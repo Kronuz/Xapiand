@@ -1020,19 +1020,19 @@ HttpClient::home_view(enum http_method method, Command)
 	auto local_node_ = local_node.load();
 	auto document = db_handler.get_document(serialise_node_id(local_node_->id));
 
-	auto obj_data = document.get_obj();
-	if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
-		obj_data[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
+	auto obj = document.get_obj();
+	if (obj.find(ID_FIELD_NAME) == obj.end()) {
+		obj[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
 	}
 
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data[RESPONSE_CLUSTER_NAME] = XapiandManager::manager->opts.cluster_name;
+	obj[RESPONSE_CLUSTER_NAME] = XapiandManager::manager->opts.cluster_name;
 #endif
-	obj_data[RESPONSE_SERVER] = Package::STRING;
-	obj_data[RESPONSE_URL] = Package::BUGREPORT;
-	obj_data[RESPONSE_VERSIONS] = {
+	obj[RESPONSE_SERVER] = Package::STRING;
+	obj[RESPONSE_URL] = Package::BUGREPORT;
+	obj[RESPONSE_VERSIONS] = {
 		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : format_string("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
 		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
@@ -1043,7 +1043,7 @@ HttpClient::home_view(enum http_method method, Command)
 #endif
 	};
 
-	write_http_response(HTTP_STATUS_OK, obj_data);
+	write_http_response(HTTP_STATUS_OK, obj);
 }
 
 
@@ -1613,9 +1613,10 @@ HttpClient::search_view(enum http_method method, Command)
 				continue;
 			}
 
-			MsgPack obj_data;
+			MsgPack obj;
+			MsgPack* obj_ptr;
 			if (chunked) {
-				obj_data = MsgPack::unserialise(split_data_obj(data));
+				obj = MsgPack::unserialise(split_data_obj(data));
 			} else {
 				// Figure out the document's blob and blob's ContentType.
 				std::string blob;
@@ -1652,7 +1653,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (is_acceptable_type(ct_type, msgpack_serializers)) {
-					obj_data = MsgPack::unserialise(split_data_obj(data));
+					obj = MsgPack::unserialise(split_data_obj(data));
 				} else {
 					// Returns blob_data in case that type is unkown
 					if (blob.empty()) {
@@ -1687,23 +1688,23 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 			}
 
-			if (obj_data.find(ID_FIELD_NAME) == obj_data.end()) {
-				obj_data[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			if (obj.find(ID_FIELD_NAME) == obj.end()) {
+				obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 			}
 
 			// Detailed info about the document:
-			obj_data[RESPONSE_DOCID] = document.get_docid();
+			obj[RESPONSE_DOCID] = document.get_docid();
 			if (!did && chunked) {
-				obj_data[RESPONSE_RANK] = m.get_rank();
-				obj_data[RESPONSE_WEIGHT] = m.get_weight();
-				obj_data[RESPONSE_PERCENT] = m.get_percent();
+				obj[RESPONSE_RANK] = m.get_rank();
+				obj[RESPONSE_WEIGHT] = m.get_weight();
+				obj[RESPONSE_PERCENT] = m.get_percent();
 				// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 				// auto endpoint = endpoints[subdatabase];
-				// obj_data[RESPONSE_ENDPOINT] = endpoint.to_string();
+				// obj[RESPONSE_ENDPOINT] = endpoint.to_string();
 			}
 
 			if (!selector.empty()) {
-				obj_data = obj_data.select(selector);
+				obj = obj.select(selector);
 			}
 
 			if (Logging::log_level > LOG_DEBUG) {
@@ -1714,13 +1715,13 @@ HttpClient::search_view(enum http_method method, Command)
 					if (!l_buffer.empty()) {
 						response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 					}
-					l_buffer = obj_data.to_string(4);
+					l_buffer = obj.to_string(4);
 				} else {
-					response_body += obj_data.to_string(4);
+					response_body += obj.to_string(4);
 				}
 			}
 
-			auto result = serialize_response(obj_data, ct_type, indent);
+			auto result = serialize_response(obj, ct_type, indent);
 			if (chunked) {
 				if (rc == 0) {
 					if (type_encoding != Encoding::none) {
