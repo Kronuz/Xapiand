@@ -1539,7 +1539,9 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string l_eol_chunk;
 		std::string l_sep_chunk;
 
+		// Get default content type to return.
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
+
 		if (chunked) {
 			MsgPack basic_query({
 				{ RESPONSE_TOTAL_COUNT, total_count},
@@ -1615,6 +1617,7 @@ HttpClient::search_view(enum http_method method, Command)
 			if (chunked) {
 				obj_data = MsgPack::unserialise(split_data_obj(data));
 			} else {
+				// Figure out the document's blob and blob's ContentType.
 				std::string blob;
 				std::string ct_type_str;
 				auto store = split_data_store(data);
@@ -1623,13 +1626,21 @@ HttpClient::search_view(enum http_method method, Command)
 					ct_type_str = unserialise_string_at(1, blob);
 				}
 
+				// There wasn't a content type in the blob, try getting it from the object.
 				if (ct_type_str.empty()) {
-					const auto ct_type_mp = Document::get_field(CONTENT_TYPE_FIELD_NAME, document.get_obj());
-					ct_type_str = ct_type_mp ? ct_type_mp.str() : MSGPACK_CONTENT_TYPE;
+					const auto field_ct_type_str = Document::get_field(CONTENT_TYPE_FIELD_NAME, document.get_obj());
+					ct_type_str = field_ct_type_str ? field_ct_type_str.str() : MSGPACK_CONTENT_TYPE;
 				}
 
-				ct_type = resolve_ct_type(ct_type_str);
-				if (ct_type.first == no_type.first && ct_type.second == no_type.second) {
+				// If there's a ContentType in the blob store or in the ContentType's field
+				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
+				auto _ct_type = resolve_ct_type(ct_type_str);
+				if (!_ct_type.empty()) {
+					ct_type = _ct_type;
+				}
+
+				if (ct_type.empty()) {
+					// No content type could be resolved, return NOT ACCEPTABLE.
 					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 					MsgPack err_response = {
 						{ RESPONSE_STATUS, (int)error_code },
