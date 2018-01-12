@@ -1873,10 +1873,12 @@ Database::dump_documents(int fd, XXH32_state_t& xxhash)
 				if (blob.empty()) {
 					auto store = split_data_store(data);
 					if (store.first) {
-						int subdatabase = (did - 1) % endpoints.size();
-						const auto& storage = storages[subdatabase];
-						if (storage) {
-							blob = storage_get(storage, store.second);
+						if (!store.second.empty()) {
+							int subdatabase = (did - 1) % endpoints.size();
+							const auto& storage = storages[subdatabase];
+							if (storage) {
+								blob = storage_get(storage, store.second);
+							}
 						}
 					}
 				}
