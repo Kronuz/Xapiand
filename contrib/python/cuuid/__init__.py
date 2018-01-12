@@ -16,6 +16,9 @@ except ValueError:
     from mertwis import MT19937
 
 
+__all__ = ['UUID']
+
+
 def _fnv_1a(num):
     # calculate FNV-1a hash
     fnv = 0xcbf29ce484222325
