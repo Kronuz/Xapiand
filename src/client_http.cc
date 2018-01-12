@@ -1616,32 +1616,7 @@ HttpClient::search_view(enum http_method method, Command)
 			MsgPack obj;
 			if (!chunked) {
 				// Figure out the document's ContentType.
-				std::string ct_type_str;
-				auto blob = split_data_blob(data);
-				if (blob.empty()) {
-					// no blob in data, it must be stored (if any).
-#ifdef XAPIAND_DATA_STORAGE
-					const auto store = split_data_store(data);
-					if (store.first) {
-						// It's stored, get ContentType from storage locator.
-						if (!store.second.empty()) {
-							const auto locator = storage_unserialise_locator(store.second);
-							ct_type_str = std::get<3>(locator);
-						}
-					} else {
-						// Get non-stored blob from the document's body, and ContentType from it.
-						blob = document.get_blob();
-						ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
-					}
-#endif
-				} else {
-					// blob could be non-stored and data-only or stored but already currently available in the data.
-					const auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
-					if (!blob_data.empty()) {
-						ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
-					}
-				}
-
+				std::string ct_type_str = get_data_content_type(data);
 				if (ct_type_str.empty()) {
 					// There wasn't a content type in the blob, try getting it from the object's field.
 					if (obj.is_undefined()) {
@@ -1672,9 +1647,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 				if (!is_acceptable_type(ct_type, msgpack_serializers)) {
 					// Returns blob_data in case that type is unkown
-					if (blob.empty()) {
-						blob = document.get_blob();
-					}
+					auto blob = document.get_blob();
 					auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 					if (Logging::log_level > LOG_DEBUG) {
 						if (ct_type.first == "image") {

@@ -419,6 +419,51 @@ std::string split_data_obj(const std::string& data)
 }
 
 
+std::string get_data_content_type(const std::string& data)
+{
+	L_CALL("::get_data_content_type(<data>)");
+
+	std::string stored_locator;
+	size_t length;
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	if (*p == DATABASE_DATA_HEADER_MAGIC) {
+		++p;
+	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+		++p;
+		try {
+			length = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError&) {
+			return "";
+		}
+		stored_locator = std::string(p, length);
+		p += length;
+	} else {
+		return "";
+	}
+
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (const Xapian::SerialisationError&) {
+		return "";
+	}
+	p += length;
+
+	if (*p == DATABASE_DATA_FOOTER_MAGIC) {
+		++p;
+		if (!stored_locator.empty()) {
+			return std::get<3>(storage_unserialise_locator(stored_locator));
+		} else if (p != p_end) {
+			return unserialise_string_at(STORED_BLOB_CONTENT_TYPE, &p, p_end);
+		} else {
+			return "";
+		}
+	}
+
+	return "";
+}
+
+
 std::string split_data_blob(const std::string& data)
 {
 	L_CALL("::split_data_blob(<data>)");
