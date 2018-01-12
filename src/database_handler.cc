@@ -453,20 +453,6 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 					id_field = id_value;
 				}
 
-				// Add Content Type.
-				if (blob.empty()) {
-					obj.erase(CONTENT_TYPE_FIELD_NAME);
-				} else {
-					// Add Content Type if indexing a blob.
-					auto& ct_field = obj[CONTENT_TYPE_FIELD_NAME];
-					if (!ct_field.is_map() && !ct_field.is_undefined()) {
-						ct_field = MsgPack();
-					}
-					ct_field[RESERVED_TYPE] = TERM_STR;
-					ct_field[RESERVED_VALUE] = ct_type.to_string();
-					ct_field[ct_type.first][ct_type.second] = nullptr;
-				}
-
 				// Index object.
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 				obj = schema->index(obj, doc, prefixed_term_id, &old_document_pair, this);

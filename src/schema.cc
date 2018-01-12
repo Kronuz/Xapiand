@@ -633,8 +633,6 @@ specification_t default_spc;
 
 const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
-	{ CONTENT_TYPE_FIELD_NAME, &Schema::set_default_spc_content_type },
-
 });
 
 
@@ -6713,45 +6711,6 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 	// Set default RESERVED_SLOT
 	specification.slot = DB_SLOT_ID;
-}
-
-
-void
-Schema::set_default_spc_content_type(MsgPack& properties)
-{
-	L_CALL("Schema::set_default_spc_content_type(%s)", repr(properties.to_string()).c_str());
-
-	if (!specification.flags.has_index) {
-		const auto index = (specification.index | TypeIndex::FIELD_TERMS) & ~TypeIndex::FIELD_VALUES; // Fallback to index anything but values
-		if (specification.index != index) {
-			specification.index = index;
-			properties[RESERVED_INDEX] = ::get_str_index(index);
-		}
-		specification.flags.has_index = true;
-	}
-
-	// RESERVED_TYPE by default is TERM
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
-	}
-
-	// Set default prefix
-	specification.local_prefix.field = DOCUMENT_CONTENT_TYPE_TERM_PREFIX;
-
-	// set default slot
-	specification.slot = DB_SLOT_CONTENT_TYPE;
-
-	if (!specification.flags.has_namespace) {
-		specification.flags.is_namespace = true;
-		specification.flags.has_namespace = true;
-		properties[RESERVED_NAMESPACE] = true;
-	}
-
-	if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
-		specification.flags.partial_paths = true;
-		specification.flags.has_partial_paths = true;
-		properties[RESERVED_PARTIAL_PATHS] = true;
-	}
 }
 
 

@@ -829,7 +829,6 @@ class Schema {
 	 */
 
 	void set_default_spc_id(MsgPack& properties);
-	void set_default_spc_content_type(MsgPack& properties);
 
 
 	/*

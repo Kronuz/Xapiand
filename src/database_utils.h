@@ -36,7 +36,6 @@
 
 // Reserved field names.
 constexpr const char ID_FIELD_NAME[]                = "_id";
-constexpr const char CONTENT_TYPE_FIELD_NAME[]      = "_content_type";
 constexpr const char UUID_FIELD_NAME[]              = "<uuid_field>";
 
 // Reserved words used in schema.

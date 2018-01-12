@@ -1617,14 +1617,6 @@ HttpClient::search_view(enum http_method method, Command)
 			if (!chunked) {
 				// Figure out the document's ContentType.
 				std::string ct_type_str = get_data_content_type(data);
-				if (ct_type_str.empty()) {
-					// There wasn't a content type in the blob, try getting it from the object's field.
-					if (obj.is_undefined()) {
-						obj = MsgPack::unserialise(split_data_obj(data));
-					}
-					const auto field_ct_type_str = Document::get_field(CONTENT_TYPE_FIELD_NAME, obj);
-					ct_type_str = field_ct_type_str ? field_ct_type_str.str() : MSGPACK_CONTENT_TYPE;
-				}
 
 				// If there's a ContentType in the blob store or in the ContentType's field
 				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
