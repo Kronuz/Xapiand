@@ -35,6 +35,13 @@ THE SOFTWARE.
 #include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
 #include "utils.h"        // for hexdec
+#include "log.h"          // for L_*
+
+
+#ifndef L_GUID
+#define L_GUID_DEFINED
+#define L_GUID L_NOTHING
+#endif
 
 
 // 0x01b21dd213814000 is the number of 100-ns intervals between the
@@ -140,6 +147,8 @@ GuidCondenser::GuidCondenser()
 inline uint64_t
 GuidCondenser::calculate_node() const
 {
+	L_CALL("GuidCondenser::calculate_node()");
+
 	uint32_t seed = 0;
 	seed ^= fnv_1a(compact.time);
 	seed ^= fnv_1a(compact.clock);
@@ -158,6 +167,8 @@ GuidCondenser::calculate_node() const
 inline std::string
 GuidCondenser::serialise() const
 {
+	L_CALL("GuidCondenser::serialise()");
+
 	uint64_t val0 = *(reinterpret_cast<const uint64_t*>(this));
 	uint64_t val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
 
@@ -209,6 +220,8 @@ GuidCondenser::serialise() const
 inline GuidCondenser
 GuidCondenser::unserialise(const char** ptr, const char* end)
 {
+	L_CALL("GuidCondenser::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
+
 	auto size = end - *ptr;
 	auto length = size + 1;
 	auto l = **ptr;
@@ -299,6 +312,8 @@ static inline unsigned char hexPairToChar(const char** ptr) {
 static inline std::array<unsigned char, 16>
 uuid_to_bytes(const char* pos, size_t size)
 {
+	L_CALL("uuid_to_bytes(%s)", repr(std::string(pos, size)).c_str());
+
 	if (size != UUID_LENGTH) {
 		THROW(InvalidArgument, "Invalid UUID string length");
 	}
@@ -502,6 +517,8 @@ Guid::uuid_version() const
 void
 Guid::compact_crush()
 {
+	L_CALL("Guid::compact_crush()");
+
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto time = uuid1_time();
 		if (!time || time > UUID_TIME_INITIAL) {
@@ -534,6 +551,8 @@ Guid::compact_crush()
 std::string
 Guid::serialise() const
 {
+	L_CALL("Guid::serialise()");
+
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		return serialise_condensed();
 	}
@@ -545,6 +564,8 @@ Guid::serialise() const
 std::string
 Guid::serialise_full() const
 {
+	L_CALL("Guid::serialise_full()");
+
 	std::string serialised;
 	serialised.reserve(17);
 	serialised.push_back(0x01);
@@ -556,6 +577,8 @@ Guid::serialise_full() const
 std::string
 Guid::serialise_condensed() const
 {
+	L_CALL("Guid::serialise_condensed()");
+
 	auto time = uuid1_time();
 	if (time) time -= UUID_TIME_INITIAL;
 
@@ -681,6 +704,8 @@ Guid::unserialise(const std::string& bytes)
 Guid
 Guid::unserialise(const char** ptr, const char* end)
 {
+	L_CALL("Guid::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
+
 	auto size = end - *ptr;
 	if (size < 2) {
 		THROW(SerialisationError, "Bad encoded UUID");
@@ -696,6 +721,8 @@ Guid::unserialise(const char** ptr, const char* end)
 Guid
 Guid::unserialise_full(const char** ptr, const char* end)
 {
+	L_CALL("Guid::unserialise_full(%s)", repr(std::string(*ptr, end)).c_str());
+
 	auto size = end - *ptr;
 	if (size < 17) {
 		THROW(SerialisationError, "Bad encoded UUID");
@@ -712,6 +739,8 @@ Guid::unserialise_full(const char** ptr, const char* end)
 Guid
 Guid::unserialise_condensed(const char** ptr, const char* end)
 {
+	L_CALL("Guid::unserialise_condensed(%s)", repr(std::string(*ptr, end)).c_str());
+
 	GuidCondenser condenser = GuidCondenser::unserialise(ptr, end);
 
 	uint64_t time = condenser.compact.time;
@@ -897,3 +926,9 @@ GuidGenerator::newGuid(bool compact)
 	}
 	return guid;
 }
+
+
+#ifdef L_GUID_DEFINED
+#undef L_GUID_DEFINED
+#undef L_GUID
+#endif
