@@ -213,6 +213,8 @@ static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
 static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
 static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
 
+constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
+constexpr int STORED_BLOB_DATA          = 1;
 
 constexpr int DB_OPEN         = 0x0000; // Opens a database
 constexpr int DB_WRITABLE     = 0x0001; // Opens as writable

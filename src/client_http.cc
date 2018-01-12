@@ -1623,9 +1623,9 @@ HttpClient::search_view(enum http_method method, Command)
 					// It's stored, get ContentType from storage locator.
 					ct_type_str = std::get<3>(storage_unserialise_locator(store.second));
 				} else {
-					// Not stored, get blob from the document's body and ContentType from it.
+					// Get non-stored blob from the document's body, and ContentType from it.
 					blob = document.get_blob();
-					ct_type_str = unserialise_string_at(1, blob);
+					ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
 				}
 				if (ct_type_str.empty()) {
 					// There wasn't a content type in the blob, try getting it from the object's field.
@@ -1660,7 +1660,7 @@ HttpClient::search_view(enum http_method method, Command)
 					if (blob.empty()) {
 						blob = document.get_blob();
 					}
-					auto blob_data = unserialise_string_at(2, blob);
+					auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 					if (Logging::log_level > LOG_DEBUG) {
 						if (ct_type.first == "image") {
 							// From [https://www.iterm2.com/documentation-images.html]

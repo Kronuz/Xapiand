@@ -499,7 +499,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 			} else {
 				L_INDEX("Data: %s", repr(obj.to_string()).c_str());
 				auto ct_type_str = ct_type.to_string();
-				doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+				doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ ct_type_str, blob })));
 			}
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
@@ -820,7 +820,7 @@ DatabaseHandler::restore(int fd)
 
 			std::string ct_type_str;
 			if (!blob.empty()) {
-				ct_type_str = unserialise_string_at(1, blob);
+				ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
 			}
 			auto ct_type = ct_type_t(ct_type_str);
 
@@ -1207,6 +1207,7 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 
 	const auto blob = split_data_blob(data);
 	if (blob.empty()) {
+		// no blob in data, it must be stored (if any).
 #ifdef XAPIAND_DATA_STORAGE
 		const auto store = split_data_store(data);
 		if (store.first) {
@@ -1225,15 +1226,16 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 		}
 #endif
 	} else {
-		const auto blob_data = unserialise_string_at(2, blob);
+		// blob could be non-stored and data-only or stored but already currently available in the data.
+		const auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 		if (blob_data.empty()) {
 			info[RESPONSE_BLOB] = nullptr;
 		} else {
-			auto blob_ct = unserialise_string_at(1, blob);
+			auto blob_ct = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
 			info[RESPONSE_BLOB] = {
 				{ RESPONSE_TYPE, "local" },
-				{ RESPONSE_CONTENT_TYPE, blob_ct },
 				{ RESPONSE_SIZE, blob_data.size() },
+				{ RESPONSE_CONTENT_TYPE, blob_ct },
 			};
 		}
 	}
