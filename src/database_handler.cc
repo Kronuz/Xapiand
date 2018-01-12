@@ -1201,32 +1201,28 @@ DatabaseHandler::get_document_info(const std::string& document_id)
 
 	MsgPack info;
 
-
 	info[RESPONSE_DOCID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
-	const auto blob = split_data_blob(data);
-	if (blob.empty()) {
-		// no blob in data, it must be stored (if any).
 #ifdef XAPIAND_DATA_STORAGE
-		const auto store = split_data_store(data);
-		if (store.first) {
-			if (store.second.empty()) {
-				info[RESPONSE_BLOB] = nullptr;
-			} else {
-				const auto locator = storage_unserialise_locator(store.second);
-				info[RESPONSE_BLOB] = {
-					{ RESPONSE_TYPE, "stored" },
-					{ RESPONSE_VOLUME, std::get<0>(locator) },
-					{ RESPONSE_OFFSET, std::get<1>(locator) },
-					{ RESPONSE_SIZE, std::get<2>(locator) },
-					{ RESPONSE_CONTENT_TYPE, std::get<3>(locator) },
-				};
-			}
+	const auto store = split_data_store(data);
+	if (store.first) {
+		if (store.second.empty()) {
+			info[RESPONSE_BLOB] = nullptr;
+		} else {
+			const auto locator = storage_unserialise_locator(store.second);
+			info[RESPONSE_BLOB] = {
+				{ RESPONSE_TYPE, "stored" },
+				{ RESPONSE_VOLUME, std::get<0>(locator) },
+				{ RESPONSE_OFFSET, std::get<1>(locator) },
+				{ RESPONSE_SIZE, std::get<2>(locator) },
+				{ RESPONSE_CONTENT_TYPE, std::get<3>(locator) },
+			};
 		}
+	} else
 #endif
-	} else {
-		// blob could be non-stored and data-only or stored but already currently available in the data.
+	{
+		const auto blob = split_data_blob(data);
 		const auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 		if (blob_data.empty()) {
 			info[RESPONSE_BLOB] = nullptr;
