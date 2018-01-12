@@ -881,7 +881,7 @@ DatabaseHandler::restore(int fd)
 			if (blob.empty()) {
 				doc.set_data(join_data(false, "", obj.serialise(), ""));
 			} else {
-				doc.set_data(join_data(true, "", obj.serialise(), serialise_strings({ prefixed_term_id, ct_type_str, blob })));
+				doc.set_data(join_data(true, "", obj.serialise(), blob));
 			}
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
