@@ -372,16 +372,22 @@ class UUID(six.binary_type, uuid.UUID):
 
 if __name__ == '__main__':
     str_uuids = [
+        # Full:
+        '5759b016-10c0-4526-a981-47d6d19f6fb4',
+        'e8b13d1b-665f-4f4c-aa83-76fa782b030a',
+        # Condensed:
         '00000000-0000-1000-8000-000000000000',
         '11111111-1111-1111-8111-111111111111',
-        # compresos
+        # Condensed + Compacted:
         '230c3300-dc3c-11e7-9266-a9cf6771112b',
         'f223c600-debf-11e7-85f7-cdf2b3c2e82b',
-        # NO compresos
+        # Condensed + Expanded:
         '60579016-dec5-11e7-b616-34363bc9ddd6',
         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
     ]
     expected_serialised = [
+        repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4'),
+        repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n'),
         repr('\x1c\x00\x00\x01'),
         repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82""""""#'),
         repr('\x07\x8e\xf7)l\x12fV'),
