@@ -27,6 +27,7 @@
 #if XAPIAND_V8
 
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <libplatform/libplatform.h>
 #include <v8.h>
