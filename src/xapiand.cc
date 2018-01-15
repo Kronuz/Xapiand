@@ -554,7 +554,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 
 	} catch (const ArgException& exc) { // catch any exceptions
-		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
+		fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
+		exit(EX_USAGE);
 	}
 }
 
