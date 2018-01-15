@@ -40,8 +40,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcomment"
 #pragma GCC diagnostic ignored "-Wunused-value"
-#pragma clang diagnostic ignored "-Wextern-initializer"
-#pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+#pragma GCC diagnostic ignored "-Wextern-initializer"
+#pragma GCC diagnostic ignored "-Wbitwise-op-parentheses"
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 /* this big block deduces configuration from config.h */
 #ifndef EV_STANDALONE
