@@ -391,6 +391,19 @@ endif ()
 
 
 ########################################################################
+# Exec Info Library
+########################################################################
+
+find_library (EXECINFO_LIBRARIES execinfo)
+if (EXECINFO_LIBRARIES)
+	set (HAVE_EXECINFO 1)
+	target_link_libraries (${PROJECT_NAME} ${EXECINFO_LIBRARIES})
+else ()
+	set (HAVE_EXECINFO 0)
+endif ()
+
+
+########################################################################
 # Real Time Library
 ########################################################################
 
