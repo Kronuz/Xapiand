@@ -26,6 +26,7 @@
 
 #include <cctype>             // for tolower, toupper
 #include <chrono>             // for system_clock, time_point, duration_cast, seconds
+#include <cstdarg>            // for va_list, va_end, va_start
 #include <cstdio>             // for size_t, vsnprintf
 #include <dirent.h>           // for DIR
 #include <math.h>             // for log10, floor, pow
