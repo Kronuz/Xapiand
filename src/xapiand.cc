@@ -179,6 +179,10 @@ void sig_handler(int sig) {
 	const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
 	write(STDERR_FILENO, msg);
 
+	if (sig == SIGTERM || sig == SIGINT) {
+		close(STDIN_FILENO);
+	}
+
 #if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
 	if (sig == SIGINFO) {
 		sig_info(sig);
