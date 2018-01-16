@@ -545,7 +545,7 @@ Guid::compact_crush()
 		uuid1_node(condenser.calculate_node());
 
 		time = condenser.compact.time * UUID_TIME_DIVISOR;
-		if (time) time = (time + UUID_TIME_INITIAL) & TIME_MASK;
+		if (time) time += UUID_TIME_INITIAL;
 		uuid1_time(time);
 	}
 }
@@ -748,7 +748,7 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 
 	uint64_t time = condenser.compact.time;
 	if (condenser.compact.compacted) time *= UUID_TIME_DIVISOR;
-	if (time) time = (time + UUID_TIME_INITIAL) & TIME_MASK;
+	if (time) time += UUID_TIME_INITIAL;
 
 	uint32_t time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
