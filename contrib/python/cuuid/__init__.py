@@ -120,15 +120,12 @@ def unserialise_compound(bytes_, repr='base59'):
     if isinstance(bytes_, UUID):
         return unserialise_compound(bytes_.serialise())
     elif isinstance(bytes_, six.string_types):
-        byte0 = ord(bytes_[0])
-        byte_1 = ord(bytes_[-1])
-        byte_6 = ord(bytes_[-6])
         if repr == 'guid':
             return ";".join("{%s}" % u for u in unserialise(bytes_))
         elif repr == 'urn':
             return "urn:uuid:" + ";".join(unserialise(bytes_))
         elif repr == 'base59':
-            if byte0 != 1 and ((byte_1 & 1) or (byte_6 & 2)):
+            if ord(bytes_[0]) != 1 and ((ord(bytes_[-1]) & 1) or (len(bytes_) >= 6 and ord(bytes_[-6]) & 2)):
                 return base59.b59encode(bytes_)
         return ";".join(unserialise(bytes_))
 
@@ -299,7 +296,7 @@ class UUID(six.binary_type, uuid.UUID):
         num = 0
         version = self.version
         variant = self.clock_seq_hi_variant & 0x80
-        if variant == 0x80 and version == 1 && self.node & 0x010000000000:
+        if variant == 0x80 and version == 1 and self.node & 0x010000000000:
             num <<= 12
             num |= self.time_hi_version & 0xfff
             num <<= 16
