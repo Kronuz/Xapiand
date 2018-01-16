@@ -149,6 +149,10 @@ GuidCondenser::calculate_node() const
 {
 	L_CALL("GuidCondenser::calculate_node()");
 
+	if (!compact.time && ! compact.clock && !compact.salt) {
+		return 0x010000000000;
+	}
+
 	uint32_t seed = 0;
 	seed ^= fnv_1a(compact.time);
 	seed ^= fnv_1a(compact.clock);
@@ -180,7 +184,7 @@ GuidCondenser::serialise() const
 		assert(compact.padding0 == 0);
 		assert(compact.padding1 == 0);
 		buf0 = (val0 >> PADDING_C1_BITS);
-		buf1 = (val0 << (64 - PADDING_C1_BITS)) | (val1 >> PADDING_C1_BITS);
+		buf1 = (val0 << (64 - PADDING_C1_BITS)) | (val1 >> PADDING_C1_BITS) | 1;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
@@ -188,7 +192,7 @@ GuidCondenser::serialise() const
 		assert(expanded.padding0 == 0);
 		assert(expanded.padding1 == 0);
 		buf0 = (val0 >> PADDING_E1_BITS);
-		buf1 = (val0 << (64 - PADDING_E1_BITS)) | (val1 >> PADDING_E1_BITS) | 1;
+		buf1 = (val0 << (64 - PADDING_E1_BITS)) | (val1 >> PADDING_E1_BITS);
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
@@ -248,7 +252,7 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 	auto buf1 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
 
 	uint64_t val0, val1;
-	if (!(buf1 & 1)) {  // compacted
+	if (buf1 & 1) {  // compacted
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
 	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC

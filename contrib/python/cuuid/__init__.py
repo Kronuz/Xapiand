@@ -60,7 +60,7 @@ def _unserialise_condensed(bytes_):
         meat <<= 8
         meat |= ord(s)
 
-    compacted = not (meat & 1)
+    compacted = meat & 1
     meat >>= UUID.COMPACTED_BITS
 
     if compacted:
@@ -124,7 +124,7 @@ def unserialise_compound(bytes_, repr='base59'):
     elif repr == 'urn':
         return "urn:uuid:" + ";".join(unserialise(bytes_))
     elif repr == 'base59':
-        if byte0 != 1 and (byte1 & 1) == 0:
+        if byte0 != 1 and byte1 & 1:
             return base59.b59encode(bytes_)
     return ";".join(unserialise(bytes_))
 
@@ -168,7 +168,7 @@ def serialise_compound(compound_uuid):
 
 class UUID(six.binary_type, uuid.UUID):
     """
-    Anonymous UUID is 00000000-0000-1000-8000-000000000000
+    Anonymous UUID is 00000000-0000-1000-8000-010000000000
     """
     UUID_TIME_INITIAL = 0x1e5b039c8040800
 
@@ -216,6 +216,8 @@ class UUID(six.binary_type, uuid.UUID):
 
     @classmethod
     def _calculate_node(cls, time, clock, salt):
+        if not time and not clock and not salt:
+            return 0x010000000000
         seed = 0
         seed ^= _fnv_1a(time)
         seed ^= _fnv_1a(clock)
@@ -342,6 +344,7 @@ class UUID(six.binary_type, uuid.UUID):
                 meat <<= cls.SALT_BITS
                 meat |= salt
                 meat <<= cls.COMPACTED_BITS
+                meat |= 1
             else:
                 meat = time
                 meat <<= cls.CLOCK_BITS
@@ -349,7 +352,6 @@ class UUID(six.binary_type, uuid.UUID):
                 meat <<= cls.NODE_BITS
                 meat |= node
                 meat <<= cls.COMPACTED_BITS
-                meat |= 1
 
             bytes_ = []
             while meat or len(bytes_) < 4:
