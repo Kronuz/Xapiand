@@ -297,7 +297,9 @@ class UUID(six.binary_type, uuid.UUID):
 
     def data(self):
         num = 0
-        if self.version == 1:
+        version = self.version
+        variant = self.clock_seq_hi_variant & 0x80
+        if variant == 0x80 and version == 1 && self.node & 0x010000000000:
             num <<= 12
             num |= self.time_hi_version & 0xfff
             num <<= 16
