@@ -117,16 +117,19 @@ def unserialise(bytes_):
 
 
 def unserialise_compound(bytes_, repr='base59'):
-    byte0 = ord(bytes_[0])
-    byte1 = ord(bytes_[-1])
-    if repr == 'guid':
-        return ";".join("{%s}" % u for u in unserialise(bytes_))
-    elif repr == 'urn':
-        return "urn:uuid:" + ";".join(unserialise(bytes_))
-    elif repr == 'base59':
-        if byte0 != 1 and byte1 & 1:
-            return base59.b59encode(bytes_)
-    return ";".join(unserialise(bytes_))
+    if isinstance(bytes_, UUID):
+        return unserialise_compound(bytes_.serialise())
+    elif isinstance(bytes_, six.string_types):
+        byte0 = ord(bytes_[0])
+        byte1 = ord(bytes_[-1])
+        if repr == 'guid':
+            return ";".join("{%s}" % u for u in unserialise(bytes_))
+        elif repr == 'urn':
+            return "urn:uuid:" + ";".join(unserialise(bytes_))
+        elif repr == 'base59':
+            if byte0 != 1 and byte1 & 1:
+                return base59.b59encode(bytes_)
+        return ";".join(unserialise(bytes_))
 
 
 def serialise(uuids_):
