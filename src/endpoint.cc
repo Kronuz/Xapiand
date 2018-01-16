@@ -52,7 +52,7 @@ normalize_and_partition(const void *p, size_t size)
 	try {
 		auto serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
 		normalized = Unserialise::uuid(serialised_uuid, XapiandManager::manager->opts.uuid_repr);
-		if (XapiandManager::manager->opts.uuid_repr == UUIDRepr::simple || serialised_uuid.front() == 1 || (serialised_uuid.back() & 1) == 0) {
+		if (!(XapiandManager::manager->opts.uuid_repr != UUIDRepr::simple && serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (*(serialised_uuid.rbegin() + 5) & 2)))) {
 			ret.append(&normalized[9], &normalized[13]);
 			ret.push_back('/');
 			ret.append(normalized);

@@ -1170,7 +1170,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef UUID_USE_BASE16
 		case UUIDRepr::base16: {
-			if (serialised_uuid.front() != 1 && serialised_uuid.back() & 1) {
+			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (*(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append(BASE16.encode(serialised_uuid));
 				break;
 			}
@@ -1178,7 +1178,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef UUID_USE_BASE58
 		case UUIDRepr::base58: {
-			if (serialised_uuid.front() != 1 && serialised_uuid.back() & 1) {
+			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (*(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append(BASE58.encode(serialised_uuid));
 				break;
 			}
@@ -1186,7 +1186,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef UUID_USE_BASE59
 		case UUIDRepr::base59: {
-			if (serialised_uuid.front() != 1 && serialised_uuid.back() & 1) {
+			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (*(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append(BASE59.encode(serialised_uuid));
 				break;
 			}
@@ -1194,7 +1194,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef UUID_USE_BASE62
 		case UUIDRepr::base62: {
-			if (serialised_uuid.front() != 1 && serialised_uuid.back() & 1) {
+			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (*(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append(BASE62.encode(serialised_uuid));
 				break;
 			}
