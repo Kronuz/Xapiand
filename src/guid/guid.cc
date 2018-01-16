@@ -63,6 +63,7 @@ constexpr uint8_t NODE_BITS       = 48;
 constexpr uint8_t PADDING_C1_BITS = 64 - COMPACTED_BITS - SALT_BITS - CLOCK_BITS;
 constexpr uint8_t PADDING_E1_BITS = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS;
 
+constexpr uint64_t TIME_MASK     =  ((1ULL << TIME_BITS)    - 1);
 constexpr uint64_t SALT_MASK     =  ((1ULL << SALT_BITS)    - 1);
 constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
 
@@ -525,29 +526,27 @@ Guid::compact_crush()
 
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto time = uuid1_time();
-		if (!time || time > UUID_TIME_INITIAL) {
-			if (time) time -= UUID_TIME_INITIAL;
+		if (time) time = (time - UUID_TIME_INITIAL) & TIME_MASK;
 
-			auto node = uuid1_node();
+		auto node = uuid1_node();
 
-			GuidCondenser condenser;
-			condenser.compact.compacted = true;
-			condenser.compact.clock = uuid1_clock_seq();
-			condenser.compact.time = time / UUID_TIME_DIVISOR;
-			if (node & 0x010000000000) {
-				condenser.compact.salt = node & SALT_MASK;
-			} else {
-				auto salt = fnv_1a(node);
-				salt = xor_fold(salt, SALT_BITS);
-				condenser.compact.salt = salt & SALT_MASK;
-			}
-
-			uuid1_node(condenser.calculate_node());
-
-			time = condenser.compact.time * UUID_TIME_DIVISOR;
-			if (time) time += UUID_TIME_INITIAL;
-			uuid1_time(time);
+		GuidCondenser condenser;
+		condenser.compact.compacted = true;
+		condenser.compact.clock = uuid1_clock_seq();
+		condenser.compact.time = time / UUID_TIME_DIVISOR;
+		if (node & 0x010000000000) {
+			condenser.compact.salt = node & SALT_MASK;
+		} else {
+			auto salt = fnv_1a(node);
+			salt = xor_fold(salt, SALT_BITS);
+			condenser.compact.salt = salt & SALT_MASK;
 		}
+
+		uuid1_node(condenser.calculate_node());
+
+		time = condenser.compact.time * UUID_TIME_DIVISOR;
+		if (time) time = (time + UUID_TIME_INITIAL) & TIME_MASK;
+		uuid1_time(time);
 	}
 }
 
@@ -584,7 +583,7 @@ Guid::serialise_condensed() const
 	L_CALL("Guid::serialise_condensed()");
 
 	auto time = uuid1_time();
-	if (time) time -= UUID_TIME_INITIAL;
+	if (time) time = (time - UUID_TIME_INITIAL) & TIME_MASK;
 
 	auto node = uuid1_node();
 
@@ -749,7 +748,7 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 
 	uint64_t time = condenser.compact.time;
 	if (condenser.compact.compacted) time *= UUID_TIME_DIVISOR;
-	if (time) time += UUID_TIME_INITIAL;
+	if (time) time = (time + UUID_TIME_INITIAL) & TIME_MASK;
 
 	uint32_t time_low = time & 0xffffffffULL;
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
