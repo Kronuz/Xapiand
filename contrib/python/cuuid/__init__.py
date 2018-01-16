@@ -45,10 +45,10 @@ def _unserialise_condensed(bytes_):
     byte0 = ord(bytes_[0])
     q = bool(byte0 & 0xf0)
     for i in range(13):
-        if (UUID.VL[i][q][0] == (byte0 & UUID.VL[i][q][1])):
+        if UUID.VL[i][q][0] == (byte0 & UUID.VL[i][q][1]):
             length = i + 4
             break
-    if (size < length):
+    if size < length:
         raise ValueError("Bad encoded uuid")
 
     list_bytes_ = list(bytes_[:length])
