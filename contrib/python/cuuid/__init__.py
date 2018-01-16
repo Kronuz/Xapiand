@@ -121,13 +121,14 @@ def unserialise_compound(bytes_, repr='base59'):
         return unserialise_compound(bytes_.serialise())
     elif isinstance(bytes_, six.string_types):
         byte0 = ord(bytes_[0])
-        byte1 = ord(bytes_[-1])
+        byte_1 = ord(bytes_[-1])
+        byte_6 = ord(bytes_[-6])
         if repr == 'guid':
             return ";".join("{%s}" % u for u in unserialise(bytes_))
         elif repr == 'urn':
             return "urn:uuid:" + ";".join(unserialise(bytes_))
         elif repr == 'base59':
-            if byte0 != 1 and byte1 & 1:
+            if byte0 != 1 and ((byte_1 & 1) or (byte_6 & 2)):
                 return base59.b59encode(bytes_)
         return ";".join(unserialise(bytes_))
 
@@ -251,33 +252,28 @@ class UUID(six.binary_type, uuid.UUID):
         # clock = 14 bits
         # node = 48 bits
         if data is not None:
-            data_len = len(data)
-            if data_len < cls.UUID_MIN_SERIALISED_LENGTH or data_len > cls.UUID_MAX_SERIALISED_LENGTH:
-                raise ValueError("Serialise UUID can store [%d, %d] bytes, given %d" % (2, cls.UUID_MAX_SERIALISED_LENGTH, data_len))
             num = 0
-            node = 0
-            for d in reversed(data):
+            for d in data:
                 num <<= 8
                 num |= ord(d)
-                node ^= num
-            node &= 0xffffffffffff
+            node = ((num << 1) & 0xfe0000000000) | num & 0x00ffffffffff | 0x010000000000
+            num >>= 47
+            clock_seq_low = num & 0xff
+            num >>= 8
+            clock_seq_hi_variant = num & 0x3f
+            num >>= 6
             time_low = num & 0xffffffff
             num >>= 32
             time_mid = num & 0xffff
             num >>= 16
             time_hi_version = num & 0xfff
             num >>= 12
-            clock_seq_hi_variant = num & 0x3f
-            num >>= 6
-            clock_seq_low = num & 0xff
-            if compacted or compacted is None and data_len <= 9:
-                compacted = True
-                time_hi_version |= 0x1000  # Version 1
-            else:
-                compacted = False
-                time_hi_version |= 0x4000  # Version 4
+            if num:
+                raise ValueError("Serialise UUID can only store as much as 15 bytes")
+            time_hi_version |= 0x1000  # Version 1
             clock_seq_hi_variant |= 0x80  # Variant: RFC 4122
             num = cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
+            compacted = False
         else:
             num = uuid.uuid1()
         if compacted or compacted is None:
@@ -299,23 +295,24 @@ class UUID(six.binary_type, uuid.UUID):
 
     def data(self):
         num = 0
-        if self.version == 4:
-            num = self.node
-        num <<= 8
-        num |= self.clock_seq_low & 0xff
-        num <<= 6
-        num |= self.clock_seq_hi_variant & 0x3f
-        num <<= 12
-        num |= self.time_hi_version & 0xfff
-        num <<= 16
-        num |= self.time_mid & 0xffff
-        num <<= 32
-        num |= self.time_low & 0xffffffff
-        data = ''
+        if self.version == 1:
+            num <<= 12
+            num |= self.time_hi_version & 0xfff
+            num <<= 16
+            num |= self.time_mid & 0xffff
+            num <<= 32
+            num |= self.time_low & 0xffffffff
+            num <<= 6
+            num |= self.clock_seq_hi_variant & 0x3f
+            num <<= 8
+            num |= self.clock_seq_low & 0xff
+            num <<= 47
+            num |= ((self.node & 0xfe0000000000) >> 1) | (self.node & 0x00ffffffffff)
+        data = []
         while num:
-            data += chr(num & 0xff)
+            data.append(chr(num & 0xff))
             num >>= 8
-        return data
+        return ''.join(reversed(data))
 
     @classmethod
     def unserialise(cls, bytes_):
