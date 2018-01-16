@@ -80,7 +80,7 @@ def _unserialise_condensed(bytes_):
     if time:
         if compacted:
             time *= UUID.UUID_TIME_DIVISOR
-        time = (time + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
+        time += UUID.UUID_TIME_INITIAL
     time_low = time & 0xffffffff
     time_mid = (time >> 32) & 0xffff
     time_hi_version = (time >> 48) & 0xfff
@@ -395,7 +395,7 @@ class UUID(six.binary_type, uuid.UUID):
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
             time = compacted_time * cls.UUID_TIME_DIVISOR
             if time:
-                time = (time + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+                time += cls.UUID_TIME_INITIAL
             time_low = time & 0xffffffff
             time_mid = (time >> 32) & 0xffff
             time_hi_version = (time >> 48) & 0xfff
