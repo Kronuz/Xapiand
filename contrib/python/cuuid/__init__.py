@@ -283,7 +283,7 @@ class UUID(six.binary_type, uuid.UUID):
         if compacted or compacted is None:
             time = num.time
             if time:
-                time = (time - cls.UUID_TIME_INITIAL)
+                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
                 time = time // cls.UUID_TIME_DIVISOR
             clock = num.clock_seq
             salt = None
@@ -381,29 +381,28 @@ class UUID(six.binary_type, uuid.UUID):
         variant = self.clock_seq_hi_variant & 0x80
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            if not time or time > cls.UUID_TIME_INITIAL:
-                if time:
-                    time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-                clock = self.clock_seq & cls.CLOCK_MASK
-                node = self.node & cls.NODE_MASK
-                if node & 0x010000000000:
-                    salt = node & cls.SALT_MASK
-                else:
-                    salt = _fnv_1a(node)
-                    salt = xor_fold(salt, cls.SALT_BITS)
-                    salt = salt & cls.SALT_MASK
-                compacted_time = time // cls.UUID_TIME_DIVISOR
-                compacted_node = cls._calculate_node(compacted_time, clock, salt)
-                time = compacted_time * cls.UUID_TIME_DIVISOR
-                if time:
-                    time = (time + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-                time_low = time & 0xffffffff
-                time_mid = (time >> 32) & 0xffff
-                time_hi_version = (time >> 48) & 0xfff
-                time_hi_version |= 0x1000
-                clock_seq_low = clock & 0xff
-                clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
-                return UUID(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
+            if time:
+                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            clock = self.clock_seq & cls.CLOCK_MASK
+            node = self.node & cls.NODE_MASK
+            if node & 0x010000000000:
+                salt = node & cls.SALT_MASK
+            else:
+                salt = _fnv_1a(node)
+                salt = xor_fold(salt, cls.SALT_BITS)
+                salt = salt & cls.SALT_MASK
+            compacted_time = time // cls.UUID_TIME_DIVISOR
+            compacted_node = cls._calculate_node(compacted_time, clock, salt)
+            time = compacted_time * cls.UUID_TIME_DIVISOR
+            if time:
+                time = (time + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            time_low = time & 0xffffffff
+            time_mid = (time >> 32) & 0xffff
+            time_hi_version = (time >> 48) & 0xfff
+            time_hi_version |= 0x1000
+            clock_seq_low = clock & 0xff
+            clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
+            return UUID(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
 
 
     def get_calculated_node(self):
