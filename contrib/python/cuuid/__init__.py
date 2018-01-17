@@ -214,8 +214,8 @@ class UUID(six.binary_type, uuid.UUID):
         [[0x0f, 0xff], [0xf0, 0xf0]],  # 16: 00001111 11111111  11110000 11110000
     ]
 
-    def __new__(self, *args, **kwargs):
-        return six.binary_type.__new__(self, uuid.UUID(*args, **kwargs))
+    def __new__(cls, *args, **kwargs):
+        return six.binary_type.__new__(cls, uuid.UUID(*args, **kwargs))
 
     @classmethod
     def _calculate_node(cls, time, clock, salt):
@@ -268,7 +268,7 @@ class UUID(six.binary_type, uuid.UUID):
             time_hi_version = num & 0xfff
             num >>= 12
             if num:
-                raise ValueError("Serialise UUID can only store as much as 15 bytes")
+                raise ValueError("UUIDs can only store as much as 15 bytes")
             time_hi_version |= 0x1000  # Version 1
             clock_seq_hi_variant |= 0x80  # Variant: RFC 4122
             num = cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
@@ -400,7 +400,7 @@ class UUID(six.binary_type, uuid.UUID):
             time_hi_version |= 0x1000
             clock_seq_low = clock & 0xff
             clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
-            return UUID(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
+            return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
 
 
     def get_calculated_node(self):
