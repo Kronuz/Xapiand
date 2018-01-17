@@ -288,8 +288,17 @@ class UUID(six.binary_type, uuid.UUID):
                 salt = _fnv_1a(num.node)
                 salt = xor_fold(salt, cls.SALT_BITS)
                 salt = salt & cls.SALT_MASK
-            node = cls._calculate_node(time, clock, salt)
-            num = cls(fields=(num.fields[:-1] + (node,)))
+            compacted_node = cls._calculate_node(compacted_time, clock, salt)
+            time = compacted_time
+            if time:
+                time = (time * cls.UUID_TIME_DIVISOR + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            time_low = time & 0xffffffff
+            time_mid = (time >> 32) & 0xffff
+            time_hi_version = (time >> 48) & 0xfff
+            time_hi_version |= 0x1000
+            clock_seq_low = clock & 0xff
+            clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
+            num = cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
         return num
 
     def data(self):
