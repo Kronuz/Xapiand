@@ -525,10 +525,10 @@ Guid::compact_crush()
 	L_CALL("Guid::compact_crush()");
 
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
+		auto node = uuid1_node();
+
 		auto time = uuid1_time();
 		if (time) time = (time - UUID_TIME_INITIAL) & TIME_MASK;
-
-		auto node = uuid1_node();
 
 		GuidCondenser condenser;
 		condenser.compact.compacted = true;
@@ -582,10 +582,10 @@ Guid::serialise_condensed() const
 {
 	L_CALL("Guid::serialise_condensed()");
 
+	auto node = uuid1_node();
+
 	auto time = uuid1_time();
 	if (time) time = (time - UUID_TIME_INITIAL) & TIME_MASK;
-
-	auto node = uuid1_node();
 
 	GuidCondenser condenser;
 	condenser.compact.compacted = true;
@@ -746,6 +746,8 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 
 	GuidCondenser condenser = GuidCondenser::unserialise(ptr, end);
 
+	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
+
 	uint64_t time = condenser.compact.time;
 	if (condenser.compact.compacted) time *= UUID_TIME_DIVISOR;
 	if (time) time += UUID_TIME_INITIAL;
@@ -754,8 +756,6 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 	uint16_t time_mid = (time >> 32) & 0xffffULL;
 	uint16_t time_hi_version = (time >> 48) & 0xfffULL;
 	time_hi_version |= 0x1000ULL; // Version 1: RFC 4122
-
-	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
 
 	uint8_t clock_seq_hi_variant = condenser.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
 	uint8_t clock_seq_low = condenser.compact.clock & 0xffULL;
