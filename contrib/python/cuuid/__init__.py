@@ -79,8 +79,10 @@ def _unserialise_condensed(bytes_):
 
     if time:
         if compacted:
-            time *= UUID.UUID_TIME_DIVISOR
-        time += UUID.UUID_TIME_INITIAL
+            time = (time * UUID.UUID_TIME_DIVISOR + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
+        elif not (node & 0x010000000000):
+            time = (time + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
+
     time_low = time & 0xffffffff
     time_mid = (time >> 32) & 0xffff
     time_hi_version = (time >> 48) & 0xfff
@@ -276,11 +278,9 @@ class UUID(six.binary_type, uuid.UUID):
         else:
             num = uuid.uuid1()
         if compacted or compacted is None:
-            time = num.time
-            if time:
-                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-                time = time // cls.UUID_TIME_DIVISOR
-            clock = num.clock_seq
+            time = num.time & cls.TIME_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
+            clock = num.clock_seq & cls.CLOCK_MASK
             salt = None
             if num.node & 0x010000000000:
                 salt = num.node & cls.SALT_MASK
@@ -333,8 +333,7 @@ class UUID(six.binary_type, uuid.UUID):
         version = ord(self.bytes[6]) >> 4
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            if time:
-                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
             clock = self.clock_seq & cls.CLOCK_MASK
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
@@ -343,7 +342,6 @@ class UUID(six.binary_type, uuid.UUID):
                 salt = _fnv_1a(node)
                 salt = xor_fold(salt, cls.SALT_BITS)
                 salt = salt & cls.SALT_MASK
-            compacted_time = time // cls.UUID_TIME_DIVISOR
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
             compacted = node == compacted_node
 
@@ -356,6 +354,9 @@ class UUID(six.binary_type, uuid.UUID):
                 meat <<= cls.COMPACTED_BITS
                 meat |= 1
             else:
+                if not (node & 0x010000000000):
+                    if time:
+                        time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
                 meat = time
                 meat <<= cls.CLOCK_BITS
                 meat |= clock
@@ -388,8 +389,7 @@ class UUID(six.binary_type, uuid.UUID):
         variant = self.clock_seq_hi_variant & 0x80
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            if time:
-                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
             clock = self.clock_seq & cls.CLOCK_MASK
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
@@ -398,11 +398,10 @@ class UUID(six.binary_type, uuid.UUID):
                 salt = _fnv_1a(node)
                 salt = xor_fold(salt, cls.SALT_BITS)
                 salt = salt & cls.SALT_MASK
-            compacted_time = time // cls.UUID_TIME_DIVISOR
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
-            time = compacted_time * cls.UUID_TIME_DIVISOR
+            time = compacted_time
             if time:
-                time += cls.UUID_TIME_INITIAL
+                time = (time * cls.UUID_TIME_DIVISOR + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
             time_low = time & 0xffffffff
             time_mid = (time >> 32) & 0xffff
             time_hi_version = (time >> 48) & 0xfff
@@ -417,9 +416,8 @@ class UUID(six.binary_type, uuid.UUID):
         version = self.version
         variant = self.clock_seq_hi_variant & 0x80
         if variant == 0x80 and version == 1:
-            time = self.time
-            if time:
-                time = (time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+            time = self.time & cls.TIME_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
             clock = self.clock_seq & cls.CLOCK_MASK
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
@@ -428,7 +426,6 @@ class UUID(six.binary_type, uuid.UUID):
                 salt = _fnv_1a(node)
                 salt = xor_fold(salt, cls.SALT_BITS)
                 salt = salt & cls.SALT_MASK
-            compacted_time = time // cls.UUID_TIME_DIVISOR
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
             compacted = node == compacted_node
             if compacted:
