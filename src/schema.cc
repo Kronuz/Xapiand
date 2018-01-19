@@ -5818,6 +5818,12 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
+
+	if (!specification.endpoint.empty()) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+			THROW(ClientError, "Data inconsistency, %s must be foreign", repr(prop_name).c_str());
+		}
+	}
 }
 
 
@@ -6137,8 +6143,18 @@ Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoi
 			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
 		}
 		if (specification.endpoint != _endpoint) {
+			if (
+				specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN && (
+					specification.sep_types[SPC_OBJECT_TYPE] != FieldType::EMPTY ||
+					specification.sep_types[SPC_ARRAY_TYPE] != FieldType::EMPTY ||
+					specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY
+				)
+			) {
+				THROW(ClientError, "Data inconsistency, %s cannot be used in non-foreign fields", repr(prop_name).c_str());
+			}
 			specification.flags.static_endpoint = false;
 			specification.endpoint = _endpoint;
+
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -6263,6 +6279,12 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
+	}
+
+	if (!specification.endpoint.empty()) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+			THROW(ClientError, "Data inconsistency, %s must be foreign", repr(prop_name).c_str());
+		}
 	}
 }
 
