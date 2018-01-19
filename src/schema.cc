@@ -699,6 +699,7 @@ const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema
 	{ RESERVED_PARTIAL_PATHS,          &Schema::feed_partial_paths                 },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::feed_index_uuid_field              },
 	{ RESERVED_SCRIPT,                 &Schema::feed_script                        },
+	{ RESERVED_ENDPOINT,               &Schema::feed_endpoint                      },
 });
 
 
@@ -729,6 +730,7 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 	{ RESERVED_PARTIAL_PATHS,          &Schema::process_partial_paths              },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::process_index_uuid_field           },
 	{ RESERVED_VALUE,                  &Schema::process_value                      },
+	{ RESERVED_ENDPOINT,               &Schema::process_endpoint                   },
 	{ RESERVED_SCRIPT,                 &Schema::process_script                     },
 	{ RESERVED_FLOAT,                  &Schema::process_cast_object                },
 	{ RESERVED_POSITIVE,               &Schema::process_cast_object                },
@@ -868,7 +870,8 @@ required_spc_t::flags_t::flags_t()
 	  has_bool_term(false),
 	  has_index(false),
 	  has_namespace(false),
-	  has_partial_paths(false) { }
+	  has_partial_paths(false),
+	  static_endpoint(false) { }
 
 
 std::string
@@ -1300,6 +1303,7 @@ specification_t::to_string() const
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	str << "\t" << RESERVED_SCRIPT              << ": " << (script    ? script->to_string()    : "null")   << "\n";
 #endif
+	str << "\t" << RESERVED_ENDPOINT            << ": " << endpoint                                    << "\n";
 
 	str << "\t" << RESERVED_SLOT                << ": " << slot                                        << "\n";
 	str << "\t" << RESERVED_TYPE                << ": " << get_str_type(sep_types)                     << "\n";
@@ -1330,7 +1334,7 @@ specification_t::to_string() const
 	str << "\t" << RESERVED_PARTIAL_PATHS       << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
 	str << "\t" << "optimal"                    << ": " << (flags.optimal               ? "true" : "false") << "\n";
 	str << "\t" << "field_found"                << ": " << (flags.field_found           ? "true" : "false") << "\n";
-	str << "\t" << "concrete"                   << ": " << (flags.concrete       ? "true" : "false") << "\n";
+	str << "\t" << "concrete"                   << ": " << (flags.concrete              ? "true" : "false") << "\n";
 	str << "\t" << "complete"                   << ": " << (flags.complete              ? "true" : "false") << "\n";
 	str << "\t" << "uuid_field"                 << ": " << (flags.uuid_field            ? "true" : "false") << "\n";
 	str << "\t" << "uuid_path"                  << ": " << (flags.uuid_path             ? "true" : "false") << "\n";
@@ -1342,11 +1346,12 @@ specification_t::to_string() const
 	str << "\t" << "has_bool_term"              << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
 	str << "\t" << "has_index"                  << ": " << (flags.has_index             ? "true" : "false") << "\n";
 	str << "\t" << "has_namespace"              << ": " << (flags.has_namespace         ? "true" : "false") << "\n";
+	str << "\t" << "static_endpoint"            << ": " << (flags.static_endpoint       ? "true" : "false") << "\n";
 
 	str << "\t" << "meta_name"                  << ": " << meta_name            << "\n";
 	str << "\t" << "full_meta_name"             << ": " << full_meta_name       << "\n";
-	str << "\t" << "aux_stem_language"               << ": " << aux_stem_language         << "\n";
-	str << "\t" << "aux_language"                    << ": " << aux_language              << "\n";
+	str << "\t" << "aux_stem_language"          << ": " << aux_stem_language    << "\n";
+	str << "\t" << "aux_language"               << ": " << aux_language         << "\n";
 
 	str << "}\n";
 
@@ -1529,18 +1534,20 @@ Schema::restart_specification()
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
 	specification.flags.has_index            = default_spc.flags.has_index;
 	specification.flags.has_namespace        = default_spc.flags.has_namespace;
+	specification.flags.static_endpoint      = default_spc.flags.static_endpoint;
 
 	specification.flags.concrete             = default_spc.flags.concrete;
 	specification.flags.complete             = default_spc.flags.complete;
 	specification.flags.uuid_field           = default_spc.flags.uuid_field;
 
 	specification.sep_types                  = default_spc.sep_types;
+	specification.endpoint                   = default_spc.endpoint;
 	specification.local_prefix               = default_spc.local_prefix;
 	specification.slot                       = default_spc.slot;
 	specification.accuracy                   = default_spc.accuracy;
 	specification.acc_prefix                 = default_spc.acc_prefix;
-	specification.aux_stem_language               = default_spc.aux_stem_language;
-	specification.aux_language                    = default_spc.aux_language;
+	specification.aux_stem_language          = default_spc.aux_stem_language;
+	specification.aux_language               = default_spc.aux_language;
 
 	specification.partial_index_spcs         = default_spc.partial_index_spcs;
 }
@@ -1551,18 +1558,20 @@ Schema::restart_namespace_specification()
 {
 	L_CALL("Schema::restart_namespace_specification()");
 
-	specification.flags.bool_term        = default_spc.flags.bool_term;
-	specification.flags.has_bool_term    = default_spc.flags.has_bool_term;
+	specification.flags.bool_term            = default_spc.flags.bool_term;
+	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
+	specification.flags.static_endpoint      = default_spc.flags.static_endpoint;
 
-	specification.flags.concrete         = default_spc.flags.concrete;
-	specification.flags.complete         = default_spc.flags.complete;
-	specification.flags.uuid_field       = default_spc.flags.uuid_field;
+	specification.flags.concrete             = default_spc.flags.concrete;
+	specification.flags.complete             = default_spc.flags.complete;
+	specification.flags.uuid_field           = default_spc.flags.uuid_field;
 
-	specification.sep_types              = default_spc.sep_types;
-	specification.aux_stem_language           = default_spc.aux_stem_language;
-	specification.aux_language                = default_spc.aux_language;
+	specification.sep_types                  = default_spc.sep_types;
+	specification.endpoint                   = default_spc.endpoint;
+	specification.aux_stem_language          = default_spc.aux_stem_language;
+	specification.aux_language               = default_spc.aux_language;
 
-	specification.partial_index_spcs     = default_spc.partial_index_spcs;
+	specification.partial_index_spcs         = default_spc.partial_index_spcs;
 }
 
 
@@ -5320,6 +5329,20 @@ Schema::feed_script(const MsgPack& prop_script)
 
 
 void
+Schema::feed_endpoint(const MsgPack& prop_endpoint)
+{
+	L_CALL("Schema::feed_endpoint(%s)", repr(prop_endpoint.to_string()).c_str());
+
+	try {
+		specification.endpoint = prop_endpoint.str();
+		specification.flags.static_endpoint = true;
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ENDPOINT, repr(specification.full_meta_name).c_str());
+	}
+}
+
+
+void
 Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
@@ -5642,6 +5665,17 @@ Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_
 	L_CALL("Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
 
 	consistency_schema(prop_name, doc_schema);
+}
+
+
+void
+Schema::write_endpoint(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_endpoint)
+{
+	L_CALL("Schema::write_endpoint(%s)", repr(doc_endpoint.to_string()).c_str());
+
+	process_endpoint(prop_name, doc_endpoint);
+	specification.flags.static_endpoint = true;
+	properties[prop_name] = specification.endpoint;
 }
 
 
@@ -6088,6 +6122,27 @@ Schema::process_script(const std::string&, const MsgPack& doc_script)
 	ignore_unused(doc_script);
 	THROW(ClientError, "'%s' only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
+}
+
+
+void
+Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoint)
+{
+	// RESERVED_ENDPOINT isn't heritable.
+	L_CALL("Schema::process_endpoint(%s)", repr(doc_endpoint.to_string()).c_str());
+
+	try {
+		const auto _endpoint = doc_endpoint.str();
+		if (_endpoint.empty()) {
+			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
+		}
+		if (specification.endpoint != _endpoint) {
+			specification.flags.static_endpoint = false;
+			specification.endpoint = _endpoint;
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
+	}
 }
 
 

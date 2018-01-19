@@ -66,6 +66,8 @@ constexpr const char RESERVED_RECURSE[]             = "_recurse";
 constexpr const char RESERVED_NAMESPACE[]           = "_namespace";
 constexpr const char RESERVED_PARTIAL_PATHS[]       = "_partial_paths";
 constexpr const char RESERVED_INDEX_UUID_FIELD[]    = "_index_uuid_field";
+constexpr const char RESERVED_SCHEMA[]              = "_schema";
+constexpr const char RESERVED_ENDPOINT[]            = "_endpoint";
 // Reserved words for detecting types.
 constexpr const char RESERVED_DATE_DETECTION[]      = "_date_detection";
 constexpr const char RESERVED_TIME_DETECTION[]      = "_time_detection";
@@ -113,7 +115,6 @@ constexpr const char RESERVED_MULTIPOLYGON[]        = "_multipolygon";
 constexpr const char RESERVED_MULTICHULL[]          = "_multichull";
 constexpr const char RESERVED_GEO_COLLECTION[]      = "_geometrycollection";
 constexpr const char RESERVED_GEO_INTERSECTION[]    = "_geometryintersection";
-constexpr const char RESERVED_SCHEMA[]              = "_schema";
 
 constexpr const char SCHEMA_FIELD_NAME[]            = "schema";
 constexpr const char VERSION_FIELD_NAME[]           = "version";

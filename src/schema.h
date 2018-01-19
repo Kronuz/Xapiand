@@ -305,6 +305,8 @@ struct required_spc_t {
 		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
 		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
 
+		bool static_endpoint:1;      // RESERVED_ENDPOINT is from the schema
+
 		flags_t();
 	};
 
@@ -417,6 +419,7 @@ struct specification_t : required_spc_t {
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	std::unique_ptr<const MsgPack> script;
 #endif
+	std::string endpoint;
 
 	// Used to save the last meta name.
 	std::string meta_name;
@@ -726,6 +729,7 @@ class Schema {
 	void feed_partial_paths(const MsgPack& prop_partial_paths);
 	void feed_index_uuid_field(const MsgPack& prop_index_uuid_field);
 	void feed_script(const MsgPack& prop_script);
+	void feed_endpoint(const MsgPack& prop_script);
 
 
 	/*
@@ -755,6 +759,7 @@ class Schema {
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
 	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
+	void write_endpoint(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
 
 
 	/*
@@ -783,6 +788,7 @@ class Schema {
 	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
 	void process_error(const std::string& prop_name, const MsgPack& doc_error);
 	void process_value(const std::string& prop_name, const MsgPack& doc_value);
+	void process_endpoint(const std::string& prop_name, const MsgPack& doc_value);
 	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
 	void process_script(const std::string& prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
