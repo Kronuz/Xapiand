@@ -1374,7 +1374,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			const auto& sep_types = required_spc_t::get_types(object.at(RESERVED_TYPE).str());
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				try {
-					const auto& foreign_value = object.at(RESERVED_VALUE);
+					const auto& foreign_value = object.at(RESERVED_ENDPOINT);
 					if (!foreign_value.is_string()) {
 						THROW(ErrorType, "%sschema must be string because is foreign", prefix);
 					}
@@ -2205,7 +2205,7 @@ Schema::update(const MsgPack& object)
 		if (checked.first) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
-				{ RESERVED_VALUE, *checked.first },
+				{ RESERVED_ENDPOINT, *checked.first },
 			}));
 			return;
 		}
@@ -2576,7 +2576,7 @@ Schema::write(const MsgPack& object, bool replace)
 		if (checked.first) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
-				{ RESERVED_VALUE, *checked.first },
+				{ RESERVED_ENDPOINT, *checked.first },
 			}));
 			return;
 		}

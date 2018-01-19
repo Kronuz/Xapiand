@@ -36,7 +36,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 		const auto aux_schema_str = object.str();
 		split_path_id(aux_schema_str, foreign_path, foreign_id);
 		if (foreign_path.empty() || foreign_id.empty()) {
-			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_VALUE, aux_schema_str.c_str());
+			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, aux_schema_str.c_str());
 		}
 		return;
 	}
@@ -49,28 +49,28 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 		const auto& sep_type = required_spc_t::get_types(type.str());
 		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			try {
-				const auto& foreign_value = object.at(RESERVED_VALUE);
+				const auto& foreign_value = object.at(RESERVED_ENDPOINT);
 				const auto aux_schema_str = foreign_value.str();
 				split_path_id(aux_schema_str, foreign_path, foreign_id);
 				if (foreign_path.empty() || foreign_id.empty()) {
-					THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_VALUE, aux_schema_str.c_str());
+					THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, aux_schema_str.c_str());
 				}
 			} catch (const std::out_of_range&) {
-				THROW(ErrorType, "%smust have '%s' and '%s'", prefix, RESERVED_TYPE, RESERVED_VALUE);
+				THROW(ErrorType, "%smust have '%s' and '%s'", prefix, RESERVED_TYPE, RESERVED_ENDPOINT);
 			} catch (const msgpack::type_error&) {
-				THROW(ErrorType, "%s'%s' must be string because is foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be string because is foreign", prefix, RESERVED_ENDPOINT);
 			}
 		} else {
 			const auto& schema_value = object.at(SCHEMA_FIELD_NAME);
 			if (!schema_value.is_map() || sep_type[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_ENDPOINT);
 			}
 		}
 	} catch (const std::out_of_range&) {
 		try{
 			const auto& schema_value = object.at(SCHEMA_FIELD_NAME);
 			if (!schema_value.is_map()) {
-				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_VALUE);
+				THROW(ErrorType, "%s'%s' must be object because is not foreign", prefix, RESERVED_ENDPOINT);
 			}
 		} catch (const std::out_of_range&) {
 			THROW(ErrorType, "%smust have '%s'", prefix, SCHEMA_FIELD_NAME);
@@ -200,7 +200,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		// FOREIGN new schema, write the foreign link to metadata:
 		schema_ptr = std::make_shared<MsgPack>(MsgPack({
 			{ RESERVED_TYPE, "foreign/object" },
-			{ RESERVED_VALUE, foreign_path + "/" + foreign_id },
+			{ RESERVED_ENDPOINT, foreign_path + "/" + foreign_id },
 		}));
 		if (atom_local_schema->compare_exchange_strong(local_schema_ptr, schema_ptr)) {
 			try {
