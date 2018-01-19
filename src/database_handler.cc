@@ -71,9 +71,9 @@ constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
 
 
-const std::string dump_metadata_header("metadata");
-const std::string dump_schema_header("schema");
-const std::string dump_documents_header("documents");
+const std::string dump_metadata_header ("xapiand-dump-meta");
+const std::string dump_schema_header("xapiand-dump-schm");
+const std::string dump_documents_header("xapiand-dump-docs");
 
 
 Xapian::docid
