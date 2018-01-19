@@ -71,8 +71,9 @@ constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
 
 
-const std::string dump_meta_header("xapiand-dump-meta");
-const std::string dump_docs_header("xapiand-dump-docs");
+const std::string dump_metadata_header("metadata");
+const std::string dump_schema_header("schema");
+const std::string dump_documents_header("documents");
 
 
 Xapian::docid
@@ -706,9 +707,9 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 void
-DatabaseHandler::dump_meta(int fd)
+DatabaseHandler::dump_metadata(int fd)
 {
-	L_CALL("DatabaseHandler::dump_meta()");
+	L_CALL("DatabaseHandler::dump_metadata()");
 
 	lock_database lk_db(this);
 
@@ -716,8 +717,8 @@ DatabaseHandler::dump_meta(int fd)
 	XXH32_reset(&xxhash, 0);
 
 	auto db_endpoints = endpoints.to_string();
-	serialise_string(fd, dump_meta_header);
-	XXH32_update(&xxhash, dump_meta_header.data(), dump_meta_header.size());
+	serialise_string(fd, dump_metadata_header);
+	XXH32_update(&xxhash, dump_metadata_header.data(), dump_metadata_header.size());
 
 	serialise_string(fd, db_endpoints);
 	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
@@ -731,9 +732,17 @@ DatabaseHandler::dump_meta(int fd)
 
 
 void
-DatabaseHandler::dump_docs(int fd)
+DatabaseHandler::dump_schema(int fd)
 {
-	L_CALL("DatabaseHandler::dump_docs()");
+	L_CALL("DatabaseHandler::dump_schema()");
+
+	std::string saved_schema_ser;
+	try {
+		schema = get_schema();
+		saved_schema_ser = schema->get_schema().serialise();
+	} catch (...) {
+		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
+	}
 
 	lock_database lk_db(this);
 
@@ -741,8 +750,34 @@ DatabaseHandler::dump_docs(int fd)
 	XXH32_reset(&xxhash, 0);
 
 	auto db_endpoints = endpoints.to_string();
-	serialise_string(fd, dump_docs_header);
-	XXH32_update(&xxhash, dump_docs_header.data(), dump_docs_header.size());
+	serialise_string(fd, dump_schema_header);
+	XXH32_update(&xxhash, dump_schema_header.data(), dump_schema_header.size());
+
+	serialise_string(fd, db_endpoints);
+	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+
+	serialise_string(fd, saved_schema_ser);
+	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+
+	uint32_t current_hash = XXH32_digest(&xxhash);
+	serialise_length(fd, current_hash);
+	L_INFO("Dump hash is 0x%08x", current_hash);
+}
+
+
+void
+DatabaseHandler::dump_documents(int fd)
+{
+	L_CALL("DatabaseHandler::dump_documents()");
+
+	lock_database lk_db(this);
+
+	XXH32_state_t xxhash;
+	XXH32_reset(&xxhash, 0);
+
+	auto db_endpoints = endpoints.to_string();
+	serialise_string(fd, dump_documents_header);
+	XXH32_update(&xxhash, dump_documents_header.data(), dump_documents_header.size());
 
 	serialise_string(fd, db_endpoints);
 	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
@@ -770,7 +805,7 @@ DatabaseHandler::restore(int fd)
 
 	auto header = unserialise_string(fd, buffer, off);
 	XXH32_update(&xxhash, header.data(), header.size());
-	if (header != dump_docs_header && header != dump_meta_header) {
+	if (header != dump_documents_header && header != dump_schema_header && header != dump_metadata_header) {
 		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
 	}
 
@@ -778,7 +813,7 @@ DatabaseHandler::restore(int fd)
 	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
 
 	// restore metadata (key, value)
-	if (header == dump_meta_header) {
+	if (header == dump_metadata_header) {
 		size_t i = 0;
 		do {
 			++i;
@@ -797,8 +832,25 @@ DatabaseHandler::restore(int fd)
 		} while (true);
 	}
 
+	// restore schema
+	if (header == dump_schema_header) {
+		auto saved_schema_ser = unserialise_string(fd, buffer, off);
+		XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+
+		lk_db.unlock();
+		schema = get_schema();
+		if (!saved_schema_ser.empty()) {
+			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
+			auto schema_begins = std::chrono::system_clock::now();
+			do {
+				schema->write(saved_schema, true);
+			} while (!update_schema(schema_begins));
+		}
+		lk_db.lock();
+	}
+
 	// restore documents (document_id, object, blob)
-	if (header == dump_docs_header) {
+	if (header == dump_documents_header) {
 		lk_db.unlock();
 		schema = get_schema();
 		lk_db.lock();

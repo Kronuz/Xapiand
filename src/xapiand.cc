@@ -304,8 +304,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		}
 
 		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
-		ValueArg<std::string> dump_meta("", "dump-meta", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> dump_docs("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> dump_metadata("", "dump-metadata", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> dump_schema("", "dump-schema", "Dump endpoint schema to stdout.", false, "", "endpoint", cmd);
+		ValueArg<std::string> dump_documents("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
 		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
 		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
 
@@ -528,14 +529,15 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 			}
 		}
 
-		opts.dump_meta = dump_meta.getValue();
-		opts.dump_docs = dump_docs.getValue();
+		opts.dump_metadata = dump_metadata.getValue();
+		opts.dump_schema = dump_schema.getValue();
+		opts.dump_documents = dump_documents.getValue();
 		auto out_filename = out.getValue();
 		opts.restore = restore.getValue();
 		auto in_filename = in.getValue();
-		if ((!opts.dump_meta.empty() || !opts.dump_docs.empty()) && !opts.restore.empty()) {
+		if ((!opts.dump_metadata.empty() || !opts.dump_schema.empty() || !opts.dump_documents.empty()) && !opts.restore.empty()) {
 			throw CmdLineParseException("Cannot dump and restore at the same time");
-		} else if (!opts.dump_meta.empty() || !opts.dump_docs.empty() || !opts.restore.empty()) {
+		} else if (!opts.dump_metadata.empty() || !opts.dump_schema.empty() || !opts.dump_documents.empty() || !opts.restore.empty()) {
 			if (!opts.restore.empty()) {
 				if (!out_filename.empty()) {
 					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
@@ -1019,7 +1021,7 @@ int server(opts_t &opts) {
 }
 
 
-int dump_meta(opts_t &opts) {
+int dump_metadata(opts_t &opts) {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
@@ -1028,10 +1030,10 @@ int dump_meta(opts_t &opts) {
 			usedir(opts.database.c_str(), opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump_meta));
+			Endpoints endpoints(Endpoint(opts.dump_metadata));
 			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()).c_str());
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
-			db_handler.dump_meta(fd);
+			db_handler.dump_metadata(fd);
 			L_INFO("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
@@ -1051,7 +1053,7 @@ int dump_meta(opts_t &opts) {
 }
 
 
-int dump_docs(opts_t &opts) {
+int dump_schema(opts_t &opts) {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
@@ -1060,10 +1062,42 @@ int dump_docs(opts_t &opts) {
 			usedir(opts.database.c_str(), opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump_docs));
+			Endpoints endpoints(Endpoint(opts.dump_schema));
+			L_INFO("Dumping schema database: %s", repr(endpoints.to_string()).c_str());
+			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+			db_handler.dump_schema(fd);
+			L_INFO("Dump is ready!");
+		} catch (...) {
+			if (fd != STDOUT_FILENO) {
+				io::close(fd);
+			}
+			throw;
+		}
+		if (fd != STDOUT_FILENO) {
+			io::close(fd);
+		}
+	} else {
+		exit_code = EX_OSFILE;
+		L_ERR("Cannot open file: %s", opts.filename.c_str());
+	}
+
+	return exit_code;
+}
+
+
+int dump_documents(opts_t &opts) {
+	int exit_code = EX_OK;
+
+	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	if (fd >= 0) {
+		try {
+			usedir(opts.database.c_str(), opts.solo);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			DatabaseHandler db_handler;
+			Endpoints endpoints(Endpoint(opts.dump_documents));
 			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
-			db_handler.dump_docs(fd);
+			db_handler.dump_documents(fd);
 			L_INFO("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
@@ -1170,10 +1204,12 @@ int main(int argc, char **argv) {
 	banner();
 
 	try {
-		if (!opts.dump_meta.empty()) {
-			exit_code = dump_meta(opts);
-		} else if (!opts.dump_docs.empty()) {
-			exit_code = dump_docs(opts);
+		if (!opts.dump_metadata.empty()) {
+			exit_code = dump_metadata(opts);
+		} else if (!opts.dump_schema.empty()) {
+			exit_code = dump_schema(opts);
+		} else if (!opts.dump_documents.empty()) {
+			exit_code = dump_documents(opts);
 		} else if (!opts.restore.empty()) {
 			exit_code = restore(opts);
 		} else {
