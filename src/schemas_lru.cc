@@ -111,7 +111,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 }
 
 
-std::pair<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>>
+std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
 SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 {
 	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
@@ -185,16 +185,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		if (foreign_path.empty()) {
 			// LOCAL new schema *and* LOCAL metadata schema.
 			if (schema_obj) {
-				Schema schema(schema_ptr);
+				Schema schema(schema_ptr, nullptr, "");
 				schema.update(*schema_obj);
 				auto aux_schema_ptr = schema.get_modified_schema();
 				if (aux_schema_ptr) {
 					std::unique_ptr<MsgPack> mut_schema;
 					schema.swap(mut_schema);
-					return std::make_pair(std::move(schema_ptr), std::move(mut_schema));
+					return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), "");
 				}
 			}
-			return std::make_pair(schema_ptr, nullptr);
+			return std::make_tuple(schema_ptr, nullptr, "");
 		}
 	} else {
 		// FOREIGN new schema, write the foreign link to metadata:
@@ -216,7 +216,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 
 	// FOREIGN Schema, get from the cache or use `get_shared()`
 	// to load from `foreign_path/foreign_id` endpoint:
-	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + foreign_id);
+	auto foreign = foreign_path + "/" + foreign_id;
+	const auto foreign_schema_hash = std::hash<std::string>{}(foreign);
 	atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -252,17 +253,17 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	}
 
 	if (schema_obj) {
-		Schema schema(schema_ptr);
+		Schema schema(schema_ptr, nullptr, "");
 		schema.update(*schema_obj);
 		auto aux_schema_ptr = schema.get_modified_schema();
 		if (aux_schema_ptr) {
 			std::unique_ptr<MsgPack> mut_schema;
 			schema.swap(mut_schema);
-			return std::make_pair(std::move(schema_ptr), std::move(mut_schema));
+			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), foreign);
 		}
 	}
 
-	return std::make_pair(std::move(schema_ptr), nullptr);
+	return std::make_tuple(std::move(schema_ptr), nullptr, foreign);
 }
 
 
@@ -382,7 +383,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	// FOREIGN Schema, get from the cache or use `get_shared()`
 	// to load from `foreign_path/foreign_id` endpoint:
-	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + foreign_id);
+	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
 	atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);

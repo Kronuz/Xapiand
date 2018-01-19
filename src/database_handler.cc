@@ -208,7 +208,7 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
 	auto s = XapiandManager::manager->schemas.get(this, obj);
-	return std::make_shared<Schema>(std::move(s.first), std::move(s.second));
+	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
 

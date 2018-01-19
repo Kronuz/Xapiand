@@ -480,6 +480,7 @@ class Schema {
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
+	std::string origin;
 
 	std::unordered_map<Xapian::valueno, std::set<std::string>> map_values;
 	specification_t specification;
@@ -881,7 +882,7 @@ class Schema {
 	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
 
 public:
-	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m = nullptr);
+	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, const std::string& o);
 
 	Schema() = delete;
 	Schema(Schema&& schema) = delete;
@@ -932,6 +933,10 @@ public:
 		} else {
 			return *schema;
 		}
+	}
+
+	const std::string& get_origin() const {
+		return origin;
 	}
 
 	/*
