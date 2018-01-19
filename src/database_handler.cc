@@ -736,13 +736,8 @@ DatabaseHandler::dump_schema(int fd)
 {
 	L_CALL("DatabaseHandler::dump_schema()");
 
-	std::string saved_schema_ser;
-	try {
-		schema = get_schema();
-		saved_schema_ser = schema->get_full().serialise();
-	} catch (...) {
-		L_WARNING("Cannot open schema for %s database", repr(endpoints.to_string()).c_str());
-	}
+	schema = get_schema();
+	auto saved_schema_ser = schema->get_full().serialise();
 
 	lock_database lk_db(this);
 
