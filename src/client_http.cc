@@ -1158,7 +1158,7 @@ HttpClient::write_schema_view(enum http_method method, Command)
 
 	MsgPack response;
 	status_code = HTTP_STATUS_OK;
-	response = db_handler.get_schema()->get_readable();
+	response = db_handler.get_schema()->get_full(true);
 
 	write_http_response(status_code, response);
 }
@@ -1383,7 +1383,7 @@ HttpClient::schema_view(enum http_method method, Command)
 
 	db_handler.reset(endpoints, DB_OPEN, method);
 
-	auto schema = db_handler.get_schema()->get_readable();
+	auto schema = db_handler.get_schema()->get_full(true);
 	if (!selector.empty()) {
 		schema = schema.select(selector);
 	}

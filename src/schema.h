@@ -841,7 +841,7 @@ class Schema {
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	static void readable(MsgPack& item_schema, bool at_root);
+	static void dispatch_readable(MsgPack& item_schema, bool at_root);
 
 	/*
 	 * Tranforms reserved words into a readable form.
@@ -940,9 +940,9 @@ public:
 	}
 
 	/*
-	 * Returns readable schema.
+	 * Returns full schema.
 	 */
-	const MsgPack get_readable() const;
+	const MsgPack get_full(bool readable = false) const;
 
 	/*
 	 * Set default specification in namespace FIELD_ID_NAME

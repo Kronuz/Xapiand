@@ -6847,20 +6847,26 @@ Schema::set_default_spc_id(MsgPack& properties)
 
 
 const MsgPack
-Schema::get_readable() const
+Schema::get_full(bool readable) const
 {
-	L_CALL("Schema::get_readable()");
+	L_CALL("Schema::get_full(%s)", readable ? "true" : "false");
 
-	auto schema_readable = get_schema();
-	readable(schema_readable, true);
-	return schema_readable;
+	auto full_schema = get_schema();
+	if (readable) {
+		dispatch_readable(full_schema, true);
+	}
+	if (!origin.empty()) {
+		full_schema[RESERVED_TYPE] = "foreign/object";
+		full_schema[RESERVED_ENDPOINT] = origin;
+	}
+	return full_schema;
 }
 
 
 void
-Schema::readable(MsgPack& item_schema, bool at_root)
+Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 {
-	L_CALL("Schema::readable(%s, %s)", repr(item_schema.to_string()).c_str(), at_root ? "true" : "false");
+	L_CALL("Schema::dispatch_readable(%s, %s)", repr(item_schema.to_string()).c_str(), at_root ? "true" : "false");
 
 	// Change this item of schema in readable form.
 	static const auto drit_e = map_get_readable.end();
@@ -6871,7 +6877,7 @@ Schema::readable(MsgPack& item_schema, bool at_root)
 			if (is_valid(str_key)) {
 				auto& value = it.value();
 				if (value.is_map()) {
-					readable(value, false);
+					dispatch_readable(value, false);
 				}
 			} else if (map_dispatch_set_default_spc.count(str_key)) {
 				if (at_root) {
@@ -6880,7 +6886,7 @@ Schema::readable(MsgPack& item_schema, bool at_root)
 				}
 				auto& value = it.value();
 				if (value.is_map()) {
-					readable(value, false);
+					dispatch_readable(value, false);
 				}
 			}
 		} else {
@@ -6966,7 +6972,7 @@ Schema::readable_script(MsgPack& prop_script, MsgPack&)
 {
 	L_CALL("Schema::readable_script(%s)", repr(prop_script.to_string()).c_str());
 
-	readable(prop_script, 0);
+	dispatch_readable(prop_script, 0);
 	return true;
 }
 
@@ -7000,7 +7006,7 @@ Schema::to_string(bool prettify) const
 {
 	L_CALL("Schema::to_string(%d)", prettify);
 
-	return get_readable().to_string(prettify);
+	return get_full(true).to_string(prettify);
 }
 
 

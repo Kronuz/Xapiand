@@ -163,7 +163,7 @@ AggregationMatchSpy::unserialise(const std::string& s, const Xapian::Registry&) 
 		}
 
 		auto it = data.begin();
-		return new AggregationMatchSpy(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it))));
+		return new AggregationMatchSpy(MsgPack::unserialise(*it), std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::unserialise(*++it)), nullptr, ""));
 	} catch (const SerialisationError&) {
 		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
 	}
