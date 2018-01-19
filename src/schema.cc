@@ -2055,7 +2055,9 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
 	}
 }
@@ -2169,7 +2171,9 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 			set_type_to_object();
 		}
 	} else {
@@ -2523,7 +2527,9 @@ Schema::update_item_value()
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
 	}
 }
@@ -2563,7 +2569,9 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 			set_type_to_object();
 		}
 	} else {
@@ -2907,7 +2915,9 @@ Schema::write_item_value(MsgPack*& mut_properties)
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
 	}
 }
@@ -2947,7 +2957,9 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 			set_type_to_object();
 		}
 	} else {
