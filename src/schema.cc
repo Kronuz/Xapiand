@@ -2132,6 +2132,19 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 {
 	L_CALL("Schema::index_item_value(%s, <doc>, %s, <FieldVector>)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str());
 
+	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		if (!specification.endpoint.empty() &&
+			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+	}
+
 	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
 
 	if (val) {
@@ -2523,6 +2536,19 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 
 	const auto spc_start = specification;
 
+	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		if (!specification.endpoint.empty() &&
+			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+	}
+
 	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
@@ -2531,7 +2557,7 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 		}
 	}
 
-	if (specification.flags.is_namespace && fields.size()) {
+	if (specification.flags.is_namespace && !fields.empty()) {
 		specification = std::move(spc_start);
 		return;
 	}
@@ -2894,6 +2920,19 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 
 	const auto spc_start = specification;
 
+	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		if (!specification.endpoint.empty() &&
+			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
+			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+	}
+
 	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
@@ -2902,7 +2941,7 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 		}
 	}
 
-	if (specification.flags.is_namespace && fields.size()) {
+	if (specification.flags.is_namespace && !fields.empty()) {
 		specification = std::move(spc_start);
 		return;
 	}
