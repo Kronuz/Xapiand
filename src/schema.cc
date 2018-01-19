@@ -6197,6 +6197,11 @@ Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoi
 		if (_endpoint.empty()) {
 			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
 		}
+		std::string _path, _id;
+		split_path_id(_endpoint, _path, _id);
+		if (_path.empty() || _id.empty()) {
+			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
+		}
 		if (specification.endpoint != _endpoint) {
 			if (
 				specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN && (
