@@ -1378,8 +1378,8 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 					if (!foreign_value.is_string()) {
 						THROW(ErrorType, "%sschema must be string because is foreign", prefix);
 					}
-					if (object.size() != 2) { // '_type' and '_value'
-						THROW(ErrorType, "%sschema is a foreign type and as such it cannot have extra fields");
+					if (object.size() != 2) { // '_type' and '_endpoint'
+						THROW(ErrorType, "%sschema is a foreign type and as such it cannot have extra fields", prefix);
 					}
 					return std::make_pair(&foreign_value, nullptr);
 				} catch (const std::out_of_range&) {
