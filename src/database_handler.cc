@@ -628,14 +628,27 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 void
 DatabaseHandler::write_schema(const MsgPack& obj)
 {
-	L_CALL("DatabaseHandler::write_schema(<obj>)");
+	L_CALL("DatabaseHandler::write_schema(%s)", repr(obj.to_string()).c_str());
 
 	auto schema_begins = std::chrono::system_clock::now();
+	bool was_foreign_obj;
 	do {
 		schema = get_schema();
-		schema->write(obj, method == HTTP_PUT);
-		L_INDEX("Schema to write: %s", repr(schema->to_string()).c_str());
+		was_foreign_obj = schema->write(obj, method == HTTP_PUT);
+		L_INDEX("Schema to write: %s %s", repr(schema->to_string()).c_str(), was_foreign_obj ? "(foreign)" : "(local)");
 	} while (!update_schema(schema_begins));
+
+	if (was_foreign_obj) {
+		MsgPack o = obj;
+		o[RESERVED_TYPE] = "object";
+		o.erase(RESERVED_ENDPOINT);
+		do {
+			schema = get_schema();
+			was_foreign_obj = schema->write(o, method == HTTP_PUT);
+			assert(!was_foreign_obj);
+			L_INDEX("Schema to write: %s (local)", repr(schema->to_string()).c_str());
+		} while (!update_schema(schema_begins));
+	}
 }
 
 

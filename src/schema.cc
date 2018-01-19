@@ -1378,10 +1378,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 					if (!foreign_value.is_string()) {
 						THROW(ErrorType, "%sschema must be string because is foreign", prefix);
 					}
-					if (object.size() != 2) { // '_type' and '_endpoint'
-						THROW(ErrorType, "%sschema is a foreign type and as such it cannot have extra fields", prefix);
-					}
-					return std::make_pair(&foreign_value, nullptr);
+					return std::make_pair(&foreign_value, &object);
 				} catch (const std::out_of_range&) {
 					THROW(ErrorType, "%sschema must be a string to be foreign", prefix);
 				}
@@ -2209,10 +2206,10 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 //  _____ _____ _____ _____ _____ _____ _____ _____
 // |_____|_____|_____|_____|_____|_____|_____|_____|
 
-void
+bool
 Schema::update(const MsgPack& object)
 {
-	L_CALL("Schema::update(%s)", repr(object.to_string()).c_str());
+	L_CALL("Schema::update(%s, %s)", repr(object.to_string()).c_str());
 
 	try {
 		std::pair<const MsgPack*, const MsgPack*> checked;
@@ -2223,7 +2220,8 @@ Schema::update(const MsgPack& object)
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, *checked.first },
 			}));
-			return;
+
+			return checked.second ? checked.second->size() != 2 : false;
 		}
 		const auto& schema_obj = checked.second ? *checked.second : object;
 
@@ -2261,6 +2259,8 @@ Schema::update(const MsgPack& object)
 				}
 			}
 		}
+
+		return false;
 	} catch (...) {
 		mut_schema.reset();
 		throw;
@@ -2598,10 +2598,10 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 //  _____ _____ _____ _____ _____ _____ _____ _____
 // |_____|_____|_____|_____|_____|_____|_____|_____|
 
-void
+bool
 Schema::write(const MsgPack& object, bool replace)
 {
-	L_CALL("Schema::write(%s, %d)", repr(object.to_string()).c_str(), replace);
+	L_CALL("Schema::write(%s, %s, %s)", repr(object.to_string()).c_str(), replace ? "true" : "false");
 
 	try {
 		std::pair<const MsgPack*, const MsgPack*> checked;
@@ -2612,7 +2612,8 @@ Schema::write(const MsgPack& object, bool replace)
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, *checked.first },
 			}));
-			return;
+
+			return checked.second ? checked.second->size() != 2 : false;
 		}
 		const auto& schema_obj = checked.second ? *checked.second : object;
 
@@ -2651,6 +2652,8 @@ Schema::write(const MsgPack& object, bool replace)
 				}
 			}
 		}
+
+		return false;
 	} catch (...) {
 		mut_schema.reset();
 		throw;
@@ -5870,7 +5873,6 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
-
 	if (!specification.endpoint.empty()) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
 			THROW(ClientError, "Data inconsistency, %s must be foreign", repr(prop_name).c_str());

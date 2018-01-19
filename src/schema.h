@@ -920,8 +920,8 @@ public:
 	/*
 	 * Function to update the schema according to obj_schema.
 	 */
-	void update(const MsgPack& obj_schema);
-	void write(const MsgPack& obj_schema, bool replace);
+	bool update(const MsgPack& obj_schema);
+	bool write(const MsgPack& obj_schema, bool replace);
 
 	/*
 	 * Returns underlying msgpack schema.
