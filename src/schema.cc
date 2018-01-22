@@ -1414,9 +1414,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	try {
 		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
 		try {
-			const auto& sep_types = required_spc_t::get_types(schema_field.at(RESERVED_TYPE).str());
+			auto type_name = schema_field.at(RESERVED_TYPE).str();
+			const auto& sep_types = required_spc_t::get_types(type_name);
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%s'%s' has an unsupported type", prefix, SCHEMA_FIELD_NAME);
+				THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
 			}
 		} catch (const std::out_of_range&) {
 			if (!schema_field.is_map()) {
