@@ -1574,12 +1574,13 @@ Schema::restart_namespace_specification()
 }
 
 
+template <typename T>
 inline void
-Schema::feed_subproperties(const MsgPack& properties, const std::string& meta_name)
+Schema::feed_subproperties(T& properties, const std::string& meta_name)
 {
-	L_CALL("Schema::feed_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(meta_name).c_str());
+	L_CALL("Schema::feed_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
-	auto& meta_properties = properties.at(meta_name);
+	properties = &properties->at(meta_name);
 	specification.flags.field_found = true;
 	static const auto stit_e = map_stem_language.end();
 	const auto stit = map_stem_language.find(meta_name);
@@ -1594,7 +1595,7 @@ Schema::feed_subproperties(const MsgPack& properties, const std::string& meta_na
 		specification.full_meta_name.append(1, DB_OFFSPRING_UNION).append(meta_name);
 	}
 
-	dispatch_feed_properties(meta_properties);
+	dispatch_feed_properties(*properties);
 }
 
 
@@ -1720,7 +1721,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*properties, field_name);
+				feed_subproperties(properties, field_name);
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
@@ -1729,7 +1730,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*properties, specification.meta_name);
+						feed_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
@@ -1775,7 +1776,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		}
 		restart_specification();
 		try {
-			feed_subproperties(*properties, field_name);
+			feed_subproperties(properties, field_name);
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
@@ -1785,7 +1786,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				try {
-					feed_subproperties(*properties, specification.meta_name);
+					feed_subproperties(properties, specification.meta_name);
 					dispatch_process_properties(object, fields);
 					update_prefixes();
 					if (specification.flags.store) {
@@ -1838,7 +1839,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*properties, field_name);
+				feed_subproperties(properties, field_name);
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
@@ -1847,7 +1848,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*properties, specification.meta_name);
+						feed_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
@@ -2297,13 +2298,13 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*properties, field_name);
+				feed_subproperties(properties, field_name);
 				update_prefixes();
 			} catch (const std::out_of_range&) {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*properties, specification.meta_name);
+						feed_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }
@@ -2337,14 +2338,14 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 		}
 		restart_specification();
 		try {
-			feed_subproperties(*properties, field_name);
+			feed_subproperties(properties, field_name);
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 		} catch (const std::out_of_range&) {
 			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				try {
-					feed_subproperties(*properties, specification.meta_name);
+					feed_subproperties(properties, specification.meta_name);
 					dispatch_process_properties(object, fields);
 					update_prefixes();
 					return *properties;
@@ -2384,13 +2385,13 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*properties, field_name);
+				feed_subproperties(properties, field_name);
 				update_prefixes();
 			} catch (const std::out_of_range&) {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*properties, specification.meta_name);
+						feed_subproperties(properties, specification.meta_name);
 						update_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }
@@ -2690,13 +2691,13 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*mut_properties, field_name);
+				feed_subproperties(mut_properties, field_name);
 				update_prefixes();
 			} catch (const std::out_of_range&) {
 				verify_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*mut_properties, specification.meta_name);
+						feed_subproperties(mut_properties, specification.meta_name);
 						update_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }
@@ -2729,14 +2730,14 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 		}
 		restart_specification();
 		try {
-			feed_subproperties(*mut_properties, field_name);
+			feed_subproperties(mut_properties, field_name);
 			dispatch_write_properties(*mut_properties, object, fields);
 			update_prefixes();
 		} catch (const std::out_of_range&) {
 			verify_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				try {
-					feed_subproperties(*mut_properties, specification.meta_name);
+					feed_subproperties(mut_properties, specification.meta_name);
 					dispatch_write_properties(*mut_properties, object, fields);
 					update_prefixes();
 					return *mut_properties;
@@ -2775,13 +2776,13 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 			}
 			restart_specification();
 			try {
-				feed_subproperties(*mut_properties, field_name);
+				feed_subproperties(mut_properties, field_name);
 				update_prefixes();
 			} catch (const std::out_of_range&) {
 				verify_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					try {
-						feed_subproperties(*mut_properties, specification.meta_name);
+						feed_subproperties(mut_properties, specification.meta_name);
 						update_prefixes();
 						continue;
 					} catch (const std::out_of_range&) { }

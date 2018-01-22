@@ -548,7 +548,8 @@ class Schema {
 	 * Get the properties of meta name of schema.
 	 */
 
-	void feed_subproperties(const MsgPack& properties, const std::string& meta_name);
+	template <typename T>
+	void feed_subproperties(T& properties, const std::string& meta_name);
 
 	/*
 	 * Main functions to index objects and arrays
