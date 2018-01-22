@@ -1439,15 +1439,8 @@ HttpClient::search_view(enum http_method method, Command)
 	endpoints_maker(1s);
 	query_field_maker(id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
 
-	auto did = to_docid(id);
-
-	bool chunked;
-	if (id.empty()) {
-		chunked = true;
-	} else {
-		query_field->query.push_back(std::string(ID_FIELD_NAME) + ":" + escape(id));
-		chunked = isRange(id);
-	}
+	bool single = !id.empty() && !isRange(id);
+	Xapian::docid did = 0;
 
 	MSet mset;
 	std::vector<std::string> suggestions;
@@ -1479,7 +1472,11 @@ HttpClient::search_view(enum http_method method, Command)
 
 		db_handler.reopen();  // Ensure the database is current.
 
-		if (!did) {
+		if (single) {
+			try {
+				did = db_handler.get_docid(id);
+			} catch (const DocNotFoundError&) { }
+		} else {
 			if (body.empty()) {
 				mset = db_handler.get_mset(*query_field, nullptr, nullptr, suggestions);
 			} else {
@@ -1492,7 +1489,7 @@ HttpClient::search_view(enum http_method method, Command)
 	} catch (const CheckoutError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
-		if (!chunked) {
+		if (single) {
 			throw;
 		}
 	}
@@ -1508,7 +1505,7 @@ HttpClient::search_view(enum http_method method, Command)
 	int rc = 0;
 	auto total_count = did ? 1 : mset.size();
 
-	if (!chunked && !total_count) {
+	if (single && !total_count) {
 		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
@@ -1542,10 +1539,10 @@ HttpClient::search_view(enum http_method method, Command)
 		// Get default content type to return.
 		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
 
-		if (chunked) {
+		if (!single) {
 			MsgPack basic_query({
 				{ RESPONSE_TOTAL_COUNT, total_count},
-				{ RESPONSE_MATCHES_ESTIMATED, did ? 1 : mset.get_matches_estimated()},
+				{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
 				{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
 			});
 			MsgPack basic_response;
@@ -1614,7 +1611,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			MsgPack obj;
-			if (!chunked) {
+			if (single) {
 				// Figure out the document's ContentType.
 				std::string ct_type_str = get_data_content_type(data);
 
@@ -1677,7 +1674,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 			// Detailed info about the document:
 			obj[RESPONSE_DOCID] = document.get_docid();
-			if (!did && chunked) {
+			if (!single) {
 				obj[RESPONSE_RANK] = m.get_rank();
 				obj[RESPONSE_WEIGHT] = m.get_weight();
 				obj[RESPONSE_PERCENT] = m.get_percent();
@@ -1691,7 +1688,9 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			if (Logging::log_level > LOG_DEBUG) {
-				if (chunked) {
+				if (single) {
+					response_body += obj.to_string(4);
+				} else {
 					if (rc == 0) {
 						response_body += l_first_chunk;
 					}
@@ -1699,13 +1698,22 @@ HttpClient::search_view(enum http_method method, Command)
 						response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 					}
 					l_buffer = obj.to_string(4);
-				} else {
-					response_body += obj.to_string(4);
 				}
 			}
 
 			auto result = serialize_response(obj, ct_type, indent);
-			if (chunked) {
+			if (single) {
+				if (type_encoding != Encoding::none) {
+					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
+					if (!encoded.empty() && encoded.size() <= result.first.size()) {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
+					} else {
+						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+					}
+				} else {
+					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
+				}
+			} else {
 				if (rc == 0) {
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
@@ -1735,24 +1743,13 @@ HttpClient::search_view(enum http_method method, Command)
 					}
 				}
 				buffer = result.first;
-			} else {
-				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
-					if (!encoded.empty() && encoded.size() <= result.first.size()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
-					} else {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
-					}
-				} else {
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second));
-				}
 			}
 
-			if (did) break;
+			if (single) break;
 		}
 
 		if (Logging::log_level > LOG_DEBUG) {
-			if (chunked) {
+			if (!single) {
 				if (rc == 0) {
 					response_body += l_first_chunk;
 				}
@@ -1765,7 +1762,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 		}
 
-		if (chunked) {
+		if (!single) {
 			if (rc == 0) {
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
