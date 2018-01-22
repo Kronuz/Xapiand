@@ -132,16 +132,16 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 // ::log <- (cleanup, info, stacked, delay, async, priority, exc, file, line, suffix, prefix, format, args)
 #define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
 
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { ::log(false, true, true, 0ms, true, 0, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args); }
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { ::log(false, true, true, 0ms, true, -LOG_INFO, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args); }
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
 #define L_WARNING(args...) LOG(true, LOG_WARNING, WARNING_COL, args)
 #define L_ERR(args...) LOG(true, LOG_ERR, ERR_COL, args)
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
-#define L_ALERT(args...) LOG(true, -LOG_ALERT, ALERT_COL, args)
-#define L_EMERG(args...) LOG(true, -LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) ::log(false, true, true, 0ms, true, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define L_ALERT(args...) LOG(true, LOG_ALERT, ALERT_COL, args)
+#define L_EMERG(args...) LOG(true, LOG_EMERG, EMERG_COL, args)
+#define L_EXC(args...) ::log(false, true, true, 0ms, true, LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
 #define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
