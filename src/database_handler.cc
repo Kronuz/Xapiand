@@ -627,7 +627,7 @@ DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPac
 
 
 void
-DatabaseHandler::write_schema(const MsgPack& obj)
+DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 {
 	L_CALL("DatabaseHandler::write_schema(%s)", repr(obj.to_string()).c_str());
 
@@ -635,7 +635,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 	bool was_foreign_obj;
 	do {
 		schema = get_schema();
-		was_foreign_obj = schema->write(obj, method == HTTP_PUT);
+		was_foreign_obj = schema->write(obj, replace);
 		L_INDEX("Schema to write: %s %s", repr(schema->to_string()).c_str(), was_foreign_obj ? "(foreign)" : "(local)");
 	} while (!update_schema(schema_begins));
 
@@ -645,8 +645,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 		o.erase(RESERVED_ENDPOINT);
 		do {
 			schema = get_schema();
-			was_foreign_obj = schema->write(o, method == HTTP_PUT);
-			assert(!was_foreign_obj);
+			was_foreign_obj = schema->write(o, replace);
 			L_INDEX("Schema to write: %s (local)", repr(schema->to_string()).c_str());
 		} while (!update_schema(schema_begins));
 	}
@@ -836,10 +835,7 @@ DatabaseHandler::restore(int fd)
 		schema = get_schema();
 		if (!saved_schema_ser.empty()) {
 			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
-			auto schema_begins = std::chrono::system_clock::now();
-			do {
-				schema->write(saved_schema, true);
-			} while (!update_schema(schema_begins));
+			write_schema(saved_schema, true);
 		}
 		lk_db.lock();
 	}

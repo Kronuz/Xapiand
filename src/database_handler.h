@@ -147,7 +147,7 @@ public:
 	DataType patch(const std::string& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
 	DataType merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 
-	void write_schema(const MsgPack& obj);
+	void write_schema(const MsgPack& obj, bool replace);
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);

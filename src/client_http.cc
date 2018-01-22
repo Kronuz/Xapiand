@@ -1152,7 +1152,7 @@ HttpClient::write_schema_view(enum http_method method, Command)
 	operation_begins = std::chrono::system_clock::now();
 
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.write_schema(get_decoded_body().second);
+	db_handler.write_schema(get_decoded_body().second, method == HTTP_PUT);
 
 	operation_ends = std::chrono::system_clock::now();
 
