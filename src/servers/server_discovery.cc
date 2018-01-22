@@ -390,7 +390,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 	int fd = watcher.fd;
 
 	L_CALL("DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_INFO_HOOK_LOG("DiscoveryServer::io_accept_cb", "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_DEBUG_HOOK("DiscoveryServer::io_accept_cb", "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
 	if (EV_ERROR & revents) {
 		L_EV("ERROR: got invalid discovery event {fd:%d}: %s", fd, strerror(errno));

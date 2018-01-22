@@ -322,7 +322,7 @@ Scheduler::run()
 		// Sleep until wakeup time arrives or someone adding a task wakes us up;
 		// make sure we first lock mutex so there cannot be race condition between
 		// the time we load the next_wakeup_time and we actually start waiting:
-		L_INFO_HOOK_LOG("Scheduler::LOOP", "Scheduler::" + STEEL_BLUE + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+		L_DEBUG_HOOK("Scheduler::LOOP", "Scheduler::" + STEEL_BLUE + "LOOP" + NO_COL + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
 		lk.lock();
 		next_wakeup_time = atom_next_wakeup_time.load();
 		auto next_wakeup_time_point = time_point_from_ullong(next_wakeup_time);

@@ -129,7 +129,10 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 
 #define L_NOTHING(args...)
 
+// ::log <- (cleanup, info, stacked, delay, async, priority, exc, file, line, suffix, prefix, format, args)
 #define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __FILE__, __LINE__, NO_COL, color, args)
+
+#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { ::log(false, true, true, 0ms, true, 0, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args); }
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -155,9 +158,8 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
-#define L_INFO_HOOK L_NOTHING
+#define L_DEBUG_HOOK L_NOTHING
 #else
 #define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
-#define L_INFO_HOOK(hook, args...) if ((logger_info_hook.load() & xxh64::hash(hook)) == xxh64::hash(hook)) { L_PRINT(args); }
+#define L_DEBUG_HOOK L_INFO_HOOK
 #endif
-#define L_INFO_HOOK_LOG(hook, args...) L_INFO_HOOK(hook, args)

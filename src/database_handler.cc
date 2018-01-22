@@ -822,7 +822,7 @@ DatabaseHandler::restore(int fd)
 				continue;
 			}
 
-			L_INFO_HOOK_LOG("DatabaseHandler::restore", "Metadata %s = %s", key.c_str(), value.c_str());
+			L_INFO_HOOK("DatabaseHandler::restore", "Metadata %s = %s", key.c_str(), value.c_str());
 			database->set_metadata(key, value, false, false);
 		} while (true);
 	}
@@ -836,7 +836,7 @@ DatabaseHandler::restore(int fd)
 		schema = get_schema();
 		if (!saved_schema_ser.empty()) {
 			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
-			L_INFO_HOOK_LOG("DatabaseHandler::restore", "Schema: %s", saved_schema.to_string(4).c_str());
+			L_INFO_HOOK("DatabaseHandler::restore", "Schema: %s", saved_schema.to_string(4).c_str());
 			write_schema(saved_schema, true);
 		}
 		lk_db.lock();
@@ -931,7 +931,7 @@ DatabaseHandler::restore(int fd)
 			doc.add_value(spc_id.slot, term_id);
 
 			// Index document.
-			L_INFO_HOOK_LOG("DatabaseHandler::restore", "Document: %s", repr(document_id.to_string()).c_str());
+			L_INFO_HOOK("DatabaseHandler::restore", "Document: %s", repr(document_id.to_string()).c_str());
 			database->replace_document_term(prefixed_term_id, doc, false, false);
 		} while (true);
 

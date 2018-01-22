@@ -162,7 +162,6 @@ static const std::vector<std::string> vec_signame = []() {
 }();
 
 
-#ifndef NDEBUG
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
@@ -172,7 +171,6 @@ void sig_info(int) {
 		write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + NO_COL + "\n");
 	}
 }
-#endif
 
 
 void sig_handler(int sig) {
@@ -183,7 +181,7 @@ void sig_handler(int sig) {
 		close(STDIN_FILENO);
 	}
 
-#if !defined(NDEBUG) && (defined(__APPLE__) || defined(__FreeBSD__))
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	if (sig == SIGINFO) {
 		sig_info(sig);
 	}

@@ -260,7 +260,7 @@ public:
 			auto new_first_key = get_inc_base_key(ctx.cur_key);
 			auto cur = get_slot(ctx.cur_key);
 
-			L_INFO_HOOK_LOG("StashSlots::LOOP", "StashSlots::" + CYAN + "LOOP" + NO_COL + " - "+ ctx._col() + "_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
+			L_DEBUG_HOOK("StashSlots::LOOP", "StashSlots::" + CYAN + "LOOP" + NO_COL + " - "+ ctx._col() + "_Mod:%llu, current_key:%llu, cur_key:%llu, cur:%llu, final_key:%llu, atom_first_key:%llu, atom_last_key:%llu, op:%s", _Mod, ctx.current_key, ctx.cur_key, cur, final_key, ctx.atom_first_key.load(), ctx.atom_last_key.load(), ctx._op());
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
 			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {
@@ -400,7 +400,7 @@ public:
 		while (loop) {
 			auto new_cur = cur + 1;
 
-			L_INFO_HOOK_LOG("StashValues::LOOP", "StashValues::" + LIGHT_SKY_BLUE + "LOOP" + NO_COL + " - " + ctx._col() + "cur:%llu, cur:%llu, atom_end:%llu, op:%s", cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
+			L_DEBUG_HOOK("StashValues::LOOP", "StashValues::" + LIGHT_SKY_BLUE + "LOOP" + NO_COL + " - " + ctx._col() + "cur:%llu, cur:%llu, atom_end:%llu, op:%s", cur, (ctx.op == StashContext::Operation::clean) ? clean_cur : walk_cur, atom_end.load(), ctx._op());
 
 			std::atomic<_Tp*>* ptr_atom_ptr = nullptr;
 			switch (Stash_T::get(&ptr_atom_ptr, cur, false)) {

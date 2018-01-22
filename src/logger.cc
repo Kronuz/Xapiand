@@ -331,7 +331,7 @@ Logging::join()
 void
 Logging::run()
 {
-	L_INFO_HOOK_LOG("Logging::run", "Logging::run()");
+	L_DEBUG_HOOK("Logging::run", "Logging::run()");
 
 	auto msg = str_start;
 	if (async) {
