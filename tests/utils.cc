@@ -23,78 +23,7 @@
 #include "utils.h"
 
 
-bool write_file_contents(const std::string& filename, const std::string& contents) {
-	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
-	if (of.bad()) {
-		return false;
-	}
-	of.write(contents.data(), contents.size());
-	return true;
-}
-
-
-bool read_file_contents(const std::string& filename, std::string* contents) {
-	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
-	if (in.bad()) {
-		return false;
-	}
-
-	in.seekg(0, std::ios::end);
-	contents->resize(static_cast<size_t>(in.tellg()));
-	in.seekg(0, std::ios::beg);
-	in.read(&(*contents)[0], contents->size());
-	in.close();
-	return true;
-}
-
-
-DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type)
-	: name_database(db_name)
-{
-	// Delete database to create new db.
-	delete_files(name_database);
-	create_manager();
-
-	endpoints.add(create_endpoint(name_database));
-
-	db_handler.reset(endpoints, flags, HTTP_GET);
-
-	// Index documents in the database.
-	size_t i = 1;
-	for (const auto& doc : docs) {
-		std::string buffer;
-		try {
-			if (!read_file_contents(doc, &buffer)) {
-				destroy();
-				L_ERR("Can not read the file %s", doc.c_str());
-			} else if (db_handler.index(std::to_string(i++), false, get_body(buffer, ct_type).second, true, ct_type_t(ct_type)).first == 0) {
-				destroy();
-				THROW(Error, "File %s can not index", doc.c_str());
-			}
-		} catch (const std::exception& e) {
-			destroy();
-			THROW(Error, "File %s can not index [%s]", doc.c_str(), e.what());
-		}
-	}
-}
-
-
-DB_Test::~DB_Test()
-{
-	destroy();
-}
-
-
-void
-DB_Test::destroy()
-{
-	XapiandManager::manager.reset();
-	delete_files(name_database);
-}
-
-
-void
-DB_Test::create_manager()
+Initializer::Initializer()
 {
 	if (!XapiandManager::manager) {
 		opts_t opts = {
@@ -143,6 +72,75 @@ DB_Test::create_manager()
 		ev::default_loop default_loop(opts.ev_flags);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
 	}
+}
+
+
+bool write_file_contents(const std::string& filename, const std::string& contents) {
+	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
+	if (of.bad()) {
+		return false;
+	}
+	of.write(contents.data(), contents.size());
+	return true;
+}
+
+
+bool read_file_contents(const std::string& filename, std::string* contents) {
+	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
+	if (in.bad()) {
+		return false;
+	}
+
+	in.seekg(0, std::ios::end);
+	contents->resize(static_cast<size_t>(in.tellg()));
+	in.seekg(0, std::ios::beg);
+	in.read(&(*contents)[0], contents->size());
+	in.close();
+	return true;
+}
+
+
+DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type)
+	: name_database(db_name)
+{
+	// Delete database to create new db.
+	delete_files(name_database);
+
+	endpoints.add(create_endpoint(name_database));
+
+	db_handler.reset(endpoints, flags, HTTP_GET);
+
+	// Index documents in the database.
+	size_t i = 1;
+	for (const auto& doc : docs) {
+		std::string buffer;
+		try {
+			if (!read_file_contents(doc, &buffer)) {
+				destroy();
+				L_ERR("Can not read the file %s", doc.c_str());
+			} else if (db_handler.index(std::to_string(i++), false, get_body(buffer, ct_type).second, true, ct_type_t(ct_type)).first == 0) {
+				destroy();
+				THROW(Error, "File %s can not index", doc.c_str());
+			}
+		} catch (const std::exception& e) {
+			destroy();
+			THROW(Error, "File %s can not index [%s]", doc.c_str(), e.what());
+		}
+	}
+}
+
+
+DB_Test::~DB_Test()
+{
+	destroy();
+}
+
+
+void
+DB_Test::destroy()
+{
+	XapiandManager::manager.reset();
+	delete_files(name_database);
 }
 
 

@@ -30,6 +30,12 @@
 
 #include "../src/utils.h"
 
+#include "../src/manager.h"
+struct Initializer {
+	Initializer();
+};
+static const Initializer initializer;
+
 
 #ifndef TESTING_LOGS
 #  define TESTING_LOGS 1
@@ -91,8 +97,6 @@ bool read_file_contents(const std::string& filename, std::string* contents);
 
 #if (TESTING_DATABASE == 1) || (TESTING_ENDPOINTS == 1)
 #include "../src/database_handler.h"
-#include "../src/manager.h"
-
 
 /*
  *	The database used in the test is local
@@ -108,7 +112,6 @@ struct DB_Test {
 	~DB_Test();
 
 	void destroy();
-	void create_manager();
 	std::pair<std::string, MsgPack> get_body(const std::string& body, const std::string& ct_type);
 };
 #endif
