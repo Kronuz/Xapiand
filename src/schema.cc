@@ -1244,37 +1244,37 @@ specification_t::to_obj() const
 {
 	MsgPack obj;
 
-	auto& obj_position = obj[RESERVED_POSITION] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_position = obj["position"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : position) {
 		obj_position.append(p);
 	}
 
-	auto& obj_weight = obj[RESERVED_WEIGHT] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_weight = obj["weight"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& w : weight) {
 		obj_weight.append(w);
 	}
 
-	auto& obj_spelling = obj[RESERVED_SPELLING] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_spelling = obj["spelling"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& s : spelling) {
 		obj_spelling.append(s ? true : false);
 	}
 
-	auto& obj_positions = obj[RESERVED_POSITIONS] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_positions = obj["positions"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : positions) {
 		obj_positions.append(p ? true : false);
 	}
 
-	obj[RESERVED_LANGUAGE] = language;
-	obj[RESERVED_STOP_STRATEGY] = get_str_stop_strategy(stop_strategy);
-	obj[RESERVED_STEM_STRATEGY] = get_str_stem_strategy(stem_strategy);
-	obj[RESERVED_STEM_LANGUAGE] = stem_language;
+	obj["language"] = language;
+	obj["stop_strategy"] = get_str_stop_strategy(stop_strategy);
+	obj["stem_strategy"] = get_str_stem_strategy(stem_strategy);
+	obj["stem_language"] = stem_language;
 
-	auto& obj_accuracy = obj[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& a : accuracy) {
 		obj_accuracy.append(a);
 	}
 
-	auto& obj_acc_prefix = obj[RESERVED_ACC_PREFIX] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& a : acc_prefix) {
 		obj_acc_prefix.append(repr(a));
 	}
@@ -1293,41 +1293,41 @@ specification_t::to_obj() const
 	}
 
 	obj["value_rec"] = value_rec ? value_rec->to_string() : nullptr;
-	obj[RESERVED_VALUE] = value ? value->to_string() : nullptr;
+	obj["value"] = value ? value->to_string() : nullptr;
 	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : nullptr;
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	obj[RESERVED_SCRIPT] = script ? script->to_string() : nullptr;
+	obj["script"] = script ? script->to_string() : nullptr;
 #endif
-	obj[RESERVED_ENDPOINT] = endpoint;
+	obj["endpoint"] = endpoint;
 
-	obj[RESERVED_SLOT] = slot;
-	obj[RESERVED_TYPE] = get_str_type(sep_types);
-	obj[RESERVED_PREFIX] = prefix.to_string();
+	obj["slot"] = slot;
+	obj["type"] = get_str_type(sep_types);
+	obj["prefix"] = prefix.to_string();
 	obj["local_prefix"] = local_prefix.to_string();
-	obj[RESERVED_INDEX] = get_str_index(index);
-	obj[RESERVED_INDEX_UUID_FIELD] = get_str_index_uuid_field(index_uuid_field);
-	obj[RESERVED_ERROR] = error;
+	obj["index"] = get_str_index(index);
+	obj["index_uuid_field"] = get_str_index_uuid_field(index_uuid_field);
+	obj["error"] = error;
 
 	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
-	obj_flags[RESERVED_PARTIALS] = flags.partials;
-	obj_flags[RESERVED_STORE] = flags.store;
+	obj_flags["partials"] = flags.partials;
+	obj_flags["store"] = flags.store;
 	obj_flags["parent_store"] = flags.parent_store;
-	obj_flags[RESERVED_RECURSE] = flags.is_recurse;
-	obj_flags[RESERVED_DYNAMIC] = flags.dynamic;
-	obj_flags[RESERVED_STRICT] = flags.strict;
-	obj_flags[RESERVED_DATE_DETECTION] = flags.date_detection;
-	obj_flags[RESERVED_TIME_DETECTION] = flags.time_detection;
-	obj_flags[RESERVED_TIMEDELTA_DETECTION] = flags.timedelta_detection;
-	obj_flags[RESERVED_NUMERIC_DETECTION] = flags.numeric_detection;
-	obj_flags[RESERVED_GEO_DETECTION] = flags.geo_detection;
-	obj_flags[RESERVED_BOOL_DETECTION] = flags.bool_detection;
-	obj_flags[RESERVED_STRING_DETECTION] = flags.string_detection;
-	obj_flags[RESERVED_TEXT_DETECTION] = flags.text_detection;
-	obj_flags[RESERVED_TERM_DETECTION] = flags.term_detection;
-	obj_flags[RESERVED_UUID_DETECTION] = flags.uuid_detection;
-	obj_flags[RESERVED_BOOL_TERM] = flags.bool_term;
-	obj_flags[RESERVED_NAMESPACE] = flags.is_namespace;
-	obj_flags[RESERVED_PARTIAL_PATHS] = flags.partial_paths;
+	obj_flags["recurse"] = flags.is_recurse;
+	obj_flags["dynamic"] = flags.dynamic;
+	obj_flags["strict"] = flags.strict;
+	obj_flags["date_detection"] = flags.date_detection;
+	obj_flags["time_detection"] = flags.time_detection;
+	obj_flags["timedelta_detection"] = flags.timedelta_detection;
+	obj_flags["numeric_detection"] = flags.numeric_detection;
+	obj_flags["geo_detection"] = flags.geo_detection;
+	obj_flags["bool_detection"] = flags.bool_detection;
+	obj_flags["string_detection"] = flags.string_detection;
+	obj_flags["text_detection"] = flags.text_detection;
+	obj_flags["term_detection"] = flags.term_detection;
+	obj_flags["uuid_detection"] = flags.uuid_detection;
+	obj_flags["bool_term"] = flags.bool_term;
+	obj_flags["namespace"] = flags.is_namespace;
+	obj_flags["partial_paths"] = flags.partial_paths;
 	obj_flags["optimal"] = flags.optimal;
 	obj_flags["field_found"] = flags.field_found;
 	obj_flags["concrete"] = flags.concrete;
