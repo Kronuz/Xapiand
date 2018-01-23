@@ -25,7 +25,8 @@
 #include <cstdio>
 
 
-int test_guid();
+int test_constructor_guid();
+int test_generator_guid();
 int test_special_guids();
 int test_compacted_guids();
 int test_condensed_guids();

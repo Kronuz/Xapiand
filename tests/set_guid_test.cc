@@ -25,20 +25,37 @@
 #include "gtest/gtest.h"
 
 
-TEST(GUIDTest, Working) {
-	EXPECT_EQ(test_guid(), 0);
+TEST(GUIDTest, Generator) {
+	EXPECT_EQ(test_generator_guid(), 0);
 }
 
 
-TEST(GUIDTest, SingleUUID) {
+TEST(GUIDTest, Constructor) {
+	EXPECT_EQ(test_constructor_guid(), 0);
+}
+
+
+TEST(GUIDTest, Special) {
 	EXPECT_EQ(test_special_guids(), 0);
-	EXPECT_EQ(test_compacted_guids(), 0);
+}
+
+
+TEST(GUIDTest, Condensed) {
 	EXPECT_EQ(test_condensed_guids(), 0);
+}
+
+
+TEST(GUIDTest, Compacted) {
+	EXPECT_EQ(test_compacted_guids(), 0);
+}
+
+
+TEST(GUIDTest, Expanded) {
 	EXPECT_EQ(test_expanded_guids(), 0);
 }
 
 
-TEST(GUIDTest, SeveralUUID) {
+TEST(GUIDTest, Several) {
 	EXPECT_EQ(test_several_guids(), 0);
 }
 

@@ -352,7 +352,7 @@ int test_serialise_uuid() {
 		const auto serialised = repr(Serialise::uuid(test.uuid), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::uuid(%s) is not working.\n\tResult: %s\n\tExpected: %s\n", test.uuid.c_str(), serialised.c_str(), test.serialised.c_str());
+			L_ERR("ERROR: Serialise::uuid(%s) is not working.\n\tResult: %s\n\tExpected: %s", test.uuid.c_str(), serialised.c_str(), test.serialised.c_str());
 		}
 	}
 
@@ -374,7 +374,7 @@ int test_unserialise_uuid() {
 		const auto uuid = Unserialise::uuid(serialised);
 		if (uuid != test.unserialised) {
 			++cont;
-			L_ERR("ERROR: Unserialise::uuid(%s) is not working.\n\tResult: %s\n\tExpected: %s\n", test.uuid.c_str(), uuid.c_str(), test.unserialised.c_str());
+			L_ERR("ERROR: Unserialise::uuid(%s) is not working.\n\tResult: %s\n\tExpected: %s", test.uuid.c_str(), uuid.c_str(), test.unserialised.c_str());
 		}
 	}
 

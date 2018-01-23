@@ -38,19 +38,38 @@ constexpr size_t MIN_EXPANDED_LENGTH  =  3;
 constexpr size_t MAX_EXPANDED_LENGTH  = 17;
 
 
-int test_guid() {
+int test_generator_guid() {
 	INIT_LOG
 	GuidGenerator generator;
 
-	auto g1 = generator.newGuid();
-	auto g2 = generator.newGuid();
-	auto g3 = generator.newGuid();
+	int cont = 0;
+
+	auto g1 = generator.newGuid(false);
+	auto g2 = generator.newGuid(false);
+	auto g3 = generator.newGuid(false);
 
 	L_DEBUG("Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
 		L_ERR("ERROR: Not all random guids are different");
-		RETURN(1);
+		++cont;
 	}
+
+	auto g4 = generator.newGuid();
+	auto g5 = generator.newGuid();
+	auto g6 = generator.newGuid();
+
+	L_DEBUG("Guids generated: %s  %s  %s", repr(g4.to_string()).c_str(), repr(g5.to_string()).c_str(), repr(g6.to_string()).c_str());
+	if (g4 == g5 || g4 == g6 || g5 == g6) {
+		L_ERR("ERROR: Not all random guids are different");
+		++cont;
+	}
+
+	RETURN(cont);
+}
+
+
+int test_constructor_guid() {
+	int cont = 0;
 
 	std::string u1("3c0f2be3-ff4f-40ab-b157-c51a81eff176");
 	std::string u2("e47fcfdf-8db6-4469-a97f-57146dc41ced");
@@ -63,30 +82,30 @@ int test_guid() {
 
 	if (s1 == s2) {
 		L_ERR("ERROR: s1 and s2 must be different");
-		RETURN(1);
+		++cont;
 	}
 
 	if (s1 != s4) {
 		L_ERR("ERROR: s1 and s4 must be equal");
-		RETURN(1);
+		++cont;
 	}
 
 	if (s1.to_string() != u1) {
 		L_ERR("ERROR: string generated from s1 is wrong");
-		RETURN(1);
+		++cont;
 	}
 
 	if (s2.to_string() != u2) {
 		L_ERR("ERROR: string generated from s2 is wrong");
-		RETURN(1);
+		++cont;
 	}
 
 	if (s3.to_string() != u3) {
 		L_ERR("ERROR: string generated from s3 is wrong");
-		RETURN(1);
+		++cont;
 	}
 
-	RETURN(0);
+	RETURN(cont);
 }
 
 
@@ -108,7 +127,7 @@ int test_special_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 	}
 
@@ -127,7 +146,7 @@ int test_compacted_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -162,7 +181,7 @@ int test_condensed_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -227,7 +246,7 @@ int test_expanded_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR: Expected: %s Result: %s\n", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -317,14 +336,14 @@ int test_several_guids() {
 		Guid::unserialise(serialised, std::back_inserter(guids));
 		if (guids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR("ERROR: Different sizes. Expected: %zu  Result: %zu", str_uuids.size(), guids.size());
+			L_ERR("ERROR: Different sizes. Expected:\n\tResult: %s\n\tExpected: %s", std::to_string(guids.size()).c_str(), std::to_string(str_uuids.size()).c_str());
 		} else {
 			auto it = str_uuids.begin();
 			for (const auto& guid : guids) {
 				const auto str_guid = guid.to_string();
 				if (str_guid != *it) {
 					++cont;
-					L_ERR("ERROR: Expected: %s  Result: %s", it->c_str(), str_guid.c_str());
+					L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", str_guid.c_str(), it->c_str());
 				}
 				++it;
 			}
