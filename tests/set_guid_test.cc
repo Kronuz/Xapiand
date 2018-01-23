@@ -25,8 +25,13 @@
 #include "gtest/gtest.h"
 
 
-TEST(GUIDTest, Generator) {
-	EXPECT_EQ(test_generator_guid(), 0);
+TEST(GUIDTest, ExpandedGenerator) {
+	EXPECT_EQ(test_generator_guid(false), 0);
+}
+
+
+TEST(GUIDTest, CompactedGenerator) {
+	EXPECT_EQ(test_generator_guid(true), 0);
 }
 
 

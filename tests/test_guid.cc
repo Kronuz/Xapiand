@@ -38,28 +38,18 @@ constexpr size_t MIN_EXPANDED_LENGTH  =  3;
 constexpr size_t MAX_EXPANDED_LENGTH  = 17;
 
 
-int test_generator_guid() {
+int test_generator_guid(bool compact) {
 	INIT_LOG
 	GuidGenerator generator;
 
 	int cont = 0;
 
-	auto g1 = generator.newGuid(false);
-	auto g2 = generator.newGuid(false);
-	auto g3 = generator.newGuid(false);
+	auto g1 = generator.newGuid(compact);
+	auto g2 = generator.newGuid(compact);
+	auto g3 = generator.newGuid(compact);
 
 	L_DEBUG("Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
-		L_ERR("ERROR: Not all random guids are different");
-		++cont;
-	}
-
-	auto g4 = generator.newGuid();
-	auto g5 = generator.newGuid();
-	auto g6 = generator.newGuid();
-
-	L_DEBUG("Guids generated: %s  %s  %s", repr(g4.to_string()).c_str(), repr(g5.to_string()).c_str(), repr(g6.to_string()).c_str());
-	if (g4 == g5 || g4 == g6 || g5 == g6) {
 		L_ERR("ERROR: Not all random guids are different");
 		++cont;
 	}
