@@ -69,49 +69,9 @@ inline void log(std::string fmt, Args&&... args) {
 #  define INIT_LOG
 #endif
 
-
-constexpr int          TEST_VERBOSITY                     = 3;
-constexpr bool         TEST_DETACH                        = false;
-constexpr bool         TEST_CHERT                         = false;
-constexpr bool         TEST_SOLO                          = true;
-constexpr bool         TEST_STRICT                        = false;
-constexpr bool         TEST_OPTIMAL                       = false;
-constexpr bool         TEST_COLORS                        = false;
-constexpr bool         TEST_NO_COLORS                     = false;
-constexpr const char   TEST_DATABASE[]                    = "";
-constexpr const char   TEST_CLUSTER_NAME[]                = "cluster_test";
-constexpr const char   TEST_NODE_NAME[]                   = "node_test";
-constexpr unsigned int TEST_XAPIAND_HTTP_SERVERPORT       = XAPIAND_HTTP_SERVERPORT;
-constexpr unsigned int TEST_XAPIAND_BINARY_SERVERPORT     = XAPIAND_BINARY_SERVERPORT;
-constexpr unsigned int TEST_XAPIAND_DISCOVERY_SERVERPORT  = XAPIAND_DISCOVERY_SERVERPORT;
-constexpr unsigned int TEST_XAPIAND_RAFT_SERVERPORT       = XAPIAND_RAFT_SERVERPORT;
-constexpr const char   TEST_PIDFILE[]                     = "";
-constexpr const char   TEST_LOGFILE[]                     = "";
-constexpr const char   TEST_UID[]                         = "";
-constexpr const char   TEST_GID[]                         = "";
-constexpr const char   TEST_DISCOVERY_GROUP[]             = "";
-constexpr const char   TEST_RAFT_GROUP[]                  = "";
-constexpr size_t       TEST_NUM_SERVERS                   = 1;
-constexpr size_t       TEST_DBPOOL_SIZE                   = 1;
-constexpr size_t       TEST_NUM_REPLICATORS               = 1;
-constexpr size_t       TEST_THREADPOOL_SIZE               = 1;
-constexpr size_t       TEST_ENDPOINT_LIST_SIZE            = 1;
-constexpr size_t       TEST_NUM_COMMITERS                 = 1;
-constexpr size_t       TEST_NUM_FSYNCHERS                 = NUM_FSYNCHERS;
-constexpr size_t       TEST_MAX_CLIENTS                   = 100;
-constexpr size_t       TEST_MAX_DATABASES                 = MAX_DATABASES;
-constexpr size_t       TEST_MAX_FILES                     = 1000;
-constexpr unsigned int TEST_EV_FLAG                       = 0;
-constexpr bool         TEST_UUID_COMPACT                  = true;
-constexpr uint8_t      TEST_UUID_REPR                     = 0;
-constexpr bool         TEST_UUID_PARTITION                = true;
-constexpr const char   TEST_DUMP_METADATA[]               = "";
-constexpr const char   TEST_DUMP_SCHEMA[]                 = "";
-constexpr const char   TEST_DUMP_DOCUMENTS[]              = "";
-constexpr const char   TEST_RESTORE[]                     = "";
-constexpr const char   TEST_FILENAME[]                    = "";
-
-constexpr const char   TEST_LOCAL_HOST[]                  = "127.0.0.1";
+constexpr const char   TEST_CLUSTER_NAME[]  = "cluster_test";
+constexpr const char   TEST_NODE_NAME[]     = "node_test";
+constexpr const char   TEST_LOCAL_HOST[]    = "127.0.0.1";
 
 #if (TESTING_ENDPOINTS == 1)
 #include "../src/endpoint.h"
