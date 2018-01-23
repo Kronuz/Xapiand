@@ -1239,123 +1239,124 @@ specification_t::update(const index_spc_t& spc)
 }
 
 
-std::string
-specification_t::to_string() const
+MsgPack
+specification_t::to_obj() const
 {
-	std::stringstream str;
-	str << "\n{\n";
-	str << "\t" << RESERVED_POSITION << ": [ ";
-	for (const auto& _position : position) {
-		str << _position << " ";
+	MsgPack obj;
+
+	auto& obj_position = obj[RESERVED_POSITION] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& p : position) {
+		obj_position.append(p);
 	}
-	str << "]\n";
 
-	str << "\t" << RESERVED_WEIGHT << ": [ ";
-	for (const auto& _w : weight) {
-		str << _w << " ";
+	auto& obj_weight = obj[RESERVED_WEIGHT] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& w : weight) {
+		obj_weight.append(w);
 	}
-	str << "]\n";
 
-	str << "\t" << RESERVED_SPELLING << ": [ ";
-	for (const auto& spel : spelling) {
-		str << (spel ? "true" : "false") << " ";
+	auto& obj_spelling = obj[RESERVED_SPELLING] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& s : spelling) {
+		obj_spelling.append(s ? true : false);
 	}
-	str << "]\n";
 
-	str << "\t" << RESERVED_POSITIONS << ": [ ";
-	for (const auto& _positions : positions) {
-		str << (_positions ? "true" : "false") << " ";
+	auto& obj_positions = obj[RESERVED_POSITIONS] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& p : positions) {
+		obj_positions.append(p ? true : false);
 	}
-	str << "]\n";
 
-	str << "\t" << RESERVED_LANGUAGE          << ": " << language          << "\n";
-	str << "\t" << RESERVED_STOP_STRATEGY     << ": " << get_str_stop_strategy(stop_strategy) << "\n";
-	str << "\t" << RESERVED_STEM_STRATEGY     << ": " << get_str_stem_strategy(stem_strategy) << "\n";
-	str << "\t" << RESERVED_STEM_LANGUAGE     << ": " << stem_language     << "\n";
+	obj[RESERVED_LANGUAGE] = language;
+	obj[RESERVED_STOP_STRATEGY] = get_str_stop_strategy(stop_strategy);
+	obj[RESERVED_STEM_STRATEGY] = get_str_stem_strategy(stem_strategy);
+	obj[RESERVED_STEM_LANGUAGE] = stem_language;
 
-	str << "\t" << RESERVED_ACCURACY << ": [ ";
-	for (const auto& acc : accuracy) {
-		str << acc << " ";
+	auto& obj_accuracy = obj[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : accuracy) {
+		obj_accuracy.append(a);
 	}
-	str << "]\n";
 
-	str << "\t" << RESERVED_ACC_PREFIX << ": [ ";
-	for (const auto& acc_p : acc_prefix) {
-		str << repr(acc_p) << " ";
+	auto& obj_acc_prefix = obj[RESERVED_ACC_PREFIX] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : acc_prefix) {
+		obj_acc_prefix.append(repr(a));
 	}
-	str << "]\n";
 
-	str << "\t" << "partial_prefixes" << ": [ ";
-	for (const auto& partial_prefix : partial_prefixes) {
-		str << partial_prefix.to_string() << " ";
+	auto& obj_partial_prefixes = obj["partial_prefixes"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& p : partial_prefixes) {
+		obj_partial_prefixes.append(p.to_string());
 	}
-	str << "]\n";
 
-	str << "\t" << "partial_index_spcs" << ": [ ";
-	for (const auto& spc : partial_index_spcs) {
-		str << "{" << repr(spc.prefix) << ", " << spc.slot << "} ";
+	auto& obj_partial_index_spcs = obj["partial_index_spcs"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& s : partial_index_spcs) {
+		MsgPack o;
+		o["prefix"] = repr(s.prefix);
+		o["slot"] = s.slot;
+		obj_partial_index_spcs.append(o);
 	}
-	str << "]\n";
 
-	str << "\t" << "value_rec"                  << ": " << (value_rec ? value_rec->to_string() : "null")   << "\n";
-	str << "\t" << RESERVED_VALUE               << ": " << (value     ? value->to_string()     : "null")   << "\n";
-	str << "\t" << "doc_acc"                    << ": " << (doc_acc   ? doc_acc->to_string()   : "null")   << "\n";
+	obj["value_rec"] = value_rec ? value_rec->to_string() : nullptr;
+	obj[RESERVED_VALUE] = value ? value->to_string() : nullptr;
+	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : nullptr;
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	str << "\t" << RESERVED_SCRIPT              << ": " << (script    ? script->to_string()    : "null")   << "\n";
+	obj[RESERVED_SCRIPT] = script ? script->to_string() : nullptr;
 #endif
-	str << "\t" << RESERVED_ENDPOINT            << ": " << endpoint                                    << "\n";
+	obj[RESERVED_ENDPOINT] = endpoint;
 
-	str << "\t" << RESERVED_SLOT                << ": " << slot                                        << "\n";
-	str << "\t" << RESERVED_TYPE                << ": " << get_str_type(sep_types)                     << "\n";
-	str << "\t" << RESERVED_PREFIX              << ": " << prefix.to_string()                          << "\n";
-	str << "\t" << "local_prefix"               << ": " << local_prefix.to_string()                    << "\n";
-	str << "\t" << RESERVED_INDEX               << ": " << get_str_index(index)                       << "\n";
-	str << "\t" << RESERVED_INDEX_UUID_FIELD    << ": " << get_str_index_uuid_field(index_uuid_field) << "\n";
-	str << "\t" << RESERVED_ERROR               << ": " << error                                       << "\n";
+	obj[RESERVED_SLOT] = slot;
+	obj[RESERVED_TYPE] = get_str_type(sep_types);
+	obj[RESERVED_PREFIX] = prefix.to_string();
+	obj["local_prefix"] = local_prefix.to_string();
+	obj[RESERVED_INDEX] = get_str_index(index);
+	obj[RESERVED_INDEX_UUID_FIELD] = get_str_index_uuid_field(index_uuid_field);
+	obj[RESERVED_ERROR] = error;
 
-	str << "\t" << RESERVED_PARTIALS            << ": " << (flags.partials              ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STORE               << ": " << (flags.store                 ? "true" : "false") << "\n";
-	str << "\t" << "parent_store"               << ": " << (flags.parent_store          ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_RECURSE             << ": " << (flags.is_recurse            ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC             << ": " << (flags.dynamic               ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRICT              << ": " << (flags.strict                ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DATE_DETECTION      << ": " << (flags.date_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TIME_DETECTION      << ": " << (flags.time_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TIMEDELTA_DETECTION << ": " << (flags.timedelta_detection   ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NUMERIC_DETECTION   << ": " << (flags.numeric_detection     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_GEO_DETECTION       << ": " << (flags.geo_detection         ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_DETECTION      << ": " << (flags.bool_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_STRING_DETECTION    << ": " << (flags.string_detection      ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TEXT_DETECTION      << ": " << (flags.text_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_TERM_DETECTION      << ": " << (flags.term_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_UUID_DETECTION      << ": " << (flags.uuid_detection        ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM           << ": " << (flags.bool_term             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_NAMESPACE           << ": " << (flags.is_namespace          ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_PARTIAL_PATHS       << ": " << (flags.partial_paths         ? "true" : "false") << "\n";
-	str << "\t" << "optimal"                    << ": " << (flags.optimal               ? "true" : "false") << "\n";
-	str << "\t" << "field_found"                << ": " << (flags.field_found           ? "true" : "false") << "\n";
-	str << "\t" << "concrete"                   << ": " << (flags.concrete              ? "true" : "false") << "\n";
-	str << "\t" << "complete"                   << ": " << (flags.complete              ? "true" : "false") << "\n";
-	str << "\t" << "uuid_field"                 << ": " << (flags.uuid_field            ? "true" : "false") << "\n";
-	str << "\t" << "uuid_path"                  << ": " << (flags.uuid_path             ? "true" : "false") << "\n";
-	str << "\t" << "inside_namespace"           << ": " << (flags.inside_namespace      ? "true" : "false") << "\n";
+	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
+	obj_flags[RESERVED_PARTIALS] = flags.partials;
+	obj_flags[RESERVED_STORE] = flags.store;
+	obj_flags["parent_store"] = flags.parent_store;
+	obj_flags[RESERVED_RECURSE] = flags.is_recurse;
+	obj_flags[RESERVED_DYNAMIC] = flags.dynamic;
+	obj_flags[RESERVED_STRICT] = flags.strict;
+	obj_flags[RESERVED_DATE_DETECTION] = flags.date_detection;
+	obj_flags[RESERVED_TIME_DETECTION] = flags.time_detection;
+	obj_flags[RESERVED_TIMEDELTA_DETECTION] = flags.timedelta_detection;
+	obj_flags[RESERVED_NUMERIC_DETECTION] = flags.numeric_detection;
+	obj_flags[RESERVED_GEO_DETECTION] = flags.geo_detection;
+	obj_flags[RESERVED_BOOL_DETECTION] = flags.bool_detection;
+	obj_flags[RESERVED_STRING_DETECTION] = flags.string_detection;
+	obj_flags[RESERVED_TEXT_DETECTION] = flags.text_detection;
+	obj_flags[RESERVED_TERM_DETECTION] = flags.term_detection;
+	obj_flags[RESERVED_UUID_DETECTION] = flags.uuid_detection;
+	obj_flags[RESERVED_BOOL_TERM] = flags.bool_term;
+	obj_flags[RESERVED_NAMESPACE] = flags.is_namespace;
+	obj_flags[RESERVED_PARTIAL_PATHS] = flags.partial_paths;
+	obj_flags["optimal"] = flags.optimal;
+	obj_flags["field_found"] = flags.field_found;
+	obj_flags["concrete"] = flags.concrete;
+	obj_flags["complete"] = flags.complete;
+	obj_flags["uuid_field"] = flags.uuid_field;
+	obj_flags["uuid_path"] = flags.uuid_path;
+	obj_flags["inside_namespace"] = flags.inside_namespace;
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	str << "\t" << "normalized_script"          << ": " << (flags.normalized_script     ? "true" : "false") << "\n";
+	obj_flags["normalized_script"] = flags.normalized_script;
 #endif
-	str << "\t" << "has_uuid_prefix"            << ": " << (flags.has_uuid_prefix       ? "true" : "false") << "\n";
-	str << "\t" << "has_bool_term"              << ": " << (flags.has_bool_term         ? "true" : "false") << "\n";
-	str << "\t" << "has_index"                  << ": " << (flags.has_index             ? "true" : "false") << "\n";
-	str << "\t" << "has_namespace"              << ": " << (flags.has_namespace         ? "true" : "false") << "\n";
-	str << "\t" << "static_endpoint"            << ": " << (flags.static_endpoint       ? "true" : "false") << "\n";
+	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
+	obj_flags["has_bool_term"] = flags.has_bool_term;
+	obj_flags["has_index"] = flags.has_index;
+	obj_flags["has_namespace"] = flags.has_namespace;
+	obj_flags["static_endpoint"] = flags.static_endpoint;
 
-	str << "\t" << "meta_name"                  << ": " << meta_name            << "\n";
-	str << "\t" << "full_meta_name"             << ": " << full_meta_name       << "\n";
-	str << "\t" << "aux_stem_language"          << ": " << aux_stem_language    << "\n";
-	str << "\t" << "aux_language"               << ": " << aux_language         << "\n";
+	obj["meta_name"] = meta_name;
+	obj["full_meta_name"] = full_meta_name;
+	obj["aux_stem_language"] = aux_stem_language;
+	obj["aux_language"] = aux_language;
 
-	str << "}\n";
+	return obj;
+}
 
-	return str.str();
+
+std::string
+specification_t::to_string(int indent) const
+{
+	return to_obj().to_string(indent);
 }
 
 
@@ -3599,7 +3600,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 	// Process RESERVED_TYPE
 	mut_properties[RESERVED_TYPE] = ::get_str_type(specification.sep_types);
 
-	// L_DEBUG("\nspecification = %s\nmut_properties = %s", specification.to_string().c_str(), mut_properties.to_string(true).c_str());
+	// L_DEBUG("\nspecification = %s\nmut_properties = %s", specification.to_string(4).c_str(), mut_properties.to_string(true).c_str());
 }
 
 
@@ -3700,7 +3701,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 {
 	L_CALL("Schema::index_item(<doc>, %s, %s, %zu, %s)", repr(value.to_string()).c_str(), repr(data.to_string()).c_str(), pos, add_value ? "true" : "false");
 
-	L_SCHEMA("Final Specification: %s", specification.to_string().c_str());
+	L_SCHEMA("Final Specification: %s", specification.to_string(4).c_str());
 
 	_index_item(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
 	if (specification.flags.store && add_value) {

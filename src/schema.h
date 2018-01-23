@@ -445,7 +445,9 @@ struct specification_t : required_spc_t {
 
 	void update(index_spc_t&& spc);
 	void update(const index_spc_t& spc);
-	std::string to_string() const;
+
+	MsgPack to_obj() const;
+	std::string to_string(int indent=-1) const;
 
 	static FieldType global_type(FieldType field_type);
 	static const specification_t& get_global(FieldType field_type);
