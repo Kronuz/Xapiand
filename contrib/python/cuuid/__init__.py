@@ -79,7 +79,7 @@ def _unserialise_condensed(bytes_):
 
     if time:
         if compacted:
-            time = (time * UUID.UUID_TIME_DIVISOR + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
+            time = ((time << UUID.CLOCK_BITS) + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
         elif not (node & 0x010000000000):
             time = (time + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
 
@@ -180,7 +180,6 @@ class UUID(six.binary_type, uuid.UUID):
     UUID_MIN_SERIALISED_LENGTH = 2
     UUID_MAX_SERIALISED_LENGTH = 17
     UUID_LENGTH = 36
-    UUID_TIME_DIVISOR = 10000
 
     TIME_BITS = 60
     VERSION_BITS = 64 - TIME_BITS
@@ -195,8 +194,8 @@ class UUID(six.binary_type, uuid.UUID):
     TIME_MASK = ((1 << TIME_BITS) - 1)
     SALT_MASK = ((1 << SALT_BITS) - 1)
     CLOCK_MASK = ((1 << CLOCK_BITS) - 1)
-    COMPACTED_MASK = ((1 << COMPACTED_BITS) - 1)
     NODE_MASK = ((1 << NODE_BITS) - 1)
+    COMPACTED_MASK = ((1 << COMPACTED_BITS) - 1)
     VERSION_MASK = ((1 << VERSION_BITS) - 1)
     VARIANT_MASK = ((1 << VARIANT_BITS) - 1)
 
@@ -279,8 +278,9 @@ class UUID(six.binary_type, uuid.UUID):
             num = uuid.uuid1()
         if compacted or compacted is None:
             time = num.time & cls.TIME_MASK
-            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
-            clock = num.clock_seq & cls.CLOCK_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
+            clock = (num.clock_seq ^ compacted_time) & cls.CLOCK_MASK
+            compacted_time >>= cls.CLOCK_BITS
             salt = None
             if num.node & 0x010000000000:
                 salt = num.node & cls.SALT_MASK
@@ -291,7 +291,7 @@ class UUID(six.binary_type, uuid.UUID):
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
             time = compacted_time
             if time:
-                time = (time * cls.UUID_TIME_DIVISOR + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+                time = ((time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
             time_low = time & 0xffffffff
             time_mid = (time >> 32) & 0xffff
             time_hi_version = (time >> 48) & 0xfff
@@ -333,8 +333,9 @@ class UUID(six.binary_type, uuid.UUID):
         version = ord(self.bytes[6]) >> 4
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
-            clock = self.clock_seq & cls.CLOCK_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
+            clock = (self.clock_seq ^ compacted_time) & cls.CLOCK_MASK
+            compacted_time >>= cls.CLOCK_BITS
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
                 salt = node & cls.SALT_MASK
@@ -389,8 +390,9 @@ class UUID(six.binary_type, uuid.UUID):
         variant = self.clock_seq_hi_variant & 0x80
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
-            clock = self.clock_seq & cls.CLOCK_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
+            clock = (self.clock_seq ^ compacted_time) & cls.CLOCK_MASK
+            compacted_time >>= cls.CLOCK_BITS
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
                 salt = node & cls.SALT_MASK
@@ -401,7 +403,7 @@ class UUID(six.binary_type, uuid.UUID):
             compacted_node = cls._calculate_node(compacted_time, clock, salt)
             time = compacted_time
             if time:
-                time = (time * cls.UUID_TIME_DIVISOR + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
+                time = ((time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
             time_low = time & 0xffffffff
             time_mid = (time >> 32) & 0xffff
             time_hi_version = (time >> 48) & 0xfff
@@ -410,15 +412,15 @@ class UUID(six.binary_type, uuid.UUID):
             clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
             return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
 
-
     def get_calculated_node(self):
         cls = self.__class__
         version = self.version
         variant = self.clock_seq_hi_variant & 0x80
         if variant == 0x80 and version == 1:
             time = self.time & cls.TIME_MASK
-            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) // cls.UUID_TIME_DIVISOR if time else 0
-            clock = self.clock_seq & cls.CLOCK_MASK
+            compacted_time = ((time - cls.UUID_TIME_INITIAL) & cls.TIME_MASK) if time else 0
+            clock = (self.clock_seq ^ compacted_time) & cls.CLOCK_MASK
+            compacted_time >>= cls.CLOCK_BITS
             node = self.node & cls.NODE_MASK
             if node & 0x010000000000:
                 salt = node & cls.SALT_MASK
@@ -450,8 +452,8 @@ if __name__ == '__main__':
         '00000000-0000-1000-8000-000000000000',
         '11111111-1111-1111-8111-111111111111',
         # Condensed + Compacted:
-        '230c3300-dc3c-11e7-9266-a9cf6771112b',
-        'f223c600-debf-11e7-85f7-cdf2b3c2e82b',
+        '230c0800-dc3c-11e7-b966-a3ab262e682b',
+        'f2238800-debf-11e7-bbf7-dffcee0c03ab',
         # Condensed + Expanded:
         '60579016-dec5-11e7-b616-34363bc9ddd6',
         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
@@ -463,8 +465,8 @@ if __name__ == '__main__':
         repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n'),
         repr('\x1c\x00\x00\x00'),
         repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""'),
-        repr('\x07\x8e\xf7)l\x12fW'),
-        repr('\x07\x93\x15\xfax\x05\xf7W'),
+        repr('\x06,\x02[\b9fW'),
+        repr('\x06.\x86*\x1f\xbb\xf7W'),
         repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac'),
         repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4'),
         repr('\x1c\x00\x00\x01'),
@@ -472,7 +474,7 @@ if __name__ == '__main__':
     expected_compund = [
         repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'),
         repr('WPQUDun7rkRr7TkQ2PSfCHGo4WWz'),
-        repr('njMlLhOOkpX9DafobEruTj'),
+        repr('EYBuNUmS8MZs98Mq64McVQ'),
         repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'),
     ]
 
