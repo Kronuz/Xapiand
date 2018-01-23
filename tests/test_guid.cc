@@ -22,6 +22,8 @@
 
 #include "test_guid.h"
 
+#include <unordered_set>
+
 #include "../src/base_x.hh"
 #include "../src/guid/guid.h"
 #include "utils.h"
@@ -47,9 +49,17 @@ int test_generator_guid(bool compact) {
 	auto g1 = generator.newGuid(compact);
 	auto g2 = generator.newGuid(compact);
 	auto g3 = generator.newGuid(compact);
-
 	L_DEBUG("Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
+		L_ERR("ERROR: Not all random guids are different");
+		++cont;
+	}
+
+	std::unordered_set<std::string> guids;
+	for (int i = 0; i < NUM_TESTS; ++i) {
+		guids.insert(generator.newGuid(compact).serialise());
+	}
+	if (guids.size() != NUM_TESTS) {
 		L_ERR("ERROR: Not all random guids are different");
 		++cont;
 	}
