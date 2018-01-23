@@ -1335,11 +1335,11 @@ specification_t::to_obj() const
 
 	obj["index_uuid_field"] = get_str_index_uuid_field(index_uuid_field);
 
-	obj["value_rec"] = value_rec ? value_rec->to_string() : nullptr;
-	obj["value"] = value ? value->to_string() : nullptr;
-	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : nullptr;
+	obj["value_rec"] = value_rec ? value_rec->to_string() : MsgPack(MsgPack::Type::NIL);
+	obj["value"] = value ? value->to_string() : MsgPack(MsgPack::Type::NIL);
+	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : MsgPack(MsgPack::Type::NIL);
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	obj["script"] = script ? script->to_string() : nullptr;
+	obj["script"] = script ? script->to_string() : MsgPack(MsgPack::Type::NIL);
 #endif
 
 	obj["endpoint"] = endpoint;
