@@ -86,7 +86,7 @@ enum class StemStrategy : uint8_t {
 };
 
 
-enum class UnitTime : uint32_t {
+enum class UnitTime : uint64_t {
 	SECOND     = 1,
 	MINUTE     = SECOND * 60,
 	HOUR       = MINUTE * 60,
