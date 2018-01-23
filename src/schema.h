@@ -284,6 +284,7 @@ struct required_spc_t {
 		bool text_detection:1;
 		bool term_detection:1;
 		bool uuid_detection:1;
+
 		bool partial_paths:1;
 		bool is_namespace:1;
 		bool optimal:1;
@@ -349,6 +350,9 @@ struct required_spc_t {
 	// Variables for GEO type.
 	double error;
 
+	////////////////////////////////////////////////////////////////////
+	// Methods:
+
 	required_spc_t();
 	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
 	required_spc_t(const required_spc_t& o);
@@ -408,6 +412,7 @@ struct specification_t : required_spc_t {
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
+
 	TypeIndex index;
 
 	UUIDFieldIndex index_uuid_field;  // Used to save how to index uuid fields.
@@ -419,6 +424,7 @@ struct specification_t : required_spc_t {
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	std::unique_ptr<const MsgPack> script;
 #endif
+
 	std::string endpoint;
 
 	// Used to save the last meta name.
@@ -434,6 +440,9 @@ struct specification_t : required_spc_t {
 	// Auxiliar variables for saving partial prefixes.
 	std::vector<prefix_t> partial_prefixes;
 	std::vector<index_spc_t> partial_index_spcs;
+
+	////////////////////////////////////////////////////////////////////
+	// Methods:
 
 	specification_t();
 	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);

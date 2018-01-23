@@ -1244,6 +1244,73 @@ specification_t::to_obj() const
 {
 	MsgPack obj;
 
+	// required_spc_t
+
+	obj["type"] = get_str_type(sep_types);
+	obj["prefix"] = prefix.to_string();
+	obj["slot"] = slot;
+
+	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
+	obj_flags["bool_term"] = flags.bool_term;
+	obj_flags["partials"] = flags.partials;
+
+	obj_flags["store"] = flags.store;
+	obj_flags["parent_store"] = flags.parent_store;
+	obj_flags["is_recurse"] = flags.is_recurse;
+	obj_flags["dynamic"] = flags.dynamic;
+	obj_flags["strict"] = flags.strict;
+	obj_flags["date_detection"] = flags.date_detection;
+	obj_flags["time_detection"] = flags.time_detection;
+	obj_flags["timedelta_detection"] = flags.timedelta_detection;
+	obj_flags["numeric_detection"] = flags.numeric_detection;
+	obj_flags["geo_detection"] = flags.geo_detection;
+	obj_flags["bool_detection"] = flags.bool_detection;
+	obj_flags["string_detection"] = flags.string_detection;
+	obj_flags["text_detection"] = flags.text_detection;
+	obj_flags["term_detection"] = flags.term_detection;
+	obj_flags["uuid_detection"] = flags.uuid_detection;
+
+	obj_flags["partial_paths"] = flags.partial_paths;
+	obj_flags["is_namespace"] = flags.is_namespace;
+	obj_flags["optimal"] = flags.optimal;
+
+	obj_flags["field_found"] = flags.field_found;
+	obj_flags["concrete"] = flags.concrete;
+	obj_flags["complete"] = flags.complete;
+	obj_flags["uuid_field"] = flags.uuid_field;
+	obj_flags["uuid_path"] = flags.uuid_path;
+	obj_flags["inside_namespace"] = flags.inside_namespace;
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	obj_flags["normalized_script"] = flags.normalized_script;
+#endif
+	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
+	obj_flags["has_bool_term"] = flags.has_bool_term;
+	obj_flags["has_index"] = flags.has_index;
+	obj_flags["has_namespace"] = flags.has_namespace;
+	obj_flags["has_partial_paths"] = flags.has_partial_paths;
+	obj_flags["static_endpoint"] = flags.static_endpoint;
+
+	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : accuracy) {
+		obj_accuracy.append(a);
+	}
+
+	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : acc_prefix) {
+		obj_acc_prefix.append(a);
+	}
+
+	obj["language"] = language;
+	obj["stop_strategy"] = get_str_stop_strategy(stop_strategy);
+	obj["stem_strategy"] = get_str_stem_strategy(stem_strategy);
+	obj["stem_language"] = stem_language;
+
+	obj["error"] = error;
+
+	// specification_t
+
+	obj["local_prefix"] = local_prefix.to_string();
+
 	auto& obj_position = obj["position"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : position) {
 		obj_position.append(p);
@@ -1264,20 +1331,24 @@ specification_t::to_obj() const
 		obj_positions.append(p ? true : false);
 	}
 
-	obj["language"] = language;
-	obj["stop_strategy"] = get_str_stop_strategy(stop_strategy);
-	obj["stem_strategy"] = get_str_stem_strategy(stem_strategy);
-	obj["stem_language"] = stem_language;
+	obj["index"] = get_str_index(index);
 
-	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
-	for (const auto& a : accuracy) {
-		obj_accuracy.append(a);
-	}
+	obj["index_uuid_field"] = get_str_index_uuid_field(index_uuid_field);
 
-	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
-	for (const auto& a : acc_prefix) {
-		obj_acc_prefix.append(repr(a));
-	}
+	obj["value_rec"] = value_rec ? value_rec->to_string() : nullptr;
+	obj["value"] = value ? value->to_string() : nullptr;
+	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : nullptr;
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	obj["script"] = script ? script->to_string() : nullptr;
+#endif
+
+	obj["endpoint"] = endpoint;
+
+	obj["meta_name"] = meta_name;
+	obj["full_meta_name"] = full_meta_name;
+
+	obj["aux_stem_language"] = aux_stem_language;
+	obj["aux_language"] = aux_language;
 
 	auto& obj_partial_prefixes = obj["partial_prefixes"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : partial_prefixes) {
@@ -1286,68 +1357,11 @@ specification_t::to_obj() const
 
 	auto& obj_partial_index_spcs = obj["partial_index_spcs"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& s : partial_index_spcs) {
-		MsgPack o;
-		o["prefix"] = repr(s.prefix);
-		o["slot"] = s.slot;
-		obj_partial_index_spcs.append(o);
+		obj_partial_index_spcs.append(MsgPack({
+			{ "prefix", repr(s.prefix) },
+			{ "slot", s.slot },
+		}));
 	}
-
-	obj["value_rec"] = value_rec ? value_rec->to_string() : nullptr;
-	obj["value"] = value ? value->to_string() : nullptr;
-	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : nullptr;
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	obj["script"] = script ? script->to_string() : nullptr;
-#endif
-	obj["endpoint"] = endpoint;
-
-	obj["slot"] = slot;
-	obj["type"] = get_str_type(sep_types);
-	obj["prefix"] = prefix.to_string();
-	obj["local_prefix"] = local_prefix.to_string();
-	obj["index"] = get_str_index(index);
-	obj["index_uuid_field"] = get_str_index_uuid_field(index_uuid_field);
-	obj["error"] = error;
-
-	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
-	obj_flags["partials"] = flags.partials;
-	obj_flags["store"] = flags.store;
-	obj_flags["parent_store"] = flags.parent_store;
-	obj_flags["recurse"] = flags.is_recurse;
-	obj_flags["dynamic"] = flags.dynamic;
-	obj_flags["strict"] = flags.strict;
-	obj_flags["date_detection"] = flags.date_detection;
-	obj_flags["time_detection"] = flags.time_detection;
-	obj_flags["timedelta_detection"] = flags.timedelta_detection;
-	obj_flags["numeric_detection"] = flags.numeric_detection;
-	obj_flags["geo_detection"] = flags.geo_detection;
-	obj_flags["bool_detection"] = flags.bool_detection;
-	obj_flags["string_detection"] = flags.string_detection;
-	obj_flags["text_detection"] = flags.text_detection;
-	obj_flags["term_detection"] = flags.term_detection;
-	obj_flags["uuid_detection"] = flags.uuid_detection;
-	obj_flags["bool_term"] = flags.bool_term;
-	obj_flags["namespace"] = flags.is_namespace;
-	obj_flags["partial_paths"] = flags.partial_paths;
-	obj_flags["optimal"] = flags.optimal;
-	obj_flags["field_found"] = flags.field_found;
-	obj_flags["concrete"] = flags.concrete;
-	obj_flags["complete"] = flags.complete;
-	obj_flags["uuid_field"] = flags.uuid_field;
-	obj_flags["uuid_path"] = flags.uuid_path;
-	obj_flags["inside_namespace"] = flags.inside_namespace;
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	obj_flags["normalized_script"] = flags.normalized_script;
-#endif
-	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
-	obj_flags["has_bool_term"] = flags.has_bool_term;
-	obj_flags["has_index"] = flags.has_index;
-	obj_flags["has_namespace"] = flags.has_namespace;
-	obj_flags["static_endpoint"] = flags.static_endpoint;
-
-	obj["meta_name"] = meta_name;
-	obj["full_meta_name"] = full_meta_name;
-	obj["aux_stem_language"] = aux_stem_language;
-	obj["aux_language"] = aux_language;
 
 	return obj;
 }
