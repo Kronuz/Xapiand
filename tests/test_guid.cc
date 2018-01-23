@@ -22,6 +22,7 @@
 
 #include "test_guid.h"
 
+#include "../src/cppcodec/base64_default_url_unpadded.hpp"
 #include "../src/guid/guid.h"
 #include "utils.h"
 
@@ -126,7 +127,7 @@ int test_compacted_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR(stderr, "ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -161,7 +162,7 @@ int test_condensed_guids() {
 		const auto uuid_rec = guid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR(stderr, "ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
+			L_ERR("ERROR: Expected: %s Result: %s", uuid_orig.c_str(), uuid_rec.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -298,7 +299,7 @@ int test_several_guids() {
 		for (auto& encoded : norm_uuids) {
 			std::string decoded;
 			try {
-				base64::decode(decoded, node_id_str);
+				base64::decode(decoded, encoded);
 				if (Guid::is_serialised(decoded)) {
 					serialised.append(decoded);
 					continue;
@@ -312,6 +313,7 @@ int test_several_guids() {
 			L_ERR("Invalid encoded UUID format in: %s", encoded.c_str());
 		}
 
+		std::vector<Guid> guids;
 		Guid::unserialise(serialised, std::back_inserter(guids));
 		if (guids.size() != str_uuids.size()) {
 			++cont;
