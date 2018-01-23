@@ -22,13 +22,14 @@
 
 #include "test_guid.h"
 
-#include "../src/cppcodec/base64_default_url_unpadded.hpp"
+#include "../src/base_x.hh"
 #include "../src/guid/guid.h"
 #include "utils.h"
 
+#define B59 (Base59::dubaluchk())
+
 
 constexpr int NUM_TESTS = 1000;
-
 
 constexpr size_t MIN_COMPACTED_LENGTH =  2;
 constexpr size_t MAX_COMPACTED_LENGTH = 11;
@@ -280,9 +281,19 @@ int test_several_guids() {
 				Guid guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
 				norm_uuids.push_back(guid.to_string());
+
 				guid = GuidGenerator().newGuid(false);
 				str_uuids.push_back(guid.to_string());
 				norm_uuids.push_back(guid.to_string());
+
+				guid = GuidGenerator().newGuid(true);
+				str_uuids.push_back(guid.to_string());
+				norm_uuids.push_back(guid.to_string());
+
+				guid = GuidGenerator().newGuid(false);
+				str_uuids.push_back(guid.to_string());
+				norm_uuids.push_back(guid.to_string());
+
 				guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
 				norm_uuids.push_back(guid.to_string());
@@ -291,52 +302,79 @@ int test_several_guids() {
 			case 1: {
 				Guid guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(base64::encode(guid.serialise()));
+				norm_uuids.push_back(B59.encode(guid.serialise()));
+
 				guid = GuidGenerator().newGuid(false);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(base64::encode(guid.serialise()));
+				norm_uuids.push_back(B59.encode(guid.serialise()));
+
 				guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(base64::encode(guid.serialise()));
+				norm_uuids.push_back(B59.encode(guid.serialise()));
+
+				guid = GuidGenerator().newGuid(false);
+				str_uuids.push_back(guid.to_string());
+				norm_uuids.push_back(B59.encode(guid.serialise()));
+
+				guid = GuidGenerator().newGuid(true);
+				str_uuids.push_back(guid.to_string());
+				norm_uuids.push_back(B59.encode(guid.serialise()));
 				break;
 			}
 			default: {
 				Guid guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
 				auto serialised = guid.serialise();
+
 				guid = GuidGenerator().newGuid(false);
 				str_uuids.push_back(guid.to_string());
 				serialised.append(guid.serialise());
+
 				guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
 				serialised.append(guid.serialise());
-				norm_uuids.push_back(base64::encode(serialised));
+
+				guid = GuidGenerator().newGuid(false);
+				str_uuids.push_back(guid.to_string());
+				serialised.append(guid.serialise());
+
+				guid = GuidGenerator().newGuid(true);
+				str_uuids.push_back(guid.to_string());
+				serialised.append(guid.serialise());
+
+				norm_uuids.push_back(B59.encode(serialised));
 				break;
 			}
 		}
-		std::string serialised;
+
+		std::string guids_serialised;
 		for (auto& encoded : norm_uuids) {
 			std::string decoded;
 			try {
-				base64::decode(decoded, encoded);
+				B59.decode(decoded, encoded);
 				if (Guid::is_serialised(decoded)) {
-					serialised.append(decoded);
+					guids_serialised.append(decoded);
 					continue;
 				}
 			} catch (const std::invalid_argument&) { }
 			try {
 				Guid guid(encoded);
-				serialised.append(guid.serialise());
+				guids_serialised.append(guid.serialise());
 				continue;
 			} catch (const std::invalid_argument&) { }
 			L_ERR("Invalid encoded UUID format in: %s", encoded.c_str());
 		}
 
+		std::string str_uuids_serialised;
+		for (const auto& s : str_uuids) {
+			str_uuids_serialised.append(Guid(s).serialise());
+		}
+
 		std::vector<Guid> guids;
-		Guid::unserialise(serialised, std::back_inserter(guids));
+		Guid::unserialise(guids_serialised, std::back_inserter(guids));
 		if (guids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR("ERROR: Different sizes. Expected:\n\tResult: %s\n\tExpected: %s", std::to_string(guids.size()).c_str(), std::to_string(str_uuids.size()).c_str());
+			L_ERR("ERROR: Different sizes: %zu != %zu\n\tResult: %s\n\tExpected: %s", guids.size(), str_uuids.size(), repr(guids_serialised).c_str(), repr(str_uuids_serialised).c_str());
 		} else {
 			auto it = str_uuids.begin();
 			for (const auto& guid : guids) {
