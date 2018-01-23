@@ -22,11 +22,8 @@
 
 #include "test_guid.h"
 
-#include "../src/base_x.hh"
 #include "../src/guid/guid.h"
 #include "utils.h"
-
-#define B59 (Base59::dubaluchk())
 
 
 constexpr int NUM_TESTS = 1000;
@@ -302,23 +299,23 @@ int test_several_guids() {
 			case 1: {
 				Guid guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(B59.encode(guid.serialise()));
+				norm_uuids.push_back(guid.serialise());
 
 				guid = GuidGenerator().newGuid(false);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(B59.encode(guid.serialise()));
+				norm_uuids.push_back(guid.serialise());
 
 				guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(B59.encode(guid.serialise()));
+				norm_uuids.push_back(guid.serialise());
 
 				guid = GuidGenerator().newGuid(false);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(B59.encode(guid.serialise()));
+				norm_uuids.push_back(guid.serialise());
 
 				guid = GuidGenerator().newGuid(true);
 				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(B59.encode(guid.serialise()));
+				norm_uuids.push_back(guid.serialise());
 				break;
 			}
 			default: {
@@ -342,27 +339,21 @@ int test_several_guids() {
 				str_uuids.push_back(guid.to_string());
 				serialised.append(guid.serialise());
 
-				norm_uuids.push_back(B59.encode(serialised));
+				norm_uuids.push_back(serialised);
 				break;
 			}
 		}
 
 		std::string guids_serialised;
 		for (auto& encoded : norm_uuids) {
-			std::string decoded;
-			try {
-				B59.decode(decoded, encoded);
-				if (Guid::is_serialised(decoded)) {
-					guids_serialised.append(decoded);
-					continue;
-				}
-			} catch (const std::invalid_argument&) { }
-			try {
+			if (Guid::is_valid(encoded)) {
 				Guid guid(encoded);
 				guids_serialised.append(guid.serialise());
-				continue;
-			} catch (const std::invalid_argument&) { }
-			L_ERR("Invalid encoded UUID format in: %s", encoded.c_str());
+			} else if (Guid::is_serialised(encoded)) {
+				guids_serialised.append(encoded);
+			} else {
+				L_ERR("Invalid encoded UUID format in: %s", repr(encoded).c_str());
+			}
 		}
 
 		std::string str_uuids_serialised;
