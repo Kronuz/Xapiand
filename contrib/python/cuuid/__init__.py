@@ -455,21 +455,24 @@ if __name__ == '__main__':
         # Condensed + Expanded:
         '60579016-dec5-11e7-b616-34363bc9ddd6',
         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
+        # Other:
+        '00000000-0000-1000-8000-010000000000',
     ]
     expected_serialised = [
         repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4'),
         repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n'),
+        repr('\x1c\x00\x00\x00'),
+        repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""'),
+        repr('\x07\x8e\xf7)l\x12fW'),
+        repr('\x07\x93\x15\xfax\x05\xf7W'),
+        repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac'),
+        repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4'),
         repr('\x1c\x00\x00\x01'),
-        repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82""""""#'),
-        repr('\x07\x8e\xf7)l\x12fV'),
-        repr('\x07\x93\x15\xfax\x05\xf7V'),
-        repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xad'),
-        repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc5'),
     ]
     expected_compund = [
         repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'),
-        repr('00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111'),
-        repr('njMlLhOOkwOFCDe3bqolhf'),
+        repr('WPQUDun7rkRr7TkQ2PSfCHGo4WWz'),
+        repr('njMlLhOOkpX9DafobEruTj'),
         repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'),
     ]
 
@@ -479,7 +482,7 @@ if __name__ == '__main__':
         result = repr(unserialise_compound(serialise_compound(uuids)))
         if result != expected:
             errors += 1
-            print("Error in compund serialization: %s  Expected: %s Result: %s" % (uuids, expected, result))
+            print("Error in compund serialization: %s\n\tResult: %s\n\tExpected: %s" % (uuids, result, expected))
     ################################################
 
     for i, str_uuid in enumerate(str_uuids):
@@ -491,11 +494,11 @@ if __name__ == '__main__':
             res = unserialise(serialised)
             if result != expected:
                 errors += 1
-                print("Error in serialise: %s  Expected: %s Result: %s" % (str_uuid, expected, result))
+                print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result, expected))
             uns_u = UUID.unserialise(serialised)
             if uns_u != u:
                 errors += 1
-                print("Error in unserialise: Expected: %s Result: %s" % (str_uuid, uns_u))
+                print("Error in unserialise:\n\tResult: %s\n\tExpected: %s" % (uns_u, str_uuid))
         except ValueError as e:
             errors += 1
             print(e.message)
@@ -507,10 +510,10 @@ if __name__ == '__main__':
         '{d095e48f-c64f-4f08-91ec-888e6068dfe0;c5c52a08-c3b4-11e6-9231-339cb51d7742;c5c52a08-c3b4-51e6-7231-339cb51d7742}',
     ]
     expected_serialised = [
-        repr('\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x01\n@\x00\x00\x00\x00\x00\x00\x01'),
+        repr('\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\n@\x00\x00\x00\x00\x00\x00\x00'),
         repr('\x01\x00\x00\x00\x00\x00\x00@\x00\xb0\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00 \x00\x10\x00\xc0\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00 \x00@\x00\xc0\x00\x00\x00\x00\x00\x00\x00'),
-        repr('\x01\x00\x00\x00\x00 \x00 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc5\x0ehawno\xcb\xeb\x14\xc1\xf0;\x8e\xce\xc5'),
-        repr('\x01\xd0\x95\xe4\x8f\xc6OO\x08\x91\xec\x88\x8e`h\xdf\xe0\x0e\x89\xbd~\xe0\x91\x04$bg9j:\xee\x85\x01\xc5\xc5*\x08\xc3\xb4Q\xe6r13\x9c\xb5\x1dwB'),
+        repr('\x01\x00\x00\x00\x00 \x00 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4\x0ehawno\xcb\xeb\x14\xc1\xf0;\x8e\xce\xc4'),
+        repr('\x01\xd0\x95\xe4\x8f\xc6OO\b\x91\xec\x88\x8e`h\xdf\xe0\x0f\xf3a\xdab\xe2\x95\x04$bg9j:\xee\x84\x01\xc5\xc5*\b\xc3\xb4Q\xe6r13\x9c\xb5\x1dwB'),
     ]
     i = 0
     for str_uuid in str_uuids:
@@ -520,7 +523,7 @@ if __name__ == '__main__':
             result = repr(serialised)
             if result != expected:
                 errors += 1
-                print("Error in serialise: %s  Expected: %s Result: %s" % (str_uuid, expected, result))
+                print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result, expected))
             uns_uuuids = unserialise(serialised)
             compound_uuid = '{'
             for uuid_ in uns_uuuids:
@@ -528,7 +531,7 @@ if __name__ == '__main__':
             compound_uuid = compound_uuid[:-1] + '}'
             if compound_uuid != str_uuid:
                 errors += 1
-                print("Error in unserialise: Expected: %s Result: %s" % (str_uuid, compound_uuid))
+                print("Error in unserialise:\n\tResult: %s\n\tExpected: %s" % (compound_uuid, str_uuid))
         except ValueError as e:
             errors += 1
             print(e.message)

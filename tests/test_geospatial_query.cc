@@ -131,7 +131,7 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 					auto region = document.get_obj().at("region").str();
 					if (region != *it) {
 						++cont;
-						L_ERR("Different regions. Result: %s Expected: %s", region.c_str(), it->c_str());
+						L_ERR("Different regions.\n\tResult: %s\n\tExpected: %s", region.c_str(), it->c_str());
 					}
 				}
 			}
