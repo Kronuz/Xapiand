@@ -98,13 +98,46 @@ DB_Test::create_manager()
 {
 	if (!XapiandManager::manager) {
 		opts_t opts = {
-			TEST_VERBOSITY, TEST_DETACH, TEST_CHERT, TEST_SOLO, TEST_STRICT, TEST_OPTIMAL, TEST_COLORS, TEST_NO_COLORS, TEST_DATABASE,
-			TEST_CLUSTER_NAME, TEST_NODE_NAME, XAPIAND_HTTP_SERVERPORT, XAPIAND_BINARY_SERVERPORT,
-			XAPIAND_DISCOVERY_SERVERPORT, XAPIAND_RAFT_SERVERPORT, TEST_PIDFILE,
-			TEST_LOGFILE, TEST_UID, TEST_GID, TEST_DISCOVERY_GROUP, TEST_RAFT_GROUP,
-			TEST_NUM_SERVERS, TEST_DBPOOL_SIZE, TEST_NUM_REPLICATORS, TEST_THREADPOOL_SIZE,
-			TEST_ENDPOINT_LIST_SIZE, TEST_NUM_COMMITERS, NUM_FSYNCHERS, TEST_MAX_CLIENTS,
-			MAX_DATABASES, TEST_MAX_FILES, TEST_EV_FLAG
+			TEST_VERBOSITY,                           // int verbosity;
+			TEST_DETACH,                              // bool detach;
+			TEST_CHERT,                               // bool chert;
+			TEST_SOLO,                                // bool solo;
+			TEST_STRICT,                              // bool strict;
+			TEST_OPTIMAL,                             // bool optimal;
+			TEST_COLORS,                              // bool colors;
+			TEST_NO_COLORS,                           // bool no_colors;
+			TEST_DATABASE,                            // std::string database;
+			TEST_CLUSTER_NAME,                        // std::string cluster_name;
+			TEST_NODE_NAME,                           // std::string node_name;
+			TEST_XAPIAND_HTTP_SERVERPORT,             // unsigned int http_port;
+			TEST_XAPIAND_BINARY_SERVERPORT,           // unsigned int binary_port;
+			TEST_XAPIAND_DISCOVERY_SERVERPORT,        // unsigned int discovery_port;
+			TEST_XAPIAND_RAFT_SERVERPORT,             // unsigned int raft_port;
+			TEST_PIDFILE,                             // std::string pidfile;
+			TEST_LOGFILE,                             // std::string logfile;
+			TEST_UID,                                 // std::string uid;
+			TEST_GID,                                 // std::string gid;
+			TEST_DISCOVERY_GROUP,                     // std::string discovery_group;
+			TEST_RAFT_GROUP,                          // std::string raft_group;
+			TEST_NUM_SERVERS,                         // ssize_t num_servers;
+			TEST_DBPOOL_SIZE,                         // ssize_t dbpool_size;
+			TEST_NUM_REPLICATORS,                     // ssize_t num_replicators;
+			TEST_THREADPOOL_SIZE,                     // ssize_t threadpool_size;
+			TEST_ENDPOINT_LIST_SIZE,                  // ssize_t endpoints_list_size;
+			TEST_NUM_COMMITERS,                       // ssize_t num_committers;
+			TEST_NUM_FSYNCHERS,                       // ssize_t num_fsynchers;
+			TEST_MAX_CLIENTS,                         // ssize_t max_clients;
+			TEST_MAX_DATABASES,                       // ssize_t max_databases;
+			TEST_MAX_FILES,                           // ssize_t max_files;
+			TEST_EV_FLAG,                             // unsigned int ev_flags;
+			TEST_UUID_COMPACT,                        // bool uuid_compact;
+			TEST_UUID_REPR,                           // UUIDRepr uuid_repr;
+			TEST_UUID_PARTITION,                      // bool uuid_partition;
+			TEST_DUMP_METADATA,                       // std::string dump_metadata;
+			TEST_DUMP_SCHEMA,                         // std::string dump_schema;
+			TEST_DUMP_DOCUMENTS,                      // std::string dump_documents;
+			TEST_RESTORE,                             // std::string restore;
+			TEST_FILENAME,                            // std::string filename;
 		};
 
 		ev::default_loop default_loop(opts.ev_flags);
