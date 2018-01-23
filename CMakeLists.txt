@@ -20,6 +20,9 @@
 # IN THE SOFTWARE.
 
 cmake_minimum_required (VERSION 3.2)
+
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+
 project (xapiand C CXX)
 
 set (PACKAGE_NAME "Xapiand")
@@ -85,8 +88,6 @@ add_custom_target (package_config
 ########################################################################
 # CMake Includes
 ########################################################################
-
-set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 include (AC_HEADER_STDC)
 include (CheckCXXCompilerFlag)
