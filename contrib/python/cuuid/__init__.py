@@ -469,6 +469,7 @@ if __name__ == '__main__':
         '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662',
         # Other:
         '00000000-0000-1000-8000-010000000000',
+        '11111111-1111-1111-8111-101111111111'
     ]
     expected_serialised = [
         repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4'),
@@ -480,6 +481,7 @@ if __name__ == '__main__':
         repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac'),
         repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4'),
         repr('\x1c\x00\x00\x01'),
+        repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""'),
     ]
     expected_compund = [
         repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'),
