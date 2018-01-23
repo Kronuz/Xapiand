@@ -2162,7 +2162,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		}
 	}
 
-	auto val = specification.value ? std::move(specification.value) : std::move(specification.value_rec);
+	auto val = specification.value ? specification.value.get() : specification.value_rec.get();
 
 	if (val) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
