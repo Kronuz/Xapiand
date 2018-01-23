@@ -50,7 +50,6 @@ THE SOFTWARE.
 constexpr uint64_t UUID_TIME_EPOCH             = 0x01b21dd213814000ULL;
 constexpr uint64_t UUID_TIME_YEAR              = 0x00011f0241243c00ULL;
 constexpr uint64_t UUID_TIME_INITIAL           = UUID_TIME_EPOCH + (2016 - 1970) * UUID_TIME_YEAR;
-constexpr uint64_t UUID_TIME_DIVISOR           = 10000;
 constexpr uint8_t  UUID_MAX_SERIALISED_LENGTH  = 17;
 
 constexpr uint8_t TIME_BITS       = 60;
@@ -65,6 +64,7 @@ constexpr uint8_t PADDING_E1_BITS = 64 - COMPACTED_BITS - NODE_BITS - CLOCK_BITS
 
 constexpr uint64_t TIME_MASK     =  ((1ULL << TIME_BITS)    - 1);
 constexpr uint64_t SALT_MASK     =  ((1ULL << SALT_BITS)    - 1);
+constexpr uint64_t CLOCK_MASK    =  ((1ULL << CLOCK_BITS)   - 1);
 constexpr uint64_t NODE_MASK     =  ((1ULL << NODE_BITS)    - 1);
 
 // Variable-length length encoding table for condensed UUIDs (prefix, mask)
@@ -527,12 +527,16 @@ Guid::compact_crush()
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto node = uuid1_node();
 
+		auto clock = uuid1_clock_seq();
+
 		auto time = uuid1_time();
-		auto compacted_time = time ? ((time - UUID_TIME_INITIAL) & TIME_MASK) / UUID_TIME_DIVISOR : time;
+		auto compacted_time = time ? ((time - UUID_TIME_INITIAL) & TIME_MASK) : time;
+		auto compacted_time_clock = compacted_time & CLOCK_MASK;
+		compacted_time >>= CLOCK_BITS;
 
 		GuidCondenser condenser;
 		condenser.compact.compacted = true;
-		condenser.compact.clock = uuid1_clock_seq();
+		condenser.compact.clock = clock ^ compacted_time_clock;
 		condenser.compact.time = compacted_time;
 		if (node & 0x010000000000) {
 			condenser.compact.salt = node & SALT_MASK;
@@ -544,12 +548,15 @@ Guid::compact_crush()
 
 		uuid1_node(condenser.calculate_node());
 
+		uuid1_clock_seq(condenser.compact.clock);
+
 		time = condenser.compact.time;
 		if (time) {
-			time = (time * UUID_TIME_DIVISOR + UUID_TIME_INITIAL) & TIME_MASK;
+			time = ((time << CLOCK_BITS) + UUID_TIME_INITIAL) & TIME_MASK;
 		}
 		uuid1_time(time);
 	}
+
 }
 
 
@@ -586,12 +593,16 @@ Guid::serialise_condensed() const
 
 	auto node = uuid1_node();
 
+	auto clock = uuid1_clock_seq();
+
 	auto time = uuid1_time();
-	auto compacted_time = time ? ((time - UUID_TIME_INITIAL) & TIME_MASK) / UUID_TIME_DIVISOR : time;
+	auto compacted_time = time ? ((time - UUID_TIME_INITIAL) & TIME_MASK) : time;
+	auto compacted_time_clock = compacted_time & CLOCK_MASK;
+	compacted_time >>= CLOCK_BITS;
 
 	GuidCondenser condenser;
 	condenser.compact.compacted = true;
-	condenser.compact.clock = uuid1_clock_seq();
+	condenser.compact.clock = clock ^ compacted_time_clock;
 	condenser.compact.time = compacted_time;
 	condenser.compact.salt = node & SALT_MASK;
 
@@ -603,6 +614,7 @@ Guid::serialise_condensed() const
 				time = (time - UUID_TIME_INITIAL) & TIME_MASK;
 			}
 		}
+		condenser.expanded.clock = clock;
 		condenser.expanded.time = time;
 		condenser.expanded.node = node;
 	}
@@ -758,7 +770,7 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 	uint64_t time = condenser.compact.time;
 	if (time) {
 		if (condenser.compact.compacted) {
-			time = (time * UUID_TIME_DIVISOR + UUID_TIME_INITIAL) & TIME_MASK;
+			time = ((time << CLOCK_BITS) + UUID_TIME_INITIAL) & TIME_MASK;
 		} else if (!(node & 0x010000000000)) {
 			time = (time + UUID_TIME_INITIAL) & TIME_MASK;
 		}

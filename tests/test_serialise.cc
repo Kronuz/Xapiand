@@ -153,8 +153,8 @@ const std::vector<test_uuid_t> test_seri_uuids({
 	{ "00000000-0000-1000-8000-000000000000",   "\\x1c\\x00\\x00\\x00",                                                                   "00000000-0000-1000-8000-000000000000" },
 	{ "11111111-1111-1111-8111-111111111111",   "\\x0f\\x88\\x88\\x88\\x88\\x88\\x88\\x88\\x82\"\"\"\"\"\"\"",                            "11111111-1111-1111-8111-111111111111" },
 	// Condensed + Compacted:
-	{ "230c3300-dc3c-11e7-9266-a9cf6771112b",   "\\x07\\x8e\\xf7)l\\x12fW",                                                               "230c3300-dc3c-11e7-9266-a9cf6771112b" },
-	{ "f223c600-debf-11e7-85f7-cdf2b3c2e82b",   "\\x07\\x93\\x15\\xfax\\x05\\xf7W",                                                       "f223c600-debf-11e7-85f7-cdf2b3c2e82b" },
+	{ "230c0800-dc3c-11e7-b966-a3ab262e682b",   "\\x06,\\x02[\\b9fW",                                                                   "230c0800-dc3c-11e7-b966-a3ab262e682b" },
+	{ "f2238800-debf-11e7-bbf7-dffcee0c03ab",   "\\x06.\\x86*\\x1f\\xbb\\xf7W",                                                           "f2238800-debf-11e7-bbf7-dffcee0c03ab" },
 	// Condensed + Expanded:
 	{ "60579016-dec5-11e7-b616-34363bc9ddd6",   "\\xe1\\x17E\\xcc)\\xc4\\x0bl,hlw\\x93\\xbb\\xac",                                        "60579016-dec5-11e7-b616-34363bc9ddd6" },
 	{ "4ec97478-c3a9-11e6-bbd0-a46ba9ba5662",   "\\x0e\\x89\\xb7\\xc3b\\xb6<w\\xa1H\\xd7St\\xac\\xc4",                                    "4ec97478-c3a9-11e6-bbd0-a46ba9ba5662" },
@@ -177,9 +177,9 @@ const std::vector<test_uuid_t> test_seri_uuids({
 		"00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111",
 	},
 	{
-		"230c3300-dc3c-11e7-9266-a9cf6771112b;f223c600-debf-11e7-85f7-cdf2b3c2e82b",
-		"\\x07\\x8e\\xf7)l\\x12fW\\x07\\x93\\x15\\xfax\\x05\\xf7W",
-		"230c3300-dc3c-11e7-9266-a9cf6771112b;f223c600-debf-11e7-85f7-cdf2b3c2e82b",
+		"230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab",
+		"\\x06,\\x02[\\b9fW\\x06.\\x86*\\x1f\\xbb\\xf7W",
+		"230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab",
 	},
 	{
 		"60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662",
