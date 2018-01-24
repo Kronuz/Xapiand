@@ -1079,12 +1079,9 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 	std::string result;
 	std::vector<Guid> uuids;
 	switch (repr) {
-		case UUIDRepr::simple:
-			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
-			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
-			break;
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
+			// {00000000-0000-1000-8000-010000000000}
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.push_back('{');
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
@@ -1093,6 +1090,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn:
+			// urn:uuid:00000000-0000-1000-8000-010000000000
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append("urn:uuid:");
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
@@ -1104,10 +1102,13 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}
+#endif
+		default:
+		case UUIDRepr::simple:
+			// 00000000-0000-1000-8000-010000000000
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
-#endif
 	}
 	return result;
 }

@@ -62,12 +62,6 @@ normalize_and_partition(const void *p, size_t size)
 
 	std::string result;
 	switch (repr) {
-		case UUIDRepr::simple:
-			// 00000000-0000-1000-8000-010000000000
-			result.append(&normalized[9], &normalized[13]);
-			result.push_back('/');
-			result.append(normalized);
-			break;
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
 			// {00000000-0000-1000-8000-010000000000}
@@ -108,11 +102,14 @@ normalize_and_partition(const void *p, size_t size)
 				result.append(cit, cit_e);
 				break;
 			}
+#endif
+		default:
+		case UUIDRepr::simple:
+			// 00000000-0000-1000-8000-010000000000
 			result.append(&normalized[9], &normalized[13]);
 			result.push_back('/');
 			result.append(normalized);
 			break;
-#endif
 	}
 	return result;
 }
