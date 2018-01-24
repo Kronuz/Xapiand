@@ -28,7 +28,6 @@ __version__ = '0.0.1'
 
 class BaseX(object):
     def __init__(self, alphabet, translate):
-        # 59 character alphabet used
         self.alphabet = alphabet
         self.translate = translate
 
@@ -48,7 +47,7 @@ class BaseX(object):
                 self.decoder[o] = x
 
     def encode_int(self, i, default_one=True):
-        '''Encode an integer using Base59'''
+        """Encode an integer using BaseX"""
         if not i and default_one:
             return self.alphabet[0]
         string = ""
@@ -60,7 +59,7 @@ class BaseX(object):
         return string, sum_chk
 
     def encode(self, v):
-        '''Encode a string using Base59'''
+        """Encode a string using BaseX"""
         if not isinstance(v, bytes):
             raise TypeError("a bytes-like object is required, not '%s'" %
                             type(v).__name__)
@@ -79,7 +78,7 @@ class BaseX(object):
         return result + self.alphabet[sum_chk]
 
     def decode_int(self, v):
-        '''Decode a Base59 encoded string as an integer'''
+        """Decode a BaseX encoded string as an integer"""
 
         if not isinstance(v, str):
             v = v.decode('ascii')
@@ -100,7 +99,7 @@ class BaseX(object):
         return decimal, sum_chk, sumsz
 
     def decode(self, v):
-        '''Decode a Base59 encoded string'''
+        """Decode a BaseX encoded string"""
 
         if not isinstance(v, str):
             v = v.decode('ascii')
@@ -135,7 +134,7 @@ b59encode = b59.encode
 
 
 def main():
-    '''Base59 encode or decode FILE, or standard input, to standard output.'''
+    """BaseX encode or decode FILE, or standard input, to standard output."""
 
     import sys
     import argparse
@@ -161,9 +160,7 @@ def main():
     args = parser.parse_args()
     fun = {
         (False, False): b59encode,
-        (False, True): b59encode_check,
         (True, False): b59decode,
-        (True, True): b59decode_check
     }[(args.decode, args.check)]
 
     data = args.file.read().rstrip(b'\n')
