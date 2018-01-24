@@ -50,12 +50,14 @@ class BaseX(object):
         """Encode an integer using BaseX"""
         if not i and default_one:
             return self.alphabet[0]
+
         string = ""
         sum_chk = 0
         while i:
             i, idx = divmod(i, self.base)
             string = self.alphabet[idx] + string
             sum_chk += idx
+
         return string, sum_chk
 
     def encode(self, v):
@@ -96,6 +98,7 @@ class BaseX(object):
             decimal = decimal * self.base + i
             sum_chk += i
             sumsz += 1
+
         return decimal, sum_chk, sumsz
 
     def decode(self, v):
@@ -117,7 +120,7 @@ class BaseX(object):
 
         sum_chk += chk
         sum_chk += (sumsz + sumsz / self.base) % self.base
-        if (sum_chk % self.base):
+        if sum_chk % self.base:
             raise ValueError("Invalid checksum")
 
         result = []
