@@ -135,39 +135,42 @@ def unserialise_compound(bytes_, repr='encoded'):
         return ";".join(unserialise(bytes_))
 
 
-def _is_serialised(uuid_):
-    if (uuid_.length < 2):
-        return False
-    length = uuid_.length + 1
-    if (uuid_[0] == 1):
-        length = 17
-    else:
-        q = bool(uuid_[0] & 0xf0)
-        for i in range(13):
-            if (UUID.VL[i][q][0] == (uuid_[0] & UUID.VL[i][q][1])):
-                length = i + 4
-                break
-    if (uuid_ < length):
-        return False
+def _is_serialised(bytes_):
+    while bytes_:
+        size = len(bytes_)
+        if size < 2:
+            return False
+        byte0 = ord(bytes_[0])
+        if byte0 == 1:
+            length = 17
+        else:
+            length = size
+            q = bool(byte0 & 0xf0)
+            for i in range(13):
+                if UUID.VL[i][q][0] == (byte0 & UUID.VL[i][q][1]):
+                    length = i + 4
+                    break
+        if size < length:
+            return False
+        bytes_ = bytes_[length:]
     return True
 
 
 def serialise(uuids_):
     serialised = b''
     for uuid_ in uuids_:
-        uuid_sz = len(uuid_)
-        if uuid_sz == UUID.UUID_LENGTH and uuid_[8] == '-' and uuid_[13] == '-' and uuid_[18] == '-' and uuid_[23] == '-':
+        size = len(uuid_)
+        if size == UUID.UUID_LENGTH and uuid_[8] == '-' and uuid_[13] == '-' and uuid_[18] == '-' and uuid_[23] == '-':
             hex_uuid = uuid_[0:8] + uuid_[9:4] + uuid_[14:4] + uuid_[19:4] + uuid_[24:12]
             if all(c in string.hexdigits for c in hex_uuid):
                 u = UUID(uuid_)
                 serialised += u.serialise()
                 continue
-        elif uuid_sz >= 7 and uuid_[0] == '~':
+        elif size >= 7 and uuid_[0] == '~':
             serialised += ENCODER.decode(uuid_)
             if _is_serialised(serialised):
                 continue
         raise ValueError("Invalid UUID format %s" % uuid_)
-
     return serialised
 
 
@@ -475,40 +478,46 @@ if __name__ == '__main__':
 
     uuids = [
         # Full:
-        ('5759b016-10c0-4526-a981-47d6d19f6fb4', repr('5759b016-10c0-4526-a981-47d6d19f6fb4'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4')),
-        ('e8b13d1b-665f-4f4c-aa83-76fa782b030a', repr('e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
+        ('5759b016-10c0-4526-a981-47d6d19f6fb4', ['5759b016-10c0-4526-a981-47d6d19f6fb4'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4')),
+        ('e8b13d1b-665f-4f4c-aa83-76fa782b030a', ['e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
         # Condensed:
-        ('00000000-0000-1000-8000-000000000000', repr('00000000-0000-1000-8000-000000000000'), repr('\x1c\x00\x00\x00')),
-        ('11111111-1111-1111-8111-111111111111', repr('~yc9DnemYGNTMdKXsYYiTKOc'), repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('00000000-0000-1000-8000-000000000000', ['00000000-0000-1000-8000-000000000000'], repr('00000000-0000-1000-8000-000000000000'), repr('\x1c\x00\x00\x00')),
+        ('11111111-1111-1111-8111-111111111111', ['11111111-1111-1111-8111-111111111111'], repr('~yc9DnemYGNTMdKXsYYiTKOc'), repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
         # Condensed + Compacted:
-        ('230c0800-dc3c-11e7-b966-a3ab262e682b', repr('~SsQq3dJdg3P'), repr('\x06,\x02[\b9fW')),
-        ('f2238800-debf-11e7-bbf7-dffcee0c03ab', repr('~SUkSiXYTT8c'), repr('\x06.\x86*\x1f\xbb\xf7W')),
+        ('230c0800-dc3c-11e7-b966-a3ab262e682b', ['230c0800-dc3c-11e7-b966-a3ab262e682b'], repr('~SsQq3dJdg3P'), repr('\x06,\x02[\b9fW')),
+        ('f2238800-debf-11e7-bbf7-dffcee0c03ab', ['f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~SUkSiXYTT8c'), repr('\x06.\x86*\x1f\xbb\xf7W')),
         # Condensed + Expanded:
-        ('60579016-dec5-11e7-b616-34363bc9ddd6', repr('60579016-dec5-11e7-b616-34363bc9ddd6'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac')),
-        ('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', repr('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
+        ('60579016-dec5-11e7-b616-34363bc9ddd6', ['60579016-dec5-11e7-b616-34363bc9ddd6'], repr('60579016-dec5-11e7-b616-34363bc9ddd6'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac')),
+        ('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', ['4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
         # Other:
-        ('00000000-0000-0000-0000-000000000000', repr('00000000-0000-0000-0000-000000000000'), repr('\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')),
-        ('00000000-0000-1000-8000-010000000000', repr('~notmet'), repr('\x1c\x00\x00\x01')),
-        ('11111111-1111-1111-8111-101111111111', repr('11111111-1111-1111-8111-101111111111'), repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
-        ('00000000-0000-1000-a000-000000000000', repr('00000000-0000-1000-a000-000000000000'), repr('\n@\x00\x00\x00\x00\x00\x00\x00')),
+        ('00000000-0000-0000-0000-000000000000', ['00000000-0000-0000-0000-000000000000'], repr('00000000-0000-0000-0000-000000000000'), repr('\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')),
+        ('00000000-0000-1000-8000-010000000000', ['00000000-0000-1000-8000-010000000000'], repr('~notmet'), repr('\x1c\x00\x00\x01')),
+        ('11111111-1111-1111-8111-101111111111', ['11111111-1111-1111-8111-101111111111'], repr('11111111-1111-1111-8111-101111111111'), repr('\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
+        ('00000000-0000-1000-a000-000000000000', ['00000000-0000-1000-a000-000000000000'], repr('00000000-0000-1000-a000-000000000000'), repr('\n@\x00\x00\x00\x00\x00\x00\x00')),
         # Coumpound:
-        ('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a', repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
-        ('00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111', repr('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
-        ('230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab', repr('~EYBuNUmS8MZs98Mq64McVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
-        ('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
-        ('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111', repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
+        ('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a', ['5759b016-10c0-4526-a981-47d6d19f6fb4', 'e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
+        ('00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~EYBuNUmS8MZs98Mq64McVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
+        ('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', ['60579016-dec5-11e7-b616-34363bc9ddd6', '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
+        ('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111', ['00000000-0000-1000-8000-010000000000', '11111111-1111-1111-8111-101111111111'], repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
+        # Compound + Encoded:
+        ('~HahbAtfQHjMfBztms7OdcPNp34A8PQ3RA3KD2gYdzO55QK', ['5759b016-10c0-4526-a981-47d6d19f6fb4', 'e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
+        ('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('~EYBuNUmS8MZs98Mq64McVQ', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~EYBuNUmS8MZs98Mq64McVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
+        ('~bo9AghAbwcXA2PzQQmZUlSFts6SmBNlgK76ctOiw7f', ['60579016-dec5-11e7-b616-34363bc9ddd6', '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
+        ('~WPQUxPCuJZ3YBTcUmoAMhJFiMicb', ['00000000-0000-1000-8000-010000000000', '11111111-1111-1111-8111-101111111111'], repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
     ]
 
     ################################################
 
-    for i, (str_uuid, expected_encoded, expected_serialised) in enumerate(uuids):
+    for i, (str_uuid, expected, expected_encoded, expected_serialised) in enumerate(uuids):
         try:
             serialised = serialise_compound(str_uuid)
 
-            result_str_uuid = ';'.join(unserialise(serialised))
-            if result_str_uuid != str_uuid:
+            result = unserialise(serialised)
+            if result != expected:
                 errors += 1
-                print("Error in unserialise:\n\tResult: %s\n\tExpected: %s" % (result_str_uuid, str_uuid))
+                print("Error in unserialise:\n\tResult: %s\n\tExpected: %s" % (result, expected))
 
             result_encoded = repr(unserialise_compound(serialised))
             if result_encoded != expected_encoded:

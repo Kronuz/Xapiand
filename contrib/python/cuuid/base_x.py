@@ -21,16 +21,17 @@ class BaseX(object):
         self.base = len(self.alphabet)
         self.decoder = [self.base] * 256
         for i, a in enumerate(self.alphabet):
-            self.decoder[ord(a)] = i
+            o = ord(a)
+            self.decoder[o] = i
 
         x = -1
         for a in self.translate:
-            v = ord(a)
-            i = self.decoder[v]
-            if i <= self.base:
+            o = ord(a)
+            i = self.decoder[o]
+            if i < self.base:
                 x = i
             else:
-                self.decoder[v] = x
+                self.decoder[o] = x
 
     def encode_int(self, i, default_one=True):
         '''Encode an integer using Base59'''
@@ -73,12 +74,11 @@ class BaseX(object):
         sum_chk = 0
         sumsz = 0
         for char in v:
-            i = self.decoder[ord(char)]
+            o = ord(char)
+            i = self.decoder[o]
             if i < 0:
                 continue
             if i >= self.base:
-                print 'char-> '
-                print repr(char)
                 raise ValueError("Invalid character")
             decimal = decimal * self.base + i
             sum_chk += i
