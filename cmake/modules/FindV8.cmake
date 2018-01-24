@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+# Copyright (C) 2015-2018 deipi.com LLC and contributors. All rights reserved.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -33,7 +33,7 @@
 ########################################################################
 
 
-find_path (V8_INCLUDE_DIR v8.h
+find_path(V8_INCLUDE_DIR v8.h
 	$ENV{V8_DIR}/include
 	$ENV{V8_DIR}
 	/usr/local/include
@@ -49,7 +49,7 @@ find_path (V8_INCLUDE_DIR v8.h
 )
 
 
-find_library (V8_LIBRARY
+find_library(V8_LIBRARY
 	NAMES v8
 	PATHS
 		$ENV{V8_DIR}
@@ -65,7 +65,7 @@ find_library (V8_LIBRARY
 		/Library/Frameworks
 )
 
-find_library (V8_BASE_LIBRARY
+find_library(V8_BASE_LIBRARY
 	NAMES v8_base libv8_base v8_base.ia32 v8_base.x64
 	PATHS
 		$ENV{V8_DIR}
@@ -81,7 +81,7 @@ find_library (V8_BASE_LIBRARY
 		/Library/Frameworks
 )
 
-find_library (V8_NOSNAPSHOT_LIBRARY
+find_library(V8_NOSNAPSHOT_LIBRARY
 	NAMES v8_nosnapshot libv8_nosnapshot
 	PATHS
 		$ENV{V8_DIR}
@@ -97,7 +97,7 @@ find_library (V8_NOSNAPSHOT_LIBRARY
 		/Library/Frameworks
 )
 
-find_library (V8_LIBBASE_LIBRARY
+find_library(V8_LIBBASE_LIBRARY
 	NAMES v8_libbase libv8_libbase
 	PATHS
 		$ENV{V8_DIR}
@@ -113,7 +113,7 @@ find_library (V8_LIBBASE_LIBRARY
 		/Library/Frameworks
 )
 
-find_library (V8_LIBPLATFORM_LIBRARY
+find_library(V8_LIBPLATFORM_LIBRARY
 	NAMES v8_libplatform libv8_libplatform
 	PATHS
 		$ENV{V8_DIR}
@@ -129,24 +129,24 @@ find_library (V8_LIBPLATFORM_LIBRARY
 		/Library/Frameworks
 )
 
-if (V8_INCLUDE_DIR AND V8_LIBRARY)
-	set (V8_FOUND TRUE)
-	set (V8_INCLUDE_DIRS ${V8_INCLUDE_DIR})
-	set (V8_LIBRARIES ${V8_LIBRARY})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBBASE_LIBRARY})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBPLATFORM_LIBRARY})
-	message (STATUS "Found v8: ${V8_INCLUDE_DIRS}")
-elseif (V8_INCLUDE_DIR AND V8_BASE_LIBRARY)
-	set (V8_FOUND TRUE)
-	set (V8_INCLUDE_DIRS ${V8_INCLUDE_DIR})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_BASE_LIBRARY})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_NOSNAPSHOT_LIBRARY})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBBASE_LIBRARY})
-	set (V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBPLATFORM_LIBRARY})
-	message (STATUS "Found v8: ${V8_INCLUDE_DIRS}")
-else ()
-	set (V8_FOUND FALSE)
-	if (V8_FIND_REQUIRED)
-		message (FATAL_ERROR "V8 library not found.")
-	endif ()
-endif ()
+if(V8_INCLUDE_DIR AND V8_LIBRARY)
+	set(V8_FOUND TRUE)
+	set(V8_INCLUDE_DIRS ${V8_INCLUDE_DIR})
+	set(V8_LIBRARIES ${V8_LIBRARY})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBBASE_LIBRARY})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBPLATFORM_LIBRARY})
+	message(STATUS "Found v8: ${V8_INCLUDE_DIRS}")
+elseif(V8_INCLUDE_DIR AND V8_BASE_LIBRARY)
+	set(V8_FOUND TRUE)
+	set(V8_INCLUDE_DIRS ${V8_INCLUDE_DIR})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_BASE_LIBRARY})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_NOSNAPSHOT_LIBRARY})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBBASE_LIBRARY})
+	set(V8_LIBRARIES ${V8_LIBRARIES} ${V8_LIBPLATFORM_LIBRARY})
+	message(STATUS "Found v8: ${V8_INCLUDE_DIRS}")
+else()
+	set(V8_FOUND FALSE)
+	if(V8_FIND_REQUIRED)
+		message(FATAL_ERROR "V8 library not found.")
+	endif()
+endif()

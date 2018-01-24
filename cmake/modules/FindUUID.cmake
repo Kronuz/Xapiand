@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
+# Copyright (C) 2015-2018 deipi.com LLC and contributors. All rights reserved.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -33,35 +33,35 @@
 ########################################################################
 
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-	set (GUID_FREEBSD 1)
-	set (UUID_NAME_LIB c++)
-	set (UUID_LIB_PATH uuid.h)
-	set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
-elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	set (GUID_LIBUUID 1)
-	set (UUID_NAME_LIB c++)
-	set (UUID_LIB_PATH uuid/uuid.h)
-	# set (GUID_CFUUID 1)
-	# set (UUID_NAME_LIB CoreFoundation)
-	# set (UUID_LIB_PATH CoreFoundation/CFUUID.h)
-	# set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found")
-elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set (GUID_LIBUUID 1)
-	set (UUID_NAME_LIB uuid)
-	set (UUID_LIB_PATH uuid/uuid.h)
-	set (UUID_ERR_MSG "UUID library (${UUID_LIB_PATH}) not found, You may need to install the uuid-dev or libuuid-devel package")
-else ()
-	message (FATAL_ERROR "This module does not have support for ${CMAKE_SYSTEM_NAME}")
-endif ()
+if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+	set(GUID_FREEBSD 1)
+	set(UUID_NAME_LIB c++)
+	set(UUID_LIB_PATH uuid.h)
+	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+	set(GUID_LIBUUID 1)
+	set(UUID_NAME_LIB c++)
+	set(UUID_LIB_PATH uuid/uuid.h)
+	# set(GUID_CFUUID 1)
+	# set(UUID_NAME_LIB CoreFoundation)
+	# set(UUID_LIB_PATH CoreFoundation/CFUUID.h)
+	# set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set(GUID_LIBUUID 1)
+	set(UUID_NAME_LIB uuid)
+	set(UUID_LIB_PATH uuid/uuid.h)
+	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the uuid-dev or libuuid-devel package")
+else()
+	message(FATAL_ERROR "This module does not have support for ${CMAKE_SYSTEM_NAME}")
+endif()
 
 
-find_package (PkgConfig REQUIRED)
-pkg_check_modules (PC_UUID QUIET ${UUID_NAME_LIB})
-set (UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_UUID QUIET ${UUID_NAME_LIB})
+set(UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
 
 
-find_path (UUID_INCLUDE_DIR ${UUID_LIB_PATH}
+find_path(UUID_INCLUDE_DIR ${UUID_LIB_PATH}
 	$ENV{UUID_DIR}/include
 	$ENV{UUID_DIR}
 	/usr/local/include
@@ -77,7 +77,7 @@ find_path (UUID_INCLUDE_DIR ${UUID_LIB_PATH}
 )
 
 
-find_library (UUID_LIBRARY ${UUID_NAME_LIB}
+find_library(UUID_LIBRARY ${UUID_NAME_LIB}
 	$ENV{UUID_DIR}
 	$ENV{UUID_DIR}/lib
 	/usr/local/lib
@@ -91,7 +91,7 @@ find_library (UUID_LIBRARY ${UUID_NAME_LIB}
 	/Library/Frameworks
 )
 
-include (FindPackageHandleStandardArgs)
+include(FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE
 # if all listed variables are TRUE
@@ -99,8 +99,8 @@ find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
 	UUID_LIBRARY UUID_INCLUDE_DIR)
 
 
-mark_as_advanced (UUID_LIBRARY UUID_INCLUDE_DIR)
+mark_as_advanced(UUID_LIBRARY UUID_INCLUDE_DIR)
 
 
-set (UUID_LIBRARIES ${UUID_LIBRARY})
-set (UUID_INCLUDE_DIRS ${UUID_INCLUDE_DIR})
+set(UUID_LIBRARIES ${UUID_LIBRARY})
+set(UUID_INCLUDE_DIRS ${UUID_INCLUDE_DIR})

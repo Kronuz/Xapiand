@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2017 deipi.com LLC and contributors. All rights reserved.
+# Copyright (C) 2017-2018 deipi.com LLC and contributors. All rights reserved.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -29,7 +29,7 @@
 ########################################################################
 
 
-find_path (CHAISCRIPT_INCLUDE_DIR chaiscript/chaiscript.hpp
+find_path(CHAISCRIPT_INCLUDE_DIR chaiscript/chaiscript.hpp
 	$ENV{CHAISCRIPT_DIR}/include
 	$ENV{CHAISCRIPT_DIR}
 	/usr/local/include
@@ -50,11 +50,11 @@ include(FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set CHAISCRIPT_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args (CHAISCRIPT "System ChaiScript library not found, using included one."
+find_package_handle_standard_args(CHAISCRIPT "System ChaiScript library not found, using included one."
 	CHAISCRIPT_INCLUDE_DIR)
 
 
-mark_as_advanced (CHAISCRIPT_INCLUDE_DIR)
+mark_as_advanced(CHAISCRIPT_INCLUDE_DIR)
 
 
-set (CHAISCRIPT_INCLUDE_DIRS ${CHAISCRIPT_INCLUDE_DIR})
+set(CHAISCRIPT_INCLUDE_DIRS ${CHAISCRIPT_INCLUDE_DIR})
