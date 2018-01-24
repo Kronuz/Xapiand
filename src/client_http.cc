@@ -1220,12 +1220,12 @@ HttpClient::meta_view(enum http_method method, Command)
 		std::string cmd = path_parser.get_cmd();
 		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
-			selector = cmd.substr(needle);
+			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
 		}
 	} else {
 		auto needle = key.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
-			selector = key.substr(needle);
+			selector = key.substr(key[needle] == '|' ? needle + 1 : needle);
 			key = key.substr(0, needle);
 		}
 	}
@@ -1374,7 +1374,7 @@ HttpClient::schema_view(enum http_method method, Command)
 	auto cmd = path_parser.get_cmd();
 	auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 	if (needle != std::string::npos) {
-		selector = cmd.substr(needle);
+		selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
 	}
 
 	endpoints_maker(1s);
@@ -1426,12 +1426,12 @@ HttpClient::search_view(enum http_method method, Command)
 		auto cmd = path_parser.get_cmd();
 		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
-			selector = cmd.substr(needle);
+			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
 		}
 	} else {
 		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
-			selector = id.substr(needle);
+			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
 	}
