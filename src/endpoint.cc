@@ -65,7 +65,10 @@ normalize_and_partition(const void *p, size_t size)
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
 			// {00000000-0000-1000-8000-010000000000}
-			result.append(&normalized[10], &normalized[14]);
+			result.reserve(2 + 8 + normalized.size());
+			result.append(&normalized[1 + 14], &normalized[1 + 18]);
+			result.push_back('/');
+			result.append(&normalized[1 + 9], &normalized[1 + 13]);
 			result.push_back('/');
 			result.append(normalized);
 			break;
@@ -73,7 +76,10 @@ normalize_and_partition(const void *p, size_t size)
 #ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn:
 			// urn:uuid:00000000-0000-1000-8000-010000000000
-			result.append(&normalized[18], &normalized[22]);
+			result.reserve(2 + 8 + normalized.size());
+			result.append(&normalized[9 + 14], &normalized[9 + 18]);
+			result.push_back('/');
+			result.append(&normalized[9 + 9], &normalized[9 + 13]);
 			result.push_back('/');
 			result.append(normalized);
 			break;
@@ -106,6 +112,9 @@ normalize_and_partition(const void *p, size_t size)
 		default:
 		case UUIDRepr::simple:
 			// 00000000-0000-1000-8000-010000000000
+			result.reserve(2 + 8 + normalized.size());
+			result.append(&normalized[14], &normalized[18]);
+			result.push_back('/');
 			result.append(&normalized[9], &normalized[13]);
 			result.push_back('/');
 			result.append(normalized);
