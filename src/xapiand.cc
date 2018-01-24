@@ -324,17 +324,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #ifdef UUID_USE_URN
 			"urn",
 #endif
-#ifdef UUID_USE_BASE16
-			"base16",
-#endif
-#ifdef UUID_USE_BASE58
-			"base58",
-#endif
-#ifdef UUID_USE_BASE59
-			"base59",
-#endif
-#ifdef UUID_USE_BASE62
-			"base62",
+#ifdef UUID_USE_ENCODED
+			"encoded",
 #endif
 			"optimal",
 		});
@@ -480,12 +471,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				case xxh64::hash("optimal"):
 					opts.uuid_compact = true;
 					opts.uuid_partition = true;
-#if defined UUID_USE_BASE59
-					opts.uuid_repr = UUIDRepr::base59;
-#elif defined UUID_USE_BASE58
-					opts.uuid_repr = UUIDRepr::base58;
-#elif defined UUID_USE_BASE62
-					opts.uuid_repr = UUIDRepr::base62;
+#if defined UUID_USE_ENCODED
+					opts.uuid_repr = UUIDRepr::encoded;
 #endif
 					break;
 				case xxh64::hash("compact"):
@@ -504,24 +491,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 					opts.uuid_repr = UUIDRepr::urn;
 					break;
 #endif
-#ifdef UUID_USE_BASE16
-				case xxh64::hash("base16"):
-					opts.uuid_repr = UUIDRepr::base16;
-					break;
-#endif
-#ifdef UUID_USE_BASE58
-				case xxh64::hash("base58"):
-					opts.uuid_repr = UUIDRepr::base58;
-					break;
-#endif
-#ifdef UUID_USE_BASE59
-				case xxh64::hash("base59"):
-					opts.uuid_repr = UUIDRepr::base59;
-					break;
-#endif
-#ifdef UUID_USE_BASE62
-				case xxh64::hash("base62"):
-					opts.uuid_repr = UUIDRepr::base62;
+#ifdef UUID_USE_ENCODED
+				case xxh64::hash("encoded"):
+					opts.uuid_repr = UUIDRepr::encoded;
 					break;
 #endif
 			}

@@ -69,44 +69,15 @@ Serialise::isUUID(const std::string& field_value) noexcept
 						continue;
 					}
 				}
-#ifdef UUID_USE_BASE16
-				if (uuid_sz >= 9) {  // floor((4 * 8) / log2(16)) + 1
-					if (BASE16.is_valid(uuid)) {
-						auto decoded = BASE16.decode(uuid);
+#ifdef UUID_USE_ENCODED
+				auto uuid_front = uuid.front();
+				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
+					try {
+						auto decoded = UUID_ENCODER.decode(uuid);
 						if (Guid::is_serialised(decoded)) {
 							continue;
 						}
-					}
-				}
-#endif
-#ifdef UUID_USE_BASE58
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(58)) + 1
-					if (BASE58.is_valid(uuid)) {
-						auto decoded = BASE58.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							continue;
-						}
-					}
-				}
-#endif
-#ifdef UUID_USE_BASE59
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(59)) + 1
-					if (BASE59.is_valid(uuid)) {
-						auto decoded = BASE59.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							continue;
-						}
-					}
-				}
-#endif
-#ifdef UUID_USE_BASE62
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(62)) + 1
-					if (BASE62.is_valid(uuid)) {
-						auto decoded = BASE62.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							continue;
-						}
-					}
+					} catch (const std::invalid_argument&) { }
 				}
 #endif
 				return false;
@@ -617,43 +588,11 @@ Serialise::uuid(const std::string& field_value)
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
-			#ifdef UUID_USE_BASE16
-				if (uuid_sz >= 9) {  // floor((4 * 8) / log2(16)) + 1
+			#ifdef UUID_USE_ENCODED
+				auto uuid_front = uuid.front();
+				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
-						auto decoded = BASE16.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							serialised.append(decoded);
-							continue;
-						}
-					} catch (const std::invalid_argument&) { }
-				}
-			#endif
-			#ifdef UUID_USE_BASE58
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(58)) + 1
-					try {
-						auto decoded = BASE58.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							serialised.append(decoded);
-							continue;
-						}
-					} catch (const std::invalid_argument&) { }
-				}
-			#endif
-			#ifdef UUID_USE_BASE59
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(59)) + 1
-					try {
-						auto decoded = BASE59.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							serialised.append(decoded);
-							continue;
-						}
-					} catch (const std::invalid_argument&) { }
-				}
-			#endif
-			#ifdef UUID_USE_BASE62
-				if (uuid_sz >= 6) {  // floor((4 * 8) / log2(62)) + 1
-					try {
-						auto decoded = BASE62.decode(uuid);
+						auto decoded = UUID_ENCODER.decode(uuid);
 						if (Guid::is_serialised(decoded)) {
 							serialised.append(decoded);
 							continue;
@@ -1158,34 +1097,10 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			break;
 		}
 #endif
-#ifdef UUID_USE_BASE16
-		case UUIDRepr::base16: {
-			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
-				result.append(BASE16.encode(serialised_uuid));
-				break;
-			}
-		}
-#endif
-#ifdef UUID_USE_BASE58
-		case UUIDRepr::base58: {
-			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
-				result.append(BASE58.encode(serialised_uuid));
-				break;
-			}
-		}
-#endif
-#ifdef UUID_USE_BASE59
+#ifdef UUID_USE_ENCODED
 		case UUIDRepr::base59: {
 			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
-				result.append(BASE59.encode(serialised_uuid));
-				break;
-			}
-		}
-#endif
-#ifdef UUID_USE_BASE62
-		case UUIDRepr::base62: {
-			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
-				result.append(BASE62.encode(serialised_uuid));
+				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}
 		}
