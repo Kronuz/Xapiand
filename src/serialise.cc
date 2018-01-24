@@ -55,16 +55,12 @@ Serialise::isUUID(const std::string& field_value) noexcept
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
 		Split<> split(field_value, UUID_SEPARATOR_LIST);
-#ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
 			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else
-#endif
-#ifdef UUID_USE_URN
 		if (field_value.compare(0, 9, "urn:uuid:") == 0) {
 			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
-#endif
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
 			if (uuid_sz) {
@@ -604,16 +600,12 @@ Serialise::uuid(const std::string& field_value)
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
 		Split<> split(field_value, UUID_SEPARATOR_LIST);
-#ifdef UUID_USE_GUID
 		if (field_value.front() == '{' && field_value.back() == '}') {
 			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else
-#endif
-#ifdef UUID_USE_URN
 		if (field_value.compare(0, 9, "urn:uuid:") == 0) {
 			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
-#endif
 		std::string serialised;
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
