@@ -58,13 +58,15 @@ class BaseX(object):
             string = self.alphabet[idx] + string
             sum_chk += idx
 
-        return string, sum_chk
+        sumsz = len(string)
+        sum_chk += sumsz + sumsz / self.base
+
+        return string, sum_chk % self.base
 
     def encode(self, v):
         """Encode a string using BaseX"""
         if not isinstance(v, bytes):
-            raise TypeError("a bytes-like object is required, not '%s'" %
-                            type(v).__name__)
+            raise TypeError("a bytes-like object is required, not '%s'" % type(v).__name__)
 
         p, acc = 1, 0
         for c in map(ord, reversed(v)):
@@ -73,9 +75,6 @@ class BaseX(object):
 
         result, sum_chk = self.encode_int(acc, default_one=False)
 
-        sz = len(result)
-        sz = (sz + (sz / self.base)) % self.base
-        sum_chk += sz
         sum_chk = (self.base - (sum_chk % self.base)) % self.base
         return result + self.alphabet[sum_chk]
 
@@ -99,7 +98,9 @@ class BaseX(object):
             sum_chk += i
             sumsz += 1
 
-        return decimal, sum_chk, sumsz
+        sum_chk += sumsz + sumsz / self.base
+
+        return decimal, sum_chk % self.base
 
     def decode(self, v):
         """Decode a BaseX encoded string"""
@@ -116,10 +117,9 @@ class BaseX(object):
                 raise ValueError("Invalid character")
             break
 
-        acc, sum_chk, sumsz = self.decode_int(v)
+        acc, sum_chk = self.decode_int(v)
 
         sum_chk += chk
-        sum_chk += (sumsz + sumsz / self.base) % self.base
         if sum_chk % self.base:
             raise ValueError("Invalid checksum")
 
@@ -130,10 +130,22 @@ class BaseX(object):
 
         return ''.join(map(chr, reversed(result)))
 
+    def chksum(self, v):
+        """Get checksum character for BaseX encoded string"""
+
+        if not isinstance(v, str):
+            v = v.decode('ascii')
+
+        acc, sum_chk = self.decode_int(v)
+
+        sum_chk = (self.base - (sum_chk % self.base)) % self.base
+        return self.alphabet[sum_chk]
+
 
 b59 = BaseX('zy9MalDxwpKLdvW2AtmscgbYUq6jhP7E53TiXenZRkVCrouBH4GSQf8FNJO', '~l1IO0')
 b59decode = b59.decode
 b59encode = b59.encode
+b59
 
 
 def main():
