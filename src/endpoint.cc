@@ -36,49 +36,85 @@ atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
 static inline std::string
 normalize(const void *p, size_t size)
 {
+	UUIDRepr repr = XapiandManager::manager->opts.uuid_repr;
+	std::string serialised_uuid;
+	std::string normalized;
 	try {
-		return Unserialise::uuid(Serialise::uuid(std::string(static_cast<const char*>(p), size)), XapiandManager::manager->opts.uuid_repr);
-	} catch (const SerialisationError&) {
-		return "";
-	}
+		serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
+		normalized = Unserialise::uuid(serialised_uuid, repr);
+	} catch (const SerialisationError&) { }
+	return normalized;
 }
 
 
 static inline std::string
 normalize_and_partition(const void *p, size_t size)
 {
-	std::string ret;
+	UUIDRepr repr = XapiandManager::manager->opts.uuid_repr;
+	std::string serialised_uuid;
 	std::string normalized;
 	try {
-		auto serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
-		normalized = Unserialise::uuid(serialised_uuid, XapiandManager::manager->opts.uuid_repr);
-		if (!(XapiandManager::manager->opts.uuid_repr != UUIDRepr::simple && serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2)))) {
-			ret.append(&normalized[9], &normalized[13]);
-			ret.push_back('/');
-			ret.append(normalized);
-			return ret;
-		}
+		serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
+		normalized = Unserialise::uuid(serialised_uuid, repr);
 	} catch (const SerialisationError& exc) {
 		return normalized;
 	}
-	auto cit = normalized.cbegin();
-	auto cit_e = normalized.cend();
-	ret.reserve(2 + normalized.size());
-	if (cit == cit_e) return ret;
-	ret.push_back(*cit++);
-	if (cit == cit_e) return ret;
-	ret.push_back(*cit++);
-	if (cit == cit_e) return ret;
-	ret.push_back(*cit++);
-	if (cit == cit_e) return ret;
-	ret.push_back('/');
-	ret.push_back(*cit++);
-	if (cit == cit_e) return ret;
-	ret.push_back(*cit++);
-	if (cit == cit_e) return ret;
-	ret.push_back('/');
-	ret.append(cit, cit_e);
-	return ret;
+
+	std::string result;
+	switch (repr) {
+		case UUIDRepr::simple:
+			// 00000000-0000-1000-8000-010000000000
+			result.append(&normalized[9], &normalized[13]);
+			result.push_back('/');
+			result.append(normalized);
+			break;
+#ifdef XAPIAND_UUID_GUID
+		case UUIDRepr::guid:
+			// {00000000-0000-1000-8000-010000000000}
+			result.append(&normalized[10], &normalized[14]);
+			result.push_back('/');
+			result.append(normalized);
+			break;
+#endif
+#ifdef XAPIAND_UUID_URN
+		case UUIDRepr::urn:
+			// urn:uuid:00000000-0000-1000-8000-010000000000
+			result.append(&normalized[18], &normalized[22]);
+			result.push_back('/');
+			result.append(normalized);
+			break;
+#endif
+#ifdef XAPIAND_UUID_ENCODED
+		case UUIDRepr::encoded:
+			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
+				auto cit = normalized.cbegin();
+				auto cit_e = normalized.cend();
+				result.reserve(2 + normalized.size());
+				if (cit == cit_e) return result;
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back('/');
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back(*cit++);
+				if (cit == cit_e) return result;
+				result.push_back('/');
+				result.append(cit, cit_e);
+				break;
+			}
+			result.append(&normalized[9], &normalized[13]);
+			result.push_back('/');
+			result.append(normalized);
+			break;
+#endif
+	}
+	return result;
 }
 
 

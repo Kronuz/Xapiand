@@ -1077,40 +1077,37 @@ std::string
 Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
+	std::vector<Guid> uuids;
 	switch (repr) {
+		case UUIDRepr::simple:
+			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			break;
 #ifdef XAPIAND_UUID_GUID
-		case UUIDRepr::guid: {
-			std::vector<Guid> uuids;
+		case UUIDRepr::guid:
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.push_back('{');
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			result.push_back('}');
 			break;
-		}
 #endif
 #ifdef XAPIAND_UUID_URN
-		case UUIDRepr::urn: {
-			std::vector<Guid> uuids;
+		case UUIDRepr::urn:
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append("urn:uuid:");
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
-		}
 #endif
 #ifdef XAPIAND_UUID_ENCODED
-		case UUIDRepr::base59: {
+		case UUIDRepr::encoded:
 			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}
-		}
-#endif
-		case UUIDRepr::simple: {
-			std::vector<Guid> uuids;
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
-		}
+#endif
 	}
 	return result;
 }
