@@ -135,9 +135,9 @@ def unserialise_compound(bytes_, repr='encoded'):
         return ";".join(unserialise(bytes_))
 
 
-def _is_serialise(uuid_):
+def _is_serialised(uuid_):
     if (uuid_.length < 2):
-        return False;
+        return False
     length = uuid_.length + 1
     if (uuid_[0] == 1):
         length = 17
@@ -152,7 +152,6 @@ def _is_serialise(uuid_):
     return True
 
 
-
 def serialise(uuids_):
     serialised = b''
     for uuid_ in uuids_:
@@ -165,7 +164,7 @@ def serialise(uuids_):
                 continue
         elif uuid_sz >= 7 and uuid_[0] == '~':
             serialised += ENCODER.decode(uuid_)
-            if _is_serialise(serialised):
+            if _is_serialised(serialised):
                 continue
         raise ValueError("Invalid UUID format %s" % uuid_)
 
