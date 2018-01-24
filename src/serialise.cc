@@ -69,7 +69,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 						continue;
 					}
 				}
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 				auto uuid_front = uuid.front();
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
@@ -588,7 +588,7 @@ Serialise::uuid(const std::string& field_value)
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
-			#ifdef UUID_USE_ENCODED
+			#ifdef XAPIAND_UUID_ENCODED
 				auto uuid_front = uuid.front();
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
@@ -1078,7 +1078,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
 	switch (repr) {
-#ifdef UUID_USE_GUID
+#ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid: {
 			std::vector<Guid> uuids;
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
@@ -1088,7 +1088,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			break;
 		}
 #endif
-#ifdef UUID_USE_URN
+#ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn: {
 			std::vector<Guid> uuids;
 			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
@@ -1097,7 +1097,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 			break;
 		}
 #endif
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 		case UUIDRepr::base59: {
 			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));

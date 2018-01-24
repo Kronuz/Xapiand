@@ -318,13 +318,13 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		std::vector<std::string> uuid_allowed({
 			"compact",
 			"partition",
-#ifdef UUID_USE_GUID
+#ifdef XAPIAND_UUID_GUID
 			"guid",
 #endif
-#ifdef UUID_USE_URN
+#ifdef XAPIAND_UUID_URN
 			"urn",
 #endif
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 			"encoded",
 #endif
 			"optimal",
@@ -471,7 +471,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				case xxh64::hash("optimal"):
 					opts.uuid_compact = true;
 					opts.uuid_partition = true;
-#if defined UUID_USE_ENCODED
+#if defined XAPIAND_UUID_ENCODED
 					opts.uuid_repr = UUIDRepr::encoded;
 #endif
 					break;
@@ -481,17 +481,17 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				case xxh64::hash("partition"):
 					opts.uuid_partition = true;
 					break;
-#ifdef UUID_USE_GUID
+#ifdef XAPIAND_UUID_GUID
 				case xxh64::hash("guid"):
 					opts.uuid_repr = UUIDRepr::guid;
 					break;
 #endif
-#ifdef UUID_USE_URN
+#ifdef XAPIAND_UUID_URN
 				case xxh64::hash("urn"):
 					opts.uuid_repr = UUIDRepr::urn;
 					break;
 #endif
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 				case xxh64::hash("encoded"):
 					opts.uuid_repr = UUIDRepr::encoded;
 					break;

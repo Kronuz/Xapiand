@@ -73,13 +73,13 @@ constexpr uint32_t MAXDOU2INT = 2000000000;
 
 enum class UUIDRepr : uint8_t {
 	simple,
-#ifdef UUID_USE_GUID
+#ifdef XAPIAND_UUID_GUID
 	guid,
 #endif
-#ifdef UUID_USE_URN
+#ifdef XAPIAND_UUID_URN
 	urn,
 #endif
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 	encoded,
 #endif
 };

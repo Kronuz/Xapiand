@@ -264,8 +264,8 @@
 /* Enable V8 engine */
 #cmakedefine XAPIAND_V8 @XAPIAND_V8@
 
-#cmakedefine UUID_USE_ENCODED @UUID_USE_ENCODED@
-#cmakedefine UUID_USE_GUID @UUID_USE_GUID@
-#cmakedefine UUID_USE_URN @UUID_USE_URN@
+#cmakedefine XAPIAND_UUID_ENCODED @XAPIAND_UUID_ENCODED@
+#cmakedefine XAPIAND_UUID_GUID @XAPIAND_UUID_GUID@
+#cmakedefine XAPIAND_UUID_URN @XAPIAND_UUID_URN@
 
 #endif /*  _CONFIG_H_ */

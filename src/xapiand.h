@@ -72,6 +72,6 @@
 #endif
 
 
-#ifdef UUID_USE_ENCODED
+#ifdef XAPIAND_UUID_ENCODED
 	#define UUID_ENCODER (Base59::dubaluchk())
 #endif
