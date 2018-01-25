@@ -28,7 +28,6 @@
 #include <stdexcept>                        // for out_of_range
 
 #include "cast.h"                           // for Cast
-#include "chaipp/chaipp.h"                  // for chaipp namespace
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
@@ -44,7 +43,13 @@
 #include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
 #include "utils.h"                          // for repr
+
+#if defined(XAPIAND_V8)
 #include "v8pp/v8pp.h"                      // for v8pp namespace
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+#include "chaipp/chaipp.h"                  // for chaipp namespace
+#endif
 
 
 // Reserved words only used in the responses to the user.

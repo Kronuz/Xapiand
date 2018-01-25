@@ -87,13 +87,6 @@
 #endif
 
 
-#if defined(XAPIAND_V8)
-#include "v8pp/v8pp.h"
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
-#include "chaipp/chaipp.h"
-#endif
-
 #ifndef L_MANAGER
 #define L_MANAGER_DEFINED
 #define L_MANAGER L_NOTHING
