@@ -495,7 +495,7 @@ class Processor {
 
 public:
 	Processor(const std::string& script_source)
-		: isolate(v8::Isolate::New(engine(0).create_params)),
+		: isolate(v8::Isolate::New(engine().create_params)),
 		  finished(false)
 	{
 		Initialize(script_source);
@@ -526,17 +526,17 @@ public:
 		return it->second;
 	}
 
-	static Engine& engine(ssize_t max_size) {
-		static Engine engine(max_size);
+	static Engine& engine() {
+		static Engine engine(SCRIPTS_CACHE_SIZE);
 		return engine;
 	}
 
 	static auto compile(const std::string& script_name, const std::string& script_body) {
-		return engine(0).compile(script_name, script_body);
+		return engine().compile(script_name, script_body);
 	}
 
 	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
-		return engine(0).compile(script_hash, body_hash, script_body);
+		return engine().compile(script_hash, body_hash, script_body);
 	}
 };
 
