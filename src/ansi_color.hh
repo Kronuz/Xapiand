@@ -75,16 +75,16 @@ class ansi_color {
   }
 
   static constexpr auto standard256() {
-    constexpr uint8_t color = (r == g && g == b) ? (
-      r < 8 ? 16 :
-      r > 238 ? 231 :
-      (232 + static_cast<int>(((r - 8) * 23.0f / 230.0f) + 0.5f))
+    constexpr uint8_t color = static_cast<uint8_t>((r == g && g == b) ? (
+      r < 6 ? 16 :
+      r > 249 ? 231 :
+      231 + static_cast<int>((r * 25.0f / 255.0f) + 0.5f)
     ) : (
       16 +
       (static_cast<int>(r / 255.0f * 5.0f + 0.5f) * 36) +
       (static_cast<int>(g / 255.0f * 5.0f + 0.5f) * 6) +
       (static_cast<int>(b / 255.0f * 5.0f + 0.5f))
-    );
+    ));
     return (
       esc +
       to_string<bold>::value +
@@ -99,7 +99,7 @@ class ansi_color {
     constexpr auto min = _min < b ? _min : b;
     constexpr auto _max = r > g ? r : g;
     constexpr auto max = _max > b ? _max : b;
-    constexpr uint8_t color = (r == g && g == b) ? (
+    constexpr uint8_t color = static_cast<uint8_t>((r == g && g == b) ? (
       r > 192 ? 15 :
       r > 128 ? 7 :
       r > 32 ? 8 :
@@ -114,7 +114,7 @@ class ansi_color {
           ((static_cast<int>((r - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0))
         ) + (max > 192 ? 8 : 0)
       )
-    );
+    ));
     return (
       esc +
       to_string<bold>::value +
