@@ -1642,10 +1642,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 #endif
 
 	try {
+		map_values.clear();
 		specification = default_spc;
-
-		// Set default RESERVED_SLOT for root
-		specification.slot = DB_SLOT_ROOT;
+		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		FieldVector fields;
 		auto properties = &get_newest_properties();
@@ -2230,6 +2229,10 @@ Schema::update(const MsgPack& object)
 	L_CALL("Schema::update(%s, %s)", repr(object.to_string()).c_str());
 
 	try {
+		map_values.clear();
+		specification = default_spc;
+		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
+
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
@@ -2244,11 +2247,6 @@ Schema::update(const MsgPack& object)
 		const auto& schema_obj = checked.second ? *checked.second : object;
 
 		auto properties = &get_newest_properties();
-
-		specification = default_spc;
-
-		// Set default RESERVED_SLOT for root
-		specification.slot = DB_SLOT_ROOT;
 
 		FieldVector fields;
 
@@ -2622,6 +2620,10 @@ Schema::write(const MsgPack& object, bool replace)
 	L_CALL("Schema::write(%s, %s, %s)", repr(object.to_string()).c_str(), replace ? "true" : "false");
 
 	try {
+		map_values.clear();
+		specification = default_spc;
+		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
+
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
@@ -2639,11 +2641,6 @@ Schema::write(const MsgPack& object, bool replace)
 		if (replace) {
 			mut_properties->clear();
 		}
-
-		specification = default_spc;
-
-		// Set default RESERVED_SLOT for root
-		specification.slot = DB_SLOT_ROOT;
 
 		FieldVector fields;
 
