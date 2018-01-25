@@ -156,8 +156,8 @@ public:
 	}
 
 	static Engine& engine() {
-		static Engine engine(SCRIPTS_CACHE_SIZE);
-		return engine;
+		static Engine* engine = new Engine(SCRIPTS_CACHE_SIZE);
+		return *engine;
 	}
 
 	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
