@@ -4092,16 +4092,19 @@ Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> r
 		auto prev_value = Unserialise::ranges_centroids(*s.begin());
 		s.clear();
 		ranges = HTM::range_union(std::move(ranges), std::vector<range_t>(std::make_move_iterator(prev_value.first.begin()), std::make_move_iterator(prev_value.first.end())));
-		if (prev_value.second.empty()) {
-			s.insert(Serialise::ranges_centroids(ranges, centroids));
-		} else {
-			for (const auto& _centroid : prev_value.second) {
-				if (std::find(centroids.begin(), centroids.end(), _centroid) == centroids.end()) {
-					centroids.push_back(_centroid);
+		const auto& prev_centroids = prev_value.second;
+		if (!prev_centroids.empty()) {
+			std::vector<Cartesian> missing;
+			auto centroids_begin = centroids.begin();
+			auto centroids_end = centroids.end();
+			for (const auto& _centroid : prev_centroids) {
+				if (std::find(centroids_begin, centroids_end, _centroid) == centroids_end) {
+					missing.push_back(_centroid);
 				}
 			}
-			s.insert(Serialise::ranges_centroids(ranges, centroids));
+			centroids.insert(centroids.end(), missing.begin(), missing.end());
 		}
+		s.insert(Serialise::ranges_centroids(ranges, centroids));
 	}
 }
 
