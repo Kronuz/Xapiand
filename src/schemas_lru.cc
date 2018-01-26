@@ -163,7 +163,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			if (new_metadata) {
 				// LOCAL new schema.
 				if (opts.foreign_schemas) {
-					THROW(CheckoutError, "Schema of %s must be a foreign (shared) schema", repr(db_handler->endpoints.to_string()).c_str());
+					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()).c_str());
 				}
 				try {
 					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
@@ -246,6 +246,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 				if (!schema_ptr->is_map()) {
 					THROW(Error, "Schema of %s must be map [%s]", repr(db_handler->endpoints.to_string()).c_str(), repr(schema_ptr->to_string()).c_str());
 				}
+			} catch (const ForeignSchemaError&) {
+				schema_ptr = Schema::get_initial_schema();
 			} catch (const CheckoutError&) {
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const DocNotFoundError&) {
