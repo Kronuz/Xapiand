@@ -61,7 +61,8 @@
 #include "ignore_unused.h"           // for ignore_unused
 #include "io_utils.h"                // for close, open, write
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
-#include "manager.h"                 // for opts_t, XapiandManager, XapiandM...
+#include "manager.h"                 // for XapiandManager, XapiandM...
+#include "opts.h"                    // for opts_t
 #include "schema.h"                  // for default_spc
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
@@ -74,6 +75,7 @@
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
 
+opts_t opts;
 
 template<typename T, std::size_t N>
 ssize_t write(int fildes, T (&buf)[N]) {
@@ -284,7 +286,7 @@ std::vector<std::string> ev_supported() {
 }
 
 
-void parseOptions(int argc, char** argv, opts_t &opts) {
+void parseOptions(int argc, char** argv) {
 	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
 
 	using namespace TCLAP;
@@ -465,14 +467,14 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.ev_flags = ev_backend(use.getValue());
 		opts.uuid_compact = false;
 		opts.uuid_partition = false;
-		opts.uuid_repr = UUIDRepr::simple;
+		opts.uuid_repr = xxh64::hash("simple");
 		for (const auto& u : uuid.getValue()) {
 			switch (xxh64::hash(u)) {
 				case xxh64::hash("optimal"):
 					opts.uuid_compact = true;
 					opts.uuid_partition = true;
 #if defined XAPIAND_UUID_ENCODED
-					opts.uuid_repr = UUIDRepr::encoded;
+					opts.uuid_repr = xxh64::hash("encoded");
 #endif
 					break;
 				case xxh64::hash("compact"):
@@ -483,17 +485,17 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 					break;
 #ifdef XAPIAND_UUID_GUID
 				case xxh64::hash("guid"):
-					opts.uuid_repr = UUIDRepr::guid;
+					opts.uuid_repr = xxh64::hash("guid");
 					break;
 #endif
 #ifdef XAPIAND_UUID_URN
 				case xxh64::hash("urn"):
-					opts.uuid_repr = UUIDRepr::urn;
+					opts.uuid_repr = xxh64::hash("urn");
 					break;
 #endif
 #ifdef XAPIAND_UUID_ENCODED
 				case xxh64::hash("encoded"):
-					opts.uuid_repr = UUIDRepr::encoded;
+					opts.uuid_repr = xxh64::hash("encoded");
 					break;
 #endif
 			}
@@ -601,7 +603,7 @@ ssize_t get_open_files()
 }
 
 
-void adjustOpenFilesLimit(opts_t &opts) {
+void adjustOpenFilesLimit() {
 
 	// Try getting the currently available number of files (-10%):
 	ssize_t available_files = get_max_files_per_proc() - get_open_files();
@@ -924,7 +926,7 @@ void banner() {
 }
 
 
-int server(opts_t &opts) {
+int server() {
 	int exit_code = EX_OK;
 
 	try {
@@ -961,7 +963,7 @@ int server(opts_t &opts) {
 			L_INFO("Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
 		}
 
-		adjustOpenFilesLimit(opts);
+		adjustOpenFilesLimit();
 
 		L_INFO("With a maximum of " + join_string(std::vector<std::string>{
 			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
@@ -973,8 +975,8 @@ int server(opts_t &opts) {
 		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
 		usedir(opts.database.c_str(), opts.solo);
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
-		XapiandManager::manager->run(opts);
+		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
+		XapiandManager::manager->run();
 
 		long managers = XapiandManager::manager.use_count() - 1;
 		if (managers == 0) {
@@ -991,14 +993,14 @@ int server(opts_t &opts) {
 }
 
 
-int dump_metadata(opts_t &opts) {
+int dump_metadata() {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
 			usedir(opts.database.c_str(), opts.solo);
-			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
 			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()).c_str());
@@ -1023,14 +1025,14 @@ int dump_metadata(opts_t &opts) {
 }
 
 
-int dump_schema(opts_t &opts) {
+int dump_schema() {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
 			usedir(opts.database.c_str(), opts.solo);
-			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
 			L_INFO("Dumping schema database: %s", repr(endpoints.to_string()).c_str());
@@ -1055,14 +1057,14 @@ int dump_schema(opts_t &opts) {
 }
 
 
-int dump_documents(opts_t &opts) {
+int dump_documents() {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
 			usedir(opts.database.c_str(), opts.solo);
-			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
 			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
@@ -1087,14 +1089,14 @@ int dump_documents(opts_t &opts) {
 }
 
 
-int restore(opts_t &opts) {
+int restore() {
 	int exit_code = EX_OK;
 
 	int fd = opts.filename.empty() ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
 			usedir(opts.database.c_str(), opts.solo);
-			XapiandManager::manager = Worker::make_shared<XapiandManager>(opts);
+			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
 			L_INFO("Restoring into: %s", repr(endpoints.to_string()).c_str());
@@ -1122,9 +1124,7 @@ int restore(opts_t &opts) {
 int main(int argc, char **argv) {
 	int exit_code = EX_OK;
 
-	opts_t opts;
-
-	parseOptions(argc, argv, opts);
+	parseOptions(argc, argv);
 
 	if (opts.detach) {
 		detach();
@@ -1175,15 +1175,15 @@ int main(int argc, char **argv) {
 
 	try {
 		if (!opts.dump_metadata.empty()) {
-			exit_code = dump_metadata(opts);
+			exit_code = dump_metadata();
 		} else if (!opts.dump_schema.empty()) {
-			exit_code = dump_schema(opts);
+			exit_code = dump_schema();
 		} else if (!opts.dump_documents.empty()) {
-			exit_code = dump_documents(opts);
+			exit_code = dump_documents();
 		} else if (!opts.restore.empty()) {
-			exit_code = restore(opts);
+			exit_code = restore();
 		} else {
-			exit_code = server(opts);
+			exit_code = server();
 		}
 	} catch (const BaseException& exc) {
 		exit_code = EX_SOFTWARE;

@@ -26,7 +26,7 @@
 #include <xapian.h>         // for SerialisationError
 
 #include "length.h"         // for serialise_length, unserialise_length, ser...
-#include "manager.h"        // for XapiandManager::manager->opts
+#include "opts.h"           // for opts
 #include "serialise.h"      // for Serialise
 
 
@@ -36,7 +36,7 @@ atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
 static inline std::string
 normalize(const void *p, size_t size)
 {
-	UUIDRepr repr = XapiandManager::manager->opts.uuid_repr;
+	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
 	try {
@@ -50,7 +50,7 @@ normalize(const void *p, size_t size)
 static inline std::string
 normalize_and_partition(const void *p, size_t size)
 {
-	UUIDRepr repr = XapiandManager::manager->opts.uuid_repr;
+	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
 	try {
@@ -257,7 +257,7 @@ Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery
 		path = path.substr(0, path.size() - 1);
 	}
 
-	if (XapiandManager::manager->opts.uuid_partition) {
+	if (opts.uuid_partition) {
 		path = normalizer<normalize_and_partition>(path.data(), path.size());
 	} else {
 		path = normalizer<normalize>(path.data(), path.size());

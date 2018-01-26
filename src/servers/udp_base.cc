@@ -33,6 +33,7 @@
 #include "io_utils.h"               // for close
 #include "length.h"                 // for serialise_string, unserialise_string
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
+#include "opts.h"                   // for opts
 #include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
 #include "utils.h"                  // for ignored_errorno
 
@@ -187,7 +188,7 @@ BaseUDP::send_message(char type, const std::string& content)
 	if (!content.empty()) {
 		std::string message(1, type);
 		message.append(std::string((const char *)&version, sizeof(uint16_t)));
-		message.append(serialise_string(XapiandManager::manager->opts.cluster_name));
+		message.append(serialise_string(opts.cluster_name));
 		message.append(content);
 		sending_message(message);
 	}
@@ -237,7 +238,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 		THROW(NetworkError, "Badly formed message: No cluster name!");
 	}
 
-	if (remote_cluster_name != XapiandManager::manager->opts.cluster_name) {
+	if (remote_cluster_name != opts.cluster_name) {
 		throw DummyException();
 	}
 

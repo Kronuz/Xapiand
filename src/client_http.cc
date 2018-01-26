@@ -54,6 +54,7 @@
 #include "msgpack.h"                        // for MsgPack, object::object, ...
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
+#include "opts.h"                           // for opts
 #include "queue.h"                          // for Queue
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
@@ -1028,7 +1029,7 @@ HttpClient::home_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
-	obj[RESPONSE_CLUSTER_NAME] = XapiandManager::manager->opts.cluster_name;
+	obj[RESPONSE_CLUSTER_NAME] = opts.cluster_name;
 #endif
 	obj[RESPONSE_SERVER] = Package::STRING;
 	obj[RESPONSE_URL] = Package::BUGREPORT;
@@ -1107,8 +1108,8 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
-		auto uuid = generator.newGuid(XapiandManager::manager->opts.uuid_compact);
-		doc_id = Unserialise::uuid(uuid.serialise(), XapiandManager::manager->opts.uuid_repr);
+		auto uuid = generator.newGuid(opts.uuid_compact);
+		doc_id = Unserialise::uuid(uuid.serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
 	} else {
 		doc_id = path_parser.get_id();
 	}
@@ -1337,7 +1338,7 @@ HttpClient::nodes_view(enum http_method, Command)
 	};
 
 	write_http_response(HTTP_STATUS_OK, {
-		{ RESPONSE_CLUSTER_NAME, XapiandManager::manager->opts.cluster_name },
+		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
 		{ RESPONSE_NODES, nodes },
 	});
 }

@@ -37,7 +37,7 @@
 #include "io_utils.h"                                // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE
-#include "manager.h"                                 // for XapiandManager::manager->opts.uuid_repr
+#include "opts.h"                                    // for opts
 #include "rapidjson/document.h"                      // for Document, GenericDocument
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
@@ -99,7 +99,7 @@ std::string get_prefix(const std::string& field_name)
 
 std::string normalize_uuid(const std::string& uuid)
 {
-	return Unserialise::uuid(Serialise::uuid(uuid), XapiandManager::manager->opts.uuid_repr);
+	return Unserialise::uuid(Serialise::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
 }
 
 

@@ -110,39 +110,37 @@ void sig_exit(int sig) {
 	}
 }
 
-XapiandManager::XapiandManager(const opts_t& o)
+XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
-	  database_pool(o.dbpool_size, o.max_databases),
-	  schemas(o.dbpool_size),
-	  thread_pool("W%02zu", o.threadpool_size),
-	  server_pool("S%02zu", o.num_servers),
+	  database_pool(opts.dbpool_size, opts.max_databases),
+	  schemas(opts.dbpool_size),
+	  thread_pool("W%02zu", opts.threadpool_size),
+	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  replicator_pool("R%02zu", o.num_replicators),
-	  endp_r(o.endpoints_list_size),
+	  replicator_pool("R%02zu", opts.num_replicators),
+	  endp_r(opts.endpoints_list_size),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  state(State::RESET),
-	  opts(o),
-	  node_name(o.node_name),
+	  node_name(opts.node_name),
 	  atom_sig(0) { }
 
 
-XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)
+XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
-	  database_pool(o.dbpool_size, o.max_databases),
-	  schemas(o.dbpool_size),
-	  thread_pool("W%02zu", o.threadpool_size),
-	  server_pool("S%02zu", o.num_servers),
+	  database_pool(opts.dbpool_size, opts.max_databases),
+	  schemas(opts.dbpool_size),
+	  thread_pool("W%02zu", opts.threadpool_size),
+	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  replicator_pool("R%02zu", o.num_replicators),
-	  endp_r(o.endpoints_list_size),
+	  replicator_pool("R%02zu", opts.num_replicators),
+	  endp_r(opts.endpoints_list_size),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  state(State::RESET),
-	  opts(o),
-	  node_name(o.node_name),
+	  node_name(opts.node_name),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop)
 {
@@ -579,13 +577,13 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 
 
 void
-XapiandManager::make_servers(const opts_t& o)
+XapiandManager::make_servers()
 {
 	L_CALL("XapiandManager::make_servers()");
 
 	std::string msg("Listening on ");
 
-	auto http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, o.http_port);
+	auto http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, opts.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
@@ -594,13 +592,13 @@ XapiandManager::make_servers(const opts_t& o)
 	std::shared_ptr<Raft> raft;
 
 	if (!opts.solo) {
-		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, o.binary_port);
+		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, opts.binary_port);
 		msg += binary->getDescription() + ", ";
 
-		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, o.discovery_port, o.discovery_group);
+		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, opts.discovery_port, opts.discovery_group);
 		msg += discovery->getDescription() + ", ";
 
-		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, o.raft_port, o.raft_group);
+		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, opts.raft_port, opts.raft_group);
 		msg += raft->getDescription() + ", ";
 	}
 #endif
@@ -609,7 +607,7 @@ XapiandManager::make_servers(const opts_t& o)
 	L_NOTICE(msg.c_str());
 
 
-	for (ssize_t i = 0; i < o.num_servers; ++i) {
+	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
 
@@ -644,48 +642,46 @@ XapiandManager::make_servers(const opts_t& o)
 
 
 void
-XapiandManager::make_replicators(const opts_t& o)
+XapiandManager::make_replicators()
 {
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		for (ssize_t i = 0; i < o.num_replicators; ++i) {
+		for (ssize_t i = 0; i < opts.num_replicators; ++i) {
 			auto obj = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags);
 			replicator_pool.enqueue(std::move(obj));
 		}
 	}
-#else
-	ignore_unused(o);
 #endif
 }
 
 
 void
-XapiandManager::run(const opts_t& o)
+XapiandManager::run()
 {
 	L_CALL("XapiandManager::run()");
 
 	if (node_name == "~") {
-		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
+		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name.c_str());
 		join();
 		throw Exit(EX_CONFIG);
 	}
 
-	make_servers(o);
+	make_servers();
 
-	make_replicators(o);
+	make_replicators();
 
-	DatabaseAutocommit::scheduler(o.num_committers);
+	DatabaseAutocommit::scheduler(opts.num_committers);
 
-	AsyncFsync::scheduler(o.num_fsynchers);
+	AsyncFsync::scheduler(opts.num_fsynchers);
 
 	std::vector<std::string> values({
-		std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers"),
-		std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads"),
+		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
+		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
 #ifdef XAPIAND_CLUSTERING
-		opts.solo ? "" : std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators"),
+		opts.solo ? "" : std::to_string(opts.num_replicators) + ((opts.num_replicators == 1) ? " replicator" : " replicators"),
 #endif
-		std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters"),
-		std::to_string(o.num_fsynchers) + ((o.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
+		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
+		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
 	});
 
 	L_NOTICE("Started " + join_string(values, ", ", " and ", [](const auto& s) { return s.empty(); }));

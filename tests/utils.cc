@@ -21,12 +21,14 @@
  */
 
 #include "utils.h"
+#include "../src/opts.h"
 
+opts_t opts;
 
 Initializer::Initializer()
 {
 	if (!XapiandManager::manager) {
-		opts_t opts = {
+		opts = {
 			/* int verbosity = */ 3,
 			/* bool detach = */ false,
 			/* bool chert = */ false,
@@ -70,7 +72,7 @@ Initializer::Initializer()
 		};
 
 		ev::default_loop default_loop(opts.ev_flags);
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
+		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
 	}
 }
 

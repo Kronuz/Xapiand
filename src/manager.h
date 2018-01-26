@@ -34,6 +34,7 @@
 #include "endpoint_resolver.h"
 #include "ev/ev++.h"
 #include "length.h"
+#include "opts.h"
 #include "schemas_lru.h"
 #include "stats.h"
 #include "threadpool.h"
@@ -42,50 +43,6 @@
 
 
 #define UNKNOWN_REGION -1
-
-
-struct opts_t {
-	int verbosity;
-	bool detach;
-	bool chert;
-	bool solo;
-	bool strict;
-	bool optimal;
-	bool colors;
-	bool no_colors;
-	std::string database;
-	std::string cluster_name;
-	std::string node_name;
-	unsigned int http_port;
-	unsigned int binary_port;
-	unsigned int discovery_port;
-	unsigned int raft_port;
-	std::string pidfile;
-	std::string logfile;
-	std::string uid;
-	std::string gid;
-	std::string discovery_group;
-	std::string raft_group;
-	ssize_t num_servers;
-	ssize_t dbpool_size;
-	ssize_t num_replicators;
-	ssize_t threadpool_size;
-	ssize_t endpoints_list_size;
-	ssize_t num_committers;
-	ssize_t num_fsynchers;
-	ssize_t max_clients;
-	ssize_t max_databases;
-	ssize_t max_files;
-	unsigned int ev_flags;
-	bool uuid_compact;
-	UUIDRepr uuid_repr;
-	bool uuid_partition;
-	std::string dump_metadata;
-	std::string dump_schema;
-	std::string dump_documents;
-	std::string restore;
-	std::string filename;
-};
 
 
 class Http;
@@ -120,8 +77,8 @@ class XapiandManager : public Worker  {
 
 	std::mutex qmtx;
 
-	XapiandManager(const opts_t& o);
-	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o);
+	XapiandManager();
+	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	struct sockaddr_in host_address();
 
@@ -148,8 +105,8 @@ protected:
 	void save_node_id(uint64_t node_id);
 	uint64_t get_node_id();
 
-	void make_servers(const opts_t& o);
-	void make_replicators(const opts_t& o);
+	void make_servers();
+	void make_replicators();
 
 public:
 	std::string __repr__() const override {
@@ -195,7 +152,6 @@ public:
 	std::atomic<time_t> shutdown_now;
 
 	std::atomic<State> state;
-	const opts_t& opts;
 	std::string node_name;
 
 	std::atomic_int atom_sig;
@@ -212,7 +168,7 @@ public:
 
 	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
-	void run(const opts_t& o);
+	void run();
 
 	bool is_single_node();
 
