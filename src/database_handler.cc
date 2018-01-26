@@ -1358,6 +1358,9 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 	const auto document_id = get_hashed(endpoint.path);
 
 	try {
+		if (db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
+			db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+		}
 		try {
 			db_handler.get_document(document_id);
 		} catch (const DocNotFoundError&) {

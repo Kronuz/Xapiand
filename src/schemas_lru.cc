@@ -24,6 +24,7 @@
 
 #include "database_handler.h"
 #include "log.h"
+#include "opts.h"
 
 
 template <typename ErrorType>
@@ -140,7 +141,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	}
 
 	if (foreign_path.empty()) {
-		// LOCAL new schema.
+		// Possibly LOCAL schema.
 
 		if (local_schema_ptr) {
 			// found in cache
@@ -160,6 +161,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			}
 
 			if (new_metadata) {
+				// LOCAL new schema.
+				if (opts.foreign_schemas) {
+					THROW(CheckoutError, "Schema of %s must be a foreign (shared) schema", repr(db_handler->endpoints.to_string()).c_str());
+				}
 				try {
 					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
 						str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
@@ -395,6 +400,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (*shared_schema_ptr != *new_schema) {
 			try {
 				DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
+				if (_db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
+					_db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+				}
 				// FIXME: Process the foreign_path's subfields instead of ignoring.
 				auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
 				_db_handler.index(foreign_id.substr(0, needle), true, *new_schema, false, msgpack_type);
