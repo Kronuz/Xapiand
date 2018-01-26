@@ -318,6 +318,7 @@ void parseOptions(int argc, char** argv) {
 #endif
 
 		std::vector<std::string> uuid_allowed({
+			"simple",
 			"compact",
 			"partition",
 #ifdef XAPIAND_UUID_GUID
@@ -329,7 +330,6 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_UUID_ENCODED
 			"encoded",
 #endif
-			"optimal",
 		});
 		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
 		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
@@ -465,17 +465,24 @@ void parseOptions(int argc, char** argv) {
 			}
 		}
 		opts.ev_flags = ev_backend(use.getValue());
-		opts.uuid_compact = false;
-		opts.uuid_partition = false;
-		opts.uuid_repr = xxh64::hash("simple");
+		if (opts.optimal) {
+			opts.uuid_compact = true;
+			opts.uuid_partition = true;
+#if defined XAPIAND_UUID_ENCODED
+			opts.uuid_repr = xxh64::hash("encoded");
+#else
+			opts.uuid_repr = xxh64::hash("simple");
+#endif
+		} else {
+			opts.uuid_compact = false;
+			opts.uuid_partition = false;
+			opts.uuid_repr = xxh64::hash("simple");
+		}
+
 		for (const auto& u : uuid.getValue()) {
 			switch (xxh64::hash(u)) {
-				case xxh64::hash("optimal"):
-					opts.uuid_compact = true;
-					opts.uuid_partition = true;
-#if defined XAPIAND_UUID_ENCODED
-					opts.uuid_repr = xxh64::hash("encoded");
-#endif
+				case xxh64::hash("simple"):
+					opts.uuid_repr = xxh64::hash("simple");
 					break;
 				case xxh64::hash("compact"):
 					opts.uuid_compact = true;
