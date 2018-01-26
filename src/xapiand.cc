@@ -374,8 +374,8 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 #endif
-		SwitchArg optimal_arg("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
-		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field.", cmd, false);
+		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
+		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -427,8 +427,8 @@ void parseOptions(int argc, char** argv) {
 #else
 		opts.solo = true;
 #endif
-		opts.strict = strict_arg.getValue();
-		opts.optimal = optimal_arg.getValue();
+		opts.strict = strict.getValue();
+		opts.optimal = optimal.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
