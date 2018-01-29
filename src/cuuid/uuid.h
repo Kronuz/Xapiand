@@ -149,13 +149,13 @@ private:
  * Class that can create new UUIDs. The only reason this exists instead of
  * just a global "newUUID" function is because some platforms will require
  * that there is some attached context. In the case of android, we need to
- * know what JNIEnv is being used to call back to Java, but the newUUID()
+ * know what JNIEnv is being used to call back to Java, but the generator
  * function would no longer be cross-platform if we parameterized the android
  * version. Instead, construction of the UUIDGenerator may be different on
- * each platform, but the use of newUUID is uniform.
+ * each platform, but the use of the generator is uniform.
  */
 class UUIDGenerator {
-	UUID _newUUID();
+	UUID newUUID();
 
 public:
 #ifdef UUID_ANDROID
@@ -164,7 +164,6 @@ public:
 	UUIDGenerator() { }
 #endif
 
-	UUID newUUID(bool compact = true);
 	UUID operator ()(bool compact = true);
 
 #ifdef UUID_ANDROID

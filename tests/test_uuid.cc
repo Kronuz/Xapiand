@@ -42,13 +42,14 @@ constexpr size_t MAX_EXPANDED_LENGTH  = 17;
 
 int test_generator_uuid(bool compact) {
 	INIT_LOG
+
 	UUIDGenerator generator;
 
 	int cont = 0;
 
-	auto g1 = generator.newUUID(compact);
-	auto g2 = generator.newUUID(compact);
-	auto g3 = generator.newUUID(compact);
+	auto g1 = generator(compact);
+	auto g2 = generator(compact);
+	auto g3 = generator(compact);
 	L_DEBUG("UUIDs generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
 		L_ERR("ERROR: Not all random UUIDs are different");
@@ -57,7 +58,7 @@ int test_generator_uuid(bool compact) {
 
 	std::unordered_set<std::string> uuids;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		uuids.insert(generator.newUUID(compact).serialise());
+		uuids.insert(generator(compact).serialise());
 	}
 	if (uuids.size() != NUM_TESTS) {
 		L_ERR("ERROR: Not all random UUIDs are different");
@@ -136,10 +137,11 @@ int test_special_uuids() {
 
 
 int test_compacted_uuids() {
+	UUIDGenerator generator;
 	int cont = 0;
 	size_t min_length = 20, max_length = 0;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		UUID uuid = UUIDGenerator().newUUID(true);
+		UUID uuid = generator(true);
 		const auto uuid_orig = uuid.to_string();
 		const auto serialised = uuid.serialise();
 		UUID uuid2 = UUID::unserialise(serialised);
@@ -171,10 +173,11 @@ int test_compacted_uuids() {
 
 
 int test_condensed_uuids() {
+	UUIDGenerator generator;
 	int cont = 0;
 	size_t min_length = 20, max_length = 0;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		UUID uuid = UUIDGenerator().newUUID(false);
+		UUID uuid = generator(false);
 		const auto uuid_orig = uuid.to_string();
 		const auto serialised = uuid.serialise();
 		UUID uuid2 = UUID::unserialise(serialised);
@@ -271,73 +274,74 @@ int test_expanded_uuids() {
 
 
 int test_several_uuids() {
+	UUIDGenerator generator();
 	size_t cont = 0;
 	for (auto i = 0; i < NUM_TESTS; ++i) {
 		std::vector<std::string> str_uuids;
 		std::vector<std::string> norm_uuids;
 		switch (i % 3) {
 			case 0: {
-				UUID uuid = UUIDGenerator().newUUID(true);
+				UUID uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back(uuid.to_string());
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back(uuid.to_string());
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back(uuid.to_string());
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back(uuid.to_string());
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back(uuid.to_string());
 				break;
 			}
 			case 1: {
-				UUID uuid = UUIDGenerator().newUUID(true);
+				UUID uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 				break;
 			}
 			default: {
-				UUID uuid = UUIDGenerator().newUUID(true);
+				UUID uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				auto serialised = uuid.serialise();
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				serialised.append(uuid.serialise());
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				serialised.append(uuid.serialise());
 
-				uuid = UUIDGenerator().newUUID(false);
+				uuid = generator(false);
 				str_uuids.push_back(uuid.to_string());
 				serialised.append(uuid.serialise());
 
-				uuid = UUIDGenerator().newUUID(true);
+				uuid = generator(true);
 				str_uuids.push_back(uuid.to_string());
 				serialised.append(uuid.serialise());
 

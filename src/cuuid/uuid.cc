@@ -808,7 +808,7 @@ UUID::unserialise_condensed(const char** ptr, const char* end)
 #include <uuid.h>
 
 inline UUID
-UUIDGenerator::_newUUID()
+UUIDGenerator::newUUID()
 {
 	uuid_t id;
 	uint32_t status;
@@ -828,7 +828,7 @@ UUIDGenerator::_newUUID()
 #include <uuid/uuid.h>
 
 inline UUID
-UUIDGenerator::_newUUID()
+UUIDGenerator::newUUID()
 {
 	std::array<unsigned char, 16> byteArray;
 	uuid_generate_time(byteArray.data());
@@ -841,7 +841,7 @@ UUIDGenerator::_newUUID()
 #include <CoreFoundation/CFUUID.h>
 
 inline UUID
-UUIDGenerator::_newUUID()
+UUIDGenerator::newUUID()
 {
 	auto newId = CFUUIDCreate(nullptr);
 	auto bytes = CFUUIDGetUUIDBytes(newId);
@@ -873,7 +873,7 @@ UUIDGenerator::_newUUID()
 #include <objbase.h>
 
 inline UUID
-UUIDGenerator::_newUUID()
+UUIDGenerator::newUUID()
 {
 	GUID newId;
 	CoCreateUUID(&newId);
@@ -916,7 +916,7 @@ UUIDGenerator::UUIDGenerator(JNIEnv *env)
 
 
 inline UUID
-UUIDGenerator::_newUUID()
+UUIDGenerator::newUUID()
 {
 	jobject javaUuid = _env->CallStaticObjectMethod(_uuidClass, _newUUIDMethod);
 	jlong mostSignificant = _env->CallLongMethod(javaUuid, _mostSignificantBitsMethod);
@@ -945,20 +945,13 @@ UUIDGenerator::_newUUID()
 
 
 UUID
-UUIDGenerator::newUUID(bool compact)
+UUIDGenerator::operator ()(bool compact)
 {
-	auto uuid = _newUUID();
+	auto uuid = newUUID();
 	if (compact) {
 		uuid.compact_crush();
 	}
 	return uuid;
-}
-
-
-UUID
-UUIDGenerator::operator ()(bool compact)
-{
-	return newUUID(compact);
 }
 
 

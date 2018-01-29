@@ -1108,7 +1108,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
-		auto uuid = generator.newUUID(opts.uuid_compact);
+		auto uuid = generator(opts.uuid_compact);
 		doc_id = Unserialise::uuid(uuid.serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
 	} else {
 		doc_id = path_parser.get_id();
