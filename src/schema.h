@@ -768,6 +768,7 @@ class Schema {
 	void write_text_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_text_detection);
 	void write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_term_detection);
 	void write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection);
+	void write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_term);
 	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
 	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);

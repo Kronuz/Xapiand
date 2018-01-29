@@ -656,6 +656,7 @@ const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema:
 	{ RESERVED_TEXT_DETECTION,         &Schema::write_text_detection               },
 	{ RESERVED_TERM_DETECTION,         &Schema::write_term_detection               },
 	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection               },
+	{ RESERVED_BOOL_TERM,              &Schema::write_bool_term                    },
 	{ RESERVED_NAMESPACE,              &Schema::write_namespace                    },
 	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths                },
 	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field             },
@@ -3348,7 +3349,7 @@ Schema::validate_required_namespace_data()
 
 			if (!specification.flags.has_bool_term) {
 				specification.flags.bool_term = strhasupper(specification.meta_name);
-				specification.flags.has_bool_term = true;
+				specification.flags.has_bool_term = specification.flags.bool_term;
 			}
 			specification.flags.concrete = true;
 			break;
@@ -3498,20 +3499,21 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				specification.flags.has_index = true;
 			}
 
-			// It is needed for soundex.
-			mut_properties[RESERVED_LANGUAGE] = specification.language;
-
 			mut_properties[RESERVED_STOP_STRATEGY] = ::get_str_stop_strategy(specification.stop_strategy);
-
 			mut_properties[RESERVED_STEM_STRATEGY] = ::get_str_stem_strategy(specification.stem_strategy);
 			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
 				specification.stem_language = specification.aux_language;
 			}
 			mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
 
+			// Language could be needed, for soundex.
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
 				specification.language = specification.aux_stem_language;
 			}
+			if (specification.language != DEFAULT_LANGUAGE) {
+				mut_properties[RESERVED_LANGUAGE] = specification.language;
+			}
+
 			specification.flags.concrete = true;
 			break;
 		}
@@ -3525,8 +3527,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				specification.flags.has_index = true;
 			}
 
-			// It is needed for soundex.
-			mut_properties[RESERVED_LANGUAGE] = specification.language;
+			// Language could be needed, for soundex.
+			if (specification.language != DEFAULT_LANGUAGE) {
+				mut_properties[RESERVED_LANGUAGE] = specification.language;
+			}
+
 			specification.flags.concrete = true;
 			break;
 		}
@@ -3543,13 +3548,19 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
-				specification.flags.bool_term = strhasupper(specification.meta_name);
+				const auto bool_term = strhasupper(specification.meta_name);
+				if (specification.flags.bool_term != bool_term) {
+					specification.flags.bool_term = bool_term;
+					mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
+				}
 				specification.flags.has_bool_term = true;
 			}
-			mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
 
-			// It is needed for soundex.
-			mut_properties[RESERVED_LANGUAGE] = specification.language;
+			// Language could be needed, for soundex.
+			if (specification.language != DEFAULT_LANGUAGE) {
+				mut_properties[RESERVED_LANGUAGE] = specification.language;
+			}
+
 			specification.flags.concrete = true;
 			break;
 		}
@@ -5681,6 +5692,17 @@ Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
+Schema::write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_term)
+{
+	// RESERVED_BOOL_TERM isn't heritable and can't change.
+	L_CALL("Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
+
+	process_bool_term(prop_name, doc_bool_term);
+	properties[prop_name] = specification.flags.bool_term;
+}
+
+
+void
 Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
@@ -6841,8 +6863,8 @@ Schema::set_default_spc_id(MsgPack& properties)
 {
 	L_CALL("Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
 
-	specification.flags.has_bool_term = true;
 	specification.flags.bool_term = true;
+	specification.flags.has_bool_term = true;
 	properties[RESERVED_BOOL_TERM] = true;  // force bool term
 
 	if (!specification.flags.has_index) {
