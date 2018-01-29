@@ -1,7 +1,6 @@
 /*
- * Copyright (C):
- *  2014 furan,
- *  2015-2018 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2018 deipi.com LLC and contributors
+ * Copyright (C) 2014 furan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
