@@ -162,7 +162,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 
 			if (new_metadata) {
 				// LOCAL new schema.
-				if (opts.foreign_schemas) {
+				if (opts.foreign) {
 					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()).c_str());
 				}
 				try {

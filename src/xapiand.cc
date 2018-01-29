@@ -374,9 +374,9 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 #endif
+		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
-		SwitchArg foreign_schemas("", "foreign-schemas", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -430,7 +430,7 @@ void parseOptions(int argc, char** argv) {
 #endif
 		opts.strict = strict.getValue();
 		opts.optimal = optimal.getValue();
-		opts.foreign_schemas = foreign_schemas.getValue();
+		opts.foreign = foreign.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();

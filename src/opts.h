@@ -33,7 +33,7 @@ extern struct opts_t {
 	bool solo;
 	bool strict;
 	bool optimal;
-	bool foreign_schemas;
+	bool foreign;
 	bool colors;
 	bool no_colors;
 	std::string database;
