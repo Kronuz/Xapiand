@@ -145,7 +145,7 @@ const std::vector<test_range_t> test_seri_ranges({
 
 
 const std::vector<test_uuid_t> test_seri_uuids({
-	// Guid                                     Expected serialised uuid.                                                                 Expected unserialise uuid
+	// UUID                                     Expected serialised uuid.                                                                 Expected unserialise uuid
 	// Full:
 	{ "5759b016-10c0-4526-a981-47d6d19f6fb4",   "\\x01WY\\xb0\\x16\\x10\\xc0E&\\xa9\\x81G\\xd6\\xd1\\x9fo\\xb4",                          "5759b016-10c0-4526-a981-47d6d19f6fb4" },
 	{ "e8b13d1b-665f-4f4c-aa83-76fa782b030a",   "\\x01\\xe8\\xb1=\\x1bf_OL\\xaa\\x83v\\xfax+\\x03\\n",                                    "e8b13d1b-665f-4f4c-aa83-76fa782b030a" },

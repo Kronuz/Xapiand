@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "guid.h"
+#include "cuuid/uuid.h"
 
 #include <algorithm>      // for std::copy_n
 #include <iomanip>        // for std::setw and std::setfill
@@ -38,9 +38,9 @@ THE SOFTWARE.
 #include "log.h"          // for L_*
 
 
-#ifndef L_GUID
-#define L_GUID_DEFINED
-#define L_GUID L_NOTHING
+#ifndef L_UUID
+#define L_UUID_DEFINED
+#define L_UUID L_NOTHING
 #endif
 
 
@@ -111,7 +111,7 @@ static inline uint64_t xor_fold(uint64_t num, int bits) {
 /*
  * Union for condensed UUIDs
  */
-union GuidCondenser {
+union UUIDCondenser {
 	struct compact_t {
 		uint64_t time        : TIME_BITS;
 		uint64_t padding0    : PADDING_C0_BITS;
@@ -135,20 +135,20 @@ union GuidCondenser {
 	uint64_t calculate_node() const;
 
 	std::string serialise() const;
-	static GuidCondenser unserialise(const char** ptr, const char* end);
+	static UUIDCondenser unserialise(const char** ptr, const char* end);
 
-	GuidCondenser();
+	UUIDCondenser();
 };
 
 
-GuidCondenser::GuidCondenser()
+UUIDCondenser::UUIDCondenser()
 	: compact({ 0, 0, 0, 0, 0, 0 }) { }
 
 
 inline uint64_t
-GuidCondenser::calculate_node() const
+UUIDCondenser::calculate_node() const
 {
-	L_CALL("GuidCondenser::calculate_node()");
+	L_CALL("UUIDCondenser::calculate_node()");
 
 	if (!compact.time && ! compact.clock && !compact.salt) {
 		return 0x010000000000;
@@ -170,9 +170,9 @@ GuidCondenser::calculate_node() const
 
 
 inline std::string
-GuidCondenser::serialise() const
+UUIDCondenser::serialise() const
 {
-	L_CALL("GuidCondenser::serialise()");
+	L_CALL("UUIDCondenser::serialise()");
 
 	uint64_t val0 = *(reinterpret_cast<const uint64_t*>(this));
 	uint64_t val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
@@ -222,10 +222,10 @@ GuidCondenser::serialise() const
 }
 
 
-inline GuidCondenser
-GuidCondenser::unserialise(const char** ptr, const char* end)
+inline UUIDCondenser
+UUIDCondenser::unserialise(const char** ptr, const char* end)
 {
-	L_CALL("GuidCondenser::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
+	L_CALL("UUIDCondenser::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
 
 	auto size = end - *ptr;
 	auto length = size + 1;
@@ -267,7 +267,7 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 		val1 = (buf1 << PADDING_E1_BITS);
 	}
 
-	GuidCondenser condenser;
+	UUIDCondenser condenser;
 	*(reinterpret_cast<uint64_t*>(&condenser)) = val0;
 	*(reinterpret_cast<uint64_t*>(&condenser) + 1) = val1;
 
@@ -277,29 +277,29 @@ GuidCondenser::unserialise(const char** ptr, const char* end)
 
 
 // overload << so that it's easy to convert to a string
-std::ostream& operator<<(std::ostream& s, const Guid& guid) {
+std::ostream& operator<<(std::ostream& s, const UUID& uuid) {
 	std::ios::fmtflags flags(s.flags());
 	s << std::hex << std::setfill('0')
-		<< std::setw(2) << (int)guid._bytes[0]
-		<< std::setw(2) << (int)guid._bytes[1]
-		<< std::setw(2) << (int)guid._bytes[2]
-		<< std::setw(2) << (int)guid._bytes[3]
+		<< std::setw(2) << (int)uuid._bytes[0]
+		<< std::setw(2) << (int)uuid._bytes[1]
+		<< std::setw(2) << (int)uuid._bytes[2]
+		<< std::setw(2) << (int)uuid._bytes[3]
 		<< "-"
-		<< std::setw(2) << (int)guid._bytes[4]
-		<< std::setw(2) << (int)guid._bytes[5]
+		<< std::setw(2) << (int)uuid._bytes[4]
+		<< std::setw(2) << (int)uuid._bytes[5]
 		<< "-"
-		<< std::setw(2) << (int)guid._bytes[6]
-		<< std::setw(2) << (int)guid._bytes[7]
+		<< std::setw(2) << (int)uuid._bytes[6]
+		<< std::setw(2) << (int)uuid._bytes[7]
 		<< "-"
-		<< std::setw(2) << (int)guid._bytes[8]
-		<< std::setw(2) << (int)guid._bytes[9]
+		<< std::setw(2) << (int)uuid._bytes[8]
+		<< std::setw(2) << (int)uuid._bytes[9]
 		<< "-"
-		<< std::setw(2) << (int)guid._bytes[10]
-		<< std::setw(2) << (int)guid._bytes[11]
-		<< std::setw(2) << (int)guid._bytes[12]
-		<< std::setw(2) << (int)guid._bytes[13]
-		<< std::setw(2) << (int)guid._bytes[14]
-		<< std::setw(2) << (int)guid._bytes[15];
+		<< std::setw(2) << (int)uuid._bytes[10]
+		<< std::setw(2) << (int)uuid._bytes[11]
+		<< std::setw(2) << (int)uuid._bytes[12]
+		<< std::setw(2) << (int)uuid._bytes[13]
+		<< std::setw(2) << (int)uuid._bytes[14]
+		<< std::setw(2) << (int)uuid._bytes[15];
 	s.flags(flags);
 	return s;
 }
@@ -348,38 +348,38 @@ uuid_to_bytes(const char* pos, size_t size)
 }
 
 
-// create a guid from vector of bytes
-Guid::Guid(const std::array<unsigned char, 16>& bytes)
+// create a UUID from vector of bytes
+UUID::UUID(const std::array<unsigned char, 16>& bytes)
 	: _bytes(bytes) { }
 
 
-// create a guid from string
-Guid::Guid(const char* str, size_t size)
+// create a UUID from string
+UUID::UUID(const char* str, size_t size)
 	: _bytes(uuid_to_bytes(str, size)) { }
 
 
-Guid::Guid(const std::string& string)
-	: Guid(string.data(), string.size()) { }
+UUID::UUID(const std::string& string)
+	: UUID(string.data(), string.size()) { }
 
 
-// create empty guid
-Guid::Guid()
+// create empty UUID
+UUID::UUID()
 	: _bytes{ } { }
 
 
 // copy constructor
-Guid::Guid(const Guid& other)
+UUID::UUID(const UUID& other)
 	: _bytes(other._bytes) { }
 
 
 // move constructor
-Guid::Guid(Guid&& other)
+UUID::UUID(UUID&& other)
 	: _bytes(std::move(other._bytes)) { }
 
 
 // overload assignment operator
-Guid&
-Guid::operator=(const Guid& other)
+UUID&
+UUID::operator=(const UUID& other)
 {
 	_bytes = other._bytes;
 	return *this;
@@ -387,8 +387,8 @@ Guid::operator=(const Guid& other)
 
 
 // overload move operator
-Guid&
-Guid::operator=(Guid&& other)
+UUID&
+UUID::operator=(UUID&& other)
 {
 	_bytes = std::move(other._bytes);
 	return *this;
@@ -397,7 +397,7 @@ Guid::operator=(Guid&& other)
 
 // overload equality operator
 bool
-Guid::operator==(const Guid& other) const
+UUID::operator==(const UUID& other) const
 {
 	return _bytes == other._bytes;
 }
@@ -405,15 +405,15 @@ Guid::operator==(const Guid& other) const
 
 // overload inequality operator
 bool
-Guid::operator!=(const Guid& other) const
+UUID::operator!=(const UUID& other) const
 {
 	return !operator==(other);
 }
 
 
-// converts GUID to std::string.
+// converts UUID to std::string.
 std::string
-Guid::to_string() const
+UUID::to_string() const
 {
 	std::ostringstream stream;
 	stream << *this;
@@ -422,7 +422,7 @@ Guid::to_string() const
 
 
 void
-Guid::uuid1_node(uint64_t node)
+UUID::uuid1_node(uint64_t node)
 {
 	auto node_ptr = reinterpret_cast<uint64_t*>(&_bytes[8]);
 	*node_ptr = htobe64((be64toh(*node_ptr) & 0xffff000000000000ULL) | (node & 0xffffffffffffULL));
@@ -430,7 +430,7 @@ Guid::uuid1_node(uint64_t node)
 
 
 void
-Guid::uuid1_time(uint64_t time)
+UUID::uuid1_time(uint64_t time)
 {
 	auto time_low_ptr = reinterpret_cast<uint32_t*>(&_bytes[0]);
 	auto time_mid_ptr = reinterpret_cast<uint16_t*>(&_bytes[4]);
@@ -448,7 +448,7 @@ Guid::uuid1_time(uint64_t time)
 
 
 void
-Guid::uuid1_clock_seq(uint16_t clock_seq)
+UUID::uuid1_clock_seq(uint16_t clock_seq)
 {
 	uint8_t clock_seq_low = clock_seq & 0xffULL;
 	uint8_t clock_seq_hi_variant = (clock_seq >> 8) & 0x3fULL;
@@ -459,7 +459,7 @@ Guid::uuid1_clock_seq(uint16_t clock_seq)
 
 
 void
-Guid::uuid_variant(uint8_t variant)
+UUID::uuid_variant(uint8_t variant)
 {
 	uint8_t clock_seq_hi_variant = variant & 0xc0ULL;
 	clock_seq_hi_variant |= _bytes[8] & 0x3fULL;
@@ -468,14 +468,14 @@ Guid::uuid_variant(uint8_t variant)
 
 
 void
-Guid::uuid_version(uint8_t version)
+UUID::uuid_version(uint8_t version)
 {
 	_bytes[6] = (_bytes[6] & 0x0fULL) | ((version & 0x0f) << 4);
 }
 
 
 uint64_t
-Guid::uuid1_node() const
+UUID::uuid1_node() const
 {
 	auto node_ptr = reinterpret_cast<const uint64_t*>(&_bytes[8]);
 	return be64toh(*node_ptr) & 0xffffffffffffULL;
@@ -483,7 +483,7 @@ Guid::uuid1_node() const
 
 
 uint64_t
-Guid::uuid1_time() const
+UUID::uuid1_time() const
 {
 	auto time_low_ptr = reinterpret_cast<const uint32_t*>(&_bytes[0]);
 	auto time_mid_ptr = reinterpret_cast<const uint16_t*>(&_bytes[4]);
@@ -498,7 +498,7 @@ Guid::uuid1_time() const
 
 
 uint16_t
-Guid::uuid1_clock_seq() const
+UUID::uuid1_clock_seq() const
 {
 	auto clock_seq_ptr = reinterpret_cast<const uint16_t*>(&_bytes[8]);
 	return be16toh(*clock_seq_ptr) & 0x3fffULL;
@@ -506,23 +506,23 @@ Guid::uuid1_clock_seq() const
 
 
 uint8_t
-Guid::uuid_variant() const
+UUID::uuid_variant() const
 {
 	return _bytes[8] & 0xc0ULL;
 }
 
 
 uint8_t
-Guid::uuid_version() const
+UUID::uuid_version() const
 {
 	return _bytes[6] >> 4;
 }
 
 
 void
-Guid::compact_crush()
+UUID::compact_crush()
 {
-	L_CALL("Guid::compact_crush()");
+	L_CALL("UUID::compact_crush()");
 
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		auto node = uuid1_node();
@@ -534,7 +534,7 @@ Guid::compact_crush()
 		auto compacted_time_clock = compacted_time & CLOCK_MASK;
 		compacted_time >>= CLOCK_BITS;
 
-		GuidCondenser condenser;
+		UUIDCondenser condenser;
 		condenser.compact.compacted = true;
 		condenser.compact.clock = clock ^ compacted_time_clock;
 		condenser.compact.time = compacted_time;
@@ -561,9 +561,9 @@ Guid::compact_crush()
 
 
 std::string
-Guid::serialise() const
+UUID::serialise() const
 {
-	L_CALL("Guid::serialise()");
+	L_CALL("UUID::serialise()");
 
 	if (uuid_variant() == 0x80 && uuid_version() == 1) {
 		return serialise_condensed();
@@ -574,9 +574,9 @@ Guid::serialise() const
 
 
 std::string
-Guid::serialise_full() const
+UUID::serialise_full() const
 {
-	L_CALL("Guid::serialise_full()");
+	L_CALL("UUID::serialise_full()");
 
 	std::string serialised;
 	serialised.reserve(17);
@@ -587,9 +587,9 @@ Guid::serialise_full() const
 
 
 std::string
-Guid::serialise_condensed() const
+UUID::serialise_condensed() const
 {
-	L_CALL("Guid::serialise_condensed()");
+	L_CALL("UUID::serialise_condensed()");
 
 	auto node = uuid1_node();
 
@@ -600,7 +600,7 @@ Guid::serialise_condensed() const
 	auto compacted_time_clock = compacted_time & CLOCK_MASK;
 	compacted_time >>= CLOCK_BITS;
 
-	GuidCondenser condenser;
+	UUIDCondenser condenser;
 	condenser.compact.compacted = true;
 	condenser.compact.clock = clock ^ compacted_time_clock;
 	condenser.compact.time = compacted_time;
@@ -624,7 +624,7 @@ Guid::serialise_condensed() const
 
 
 bool
-Guid::is_valid(const char** ptr, const char* end)
+UUID::is_valid(const char** ptr, const char* end)
 {
 	auto pos = *ptr;
 	auto size = end - pos;
@@ -703,7 +703,7 @@ _is_serialised(const char** ptr, const char* end)
 
 
 bool
-Guid::is_serialised(const char** ptr, const char* end)
+UUID::is_serialised(const char** ptr, const char* end)
 {
 	while (*ptr != end) {
 		if (!_is_serialised(ptr, end)) {
@@ -714,8 +714,8 @@ Guid::is_serialised(const char** ptr, const char* end)
 }
 
 
-Guid
-Guid::unserialise(const std::string& bytes)
+UUID
+UUID::unserialise(const std::string& bytes)
 {
 	const char* pos = bytes.data();
 	const char* end = pos + bytes.size();
@@ -723,10 +723,10 @@ Guid::unserialise(const std::string& bytes)
 }
 
 
-Guid
-Guid::unserialise(const char** ptr, const char* end)
+UUID
+UUID::unserialise(const char** ptr, const char* end)
 {
-	L_CALL("Guid::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
+	L_CALL("UUID::unserialise(%s)", repr(std::string(*ptr, end)).c_str());
 
 	auto size = end - *ptr;
 	if (size < 2) {
@@ -740,17 +740,17 @@ Guid::unserialise(const char** ptr, const char* end)
 }
 
 
-Guid
-Guid::unserialise_full(const char** ptr, const char* end)
+UUID
+UUID::unserialise_full(const char** ptr, const char* end)
 {
-	L_CALL("Guid::unserialise_full(%s)", repr(std::string(*ptr, end)).c_str());
+	L_CALL("UUID::unserialise_full(%s)", repr(std::string(*ptr, end)).c_str());
 
 	auto size = end - *ptr;
 	if (size < 17) {
 		THROW(SerialisationError, "Bad encoded UUID");
 	}
 
-	Guid out;
+	UUID out;
 	std::copy_n(*ptr + 1, 16, reinterpret_cast<char*>(&out._bytes[0]));
 
 	*ptr += 17;
@@ -758,12 +758,12 @@ Guid::unserialise_full(const char** ptr, const char* end)
 }
 
 
-Guid
-Guid::unserialise_condensed(const char** ptr, const char* end)
+UUID
+UUID::unserialise_condensed(const char** ptr, const char* end)
 {
-	L_CALL("Guid::unserialise_condensed(%s)", repr(std::string(*ptr, end)).c_str());
+	L_CALL("UUID::unserialise_condensed(%s)", repr(std::string(*ptr, end)).c_str());
 
-	GuidCondenser condenser = GuidCondenser::unserialise(ptr, end);
+	UUIDCondenser condenser = UUIDCondenser::unserialise(ptr, end);
 
 	uint64_t node = condenser.compact.compacted ? condenser.calculate_node() : condenser.expanded.node;
 
@@ -784,7 +784,7 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 	uint8_t clock_seq_hi_variant = condenser.compact.clock >> 8 | 0x80ULL;  // Variant: RFC 4122
 	uint8_t clock_seq_low = condenser.compact.clock & 0xffULL;
 
-	Guid out;
+	UUID out;
 	auto time_low_ptr = reinterpret_cast<uint32_t*>(&out._bytes[0]);
 	auto time_mid_ptr = reinterpret_cast<uint16_t*>(&out._bytes[4]);
 	auto time_hi_and_version_ptr = reinterpret_cast<uint16_t*>(&out._bytes[6]);
@@ -802,13 +802,13 @@ Guid::unserialise_condensed(const char** ptr, const char* end)
 
 
 // This is the FreBSD version.
-#if defined GUID_FREEBSD
+#if defined UUID_FREEBSD
 #include <cstdint>
 #include <cstring>
 #include <uuid.h>
 
-inline Guid
-GuidGenerator::_newGuid()
+inline UUID
+UUIDGenerator::_newUUID()
 {
 	uuid_t id;
 	uint32_t status;
@@ -819,35 +819,35 @@ GuidGenerator::_newGuid()
 	}
 	std::array<unsigned char, 16> byteArray;
 	uuid_enc_be(byteArray.data(), &id);
-	return Guid(byteArray);
+	return UUID(byteArray);
 }
 
 
 // For systems that have libuuid available.
-#elif defined GUID_LIBUUID
+#elif defined UUID_LIBUUID
 #include <uuid/uuid.h>
 
-inline Guid
-GuidGenerator::_newGuid()
+inline UUID
+UUIDGenerator::_newUUID()
 {
 	std::array<unsigned char, 16> byteArray;
 	uuid_generate_time(byteArray.data());
-	return Guid(byteArray);
+	return UUID(byteArray);
 }
 
 
 // This is the macOS and iOS version
-#elif defined GUID_CFUUID
+#elif defined UUID_CFUUID
 #include <CoreFoundation/CFUUID.h>
 
-inline Guid
-GuidGenerator::_newGuid()
+inline UUID
+UUIDGenerator::_newUUID()
 {
 	auto newId = CFUUIDCreate(nullptr);
 	auto bytes = CFUUIDGetUUIDBytes(newId);
 	CFRelease(newId);
 
-	return Guid(std::array<unsigned char, 16>{{
+	return UUID(std::array<unsigned char, 16>{{
 		bytes.byte0,
 		bytes.byte1,
 		bytes.byte2,
@@ -869,14 +869,14 @@ GuidGenerator::_newGuid()
 
 
 // Obviously this is the Windows version
-#elif defined GUID_WINDOWS
+#elif defined UUID_WINDOWS
 #include <objbase.h>
 
-inline Guid
-GuidGenerator::_newGuid()
+inline UUID
+UUIDGenerator::_newUUID()
 {
 	GUID newId;
-	CoCreateGuid(&newId);
+	CoCreateUUID(&newId);
 
 	return std::array<unsigned char, 16>{{
 		(newId.Data1 >> 24) & 0xFF,
@@ -903,22 +903,22 @@ GuidGenerator::_newGuid()
 
 
 // Android version that uses a call to a java api
-#elif defined GUID_ANDROID
+#elif defined UUID_ANDROID
 
-GuidGenerator::GuidGenerator(JNIEnv *env)
+UUIDGenerator::UUIDGenerator(JNIEnv *env)
 {
 	_env = env;
 	_uuidClass = env->FindClass("java/util/UUID");
-	_newGuidMethod = env->GetStaticMethodID(_uuidClass, "randomUUID", "()Ljava/util/UUID;");
+	_newUUIDMethod = env->GetStaticMethodID(_uuidClass, "randomUUID", "()Ljava/util/UUID;");
 	_mostSignificantBitsMethod = env->GetMethodID(_uuidClass, "getMostSignificantBits", "()J");
 	_leastSignificantBitsMethod = env->GetMethodID(_uuidClass, "getLeastSignificantBits", "()J");
 }
 
 
-inline Guid
-GuidGenerator::_newGuid()
+inline UUID
+UUIDGenerator::_newUUID()
 {
-	jobject javaUuid = _env->CallStaticObjectMethod(_uuidClass, _newGuidMethod);
+	jobject javaUuid = _env->CallStaticObjectMethod(_uuidClass, _newUUIDMethod);
 	jlong mostSignificant = _env->CallLongMethod(javaUuid, _mostSignificantBitsMethod);
 	jlong leastSignificant = _env->CallLongMethod(javaUuid, _leastSignificantBitsMethod);
 
@@ -944,18 +944,25 @@ GuidGenerator::_newGuid()
 #endif
 
 
-Guid
-GuidGenerator::newGuid(bool compact)
+UUID
+UUIDGenerator::newUUID(bool compact)
 {
-	auto guid = _newGuid();
+	auto uuid = _newUUID();
 	if (compact) {
-		guid.compact_crush();
+		uuid.compact_crush();
 	}
-	return guid;
+	return uuid;
 }
 
 
-#ifdef L_GUID_DEFINED
-#undef L_GUID_DEFINED
-#undef L_GUID
+UUID
+UUIDGenerator::operator ()(bool compact)
+{
+	return newUUID(compact);
+}
+
+
+#ifdef L_UUID_DEFINED
+#undef L_UUID_DEFINED
+#undef L_UUID
 #endif

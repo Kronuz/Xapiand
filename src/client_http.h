@@ -39,6 +39,7 @@
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "client_base.h"        // for BaseClient
+#include "cuuid/uuid.h"         // for UUIDGenerator
 #include "database_handler.h"   // for DatabaseHandler
 #include "database_utils.h"     // for query_field_t (ptr only)
 #include "deflate_compressor.h" // for DeflateCompressData
@@ -62,7 +63,7 @@ constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
 
-class GuidGenerator;
+class UUIDGenerator;
 class HttpServer;
 class Logging;
 class Worker;
@@ -172,7 +173,7 @@ class HttpClient : public BaseClient {
 
 	static const http_parser_settings settings;
 
-	static GuidGenerator generator;
+	static UUIDGenerator generator;
 
 	static AcceptLRU accept_sets;
 	accept_set_t accept_set;

@@ -47,7 +47,7 @@
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
-#include "guid/guid.h"                      // for GuidGenerator, Guid
+#include "cuuid/uuid.h"                     // for UUIDGenerator, UUID
 #include "io_utils.h"                       // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_D...
 #include "manager.h"                        // for XapiandManager, XapiandMa...
@@ -110,7 +110,7 @@ static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a
 
 static const std::string eol("\r\n");
 
-GuidGenerator HttpClient::generator;
+UUIDGenerator HttpClient::generator;
 
 AcceptLRU HttpClient::accept_sets;
 
@@ -1108,7 +1108,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
-		auto uuid = generator.newGuid(opts.uuid_compact);
+		auto uuid = generator.newUUID(opts.uuid_compact);
 		doc_id = Unserialise::uuid(uuid.serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
 	} else {
 		doc_id = path_parser.get_id();

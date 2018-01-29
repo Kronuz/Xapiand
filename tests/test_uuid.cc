@@ -20,12 +20,12 @@
  * IN THE SOFTWARE.
  */
 
-#include "test_guid.h"
+#include "test_uuid.h"
 
 #include <unordered_set>
 
 #include "../src/base_x.hh"
-#include "../src/guid/guid.h"
+#include "../src/cuuid/uuid.h"
 #include "utils.h"
 
 #define B59 (Base59::dubaluchk())
@@ -40,27 +40,27 @@ constexpr size_t MIN_EXPANDED_LENGTH  =  3;
 constexpr size_t MAX_EXPANDED_LENGTH  = 17;
 
 
-int test_generator_guid(bool compact) {
+int test_generator_uuid(bool compact) {
 	INIT_LOG
-	GuidGenerator generator;
+	UUIDGenerator generator;
 
 	int cont = 0;
 
-	auto g1 = generator.newGuid(compact);
-	auto g2 = generator.newGuid(compact);
-	auto g3 = generator.newGuid(compact);
-	L_DEBUG("Guids generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
+	auto g1 = generator.newUUID(compact);
+	auto g2 = generator.newUUID(compact);
+	auto g3 = generator.newUUID(compact);
+	L_DEBUG("UUIDs generated: %s  %s  %s", repr(g1.to_string()).c_str(), repr(g2.to_string()).c_str(), repr(g3.to_string()).c_str());
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
-		L_ERR("ERROR: Not all random guids are different");
+		L_ERR("ERROR: Not all random UUIDs are different");
 		++cont;
 	}
 
-	std::unordered_set<std::string> guids;
+	std::unordered_set<std::string> uuids;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		guids.insert(generator.newGuid(compact).serialise());
+		uuids.insert(generator.newUUID(compact).serialise());
 	}
-	if (guids.size() != NUM_TESTS) {
-		L_ERR("ERROR: Not all random guids are different");
+	if (uuids.size() != NUM_TESTS) {
+		L_ERR("ERROR: Not all random UUIDs are different");
 		++cont;
 	}
 
@@ -68,17 +68,17 @@ int test_generator_guid(bool compact) {
 }
 
 
-int test_constructor_guid() {
+int test_constructor_uuid() {
 	int cont = 0;
 
 	std::string u1("3c0f2be3-ff4f-40ab-b157-c51a81eff176");
 	std::string u2("e47fcfdf-8db6-4469-a97f-57146dc41ced");
 	std::string u3("b2ce58e8-d049-4705-b0cb-fe7435843781");
 
-	Guid s1(u1);
-	Guid s2(u2);
-	Guid s3(u3);
-	Guid s4(u1);
+	UUID s1(u1);
+	UUID s2(u2);
+	UUID s3(u3);
+	UUID s4(u1);
 
 	if (s1 == s2) {
 		L_ERR("ERROR: s1 and s2 must be different");
@@ -109,7 +109,7 @@ int test_constructor_guid() {
 }
 
 
-int test_special_guids() {
+int test_special_uuids() {
 	std::vector<std::string> special_uuids({
 		"00000000-0000-0000-0000-000000000000",
 		"00000000-0000-1000-8000-000000000000",
@@ -122,9 +122,9 @@ int test_special_guids() {
 
 	int cont = 0;
 	for (const auto& uuid_orig : special_uuids) {
-		Guid guid(uuid_orig);
-		Guid guid2 = Guid::unserialise(guid.serialise());
-		const auto uuid_rec = guid2.to_string();
+		UUID uuid(uuid_orig);
+		UUID uuid2 = UUID::unserialise(uuid.serialise());
+		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
 			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
@@ -135,15 +135,15 @@ int test_special_guids() {
 }
 
 
-int test_compacted_guids() {
+int test_compacted_uuids() {
 	int cont = 0;
 	size_t min_length = 20, max_length = 0;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		Guid guid = GuidGenerator().newGuid(true);
-		const auto uuid_orig = guid.to_string();
-		const auto serialised = guid.serialise();
-		Guid guid2 = Guid::unserialise(serialised);
-		const auto uuid_rec = guid2.to_string();
+		UUID uuid = UUIDGenerator().newUUID(true);
+		const auto uuid_orig = uuid.to_string();
+		const auto serialised = uuid.serialise();
+		UUID uuid2 = UUID::unserialise(serialised);
+		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
 			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
@@ -170,15 +170,15 @@ int test_compacted_guids() {
 }
 
 
-int test_condensed_guids() {
+int test_condensed_uuids() {
 	int cont = 0;
 	size_t min_length = 20, max_length = 0;
 	for (int i = 0; i < NUM_TESTS; ++i) {
-		Guid guid = GuidGenerator().newGuid(false);
-		const auto uuid_orig = guid.to_string();
-		const auto serialised = guid.serialise();
-		Guid guid2 = Guid::unserialise(serialised);
-		const auto uuid_rec = guid2.to_string();
+		UUID uuid = UUIDGenerator().newUUID(false);
+		const auto uuid_orig = uuid.to_string();
+		const auto serialised = uuid.serialise();
+		UUID uuid2 = UUID::unserialise(serialised);
+		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
 			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
@@ -205,7 +205,7 @@ int test_condensed_guids() {
 }
 
 
-int test_expanded_guids() {
+int test_expanded_uuids() {
 	int cont = 0;
 	size_t min_length = 20, max_length = 0;
 	for (auto i = 0; i < NUM_TESTS; ++i) {
@@ -240,10 +240,10 @@ int test_expanded_guids() {
 		if ((version == 1 || version == 4) && (variant == '8' || variant == '9' || variant == 'a' || variant == 'b')) {
 			variant = '7';
 		}
-		Guid guid(uuid_orig);
-		const auto serialised = guid.serialise();
-		Guid guid2 = Guid::unserialise(serialised);
-		const auto uuid_rec = guid2.to_string();
+		UUID uuid(uuid_orig);
+		const auto serialised = uuid.serialise();
+		UUID uuid2 = UUID::unserialise(serialised);
+		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
 			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
@@ -270,90 +270,90 @@ int test_expanded_guids() {
 }
 
 
-int test_several_guids() {
+int test_several_uuids() {
 	size_t cont = 0;
 	for (auto i = 0; i < NUM_TESTS; ++i) {
 		std::vector<std::string> str_uuids;
 		std::vector<std::string> norm_uuids;
 		switch (i % 3) {
 			case 0: {
-				Guid guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(guid.to_string());
+				UUID uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back(uuid.to_string());
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(guid.to_string());
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back(uuid.to_string());
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(guid.to_string());
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back(uuid.to_string());
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(guid.to_string());
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back(uuid.to_string());
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back(guid.to_string());
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back(uuid.to_string());
 				break;
 			}
 			case 1: {
-				Guid guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back("~" + B59.encode(guid.serialise()));
+				UUID uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back("~" + B59.encode(guid.serialise()));
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back("~" + B59.encode(guid.serialise()));
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back("~" + B59.encode(guid.serialise()));
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				norm_uuids.push_back("~" + B59.encode(guid.serialise()));
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				norm_uuids.push_back("~" + B59.encode(uuid.serialise()));
 				break;
 			}
 			default: {
-				Guid guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				auto serialised = guid.serialise();
+				UUID uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				auto serialised = uuid.serialise();
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				serialised.append(guid.serialise());
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				serialised.append(uuid.serialise());
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				serialised.append(guid.serialise());
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				serialised.append(uuid.serialise());
 
-				guid = GuidGenerator().newGuid(false);
-				str_uuids.push_back(guid.to_string());
-				serialised.append(guid.serialise());
+				uuid = UUIDGenerator().newUUID(false);
+				str_uuids.push_back(uuid.to_string());
+				serialised.append(uuid.serialise());
 
-				guid = GuidGenerator().newGuid(true);
-				str_uuids.push_back(guid.to_string());
-				serialised.append(guid.serialise());
+				uuid = UUIDGenerator().newUUID(true);
+				str_uuids.push_back(uuid.to_string());
+				serialised.append(uuid.serialise());
 
 				norm_uuids.push_back("~" + B59.encode(serialised));
 				break;
 			}
 		}
 
-		std::string guids_serialised;
+		std::string uuids_serialised;
 		for (auto& uuid : norm_uuids) {
 			auto uuid_sz = uuid.size();
 			if (uuid_sz) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
-						Guid guid(uuid);
-						guids_serialised.append(guid.serialise());
+						UUID uuid(uuid);
+						uuids_serialised.append(uuid.serialise());
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
@@ -361,8 +361,8 @@ int test_several_guids() {
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = B59.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
-							guids_serialised.append(decoded);
+						if (UUID::is_serialised(decoded)) {
+							uuids_serialised.append(decoded);
 							continue;
 						}
 					} catch (const std::invalid_argument&) { }
@@ -373,21 +373,21 @@ int test_several_guids() {
 
 		std::string str_uuids_serialised;
 		for (const auto& s : str_uuids) {
-			str_uuids_serialised.append(Guid(s).serialise());
+			str_uuids_serialised.append(UUID(s).serialise());
 		}
 
-		std::vector<Guid> guids;
-		Guid::unserialise(guids_serialised, std::back_inserter(guids));
-		if (guids.size() != str_uuids.size()) {
+		std::vector<UUID> uuids;
+		UUID::unserialise(uuids_serialised, std::back_inserter(uuids));
+		if (uuids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR("ERROR: Different sizes: %zu != %zu\n\tResult: %s\n\tExpected: %s", guids.size(), str_uuids.size(), repr(guids_serialised).c_str(), repr(str_uuids_serialised).c_str());
+			L_ERR("ERROR: Different sizes: %zu != %zu\n\tResult: %s\n\tExpected: %s", uuids.size(), str_uuids.size(), repr(uuids_serialised).c_str(), repr(str_uuids_serialised).c_str());
 		} else {
 			auto it = str_uuids.begin();
-			for (const auto& guid : guids) {
-				const auto str_guid = guid.to_string();
-				if (str_guid != *it) {
+			for (const auto& uuid : uuids) {
+				const auto str_uuid = uuid.to_string();
+				if (str_uuid != *it) {
 					++cont;
-					L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", str_guid.c_str(), it->c_str());
+					L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", str_uuid.c_str(), it->c_str());
 				}
 				++it;
 			}

@@ -30,10 +30,9 @@
 #include <sys/fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                                // for stat
 
-#include "base_x.hh"                                  // for base62
+#include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
 #include "exception.h"                               // for ClientError, MSG_ClientError
-#include "guid/guid.h"                               // for Guid
 #include "io_utils.h"                                // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE

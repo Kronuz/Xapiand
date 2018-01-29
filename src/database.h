@@ -43,8 +43,8 @@
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "database_utils.h"     // for DB_WRITABLE
+#include "cuuid/uuid.h"         // for UUID, UUID_LENGTH
 #include "endpoint.h"           // for Endpoints, Endpoint
-#include "guid/guid.h"          // for Guid
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 #include "lz4/xxhash.h"         // for XXH32
 #include "queue.h"              // for Queue, QueueSet

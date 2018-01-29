@@ -20,48 +20,48 @@
  * IN THE SOFTWARE.
  */
 
-#include "test_guid.h"
+#include "test_uuid.h"
 
 #include "gtest/gtest.h"
 
 
-TEST(GUIDTest, ExpandedGenerator) {
-	EXPECT_EQ(test_generator_guid(false), 0);
+TEST(UUIDTest, ExpandedGenerator) {
+	EXPECT_EQ(test_generator_uuid(false), 0);
 }
 
 
-TEST(GUIDTest, CompactedGenerator) {
-	EXPECT_EQ(test_generator_guid(true), 0);
+TEST(UUIDTest, CompactedGenerator) {
+	EXPECT_EQ(test_generator_uuid(true), 0);
 }
 
 
-TEST(GUIDTest, Constructor) {
-	EXPECT_EQ(test_constructor_guid(), 0);
+TEST(UUIDTest, Constructor) {
+	EXPECT_EQ(test_constructor_uuid(), 0);
 }
 
 
-TEST(GUIDTest, Special) {
-	EXPECT_EQ(test_special_guids(), 0);
+TEST(UUIDTest, Special) {
+	EXPECT_EQ(test_special_uuids(), 0);
 }
 
 
-TEST(GUIDTest, Condensed) {
-	EXPECT_EQ(test_condensed_guids(), 0);
+TEST(UUIDTest, Condensed) {
+	EXPECT_EQ(test_condensed_uuids(), 0);
 }
 
 
-TEST(GUIDTest, Compacted) {
-	EXPECT_EQ(test_compacted_guids(), 0);
+TEST(UUIDTest, Compacted) {
+	EXPECT_EQ(test_compacted_uuids(), 0);
 }
 
 
-TEST(GUIDTest, Expanded) {
-	EXPECT_EQ(test_expanded_guids(), 0);
+TEST(UUIDTest, Expanded) {
+	EXPECT_EQ(test_expanded_uuids(), 0);
 }
 
 
-TEST(GUIDTest, Several) {
-	EXPECT_EQ(test_several_guids(), 0);
+TEST(UUIDTest, Several) {
+	EXPECT_EQ(test_several_uuids(), 0);
 }
 
 

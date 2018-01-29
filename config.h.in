@@ -253,10 +253,10 @@
 /* Path for stopwords files */
 #cmakedefine PATH_STOPWORDS "@PATH_STOPWORDS@"
 
-/* Defines for cross-platform UUID/GUID generation */
-#cmakedefine GUID_LIBUUID @GUID_LIBUUID@
-#cmakedefine GUID_CFUUID @GUID_CFUUID@
-#cmakedefine GUID_FREEBSD @GUID_FREEBSD@
+/* Defines for cross-platform UUID generation */
+#cmakedefine UUID_LIBUUID @UUID_LIBUUID@
+#cmakedefine UUID_CFUUID @UUID_CFUUID@
+#cmakedefine UUID_FREEBSD @UUID_FREEBSD@
 
 /* Enable CHAISCRIPT engine */
 #cmakedefine XAPIAND_CHAISCRIPT @XAPIAND_CHAISCRIPT@

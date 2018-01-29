@@ -25,10 +25,10 @@
 #include <cstdio>
 
 
-int test_generator_guid(bool compact);
-int test_constructor_guid();
-int test_special_guids();
-int test_compacted_guids();
-int test_condensed_guids();
-int test_expanded_guids();
-int test_several_guids();
+int test_generator_uuid(bool compact);
+int test_constructor_uuid();
+int test_special_uuids();
+int test_compacted_uuids();
+int test_condensed_uuids();
+int test_expanded_uuids();
+int test_several_uuids();

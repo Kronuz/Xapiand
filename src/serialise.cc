@@ -37,7 +37,7 @@
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
-#include "guid/guid.h"                                // for Guid
+#include "cuuid/uuid.h"                               // for Uuid
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
@@ -65,7 +65,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 			auto uuid_sz = uuid.size();
 			if (uuid_sz) {
 				if (uuid_sz == UUID_LENGTH) {
-					if (Guid::is_valid(uuid)) {
+					if (UUID::is_valid(uuid)) {
 						continue;
 					}
 				}
@@ -74,7 +74,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = UUID_ENCODER.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
+						if (UUID::is_serialised(decoded)) {
 							continue;
 						}
 					} catch (const std::invalid_argument&) { }
@@ -583,8 +583,7 @@ Serialise::uuid(const std::string& field_value)
 			if (uuid_sz) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
-						Guid guid(uuid);
-						serialised.append(guid.serialise());
+						serialised.append(UUID(uuid).serialise());
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
@@ -593,7 +592,7 @@ Serialise::uuid(const std::string& field_value)
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = UUID_ENCODER.decode(uuid);
-						if (Guid::is_serialised(decoded)) {
+						if (UUID::is_serialised(decoded)) {
 							serialised.append(decoded);
 							continue;
 						}
@@ -1077,12 +1076,12 @@ std::string
 Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
-	std::vector<Guid> uuids;
+	std::vector<UUID> uuids;
 	switch (repr) {
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
 			// {00000000-0000-1000-8000-010000000000}
-			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.push_back('{');
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			result.push_back('}');
@@ -1091,7 +1090,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 #ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn:
 			// urn:uuid:00000000-0000-1000-8000-010000000000
-			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append("urn:uuid:");
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
@@ -1106,7 +1105,7 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 		default:
 		case UUIDRepr::simple:
 			// 00000000-0000-1000-8000-010000000000
-			Guid::unserialise(serialised_uuid, std::back_inserter(uuids));
+			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append(join_string(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 	}

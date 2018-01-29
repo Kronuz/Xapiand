@@ -571,9 +571,9 @@ DatabaseWAL::init_database()
 		return true;
 	}
 
-	Guid guid(header.head.uuid, UUID_LENGTH);
-	const auto& bytes = guid.get_bytes();
-	std::string uuid(bytes.begin(), bytes.end());
+	UUID uuid(header.head.uuid, UUID_LENGTH);
+	const auto& bytes = uuid.get_bytes();
+	std::string uuid_str(bytes.begin(), bytes.end());
 
 	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
 	if (unlikely(fd < 0)) {
@@ -585,7 +585,7 @@ DatabaseWAL::init_database()
 		io::close(fd);
 		return false;
 	}
-	if unlikely(io::write(fd, uuid.data(), uuid.size()) < 0) {
+	if unlikely(io::write(fd, uuid_str.data(), uuid_str.size()) < 0) {
 		L_ERRNO("io::write() -> %s", io::strerrno(errno));
 		io::close(fd);
 		return false;

@@ -143,10 +143,10 @@ file(GLOB LZ4_SRC_LIST
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
-file(GLOB GUID_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/guid/*.c* ${PROJECT_SOURCE_DIR}/src/guid/*.h
+file(GLOB UUID_SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/cuuid/*.c* ${PROJECT_SOURCE_DIR}/src/cuuid/*.h
 )
-add_library(GUID_OBJ OBJECT ${GUID_SRC_LIST})
+add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 add_executable(${PROJECT_NAME}
 	${PROJECT_SOURCE_DIR}/src/xapiand.cc
@@ -155,7 +155,7 @@ add_executable(${PROJECT_NAME}
 	$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
 	$<TARGET_OBJECTS:LIBEV_OBJ>
 	$<TARGET_OBJECTS:LZ4_OBJ>
-	$<TARGET_OBJECTS:GUID_OBJ>
+	$<TARGET_OBJECTS:UUID_OBJ>
 )
 
 add_dependencies(${PROJECT_NAME} package_config)
@@ -602,8 +602,8 @@ if(IWYU)
 		set_property(TARGET LIBEV_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET LZ4_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET LZ4_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET GUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET GUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET UUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET UUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 	else()
@@ -632,7 +632,7 @@ if(BUILD_TESTS)
 	link_directories(${GTEST_LIBS})
 
 	foreach(VAR_TEST boolparser compressor endpoint fieldparser generate_terms
-		geospatial geospatial_query guid hash lru msgpack patcher phonetic query queue
+		geospatial geospatial_query uuid hash lru msgpack patcher phonetic query queue
 		serialise serialise_list sort storage string_metric threadpool url_parser wal)
 		set(PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 		add_executable(${PROJECT_TEST}
@@ -644,7 +644,7 @@ if(BUILD_TESTS)
 			$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
 			$<TARGET_OBJECTS:LIBEV_OBJ>
 			$<TARGET_OBJECTS:LZ4_OBJ>
-			$<TARGET_OBJECTS:GUID_OBJ>
+			$<TARGET_OBJECTS:UUID_OBJ>
 		)
 
 		add_dependencies(${PROJECT_TEST} googletest)

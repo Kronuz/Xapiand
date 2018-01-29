@@ -27,26 +27,26 @@
 #  UUID_INCLUDE_DIRS - where to find UUID library
 #  UUID_FOUND - If found UUID library
 #
-#  GUID_LIBUUID - If the OS is Linux or FreeBSD
-#  GUID_CFUUID - If the OS is Darwin
+#  UUID_LIBUUID - If the OS is Linux or FreeBSD
+#  UUID_CFUUID - If the OS is Darwin
 ########################################################################
 
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-	set(GUID_FREEBSD 1)
+	set(UUID_FREEBSD 1)
 	set(UUID_NAME_LIB c++)
 	set(UUID_LIB_PATH uuid.h)
 	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	set(GUID_LIBUUID 1)
+	set(UUID_LIBUUID 1)
 	set(UUID_NAME_LIB c++)
 	set(UUID_LIB_PATH uuid/uuid.h)
-	# set(GUID_CFUUID 1)
+	# set(UUID_CFUUID 1)
 	# set(UUID_NAME_LIB CoreFoundation)
 	# set(UUID_LIB_PATH CoreFoundation/CFUUID.h)
 	# set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(GUID_LIBUUID 1)
+	set(UUID_LIBUUID 1)
 	set(UUID_NAME_LIB uuid)
 	set(UUID_LIB_PATH uuid/uuid.h)
 	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the uuid-dev or libuuid-devel package")

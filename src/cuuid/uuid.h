@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include <iostream>        // for ostream
 #include <string>          // for string
 
-#ifdef GUID_ANDROID
+#ifdef UUID_ANDROID
 #include <jni.h>
 #endif
 
@@ -39,42 +39,42 @@ constexpr uint8_t UUID_LENGTH = 36;
 
 
 /*
- * Class to represent a GUID/UUID. Each instance acts as a wrapper around a
+ * Class to represent a UUID. Each instance acts as a wrapper around a
  * 16 byte value that can be passed around by value. It also supports
  * conversion to string (via the stream operator <<) and conversion from a
  * string via constructor.
  */
-class Guid {
+class UUID {
 	// actual data
 	std::array<unsigned char, 16> _bytes;
 
 public:
-	// create a guid from vector of bytes
-	explicit Guid(const std::array<unsigned char, 16>& bytes);
+	// create a UUID from vector of bytes
+	explicit UUID(const std::array<unsigned char, 16>& bytes);
 
-	// create a guid from string
-	explicit Guid(const char* str, size_t size);
+	// create a UUID from string
+	explicit UUID(const char* str, size_t size);
 
-	explicit Guid(const std::string& string);
+	explicit UUID(const std::string& string);
 
-	// create empty guid
-	Guid();
+	// create empty UUID
+	UUID();
 
 	// copy constructor
-	Guid(const Guid& other);
+	UUID(const UUID& other);
 
 	// move constructor
-	Guid(Guid&& other);
+	UUID(UUID&& other);
 
 	// overload assignment operator
-	Guid& operator=(const Guid& other);
+	UUID& operator=(const UUID& other);
 
 	// overload move operator
-	Guid& operator=(Guid&& other);
+	UUID& operator=(UUID&& other);
 
 	// overload equality and inequality operator
-	bool operator==(const Guid& other) const;
-	bool operator!=(const Guid& other) const;
+	bool operator==(const UUID& other) const;
+	bool operator!=(const UUID& other) const;
 
 	const std::array<unsigned char, 16>& get_bytes() const {
 		return _bytes;
@@ -97,8 +97,8 @@ public:
 	std::string to_string() const;
 	std::string serialise() const;
 
-	static Guid unserialise(const std::string& bytes);
-	static Guid unserialise(const char** ptr, const char* end);
+	static UUID unserialise(const std::string& bytes);
+	static UUID unserialise(const char** ptr, const char* end);
 
 	// unserialise a serialised uuid's list
 	template <typename OutputIt>
@@ -131,53 +131,54 @@ public:
 
 private:
 	// make the << operator a friend so it can access _bytes
-	friend std::ostream &operator<<(std::ostream& s, const Guid& guid);
+	friend std::ostream &operator<<(std::ostream& s, const UUID& uuid);
 
-	union GuidCompactor get_compactor(bool compacted) const;
+	union UUIDCompactor get_compactor(bool compacted) const;
 
 	// Aux functions for serialise/unserialise UUIDs.
 
 	std::string serialise_full() const;
 	std::string serialise_condensed() const;
 
-	static Guid unserialise_full(const char** ptr, const char* end);
-	static Guid unserialise_condensed(const char** ptr, const char* end);
+	static UUID unserialise_full(const char** ptr, const char* end);
+	static UUID unserialise_condensed(const char** ptr, const char* end);
 };
 
 
 /*
- * Class that can create new guids. The only reason this exists instead of
- * just a global "newGuid" function is because some platforms will require
+ * Class that can create new UUIDs. The only reason this exists instead of
+ * just a global "newUUID" function is because some platforms will require
  * that there is some attached context. In the case of android, we need to
- * know what JNIEnv is being used to call back to Java, but the newGuid()
+ * know what JNIEnv is being used to call back to Java, but the newUUID()
  * function would no longer be cross-platform if we parameterized the android
- * version. Instead, construction of the GuidGenerator may be different on
- * each platform, but the use of newGuid is uniform.
+ * version. Instead, construction of the UUIDGenerator may be different on
+ * each platform, but the use of newUUID is uniform.
  */
-class GuidGenerator {
-	Guid _newGuid();
+class UUIDGenerator {
+	UUID _newUUID();
 
 public:
-#ifdef GUID_ANDROID
-	explicit GuidGenerator(JNIEnv* env);
+#ifdef UUID_ANDROID
+	explicit UUIDGenerator(JNIEnv* env);
 #else
-	GuidGenerator() { }
+	UUIDGenerator() { }
 #endif
 
-	Guid newGuid(bool compact=true);
+	UUID newUUID(bool compact = true);
+	UUID operator ()(bool compact = true);
 
-#ifdef GUID_ANDROID
+#ifdef UUID_ANDROID
 private:
 	JNIEnv* _env;
 	jclass _uuidClass;
-	jmethodID _newGuidMethod;
+	jmethodID _newUUIDMethod;
 	jmethodID _mostSignificantBitsMethod;
 	jmethodID _leastSignificantBitsMethod;
 #endif
 };
 
 namespace std {
-	inline auto to_string(const Guid& uuid) {
+	inline auto to_string(const UUID& uuid) {
 		return uuid.to_string();
 	}
 }

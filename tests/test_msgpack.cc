@@ -359,7 +359,7 @@ int test_msgpack_explore() {
 		"\"favoriteFruit\":\"banana\"\n"
 		"\"friends\":[3, {\"id\":1, \"name\":\"Norma Salas\"}]\n"
 		"\"greeting\":\"Hello, Serena! You have 6 unread messages.\"\n"
-		"\"guid\":\"e82fe710-dca6-41f3-be6c-52be4661a462\"\n"
+		"\"uuid\":\"e82fe710-dca6-41f3-be6c-52be4661a462\"\n"
 		"\"index\":0\n"
 		"\"isActive\":false\n"
 		"\"latitude\":\"39.106713\"\n"
