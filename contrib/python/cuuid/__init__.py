@@ -22,9 +22,11 @@
 #
 from __future__ import absolute_import, division
 
+__all__ = ['UUID', 'uuid', 'uuid1', 'uuid3', 'uuid4', 'uuid5',
+           'NAMESPACE_DNS', 'NAMESPACE_URL', 'NAMESPACE_OID', 'NAMESPACE_X500']
+
 import six
-import uuid
-import string
+import uuid as _uuid
 
 try:
     from . import base_x
@@ -35,9 +37,6 @@ try:
     from .mertwis import MT19937
 except ValueError:
     from mertwis import MT19937
-
-
-__all__ = ['UUID']
 
 
 ENCODER = base_x.b59
@@ -133,6 +132,13 @@ def _unserialise(bytes_):
         return _unserialise_condensed(bytes_)
 
 
+def unserialise_one(bytes_):
+    uuid, length = _unserialise(bytes_)
+    if length > len(bytes_):
+        raise ValueError("Invalid serialised uuid %s" % bytes_)
+    return uuid
+
+
 def unserialise(bytes_):
     uuids = []
     while bytes_:
@@ -142,18 +148,18 @@ def unserialise(bytes_):
     return uuids
 
 
-def unserialise_compound(bytes_, repr='encoded'):
+def unserialise_compound(bytes_, encoding='encoded'):
     if isinstance(bytes_, UUID):
         return unserialise_compound(bytes_.serialise())
     elif isinstance(bytes_, six.string_types):
-        if repr == 'guid':
-            return ";".join("{%s}" % u for u in unserialise(bytes_))
-        elif repr == 'urn':
-            return "urn:uuid:" + ";".join(unserialise(bytes_))
-        elif repr == 'encoded':
+        if encoding == 'guid':
+            return b';'.join("{%s}" % u for u in unserialise(bytes_))
+        elif encoding == 'urn':
+            return b'urn:uuid:' + ";".join(unserialise(bytes_))
+        elif encoding == 'encoded':
             if ord(bytes_[0]) != 1 and ((ord(bytes_[-1]) & 1) or (len(bytes_) >= 6 and ord(bytes_[-6]) & 2)):
-                return '~' + ENCODER.encode(bytes_)
-        return ";".join(unserialise(bytes_))
+                return b'~' + ENCODER.encode(bytes_)
+        return b';'.join(unserialise(bytes_))
 
 
 def _is_serialised(bytes_):
@@ -177,22 +183,24 @@ def _is_serialised(bytes_):
     return True
 
 
+def serialise_one(uuid_):
+    if len(uuid_) >= 7 and uuid_[0] == '~':
+        serialised = ENCODER.decode(uuid_)
+        if _is_serialised(serialised):
+            return serialised
+
+    hex = uuid_
+    hex = hex.replace('urn:', '').replace('uuid:', '')
+    hex = hex.strip('{}').replace('-', '')
+    if len(hex) == 32:
+        u = UUID(int=_uuid.UUID(hex).int)
+        return u.serialise()
+
+    raise ValueError("Invalid UUID format %s" % uuid_)
+
+
 def serialise(uuids_):
-    serialised = b''
-    for uuid_ in uuids_:
-        size = len(uuid_)
-        if size == UUID.UUID_LENGTH and uuid_[8] == '-' and uuid_[13] == '-' and uuid_[18] == '-' and uuid_[23] == '-':
-            hex_uuid = uuid_[0:8] + uuid_[9:4] + uuid_[14:4] + uuid_[19:4] + uuid_[24:12]
-            if all(c in string.hexdigits for c in hex_uuid):
-                u = UUID(uuid_)
-                serialised += u.serialise()
-                continue
-        elif size >= 7 and uuid_[0] == '~':
-            serialised += ENCODER.decode(uuid_)
-            if _is_serialised(serialised):
-                continue
-        raise ValueError("Invalid UUID format %s" % uuid_)
-    return serialised
+    return b''.join(serialise_one(u) for u in uuids_)
 
 
 def serialise_compound(compound_uuid):
@@ -212,7 +220,7 @@ def serialise_compound(compound_uuid):
     raise ValueError("Invalid UUID format in: %s" % compound_uuid)
 
 
-class UUID(six.binary_type, uuid.UUID):
+class UUID(six.binary_type, _uuid.UUID):
     """
     Anonymous UUID is 00000000-0000-1000-8000-010000000000
     """
@@ -258,8 +266,24 @@ class UUID(six.binary_type, uuid.UUID):
         [[0x0f, 0xff], [0xf0, 0xf0]],  # 16: 00001111 11111111  11110000 11110000
     ]
 
-    def __new__(cls, *args, **kwargs):
-        return six.binary_type.__new__(cls, uuid.UUID(*args, **kwargs))
+    def __new__(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None):
+        if [hex, bytes, bytes_le, fields, int].count(None) != 4:
+            raise TypeError('need one of hex, bytes, bytes_le, fields, or int')
+        if isinstance(hex, six.binary_type):
+            hex = unserialise_one(serialise_one(hex))
+        if isinstance(hex, _uuid.UUID):
+            u = hex
+        else:
+            u = _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
+        self = six.binary_type.__new__(cls, u)
+        self.__dict__['int'] = u.int
+        return self
+
+    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None):
+        if 'int' not in self.__dict__:
+            cls = self.__class__
+            u = cls(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
+            self.__dict__['int'] = u.int
 
     @classmethod
     def _calculate_node(cls, time, clock, salt):
@@ -318,7 +342,7 @@ class UUID(six.binary_type, uuid.UUID):
             num = cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
             compacted = False
         else:
-            num = uuid.uuid1()
+            num = _uuid.uuid1()
         if compacted or compacted is None:
             clock = num.clock_seq & UUID.CLOCK_MASK
             time = num.time & UUID.TIME_MASK
@@ -370,128 +394,120 @@ class UUID(six.binary_type, uuid.UUID):
             num >>= 8
         return ''.join(reversed(data))
 
+    def encode(self, encoding='encoded'):
+        return unserialise_compound(self.serialise(), encoding)
+
     @classmethod
     def unserialise(cls, bytes_):
         return _unserialise(bytes_)[0]
 
-    def _serialise(self, variant):
-        cls = self.__class__
-        version = ord(self.bytes[6]) >> 4
-        if variant == 0x80 and version == 1:
-            node = self.node & UUID.NODE_MASK
-            clock = self.clock_seq & UUID.CLOCK_MASK
-            time = self.time & UUID.TIME_MASK
-            compacted_time = ((time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK) if time else 0
-            compacted_time_clock = compacted_time & UUID.CLOCK_MASK
-            compacted_time >>= UUID.CLOCK_BITS
-            compacted_clock = clock ^ compacted_time_clock
-            if node & 0x010000000000:
-                salt = node & UUID.SALT_MASK
-            else:
-                salt = _fnv_1a(node)
-                salt = xor_fold(salt, UUID.SALT_BITS)
-                salt = salt & UUID.SALT_MASK
-            compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt)
-            compacted = node == compacted_node
-
-            if compacted:
-                meat = compacted_time
-                meat <<= UUID.CLOCK_BITS
-                meat |= compacted_clock
-                meat <<= UUID.SALT_BITS
-                meat |= salt
-                meat <<= UUID.COMPACTED_BITS
-                meat |= 1
-            else:
-                if not (node & 0x010000000000):
-                    if time:
-                        time = (time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
-                meat = time
-                meat <<= UUID.CLOCK_BITS
-                meat |= clock
-                meat <<= UUID.NODE_BITS
-                meat |= node
-                meat <<= UUID.COMPACTED_BITS
-
-            bytes_ = []
-            while meat or len(bytes_) < 4:
-                bytes_.append(meat & 0xff)
-                meat >>= 8
-            length = len(bytes_) - 4
-            if bytes_[-1] & UUID.VL[length][0][1]:
-                if bytes_[-1] & UUID.VL[length][1][1]:
-                    bytes_.append(UUID.VL[length + 1][0][0])
-                else:
-                    bytes_[-1] |= UUID.VL[length][1][0]
-            else:
-                bytes_[-1] |= UUID.VL[length][0][0]
-            return ''.join(chr(c) for c in reversed(bytes_))
-        else:
-            return chr(0x01) + self.bytes
-
     def serialise(self):
-        return self._serialise(ord(self.bytes[8]) & 0xc0)
+        if '_serialised' not in self.__dict__:
+            cls = self.__class__
+            variant = ord(self.bytes[8]) & 0xc0
+            version = ord(self.bytes[6]) >> 4
+            if variant == 0x80 and version == 1:
+                node = self.node & UUID.NODE_MASK
+                clock = self.clock_seq & UUID.CLOCK_MASK
+                time = self.time & UUID.TIME_MASK
+                compacted_time = ((time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK) if time else 0
+                compacted_time_clock = compacted_time & UUID.CLOCK_MASK
+                compacted_time >>= UUID.CLOCK_BITS
+                compacted_clock = clock ^ compacted_time_clock
+                if node & 0x010000000000:
+                    salt = node & UUID.SALT_MASK
+                else:
+                    salt = _fnv_1a(node)
+                    salt = xor_fold(salt, UUID.SALT_BITS)
+                    salt = salt & UUID.SALT_MASK
+                compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt)
+                self.__dict__['_compacted_node'] = compacted_node
+                compacted = node == compacted_node
+
+                if compacted:
+                    meat = compacted_time
+                    meat <<= UUID.CLOCK_BITS
+                    meat |= compacted_clock
+                    meat <<= UUID.SALT_BITS
+                    meat |= salt
+                    meat <<= UUID.COMPACTED_BITS
+                    meat |= 1
+                else:
+                    if not (node & 0x010000000000):
+                        if time:
+                            time = (time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
+                    meat = time
+                    meat <<= UUID.CLOCK_BITS
+                    meat |= clock
+                    meat <<= UUID.NODE_BITS
+                    meat |= node
+                    meat <<= UUID.COMPACTED_BITS
+
+                bytes_ = []
+                while meat or len(bytes_) < 4:
+                    bytes_.append(meat & 0xff)
+                    meat >>= 8
+                length = len(bytes_) - 4
+                if bytes_[-1] & UUID.VL[length][0][1]:
+                    if bytes_[-1] & UUID.VL[length][1][1]:
+                        bytes_.append(UUID.VL[length + 1][0][0])
+                    else:
+                        bytes_[-1] |= UUID.VL[length][1][0]
+                else:
+                    bytes_[-1] |= UUID.VL[length][0][0]
+                self.__dict__['_serialised'] = ''.join(chr(c) for c in reversed(bytes_))
+            else:
+                self.__dict__['_compacted_node'] = None
+                self.__dict__['_serialised'] = chr(0x01) + self.bytes
+        return self.__dict__['_serialised']
 
     def compact_crush(self):
-        cls = self.__class__
-        version = self.version
-        variant = self.clock_seq_hi_variant & 0x80
-        if variant == 0x80 and version == 1:
-            node = self.node & UUID.NODE_MASK
-            clock = self.clock_seq & UUID.CLOCK_MASK
-            time = self.time & UUID.TIME_MASK
-            compacted_time = ((time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK) if time else 0
-            compacted_time_clock = compacted_time & UUID.CLOCK_MASK
-            compacted_time >>= UUID.CLOCK_BITS
-            compacted_clock = clock ^ compacted_time_clock
-            if node & 0x010000000000:
-                salt = node & UUID.SALT_MASK
-            else:
-                salt = _fnv_1a(node)
-                salt = xor_fold(salt, UUID.SALT_BITS)
-                salt = salt & UUID.SALT_MASK
-            compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt)
-            clock = compacted_clock
-            time = compacted_time
-            if time:
-                time = ((time << UUID.CLOCK_BITS) + UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK
-            time_low = time & 0xffffffff
-            time_mid = (time >> 32) & 0xffff
-            time_hi_version = (time >> 48) & 0xfff
-            time_hi_version |= 0x1000
-            clock_seq_low = clock & 0xff
-            clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
-            return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, compacted_node))
+        compacted_node = self.get_compacted_node()
+        if compacted_node is not None:
+            cls = self.__class__
+            return cls(int=(self.int & ~0xffffffffffff) | compacted_node)
 
-    def get_calculated_node(self):
-        cls = self.__class__
-        version = self.version
-        variant = self.clock_seq_hi_variant & 0x80
-        if variant == 0x80 and version == 1:
-            node = self.node & UUID.NODE_MASK
-            clock = self.clock_seq & UUID.CLOCK_MASK
-            time = self.time & UUID.TIME_MASK
-            compacted_time = ((time - UUID.UUID_TIME_INITIAL) & UUID.TIME_MASK) if time else 0
-            compacted_time_clock = compacted_time & UUID.CLOCK_MASK
-            compacted_time >>= UUID.CLOCK_BITS
-            compacted_clock = clock ^ compacted_time_clock
-            if node & 0x010000000000:
-                salt = node & UUID.SALT_MASK
-            else:
-                salt = _fnv_1a(node)
-                salt = xor_fold(salt, UUID.SALT_BITS)
-                salt = salt & UUID.SALT_MASK
-            compacted_node = cls._calculate_node(compacted_time, compacted_clock, salt)
-            compacted = node == compacted_node
-            if compacted:
-                return compacted_node
+    def get_compacted_node(self):
+        if '_compacted_node' not in self.__dict__:
+            self.serialise()
+        return self.__dict__['_compacted_node']
 
     @property
-    def calculated_node(self):
-        return self.get_calculated_node()
+    def compacted_node(self):
+        return self.get_compacted_node()
 
     def iscompact(self):
-        return self.calculated_node == self.node
+        return self.compacted_node == self.node
+
+
+# Compatibility with builtin uuid
+
+def uuid(data=None, compacted=None):
+    return UUID.new(data=data, compacted=compacted)
+
+
+def uuid1(node=None, clock_seq=None):
+    return UUID(_uuid.uuid1(node=node, clock_seq=clock_seq))
+
+
+def uuid3(namespace, name):
+    return UUID(_uuid.uuid3(namespace, name))
+
+
+def uuid4():
+    return UUID(_uuid.uuid4())
+
+
+def uuid5(namespace, name):
+    return UUID(_uuid.uuid5(namespace, name))
+
+
+# The following standard UUIDs are for use with uuid3() or uuid5().
+
+NAMESPACE_DNS = UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_URL = UUID('6ba7b811-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_OID = UUID('6ba7b812-9dad-11d1-80b4-00c04fd430c8')
+NAMESPACE_X500 = UUID('6ba7b814-9dad-11d1-80b4-00c04fd430c8')
 
 
 if __name__ == '__main__':
