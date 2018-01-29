@@ -226,7 +226,7 @@ class Storage {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
 				close();
-				THROW(StorageIOError, "IO error: lseek");
+				THROW(StorageIOError, "IO error: lseek: %s", strerror(errno));
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -255,7 +255,7 @@ class Storage {
 	do_write:
 		if (io::pwrite(fd, *buffer_, STORAGE_BLOCK_SIZE, block_offset_) != STORAGE_BLOCK_SIZE) {
 			close();
-			THROW(StorageIOError, "IO error: pwrite");
+			THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 		}
 
 	do_update:
@@ -362,7 +362,7 @@ public:
 
 		if unlikely(fd <= 0) {
 			close();
-			THROW(StorageIOError, "Cannot open storage file: " + path + " (" + strerror(errno) +")");
+			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
 		}
 
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
@@ -380,7 +380,7 @@ public:
 			buffer_offset -= offset;
 			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) < 0) {
 				close();
-				THROW(StorageIOError, "IO error: pread");
+				THROW(StorageIOError, "IO error: pread: %s", strerror(errno));
 			}
 		}
 
@@ -492,7 +492,7 @@ public:
 			}
 			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
 			break;
 		}
@@ -501,7 +501,7 @@ public:
 		if (buffer != buffer_curr) {
 			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
 			buffer_curr = buffer;
 		}
@@ -610,7 +610,7 @@ public:
 			} else {
 				if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 					close();
-					THROW(StorageIOError, "IO error: pwrite");
+					THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 				}
 				break;
 			}
@@ -620,7 +620,7 @@ public:
 		if (buffer != buffer_curr) {
 			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite");
+				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
 			buffer_curr = buffer;
 		}
@@ -651,7 +651,7 @@ public:
 			r = io::read(fd, &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
 				close();
-				THROW(StorageIOError, "IO error: read");
+				THROW(StorageIOError, "IO error: read: %s", strerror(errno));
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
 				THROW(StorageCorruptVolume, "Incomplete bin header");
 			}
@@ -684,7 +684,7 @@ public:
 				r = io::read(fd, buf, buf_size);
 				if unlikely(r < 0) {
 					close();
-					THROW(StorageIOError, "IO error: read");
+					THROW(StorageIOError, "IO error: read: %s", strerror(errno));
 				} else if unlikely(static_cast<size_t>(r) != buf_size) {
 					THROW(StorageCorruptVolume, "Incomplete bin data");
 				}
@@ -699,7 +699,7 @@ public:
 		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 		if unlikely(r < 0) {
 			close();
-			THROW(StorageIOError, "IO error: read");
+			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
 		} else if unlikely(r != sizeof(StorageBinFooter)) {
 			THROW(StorageCorruptVolume, "Incomplete bin footer");
 		}
@@ -726,7 +726,7 @@ public:
 
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			close();
-			THROW(StorageIOError, "IO error: pwrite");
+			THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 		}
 
 		if (!(flags & STORAGE_NO_SYNC)) {
@@ -734,24 +734,24 @@ public:
 				if (flags & STORAGE_FULL_SYNC) {
 					if unlikely(AsyncFsync::full_fsync(fd) < 0) {
 						close();
-						THROW(StorageIOError, "IO error: full_fsync");
+						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
 					}
 				} else {
 					if unlikely(AsyncFsync::fsync(fd) < 0) {
 						close();
-						THROW(StorageIOError, "IO error: fsync");
+						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
 					}
 				}
 			} else {
 				if (flags & STORAGE_FULL_SYNC) {
 					if unlikely(io::full_fsync(fd) < 0) {
 						close();
-						THROW(StorageIOError, "IO error: full_fsync");
+						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
 					}
 				} else {
 					if unlikely(io::fsync(fd) < 0) {
 						close();
-						THROW(StorageIOError, "IO error: fsync");
+						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
 					}
 				}
 			}
