@@ -101,7 +101,7 @@ Lexer::NextToken()
 							case ')':
 							case '&':
 							case '|':
-							case '~':
+							case '!':
 								lexeme += currentSymbol.symbol;
 								currentState = LexerState::SYMBOL_OP;
 								currentSymbol = contentReader.NextSymbol();
@@ -252,7 +252,7 @@ Lexer::NextToken()
 					case '|':
 						token.set_type(TokenType::Or);
 						break;
-					case '~':
+					case '!':
 						token.set_type(TokenType::Not);
 						break;
 				}
