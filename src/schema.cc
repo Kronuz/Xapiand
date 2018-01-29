@@ -3825,12 +3825,29 @@ Schema::index_partial_paths(Xapian::Document& doc)
 		if (specification.partial_prefixes.size() > 2) {
 			const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 			for (const auto& path : paths) {
-				doc.add_term(path);
+				doc.add_boolean_term(path);
 			}
 		} else {
-			doc.add_term(specification.prefix.field);
+			doc.add_boolean_term(specification.prefix.field);
 		}
 	}
+}
+
+
+inline void
+Schema::index_valueless_term(Xapian::Document& doc, const specification_t& field_spc, size_t pos)
+{
+	L_CALL("Schema::void(<doc>, <field_spc>, %zu)", pos);
+
+	const auto& term = field_spc.prefix.field;
+	const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
+	const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
+	if (position) {
+		doc.add_posting(term, position, weight);
+	} else {
+		doc.add_term(term, weight);
+	}
+	L_INDEX("Field Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(term).c_str(), field_spc.flags.bool_term, position);
 }
 
 
@@ -3847,7 +3864,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::FIELD_TERMS: {
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
 				}
@@ -3857,7 +3874,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::FIELD_VALUES: {
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
 				}
 			}
@@ -3867,7 +3886,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification);
 				}
@@ -3877,7 +3896,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
 				}
 			}
@@ -3887,7 +3908,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_all_term(doc, value, specification, global_spc, pos++);
 				}
@@ -3898,7 +3919,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, nullptr, &global_spc);
 				}
 			}
@@ -3909,7 +3932,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification, &global_spc);
 				}
@@ -3920,7 +3943,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
 				}
 			}
@@ -3931,7 +3956,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification);
 				}
@@ -3943,7 +3968,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
 			}
@@ -3955,7 +3982,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
@@ -3966,7 +3993,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, nullptr, &global_spc);
 				}
 			}
@@ -3977,7 +4006,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification, &global_spc);
 				}
@@ -3989,7 +4018,9 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			std::set<std::string>& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
-				if (!(value.is_null() || value.is_undefined())) {
+				if (value.is_null() || value.is_undefined()) {
+					pos++; /* do nothing else (don't index any terms) */
+				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
 			}
@@ -4001,7 +4032,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			std::set<std::string>& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
-					doc.add_term(specification.prefix.field);
+					index_valueless_term(doc, specification, pos++);
 				} else {
 					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
 				}
@@ -5698,7 +5729,7 @@ Schema::write_bool_term(MsgPack& properties, const std::string& prop_name, const
 	L_CALL("Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
 
 	process_bool_term(prop_name, doc_bool_term);
-	properties[prop_name] = specification.flags.bool_term;
+	properties[prop_name] = static_cast<bool>(specification.flags.bool_term);
 }
 
 
