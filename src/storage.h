@@ -109,6 +109,13 @@ public:
 };
 
 
+class StorageEmptyFile : public StorageException {
+public:
+	template<typename... Args>
+	StorageEmptyFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+
+
 class StorageCorruptVolume : public StorageException {
 public:
 	template<typename... Args>
@@ -311,6 +318,25 @@ public:
 		XXH32_freeState(xxhash);
 	}
 
+	void initialize_file(void* args) {
+		L_CALL(this, "Storage::initialize_file()");
+
+		if unlikely(fd < 0) {
+			close();
+			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
+		}
+
+		memset(&header, 0, sizeof(header));
+		header.init(param, args);
+
+		if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
+			close();
+			THROW(StorageIOError, "IO error: write: %s", strerror(errno));
+		}
+
+		seek(STORAGE_START_BLOCK_OFFSET);
+	}
+
 	bool open(const std::string& relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
 		L_CALL("Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
 
@@ -335,20 +361,7 @@ public:
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
 					created = true;
 				}
-				if unlikely(fd < 0) {
-					close();
-					THROW(StorageIOError, "Cannot open storage file: " + path + " (" + strerror(errno) +")");
-				}
-
-				memset(&header, 0, sizeof(header));
-				header.init(param, args);
-
-				if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
-					close();
-					THROW(StorageIOError, "IO error: write");
-				}
-
-				seek(STORAGE_START_BLOCK_OFFSET);
+				initialize_file(args);
 				return created;
 			}
 		}
@@ -368,7 +381,9 @@ public:
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
 		if unlikely(r < 0) {
 			close();
-			THROW(StorageIOError, "IO error: read");
+			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
+		} else if unlikely(r == 0) {
+			THROW(StorageEmptyFile, "Empty file %s", path.c_str());
 		} else if unlikely(r != sizeof(header)) {
 			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
