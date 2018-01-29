@@ -252,7 +252,12 @@ DatabaseWAL::open_current(bool commited)
 bool
 DatabaseWAL::create(uint32_t revision)
 {
-	return open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	try {
+		return open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	} catch (StorageEmptyFile) {
+		initialize_file(reinterpret_cast<void*>(false));
+		return true;
+	}
 }
 
 
