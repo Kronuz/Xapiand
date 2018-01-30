@@ -153,9 +153,9 @@ def unserialise_compound(bytes_, encoding='encoded'):
         return unserialise_compound(bytes_.serialise())
     elif isinstance(bytes_, six.string_types):
         if encoding == 'guid':
-            return b';'.join("{%s}" % u for u in unserialise(bytes_))
+            return b';'.join('{%s}' % u for u in unserialise(bytes_))
         elif encoding == 'urn':
-            return b'urn:uuid:' + ";".join(unserialise(bytes_))
+            return b'urn:uuid:' + ';'.join(unserialise(bytes_))
         elif encoding == 'encoded':
             if ord(bytes_[0]) != 1 and ((ord(bytes_[-1]) & 1) or (len(bytes_) >= 6 and ord(bytes_[-6]) & 2)):
                 return b'~' + ENCODER.encode(bytes_)
