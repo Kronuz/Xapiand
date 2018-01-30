@@ -156,7 +156,7 @@ int geo_range_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_description().c_str());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());
@@ -176,7 +176,7 @@ int geo_terms_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_msg().c_str());
+		L_EXC("ERROR: %s", exc.get_description().c_str());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());

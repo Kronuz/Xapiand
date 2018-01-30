@@ -1199,16 +1199,7 @@ int main(int argc, char **argv) {
 		L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 	} catch (const Xapian::Error& exc) {
 		exit_code = EX_SOFTWARE;
-		auto exc_msg_error = exc.get_msg();
-		const char* error_str = exc.get_error_string();
-		if (error_str) {
-			exc_msg_error.append(" (").append(error_str).push_back(')');
-		}
-		if (exc_msg_error.empty()) {
-			L_CRIT("Uncaught Xapian::Error!");
-		} else {
-			L_CRIT(exc_msg_error);
-		}
+		L_CRIT(exc.get_description());
 	} catch (const std::exception& exc) {
 		exit_code = EX_SOFTWARE;
 		L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
