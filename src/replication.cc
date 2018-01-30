@@ -319,12 +319,12 @@ Replication::reply_changeset(const std::string &)
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
 	// } catch (const MSG_NetworkError& exc) {
-	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+	// 	L_EXC(this, "ERROR: %s", exc.get_description().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;
 	// } catch (const Xapian::DatabaseError& exc) {
-	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+	// 	L_EXC(this, "ERROR: %s", exc.get_description().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;

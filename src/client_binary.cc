@@ -172,7 +172,7 @@ BinaryClient::on_read_file_done()
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
-		L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+		L_EXC(this, "ERROR: %s", exc.get_description().c_str());
 		checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
@@ -389,8 +389,7 @@ BinaryClient::_run()
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
-			auto exc_msg = exc.get_msg().c_str();
-			L_EXC(this, "ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
+			L_EXC(this, "ERROR: %s", exc.get_description().c_str());
 			checkin_database();
 			shutdown();
 		} catch (const BaseException& exc) {
