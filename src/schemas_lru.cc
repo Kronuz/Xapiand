@@ -208,7 +208,6 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 				}
 			}
 		}
-		schema_obj = nullptr;
 	}
 
 	std::string foreign;
@@ -254,8 +253,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	}
 
 	if (schema_obj) {
+		MsgPack o = *schema_obj;
+		o[RESERVED_TYPE] = "object";
+		o.erase(RESERVED_ENDPOINT);
 		Schema schema(schema_ptr, nullptr, "");
-		schema.update(*schema_obj);
+		schema.update(o);
 		auto aux_schema_ptr = schema.get_modified_schema();
 		if (aux_schema_ptr) {
 			std::unique_ptr<MsgPack> mut_schema;
