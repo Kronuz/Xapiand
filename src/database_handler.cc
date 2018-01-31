@@ -641,6 +641,9 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 	do {
 		schema = get_schema();
 		was_foreign_obj = schema->write(obj, replace);
+		if (!was_foreign_obj && opts.foreign) {
+			THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(endpoints.to_string()).c_str());
+		}
 		L_INDEX("Schema to write: %s %s", repr(schema->to_string()).c_str(), was_foreign_obj ? "(foreign)" : "(local)");
 	} while (!update_schema(schema_begins));
 
