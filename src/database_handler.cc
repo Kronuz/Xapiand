@@ -212,7 +212,7 @@ std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
-	auto s = XapiandManager::manager->schemas.get(this, obj);
+	auto s = XapiandManager::manager->schemas.get(this, obj, flags & DB_WRITABLE);
 	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
@@ -838,12 +838,12 @@ DatabaseHandler::restore(int fd)
 		XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
 
 		lk_db.unlock();
-		schema = get_schema();
 		if (!saved_schema_ser.empty()) {
 			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring schema: %s", saved_schema.to_string(4).c_str());
 			write_schema(saved_schema, true);
 		}
+		schema = get_schema();
 		lk_db.lock();
 	}
 

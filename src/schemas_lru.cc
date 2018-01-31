@@ -113,7 +113,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::sha
 
 
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
-SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
+SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 {
 	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
 
@@ -160,7 +160,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 				schema_ptr = local_schema_ptr;
 			}
 
-			if (new_metadata) {
+			if (new_metadata && write) {
 				// LOCAL new schema.
 				if (opts.foreign) {
 					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()).c_str());
@@ -208,12 +208,14 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			{ RESERVED_ENDPOINT, foreign_path + "/" + foreign_id },
 		}));
 		if (atom_local_schema->compare_exchange_strong(local_schema_ptr, schema_ptr)) {
-			try {
-				db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false);
-			} catch(...) {
-				// On error, try reverting
-				atom_local_schema->compare_exchange_strong(schema_ptr, local_schema_ptr);
-				throw;
+			if (write) {
+				try {
+					db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false);
+				} catch(...) {
+					// On error, try reverting
+					atom_local_schema->compare_exchange_strong(schema_ptr, local_schema_ptr);
+					throw;
+				}
 			}
 		}
 		schema_obj = nullptr;
