@@ -148,26 +148,26 @@ void set_thread_name(const std::string& name);
 std::string get_thread_name();
 
 
-std::string repr(const void* p, size_t size, bool friendly = true, bool quote = true, size_t max_size = 0);
+std::string repr(const void* p, size_t size, bool friendly = true, char quote = '\'', size_t max_size = 0);
 
-inline std::string repr(const std::string& string, bool friendly = true, bool quote = true, size_t max_size = 0) {
+inline std::string repr(const std::string& string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
 	return repr(string.c_str(), string.length(), friendly, quote, max_size);
 }
 
 template<typename T, std::size_t N>
-inline std::string repr(T (&s)[N], bool friendly = true, bool quote = true, size_t max_size = 0) {
+inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', size_t max_size = 0) {
 	return repr(s, N - 1, friendly, quote, max_size);
 }
 
 
-std::string escape(const void* p, size_t size, bool quote = true);
+std::string escape(const void* p, size_t size, char quote = '\'');
 
-inline std::string escape(const std::string& string, bool quote = true) {
+inline std::string escape(const std::string& string, char quote = '\'') {
 	return escape(string.c_str(), string.length(), quote);
 }
 
 template<typename T, std::size_t N>
-inline std::string escape(T (&s)[N], bool quote = true) {
+inline std::string escape(T (&s)[N], char quote = '\'') {
 	return escape(s, N - 1, quote);
 }
 

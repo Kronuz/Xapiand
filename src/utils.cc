@@ -208,14 +208,17 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 }
 
 
-std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t max_size) {
+std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {
+	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const char* q = (const char *)p;
-	char *buff = new char[size * 4 + 3];
-	char *d = buff;
-	if (quote) *d++ = '\'';
 	const char *p_end = q + size;
 	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
 	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
+	if (max_size) size = (max_a - q) + 3 + (p_end - max_b);
+	char *buff = new char[size * 4 + 3];  // Consider "\xNN", quotes and ending '\0'
+	char *d = buff;
+	if (quote == '\1') quote = '\'';
+	if (quote) *d++ = quote;
 	while (q != p_end) {
 		char c = *q++;
 		if (q >= max_a && q <= max_b) {
@@ -226,110 +229,121 @@ std::string repr(const void* p, size_t size, bool friendly, bool quote, size_t m
 			}
 		} else if (friendly) {
 			switch (c) {
-				case '\b':
-					*d++ = '\\';
-					*d++ = 'b';
-					break;
-				case '\t':
-					*d++ = '\\';
-					*d++ = 't';
-					break;
+				// case '\a':
+				// 	*d++ = '\\';
+				// 	*d++ = 'a';
+				// 	break;
+				// case '\b':
+				// 	*d++ = '\\';
+				// 	*d++ = 'b';
+				// 	break;
+				// case '\f':
+				// 	*d++ = '\\';
+				// 	*d++ = 'f';
+				// 	break;
+				// case '\v':
+				// 	*d++ = '\\';
+				// 	*d++ = 'v';
+				// 	break;
 				case '\n':
 					*d++ = '\\';
 					*d++ = 'n';
-					break;
-				case '\f':
-					*d++ = '\\';
-					*d++ = 'f';
 					break;
 				case '\r':
 					*d++ = '\\';
 					*d++ = 'r';
 					break;
+				case '\t':
+					*d++ = '\\';
+					*d++ = 't';
+					break;
 				case '\\':
 					*d++ = '\\';
 					*d++ = '\\';
 					break;
-				case '\'':
-					*d++ = '\\';
-					*d++ = '\'';
-					break;
 				default:
-					if (c >= ' ' && c <= '~') {
-						*d++ = c;
-					} else {
+					if (c == quote) {
 						*d++ = '\\';
-						*d++ = 'x';
-						sprintf(d, "%02x", (unsigned char)c);
-						d += 2;
+						*d++ = quote;
+					} else if (c < ' ' || c >= 0x7f) {
+						sprintf(d, "\\x%02x", (unsigned char)c);
+						d += 4;
+					} else {
+						*d++ = c;
 					}
 					break;
 			}
 		} else {
-			*d++ = '\\';
-			*d++ = 'x';
-			sprintf(d, "%02x", (unsigned char)c);
-			d += 2;
+			sprintf(d, "\\x%02x", (unsigned char)c);
+			d += 4;
 		}
-		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
+		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 3));
 	}
-	if (quote) *d++ = '\'';
+	if (quote) *d++ = quote;
 	*d = '\0';
 	std::string ret(buff);
 	delete [] buff;
 	return ret;
 }
 
-std::string escape(const void* p, size_t size, bool quote) {
+std::string escape(const void* p, size_t size, char quote) {
+	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const char* q = (const char *)p;
-	char *buff = new char[size * 2 + 3]; //Consider size of quotes
-	char *d = buff;
-	if (quote) *d++ = '\'';
 	const char *p_end = q + size;
+	char *buff = new char[size * 4 + 3];  // Consider "\xNN", quotes and ending '\0'
+	char *d = buff;
+	if (quote == '\1') quote = '\'';
+	if (quote) *d++ = quote;
 	while (q != p_end) {
 		char c = *q++;
-			switch (c) {
-				case '\b':
+		switch (c) {
+			// case '\a':
+			// 	*d++ = '\\';
+			// 	*d++ = 'a';
+			// 	break;
+			// case '\b':
+			// 	*d++ = '\\';
+			// 	*d++ = 'b';
+			// 	break;
+			// case '\f':
+			// 	*d++ = '\\';
+			// 	*d++ = 'f';
+			// 	break;
+			// case '\v':
+			// 	*d++ = '\\';
+			// 	*d++ = 'v';
+			// 	break;
+			case '\n':
+				*d++ = '\\';
+				*d++ = 'n';
+				break;
+			case '\r':
+				*d++ = '\\';
+				*d++ = 'r';
+				break;
+			case '\t':
+				*d++ = '\\';
+				*d++ = 't';
+				break;
+			case '\\':
+				*d++ = '\\';
+				*d++ = '\\';
+				break;
+			default:
+				if (c == quote) {
 					*d++ = '\\';
-					*d++ = 'b';
-					break;
-				case '\t':
-					*d++ = '\\';
-					*d++ = 't';
-					break;
-				case '\n':
-					*d++ = '\\';
-					*d++ = 'n';
-					break;
-				case '\f':
-					*d++ = '\\';
-					*d++ = 'f';
-					break;
-				case '\r':
-					*d++ = '\\';
-					*d++ = 'r';
-					break;
-				case '\\':
-					*d++ = '\\';
-					*d++ = '\\';
-					break;
-				case '\'':
-					*d++ = '\\';
-					*d++ = '\'';
-					break;
-				default:
-					if (c >= ' ' && c <= '~') {
-						*d++ = c;
-					} else {
-						*d++ = '\\';
-						*d++ = 'x';
-						sprintf(d, "%02x", (unsigned char)c);
-						d += 2;
-					}
-					break;
-			}
+					*d++ = quote;
+				} else if (c < ' ' || c >= 0x7f) {
+					sprintf(d, "\\x%02x", (unsigned char)c);
+					d += 4;
+				} else {
+					*d++ = c;
+				}
+				break;
+		}
+		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 3));
 	}
-	if (quote) *d++ = '\'';
+	if (quote) *d++ = quote;
 	*d = '\0';
 	std::string ret(buff);
 	delete [] buff;
