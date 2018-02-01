@@ -142,7 +142,7 @@ class BaseX(object):
         return self.alphabet[sum_chk]
 
 
-b59 = BaseX('zy9MalDxwpKLdvW2AtmscgbYUq6jhP7E53TiXenZRkVCrouBH4GSQf8FNJO', '~l1IO0')
+b59 = BaseX('zGgvtCEewdDrRkW2aAoscxyYlL6jhP7K53TibBQZpmMuUVO9H4XSnN8FfJq', '~l1IO0')
 b59decode = b59.decode
 b59encode = b59.encode
 b59
