@@ -215,7 +215,9 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
 	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
 	if (max_size) size = (max_a - q) + 3 + (p_end - max_b);
-	char *buff = new char[size * 4 + 3];  // Consider "\xNN", quotes and ending '\0'
+	std::string ret;
+	ret.resize(size * 4 + 2);  // Consider "\xNN" and quotes
+	char *buff = &ret[0];
 	char *d = buff;
 	if (quote == '\1') quote = '\'';
 	if (quote) *d++ = quote;
@@ -277,12 +279,10 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 			sprintf(d, "\\x%02x", (unsigned char)c);
 			d += 4;
 		}
-		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 3));
+		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 2));
 	}
 	if (quote) *d++ = quote;
-	*d = '\0';
-	std::string ret(buff);
-	delete [] buff;
+	ret.resize(d - buff);
 	return ret;
 }
 
@@ -290,7 +290,9 @@ std::string escape(const void* p, size_t size, char quote) {
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const char* q = (const char *)p;
 	const char *p_end = q + size;
-	char *buff = new char[size * 4 + 3];  // Consider "\xNN", quotes and ending '\0'
+	std::string ret;
+	ret.resize(size * 4 + 2);  // Consider "\xNN" and quotes
+	char *buff = &ret[0];
 	char *d = buff;
 	if (quote == '\1') quote = '\'';
 	if (quote) *d++ = quote;
@@ -341,12 +343,10 @@ std::string escape(const void* p, size_t size, char quote) {
 				}
 				break;
 		}
-		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 3));
+		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 2));
 	}
 	if (quote) *d++ = quote;
-	*d = '\0';
-	std::string ret(buff);
-	delete [] buff;
+	ret.resize(d - buff);
 	return ret;
 }
 
