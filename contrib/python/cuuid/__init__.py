@@ -495,10 +495,10 @@ if __name__ == '__main__':
         ('e8b13d1b-665f-4f4c-aa83-76fa782b030a', ['e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
         # Condensed:
         ('00000000-0000-1000-8000-000000000000', ['00000000-0000-1000-8000-000000000000'], repr('00000000-0000-1000-8000-000000000000'), repr('\x1c\x00\x00\x00')),
-        ('11111111-1111-1111-8111-111111111111', ['11111111-1111-1111-8111-111111111111'], repr('~yc9DnemYGNTMdKXsYYiTKOc'), repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('11111111-1111-1111-8111-111111111111', ['11111111-1111-1111-8111-111111111111'], repr('~GcL2nemYXfTUrDbsYYiTDNc'), repr('\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
         # Condensed + Compacted:
-        ('230c0800-dc3c-11e7-b966-a3ab262e682b', ['230c0800-dc3c-11e7-b966-a3ab262e682b'], repr('~SsQq3dJdg3P'), repr('\x06,\x02[\b9fW')),
-        ('f2238800-debf-11e7-bbf7-dffcee0c03ab', ['f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~SUkSiXYTT8c'), repr('\x06.\x86*\x1f\xbb\xf7W')),
+        ('230c0800-dc3c-11e7-b966-a3ab262e682b', ['230c0800-dc3c-11e7-b966-a3ab262e682b'], repr('~SsQg3rJrx3P'), repr('\x06,\x02[\b9fW')),
+        ('f2238800-debf-11e7-bbf7-dffcee0c03ab', ['f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~SlMSibYTT8c'), repr('\x06.\x86*\x1f\xbb\xf7W')),
         # Condensed + Expanded:
         ('60579016-dec5-11e7-b616-34363bc9ddd6', ['60579016-dec5-11e7-b616-34363bc9ddd6'], repr('60579016-dec5-11e7-b616-34363bc9ddd6'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac')),
         ('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', ['4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
@@ -509,16 +509,16 @@ if __name__ == '__main__':
         ('00000000-0000-1000-a000-000000000000', ['00000000-0000-1000-a000-000000000000'], repr('00000000-0000-1000-a000-000000000000'), repr('\n@\x00\x00\x00\x00\x00\x00\x00')),
         # Coumpound:
         ('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a', ['5759b016-10c0-4526-a981-47d6d19f6fb4', 'e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
-        ('00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
-        ('230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~EYBuNUmS8MZs98Mq64McVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
+        ('00000000-0000-1000-8000-000000000000;11111111-1111-1111-8111-111111111111', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQl2On7vMpv7TMQBPSquHXo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~KY9OflmS8UZsL8Ug64UcVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
         ('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662', ['60579016-dec5-11e7-b616-34363bc9ddd6', '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
         ('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111', ['00000000-0000-1000-8000-010000000000', '11111111-1111-1111-8111-101111111111'], repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
         # Compound + Encoded:
-        ('~HahbAtfQHjMfBztms7OdcPNp34A8PQ3RA3KD2gYdzO55QK', ['5759b016-10c0-4526-a981-47d6d19f6fb4', 'e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
-        ('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQUDun7rkRr7TkQ2PSfCHGo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
-        ('~EYBuNUmS8MZs98Mq64McVQ', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~EYBuNUmS8MZs98Mq64McVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
-        ('~bo9AghAbwcXA2PzQQmZUlSFts6SmBNlgK76ctOiw7f', ['60579016-dec5-11e7-b616-34363bc9ddd6', '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
-        ('~WPQUxPCuJZ3YBTcUmoAMhJFiMicb', ['00000000-0000-1000-8000-010000000000', '11111111-1111-1111-8111-101111111111'], repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
+        ('~HAhyatqQHjUq9ztms7NrcPfd34a8PQ3pa3D2BxYrzN55QD', ['5759b016-10c0-4526-a981-47d6d19f6fb4', 'e8b13d1b-665f-4f4c-aa83-76fa782b030a'], repr('5759b016-10c0-4526-a981-47d6d19f6fb4;e8b13d1b-665f-4f4c-aa83-76fa782b030a'), repr('\x01WY\xb0\x16\x10\xc0E&\xa9\x81G\xd6\xd1\x9fo\xb4\x01\xe8\xb1=\x1bf_OL\xaa\x83v\xfax+\x03\n')),
+        ('~WPQl2On7vMpv7TMQBPSquHXo4WWz', ['00000000-0000-1000-8000-000000000000', '11111111-1111-1111-8111-111111111111'], repr('~WPQl2On7vMpv7TMQBPSquHXo4WWz'), repr('\x1c\x00\x00\x00\x0f\x88\x88\x88\x88\x88\x88\x88\x82"""""""')),
+        ('~KY9OflmS8UZsL8Ug64UcVQ', ['230c0800-dc3c-11e7-b966-a3ab262e682b', 'f2238800-debf-11e7-bbf7-dffcee0c03ab'], repr('~KY9OflmS8UZsL8Ug64UcVQ'), repr('\x06,\x02[\b9fW\x06.\x86*\x1f\xbb\xf7W')),
+        ('~yoLaxhaywcbaBPzQQmZlCSFts6Sm9fCxD76ctNiw7q', ['60579016-dec5-11e7-b616-34363bc9ddd6', '4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'], repr('60579016-dec5-11e7-b616-34363bc9ddd6;4ec97478-c3a9-11e6-bbd0-a46ba9ba5662'), repr('\xe1\x17E\xcc)\xc4\x0bl,hlw\x93\xbb\xac\x0e\x89\xb7\xc3b\xb6<w\xa1H\xd7St\xac\xc4')),
+        ('~WPQlEPuOJZ3Y9TclmoaUhJFiUicy', ['00000000-0000-1000-8000-010000000000', '11111111-1111-1111-8111-101111111111'], repr('00000000-0000-1000-8000-010000000000;11111111-1111-1111-8111-101111111111'), repr('\x1c\x00\x00\x01\xf7\x95\xb0k\xa4\x86\x84\x88\x82" """""')),
     ]
 
     ################################################
