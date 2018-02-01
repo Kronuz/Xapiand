@@ -356,10 +356,14 @@ class UUID(six.binary_type, _uuid.UUID):
             else:
                 serialised[-1] |= cls.VL[length][0][0]
             serialised = ''.join(chr(c) for c in reversed(serialised))
+            if compacted_time:
+                compacted_time = ((compacted_time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
         else:
             compacted_node = None
+            compacted_time = None
+            compacted_clock = None
             serialised = chr(0x01) + self.bytes
-        return serialised, compacted_node
+        return serialised, compacted_node, compacted_time, compacted_clock
 
     @classmethod
     def new(cls, data=None, compacted=None):
@@ -401,14 +405,24 @@ class UUID(six.binary_type, _uuid.UUID):
 
     def serialise(self):
         if '_serialised' not in self.__dict__:
-            self.__dict__['_serialised'], self.__dict__['_compacted_node'] = self._serialise(self)
+            self.__dict__['_serialised'], self.__dict__['_compacted_node'], self.__dict__['_compacted_time'], self.__dict__['_compacted_clock'] = self._serialise(self)
         return self.__dict__['_serialised']
 
     def compact_crush(self):
-        compacted_node = self.get_compacted_node()
-        if compacted_node is not None:
+        if '_compacted_node' not in self.__dict__:
+            self.serialise()
+        node = self.__dict__['_compacted_node']
+        if node is not None:
+            time = self.__dict__['_compacted_time']
+            clock = self.__dict__['_compacted_clock']
+            time_low = time & 0xffffffff
+            time_mid = (time >> 32) & 0xffff
+            time_hi_version = (time >> 48) & 0xfff
+            time_hi_version |= 0x1000
+            clock_seq_low = clock & 0xff
+            clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
             cls = self.__class__
-            return cls(int=(self.int & ~0xffffffffffff) | compacted_node)
+            return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
 
     def encode(self, encoding='encoded'):
         return encode(self.serialise(), encoding)
@@ -436,17 +450,10 @@ class UUID(six.binary_type, _uuid.UUID):
             num >>= 8
         return ''.join(reversed(data))
 
-    def get_compacted_node(self):
+    def iscompact(self):
         if '_compacted_node' not in self.__dict__:
             self.serialise()
-        return self.__dict__['_compacted_node']
-
-    @property
-    def compacted_node(self):
-        return self.get_compacted_node()
-
-    def iscompact(self):
-        return self.compacted_node == self.node
+        return self.__dict__['_compacted_node'] == self.node
 
 
 # Compatibility with builtin uuid
