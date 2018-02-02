@@ -44,8 +44,8 @@ protected:
 public:
 	BaseException(const char *filename, int line, const char* type, const char* format, ...);
 
-	BaseException(const char *filename, int line, const char* type, const std::string& message="")
-		: BaseException(filename, line, type, message.c_str()) { }
+	BaseException(const char *filename, int line, const char* type, const std::string& msg="")
+		: BaseException(filename, line, type, msg.c_str()) { }
 
 	virtual ~BaseException() = default;
 

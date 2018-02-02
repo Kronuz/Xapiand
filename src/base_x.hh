@@ -63,18 +63,18 @@ public:
 	static constexpr int block_padding = (1 << 3);
 
 	template <std::size_t alphabet_size1, std::size_t extended_size1, std::size_t padding_size1, std::size_t translate_size1>
-	constexpr BaseX(int flags, const char (&alphabet)[alphabet_size1], const char (&extended)[extended_size1], const char (&padding_string)[padding_size1], const char (&translate)[translate_size1]) :
+	constexpr BaseX(int flgs, const char (&alphabet)[alphabet_size1], const char (&extended)[extended_size1], const char (&padding_string)[padding_size1], const char (&translate)[translate_size1]) :
 		_chr(),
 		_ord(),
 		size(alphabet_size1 - 1 + extended_size1 - 1),
 		base(alphabet_size1 - 1),
 		base_size(uinteger_t::base_size(base)),
 		base_bits(uinteger_t::base_bits(base)),
-		block_size((flags & BaseX::block_padding) ? base_bits : 0),
+		block_size((flgs & BaseX::block_padding) ? base_bits : 0),
 		base_mask(base - 1),
 		padding_size(padding_size1 - 1),
 		padding(padding_size ? padding_string[0] : '\0'),
-		flags(flags)
+		flags(flgs)
 	{
 		for (int c = 0; c < 256; ++c) {
 			_chr[c] = 0;
