@@ -2292,7 +2292,7 @@ Schema::update(const MsgPack& object)
 		const auto it_e = object.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
@@ -2692,7 +2692,7 @@ Schema::write(const MsgPack& object, bool replace)
 		const auto it_e = object.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
 			auto str_key = it->str();
-			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
