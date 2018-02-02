@@ -23,7 +23,7 @@
 from __future__ import absolute_import, division
 
 __all__ = ['UUID', 'uuid', 'uuid1', 'uuid3', 'uuid4', 'uuid5',
-           'unserialise', 'encode', 'decode',
+           'unserialise', 'encode', 'decode', 'encode_uuid', 'decode_uuid',
            'NAMESPACE_DNS', 'NAMESPACE_URL', 'NAMESPACE_OID', 'NAMESPACE_X500']
 
 import six
@@ -92,8 +92,21 @@ def decode(encoded):
             if encoded:
                 encoded = encoded.split(';')
     if isinstance(encoded, (list, tuple)):
-        return b''.join(UUID._decode(u) for u in encoded)
+        serialised = b''.join(UUID._decode(u) for u in encoded)
+        return serialised
     raise ValueError("Invalid encoded UUID: %r" % encoded)
+
+
+def encode_uuid(uuid):
+    if uuid is None:
+        raise ValueError("Cannot encode None")
+    if not isinstance(uuid, UUID):
+        uuid = UUID(uuid)
+    return uuid.encode()
+
+
+def decode_uuid(code):
+    return UUID.unserialise(decode(code))
 
 
 class UUID(six.binary_type, _uuid.UUID):
