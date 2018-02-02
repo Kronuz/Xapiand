@@ -132,10 +132,14 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 					// Try writing (only if there's no metadata there alrady)
 					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
 						// or fallback to load from metadata (again).
-						auto str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
 						local_schema_ptr = schema_ptr;
-						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
-						schema_ptr->lock();
+						str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
+						if (str_schema.empty()) {
+							schema_ptr = Schema::get_initial_schema();
+						} else {
+							schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+							schema_ptr->lock();
+						}
 						if (!atom_local_schema->compare_exchange_strong(local_schema_ptr, schema_ptr)) {
 							schema_ptr = local_schema_ptr;
 						}
