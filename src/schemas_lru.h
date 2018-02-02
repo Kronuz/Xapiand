@@ -39,7 +39,7 @@ class DatabaseHandler;
 
 class SchemasLRU : public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
 	template <typename ErrorType>
-	void validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id);
+	std::pair<const MsgPack*, const MsgPack*> validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id);
 
 	MsgPack get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context);
 
