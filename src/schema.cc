@@ -1391,8 +1391,6 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 {
 	L_CALL("Schema::check(%s, <prefix>, allow_foreign:%s, allow_root:%s, allow_versionless:%s)", repr(object.to_string()).c_str(), allow_foreign ? "true" : "false", allow_root ? "true" : "false", allow_versionless ? "true" : "false");
 
-	auto it_end = object.end();
-
 	// Check foreign:
 	if (allow_foreign) {
 		if (object.is_string()) {
@@ -1401,6 +1399,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 		if (!object.is_map()) {
 			THROW(ErrorType, "%sschema must be a map", prefix);
 		}
+		auto it_end = object.end();
 		auto type_it = object.find(RESERVED_TYPE);
 		if (type_it != it_end) {
 			auto& type = type_it.value();
@@ -1429,6 +1428,8 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			THROW(ErrorType, "%sschema must be a map", prefix);
 		}
 	}
+
+	auto it_end = object.end();
 
 	// Check version:
 	auto version_it = object.find(VERSION_FIELD_NAME);
