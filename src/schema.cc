@@ -2267,35 +2267,36 @@ Schema::update(const MsgPack& object)
 
 			return checked.second ? checked.second->size() != 2 : false;
 		}
-		const auto& schema_obj = checked.second ? *checked.second : object;
-
-		auto properties = &get_newest_properties();
-
-		FieldVector fields;
-
-		if (properties->empty()) {  // new schemas have empty properties
-			specification.flags.field_found = false;
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			dispatch_write_properties(*mut_properties, schema_obj, fields);
-			properties = &*mut_properties;
-		} else {
-			dispatch_feed_properties(*properties);
-			dispatch_process_properties(schema_obj, fields);
-		}
-
-		update_item_value(properties, fields);
 
 		if (checked.second) {
-			// Inject remaining items from received object into the new schema
-			const auto it_e = object.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-					if (!mut_schema) {
-						mut_schema = std::make_unique<MsgPack>(*schema);
-					}
-					(*mut_schema)[str_key] = it.value();
+			const auto& schema_obj = *checked.second;
+
+			auto properties = &get_newest_properties();
+
+			FieldVector fields;
+
+			if (properties->empty()) {  // new schemas have empty properties
+				specification.flags.field_found = false;
+				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				dispatch_write_properties(*mut_properties, schema_obj, fields);
+				properties = &*mut_properties;
+			} else {
+				dispatch_feed_properties(*properties);
+				dispatch_process_properties(schema_obj, fields);
+			}
+
+			update_item_value(properties, fields);
+		}
+
+		// Inject remaining items from received object into the new schema
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				if (!mut_schema) {
+					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
+				(*mut_schema)[str_key] = it.value();
 			}
 		}
 
@@ -2665,36 +2666,37 @@ Schema::write(const MsgPack& object, bool replace)
 
 			return checked.second ? checked.second->size() != 2 : false;
 		}
-		const auto& schema_obj = checked.second ? *checked.second : object;
-
-		auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-		if (replace) {
-			mut_properties->clear();
-		}
-
-		FieldVector fields;
-
-		if (mut_properties->empty()) {  // new schemas have empty properties
-			specification.flags.field_found = false;
-		} else {
-			dispatch_feed_properties(*mut_properties);
-		}
-
-		dispatch_write_properties(*mut_properties, schema_obj, fields);
-
-		write_item_value(mut_properties, fields);
 
 		if (checked.second) {
-			// Inject remaining items from received object into the new schema
-			const auto it_e = object.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
-					if (!mut_schema) {
-						mut_schema = std::make_unique<MsgPack>(*schema);
-					}
-					(*mut_schema)[str_key] = it.value();
+			const auto& schema_obj = *checked.second;
+
+			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			if (replace) {
+				mut_properties->clear();
+			}
+
+			FieldVector fields;
+
+			if (mut_properties->empty()) {  // new schemas have empty properties
+				specification.flags.field_found = false;
+			} else {
+				dispatch_feed_properties(*mut_properties);
+			}
+
+			dispatch_write_properties(*mut_properties, schema_obj, fields);
+
+			write_item_value(mut_properties, fields);
+		}
+
+		// Inject remaining items from received object into the new schema
+		const auto it_e = object.end();
+		for (auto it = object.begin(); it != it_e; ++it) {
+			auto str_key = it->str();
+			if (is_valid(str_key) && str_key != SCHEMA_FIELD_NAME) {
+				if (!mut_schema) {
+					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
+				(*mut_schema)[str_key] = it.value();
 			}
 		}
 
