@@ -109,17 +109,17 @@ public:
 };
 
 
-class StorageEmptyFile : public StorageException {
-public:
-	template<typename... Args>
-	StorageEmptyFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
-};
-
-
 class StorageCorruptVolume : public StorageException {
 public:
 	template<typename... Args>
 	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+
+
+class StorageEmptyFile : public StorageCorruptVolume {
+public:
+	template<typename... Args>
+	StorageEmptyFile(Args&&... args) : StorageCorruptVolume(std::forward<Args>(args)...) { }
 };
 
 
