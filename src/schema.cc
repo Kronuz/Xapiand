@@ -1389,7 +1389,7 @@ template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
 Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
 {
-	L_CALL("Schema::check(%s, <prefix>, %s, %s, %s)", repr(object.to_string()).c_str(), allow_foreign ? "allow_foreign" : "", allow_root ? "allow_root" : "", allow_versionless ? "allow_versionless" : "");
+	L_CALL("Schema::check(%s, <prefix>, allow_foreign:%s, allow_root:%s, allow_versionless:%s)", repr(object.to_string()).c_str(), allow_foreign ? "true" : "false", allow_root ? "true" : "false", allow_versionless ? "true" : "false");
 
 	auto it_end = object.end();
 
@@ -2251,7 +2251,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 bool
 Schema::update(const MsgPack& object)
 {
-	L_CALL("Schema::update(%s, %s)", repr(object.to_string()).c_str());
+	L_CALL("Schema::update(%s)", repr(object.to_string()).c_str());
 
 	try {
 		map_values.clear();
