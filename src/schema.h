@@ -892,9 +892,6 @@ class Schema {
 
 	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
 
-	template <typename ErrorType>
-	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
-
 public:
 	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, const std::string& o);
 
@@ -916,6 +913,8 @@ public:
 		mut_schema.swap(other);
 	}
 
+	template <typename ErrorType>
+	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
 
 	/*
 	 * Transforms schema into json string.
