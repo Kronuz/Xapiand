@@ -1389,76 +1389,90 @@ template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
 Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
 {
-	L_CALL("Schema::check(%s, <prefix>, '%s', '%s', '%s')", repr(object.to_string()).c_str(), allow_foreign ? "allow_foreign" : "", allow_root ? "allow_root" : "", allow_versionless ? "allow_versionless" : "");
+	L_CALL("Schema::check(%s, <prefix>, %s, %s, %s)", repr(object.to_string()).c_str(), allow_foreign ? "allow_foreign" : "", allow_root ? "allow_root" : "", allow_versionless ? "allow_versionless" : "");
+
+	auto it_end = object.end();
 
 	// Check foreign:
 	if (allow_foreign) {
 		if (object.is_string()) {
 			return std::make_pair(&object, nullptr);
 		}
-		try {
-			const auto& sep_types = required_spc_t::get_types(object.at(RESERVED_TYPE).str());
-			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-				try {
-					const auto& foreign_value = object.at(RESERVED_ENDPOINT);
-					if (!foreign_value.is_string()) {
-						THROW(ErrorType, "%sschema must be string because is foreign", prefix);
-					}
-					return std::make_pair(&foreign_value, &object);
-				} catch (const std::out_of_range&) {
-					THROW(ErrorType, "%sschema must be a string to be foreign", prefix);
-				}
-			} else if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%sschema must be object", prefix);
+		if (!object.is_map()) {
+			THROW(ErrorType, "%sschema must be a map", prefix);
+		}
+		auto type_it = object.find(RESERVED_TYPE);
+		if (type_it != it_end) {
+			auto& type = type_it.value();
+			if (!type.is_string()) {
+				THROW(ErrorType, "%s'%s' field must be a string", prefix, RESERVED_TYPE);
 			}
-		} catch (const msgpack::type_error&) {
-			THROW(ErrorType, "%sschema has an invalid type", prefix);
-		} catch (const std::out_of_range&) { }
-	}
-
-	if (!object.is_map()) {
-		THROW(ErrorType, "%sschema must be a map", prefix);
+			auto type_name = type.str();
+			const auto& sep_types = required_spc_t::get_types(type_name);
+			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+				auto endpoint_it = object.find(RESERVED_ENDPOINT);
+				if (endpoint_it == it_end) {
+					THROW(ErrorType, "%s'%s' field does not exist", prefix, RESERVED_ENDPOINT);
+				}
+				auto& endpoint = endpoint_it.value();
+				if (!endpoint.is_string()) {
+					THROW(ErrorType, "%s'%s' field must be a string", prefix, RESERVED_ENDPOINT);
+				}
+				return std::make_pair(&endpoint, &object);
+			}
+			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
+			}
+		}
+	} else {
+		if (!object.is_map()) {
+			THROW(ErrorType, "%sschema must be a map", prefix);
+		}
 	}
 
 	// Check version:
-	try {
-		const auto& version_field = object.at(VERSION_FIELD_NAME);
-		if (!version_field.is_number()) {
-			THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
-		} else {
-			if (version_field.f64() != DB_VERSION_SCHEMA) {
-				THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
-			}
-		}
-	} catch (const std::out_of_range&) {
+	auto version_it = object.find(VERSION_FIELD_NAME);
+	if (version_it == it_end) {
 		if (!allow_versionless) {
 			THROW(ErrorType, "%s'%s' field does not exist", prefix, VERSION_FIELD_NAME);
+		}
+	} else {
+		auto& version = version_it.value();
+		if (!version.is_number()) {
+			THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
+		}
+		if (version.f64() != DB_VERSION_SCHEMA) {
+			THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
 		}
 	}
 
 	// Check schema object:
-	try {
-		const auto& schema_field = object.at(SCHEMA_FIELD_NAME);
-		try {
-			auto type_name = schema_field.at(RESERVED_TYPE).str();
-			const auto& sep_types = required_spc_t::get_types(type_name);
-			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
-			}
-		} catch (const std::out_of_range&) {
-			if (!schema_field.is_map()) {
-				THROW(ErrorType, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
-			}
-		} catch (const msgpack::type_error&) {
-			THROW(ErrorType, "%s'%s' has an invalid type", prefix, SCHEMA_FIELD_NAME);
-		}
-		return std::make_pair(nullptr, &schema_field);
-	} catch (const std::out_of_range&) {
+	auto schema_it = object.find(SCHEMA_FIELD_NAME);
+	if (schema_it == it_end) {
 		if (!allow_root) {
 			THROW(ErrorType, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
 		}
 		return std::make_pair(nullptr, nullptr);
 	}
+
+	auto& schema = schema_it.value();
+	if (!schema.is_map()) {
+		THROW(ErrorType, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
+	}
+	auto schema_it_end = schema.end();
+	auto type_it = schema.find(RESERVED_TYPE);
+	if (type_it != schema_it_end) {
+		auto type = type_it.value();
+		if (!type.is_string()) {
+			THROW(ErrorType, "%s'%s.%s' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
+		}
+		auto type_name = type.str();
+		const auto& sep_types = required_spc_t::get_types(type_name);
+		if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+			THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
+		}
+	}
+	return std::make_pair(nullptr, &schema);
 }
 
 
