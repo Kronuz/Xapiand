@@ -223,12 +223,14 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		MsgPack o = *schema_obj;
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_ENDPOINT);
+		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
+			o[SCHEMA_FIELD_NAME] = MsgPack(MsgPack::Type::MAP);
+		}
 		Schema schema(schema_ptr, nullptr, "");
 		schema.update(o);
-		auto aux_schema_ptr = schema.get_modified_schema();
-		if (aux_schema_ptr) {
-			std::unique_ptr<MsgPack> mut_schema;
-			schema.swap(mut_schema);
+		std::unique_ptr<MsgPack> mut_schema;
+		schema.swap(mut_schema);
+		if (mut_schema) {
 			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), foreign);
 		}
 	}
