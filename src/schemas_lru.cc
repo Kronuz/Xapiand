@@ -219,7 +219,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		}
 	}
 
-	if (schema_obj) {
+	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_ENDPOINT);
