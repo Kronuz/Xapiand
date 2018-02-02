@@ -3520,9 +3520,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
 				specification.language = specification.aux_stem_language;
 			}
-			if (specification.language != DEFAULT_LANGUAGE) {
-				mut_properties[RESERVED_LANGUAGE] = specification.language;
-			}
+			mut_properties[RESERVED_LANGUAGE] = specification.language;
 
 			specification.flags.concrete = true;
 			break;
