@@ -1710,9 +1710,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 #endif
 		MsgPack data;
-		auto data_ptr = &data;
+		auto parent_data = &data;
 
-		index_item_value(properties, doc, data_ptr, fields);
+		index_item_value(properties, doc, parent_data, fields);
 
 		for (const auto& elem : map_values) {
 			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
@@ -1955,11 +1955,12 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			properties = &index_subproperties(properties, data, name, object, fields);
 			index_item_value(properties, doc, data, fields);
 			specification = std::move(spc_start);
-			return;
+			break;
 		}
 
 		case MsgPack::Type::ARRAY: {
-			return index_array(parent_properties, object, parent_data, doc, name);
+			index_array(parent_properties, object, parent_data, doc, name);
+			break;
 		}
 
 		case MsgPack::Type::NIL:
@@ -1970,7 +1971,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			index_subproperties(properties, data, name);
 			index_partial_paths(doc);
 			specification = std::move(spc_start);
-			return;
+			break;
 		}
 
 		default: {
@@ -1983,7 +1984,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 				*data = (*data)[RESERVED_VALUE];
 			}
 			specification = std::move(spc_start);
-			return;
+			break;
 		}
 	}
 }
