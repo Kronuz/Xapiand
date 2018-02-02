@@ -2173,12 +2173,9 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 {
 	L_CALL("Schema::index_item_value(%s, <doc>, %s, <FieldVector>)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str());
 
-	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-		if (!specification.endpoint.empty() &&
-			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
@@ -2553,6 +2550,19 @@ Schema::update_item_value()
 	L_CALL("Schema::update_item_value()");
 
 	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		if (!concrete_type && !foreign_type) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+		}
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -2583,20 +2593,14 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 
 	const auto spc_start = specification;
 
-	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-		if (!specification.endpoint.empty() &&
-			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
-	}
-
-	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -2943,6 +2947,19 @@ Schema::write_item_value(MsgPack*& mut_properties)
 	L_CALL("Schema::write_item_value()");
 
 	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		if (!concrete_type && !foreign_type) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+		}
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -2973,20 +2990,14 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 
 	const auto spc_start = specification;
 
-	if (!specification.flags.concrete && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-		if (!specification.endpoint.empty() &&
-			specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
-	}
-
-	if (!specification.flags.concrete) {
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
 		} else {
@@ -3097,12 +3108,21 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_namespace_specification(%s)", repr(item_value.to_string()).c_str());
 
 	if (!specification.flags.concrete) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
 			guess_field_type(item_value);
 		}
+
 		validate_required_namespace_data();
 	}
 
@@ -3204,7 +3224,15 @@ Schema::complete_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_specification(%s)", repr(item_value.to_string()).c_str());
 
 	if (!specification.flags.concrete) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY && specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+		}
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
