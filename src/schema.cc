@@ -1980,9 +1980,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			index_subproperties(properties, data, name);
 			index_item_value(doc, *data, object, 0);
-			if (specification.flags.store && data->size() == 1) {
-				*data = (*data)[RESERVED_VALUE];
-			}
 			specification = std::move(spc_start);
 			break;
 		}
@@ -2025,9 +2022,6 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				if (specification.flags.store) {
 					auto &data_pos = (*data)[pos];
 					index_item_value(doc, data_pos, item);
-					if (data_pos.size() == 1) {
-						data_pos = data_pos[RESERVED_VALUE];
-					}
 				} else {
 					index_item_value(doc, *data, item);
 				}
@@ -2055,9 +2049,6 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				if (specification.flags.store) {
 					auto &data_pos = (*data)[pos];
 					index_item_value(doc, data_pos, item, pos);
-					if (data_pos.size() == 1) {
-						data_pos = data_pos[RESERVED_VALUE];
-					}
 				} else {
 					index_item_value(doc, *data, item, pos);
 				}
@@ -2100,6 +2091,10 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
 		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
+	}
+
+	if (specification.flags.store && data.size() == 1) {
+		data = data[RESERVED_VALUE];
 	}
 }
 
@@ -2167,6 +2162,16 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		}
 		specification.update(std::move(start_index_spc));
 	}
+
+	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (!specification.flags.static_endpoint) {
+			data[RESERVED_ENDPOINT] = specification.endpoint;
+		}
+	}
+
+	if (specification.flags.store && data.size() == 1) {
+		data = data[RESERVED_VALUE];
+	}
 }
 
 
@@ -2224,14 +2229,6 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 			specification = spc_object;
 			index_object(properties, *field.second, data, doc, field.first);
 		}
-	}
-
-	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-		if (!specification.flags.static_endpoint) {
-			(*data)[RESERVED_ENDPOINT] = specification.endpoint;
-		}
-	} else if (specification.flags.store && data->size() == 1) {
-		*data = (*data)[RESERVED_VALUE];
 	}
 }
 
