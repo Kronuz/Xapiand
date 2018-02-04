@@ -1709,10 +1709,10 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			}
 		}
 #endif
-		MsgPack data;
-		auto parent_data = &data;
+		MsgPack data_obj;
+		auto data = &data_obj;
 
-		index_item_value(properties, doc, parent_data, fields);
+		index_item_value(properties, doc, data, fields);
 
 		for (const auto& elem : map_values) {
 			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
@@ -1720,7 +1720,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			L_INDEX("Slot: %d  Values: %s", elem.first, repr(val_ser).c_str());
 		}
 
-		return data;
+		return data_obj;
 	} catch (...) {
 		mut_schema.reset();
 		throw;
