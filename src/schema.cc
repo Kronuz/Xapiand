@@ -1939,6 +1939,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		THROW(ClientError, "Field name must not be empty");
 	}
 
+	if (name[0] == '#') {
+		return;
+	}
+
 	if (!specification.flags.is_recurse && name[0] != '_') {
 		if (specification.flags.store) {
 			(*parent_data)[name] = object;
@@ -2476,6 +2480,10 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		THROW(ClientError, "Field name must not be empty");
 	}
 
+	if (name[0] == '#') {
+		return;
+	}
+
 	if (!specification.flags.is_recurse && name[0] != '_') {
 		return;
 	}
@@ -2871,6 +2879,10 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 
 	if (name.empty()) {
 		THROW(ClientError, "Field name must not be empty");
+	}
+
+	if (name[0] == '#') {
+		return;
 	}
 
 	if (!specification.flags.is_recurse && name[0] != '_') {
