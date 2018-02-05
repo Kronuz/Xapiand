@@ -1954,8 +1954,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			FieldVector fields;
 			properties = &index_subproperties(properties, data, name, object, fields);
 			index_item_value(properties, doc, data, fields);
-			if (specification.flags.store && data->is_undefined()) {
-				parent_data->erase(name);
+			if (specification.flags.store) {
+				if (data->is_undefined() || (data->is_map() && data->empty())) {
+					parent_data->erase(name);
+				}
 			}
 			specification = std::move(spc_start);
 			break;
@@ -1973,8 +1975,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			index_subproperties(properties, data, name);
 			index_partial_paths(doc);
-			if (specification.flags.store && data->is_undefined()) {
-				parent_data->erase(name);
+			if (specification.flags.store) {
+				if (data->is_undefined() || (data->is_map() && data->empty())) {
+					parent_data->erase(name);
+				}
 			}
 			specification = std::move(spc_start);
 			break;
@@ -1986,8 +1990,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			index_subproperties(properties, data, name);
 			index_item_value(doc, *data, object, 0);
-			if (specification.flags.store && data->is_undefined()) {
-				parent_data->erase(name);
+			if (specification.flags.store) {
+				if (data->is_undefined() || (data->is_map() && data->empty())) {
+					parent_data->erase(name);
+				}
 			}
 			specification = std::move(spc_start);
 			break;
