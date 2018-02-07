@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 deipi.com LLC and contributors
+ * Copyright (C) 2015-2018 dubalu.com LLC and contributors
  * Copyright (C), MM Weiss. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

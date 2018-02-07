@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 deipi.com LLC and contributors
+ * Copyright (C) 2015-2018 dubalu.com LLC and contributors
  * Copyright (C) 2014 Graeme Hill (http://graemehill.ca).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
