@@ -25,9 +25,10 @@
 
 #include "static_str.hh"
 
+#define ESC "\033"
 
-template <int N, int rem, char... a>
-struct explode : explode<N + 1, rem / 10, ('0' + rem % 10), a...> { };
+template <int N, int num, char... a>
+struct explode : explode<N + 1, num / 10, ('0' + num % 10), a...> { };
 
 template <int N, char... a>
 struct explode<N, 0, a...> {
@@ -41,30 +42,20 @@ template <>
 struct to_string<0> : explode<1, 0, '0'> { };
 
 
-enum class Coloring : uint8_t {
-	TrueColor,
-	Palette,
-	Standard256,
-	Standard16,
-	None,
-};
-
-
 // Ansi colors:
 template <int red, int green, int blue, bool bold = false>
 class ansi_color {
 	static constexpr uint8_t r = red < 0 ? 0 : red > 255 ? 255 : red;
 	static constexpr uint8_t g = green < 0 ? 0 : green > 255 ? 255 : green;
 	static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
-	static constexpr auto esc = static_str::literal("\033[");
 
 	static constexpr auto noColor() {
-		return esc + "0m";
+		return static_str::literal(ESC "[0m");
 	}
 
 	static constexpr auto trueColor() {
 		return (
-			esc +
+			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;2;" +
 			to_string<r>::value + ";" +
@@ -86,7 +77,7 @@ class ansi_color {
 			(static_cast<int>(b / 255.0f * 5.0f + 0.5f))
 		));
 		return (
-			esc +
+			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;5;" +
 			to_string<color>::value +
@@ -116,7 +107,7 @@ class ansi_color {
 			)
 		));
 		return (
-			esc +
+			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;5;" +
 			to_string<color>::value +
@@ -124,60 +115,25 @@ class ansi_color {
 		);
 	}
 
-	static Coloring _detectColoring() {
-		std::string colorterm;
-		const char *env_colorterm = getenv("COLORTERM");
-		if (env_colorterm) {
-			colorterm = env_colorterm;
-		}
-		std::string term;
-		const char* env_term = getenv("TERM");
-		if (env_term) {
-			term = env_term;
-		}
-		if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
-			return Coloring::TrueColor;
-		} else if (term.find("256color") != std::string::npos) {
-			return Coloring::Standard256;
-		} else if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
-			return Coloring::Standard16;
-		} else {
-			return Coloring::Standard16;
-		}
+	static std::string _col() {
+		constexpr auto _ = (
+			trueColor() +
+			standard256() +
+			standard16()
+		);
+		return _;
 	}
 
-	static const std::string _col() {
-		switch (ansi_color<0, 0, 0>::detectColoring()) {
-			case Coloring::TrueColor: {
-				constexpr const auto _ = trueColor();
-				return _;
-			}
-			case Coloring::Palette:
-			case Coloring::Standard256: {
-				constexpr const auto _ = standard256();
-				return _;
-			}
-			case Coloring::Standard16: {
-				constexpr const auto _ = standard16();
-				return _;
-			}
-			case Coloring::None: {
-				return "";
-			}
-		};
-	}
-
-	static const std::string _no_col() {
-		constexpr const auto _ = noColor();
+	static std::string _no_col() {
+		constexpr auto _ = (
+			noColor() +
+			noColor() +
+			noColor()
+		);
 		return _;
 	}
 
 public:
-	static Coloring detectColoring() {
-		static Coloring coloring = _detectColoring();
-		return coloring;
-	}
-
 	static const std::string& col() {
 		static auto col = _col();
 		return col;

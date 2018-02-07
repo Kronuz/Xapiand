@@ -55,8 +55,6 @@ bool Logging::no_colors = false;
 int Logging::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
-const std::regex coloring_re("\033\\[[;\\d]*m", std::regex::optimize);
-
 
 static const std::string priorities[] = {
 	EMERG_COL   + "█" + NO_COL, // LOG_EMERG    0 = System is unusable
@@ -69,6 +67,38 @@ static const std::string priorities[] = {
 	DEBUG_COL   + "▏" + NO_COL, // LOG_DEBUG    7 = Debug-level messages
 	NO_COL,                     // VERBOSE    > 7 = Verbose messages
 };
+
+
+const std::regex coloring_re("(\033\\[[;\\d]*m)(\033\\[[;\\d]*m)(\033\\[[;\\d]*m)", std::regex::optimize);
+
+
+static inline std::string
+detectColoring()
+{
+	const char *no_color = getenv("NO_COLOR");
+	if (no_color) {
+		return "";
+	}
+	std::string colorterm;
+	const char *env_colorterm = getenv("COLORTERM");
+	if (env_colorterm) {
+		colorterm = env_colorterm;
+	}
+	std::string term;
+	const char* env_term = getenv("TERM");
+	if (env_term) {
+		term = env_term;
+	}
+	if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
+		return "$1";
+	} else if (term.find("256color") != std::string::npos) {
+		return "$2";
+	} else if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
+		return "$3";
+	} else {
+		return "$3";
+	}
+}
 
 
 static inline int
@@ -260,7 +290,8 @@ std::string
 Logging::colorized(const std::string& str, bool try_coloring)
 {
 	if (try_coloring) {
-		return str;
+		static const auto coloring_group = detectColoring();
+		return std::regex_replace(str, coloring_re, coloring_group);
 	} else {
 		return std::regex_replace(str, coloring_re, "");
 	}
