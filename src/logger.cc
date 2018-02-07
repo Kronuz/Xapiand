@@ -46,7 +46,6 @@
 
 std::atomic<uint64_t> logger_info_hook;
 
-const std::regex filter_re("\033\\[[;\\d]*m", std::regex::optimize);
 std::mutex Logging::collected_mtx;
 std::vector<std::pair<std::string, bool>> Logging::collected;
 std::mutex Logging::stack_mtx;
@@ -56,6 +55,7 @@ bool Logging::no_colors = false;
 int Logging::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
+const std::regex coloring_re("\033\\[[;\\d]*m", std::regex::optimize);
 
 
 static const std::string priorities[] = {
@@ -191,11 +191,7 @@ Log::release()
 void
 StreamLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
-	if (Logging::colors && !Logging::no_colors) {
-		ofs << (with_priority ? priorities[priority] : "") + str;
-	} else {
-		ofs << Logging::decolorize((with_priority ? priorities[priority] : "") + str);
-	}
+	ofs << Logging::colorized((with_priority ? priorities[priority] : "") + str, Logging::colors && !Logging::no_colors);
 	if (with_endl) {
 		ofs << std::endl;
 	}
@@ -205,11 +201,7 @@ StreamLogger::log(int priority, const std::string& str, bool with_priority, bool
 void
 StderrLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
-	if ((isatty(fileno(stderr)) || Logging::colors) && !Logging::no_colors) {
-		std::cerr << (with_priority ? priorities[priority] : "") + str;
-	} else {
-		std::cerr << Logging::decolorize((with_priority ? priorities[priority] : "") + str);
-	}
+	std::cerr << Logging::colorized((with_priority ? priorities[priority] : "") + str, (isatty(fileno(stderr)) || Logging::colors) && !Logging::no_colors);
 	if (with_endl) {
 		std::cerr << std::endl;
 	}
@@ -231,11 +223,7 @@ SysLog::~SysLog()
 void
 SysLog::log(int priority, const std::string& str, bool with_priority, bool)
 {
-	if (Logging::colors && !Logging::no_colors) {
-		syslog(priority, "%s", ((with_priority ? priorities[priority] : "") + str).c_str());
-	} else {
-		syslog(priority, "%s", Logging::decolorize((with_priority ? priorities[priority] : "") + str).c_str());
-	}
+	syslog(priority, "%s", Logging::colorized((with_priority ? priorities[priority] : "") + str, Logging::colors && !Logging::no_colors).c_str());
 }
 
 
@@ -269,9 +257,13 @@ Logging::~Logging()
 
 
 std::string
-Logging::decolorize(const std::string& str)
+Logging::colorized(const std::string& str, bool try_coloring)
 {
-	return std::regex_replace(str, filter_re, "");
+	if (try_coloring) {
+		return str;
+	} else {
+		return std::regex_replace(str, coloring_re, "");
+	}
 }
 
 

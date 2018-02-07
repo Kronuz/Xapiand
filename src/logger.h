@@ -128,8 +128,7 @@ public:
 	Logging(const std::string& str, bool cleanup, bool stacked, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Logging();
 
-	static std::string decolorize(const std::string& str);
-
+	static std::string colorized(const std::string& s, bool try_coloring);
 	static void finish(int wait=10);
 	static void join();
 	static void dump_collected();

@@ -83,12 +83,8 @@ ssize_t write(int fildes, T (&buf)[N]) {
 }
 
 ssize_t write(int fildes, const std::string& buf) {
-	if ((isatty(fildes) || Logging::colors) && !Logging::no_colors) {
-		return write(fildes, buf.data(), buf.size());
-	} else {
-		auto buf2 = Logging::decolorize(buf);
-		return write(fildes, buf2.data(), buf2.size());
-	}
+	auto buf2 = Logging::colorized(buf, (isatty(fildes) || Logging::colors) && !Logging::no_colors);
+	return write(fildes, buf2.data(), buf2.size());
 }
 
 
