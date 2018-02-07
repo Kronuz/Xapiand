@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015-2018 deipi.com LLC and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -150,16 +150,16 @@ class ansi_color {
     switch (ansi_color<0, 0, 0>::detectColoring()) {
       case Coloring::TrueColor: {
         constexpr const auto _ = trueColor();
-        return std::string(_);
+        return _;
       }
       case Coloring::Palette:
       case Coloring::Standard256: {
         constexpr const auto _ = standard256();
-        return std::string(_);
+        return _;
       }
       case Coloring::Standard16: {
         constexpr const auto _ = standard16();
-        return std::string(_);
+        return _;
       }
       case Coloring::None: {
         return "";
@@ -169,7 +169,7 @@ class ansi_color {
 
   static const std::string _no_col() {
     constexpr const auto _ = noColor();
-    return std::string(_);
+    return _;
   }
 
 public:

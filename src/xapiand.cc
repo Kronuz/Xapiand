@@ -97,7 +97,11 @@ static const std::vector<std::string> vec_signame = []() {
 	auto len = arraySize(sys_siglist); /* same size of sys_signame but sys_signame is not portable */
 	res.reserve(len);
 	for (size_t sig = 0; sig < len; ++sig) {
-		auto col = &NO_COL;
+#if defined(__linux__)
+		const char* sig_str = strsignal(sig);
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+		const char* sig_str = sys_signame[sig];
+#endif
 		switch (sig) {
 			case SIGQUIT:
 			case SIGILL:
@@ -111,7 +115,7 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSEGV:
 			case SIGSYS:
 				// create core image
-				col = &LIGHT_RED;
+				res.push_back(format_string(LIGHT_RED + "Signal received: %s" + NO_COL + "\n", sig_str));
 				break;
 			case SIGHUP:
 			case SIGINT:
@@ -129,14 +133,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSTKFLT:
 #endif
 				// terminate process
-				col = &BROWN;
+				res.push_back(format_string(BROWN + "Signal received: %s" + NO_COL + "\n", sig_str));
 				break;
 			case SIGSTOP:
 			case SIGTSTP:
 			case SIGTTIN:
 			case SIGTTOU:
 				// stop process
-				col = &SADDLE_BROWN;
+				res.push_back(format_string(SADDLE_BROWN + "Signal received: %s" + NO_COL + "\n", sig_str));
 				break;
 			case SIGURG:
 			case SIGCONT:
@@ -147,17 +151,12 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGINFO:
 #endif
 				// discard signal
-				col = &STEEL_BLUE;
+				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + NO_COL + "\n", sig_str));
 				break;
 			default:
-				col = &STEEL_BLUE;
+				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + NO_COL + "\n", sig_str));
 				break;
 		}
-#if defined(__linux__)
-		res.push_back(format_string(*col + "Signal received: %s" + NO_COL + "\n", strsignal(sig)));
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-		res.push_back(format_string(*col + "Signal received: %s" + NO_COL + "\n", sys_signame[sig]));
-#endif
 	}
 	res.push_back(STEEL_BLUE + "Signal received: unknown" + NO_COL + "\n");
 	return res;
@@ -929,9 +928,13 @@ void banner() {
 		rgb(130, 0, 100) + "   \\" + rgb(230, 0, 110) + "o" + rgb(130, 0, 100) + "/." + rgb(230, 0, 110) + "o" + rgb(192, 192, 192) + "  \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(230, 0, 110) + "O" + rgb(130, 0, 100) + "-{" + rgb(10, 232, 103) + "(" + rgb(255, 255, 255) + "0" + rgb(10, 232, 103) + ")" + rgb(130, 0, 100) + "}-" + rgb(230, 0, 110) + "o" + rgb(160, 160, 160) + " /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(230, 0, 110) + "  O      " + rgb(128, 128, 128) + "/ /\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "        /_/" + LIGHT_GREEN + center_string(Package::HASH, 8) + rgb(96, 96, 96) + "|/" + LIGHT_GREEN + center_string(Package::FULLVERSION, 25) + "\n" + GREEN +
-		center_string("[" + Package::BUGREPORT + "]", 54) + "\n" +
-		center_string("Using " + join_string(values, ", ", " and "), 54) + "\n\n");
+		rgb(96, 96, 96)    + "        /_/" + LIGHT_GREEN + "%s" + rgb(96, 96, 96) + "|/" + LIGHT_GREEN + "%s" + "\n" + GREEN +
+		"%s" + "\n" +
+		"%s" + "\n\n",
+		center_string(Package::HASH, 8).c_str(),
+		center_string(Package::FULLVERSION, 25).c_str(),
+		center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
+		center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
 }
 
 

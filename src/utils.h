@@ -39,9 +39,10 @@
 #include <unordered_map>      // for unordered_map
 #include <vector>             // for vector
 
-#include "ev/ev++.h"    // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
-#include "exception.h"  // for InvalidArgument, OutOfRange
-#include "split.h"      // for Split
+#include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
+#include "exception.h"        // for InvalidArgument, OutOfRange
+#include "split.h"            // for Split
+#include "static_str.hh"      // for static_str
 
 
 template<class T, class... Args>
@@ -56,6 +57,8 @@ struct is_callable {
 class cstr {
 	const char* _str;
 public:
+	template <int N, typename Impl>
+	explicit cstr(static_str::string<N, Impl> s) : _str(s) { }
 	explicit cstr(const std::string &s) : _str(s.c_str())  { }
 	explicit cstr(const char* s) : _str(s) { }
 	operator const char* () {

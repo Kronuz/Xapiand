@@ -25,6 +25,7 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#pragma once
 
 #include <type_traits>
 #include <cassert>
@@ -32,6 +33,10 @@
 
 // # Based on value of macro AK_TOOLKIT_CONFIG_USING_STRING_VIEW we decide if and how
 //   we want to handle a conversion to string_view
+
+#ifndef AK_TOOLKIT_CONFIG_USING_STRING_VIEW
+#define AK_TOOLKIT_CONFIG_USING_STRING_VIEW 4
+#endif
 
 # if defined AK_TOOLKIT_CONFIG_USING_STRING_VIEW
 #   if AK_TOOLKIT_CONFIG_USING_STRING_VIEW == 0
