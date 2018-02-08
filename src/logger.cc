@@ -69,7 +69,7 @@ static const std::string priorities[] = {
 };
 
 
-const std::regex coloring_re("(\033\\[[;\\d]*m)(\033\\[[;\\d]*m)(\033\\[[;\\d]*m)", std::regex::optimize);
+const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)", std::regex::optimize);
 
 
 static inline std::string
@@ -376,7 +376,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 	if (info && priority <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
 		auto tid = " (" + get_thread_name() + ")";
-		result = DIM_GREY + iso8601 + tid;
+		result = DIM_GREY.c_str() + iso8601 + tid;
 		result += " ";
 
 #ifdef LOG_LOCATION
@@ -385,7 +385,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 		ignore_unused(file);
 		ignore_unused(line);
 #endif
-		result += NO_COL;
+		result += NO_COL.c_str();
 	}
 
 	if (stacked) {
@@ -395,7 +395,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 	result += prefix + msg + suffix;
 
 	if (!exc.empty()) {
-		result += NO_COL + exc + NO_COL;
+		result += DIM_GREY.c_str() + exc + NO_COL.c_str();
 	}
 
 	return result;
