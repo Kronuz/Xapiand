@@ -221,8 +221,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
-		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_ENDPOINT);
+		o[RESERVED_TYPE] = "object";
+		o[RESERVED_RECURSE] = false;
+		o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
+		if (o.find(ID_FIELD_NAME) == o.end()) {
+			o[ID_FIELD_NAME][RESERVED_TYPE] = "term";
+		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
 			o[SCHEMA_FIELD_NAME] = MsgPack(MsgPack::Type::MAP);
 		}
