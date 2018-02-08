@@ -50,11 +50,12 @@ class ansi_color {
 	static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
 
 	static constexpr auto noColor() {
-		return static_str::literal(ESC "[0m");
+		constexpr auto noColor = static_str::literal(ESC "[0m");
+		return noColor;
 	}
 
 	static constexpr auto trueColor() {
-		return (
+		constexpr auto trueColor = (
 			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;2;" +
@@ -63,6 +64,7 @@ class ansi_color {
 			to_string<b>::value +
 			"m"
 		);
+		return trueColor;
 	}
 
 	static constexpr auto standard256() {
@@ -76,13 +78,14 @@ class ansi_color {
 			(static_cast<int>(g / 255.0f * 5.0f + 0.5f) * 6) +
 			(static_cast<int>(b / 255.0f * 5.0f + 0.5f))
 		));
-		return (
+		constexpr auto standard256 = (
 			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;5;" +
 			to_string<color>::value +
 			"m"
 		);
+		return standard256;
 	}
 
 	static constexpr auto standard16() {
@@ -106,34 +109,33 @@ class ansi_color {
 				) + (max > 192 ? 8 : 0)
 			)
 		));
-		return (
+		constexpr auto standard16 = (
 			static_str::literal(ESC "[") +
 			to_string<bold>::value +
 			";38;5;" +
 			to_string<color>::value +
 			"m"
 		);
+		return standard16;
 	}
 
 public:
-	static const auto& col() {
-		constexpr auto _ = (
+	static constexpr auto col() {
+		constexpr auto col = (
 			trueColor() +
 			standard256() +
 			standard16()
 		);
-		static std::string __ = _;
-		return __;
+		return col;
 	}
 
-	static const auto& no_col() {
-		constexpr auto _ = (
+	static constexpr auto no_col() {
+		constexpr auto no_col = (
 			noColor() +
 			noColor() +
 			noColor()
 		);
-		static std::string __ = _;
-		return __;
+		return no_col;
 	}
 };
 
