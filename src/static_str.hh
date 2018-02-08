@@ -171,16 +171,16 @@ constexpr string<NL + NR, char_array> operator+(string<NL, TL> const& l, string<
 	return string<NL + NR, char_array>(l, r);
 }
 
-template <int NL_1, int NR, typename TR>
-constexpr string<NL_1 - 1 + NR, char_array> operator+(const char (&l)[NL_1], string<NR, TR> const& r)
+template <int NL_PLUS_1, int NR, typename TR>
+constexpr string<NL_PLUS_1 - 1 + NR, char_array> operator+(const char (&l)[NL_PLUS_1], string<NR, TR> const& r)
 {
-	return string<NL_1 - 1 + NR, char_array>(string_literal<NL_1 - 1>(l), r);
+	return string<NL_PLUS_1 - 1 + NR, char_array>(string_literal<NL_PLUS_1 - 1>(l), r);
 }
 
-template <int NL, typename TL, int NR_1>
-constexpr string<NL + NR_1 - 1, char_array> operator+(string<NL, TL> const& l, const char (&r)[NR_1])
+template <int NL, typename TL, int NR_PLUS_1>
+constexpr string<NL + NR_PLUS_1 - 1, char_array> operator+(string<NL, TL> const& l, const char (&r)[NR_PLUS_1])
 {
-	return string<NL + NR_1 - 1, char_array>(l, string_literal<NR_1 - 1>(r));
+	return string<NL + NR_PLUS_1 - 1, char_array>(l, string_literal<NR_PLUS_1 - 1>(r));
 }
 
 }
