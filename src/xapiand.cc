@@ -916,7 +916,7 @@ void banner() {
 #endif
 	});
 
-	auto banner = format_string(
+	L_INFO(
 		"\n\n" +
 		rgb(255, 255, 255) + "              __\n" +
 		rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
@@ -924,15 +924,13 @@ void banner() {
 		rgb(130, 0, 100) + "   \\" + rgb(230, 0, 110) + "o" + rgb(130, 0, 100) + "/." + rgb(230, 0, 110) + "o" + rgb(192, 192, 192) + "  \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 		rgb(230, 0, 110) + "O" + rgb(130, 0, 100) + "-{" + rgb(10, 232, 103) + "(" + rgb(255, 255, 255) + "0" + rgb(10, 232, 103) + ")" + rgb(130, 0, 100) + "}-" + rgb(230, 0, 110) + "o" + rgb(160, 160, 160) + " /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 		rgb(230, 0, 110) + "  O      " + rgb(128, 128, 128) + "/ /\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-		rgb(96, 96, 96)    + "        /_/" + LIGHT_GREEN + "%s" + rgb(96, 96, 96) + "|/" + LIGHT_GREEN + "%s" + "\n" + GREEN +
+		rgb(96, 96, 96)    + "        /_/" + rgb(144, 238, 144) + "%s" + rgb(96, 96, 96) + "|/" + rgb(144, 238, 144) + "%s" + "\n" + rgb(0, 128, 0) +
 		"%s" + "\n" +
 		"%s" + "\n\n",
 		center_string(Package::HASH, 8).c_str(),
 		center_string(Package::FULLVERSION, 25).c_str(),
 		center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
 		center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
-
-	L_INFO(banner);
 }
 
 
