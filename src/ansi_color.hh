@@ -115,35 +115,28 @@ class ansi_color {
 		);
 	}
 
-	static std::string _col() {
+public:
+	static const auto& col() {
 		constexpr auto _ = (
 			trueColor() +
 			standard256() +
 			standard16()
 		);
-		return _;
+		static std::string __ = _;
+		return __;
 	}
 
-	static std::string _no_col() {
+	static const auto& no_col() {
 		constexpr auto _ = (
 			noColor() +
 			noColor() +
 			noColor()
 		);
-		return _;
-	}
-
-public:
-	static const std::string& col() {
-		static auto col = _col();
-		return col;
-	}
-
-	static const std::string& no_col() {
-		static auto no_col = _no_col();
-		return no_col;
+		static std::string __ = _;
+		return __;
 	}
 };
+
 
 #define rgb(r, g, b)      ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::col()
 #define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col()
