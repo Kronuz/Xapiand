@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 dubalu.com LLC and contributors
+ * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
  * Copyright (C) 2014 lamerman
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 dubalu.com LLC and contributors
+ * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
  *
  * Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
  * see http://create.stephan-brumme.com/disclaimer.html
