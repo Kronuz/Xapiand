@@ -916,7 +916,7 @@ void banner() {
 #endif
 	});
 
-	L_INFO(
+	auto banner = format_string(
 		"\n\n" +
 		rgb(255, 255, 255) + "              __\n" +
 		rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
@@ -931,6 +931,8 @@ void banner() {
 		center_string(Package::FULLVERSION, 25).c_str(),
 		center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
 		center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
+
+	L_INFO(banner);
 }
 
 
