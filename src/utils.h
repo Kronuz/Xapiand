@@ -53,23 +53,6 @@ struct is_callable {
 };
 
 
-/* Wrapper to get c_str() from either std::string or a raw const char* */
-class cstr {
-	const char* _str;
-public:
-	template <int N, typename Impl>
-	explicit cstr(static_str::string<N, Impl> s) : _str(s) { }
-	explicit cstr(const std::string &s) : _str(s.c_str())  { }
-	explicit cstr(const char* s) : _str(s) { }
-	operator const char* () {
-		return _str;
-	}
-	const char* c_str() {
-		return _str;
-	}
-};
-
-
 /* Strict converter for unsigned types */
 #define stoux(func, s) \
 	[](const std::string& str) { \
@@ -227,27 +210,27 @@ namespace std {
 }
 
 
-inline std::string vformat_string(const char* format, va_list argptr) {
+inline std::string vformat_string(const std::string& format, va_list argptr) {
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
+	auto len = vsnprintf(nullptr, 0, format.c_str(), argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	std::string str;
 	str.resize(len + 1);
-	vsnprintf(&str[0], len + 1, format, argptr);
+	vsnprintf(&str[0], len + 1, format.c_str(), argptr);
 	str.resize(len);
 
 	return str;
 }
 
 
-inline std::string _format_string(const char* format, ...) {
+inline std::string _format_string(const std::string& format, int n, ...) {
 	va_list argptr;
 
-	va_start(argptr, format);
+	va_start(argptr, n);
 	auto str = vformat_string(format, argptr);
 	va_end(argptr);
 
@@ -255,9 +238,9 @@ inline std::string _format_string(const char* format, ...) {
 }
 
 
-template<typename F, typename... Args>
-inline std::string format_string(F&& format, Args&&... args) {
-	return _format_string(cstr(std::forward<F>(format)), std::forward<Args>(args)...);
+template<typename... Args>
+inline std::string format_string(const std::string& format, Args&&... args) {
+	return _format_string(format, 0, std::forward<Args>(args)...);
 }
 
 

@@ -77,7 +77,7 @@ public:
 
 class SysLog : public Logger {
 public:
-	SysLog(const char *ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
+	SysLog(const char* ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
 	~SysLog();
 
 	void log(int priority, const std::string& str, bool with_priority, bool with_endl) override;
@@ -112,9 +112,9 @@ class Logging : public ScheduledTask {
 	Logging& operator=(Logging&&) = delete;
 	Logging& operator=(const Logging&) = delete;
 
-	bool _unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...);
+	bool _unlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...);
 
-	static std::string format_string(bool info, bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	static std::string format_string(bool info, bool stacked, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
 	static Log add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
@@ -133,14 +133,14 @@ public:
 	static void join();
 	static void dump_collected();
 
-	static void do_println(bool collect, bool with_endl, const char *format, va_list argptr);
-	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	static void do_println(bool collect, bool with_endl, const std::string& format, va_list argptr);
+	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
 
-	template <typename S, typename P, typename F, typename... Args>
-	bool unlog(int _priority, const char *file, int line, S&& suffix, P&& prefix, F&& format, Args&&... args) {
-		return _unlog(_priority, file, line, cstr(std::forward<S>(suffix)), cstr(std::forward<P>(prefix)), cstr(std::forward<F>(format)), std::forward<Args>(args)...);
+	template <typename... Args>
+	bool unlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, Args&&... args) {
+		return _unlog(_priority, file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 	}
-	bool vunlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr);
+	bool vunlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
 
 	void cleanup();
 

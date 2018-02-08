@@ -75,12 +75,12 @@ const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\
 static inline std::string
 detectColoring()
 {
-	const char *no_color = getenv("NO_COLOR");
+	const char* no_color = getenv("NO_COLOR");
 	if (no_color) {
 		return "";
 	}
 	std::string colorterm;
-	const char *env_colorterm = getenv("COLORTERM");
+	const char* env_colorterm = getenv("COLORTERM");
 	if (env_colorterm) {
 		colorterm = env_colorterm;
 	}
@@ -115,34 +115,34 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool collect, bool with_endl, const char *format, va_list argptr)
+vprintln(bool collect, bool with_endl, const std::string& format, va_list argptr)
 {
 	Logging::do_println(collect, with_endl, format, argptr);
 }
 
 
 void
-_println(bool collect, bool with_endl, const char* format, ...)
+_println(bool collect, bool with_endl, const std::string& format, int n, ...)
 {
 	va_list argptr;
-	va_start(argptr, format);
+	va_start(argptr, n);
 	vprintln(collect, with_endl, format, argptr);
 	va_end(argptr);
 }
 
 
 Log
-vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr)
 {
 	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 }
 
 
 Log
-_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...)
 {
 	va_list argptr;
-	va_start(argptr, format);
+	va_start(argptr, n);
 	auto ret = vlog(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
@@ -179,17 +179,17 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::vunlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Log::vunlog(int priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr)
 {
 	return log->vunlog(priority, file, line, suffix, prefix, format, argptr);
 }
 
 
 bool
-Log::_unlog(int priority, const char* file, int line, const char *suffix, const char *prefix, const char *format, ...)
+Log::_unlog(int priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...)
 {
 	va_list argptr;
-	va_start(argptr, format);
+	va_start(argptr, n);
 	auto ret = vunlog(priority, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
@@ -238,7 +238,7 @@ StderrLogger::log(int priority, const std::string& str, bool with_priority, bool
 }
 
 
-SysLog::SysLog(const char *ident, int option, int facility)
+SysLog::SysLog(const char* ident, int option, int facility)
 {
 	openlog(ident, option, facility);
 }
@@ -368,7 +368,7 @@ Logging::run()
 
 
 std::string
-Logging::format_string(bool info, bool stacked, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::format_string(bool info, bool stacked, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr)
 {
 	auto msg = vformat_string(format, argptr);
 
@@ -403,7 +403,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 
 
 bool
-Logging::vunlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::vunlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr)
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
@@ -418,10 +418,10 @@ Logging::vunlog(int _priority, const char *file, int line, const char *suffix, c
 
 
 bool
-Logging::_unlog(int _priority, const char *file, int line, const char *suffix, const char *prefix, const char *format, ...)
+Logging::_unlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...)
 {
 	va_list argptr;
-	va_start(argptr, format);
+	va_start(argptr, n);
 	auto ret = vunlog(_priority, file, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 
@@ -430,7 +430,7 @@ Logging::_unlog(int _priority, const char *file, int line, const char *suffix, c
 
 
 void
-Logging::do_println(bool collect, bool with_endl, const char *format, va_list argptr)
+Logging::do_println(bool collect, bool with_endl, const std::string& format, va_list argptr)
 {
 	auto str = vformat_string(format, argptr);
 	if (collect) {
@@ -443,7 +443,7 @@ Logging::do_println(bool collect, bool with_endl, const char *format, va_list ar
 
 
 Log
-Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const char *format, va_list argptr)
+Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr)
 {
 	if (_priority <= log_level) {
 		_priority = validated_priority(_priority);
