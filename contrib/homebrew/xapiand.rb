@@ -8,6 +8,8 @@ class Xapiand < Formula
   homepage 'https://github.com/Kronuz/Xapiand'
 
   depends_on 'cmake' => :build
+  depends_on 'pkg-config' => :build
+  depends_on 'xapian'
 
   def install
     mkdir "build" do
