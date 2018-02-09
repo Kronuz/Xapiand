@@ -23,7 +23,7 @@ XPORTVERSION=	1.0.0
 X
 XCATEGORIES=	textproc devel
 X
-XMAINTAINER=	german.mb@deipi.com
+XMAINTAINER=	german.mb@dubalu.com
 XCOMMENT=	A Multi-Partitioning RESTful Search Engine
 X
 XLICENSE=	MIT
