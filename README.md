@@ -58,6 +58,14 @@ codebase). The only external dependencies for building it are:
 * Optionally, Google's V8 Javascript engine library (tested with v5.1)
 
 
+#### Homebrew
+
+Xapiand contains a formula for Homebrew (a package manager for OS X). It can
+be installed by using the following command:
+
+brew install --HEAD https://github.com/Kronuz/Xapiand/raw/master/contrib/homebrew/xapiand.rb
+
+
 #### Building from Source (GitHub)
 
 1. Download and untar the Xapiand official distribution or clone repository
