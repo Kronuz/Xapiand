@@ -63,8 +63,9 @@ codebase). The only external dependencies for building it are:
 Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:
 
+```sh
 brew install --HEAD https://github.com/Kronuz/Xapiand/raw/master/contrib/homebrew/xapiand.rb
-
+```
 
 #### Building from Source (GitHub)
 
@@ -121,7 +122,7 @@ Let's try and index some twitter like information. First, let's create a
 twitter user, and add some tweets (the twitter index will be created
 automatically):
 
-```
+```sh
 curl -XPUT 'http://localhost:8880/twitter/user/Kronuz?commit' -d '{ "name" : "German M. Bravo" }'
 
 curl -XPUT 'http://localhost:8880/twitter/tweet/1?commit' -d '
@@ -141,7 +142,7 @@ curl -XPUT 'http://localhost:8880/twitter/tweet/2?commit' -d '
 
 Now, let’s see if the information was added by GETting it:
 
-```
+```sh
 curl 'http://localhost:8880/twitter/user/Kronuz?pretty'
 curl 'http://localhost:8880/twitter/tweet/1?pretty'
 curl 'http://localhost:8880/twitter/tweet/2?pretty'
@@ -154,7 +155,7 @@ curl 'http://localhost:8880/twitter/tweet/2?pretty'
 
 Let’s find all the tweets that Kronuz posted:
 
-```
+```sh
 curl 'http://localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty'
 ```
 
@@ -172,13 +173,13 @@ won't be changing often.
 
 Lets put something in the storage using PUT:
 
-```
+```sh
 curl -XPUT -H "Content-Type: image/png" 'http://localhost:8880/twitter/images/Kronuz.png?commit' --data-binary @'Kronuz.png'
 ```
 
 And getting it is just a matter of retreiving it using GET:
 
-```
+```sh
 curl -H "Accept: image/png" 'http://localhost:8880/twitter/images/Kronuz.png'
 ```
 
