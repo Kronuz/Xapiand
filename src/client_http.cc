@@ -802,7 +802,7 @@ HttpClient::_get(enum http_method method)
 			break;
 		case Command::CMD_METADATA:
 			path_parser.skip_id();  // Command has no ID
-			meta_view(method, cmd);
+			metadata_view(method, cmd);
 			break;
 		default:
 			if (path_parser.off_cmd && path_parser.len_cmd > 1) {
@@ -810,7 +810,7 @@ HttpClient::_get(enum http_method method)
 					path_parser.skip_id();  // Command has no ID
 					path_parser.off_pmt = path_parser.off_cmd + 1;
 					path_parser.len_pmt = path_parser.len_cmd + 1;
-					meta_view(method, cmd);
+					metadata_view(method, cmd);
 					break;
 				}
 			}
@@ -838,7 +838,7 @@ HttpClient::_merge(enum http_method method)
 			break;
 		case Command::CMD_METADATA:
 			path_parser.skip_id();  // Command has no ID
-			update_meta_view(method, cmd);
+			update_metadata_view(method, cmd);
 			break;
 		default:
 			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -859,7 +859,7 @@ HttpClient::_put(enum http_method method)
 			break;
 		case Command::CMD_METADATA:
 			path_parser.skip_id();  // Command has no ID
-			write_meta_view(method, cmd);
+			write_metadata_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
 			path_parser.skip_id();  // Command has no ID
@@ -934,6 +934,10 @@ HttpClient::_delete(enum http_method method)
 	switch (cmd) {
 		case Command::NO_CMD_ID:
 			delete_document_view(method, cmd);
+			break;
+		case Command::CMD_METADATA:
+			path_parser.skip_id();  // Command has no ID
+			delete_metadata_view(method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
 			path_parser.skip_id();  // Command has no ID
@@ -1216,9 +1220,9 @@ HttpClient::update_document_view(enum http_method method, Command)
 
 
 void
-HttpClient::meta_view(enum http_method method, Command)
+HttpClient::metadata_view(enum http_method method, Command)
 {
-	L_CALL("HttpClient::meta_view()");
+	L_CALL("HttpClient::metadata_view()");
 
 	enum http_status status_code = HTTP_STATUS_OK;
 
@@ -1269,28 +1273,29 @@ HttpClient::meta_view(enum http_method method, Command)
 
 
 void
-HttpClient::write_meta_view(enum http_method, Command)
+HttpClient::write_metadata_view(enum http_method, Command)
 {
-	L_CALL("HttpClient::write_meta_view()");
+	L_CALL("HttpClient::write_metadata_view()");
 
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
-
-	MsgPack response;
-
-	write_http_response(status_code, response);
+	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::update_meta_view(enum http_method, Command)
+HttpClient::update_metadata_view(enum http_method, Command)
 {
-	L_CALL("HttpClient::update_meta_view()");
+	L_CALL("HttpClient::update_metadata_view()");
 
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+}
 
-	MsgPack response;
 
-	write_http_response(status_code, response);
+void
+HttpClient::delete_metadata_view(enum http_method, Command)
+{
+	L_CALL("HttpClient::delete_metadata_view()");
+
+	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
