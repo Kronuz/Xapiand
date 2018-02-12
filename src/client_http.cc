@@ -110,12 +110,6 @@ static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a
 
 static const std::string eol("\r\n");
 
-UUIDGenerator HttpClient::generator;
-
-AcceptLRU HttpClient::accept_sets;
-
-AcceptEncodingLRU HttpClient::accept_encoding_sets;
-
 
 std::string
 HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
@@ -469,6 +463,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					self->content_length = self->header_value;
 					break;
 				case xxh64::hash("accept"): {
+					static AcceptLRU accept_sets;
 					auto value = lower_string(self->header_value);
 					try {
 						self->accept_set = accept_sets.at(value);
@@ -503,6 +498,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 				}
 
 				case xxh64::hash("accept-encoding"): {
+					static AcceptEncodingLRU accept_encoding_sets;
 					auto value = lower_string(self->header_value);
 					try {
 						self->accept_encoding_set = accept_encoding_sets.at(value);
@@ -1124,6 +1120,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	if (method == HTTP_POST) {
+		static UUIDGenerator generator;
 		auto uuid = generator(opts.uuid_compact);
 		doc_id = Unserialise::uuid(uuid.serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
 	} else {

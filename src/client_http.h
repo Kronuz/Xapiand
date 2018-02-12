@@ -173,11 +173,7 @@ class HttpClient : public BaseClient {
 
 	static const http_parser_settings settings;
 
-	static UUIDGenerator generator;
-
-	static AcceptLRU accept_sets;
 	accept_set_t accept_set;
-	static AcceptEncodingLRU accept_encoding_sets;
 	accept_encoding_t accept_encoding_set;
 
 	PathParser path_parser;
