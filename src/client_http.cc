@@ -1116,14 +1116,10 @@ HttpClient::index_document_view(enum http_method method, Command)
 {
 	L_CALL("HttpClient::index_document_view()");
 
-	std::string doc_id;
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	if (method == HTTP_POST) {
-		static UUIDGenerator generator;
-		auto uuid = generator(opts.uuid_compact);
-		doc_id = Unserialise::uuid(uuid.serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
-	} else {
+	std::string doc_id;
+	if (method != HTTP_POST) {
 		doc_id = path_parser.get_id();
 	}
 
@@ -1144,9 +1140,6 @@ HttpClient::index_document_view(enum http_method method, Command)
 	L_TIME("Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	status_code = HTTP_STATUS_OK;
-	if (response.find(ID_FIELD_NAME) == response.end()) {
-		response[ID_FIELD_NAME] = doc_id;
-	}
 	response[RESPONSE_COMMIT] = query_field->commit;
 
 	write_http_response(status_code, response);

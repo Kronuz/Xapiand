@@ -392,10 +392,34 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 {
 	L_CALL("DatabaseHandler::index(%s, %s, <stored_locator>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
+	static UUIDGenerator generator;
+
 	Xapian::Document doc;
 	required_spc_t spc_id;
 	std::string term_id;
 	std::string prefixed_term_id;
+
+	Xapian::docid did = 0;
+	std::string doc_uuid;
+	std::string doc_id;
+	std::string doc_xid;
+	if (document_id.empty()) {
+		doc_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
+		// Add a new empty document to get its document ID:
+		lock_database lk_db(this);
+		try {
+			did = database->add_document(Xapian::Document(), false, false);
+		} catch (const Xapian::DatabaseError&) {
+			// Try to recover from DatabaseError (i.e when the index is manually deleted)
+			lk_db.unlock();
+			recover_index();
+			lk_db.lock();
+			did = database->add_document(Xapian::Document(), false, false);
+		}
+		doc_id = std::to_string(did);
+	} else {
+		doc_xid = document_id;
+	}
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	try {
@@ -409,7 +433,15 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 
 				// Get term ID.
 				spc_id = schema->get_data_id();
-				if (spc_id.get_type() == FieldType::EMPTY) {
+				auto id_type = spc_id.get_type();
+				if (did != 0) {
+					if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
+						doc_xid = doc_uuid;
+					} else {
+						doc_xid = doc_id;
+					}
+				}
+				if (id_type == FieldType::EMPTY) {
 					auto f_it = obj.find(ID_FIELD_NAME);
 					if (f_it != obj.end()) {
 						const auto& field = f_it.value();
@@ -422,17 +454,25 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 									THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 								}
 								spc_id.set_types(type.str());
+								id_type = spc_id.get_type();
+								if (did != 0) {
+									if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
+										doc_xid = doc_uuid;
+									} else {
+										doc_xid = doc_id;
+									}
+								}
 							}
 						}
 					}
 				} else {
-					term_id = Serialise::serialise(spc_id, document_id);
+					term_id = Serialise::serialise(spc_id, doc_xid);
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
 
 				// Add ID.
+				auto id_value = Cast::cast(id_type, doc_xid);
 				auto& id_field = obj[ID_FIELD_NAME];
-				auto id_value = Cast::cast(spc_id.get_type(), document_id);
 				if (id_field.is_map()) {
 					id_field[RESERVED_VALUE] = id_value;
 				} else {
@@ -450,15 +490,23 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 				if (prefixed_term_id.empty()) {
 					// Now the schema is full, get specification id.
 					spc_id = schema->get_data_id();
-					if (spc_id.get_type() == FieldType::EMPTY) {
+					id_type = spc_id.get_type();
+					if (did != 0) {
+						if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
+							doc_xid = doc_uuid;
+						} else {
+							doc_xid = doc_id;
+						}
+					}
+					if (id_type == FieldType::EMPTY) {
 						// Index like a namespace.
-						const auto type_ser = Serialise::guess_serialise(document_id);
+						const auto type_ser = Serialise::guess_serialise(doc_xid);
 						spc_id.set_type(type_ser.first);
 						Schema::set_namespace_spc_id(spc_id);
 						term_id = type_ser.second;
 						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					} else {
-						term_id = Serialise::serialise(spc_id, document_id);
+						term_id = Serialise::serialise(spc_id, doc_xid);
 						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
 				}
@@ -482,15 +530,26 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 #endif
 				lock_database lk_db(this);
 				try {
-					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
-					return std::make_pair(std::move(did), std::move(obj));
-				} catch (const Xapian::DatabaseError&) {
-					// Try to recover from DatabaseError (i.e when the index is manually deleted)
-					lk_db.unlock();
-					recover_index();
-					lk_db.lock();
-					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
-					return std::make_pair(std::move(did), std::move(obj));
+					try {
+						if (did) database->replace_document(did, doc, commit_);
+						else did = database->replace_document_term(prefixed_term_id, doc, commit_);
+						return std::make_pair(std::move(did), std::move(obj));
+					} catch (const Xapian::DatabaseError&) {
+						// Try to recover from DatabaseError (i.e when the index is manually deleted)
+						lk_db.unlock();
+						recover_index();
+						lk_db.lock();
+						if (did) database->replace_document(did, doc, commit_);
+						else did = database->replace_document_term(prefixed_term_id, doc, commit_);
+						return std::make_pair(std::move(did), std::move(obj));
+					}
+				} catch (...) {
+					if (did != 0) {
+						try {
+							database->delete_document(did, false, false);
+						} catch (...) { }
+					}
+					throw;
 				}
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 			}
@@ -526,10 +585,6 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPac
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
-	}
-
-	if (document_id.empty()) {
-		THROW(ClientError, "Document must have an 'id'");
 	}
 
 	MsgPack obj;
