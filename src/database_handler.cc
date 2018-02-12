@@ -560,7 +560,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 			lock_database lk_db(this);
 			doccount = database->db->get_doccount();
 		}
-		if (doccount == 0) {
+		if (doccount == 0 && schema) {
 			auto old_schema = schema->get_const_schema();
 			XapiandManager::manager->schemas.drop(this, old_schema);
 		}
