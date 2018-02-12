@@ -110,8 +110,6 @@ class DatabaseHandler {
 	std::shared_ptr<std::unordered_set<size_t>> context;
 
 	void recover_index();
-	void delete_schema();
-
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
@@ -148,6 +146,7 @@ public:
 	DataType merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
+	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);

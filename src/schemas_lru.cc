@@ -86,7 +86,6 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	const MsgPack* schema_obj = nullptr;
 
 	const auto local_schema_hash = db_handler->endpoints.hash();
-
 	atomic_shared_ptr<const MsgPack>* atom_local_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -255,7 +254,6 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	bool new_metadata = false;
 
 	const auto local_schema_hash = db_handler->endpoints.hash();
-
 	atomic_shared_ptr<const MsgPack>* atom_local_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -390,4 +388,40 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	old_schema = shared_schema_ptr;
 	return false;
+}
+
+
+bool
+SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema)
+{
+	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
+
+	bool failure = false;
+	std::string foreign_path, foreign_id;
+	std::shared_ptr<const MsgPack> schema_ptr;
+	bool new_metadata = false;
+
+	const auto local_schema_hash = db_handler->endpoints.hash();
+	atomic_shared_ptr<const MsgPack>* atom_local_schema;
+	{
+		std::lock_guard<std::mutex> lk(smtx);
+		atom_local_schema = &(*this)[local_schema_hash];
+	}
+	auto local_schema_ptr = atom_local_schema->load();
+
+	std::shared_ptr<const MsgPack> new_schema = nullptr;
+	if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
+		try {
+			db_handler->set_metadata(RESERVED_SCHEMA, "");
+		} catch(...) {
+			// On error, try reverting
+			atom_local_schema->compare_exchange_strong(new_schema, local_schema_ptr);
+			throw;
+		}
+		return true;
+	}
+
+	old_schema = local_schema_ptr;
+	return false;
+
 }

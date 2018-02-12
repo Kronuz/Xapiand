@@ -228,26 +228,6 @@ DatabaseHandler::recover_index()
 
 
 void
-DatabaseHandler::delete_schema()
-{
-	L_CALL("DatabaseHandler::delete_schema()");
-
-	const auto local_schema_hash = endpoints.hash();
-	lock_database lk_db(this);
-	unsigned doccount = database->db->get_doccount();
-
-	if (doccount == 0) {
-		XapiandManager::manager->schemas.erase(local_schema_hash);
-		database->set_metadata(RESERVED_SCHEMA, "");
-		/* Using method set_metadata of database directly instead of DatabaseHandler.set_schema
-		   for avoid double lock or database modification window in the time
-		   to unlock and lock again in DatabaseHandler.set_schema
-		 */
-	}
-}
-
-
-void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 {
 	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()).c_str(), flags_);
@@ -516,7 +496,15 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 			}
 		} while (true);
 	} catch (const MissingTypeError&) { //FIXME: perhaps others erros must be handlend in here
-		delete_schema();
+		unsigned doccount;
+		{
+			lock_database lk_db(this);
+			doccount = database->db->get_doccount();
+		}
+		if (doccount == 0) {
+			auto old_schema = schema->get_const_schema();
+			XapiandManager::manager->schemas.drop(this, old_schema);
+		}
 		if (!prefixed_term_id.empty()) {
 			dec_document_change_cnt(prefixed_term_id);
 		}
@@ -657,6 +645,24 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 			L_INDEX("Schema to write: %s (local)", repr(schema->to_string()).c_str());
 		} while (!update_schema(schema_begins));
 	}
+}
+
+
+void
+DatabaseHandler::delete_schema()
+{
+	L_CALL("DatabaseHandler::write_schema(%s)", repr(obj.to_string()).c_str());
+
+	auto schema_begins = std::chrono::system_clock::now();
+	bool done;
+	do {
+		schema = get_schema();
+		auto old_schema = schema->get_const_schema();
+		done = XapiandManager::manager->schemas.drop(this, old_schema);
+		L_INDEX("Schema to delete: %s", repr(schema->to_string()).c_str());
+	} while (!done);
+	auto schema_ends = std::chrono::system_clock::now();
+	Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 }
 
 

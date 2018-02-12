@@ -51,4 +51,5 @@ public:
 
 	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj, bool write);
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
+	bool drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema);
 };

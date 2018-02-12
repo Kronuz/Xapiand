@@ -1107,7 +1107,7 @@ HttpClient::delete_schema_view(enum http_method method, Command)
 	operation_begins = std::chrono::system_clock::now();
 
 	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	db_handler.set_metadata(RESERVED_SCHEMA, "");
+	db_handler.delete_schema();
 
 	operation_ends = std::chrono::system_clock::now();
 
