@@ -2402,13 +2402,13 @@ HttpClient::clean_http_request()
 	if (parser.http_errno) {
 		if (!response_logged.exchange(true)) L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
-		constexpr auto white = WHITE;
-		auto color = white.c_str();
+		constexpr auto red = RED;
+		auto color = red.c_str();
 		int priority = LOG_DEBUG;
 
 		if ((int)response_status >= 200 && (int)response_status <= 299) {
-			constexpr auto grey = GREY;
-			color = grey.c_str();
+			constexpr auto white = WHITE;
+			color = white.c_str();
 		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 			constexpr auto steel_blue = STEEL_BLUE;
 			color = steel_blue.c_str();
