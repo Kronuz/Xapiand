@@ -190,10 +190,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			std::lock_guard<std::mutex> lk(smtx);
 			atom_shared_schema = &(*this)[foreign_schema_hash];
 		}
-		auto shared_schema_ptr = atom_shared_schema->load();
-		if (shared_schema_ptr) {
+		auto foreign_schema_ptr = atom_shared_schema->load();
+		if (foreign_schema_ptr) {
 			// found in cache
-			schema_ptr = shared_schema_ptr;
+			schema_ptr = foreign_schema_ptr;
 		} else {
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(foreign_path, foreign_id, db_handler->context));
@@ -212,8 +212,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			} catch (const DocNotFoundError&) {
 				schema_ptr = Schema::get_initial_schema();
 			}
-			if (!atom_shared_schema->compare_exchange_strong(shared_schema_ptr, schema_ptr)) {
-				schema_ptr = shared_schema_ptr;
+			if (!atom_shared_schema->compare_exchange_strong(foreign_schema_ptr, schema_ptr)) {
+				schema_ptr = foreign_schema_ptr;
 			}
 		}
 	}
@@ -281,6 +281,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				schema_ptr = local_schema_ptr;
 			}
 
+			old_schema = schema_ptr;  // renew old_schema since lru didn't already have it
+
 			if (new_metadata) {
 				try {
 					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
@@ -309,7 +311,14 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
 		if (foreign_path.empty()) {
 			// LOCAL new schema *and* LOCAL metadata schema.
-			if (schema_ptr == new_schema || atom_local_schema->compare_exchange_strong(schema_ptr, new_schema)) {
+			if (old_schema != schema_ptr) {
+				old_schema = schema_ptr;
+				return false;
+			}
+
+			if (schema_ptr == new_schema) {
+				return true;
+			} else if (atom_local_schema->compare_exchange_strong(schema_ptr, new_schema)) {
 				if (*schema_ptr != *new_schema) {
 					try {
 						db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
@@ -329,10 +338,25 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				old_schema = schema_ptr;
 				return false;
 			}
+
 			failure = true;
 		}
 	} else {
 		// FOREIGN new schema, write the foreign link to metadata:
+		if (old_schema != local_schema_ptr) {
+			const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+			atomic_shared_ptr<const MsgPack>* atom_shared_schema;
+			{
+				std::lock_guard<std::mutex> lk(smtx);
+				atom_shared_schema = &(*this)[foreign_schema_hash];
+			}
+			auto foreign_schema_ptr = atom_shared_schema->load();
+			if (old_schema != foreign_schema_ptr) {
+				old_schema = foreign_schema_ptr;
+				return false;
+			}
+		}
+
 		if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
 			if (*local_schema_ptr != *new_schema) {
 				try {
@@ -353,6 +377,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			old_schema = local_schema_ptr;
 			return false;
 		}
+
 		failure = true;
 	}
 
@@ -364,29 +389,37 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		std::lock_guard<std::mutex> lk(smtx);
 		atom_shared_schema = &(*this)[foreign_schema_hash];
 	}
-	auto shared_schema_ptr = atom_shared_schema->load();
-
-	if (!failure && atom_shared_schema->compare_exchange_strong(shared_schema_ptr, new_schema)) {
-		if (*shared_schema_ptr != *new_schema) {
-			try {
-				DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
-				if (_db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
-					_db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
-				}
-				// FIXME: Process the foreign_path's subfields instead of ignoring.
-				auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-				_db_handler.index(foreign_id.substr(0, needle), true, *new_schema, false, msgpack_type);
-			} catch(...) {
-				// On error, try reverting
-				std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
-				atom_shared_schema->compare_exchange_strong(aux_new_schema, shared_schema_ptr);
-				throw;
-			}
-		}
-		return true;
+	auto foreign_schema_ptr = atom_shared_schema->load();
+	if (old_schema != foreign_schema_ptr) {
+		old_schema = foreign_schema_ptr;
+		return false;
 	}
 
-	old_schema = shared_schema_ptr;
+	if (!failure) {
+		if (foreign_schema_ptr == new_schema) {
+			return true;
+		} else if (atom_shared_schema->compare_exchange_strong(foreign_schema_ptr, new_schema)) {
+			if (*foreign_schema_ptr != *new_schema) {
+				try {
+					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
+					if (_db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
+						_db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+					}
+					// FIXME: Process the foreign_path's subfields instead of ignoring.
+					auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+					_db_handler.index(foreign_id.substr(0, needle), true, *new_schema, false, msgpack_type);
+				} catch(...) {
+					// On error, try reverting
+					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
+					atom_shared_schema->compare_exchange_strong(aux_new_schema, foreign_schema_ptr);
+					throw;
+				}
+			}
+			return true;
+		}
+	}
+
+	old_schema = foreign_schema_ptr;
 	return false;
 }
 
@@ -396,10 +429,8 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 {
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
-	bool failure = false;
 	std::string foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
-	bool new_metadata = false;
 
 	const auto local_schema_hash = db_handler->endpoints.hash();
 	atomic_shared_ptr<const MsgPack>* atom_local_schema;
@@ -408,9 +439,30 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		atom_local_schema = &(*this)[local_schema_hash];
 	}
 	auto local_schema_ptr = atom_local_schema->load();
+	if (old_schema != local_schema_ptr) {
+		validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+		if (foreign_path.empty()) {
+			// it faield, but metadata continues to be local
+			old_schema = local_schema_ptr;
+			return false;
+		}
+		const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
+		{
+			std::lock_guard<std::mutex> lk(smtx);
+			atom_shared_schema = &(*this)[foreign_schema_hash];
+		}
+		auto foreign_schema_ptr = atom_shared_schema->load();
+		if (old_schema != foreign_schema_ptr) {
+			old_schema = foreign_schema_ptr;
+			return false;
+		}
+	}
 
 	std::shared_ptr<const MsgPack> new_schema = nullptr;
-	if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
+	if (local_schema_ptr == new_schema) {
+		return true;
+	} else if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
 		try {
 			db_handler->set_metadata(RESERVED_SCHEMA, "");
 		} catch(...) {
@@ -421,7 +473,21 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		return true;
 	}
 
-	old_schema = local_schema_ptr;
-	return false;
+	validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+	if (foreign_path.empty()) {
+		// it faield, but metadata continues to be local
+		old_schema = local_schema_ptr;
+		return false;
+	}
 
+	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+	atomic_shared_ptr<const MsgPack>* atom_shared_schema;
+	{
+		std::lock_guard<std::mutex> lk(smtx);
+		atom_shared_schema = &(*this)[foreign_schema_hash];
+	}
+	auto foreign_schema_ptr = atom_shared_schema->load();
+
+	old_schema = foreign_schema_ptr;
+	return false;
 }
