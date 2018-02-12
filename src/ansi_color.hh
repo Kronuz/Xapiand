@@ -120,24 +120,22 @@ class ansi_color {
 	}
 
 public:
-	static auto& col() {
+	static constexpr auto col() {
 		constexpr auto col = (
 			trueColor() +
 			standard256() +
 			standard16()
 		);
-		static std::string _ = col;
-		return _;
+		return col;
 	}
 
-	static auto& no_col() {
+	static constexpr auto no_col() {
 		constexpr auto no_col = (
 			noColor() +
 			noColor() +
 			noColor()
 		);
-		static std::string _ = no_col;
-		return _;
+		return no_col;
 	}
 };
 

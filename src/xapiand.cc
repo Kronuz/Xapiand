@@ -916,7 +916,7 @@ void banner() {
 #endif
 	});
 
-	L_INFO(
+	constexpr auto banner = (
 		"\n\n" +
 		rgb(255, 255, 255) + "              __\n" +
 		rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
@@ -928,7 +928,10 @@ void banner() {
 		rgb(0, 128, 0) +
 		"%s" + "\n" +
 		rgb(0, 96, 0) +
-		"%s" + "\n\n",
+		"%s" + "\n\n"
+	);
+	L_INFO(
+		banner,
 		center_string(Package::HASH, 8).c_str(),
 		center_string(Package::FULLVERSION, 25).c_str(),
 		center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
