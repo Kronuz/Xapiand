@@ -231,7 +231,8 @@ StreamLogger::log(int priority, const std::string& str, bool with_priority, bool
 void
 StderrLogger::log(int priority, const std::string& str, bool with_priority, bool with_endl)
 {
-	std::cerr << Logging::colorized((with_priority ? priorities[priority] : "") + str, (isatty(fileno(stderr)) || Logging::colors) && !Logging::no_colors);
+	static const bool is_tty = isatty(fileno(stderr));
+	std::cerr << Logging::colorized((with_priority ? priorities[priority] : "") + str, (is_tty || Logging::colors) && !Logging::no_colors);
 	if (with_endl) {
 		std::cerr << std::endl;
 	}
