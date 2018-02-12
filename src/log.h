@@ -30,7 +30,7 @@
 #include "colors.h"
 
 #define LOG_COL NO_COL
-#define DEBUG_COL rgb(132,129,122)
+#define DEBUG_COL rgb(105, 105, 105)
 #define INFO_COL rgb(63,119,179)
 #define NOTICE_COL rgb(116,185,255)
 #define WARNING_COL rgb(255,177,66)

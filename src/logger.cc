@@ -377,7 +377,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 	if (info && priority <= LOG_DEBUG) {
 		auto iso8601 = "[" + Datetime::iso8601(std::chrono::system_clock::now(), false, ' ') + "]";
 		auto tid = " (" + get_thread_name() + ")";
-		result = DIM_GREY.c_str() + iso8601 + tid;
+		result = DEBUG_COL.c_str() + iso8601 + tid;
 		result += " ";
 
 #ifdef LOG_LOCATION
@@ -396,7 +396,7 @@ Logging::format_string(bool info, bool stacked, int priority, const std::string&
 	result += prefix + msg + suffix;
 
 	if (!exc.empty()) {
-		result += DIM_GREY.c_str() + exc + NO_COL.c_str();
+		result += DEBUG_COL.c_str() + exc + NO_COL.c_str();
 	}
 
 	return result;
