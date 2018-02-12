@@ -1,0 +1,106 @@
+curl -XPUT "http://localhost:8880/test/doc?commit" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
+{
+	"_id": {
+		"_type": "term",
+	},
+	"ident": {
+		"_type": "uuid",
+		"_index": "global_terms",
+		"_value": "~notmet",
+	},
+}'
+curl -XGET "http://localhost:8880/test/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/:info/doc" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/:search?q=~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+
+
+
+curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_schema": {
+		"_type": "foreign/object",
+		"_endpoint": "test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000",
+		"description": "Descripcion"
+	},
+	"_id": {
+		"_type": "uuid",
+	},
+	"campo": {
+		"_type": "string",
+		"_value": "valor"
+	},
+	"roles": {
+		"_type": "array/term",
+		"_value": [
+			null,  // <- there was an error when extracting _value from here
+		],
+	},
+}'
+
+
+
+curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_id": {
+		"_type": "uuid",
+	},
+	"campo": {
+		"_type": "string",
+	}
+}'
+
+
+curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_id": {
+		"_type": "uuid",
+	},
+	"campo": {
+		"_type": "string",
+		"_value": null,
+	}
+}'
+
+
+curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_id": {
+		"_type": "uuid",
+	},
+	"campo": {
+		"otro": {
+			"_type": "string",
+		}
+	}
+}'
+
+
+curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_id": {
+		"_type": "uuid",
+	},
+	"campo": {
+		"otro": {
+			"_type": "string",
+			"_value": null,
+		}
+	}
+}'
+
+
+
+curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_recurse": false,
+	"_id": {
+		"_type": "uuid",
+	},
+	"#comment": "This comment is ignored",
+	"schema": {
+		"_type": "object",
+	}
+}'
+curl -XGET "http://localhost:8880/test/A/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/A/::1" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
