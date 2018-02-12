@@ -37,7 +37,7 @@ constexpr size_t MAX_SCHEMA_RECURSION = 10;
 class DatabaseHandler;
 
 
-class SchemasLRU : public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
+class SchemasLRU : lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
 	template <typename ErrorType>
 	std::pair<const MsgPack*, const MsgPack*> validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id);
 
