@@ -29,15 +29,15 @@
 #include "logger_fwd.h"
 #include "colors.h"
 
-#define LOG_COL WHITE
-#define DEBUG_COL NO_COL
-#define INFO_COL STEEL_BLUE
-#define NOTICE_COL LIGHT_SKY_BLUE
-#define WARNING_COL GOLD
-#define ERR_COL BROWN
-#define CRIT_COL LIGHT_RED
-#define ALERT_COL LIGHT_RED
-#define EMERG_COL LIGHT_RED
+#define LOG_COL NO_COL
+#define DEBUG_COL rgb(132,129,122)
+#define INFO_COL rgb(63,119,179)
+#define NOTICE_COL rgb(116,185,255)
+#define WARNING_COL rgb(255,177,66)
+#define ERR_COL rgb(179,57,57)
+#define CRIT_COL rgb(238,82,83)
+#define ALERT_COL rgb(238,82,83)
+#define EMERG_COL rgb(238,82,83)
 
 #define _ L_NOTHING
 
