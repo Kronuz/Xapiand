@@ -236,6 +236,7 @@ class HttpClient : public BaseClient {
 	void write_meta_view(enum http_method method, Command cmd);
 	void update_meta_view(enum http_method method, Command cmd);
 	void delete_document_view(enum http_method method, Command cmd);
+	void delete_schema_view(enum http_method method, Command cmd);
 	void index_document_view(enum http_method method, Command cmd);
 	void write_schema_view(enum http_method method, Command cmd);
 	void document_info_view(enum http_method method, Command cmd);

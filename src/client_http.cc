@@ -935,6 +935,10 @@ HttpClient::_delete(enum http_method method)
 		case Command::NO_CMD_ID:
 			delete_document_view(method, cmd);
 			break;
+		case Command::CMD_SCHEMA:
+			path_parser.skip_id();  // Command has no ID
+			delete_schema_view(method, cmd);
+			break;
 		default:
 			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
@@ -1085,6 +1089,25 @@ HttpClient::delete_document_view(enum http_method method, Command)
 	L_TIME("Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	write_http_response(status_code, response);
+}
+
+
+void
+HttpClient::delete_schema_view(enum http_method method, Command)
+{
+	L_CALL("HttpClient::delete_schema_view()");
+
+	endpoints_maker(2s);
+	query_field_maker(QUERY_FIELD_COMMIT);
+
+	operation_begins = std::chrono::system_clock::now();
+
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	db_handler.set_metadata(RESERVED_SCHEMA, "");
+
+	operation_ends = std::chrono::system_clock::now();
+
+	write_http_response(HTTP_STATUS_NO_CONTENT);
 }
 
 
