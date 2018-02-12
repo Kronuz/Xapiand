@@ -3,7 +3,7 @@
  * ~~~~~~~~~~~~~~~~
  *
  * :author: Dubalu Framework Team. See AUTHORS.
- * :copyright: Copyright (c) 2017, deipi.com LLC. All Rights Reserved.
+ * :copyright: Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
  * :license: See LICENSE for more details.
  *
  */
