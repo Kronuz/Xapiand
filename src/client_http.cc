@@ -2240,59 +2240,92 @@ HttpClient::log_request()
 {
 	std::string request_prefix = " 🌎  ";
 
-	auto request_headers_color = NO_COL.c_str();
-	auto request_head_color = NO_COL.c_str();
-	auto request_body_color = NO_COL.c_str();
+	constexpr auto no_col = NO_COL;
+	auto request_headers_color = no_col.c_str();
+	auto request_head_color = no_col.c_str();
+	auto request_body_color = no_col.c_str();
 
 	switch (HTTP_PARSER_METHOD(&parser)) {
-		case HTTP_OPTIONS:
+		case HTTP_OPTIONS: {
 			// rgb(13, 90, 167)
-			request_headers_color = rgba(30, 77, 124, 0.6).c_str();
-			request_head_color = brgb(30, 77, 124).c_str();
-			request_body_color = rgb(30, 77, 124).c_str();
+			constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(30, 77, 124);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(30, 77, 124);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_HEAD:
+		}
+		case HTTP_HEAD: {
 			// rgb(144, 18, 254)
-			request_headers_color = rgba(100, 64, 131, 0.6).c_str();
-			request_head_color = brgb(100, 64, 131).c_str();
-			request_body_color = rgb(100, 64, 131).c_str();
+			constexpr auto _request_headers_color = rgba(100, 64, 131, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(100, 64, 131);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(100, 64, 131);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_GET:
+		}
+		case HTTP_GET: {
 			// rgb(101, 177, 251)
-			request_headers_color = rgba(34, 113, 191, 0.6).c_str();
-			request_head_color = brgb(34, 113, 191).c_str();
-			request_body_color = rgb(34, 113, 191).c_str();
+			constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(34, 113, 191);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(34, 113, 191);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_POST:
+		}
+		case HTTP_POST: {
 			// rgb(80, 203, 146)
-			request_headers_color = rgba(55, 100, 79, 0.6).c_str();
-			request_head_color = brgb(55, 100, 79).c_str();
-			request_body_color = rgb(55, 100, 79).c_str();
+			constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(55, 100, 79);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(55, 100, 79);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_PATCH:
+		}
+		case HTTP_PATCH: {
 			// rgb(88, 226, 194)
-			request_headers_color = rgba(51, 136, 116, 0.6).c_str();
-			request_head_color = brgb(51, 136, 116).c_str();
-			request_body_color = rgb(51, 136, 116).c_str();
+			constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_MERGE:
+		}
+		case HTTP_MERGE: {
 			// rgb(88, 226, 194)
-			request_headers_color = rgba(51, 136, 116, 0.6).c_str();
-			request_head_color = brgb(51, 136, 116).c_str();
-			request_body_color = rgb(51, 136, 116).c_str();
+			constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_PUT:
+		}
+		case HTTP_PUT: {
 			// rgb(250, 160, 63)
-			request_headers_color = rgba(158, 95, 28, 0.6).c_str();
-			request_head_color = brgb(158, 95, 28).c_str();
-			request_body_color = rgb(158, 95, 28).c_str();
+			constexpr auto _request_headers_color = rgba(158, 95, 28, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(158, 95, 28);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(158, 95, 28);
+			request_body_color = _request_body_color.c_str();
 			break;
-		case HTTP_DELETE:
+		}
+		case HTTP_DELETE: {
 			// rgb(246, 64, 68)
-			request_headers_color = rgba(151, 31, 34, 0.6).c_str();
-			request_head_color = brgb(151, 31, 34).c_str();
-			request_body_color = rgb(151, 31, 34).c_str();
+			constexpr auto _request_headers_color = rgba(151, 31, 34, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(151, 31, 34);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(151, 31, 34);
+			request_body_color = _request_body_color.c_str();
 			break;
+		}
 		default:
 			break;
 	};
@@ -2306,34 +2339,51 @@ void
 HttpClient::log_response()
 {
 	std::string response_prefix = " 💊  ";
-	auto response_headers_color = NO_COL.c_str();
-	auto response_head_color = NO_COL.c_str();
-	auto response_body_color = NO_COL.c_str();
+
+	constexpr auto no_col = NO_COL;
+	auto response_headers_color = no_col.c_str();
+	auto response_head_color = no_col.c_str();
+	auto response_body_color = no_col.c_str();
 
 	if ((int)response_status >= 200 && (int)response_status <= 299) {
-		response_headers_color = rgba(68, 136, 68, 0.6).c_str();
-		response_head_color = brgb(68, 136, 68).c_str();
-		response_body_color = rgb(68, 136, 68).c_str();
+		constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		constexpr auto _response_head_color = brgb(68, 136, 68);
+		response_head_color = _response_head_color.c_str();
+		constexpr auto _response_body_color = rgb(68, 136, 68);
+		response_body_color = _response_body_color.c_str();
 	} else if ((int)response_status >= 300 && (int)response_status <= 399) {
 		response_prefix = " 💫  ";
-		response_headers_color = rgba(68, 136, 120, 0.6).c_str();
-		response_head_color = brgb(68, 136, 120).c_str();
-		response_body_color = rgb(68, 136, 120).c_str();
+		constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		constexpr auto _response_head_color = brgb(68, 136, 120);
+		response_head_color = _response_head_color.c_str();
+		constexpr auto _response_body_color = rgb(68, 136, 120);
+		response_body_color = _response_body_color.c_str();
 	} else if ((int)response_status == 404) {
 		response_prefix = " 🕸  ";
-		response_headers_color = rgba(116, 100, 77, 0.6).c_str();
-		response_head_color = brgb(116, 100, 77).c_str();
-		response_body_color = rgb(116, 100, 77).c_str();
+		constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		constexpr auto _response_head_color = brgb(116, 100, 77);
+		response_head_color = _response_head_color.c_str();
+		constexpr auto _response_body_color = rgb(116, 100, 77);
+		response_body_color = _response_body_color.c_str();
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 		response_prefix = " 💥  ";
-		response_headers_color = rgba(183, 70, 17, 0.6).c_str();
-		response_head_color = brgb(183, 70, 17).c_str();
-		response_body_color = rgb(183, 70, 17).c_str();
+		constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		constexpr auto _response_head_color = brgb(183, 70, 17);
+		response_head_color = _response_head_color.c_str();
+		constexpr auto _response_body_color = rgb(183, 70, 17);
+		response_body_color = _response_body_color.c_str();
 	} else if ((int)response_status >= 500 && (int)response_status <= 599) {
 		response_prefix = " 🔥  ";
-		response_headers_color = rgba(190, 30, 10, 0.6).c_str();
-		response_head_color = brgb(190, 30, 10).c_str();
-		response_body_color = rgb(190, 30, 10).c_str();
+		constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		constexpr auto _response_head_color = brgb(190, 30, 10);
+		response_head_color = _response_head_color.c_str();
+		constexpr auto _response_body_color = rgb(190, 30, 10);
+		response_body_color = _response_body_color.c_str();
 	}
 
 	auto response = response_head_color + response_head + "\n" + response_headers_color + response_headers + response_body_color + response_body;
@@ -2352,18 +2402,23 @@ HttpClient::clean_http_request()
 	if (parser.http_errno) {
 		if (!response_logged.exchange(true)) L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&parser)), http_errno_description(HTTP_PARSER_ERRNO(&parser)));
 	} else {
+		constexpr auto white = WHITE;
+		auto color = white.c_str();
 		int priority = LOG_DEBUG;
-		auto color = WHITE.c_str();
 
 		if ((int)response_status >= 200 && (int)response_status <= 299) {
-			color = GREY.c_str();
+			constexpr auto grey = GREY;
+			color = grey.c_str();
 		} else if ((int)response_status >= 300 && (int)response_status <= 399) {
-			color = STEEL_BLUE.c_str();
+			constexpr auto steel_blue = STEEL_BLUE;
+			color = steel_blue.c_str();
 		} else if ((int)response_status >= 400 && (int)response_status <= 499) {
-			color = SADDLE_BROWN.c_str();
+			constexpr auto saddle_brown = SADDLE_BROWN;
+			color = saddle_brown.c_str();
 			priority = LOG_INFO;
 		} else if ((int)response_status >= 500 && (int)response_status <= 599) {
-			color = LIGHT_PURPLE.c_str();
+			constexpr auto light_purple = LIGHT_PURPLE;
+			color = light_purple.c_str();
 			priority = LOG_ERR;
 		}
 		if (!response_logged.exchange(true)) {

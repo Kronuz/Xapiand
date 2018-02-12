@@ -104,14 +104,22 @@ struct StashContext {
 
 	const char* _col() const noexcept {
 		switch (op) {
-			case Operation::walk:
-				return NO_COL.c_str();
-			case Operation::peep:
-				return DIM_GREY.c_str();
-			case Operation::clean:
-				return PURPLE.c_str();
-			default:
-				return NO_COL.c_str();
+			case Operation::walk: {
+				constexpr auto no_col = NO_COL;
+				return no_col.c_str();
+			}
+			case Operation::peep: {
+				constexpr auto dim_grey = DIM_GREY;
+				return dim_grey.c_str();
+			}
+			case Operation::clean: {
+				constexpr auto purple = PURPLE;
+				return purple.c_str();
+			}
+			default: {
+				constexpr auto no_col = NO_COL;
+				return no_col.c_str();
+			}
 		}
 	}
 };
