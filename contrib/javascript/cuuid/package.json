@@ -1,0 +1,22 @@
+{
+    "name": "uuidfield",
+    "version": "1.0.0",
+    "description": "Dubalu generate and serialise uuid",
+    "author": "Dubalu",
+    "license": "MIT",
+    "main": "src/index.js",
+    "repository": {
+    	"type": "git",
+    	"url": "''"
+  	},
+  	"scripts": {
+    	"test": "mocha test/test.js"
+  	},
+  	"dependencies": {
+	    "mersenne-twister": "^1.1.0",
+	    "uuid": "^3.1.0"
+  	},
+  	"devDependencies": {
+    	"mocha": "3.1.2"
+  	}
+}
