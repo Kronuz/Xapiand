@@ -221,10 +221,17 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		o.erase(RESERVED_ENDPOINT);
-		o[RESERVED_TYPE] = "object";
+		auto sep_types = required_spc_t::get_types(o[RESERVED_TYPE].str());
+		sep_types[SPC_FOREIGN_TYPE] = FieldType::EMPTY;
+		o[RESERVED_TYPE] = required_spc_t::get_str_type(sep_types);
 		o[RESERVED_RECURSE] = false;
-		o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 		if (o.find(ID_FIELD_NAME) == o.end()) {
+			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
+		}
+		if (o.find(ID_FIELD_NAME) == o.end()) {
+			if (opts.strict) {
+				THROW(MissingTypeError, "Type of field '%s' for the foreign schema is missing", ID_FIELD_NAME);
+			}
 			o[ID_FIELD_NAME][RESERVED_TYPE] = "term";
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
