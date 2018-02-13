@@ -88,7 +88,7 @@ const toType = function(obj) {
   return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
 }
 
-const _fnv_1a = num => {
+const fnv_1a = num => {
     // calculate FNV-1a hash fnv = 0xcbf29ce484222325
     let fnv = [0xcbf29ce4, 0x84222325];
     while (num[1] || num[0]) {
@@ -240,9 +240,9 @@ class UUID {
         }
 
         let seed = [0, 0];
-        seed = xor64(seed, _fnv_1a(time));
-        seed = xor64(seed, _fnv_1a(clock));
-        seed = xor64(seed, _fnv_1a(salt));
+        seed = xor64(seed, fnv_1a(time));
+        seed = xor64(seed, fnv_1a(clock));
+        seed = xor64(seed, fnv_1a(salt));
         const g = new MersenneTwister(seed[1]);
         let node = [];
         node[0] = g.random_int();
@@ -272,7 +272,7 @@ class UUID {
             if (s[1] || s[0]) {
                 salt = and64(node, [0x0, SALT_MASK]);
             } else {
-                salt = _fnv_1a(node);
+                salt = fnv_1a(node);
                 salt = xor_fold(salt, SALT_BITS);
                 salt = and64(salt, [0x0, SALT_MASK]);
             }
