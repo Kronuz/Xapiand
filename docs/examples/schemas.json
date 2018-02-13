@@ -333,6 +333,35 @@ curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-fo
 
 
 
+curl -XPOST "http://localhost:8880/test/schemas/uuid_field" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_schema": {
+		"schema": {
+			"_id": {
+				"_type": "uuid",
+			},
+			"<uuid_field>": {
+				"meta": {
+					"_recurse": false,
+				},
+				"roles": {
+					"_type": "array/term",
+				}
+			},
+		}
+	},
+	"~3pZyPcFqGq": {
+		"meta": {
+			"scope": "read write"
+		},
+		"roles": [
+			"myself"
+		]
+	},
+}'
+curl -XGET "http://localhost:8880/test/schemas/uuid_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/schemas/uuid_field/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+
 //////
 
 
