@@ -228,11 +228,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		if (o.find(ID_FIELD_NAME) == o.end()) {
 			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 		}
-		if (o.find(ID_FIELD_NAME) == o.end()) {
-			if (opts.strict) {
-				THROW(MissingTypeError, "Type of field '%s' for the foreign schema is missing", ID_FIELD_NAME);
-			}
-			o[ID_FIELD_NAME][RESERVED_TYPE] = "term";
+		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
+			THROW(MissingTypeError, "Type of field '%s' for the foreign schema is missing", ID_FIELD_NAME);
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
 			o[SCHEMA_FIELD_NAME] = MsgPack(MsgPack::Type::MAP);
