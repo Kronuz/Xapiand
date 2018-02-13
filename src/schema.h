@@ -408,7 +408,6 @@ struct index_spc_t {
 struct specification_t : required_spc_t {
 	// Reserved values.
 	prefix_t local_prefix;
-	std::unordered_set<std::string> seen_fields;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
@@ -677,7 +676,7 @@ class Schema {
 	/*
 	 * Detect if field_name is dynamic type.
 	 */
-	std::string detect_dynamic(const std::string& field_name);
+	void detect_dynamic(const std::string& field_name);
 
 	/*
 	 * Update specification using object's properties.

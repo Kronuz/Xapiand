@@ -144,6 +144,10 @@ class Split {
 		explicit operator bool() const noexcept {
 			return start != std::string::npos;
 		}
+
+		bool last() const noexcept {
+			return end == std::string::npos;
+		}
 	};
 
 public:
