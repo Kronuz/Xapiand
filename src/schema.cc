@@ -1736,9 +1736,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields, size_t pos)
 {
-	L_CALL("Schema::index_subproperties(%s, %s, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
+	L_CALL("Schema::index_subproperties(%s, %s, %s, %s, <fields>, %zu)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str(), pos);
 
 	Split<char> field_names(name, DB_OFFSPRING_UNION);
 
@@ -1763,7 +1763,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-			if (!inserted.second) {
+			if (!inserted.second && pos == 0) {
 				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			data = &inserted.first.value();
@@ -1822,7 +1822,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
-						if (!inserted.second) {
+						if (!inserted.second && pos == 0) {
 							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 						}
 						data = &inserted.first.value();
@@ -1842,7 +1842,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			update_prefixes();
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
-				if (!inserted.second) {
+				if (!inserted.second && pos == 0) {
 					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				data = &inserted.first.value();
@@ -1855,7 +1855,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					update_prefixes();
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
-						if (!inserted.second) {
+						if (!inserted.second && pos == 0) {
 							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 						}
 						data = &inserted.first.value();
@@ -1868,7 +1868,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			add_field(mut_properties, object, fields);
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-				if (!inserted.second) {
+				if (!inserted.second && pos == 0) {
 					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				data = &inserted.first.value();
@@ -1882,9 +1882,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, size_t pos)
 {
-	L_CALL("Schema::index_subproperties(%s, %s, %s)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str());
+	L_CALL("Schema::index_subproperties(%s, %s, %s, %zu)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), pos);
 
 	Split<char> field_names(name, DB_OFFSPRING_UNION);
 
@@ -1908,7 +1908,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-			if (!inserted.second) {
+			if (!inserted.second && pos == 0) {
 				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			data = &inserted.first.value();
@@ -1968,7 +1968,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					add_field(mut_properties);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
-						if (!inserted.second) {
+						if (!inserted.second && pos == 0) {
 							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 						}
 						data = &inserted.first.value();
@@ -1987,7 +1987,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			update_prefixes();
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
-				if (!inserted.second) {
+				if (!inserted.second && pos == 0) {
 					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				data = &inserted.first.value();
@@ -2000,7 +2000,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					update_prefixes();
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
-						if (!inserted.second) {
+						if (!inserted.second && pos == 0) {
 							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 						}
 						data = &inserted.first.value();
@@ -2013,7 +2013,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			add_field(mut_properties);
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-				if (!inserted.second) {
+				if (!inserted.second && pos == 0) {
 					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				data = &inserted.first.value();
@@ -2053,7 +2053,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			FieldVector fields;
-			properties = &index_subproperties(properties, data, name, object, fields);
+			properties = &index_subproperties(properties, data, name, object, fields, 0);
 			index_item_value(properties, doc, data, fields);
 			if (specification.flags.store) {
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
@@ -2074,7 +2074,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name);
+			index_subproperties(properties, data, name, 0);
 			index_partial_paths(doc);
 			if (specification.flags.store) {
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
@@ -2089,7 +2089,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name);
+			index_subproperties(properties, data, name, 0);
 			index_item_value(doc, *data, object, 0);
 			if (specification.flags.store) {
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
@@ -2124,7 +2124,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				FieldVector fields;
-				properties = &index_subproperties(properties, data, name, item, fields);
+				properties = &index_subproperties(properties, data, name, item, fields, pos);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 				index_item_value(properties, doc, data_pos, fields);
 				specification = spc_start;
@@ -2134,7 +2134,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::ARRAY: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name);
+				index_subproperties(properties, data, name, pos);
 				if (specification.flags.store) {
 					auto &data_pos = (*data)[pos];
 					index_item_value(doc, data_pos, item);
@@ -2149,7 +2149,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::UNDEFINED: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name);
+				index_subproperties(properties, data, name, pos);
 				index_partial_paths(doc);
 				if (specification.flags.store) {
 					(*data)[pos] = item;
@@ -2161,7 +2161,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			default: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name);
+				index_subproperties(properties, data, name, pos);
 				if (specification.flags.store) {
 					auto &data_pos = (*data)[pos];
 					index_item_value(doc, data_pos, item, pos);
