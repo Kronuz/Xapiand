@@ -1,0 +1,18 @@
+curl -XPOST "http://localhost:8880/test/schemas/duplicated_uuid_field" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"_schema": {
+		"schema": {
+			"_id": {
+				"_type": "uuid",
+			},
+			"<uuid_field>": {
+				"_type": "term",
+			},
+		}
+	},
+	"~3pZyPcFqGq": "A",
+	"00000000-0000-1000-8000-c97562616c75": "B",
+	"urn:uuid:00000000-0000-1000-8000-c97562616c75": "C",
+	"{00000000-0000-1000-8000-c97562616c75}": "D",
+}'
+curl -XGET "http://localhost:8880/test/schemas/duplicated_uuid_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
