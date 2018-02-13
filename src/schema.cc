@@ -1752,7 +1752,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			detect_dynamic(field_name);
 			update_prefixes();
 			if (specification.flags.store) {
-				data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 		}
 		const auto& field_name = *it;
@@ -1761,7 +1765,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
-			data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+			if (!inserted.second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			data = &inserted.first.value();
 		}
 	} else {
 		for (; !it.last(); ++it) {
@@ -1773,7 +1781,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
 				if (specification.flags.store) {
-					data = &(*data)[field_name];
+					auto inserted = data->insert(field_name);
+					if (!inserted.second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+					}
+					data = &inserted.first.value();
 				}
 			} else {
 				detect_dynamic(field_name);
@@ -1781,7 +1793,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						if (specification.flags.store) {
-							data = &(*data)[normalize_uuid(field_name)];
+							auto inserted = data->insert(normalize_uuid(field_name));
+							if (!inserted.second) {
+								THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+							}
+							data = &inserted.first.value();
 						}
 						continue;
 					}
@@ -1790,7 +1806,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 				add_field(mut_properties);
 				if (specification.flags.store) {
-					data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+					auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+					if (!inserted.second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+					}
+					data = &inserted.first.value();
 				}
 
 				for (++it; !it.last(); ++it) {
@@ -1801,7 +1821,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
 						if (specification.flags.store) {
-							data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+							auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
+							if (!inserted.second) {
+								THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+							}
+							data = &inserted.first.value();
 						}
 					}
 				}
@@ -1812,7 +1836,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
-						data = &(*data)[specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name];
+						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
+						if (!inserted.second) {
+							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+						}
+						data = &inserted.first.value();
 					}
 				}
 				return *mut_properties;
@@ -1828,7 +1856,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
-				data = &(*data)[field_name];
+				auto inserted = data->insert(field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 		} else {
 			detect_dynamic(field_name);
@@ -1837,7 +1869,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					dispatch_process_properties(object, fields);
 					update_prefixes();
 					if (specification.flags.store) {
-						data = &(*data)[normalize_uuid(field_name)];
+						auto inserted = data->insert(normalize_uuid(field_name));
+						if (!inserted.second) {
+							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+						}
+						data = &inserted.first.value();
 					}
 					return *properties;
 				}
@@ -1846,7 +1882,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			add_field(mut_properties, object, fields);
 			if (specification.flags.store) {
-				data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 			return *mut_properties;
 		}
@@ -1873,7 +1913,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			detect_dynamic(field_name);
 			update_prefixes();
 			if (specification.flags.store) {
-				data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 		}
 		const auto& field_name = *it;
@@ -1881,7 +1925,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
-			data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+			if (!inserted.second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+			}
+			data = &inserted.first.value();
 		}
 	} else {
 		for (; !it.last(); ++it) {
@@ -1893,7 +1941,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
 				if (specification.flags.store) {
-					data = &(*data)[field_name];
+					auto inserted = data->insert(field_name);
+					if (!inserted.second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+					}
+					data = &inserted.first.value();
 				}
 			} else {
 				detect_dynamic(field_name);
@@ -1902,7 +1954,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						if (specification.flags.store) {
-							data = &(*data)[normalize_uuid(field_name)];
+							auto inserted = data->insert(normalize_uuid(field_name));
+							if (!inserted.second) {
+								THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+							}
+							data = &inserted.first.value();
 						}
 						continue;
 					}
@@ -1911,7 +1967,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 				add_field(mut_properties);
 				if (specification.flags.store) {
-					data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+					auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+					if (!inserted.second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+					}
+					data = &inserted.first.value();
 				}
 
 				for (++it; !it.last(); ++it) {
@@ -1922,7 +1982,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
 						if (specification.flags.store) {
-							data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+							auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
+							if (!inserted.second) {
+								THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+							}
+							data = &inserted.first.value();
 						}
 					}
 				}
@@ -1933,7 +1997,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					detect_dynamic(n_field_name);
 					add_field(mut_properties);
 					if (specification.flags.store) {
-						data = &(*data)[specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name];
+						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
+						if (!inserted.second) {
+							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+						}
+						data = &inserted.first.value();
 					}
 				}
 				return *mut_properties;
@@ -1948,7 +2016,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		if (feed_subproperties(properties, field_name)) {
 			update_prefixes();
 			if (specification.flags.store) {
-				data = &(*data)[field_name];
+				auto inserted = data->insert(field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 		} else {
 			detect_dynamic(field_name);
@@ -1957,7 +2029,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				if (feed_subproperties(properties, specification.meta_name)) {
 					update_prefixes();
 					if (specification.flags.store) {
-						data = &(*data)[normalize_uuid(field_name)];
+						auto inserted = data->insert(normalize_uuid(field_name));
+						if (!inserted.second) {
+							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+						}
+						data = &inserted.first.value();
 					}
 					return *properties;
 				}
@@ -1966,7 +2042,11 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
 			add_field(mut_properties);
 			if (specification.flags.store) {
-				data = &(*data)[specification.flags.uuid_field ? normalize_uuid(field_name) : field_name];
+				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
+				if (!inserted.second) {
+					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(inserted.first->as_str()).c_str(), repr(specification.full_meta_name).c_str());
+				}
+				data = &inserted.first.value();
 			}
 			return *mut_properties;
 		}
