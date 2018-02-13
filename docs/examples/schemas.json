@@ -442,32 +442,3 @@ curl -XPUT "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json
 }'
 curl -XGET "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
 curl -XGET "http://localhost:8880/test/xxx/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
-
-
-
-
-curl -XPOST "http://localhost:8880/test/schemas/yyy" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
-{
-	"_schema": {
-		"_type": "foreign/object",
-		"_endpoint": "test/schemas/yyy/.schemas/00000000-0000-1000-8000-010000000000",
-		"_id": {
-			"_type": "uuid",
-		},
-		"description": "Descripcion",
-		"schema": {
-			"_id": {
-				"_type": "uuid",
-			},
-			"<uuid_field>": {
-				"_type": "string",
-			},
-			"campo": {
-				"_type": "string",
-			},
-		}
-	},
-	"campo": "valor",
-	"00000000-0000-1000-8000-010000000000": "XXX"
-}'
-curl -XGET "http://localhost:8880/test/schemas/yyy/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
