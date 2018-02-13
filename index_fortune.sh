@@ -19,3 +19,17 @@ for id in $(seq "$start" "$end"); do
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
 	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" "$@"
 done
+
+
+# Usage Example:
+# index_and_get_fortune() {
+# 	endpoint=$1
+# 	start=${2:-1}
+# 	end=${3:-100}
+# 	../index_fortune.sh "$endpoint" "$start" "$end"
+# 	sleep 3
+# 	for id in $(seq "$start" "$end"); do
+# 		curl "$endpoint/test/fortune/$id"
+# 	done
+# }
+# index_and_get_fortune "http://127.0.0.1:8880/test/fortune" 1 10
