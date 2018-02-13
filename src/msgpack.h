@@ -207,6 +207,7 @@ public:
 
 	template <typename K, typename V>
 	std::pair<MsgPack::iterator, bool> insert(const std::pair<K&&, V&&>& val);
+	std::pair<MsgPack::iterator, bool> insert(const std::string& s);
 
 	template <typename T>
 	void push_back(T&& v);
@@ -1435,6 +1436,13 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(size_t pos, T&& val) 
 template <typename K, typename V>
 inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::pair<K&&, V&&>& val) {
 	return emplace(std::forward<K>(val.first), std::forward<V>(val.second));
+}
+
+
+inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::string& key) {
+	_fill(false, false);
+	auto pair = _put(key, MsgPack::undefined(), false);
+	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
 }
 
 
