@@ -176,24 +176,55 @@ class UUID(six.binary_type, _uuid.UUID):
         [[0x0f, 0xff], [0xf0, 0xf0]],  # 16: 00001111 11111111  11110000 11110000
     ]
 
-    def __new__(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None):
-        if [hex, bytes, bytes_le, fields, int].count(None) != 4:
+    def __new__(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
+        if [hex, bytes, bytes_le, fields, int, data].count(None) != 5:
             raise TypeError('need one of hex, bytes, bytes_le, fields, or int')
-        if isinstance(hex, six.binary_type):
-            hex = cls.unserialise(cls._decode(hex, 1))
-        if isinstance(hex, _uuid.UUID):
-            u = hex
+        if data is not None:
+            string = data
+            num = 0
+            for d in data:
+                num <<= 8
+                num |= ord(d)
+            node = ((num << 1) & 0xfe0000000000) | num & 0x00ffffffffff
+            num >>= 47
+            clock_seq_low = num & 0xff
+            num >>= 8
+            clock_seq_hi_variant = num & 0x3f
+            num >>= 6
+            time_low = num & 0xffffffff
+            num >>= 32
+            time_mid = num & 0xffff
+            num >>= 16
+            time_hi_version = num & 0xfff
+            num >>= 12
+            if num:
+                raise ValueError("UUIDs can only store as much as 15 bytes")
+            time_hi_version |= 0x1000  # Version 1
+            clock_seq_hi_variant |= 0x80  # Variant: RFC 4122
+            node |= 0x010000000000  # Multicast bit set
+            fields, data = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node), None
+        elif hex is not None:
+            string = hex
+            if isinstance(hex, six.binary_type):
+                try:
+                    hex = cls.unserialise(cls._decode(hex, 1))
+                except Exception:
+                    pass
+            if isinstance(hex, _uuid.UUID):
+                int, hex = hex.int, None
         else:
+            string = hex
+        try:
             u = _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
+        except ValueError:
+            return six.binary_type.__new__(cls, string)
         self = six.binary_type.__new__(cls, u)
         self.__dict__['int'] = u.int
         return self
 
-    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None):
+    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
         if 'int' not in self.__dict__:
-            cls = self.__class__
-            u = cls(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
-            self.__dict__['int'] = u.int
+            _uuid.UUID.__init__(self, hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
 
     @classmethod
     def _is_serialised(cls, serialised, count=None):
@@ -381,29 +412,7 @@ class UUID(six.binary_type, _uuid.UUID):
     @classmethod
     def new(cls, data=None, compacted=None):
         if data is not None:
-            num = 0
-            for d in data:
-                num <<= 8
-                num |= ord(d)
-            node = ((num << 1) & 0xfe0000000000) | num & 0x00ffffffffff
-            num >>= 47
-            clock_seq_low = num & 0xff
-            num >>= 8
-            clock_seq_hi_variant = num & 0x3f
-            num >>= 6
-            time_low = num & 0xffffffff
-            num >>= 32
-            time_mid = num & 0xffff
-            num >>= 16
-            time_hi_version = num & 0xfff
-            num >>= 12
-            if num:
-                raise ValueError("UUIDs can only store as much as 15 bytes")
-            time_hi_version |= 0x1000  # Version 1
-            clock_seq_hi_variant |= 0x80  # Variant: RFC 4122
-            node |= 0x010000000000  # Multicast bit set
-            return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
-
+            return UUID(data=data)
         num = UUID(_uuid.uuid1())
         if compacted or compacted is None:
             num = num.compact_crush() or num
