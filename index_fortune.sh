@@ -1,7 +1,8 @@
-#/bin/sh
+#!/bin/sh
 endpoint=$1
 start=${2:-1}
 end=${3:-100}
+shift 3
 
 if [ -z "$endpoint" ]; then
 	echo "usage: $0 <endpoint> [start] [end]"
@@ -9,12 +10,12 @@ if [ -z "$endpoint" ]; then
 	exit 64
 fi
 
-function json_escape() {
+json_escape() {
 	python -c 'import sys, json; json.dump(sys.stdin.read(), sys.stdout)'
 }
 
-for id in $(seq $start $end); do
+for id in $(seq "$start" "$end"); do
 	message="$(fortune | json_escape)"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
-	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" $4 $5 $6 $7 $8 $9
+	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" "$@"
 done
