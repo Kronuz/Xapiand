@@ -801,20 +801,6 @@ HttpClient::_get(enum http_method method)
 			metadata_view(method, cmd);
 			break;
 		default:
-			if (path_parser.off_cmd && path_parser.len_cmd > 1) {
-				if (*(path_parser.off_cmd + 1) == '_') {
-					path_parser.skip_id();  // Command has no ID
-					path_parser.off_pmt = path_parser.off_cmd + 1;
-					path_parser.len_pmt = path_parser.len_cmd + 1;
-					metadata_view(method, cmd);
-					break;
-				}
-			}
-#ifndef NDEBUG
-		case Command::CMD_QUIT:
-#endif
-		case Command::CMD_TOUCH:
-		case Command::BAD_QUERY:
 			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
