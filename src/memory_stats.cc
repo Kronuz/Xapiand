@@ -24,6 +24,7 @@
 
 #include "log.h"                 // for L_ERR
 
+#include <sys/errno.h>           // for errno, strerror
 #include <sys/param.h>           // for statfs, sysctl
 #include <sys/mount.h>           // for statfs, sysctl
 #include <sys/sysctl.h>          // for xsw_usage, sysctlnametomib, sysctl

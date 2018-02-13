@@ -28,7 +28,6 @@
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
 #include "exception.h"        // for BaseException
-#include "utils.h"
 #include "xxh64.hpp"          // for xxh64
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
