@@ -1616,12 +1616,17 @@ Schema::restart_namespace_specification()
 
 
 template <typename T>
-inline void
+inline bool
 Schema::feed_subproperties(T& properties, const std::string& meta_name)
 {
 	L_CALL("Schema::feed_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
-	properties = &properties->at(meta_name);
+	auto it = properties->find(meta_name);
+	if (it == properties->end()) {
+		return false;
+	}
+
+	properties = &it.value();
 	specification.flags.field_found = true;
 	static const auto stit_e = map_stem_language.end();
 	const auto stit = map_stem_language.find(meta_name);
@@ -1637,6 +1642,8 @@ Schema::feed_subproperties(T& properties, const std::string& meta_name)
 	}
 
 	dispatch_feed_properties(*properties);
+
+	return true;
 }
 
 
@@ -1760,23 +1767,21 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(properties, field_name);
+			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
 				}
-			} catch (const std::out_of_range&) {
+			} else {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(properties, specification.meta_name);
+					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
 						}
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -1815,25 +1820,23 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
-		try {
-			feed_subproperties(properties, field_name);
+		if (feed_subproperties(properties, field_name)) {
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
 				data = &(*data)[field_name];
 			}
-		} catch (const std::out_of_range&) {
+		} else {
 			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
-				try {
-					feed_subproperties(properties, specification.meta_name);
+				if (feed_subproperties(properties, specification.meta_name)) {
 					dispatch_process_properties(object, fields);
 					update_prefixes();
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
 					}
 					return *properties;
-				} catch (const std::out_of_range&) { }
+				}
 			}
 
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -1878,23 +1881,21 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(properties, field_name);
+			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
 				if (specification.flags.store) {
 					data = &(*data)[field_name];
 				}
-			} catch (const std::out_of_range&) {
+			} else {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(properties, specification.meta_name);
+					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						if (specification.flags.store) {
 							data = &(*data)[norm_field_name];
 						}
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -2351,17 +2352,15 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(properties, field_name);
+			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
-			} catch (const std::out_of_range&) {
+			} else {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(properties, specification.meta_name);
+					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -2391,19 +2390,17 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
-		try {
-			feed_subproperties(properties, field_name);
+		if (feed_subproperties(properties, field_name)) {
 			dispatch_process_properties(object, fields);
 			update_prefixes();
-		} catch (const std::out_of_range&) {
+		} else {
 			auto norm_field_name = detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
-				try {
-					feed_subproperties(properties, specification.meta_name);
+				if (feed_subproperties(properties, specification.meta_name)) {
 					dispatch_process_properties(object, fields);
 					update_prefixes();
 					return *properties;
-				} catch (const std::out_of_range&) { }
+				}
 			}
 
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -2438,17 +2435,15 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(properties, field_name);
+			if (feed_subproperties(properties, field_name)) {
 				update_prefixes();
-			} catch (const std::out_of_range&) {
+			} else {
 				auto norm_field_name = detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(properties, specification.meta_name);
+					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -2755,17 +2750,15 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(mut_properties, field_name);
+			if (feed_subproperties(mut_properties, field_name)) {
 				update_prefixes();
-			} catch (const std::out_of_range&) {
+			} else {
 				verify_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(mut_properties, specification.meta_name);
+					if (feed_subproperties(mut_properties, specification.meta_name)) {
 						update_prefixes();
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				add_field(mut_properties);
@@ -2794,19 +2787,17 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
-		try {
-			feed_subproperties(mut_properties, field_name);
+		if (feed_subproperties(mut_properties, field_name)) {
 			dispatch_write_properties(*mut_properties, object, fields);
 			update_prefixes();
-		} catch (const std::out_of_range&) {
+		} else {
 			verify_dynamic(field_name);
 			if (specification.flags.uuid_field) {
-				try {
-					feed_subproperties(mut_properties, specification.meta_name);
+				if (feed_subproperties(mut_properties, specification.meta_name)) {
 					dispatch_write_properties(*mut_properties, object, fields);
 					update_prefixes();
 					return *mut_properties;
-				} catch (const std::out_of_range&) { }
+				}
 			}
 
 			add_field(mut_properties, object, fields);
@@ -2840,17 +2831,15 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
-			try {
-				feed_subproperties(mut_properties, field_name);
+			if (feed_subproperties(mut_properties, field_name)) {
 				update_prefixes();
-			} catch (const std::out_of_range&) {
+			} else {
 				verify_dynamic(field_name);
 				if (specification.flags.uuid_field) {
-					try {
-						feed_subproperties(mut_properties, specification.meta_name);
+					if (feed_subproperties(mut_properties, specification.meta_name)) {
 						update_prefixes();
 						continue;
-					} catch (const std::out_of_range&) { }
+					}
 				}
 
 				add_field(mut_properties);

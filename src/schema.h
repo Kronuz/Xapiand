@@ -560,7 +560,7 @@ class Schema {
 	 */
 
 	template <typename T>
-	void feed_subproperties(T& properties, const std::string& meta_name);
+	bool feed_subproperties(T& properties, const std::string& meta_name);
 
 	/*
 	 * Main functions to index objects and arrays
