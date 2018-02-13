@@ -29,7 +29,7 @@ done
 # 	../index_fortune.sh "$endpoint" "$start" "$end"
 # 	sleep 3
 # 	for id in $(seq "$start" "$end"); do
-# 		curl "$endpoint/test/fortune/$id"
+# 		curl "$endpoint/$id"
 # 	done
 # }
 # index_and_get_fortune "http://127.0.0.1:8880/test/fortune" 1 10
