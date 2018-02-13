@@ -1062,6 +1062,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 specification_t::specification_t(const specification_t& o)
 	: required_spc_t(o),
 	  local_prefix(o.local_prefix),
+	  seen_fields(o.seen_fields),
 	  position(o.position),
 	  weight(o.weight),
 	  spelling(o.spelling),
@@ -1079,6 +1080,7 @@ specification_t::specification_t(const specification_t& o)
 specification_t::specification_t(specification_t&& o) noexcept
 	: required_spc_t(std::move(o)),
 	  local_prefix(std::move(o.local_prefix)),
+	  seen_fields(std::move(o.seen_fields)),
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
@@ -1097,6 +1099,7 @@ specification_t&
 specification_t::operator=(const specification_t& o)
 {
 	local_prefix = o.local_prefix;
+	seen_fields = o.seen_fields;
 	position = o.position;
 	weight = o.weight;
 	spelling = o.spelling;
@@ -1124,6 +1127,7 @@ specification_t&
 specification_t::operator=(specification_t&& o) noexcept
 {
 	local_prefix = std::move(o.local_prefix);
+	seen_fields = std::move(o.seen_fields);
 	position = std::move(o.position);
 	weight = std::move(o.weight);
 	spelling = std::move(o.spelling);
@@ -1321,6 +1325,11 @@ specification_t::to_obj() const
 	// specification_t
 
 	obj["local_prefix"] = local_prefix.to_string();
+
+	auto& obj_seen_fields = obj["seen_fields"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& s : seen_fields) {
+		obj_seen_fields.append(s);
+	}
 
 	auto& obj_position = obj["position"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : position) {
@@ -1583,6 +1592,7 @@ Schema::restart_specification()
 	specification.sep_types                  = default_spc.sep_types;
 	specification.endpoint                   = default_spc.endpoint;
 	specification.local_prefix               = default_spc.local_prefix;
+	specification.seen_fields                = default_spc.seen_fields;
 	specification.slot                       = default_spc.slot;
 	specification.accuracy                   = default_spc.accuracy;
 	specification.acc_prefix                 = default_spc.acc_prefix;
@@ -1608,6 +1618,7 @@ Schema::restart_namespace_specification()
 
 	specification.sep_types                  = default_spc.sep_types;
 	specification.endpoint                   = default_spc.endpoint;
+	specification.seen_fields                = default_spc.seen_fields;
 	specification.aux_stem_language          = default_spc.aux_stem_language;
 	specification.aux_language               = default_spc.aux_language;
 
@@ -1747,14 +1758,19 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
-			auto norm_field_name = detect_dynamic(*it);
+			const auto& field_name = *it;
+			auto norm_field_name = detect_dynamic(field_name);
 			update_prefixes();
 			if (specification.flags.store) {
 				data = &(*data)[norm_field_name];
 			}
 		}
+		const auto& field_name = *it_last;
 		dispatch_process_properties(object, fields);
-		auto norm_field_name = detect_dynamic(*it_last);
+		auto norm_field_name = detect_dynamic(field_name);
+		if (!specification.seen_fields.insert(norm_field_name).second) {
+			THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+		}
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
@@ -1806,6 +1822,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 				} else {
 					norm_field_name = detect_dynamic(n_field_name);
+					if (!specification.seen_fields.insert(norm_field_name).second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					}
 					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
 						data = &(*data)[norm_field_name];
@@ -1821,6 +1840,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
+			if (!specification.seen_fields.insert(field_name).second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 			if (specification.flags.store) {
@@ -1828,6 +1850,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			}
 		} else {
 			auto norm_field_name = detect_dynamic(field_name);
+			if (!specification.seen_fields.insert(norm_field_name).second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(properties, specification.meta_name)) {
 					dispatch_process_properties(object, fields);
@@ -2338,11 +2363,16 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
 		for (auto it = field_names.begin(); it != it_last; ++it) {
-			auto norm_field_name = detect_dynamic(*it);
+			const auto& field_name = *it;
+			auto norm_field_name = detect_dynamic(field_name);
 			update_prefixes();
 		}
+		const auto& field_name = *it_last;
 		dispatch_process_properties(object, fields);
-		auto norm_field_name = detect_dynamic(*it_last);
+		auto norm_field_name = detect_dynamic(field_name);
+		if (!specification.seen_fields.insert(norm_field_name).second) {
+			THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+		}
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
@@ -2379,6 +2409,9 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(n_field_name).c_str(), repr(specification.full_meta_name).c_str());
 				} else {
 					norm_field_name = detect_dynamic(n_field_name);
+					if (!specification.seen_fields.insert(norm_field_name).second) {
+						THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+					}
 					add_field(mut_properties, object, fields);
 				}
 				return *mut_properties;
@@ -2391,10 +2424,16 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
+			if (!specification.seen_fields.insert(field_name).second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			dispatch_process_properties(object, fields);
 			update_prefixes();
 		} else {
 			auto norm_field_name = detect_dynamic(field_name);
+			if (!specification.seen_fields.insert(norm_field_name).second) {
+				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name).c_str(), repr(norm_field_name).c_str(), repr(specification.full_meta_name).c_str());
+			}
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(properties, specification.meta_name)) {
 					dispatch_process_properties(object, fields);

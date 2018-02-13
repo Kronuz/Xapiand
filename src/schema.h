@@ -408,6 +408,7 @@ struct index_spc_t {
 struct specification_t : required_spc_t {
 	// Reserved values.
 	prefix_t local_prefix;
+	std::unordered_set<std::string> seen_fields;
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
