@@ -891,6 +891,10 @@ HttpClient::_post(enum http_method method)
 			path_parser.skip_id();  // Command has no ID
 			touch_view(method, cmd);
 			break;
+		case Command::CMD_COMMIT:
+			path_parser.skip_id();  // Command has no ID
+			commit_view(method, cmd);
+			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
@@ -1370,6 +1374,28 @@ HttpClient::touch_view(enum http_method method, Command)
 	response[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(HTTP_STATUS_CREATED, response);
+}
+
+
+void
+HttpClient::commit_view(enum http_method method, Command)
+{
+	L_CALL("HttpClient::commit_view()");
+
+	endpoints_maker(1s);
+
+	operation_begins = std::chrono::system_clock::now();
+
+	db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+
+	db_handler.commit();  // Ensure touch.
+
+	operation_ends = std::chrono::system_clock::now();
+
+	MsgPack response;
+	response[RESPONSE_ENDPOINT] = endpoints.to_string();
+
+	write_http_response(HTTP_STATUS_OK, response);
 }
 
 

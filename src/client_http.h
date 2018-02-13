@@ -50,19 +50,6 @@
 #include "xxh64.hpp"            // for xxh64
 
 
-// Available commands
-
-constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
-constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
-constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
-constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
-constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
-constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
-constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
-constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
-constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
-
-
 class UUIDGenerator;
 class HttpServer;
 class Logging;
@@ -143,24 +130,39 @@ enum class Encoding {
 };
 
 
+// Available commands
+
+constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
+constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
+constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
+constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
+constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
+constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
+constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
+constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
+constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
+constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
+
+
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint64_t {
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_SEARCH    = xxh64::hash(COMMAND_SEARCH),
+		CMD_COMMIT    = xxh64::hash(COMMAND_COMMIT),
 		CMD_INFO      = xxh64::hash(COMMAND_INFO),
-		CMD_STATS     = xxh64::hash(COMMAND_STATS),
 		CMD_METADATA  = xxh64::hash(COMMAND_METADATA),
-		CMD_SCHEMA    = xxh64::hash(COMMAND_SCHEMA),
-#if XAPIAND_DATABASE_WAL
-		CMD_WAL       = xxh64::hash(COMMAND_WAL),
-#endif
 		CMD_NODES     = xxh64::hash(COMMAND_NODES),
-		CMD_TOUCH     = xxh64::hash(COMMAND_TOUCH),
 #ifndef NDEBUG
 		CMD_QUIT      = xxh64::hash(COMMAND_QUIT),
+#endif
+		CMD_SCHEMA    = xxh64::hash(COMMAND_SCHEMA),
+		CMD_SEARCH    = xxh64::hash(COMMAND_SEARCH),
+		CMD_STATS     = xxh64::hash(COMMAND_STATS),
+		CMD_TOUCH     = xxh64::hash(COMMAND_TOUCH),
+#if XAPIAND_DATABASE_WAL
+		CMD_WAL       = xxh64::hash(COMMAND_WAL),
 #endif
 	};
 
@@ -240,6 +242,7 @@ class HttpClient : public BaseClient {
 	void update_document_view(enum http_method method, Command cmd);
 	void search_view(enum http_method method, Command cmd);
 	void touch_view(enum http_method method, Command cmd);
+	void commit_view(enum http_method method, Command cmd);
 	void schema_view(enum http_method method, Command cmd);
 #if XAPIAND_DATABASE_WAL
 	void wal_view(enum http_method method, Command cmd);
