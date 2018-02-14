@@ -1493,6 +1493,7 @@ std::shared_ptr<const MsgPack>
 Schema::get_initial_schema()
 {
 	L_CALL("Schema::get_initial_schema()");
+
 	static const MsgPack initial_schema = [](){
 		MsgPack initial_schema({
 			{ RESERVED_RECURSE, false },
@@ -1502,7 +1503,6 @@ Schema::get_initial_schema()
 		initial_schema.lock();
 		return initial_schema;
 	}();
-
 	return std::make_shared<const MsgPack>(initial_schema);
 }
 
