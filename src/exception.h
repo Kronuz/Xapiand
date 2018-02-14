@@ -32,14 +32,19 @@
 
 #define TRACEBACK() traceback(__FILE__, __LINE__)
 
-std::string traceback(const char *filename, int line);
-
+std::string traceback(const std::string& filename, int line);
 
 class BaseException {
 protected:
-	std::string message;
-	std::string context;
-	std::string traceback;
+	std::string type;
+	mutable std::string message;
+	mutable std::string context;
+	mutable std::string traceback;
+
+	std::string filename;
+	int line;
+	void* callstack[128];
+	size_t frames;
 
 public:
 	BaseException(const char *filename, int line, const char* type, const char* format, ...);
@@ -49,17 +54,9 @@ public:
 
 	virtual ~BaseException() = default;
 
-	virtual const char* get_message() const noexcept {
-		return message.c_str();
-	}
-
-	virtual const char* get_context() const noexcept {
-		return context.c_str();
-	}
-
-	virtual const char* get_traceback() const noexcept {
-		return traceback.c_str();
-	}
+	const char* get_message() const;
+	const char* get_context() const;
+	const char* get_traceback() const;
 };
 
 

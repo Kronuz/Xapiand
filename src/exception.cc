@@ -33,19 +33,16 @@
 #define BUFFER_SIZE 1024
 
 
-std::string traceback(const char *filename, int line) {
-	std::string t;
-	void* callstack[128];
-
-	// retrieve current stack addresses
-	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
-
-	t = "\n== Traceback at (" + std::string(filename) + ":" + std::to_string(line) + "):";
+std::string
+traceback(const std::string& filename, int line, void *const * callstack, int frames)
+{
+	std::string tb = "\n== Traceback at (" + filename + ":" + std::to_string(line) + ")";
 
 	if (frames == 0) {
-		t += "\n    <empty, possibly corrupt>";
-		return t;
+		return tb;
 	}
+
+	tb.push_back(':');
 
 	// resolve addresses into strings containing "filename(function+address)"
 	char** strs = backtrace_symbols(callstack, frames);
@@ -69,15 +66,36 @@ std::string traceback(const char *filename, int line) {
 			}
 			free(unmangled);
 		}
-		t += "\n    " + result;
+		tb += "\n    " + result;
 	}
 
 	free(strs);
-	return t;
+	return tb;
+}
+
+
+std::string
+traceback(const std::string& filename, int line)
+{
+	void* callstack[128];
+
+	// retrieve current stack addresses
+	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
+
+	auto tb = traceback(filename, line, callstack, frames);
+	if (frames == 0) {
+		tb.append(":\n    <empty, possibly corrupt>");
+	}
+
+	return tb;
 }
 
 
 BaseException::BaseException(const char *filename, int line, const char* type, const char *format, ...)
+	: type(type),
+	  filename(filename),
+	  line(line),
+	  frames(0)
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -90,19 +108,40 @@ BaseException::BaseException(const char *filename, int line, const char* type, c
 
 	// Make a string to hold the formatted message.
 	message.resize(len + 1);
-	vsnprintf(&message[0], len + 1, format, argptr);
-	message.resize(len);
+	message.resize(vsnprintf(&message[0], len + 1, format, argptr));
 
 	va_end(argptr);
 
+#ifdef XAPIAND_TRACEBACKS
+	frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
+#endif
+}
+
+const char*
+BaseException::get_message() const
+{
 	if (message.empty()) {
 		message.assign(type);
 	}
+	return message.c_str();
+}
 
-	context.assign(std::string(filename) + ":" + std::to_string(line) + ": " + message);
-#ifdef XAPIAND_TRACEBACKS
-	traceback = ::traceback(filename, line);
-#else
-	traceback = "\n== Exception at (" + std::string(filename) + ":" + std::to_string(line) + ")";
-#endif
+
+const char*
+BaseException::get_context() const
+{
+	if (context.empty()) {
+		context.assign(filename + ":" + std::to_string(line) + ": " + get_message());
+	}
+	return context.c_str();
+}
+
+
+const char*
+BaseException::get_traceback() const
+{
+	if (traceback.empty()) {
+		traceback = ::traceback(filename, line, callstack, frames);
+	}
+	return traceback.c_str();
 }
