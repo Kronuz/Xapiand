@@ -581,7 +581,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 DataType
 DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
+	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", repr(body.to_string()).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
 	if (!(flags & DB_WRITABLE)) {
 		THROW(Error, "Database is read-only");
