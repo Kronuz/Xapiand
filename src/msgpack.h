@@ -683,7 +683,10 @@ inline MsgPack::MsgPack()
 
 inline MsgPack::MsgPack(const MsgPack& other)
 	: _body(std::make_shared<Body>(other)),
-	  _const_body(_body.get()) { }
+	  _const_body(_body.get())
+{
+	assert(!other._body->_lock);
+}
 
 
 inline MsgPack::MsgPack(MsgPack&& other)
@@ -757,6 +760,7 @@ inline MsgPack::MsgPack(Type type)
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
+	assert(!other._body->_lock);
 	_assignment(msgpack::object(other, *_body->_zone));
 	return *this;
 }
