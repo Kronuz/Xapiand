@@ -594,7 +594,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPac
 			blob = body.str();
 			break;
 		case MsgPack::Type::MAP:
-			obj = body;
+			obj = body.clone();
 			break;
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
