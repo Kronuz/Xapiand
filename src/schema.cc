@@ -1929,7 +1929,6 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 				}
 			} else {
 				detect_dynamic(field_name);
-
 				if (specification.flags.uuid_field) {
 					if (feed_subproperties(properties, specification.meta_name)) {
 						update_prefixes();
@@ -1995,7 +1994,6 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 			}
 		} else {
 			detect_dynamic(field_name);
-
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(properties, specification.meta_name)) {
 					update_prefixes();
