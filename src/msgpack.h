@@ -159,6 +159,8 @@ private:
 	std::pair<size_t, MsgPack::iterator> _erase(const std::string& key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
+	void _clear() noexcept;
+
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
 	template <typename T>
@@ -795,6 +797,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 
 
 inline MsgPack* MsgPack::_init_map(size_t pos) {
+	assert(!_body->_lock);
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
@@ -818,6 +821,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 
 
 inline void MsgPack::_update_map(size_t pos) {
+	assert(!_body->_lock);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		std::string str_key(p->key.via.str.ptr, p->key.via.str.size);
@@ -833,6 +837,7 @@ inline void MsgPack::_update_map(size_t pos) {
 
 
 inline MsgPack* MsgPack::_init_array(size_t pos) {
+	assert(!_body->_lock);
 	if (pos < _body->array.size()) {
 		// Destroy the previous objects to update
 		_body->array.resize(pos);
@@ -852,6 +857,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 
 
 inline void MsgPack::_update_array(size_t pos) {
+	assert(!_body->_lock);
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 		// If the previous item was a MAP, force map update.
@@ -865,6 +871,7 @@ inline void MsgPack::_update_array(size_t pos) {
 
 
 inline void MsgPack::_init() {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::MAP:
 			_init_map(0);
@@ -897,6 +904,7 @@ inline void MsgPack::_deinit() {
 
 
 inline void MsgPack::_reserve_map(size_t rsize) {
+	assert(!_body->_lock);
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity < MSGPACK_MAP_INIT_SIZE ? MSGPACK_MAP_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
@@ -918,6 +926,7 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 
 inline void MsgPack::_reserve_array(size_t rsize) {
+	assert(!_body->_lock);
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity >= MSGPACK_ARRAY_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < rsize) {
@@ -1124,6 +1133,28 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 		}
 		default:
 			THROW(msgpack::type_error);
+	}
+}
+
+
+inline void MsgPack::_clear() noexcept {
+	assert(!_body->_lock);
+	_body->_initialized = false;
+
+	switch (_body->getType()) {
+		case Type::MAP:
+			_body->_obj->via.map.size = 0;
+			_body->map.clear();
+			break;
+		case Type::ARRAY:
+			_body->_obj->via.array.size = 0;
+			_body->array.clear();
+			break;
+		case Type::STR:
+			_body->_obj->via.str.size = 0;
+			break;
+		default:
+			break;
 	}
 }
 
@@ -1393,24 +1424,8 @@ inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
 
 
 inline void MsgPack::clear() noexcept {
-	assert(!_body->_lock);
-	_body->_initialized = false;
-
-	switch (_body->getType()) {
-		case Type::MAP:
-			_body->_obj->via.map.size = 0;
-			_body->map.clear();
-			break;
-		case Type::ARRAY:
-			_body->_obj->via.array.size = 0;
-			_body->array.clear();
-			break;
-		case Type::STR:
-			_body->_obj->via.str.size = 0;
-			break;
-		default:
-			break;
-	}
+	// no need to _fill something that will be cleared.
+	_clear();
 }
 
 
