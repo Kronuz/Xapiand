@@ -1494,16 +1494,14 @@ Schema::get_initial_schema()
 {
 	L_CALL("Schema::get_initial_schema()");
 
-	static const MsgPack initial_schema = [](){
-		MsgPack initial_schema({
-			{ RESERVED_RECURSE, false },
-			{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
-			{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
-		});
-		initial_schema.lock();
-		return initial_schema;
-	}();
-	return std::make_shared<const MsgPack>(initial_schema);
+	static const MsgPack initial_schema_tpl({
+		{ RESERVED_RECURSE, false },
+		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
+		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
+	});
+	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
+	initial_schema->lock();
+	return initial_schema;
 }
 
 
