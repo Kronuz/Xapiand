@@ -4850,7 +4850,7 @@ Schema::verify_dynamic(const std::string& field_name)
 	L_CALL("Schema::verify_dynamic(%s)", repr(field_name).c_str());
 
 	if (field_name == UUID_FIELD_NAME) {
-		specification.meta_name.assign(field_name);
+		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.uuid_field = true;
 		specification.flags.uuid_path = true;
 	} else {
