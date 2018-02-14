@@ -97,6 +97,7 @@ namespace Serialise {
 	}
 
 	// Returns if field_value is UUID.
+	bool possiblyUUID(const std::string& field_value) noexcept;
 	bool isUUID(const std::string& field_value) noexcept;
 
 

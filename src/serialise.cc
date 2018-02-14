@@ -50,6 +50,42 @@ constexpr char UUID_SEPARATOR_LIST = ';';
 
 
 bool
+Serialise::possiblyUUID(const std::string& field_value) noexcept
+{
+	auto field_value_sz = field_value.size();
+	if (field_value_sz > 2) {
+		Split<> split(field_value, UUID_SEPARATOR_LIST);
+		if (field_value.front() == '{' && field_value.back() == '}') {
+			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
+		} else
+		if (field_value.compare(0, 9, "urn:uuid:") == 0) {
+			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
+		}
+		for (const auto& uuid : split) {
+			auto uuid_sz = uuid.size();
+			if (uuid_sz) {
+				if (uuid_sz == UUID_LENGTH) {
+					if (UUID::is_valid(uuid)) {
+						continue;
+					}
+				}
+#ifdef XAPIAND_UUID_ENCODED
+				if (uuid_sz >= 7 && uuid.front() == '~') {  // floor((4 * 8) / log2(59)) + 2
+					if (UUID_ENCODER.is_valid(uuid)) {
+						continue;
+					}
+				}
+#endif
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+
+bool
 Serialise::isUUID(const std::string& field_value) noexcept
 {
 	auto field_value_sz = field_value.size();
@@ -70,8 +106,7 @@ Serialise::isUUID(const std::string& field_value) noexcept
 					}
 				}
 #ifdef XAPIAND_UUID_ENCODED
-				auto uuid_front = uuid.front();
-				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
+				if (uuid_sz >= 7 && uuid.front() == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = UUID_ENCODER.decode(uuid);
 						if (UUID::is_serialised(decoded)) {

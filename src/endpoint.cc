@@ -39,10 +39,13 @@ normalize(const void *p, size_t size)
 	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
-	try {
-		serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
-		normalized = Unserialise::uuid(serialised_uuid, repr);
-	} catch (const SerialisationError&) { }
+	std::string unserialised(static_cast<const char*>(p), size);
+	if (Serialise::possiblyUUID(unserialised)) {
+		try {
+			serialised_uuid = Serialise::uuid(unserialised);
+			normalized = Unserialise::uuid(serialised_uuid, repr);
+		} catch (const SerialisationError&) { }
+	}
 	return normalized;
 }
 
@@ -53,11 +56,14 @@ normalize_and_partition(const void *p, size_t size)
 	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
-	try {
-		serialised_uuid = Serialise::uuid(std::string(static_cast<const char*>(p), size));
-		normalized = Unserialise::uuid(serialised_uuid, repr);
-	} catch (const SerialisationError& exc) {
-		return normalized;
+	std::string unserialised(static_cast<const char*>(p), size);
+	if (Serialise::possiblyUUID(unserialised)) {
+		try {
+			serialised_uuid = Serialise::uuid(unserialised);
+			normalized = Unserialise::uuid(serialised_uuid, repr);
+		} catch (const SerialisationError& exc) {
+			return normalized;
+		}
 	}
 
 	std::string result;

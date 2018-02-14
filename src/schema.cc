@@ -4870,14 +4870,20 @@ Schema::detect_dynamic(const std::string& field_name)
 {
 	L_CALL("Schema::detect_dynamic(%s)", repr(field_name).c_str());
 
-	if (Serialise::isUUID(field_name)) {
-		auto ser_uuid = Serialise::uuid(field_name);
-		specification.local_prefix.uuid.assign(ser_uuid);
-		static const auto uuid_field_prefix = get_prefix(UUID_FIELD_NAME);
-		specification.local_prefix.field.assign(uuid_field_prefix);
-		specification.meta_name.assign(UUID_FIELD_NAME);
-		specification.flags.uuid_field = true;
-		specification.flags.uuid_path = true;
+	if (Serialise::possiblyUUID(field_name)) {
+		try {
+			auto ser_uuid = Serialise::uuid(field_name);
+			specification.local_prefix.uuid.assign(ser_uuid);
+			static const auto uuid_field_prefix = get_prefix(UUID_FIELD_NAME);
+			specification.local_prefix.field.assign(uuid_field_prefix);
+			specification.meta_name.assign(UUID_FIELD_NAME);
+			specification.flags.uuid_field = true;
+			specification.flags.uuid_path = true;
+		} catch (const SerialisationError&) {
+			specification.local_prefix.field.assign(get_prefix(field_name));
+			specification.meta_name.assign(field_name);
+			specification.flags.uuid_field = false;
+		}
 	} else {
 		specification.local_prefix.field.assign(get_prefix(field_name));
 		specification.meta_name.assign(field_name);
@@ -7575,17 +7581,21 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			spc.properties = &spc.properties->at(field_name);
 			spc.prefix.append(spc.properties->at(RESERVED_PREFIX).str());
 		} catch (const std::out_of_range&) {
-			try {
-				const auto prefix_uuid = Serialise::uuid(field_name);
-				spc.has_uuid_prefix = true;
+			if (Serialise::possiblyUUID(field_name)) {
 				try {
-					spc.properties = &spc.properties->at(UUID_FIELD_NAME);
-					spc.prefix.append(prefix_uuid);
-					continue;
-				} catch (const std::out_of_range&) {
-					spc.prefix.append(prefix_uuid);
+					const auto prefix_uuid = Serialise::uuid(field_name);
+					spc.has_uuid_prefix = true;
+					try {
+						spc.properties = &spc.properties->at(UUID_FIELD_NAME);
+						spc.prefix.append(prefix_uuid);
+						continue;
+					} catch (const std::out_of_range&) {
+						spc.prefix.append(prefix_uuid);
+					}
+				} catch (const SerialisationError&) {
+					spc.prefix.append(get_prefix(field_name));
 				}
-			} catch (const SerialisationError&) {
+			} else {
 				spc.prefix.append(get_prefix(field_name));
 			}
 
@@ -7598,10 +7608,14 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& 
 			for (++it; it != it_e; ++it) {
 				auto& partial_field = *it;
 				if (is_valid(partial_field)) {
-					try {
-						spc.prefix.append(Serialise::uuid(partial_field));
-						spc.has_uuid_prefix = true;
-					} catch (const SerialisationError&) {
+					if (Serialise::possiblyUUID(field_name)) {
+						try {
+							spc.prefix.append(Serialise::uuid(partial_field));
+							spc.has_uuid_prefix = true;
+						} catch (const SerialisationError&) {
+							spc.prefix.append(get_prefix(partial_field));
+						}
+					} else {
 						spc.prefix.append(get_prefix(partial_field));
 					}
 				} else if (++it == it_e) {
