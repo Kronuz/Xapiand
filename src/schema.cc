@@ -2259,10 +2259,12 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			if (!specification.flags.concrete) {
-				if (specification.flags.inside_namespace) {
-					validate_required_namespace_data();
-				} else {
-					validate_required_data(get_mutable_properties(specification.full_meta_name));
+				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+					if (specification.flags.inside_namespace) {
+						validate_required_namespace_data();
+					} else {
+						validate_required_data(get_mutable_properties(specification.full_meta_name));
+					}
 				}
 			}
 			index_partial_paths(doc);
@@ -2331,10 +2333,12 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		index_item_value(doc, *data, *val);
 	} else {
 		if (!specification.flags.concrete) {
-			if (specification.flags.inside_namespace) {
-				validate_required_namespace_data();
-			} else {
-				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+				if (specification.flags.inside_namespace) {
+					validate_required_namespace_data();
+				} else {
+					validate_required_data(get_mutable_properties(specification.full_meta_name));
+				}
 			}
 		}
 		if (fields.empty()) {
@@ -2733,10 +2737,12 @@ Schema::update_item_value()
 				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name).c_str());
 			}
 		}
-		if (specification.flags.inside_namespace) {
-			validate_required_namespace_data();
-		} else {
-			validate_required_data(get_mutable_properties(specification.full_meta_name));
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 	}
 
@@ -2771,10 +2777,12 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
-		if (specification.flags.inside_namespace) {
-			validate_required_namespace_data();
-		} else {
-			validate_required_data(get_mutable_properties(specification.full_meta_name));
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 	}
 
@@ -3446,7 +3454,9 @@ Schema::complete_specification(const MsgPack& item_value)
 			}
 			guess_field_type(item_value);
 		}
-		validate_required_data(get_mutable_properties(specification.full_meta_name));
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			validate_required_data(get_mutable_properties(specification.full_meta_name));
+		}
 	}
 
 	if (specification.partial_prefixes.size() > 2) {
