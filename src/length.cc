@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
  * Copyright (C) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,6 +30,7 @@
 
 #include "io_utils.h"   // for io::read and io::write
 
+
 // The serialisation we use for doubles is inspired by a comp.lang.c post
 // by Jens Moeller:
 //
@@ -56,7 +58,13 @@
 // # define MAX_MANTISSA_BYTES (sizeof(double) + 1)
 #endif
 
-static int base256ify_double(double &v) {
+constexpr int max_mantissa_bytes = std::min(MAX_MANTISSA_BYTES, 8);
+constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
+
+
+static int
+base256ify_double(double &v)
+{
 	int exp;
 	v = frexp(v, &exp);
 	// v is now in the range [0.5, 1.0)
@@ -71,15 +79,16 @@ static int base256ify_double(double &v) {
 	return exp;
 }
 
+
 std::string
 serialise_double(double v)
 {
 	/* First byte:
-	 *  bit 7 Negative flag
-	 *  bit 4..6 Mantissa length - 1
-	 *  bit 0..3 --- 0-13 -> Exponent + 7
-	 *            \- 14 -> Exponent given by next byte
-	 *             - 15 -> Exponent given by next 2 bytes
+	 *   bit 7 Negative flag
+	 *   bit 4..6 Mantissa length - 1
+	 *   bit 0..3 --- 0-13 -> Exponent + 7
+	 *               \- 14 -> Exponent given by next byte
+	 *                - 15 -> Exponent given by next 2 bytes
 	 *
 	 * Then optional medium (1 byte) or large exponent (2 bytes, lsb first)
 	 *
@@ -93,34 +102,35 @@ serialise_double(double v)
 	int exp = base256ify_double(v);
 
 	std::string result;
+	result.reserve(3 + max_mantissa_bytes);
 
 	if (exp <= 6 && exp >= -7) {
 		unsigned char b = static_cast<unsigned char>(exp + 7);
 		if (negative) b |= static_cast<unsigned char>(0x80);
-		result += char(b);
+		result.push_back(static_cast<char>(b));
 	} else {
 		if (exp >= -128 && exp < 127) {
-			result += negative ? char(0x8e) : char(0x0e);
-			result += char(exp + 128);
+			result.push_back(negative ? static_cast<char>(0x8e) : static_cast<char>(0x0e));
+			result.push_back(static_cast<char>(exp + 128));
 		} else {
 			if (exp < -32768 || exp > 32767) {
 				THROW(InternalError, "Insane exponent in floating point number");
 			}
-			result += negative ? char(0x8f) : char(0x0f);
-			result += char(unsigned(exp + 32768) & 0xff);
-			result += char(unsigned(exp + 32768) >> 8);
+			result.push_back(negative ? static_cast<char>(0x8f) : static_cast<char>(0x0f));
+			result.push_back(static_cast<char>(static_cast<unsigned>(exp + 32768) & 0xff));
+			result.push_back(static_cast<char>(static_cast<unsigned>(exp + 32768) >> 8));
 		}
 	}
 
-	int maxbytes = std::min(MAX_MANTISSA_BYTES, 8);
-
 	size_t n = result.size();
+
+	int max_bytes = max_mantissa_bytes;
 	do {
 		unsigned char byte = static_cast<unsigned char>(v);
-		result += char(byte);
-		v -= double(byte);
+		result.push_back(static_cast<char>(byte));
+		v -= static_cast<double>(byte);
 		v *= 256.0;
-	} while (v != 0.0 && --maxbytes);
+	} while (v != 0.0 && --max_bytes);
 
 	n = result.size() - n;
 	if (n > 1) {
@@ -130,6 +140,7 @@ serialise_double(double v)
 
 	return result;
 }
+
 
 double
 unserialise_double(const char** p, const char* end)
@@ -163,7 +174,7 @@ unserialise_double(const char** p, const char* end)
 		exp -= 7;
 	}
 
-	if (size_t(end - *p) < mantissa_len) {
+	if (static_cast<std::size_t>(end - *p) < mantissa_len) {
 		THROW(SerialisationError, "Bad encoded double: short mantissa");
 	}
 
@@ -174,7 +185,7 @@ unserialise_double(const char** p, const char* end)
 	*p += mantissa_len;
 	if (exp > dbl_max_exp ||
 		(exp == dbl_max_exp &&
-		 double(static_cast<unsigned char>((*p)[-1])) > dbl_max_mantissa)) {
+		 static_cast<double>(static_cast<unsigned char>((*p)[-1])) > dbl_max_mantissa)) {
 		// The mantissa check should be precise provided that FLT_RADIX
 		// is a power of 2.
 		v = HUGE_VAL;
@@ -182,7 +193,7 @@ unserialise_double(const char** p, const char* end)
 		const char *q = *p;
 		while (mantissa_len--) {
 			v *= 0.00390625; // 1/256
-			v += double(static_cast<unsigned char>(*--q));
+			v += static_cast<double>(static_cast<unsigned char>(*--q));
 		}
 
 #if FLT_RADIX == 2
@@ -210,19 +221,20 @@ std::string
 serialise_length(unsigned long long len)
 {
 	std::string result;
+	result.reserve(max_length_size);
 	if (len < 255) {
-		result += static_cast<unsigned char>(len);
+		result.push_back(static_cast<unsigned char>(len));
 	} else {
-		result += '\xff';
+		result.push_back('\xff');
 		len -= 255;
 		while (true) {
 			unsigned char b = static_cast<unsigned char>(len & 0x7f);
 			len >>= 7;
 			if (!len) {
-				result += (b | static_cast<unsigned char>(0x80));
+				result.push_back(b | static_cast<unsigned char>(0x80));
 				break;
 			}
-			result += b;
+			result.push_back(b);
 		}
 	}
 	return result;
@@ -248,7 +260,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 		unsigned char ch;
 		unsigned shift = 0;
 		do {
-			if unlikely(ptr == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7)) {
+			if unlikely(ptr == end || shift > (max_length_size * 7)) {
 				*p = NULL;
 				THROW(SerialisationError, "Bad encoded length: insufficient data");
 			}
@@ -269,7 +281,9 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 std::string
 serialise_string(const std::string &input) {
 	std::string output;
-	output.append(serialise_length(input.size()));
+	unsigned long long input_size = input.size();
+	output.reserve(max_length_size + input_size);
+	output.append(serialise_length(input_size));
 	output.append(input);
 	return output;
 }
