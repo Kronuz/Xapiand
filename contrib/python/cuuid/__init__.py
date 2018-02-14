@@ -177,10 +177,25 @@ class UUID(six.binary_type, _uuid.UUID):
     ]
 
     def __new__(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
+        try:
+            string = data if data is not None else hex
+            u = cls._uuid(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version, data=data)
+            self = six.binary_type.__new__(cls, u)
+            self.__dict__['int'] = u.int
+            return self
+        except Exception as exc:
+            return six.binary_type.__new__(cls, string)
+
+    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
+        if 'int' not in self.__dict__:
+            u = self._uuid(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version, data=data)
+            self.__dict__['int'] = u.int
+
+    @classmethod
+    def _uuid(cls, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
         if [hex, bytes, bytes_le, fields, int, data].count(None) != 5:
             raise TypeError('need one of hex, bytes, bytes_le, fields, or int')
         if data is not None:
-            string = data
             num = 0
             for d in data:
                 num <<= 8
@@ -202,29 +217,13 @@ class UUID(six.binary_type, _uuid.UUID):
             time_hi_version |= 0x1000  # Version 1
             clock_seq_hi_variant |= 0x80  # Variant: RFC 4122
             node |= 0x010000000000  # Multicast bit set
-            fields, data = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node), None
+            fields = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node)
         elif hex is not None:
-            string = hex
             if isinstance(hex, six.binary_type):
-                try:
-                    hex = cls.unserialise(cls._decode(hex, 1))
-                except Exception:
-                    pass
+                hex = cls.unserialise(cls._decode(hex, 1))
             if isinstance(hex, _uuid.UUID):
                 int, hex = hex.int, None
-        else:
-            string = hex
-        try:
-            u = _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
-        except ValueError:
-            return six.binary_type.__new__(cls, string)
-        self = six.binary_type.__new__(cls, u)
-        self.__dict__['int'] = u.int
-        return self
-
-    def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
-        if 'int' not in self.__dict__:
-            _uuid.UUID.__init__(self, hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
+        return _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
 
     @classmethod
     def _is_serialised(cls, serialised, count=None):
@@ -443,8 +442,7 @@ class UUID(six.binary_type, _uuid.UUID):
             time_hi_version |= 0x1000
             clock_seq_low = clock & 0xff
             clock_seq_hi_variant = (clock >> 8) & 0x3f | 0x80  # Variant: RFC 4122
-            cls = self.__class__
-            return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
+            return self.__class__(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
 
     def encode(self, encoding='encoded'):
         return encode(self.serialise(), encoding)
