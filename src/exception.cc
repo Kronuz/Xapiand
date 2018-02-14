@@ -93,19 +93,19 @@ traceback(const std::string& filename, int line)
 
 BaseException::BaseException()
 	: line{0},
-	  frames{0},
-	  callstack{{}}
+	  callstack{{}},
+	  frames{0}
 { }
 
 
 BaseException::BaseException(const BaseException& exc)
 	: type{exc.type},
-	  message{exc.message},
-	  context{exc.context},
-	  traceback{exc.traceback},
 	  filename{exc.filename},
 	  line{exc.line},
-	  frames{exc.frames}
+	  frames{exc.frames},
+	  message{exc.message},
+	  context{exc.context},
+	  traceback{exc.traceback}
 {
 	memcpy(callstack, exc.callstack, frames * sizeof(void*));
 }
@@ -113,13 +113,13 @@ BaseException::BaseException(const BaseException& exc)
 
 BaseException::BaseException(BaseException&& exc)
 	: type{std::move(exc.type)},
-	  message{std::move(exc.message)},
-	  context{std::move(exc.context)},
-	  traceback{std::move(exc.traceback)},
 	  filename{std::move(exc.filename)},
 	  line{std::move(exc.line)},
 	  callstack{std::move(exc.callstack)},
-	  frames{std::move(exc.frames)}
+	  frames{std::move(exc.frames)},
+	  message{std::move(exc.message)},
+	  context{std::move(exc.context)},
+	  traceback{std::move(exc.traceback)}
 { }
 
 
