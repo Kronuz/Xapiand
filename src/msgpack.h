@@ -26,6 +26,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "atomic_shared_ptr.h"
 #include "exception.h"
 #include "io_utils.h"
 #include "msgpack.hpp"
@@ -64,6 +65,10 @@ class MsgPack {
 	void _assignment(const msgpack::object& obj);
 
 public:
+	struct Data {
+		virtual ~Data() { };
+	};
+
 	enum class Type : uint8_t {
 		NIL                 = msgpack::type::NIL,               //0x00
 		BOOLEAN             = msgpack::type::BOOLEAN,           //0x01
@@ -344,6 +349,10 @@ public:
 
 	static MsgPack unserialise(int fd, std::string& buffer, std::size_t& off);
 
+	void set_data(const std::shared_ptr<const Data>& new_data) const;
+	const std::shared_ptr<const Data> get_data() const;
+	void clear_data() const;
+
 	friend msgpack::adaptor::convert<MsgPack>;
 	friend msgpack::adaptor::pack<MsgPack>;
 	friend msgpack::adaptor::object<MsgPack>;
@@ -450,6 +459,8 @@ public:
 struct MsgPack::Body {
 	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
+
+	mutable atomic_shared_ptr<const Data> _data;
 
 	std::atomic_bool _lock;
 	bool _initialized;
@@ -2552,6 +2563,22 @@ inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& of
 		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
 		buffer.append(buf, r);
 	} while (true);
+}
+
+
+inline void MsgPack::set_data(const std::shared_ptr<const MsgPack::Data>& new_data) const {
+	std::shared_ptr<const MsgPack::Data> old_data;
+	while (!_body->_data.compare_exchange_weak(old_data, new_data));
+}
+
+
+inline const std::shared_ptr<const MsgPack::Data> MsgPack::get_data() const {
+	return _body->_data.load();
+}
+
+
+inline void MsgPack::clear_data() const {
+	set_data(nullptr);
 }
 
 
