@@ -508,7 +508,7 @@ class Schema {
 	 */
 	MsgPack& get_mutable_properties() {
 		if (!mut_schema) {
-			mut_schema = std::make_unique<MsgPack>(*schema);
+			mut_schema = std::make_unique<MsgPack>(schema->clone());
 		}
 		return mut_schema->at(SCHEMA_FIELD_NAME);
 	}

@@ -127,6 +127,8 @@ public:
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
 	MsgPack(T&& v);
 
+	MsgPack clone() const;
+
 	MsgPack& operator=(const MsgPack& other);
 	MsgPack& operator=(MsgPack&& other);
 	MsgPack& operator=(std::initializer_list<MsgPack> list);
@@ -756,6 +758,13 @@ inline MsgPack::MsgPack(Type type)
 		default:
 			THROW(msgpack::type_error);
 	}
+}
+
+
+inline MsgPack MsgPack::clone() const {
+	MsgPack cloned;
+	cloned._assignment(msgpack::object(*this, *cloned._body->_zone));
+	return cloned;
 }
 
 
