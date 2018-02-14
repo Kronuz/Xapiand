@@ -103,6 +103,7 @@ class Logging : public ScheduledTask {
 
 	bool clean;
 	std::string str_start;
+	BaseException exception;
 	bool async;
 	int priority;
 	std::atomic_bool cleaned;
@@ -114,8 +115,8 @@ class Logging : public ScheduledTask {
 
 	bool _unlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...);
 
-	static std::string format_string(bool info, bool stacked, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
-	static Log add(const std::string& str, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static std::string format_string(bool info, bool stacked, int priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
+	static Log add(const std::string& str, const BaseException* exc, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 public:
@@ -125,7 +126,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Logging(const std::string& str, bool cleanup, bool stacked, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	Logging(const std::string& str, const BaseException* exc, bool cleanup, bool stacked, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Logging();
 
 	static std::string colorized(const std::string& s, bool try_coloring);
@@ -134,7 +135,7 @@ public:
 	static void dump_collected();
 
 	static void do_println(bool collect, bool with_endl, const std::string& format, va_list argptr);
-	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
+	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
 
 	template <typename... Args>
 	bool unlog(int _priority, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, Args&&... args) {

@@ -85,19 +85,19 @@ static void collect(const std::string& format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
-Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const std::string& exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...);
+Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, va_list argptr);
+Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, int n, ...);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
 inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, Args&&... args) {
-	return _log(cleanup, info, stacked, wakeup, async, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+	return _log(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
 inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char* file, int line, const std::string& suffix, const std::string& prefix, const std::string& format, Args&&... args) {
-	return _log(cleanup, info, stacked, wakeup, async, priority, std::string(), file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+	return _log(cleanup, info, stacked, wakeup, async, priority, nullptr, file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
 

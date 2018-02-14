@@ -37,16 +37,23 @@ std::string traceback(const std::string& filename, int line);
 class BaseException {
 protected:
 	std::string type;
-	mutable std::string message;
-	mutable std::string context;
-	mutable std::string traceback;
-
 	std::string filename;
 	int line;
 	void* callstack[128];
 	size_t frames;
 
+	mutable std::string message;
+	mutable std::string context;
+	mutable std::string traceback;
+
+	BaseException();
+
 public:
+	BaseException(const BaseException& exc);
+	BaseException(BaseException&& exc);
+
+	BaseException(const BaseException* exc);
+
 	BaseException(const char *filename, int line, const char* type, const char* format, ...);
 
 	BaseException(const char *filename, int line, const char* type, const std::string& msg="")
@@ -57,6 +64,10 @@ public:
 	const char* get_message() const;
 	const char* get_context() const;
 	const char* get_traceback() const;
+
+	bool empty() const {
+		return type.empty();
+	}
 };
 
 
