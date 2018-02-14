@@ -272,10 +272,11 @@ Logging::Logging(const std::string& str, bool clean_, bool stacked_, bool async_
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
 		thread_id = std::this_thread::get_id();
-		try {
-			stack_level = ++stack_levels.at(thread_id);
-		} catch (const std::out_of_range&) {
+		auto it = stack_levels.find(thread_id);
+		if (it == stack_levels.end()) {
 			stack_levels[thread_id] = 0;
+		} else {
+			stack_level = ++it->second;
 		}
 	}
 }
