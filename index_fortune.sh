@@ -17,7 +17,7 @@ json_escape() {
 for id in $(seq "$start" "$end"); do
 	message="$(fortune | json_escape)"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
-	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" "$@"
+	curl "$@" -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data"
 done
 
 
@@ -29,7 +29,7 @@ done
 # 	../index_fortune.sh "$endpoint" "$start" "$end"
 # 	sleep 3
 # 	for id in $(seq "$start" "$end"); do
-# 		curl "$endpoint/$id"
+# 		curl "$@" "$endpoint/$id"
 # 	done
 # }
 # index_and_get_fortune "http://127.0.0.1:8880/test/fortune" 1 10
