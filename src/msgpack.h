@@ -542,19 +542,52 @@ struct MsgPack::Body {
 		return _obj->type == msgpack::type::EXT ? (Type)(_obj->via.ext.type() | MSGPACK_EXT_BEGIN) : (Type)_obj->type;
 	}
 
-	std::string getStrType() const noexcept {
+	const std::string& getStrType() const noexcept {
 		switch (getType()) {
-			case Type::NIL: return "NIL";
-			case Type::BOOLEAN: return "BOOLEAN";
-			case Type::POSITIVE_INTEGER: return "POSITIVE_INTEGER";
-			case Type::NEGATIVE_INTEGER: return "NEGATIVE_INTEGER";
-			case Type::FLOAT: return "FLOAT";
-			case Type::STR: return "STR";
-			case Type::ARRAY: return "ARRAY";
-			case Type::MAP: return "MAP";
-			case Type::BIN: return "BIN";
-			case Type::UNDEFINED: return "UNDEFINED";
-			default: return "<UNKNOWN>";
+			case Type::NIL: {
+				static const std::string _ = "NIL";
+				return _;
+			}
+			case Type::BOOLEAN: {
+				static const std::string _ = "BOOLEAN";
+				return _;
+			}
+			case Type::POSITIVE_INTEGER: {
+				static const std::string _ = "POSITIVE_INTEGER";
+				return _;
+			}
+			case Type::NEGATIVE_INTEGER: {
+				static const std::string _ = "NEGATIVE_INTEGER";
+				return _;
+			}
+			case Type::FLOAT: {
+				static const std::string _ = "FLOAT";
+				return _;
+			}
+			case Type::STR: {
+				static const std::string _ = "STR";
+				return _;
+			}
+			case Type::ARRAY: {
+				static const std::string _ = "ARRAY";
+				return _;
+			}
+			case Type::MAP: {
+				static const std::string _ = "MAP";
+				return _;
+			}
+			case Type::BIN: {
+				static const std::string _ = "BIN";
+				return _;
+			}
+			case Type::UNDEFINED: {
+				static const std::string _ = "UNDEFINED";
+				return _;
+			}
+			default: {
+				static const std::string _ = "<UNKNOWN>";
+				return _;
+			}
 		}
 	}
 };
