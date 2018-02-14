@@ -182,6 +182,7 @@ public:
 	auto external(std::function<T(const msgpack::object&)>) const;
 
 	void lock() const;
+	bool locked() const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	size_t erase(M&& o);
@@ -866,6 +867,7 @@ inline void MsgPack::_init() {
 
 
 inline void MsgPack::_deinit() {
+	assert(!_body->_lock);
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
@@ -1019,6 +1021,7 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 
 template <typename M, typename>
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
+	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _erase(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1036,6 +1039,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& key) {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1069,6 +1073,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& k
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1112,6 +1117,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
+	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1130,6 +1136,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(const std::string& key, T&& val, bool overwrite) {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::MAP;
@@ -1166,6 +1173,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(const std::string& key, T&& val, 
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwrite) {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
@@ -1202,6 +1210,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrite) {
+	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1220,6 +1229,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool overwrite) {
+	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
@@ -1264,10 +1274,10 @@ inline void MsgPack::_fill(bool recursive, bool lock) {
 	if (_body->_lock) {
 		return;
 	}
-	_body->_lock = lock;
 	if (!_body->_initialized) {
 		_init();
 	}
+	_body->_lock = lock;
 	if (recursive) {
 		switch (_body->getType()) {
 			case Type::MAP:
@@ -1339,6 +1349,11 @@ inline void MsgPack::lock() const {
 }
 
 
+inline bool MsgPack::locked() const {
+	return _body->_lock;
+}
+
+
 template <typename M, typename>
 inline size_t MsgPack::erase(M&& o) {
 	_fill(false, false);
@@ -1365,6 +1380,7 @@ inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
 
 
 inline void MsgPack::clear() noexcept {
+	assert(!_body->_lock);
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
