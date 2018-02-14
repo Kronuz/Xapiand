@@ -1616,6 +1616,13 @@ Schema::restart_namespace_specification()
 }
 
 
+struct FedSpecification : MsgPack::Data {
+	specification_t specification;
+
+	FedSpecification(const specification_t& specification) : specification(specification) { }
+};
+
+
 template <typename T>
 inline bool
 Schema::feed_subproperties(T& properties, const std::string& meta_name)
@@ -1628,6 +1635,14 @@ Schema::feed_subproperties(T& properties, const std::string& meta_name)
 	}
 
 	properties = &it.value();
+	const auto data = std::dynamic_pointer_cast<const FedSpecification>(properties->get_data());
+	if (data) {
+		auto local_prefix_uuid = specification.local_prefix.uuid;
+		specification = data->specification;
+		specification.local_prefix.uuid.assign(local_prefix_uuid);
+		return true;
+	}
+
 	specification.flags.field_found = true;
 	static const auto stit_e = map_stem_language.end();
 	const auto stit = map_stem_language.find(meta_name);
@@ -1643,6 +1658,8 @@ Schema::feed_subproperties(T& properties, const std::string& meta_name)
 	}
 
 	dispatch_feed_properties(*properties);
+
+	properties->set_data(std::make_shared<const FedSpecification>(specification));
 
 	return true;
 }
