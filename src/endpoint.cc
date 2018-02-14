@@ -64,6 +64,8 @@ normalize_and_partition(const void *p, size_t size)
 		} catch (const SerialisationError& exc) {
 			return normalized;
 		}
+	} else {
+		return normalized;
 	}
 
 	std::string result;
