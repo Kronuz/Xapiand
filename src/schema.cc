@@ -1463,7 +1463,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto schema_it_end = schema.end();
 	auto type_it = schema.find(RESERVED_TYPE);
 	if (type_it != schema_it_end) {
-		auto type = type_it.value();
+		auto& type = type_it.value();
 		if (!type.is_string()) {
 			THROW(ErrorType, "%s'%s.%s' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
 		}
