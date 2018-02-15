@@ -47,7 +47,7 @@ namespace detail
 	template <int i, typename T>
 	struct cat
 	{
-		static_assert (sizeof(T) < 0, "bad use of cat");
+		static_assert(sizeof(T) < 0, "bad use of cat");
 	};
 
 	template <int i, int... I>
@@ -59,7 +59,7 @@ namespace detail
 	template <int I>
 	struct make_int_sequence_
 	{
-		static_assert (I >= 0, "bad use of make_int_sequence: negative size");
+		static_assert(I >= 0, "bad use of make_int_sequence: negative size");
 		using type = typename cat<I - 1, typename make_int_sequence_<I - 1>::type>::type;
 	};
 
@@ -76,9 +76,9 @@ namespace detail
 
 // # Implementation of a constexpr-compatible assertion
 #ifdef NDEBUG
-#   define AK_TOOLKIT_ASSERT(CHECK) void(0)
+#   define constexpr_assert(CHECK) void(0)
 #else
-#   define AK_TOOLKIT_ASSERT(CHECK) ((CHECK) ? void(0) : []{assert(!#CHECK);}())
+#   define constexpr_assert(CHECK) ((CHECK) ? void(0) : []{assert(!#CHECK);}())
 #endif
 
 
@@ -88,7 +88,7 @@ struct char_array {};
 template <int N, typename T = literal_ref>
 class string
 {
-	static_assert (N > 0 && N < 0, "Invalid specialization of string");
+	static_assert(N > 0 && N < 0, "Invalid specialization of string");
 };
 
 // # A wraper over a string literal with alternate interface. No ownership management
@@ -99,8 +99,8 @@ class string<N, literal_ref>
 	const char (&_lit)[N + 1];
 
 public:
-	constexpr string(const char (&lit)[N + 1]) : _lit((AK_TOOLKIT_ASSERT(lit[N] == 0), lit)) {}
-	constexpr char operator[](int i) const { return AK_TOOLKIT_ASSERT(i >= 0 && i < N), _lit[i]; }
+	constexpr string(const char (&lit)[N + 1]) : _lit((constexpr_assert(lit[N] == 0), lit)) {}
+	constexpr char operator[](int i) const { return constexpr_assert(i >= 0 && i < N), _lit[i]; }
 
 	constexpr std::size_t size() const { return N; };
 
@@ -112,7 +112,6 @@ public:
 	constexpr operator string_view() const { return string_view(data(), N); }
 #endif
 	operator std::string() const { return std::string(data(), N); }
-
 };
 
 template <int N>
@@ -165,7 +164,7 @@ public:
 	constexpr const char* c_str() const { return _array; }
 	constexpr const char* data() const { return _array; }
 	constexpr operator const char * () const { return data(); }
-	constexpr char operator[] (int i) const { return AK_TOOLKIT_ASSERT(i >= 0 && i < N), _array[i]; }
+	constexpr char operator[] (int i) const { return constexpr_assert(i >= 0 && i < N), _array[i]; }
 
 #ifdef HAVE_STRING_VIEW
 	constexpr operator string_view() const { return string_view(data(), N); }
