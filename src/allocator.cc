@@ -152,13 +152,14 @@ namespace allocator {
 		t_allocated += size;
 		l_allocated += size;
 		*static_cast<std::size_t*>(p) = size;
+		p = static_cast<std::size_t*>(p) + 1;
 		// fprintf(stderr, "[allocated %zu bytes, %lld [%lld] are now allocated]\n", size, l_allocated, t_allocated.load());
-		return static_cast<char*>(p) + sizeof(std::size_t);
+		return p;
 	}
 
 	void TrackedAllocator::deallocate(void* p) noexcept {
 		if (p) {
-			p = static_cast<char*>(p) - sizeof(std::size_t);
+			p = static_cast<std::size_t*>(p) - 1;
 			std::size_t size = *static_cast<std::size_t*>(p);
 			auto& t_allocated = _total_allocated();
 			auto& l_allocated = _local_allocated();
