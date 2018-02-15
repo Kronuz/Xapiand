@@ -220,8 +220,7 @@ inline std::string vformat_string(const std::string& format, va_list argptr) {
 	// Make a string to hold the formatted message.
 	std::string str;
 	str.resize(len + 1);
-	vsnprintf(&str[0], len + 1, format.c_str(), argptr);
-	str.resize(len);
+	str.resize(vsnprintf(&str[0], len + 1, format.c_str(), argptr));
 
 	return str;
 }

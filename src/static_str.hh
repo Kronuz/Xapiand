@@ -32,6 +32,8 @@
 #include <cstddef>
 #include <string>
 
+#include "string_view.h"
+
 namespace static_str {
 
 // # Implementation of a subset of C++14 std::integer_sequence and std::make_integer_sequence
@@ -99,11 +101,18 @@ class string<N, literal_ref>
 public:
 	constexpr string(const char (&lit)[N + 1]) : _lit((AK_TOOLKIT_ASSERT(lit[N] == 0), lit)) {}
 	constexpr char operator[](int i) const { return AK_TOOLKIT_ASSERT(i >= 0 && i < N), _lit[i]; }
-	constexpr std::size_t size() const { return N; };
-	constexpr const char* c_str() const { return _lit; }
-	constexpr operator const char * () const { return c_str(); }
 
-	operator std::string () const { return std::string(c_str(), N); }
+	constexpr std::size_t size() const { return N; };
+
+	constexpr const char* c_str() const { return _lit; }
+	constexpr const char* data() const { return _lit; }
+	constexpr operator const char * () const { return data(); }
+
+#ifdef HAVE_STRING_VIEW
+	constexpr operator string_view() const { return string_view(data(), N); }
+#endif
+	operator std::string() const { return std::string(data(), N); }
+
 };
 
 template <int N>
@@ -154,10 +163,14 @@ public:
 	constexpr std::size_t size() const { return N; }
 
 	constexpr const char* c_str() const { return _array; }
-	constexpr operator const char * () const { return c_str(); }
+	constexpr const char* data() const { return _array; }
+	constexpr operator const char * () const { return data(); }
 	constexpr char operator[] (int i) const { return AK_TOOLKIT_ASSERT(i >= 0 && i < N), _array[i]; }
 
-	operator std::string () const { return std::string(c_str(), N); }
+#ifdef HAVE_STRING_VIEW
+	constexpr operator string_view() const { return string_view(data(), N); }
+#endif
+	operator std::string() const { return std::string(data(), N); }
 };
 
 template <int N>
