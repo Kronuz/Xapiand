@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2017 Andrzej Krzemienski.
- *
+ * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
+
  * Boost Software License - Version 1.0 - August 17th, 2003
  *
  * Permission is hereby granted, free of charge, to any person or organization
@@ -31,47 +32,11 @@
 #include <cassert>
 #include <cstddef>
 #include <string>
+#include <utility>
 
 #include "string_view.h"
 
 namespace static_str {
-
-// # Implementation of a subset of C++14 std::integer_sequence and std::make_integer_sequence
-
-namespace detail
-{
-	template <int... I>
-	struct int_sequence
-	{};
-
-	template <int i, typename T>
-	struct cat
-	{
-		static_assert(sizeof(T) < 0, "bad use of cat");
-	};
-
-	template <int i, int... I>
-	struct cat<i, int_sequence<I...>>
-	{
-		using type = int_sequence<I..., i>;
-	};
-
-	template <int I>
-	struct make_int_sequence_
-	{
-		static_assert(I >= 0, "bad use of make_int_sequence: negative size");
-		using type = typename cat<I - 1, typename make_int_sequence_<I - 1>::type>::type;
-	};
-
-	template <>
-	struct make_int_sequence_<0>
-	{
-		using type = int_sequence<>;
-	};
-
-	template <int I>
-	using make_int_sequence = typename make_int_sequence_<I>::type;
-}
 
 
 // # Implementation of a constexpr-compatible assertion
@@ -136,13 +101,13 @@ class string<N, char_array>
 	struct private_ctor {};
 
 	template <int M, int... Il, int... Ir, typename TL, typename TR>
-	constexpr explicit string(private_ctor, string<M, TL> const& l, string<N - M, TR> const& r, detail::int_sequence<Il...>, detail::int_sequence<Ir...>)
+	constexpr explicit string(private_ctor, string<M, TL> const& l, string<N - M, TR> const& r, std::integer_sequence<int, Il...>, std::integer_sequence<int, Ir...>)
 	  : _array{l[Il]..., r[Ir]..., 0}
 	{
 	}
 
 	template <int... Il, typename T>
-	constexpr explicit string(private_ctor, string<N, T> const& l, detail::int_sequence<Il...>)
+	constexpr explicit string(private_ctor, string<N, T> const& l, std::integer_sequence<int, Il...>)
 	  : _array{l[Il]..., 0}
 	{
 	}
@@ -150,12 +115,12 @@ class string<N, char_array>
 public:
 	template <int M, typename TL, typename TR, typename std::enable_if<(M < N), bool>::type = true>
 	constexpr explicit string(string<M, TL> l, string<N - M, TR> r)
-	: string(private_ctor{}, l, r, detail::make_int_sequence<M>{}, detail::make_int_sequence<N - M>{})
+	: string(private_ctor{}, l, r, std::make_integer_sequence<int, M>{}, std::make_integer_sequence<int, N - M>{})
 	{
 	}
 
 	constexpr string(string_literal<N> l) // converting
-	: string(private_ctor{}, l, detail::make_int_sequence<N>{})
+	: string(private_ctor{}, l, std::make_integer_sequence<int, N>{})
 	{
 	}
 
