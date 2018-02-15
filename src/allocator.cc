@@ -35,7 +35,6 @@
 #include <thread>         // for std::this_thread
 #include <unordered_map>  // for std::unordered_map
 #include <utility>        // for std::make_pair
-#include <utility>        // for std::pair
 
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && __GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8) || (defined(__llvm__) && !defined(_LIBCPP_VERSION))
