@@ -31,7 +31,7 @@
 #include <dirent.h>           // for DIR
 #include <math.h>             // for log10, floor, pow
 #include <regex>              // for regex
-#include <string>             // for string, allocator
+#include <string>             // for std::string
 #include <sys/errno.h>        // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
 #include <type_traits>        // for forward, underlying_type_t
