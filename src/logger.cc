@@ -31,6 +31,7 @@
 #include <regex>              // for regex_replace, regex
 #include <stdexcept>          // for out_of_range
 #include <system_error>       // for system_error
+#include <thread>             // for std::this_thread
 #include <unistd.h>           // for isatty
 #include <unordered_map>      // for unordered_map
 #include <vector>             // for vector
