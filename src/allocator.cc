@@ -87,8 +87,10 @@ namespace allocator {
 	}
 
 	void VanillaAllocator::deallocate(void* p) noexcept {
-		// fprintf(stderr, "[freed]\n");
-		::allocator::deallocate(p);
+		if (p) {
+			::allocator::deallocate(p);
+			// fprintf(stderr, "[freed]\n");
+		}
 	}
 
 
@@ -144,27 +146,28 @@ namespace allocator {
 	}
 
 	void* TrackedAllocator::allocate(std::size_t size) noexcept {
-		auto& t_allocated = _total_allocated();
-		auto& l_allocated = _local_allocated();
 		void* p = ::allocator::allocate(size + sizeof(std::size_t));
 		if (!p) return nullptr;
+		auto& t_allocated = _total_allocated();
+		auto& l_allocated = _local_allocated();
 		t_allocated += size;
 		l_allocated += size;
-		// fprintf(stderr, "[allocated %zu bytes, %lld [%lld] are now allocated]\n", size, l_allocated, t_allocated.load());
 		*static_cast<std::size_t*>(p) = size;
+		// fprintf(stderr, "[allocated %zu bytes, %lld [%lld] are now allocated]\n", size, l_allocated, t_allocated.load());
 		return static_cast<char*>(p) + sizeof(std::size_t);
 	}
 
 	void TrackedAllocator::deallocate(void* p) noexcept {
-		assert(p);
-		auto& t_allocated = _total_allocated();
-		auto& l_allocated = _local_allocated();
-		p = static_cast<char*>(p) - sizeof(std::size_t);
-		std::size_t size = *static_cast<std::size_t*>(p);
-		t_allocated -= size;
-		l_allocated -= size;
-		// fprintf(stderr, "[freed %zu bytes, %lld [%lld] remain allocated]\n", size, l_allocated, t_allocated.load());
-		::allocator::deallocate(p);
+		if (p) {
+			p = static_cast<char*>(p) - sizeof(std::size_t);
+			std::size_t size = *static_cast<std::size_t*>(p);
+			auto& t_allocated = _total_allocated();
+			auto& l_allocated = _local_allocated();
+			t_allocated -= size;
+			l_allocated -= size;
+			::allocator::deallocate(p);
+			// fprintf(stderr, "[freed %zu bytes, %lld [%lld] remain allocated]\n", size, l_allocated, t_allocated.load());
+		}
 	}
 }
 
