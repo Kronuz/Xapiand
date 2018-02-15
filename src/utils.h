@@ -43,6 +43,7 @@
 #include "exception.h"        // for InvalidArgument, OutOfRange
 #include "split.h"            // for Split
 #include "static_str.hh"      // for static_str
+#include "string_view.h"      // for string_view
 
 
 template<class T, class... Args>
@@ -210,23 +211,23 @@ namespace std {
 }
 
 
-inline std::string vformat_string(const std::string& format, va_list argptr) {
+inline std::string vformat_string(const string_view& format, va_list argptr) {
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format.c_str(), argptr_copy);
+	auto len = vsnprintf(nullptr, 0, format.data(), argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	std::string str;
 	str.resize(len + 1);
-	str.resize(vsnprintf(&str[0], len + 1, format.c_str(), argptr));
+	str.resize(vsnprintf(&str[0], len + 1, format.data(), argptr));
 
 	return str;
 }
 
 
-inline std::string _format_string(const std::string& format, int n, ...) {
+inline std::string _format_string(const string_view& format, int n, ...) {
 	va_list argptr;
 
 	va_start(argptr, n);
@@ -238,7 +239,7 @@ inline std::string _format_string(const std::string& format, int n, ...) {
 
 
 template<typename... Args>
-inline std::string format_string(const std::string& format, Args&&... args) {
+inline std::string format_string(const string_view& format, Args&&... args) {
 	return _format_string(format, 0, std::forward<Args>(args)...);
 }
 
