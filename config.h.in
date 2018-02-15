@@ -247,6 +247,9 @@
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
+/* Enable tracked memory allocator for memory usage. */
+#cmakedefine XAPIAND_TRACKED_MEM @XAPIAND_TRACKED_MEM@
+
 /* Path for test files */
 #cmakedefine PATH_TESTS "@PATH_TESTS@"
 
