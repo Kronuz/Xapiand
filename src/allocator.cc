@@ -173,7 +173,7 @@ namespace allocator {
 
 // Operators overload for tracking
 
-void* operator new(std::size_t size) throw(std::bad_alloc) {
+void* operator new(std::size_t size) noexcept(false) {
 	void* p = allocator::TrackedAllocator::allocate(size);
 	if (!p) {
 		static const std::bad_alloc nomem;
@@ -188,7 +188,7 @@ void* operator new(std::size_t size, const std::nothrow_t&) noexcept {
 }
 
 
-void* operator new[](std::size_t size) throw(std::bad_alloc) {
+void* operator new[](std::size_t size) noexcept(false) {
 	void* p = allocator::TrackedAllocator::allocate(size);
 	if (!p) {
 		static const std::bad_alloc nomem;
