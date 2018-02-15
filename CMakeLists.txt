@@ -240,6 +240,7 @@ check_include_files("unistd.h" HAVE_UNISTD_H)
 
 check_include_file_cxx("sstream" HAVE_SSTREAM)
 check_include_file_cxx("strstream" HAVE_STRSTREAM)
+check_include_file_cxx("string_view" HAVE_STRING_VIEW)
 
 check_function_exists("fallocate" HAVE_FALLOCATE)
 check_function_exists("fsync" HAVE_FSYNC)
@@ -288,7 +289,6 @@ check_include_files("sys/select.h" HAVE_SYS_SELECT_H)
 check_include_files("sys/signalfd.h" HAVE_SYS_SIGNALFD_H)
 check_include_files("port.h" HAVE_PORT_H)
 check_include_files("poll.h" HAVE_POLL_H)
-check_include_files("string_view" HAVE_STRING_VIEW)
 
 check_function_exists("inotify_init" HAVE_INOTIFY_INIT)
 check_function_exists("epoll_ctl" HAVE_EPOLL_CTL)
