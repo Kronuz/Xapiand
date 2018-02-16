@@ -33,7 +33,7 @@
 #include <math.h>             // for log10, floor, pow
 #include <regex>              // for regex
 #include <string>             // for std::string
-#include <sys/errno.h>        // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
+#include <sys/errno.h>        // for errno, EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
 #include <type_traits>        // for forward, underlying_type_t
 #include <unistd.h>           // for usleep
@@ -80,71 +80,56 @@ namespace std {
 }
 
 
-// Strict converter for unsigned types
-template <typename F>
-auto stoux(string_view str) {
-	if (str.empty() || str[0] < '0' || str[0] > '9') {
-		THROW(InvalidArgument, "Cannot convert value: '%s'", std::string(str).c_str());
-	} else {
-		std::size_t sz;
-		try {
-			auto ret = F::stox(std::string(str), &sz);
-			if (sz != str.size()) {
-				THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
-			}
-			return ret;
-		} catch (const std::out_of_range&) {
-			THROW(OutOfRange, "Out of range value: %s", std::string(str).c_str());
-		} catch (const std::invalid_argument&) {
-			THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
-		}
+// Strict converter types
+template <typename F, typename... Args>
+auto stox_helper(const char* name, F f, string_view str, std::size_t* idx, Args&&... args) {
+	auto b = str.data();
+	auto e = b + str.size();
+	auto ptr = const_cast<char*>(e);
+	auto errno_save = errno;
+	errno = 0;
+	auto r = f(b, &ptr, std::forward<Args>(args)...);
+	std::swap(errno, errno_save);
+	if (errno_save == ERANGE) {
+		throw std::out_of_range(name);
+		THROW(OutOfRange, "%s: Out of range value: %s", name, std::string(str).c_str());
 	}
-}
-
-
-// Strict converter for signed types
-template <typename F>
-auto stosx(string_view str) {
-	if (str.empty() || str[0] == ' ') {
-		THROW(InvalidArgument, "Cannot convert value: '%s'", std::string(str).c_str());
-	} else {
-		std::size_t sz;
-		try {
-			auto ret = F::stox(std::string(str), &sz);
-			if (sz != str.size()) {
-				THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
-			}
-			return ret;
-		} catch (const std::out_of_range&) {
-			THROW(OutOfRange, "Out of range value: %s", std::string(str).c_str());
-		} catch (const std::invalid_argument&) {
-			THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
-		}
+	if (ptr == b) {
+		THROW(InvalidArgument, "%s: Cannot convert value: %s", name, std::string(str).c_str());
 	}
+	if (idx) {
+		*idx = static_cast<size_t>(ptr - b);
+	} else if (ptr != e) {
+		THROW(InvalidArgument, "%s: Cannot convert value: %s", name, std::string(str).c_str());
+	}
+	return r;
 }
-
-
-#define STOXIFY(name, wrapper, func) \
-struct _Stox_##name { \
-	template <typename T> \
-	static inline auto stox(T&& str, std::size_t* sz) { \
-		return func(std::forward<T>(str), sz); \
-	} \
-}; \
-template <typename T> \
-inline auto strict_##name(T&& str) { \
-	return wrapper<_Stox_##name>(std::forward<T>(str)); \
+template <typename T, typename F, typename... Args>
+auto stox_helper_numeric_limits(const char* name, F f, string_view str, std::size_t* idx, Args&&... args) {
+	auto r = stox_helper(name, f, str, idx, std::forward<Args>(args)...);
+	if (r < std::numeric_limits<T>::min() || std::numeric_limits<T>::max() < r) {
+		THROW(OutOfRange, "%s: Out of range value: %s", name, std::string(str).c_str());
+	}
+	return r;
 }
-STOXIFY(stoul, stoux, std::stoul);
-STOXIFY(stoull, stoux, std::stoull);
-STOXIFY(stoi, stosx, std::stoi);
-STOXIFY(stol, stosx, std::stol);
-STOXIFY(stoll, stosx, std::stoll);
-STOXIFY(stof, stosx, std::stof);
-STOXIFY(stod, stosx, std::stod);
-STOXIFY(stold, stosx, std::stold);
+#define STOXIFYB(wrapper, name, func) \
+inline auto strict_##name(string_view str, std::size_t* idx = nullptr, int base = 10) { \
+	return wrapper(#name, std::func, str, idx, base); \
+}
+#define STOXIFY(wrapper, name, func) \
+inline auto strict_##name(string_view str, std::size_t* idx = nullptr) { \
+	return wrapper(#name, std::func, str, idx); \
+}
+STOXIFYB(stox_helper, stoul, strtoul);
+STOXIFYB(stox_helper, stoull, strtoull);
+STOXIFYB(stox_helper_numeric_limits<int>, stoi, strtol);
+STOXIFYB(stox_helper_numeric_limits<unsigned>, stou, strtoul);
+STOXIFYB(stox_helper, stol, strtol);
+STOXIFYB(stox_helper, stoll, strtoll);
+STOXIFY(stox_helper, stof, strtof);
+STOXIFY(stox_helper, stod, strtod);
+STOXIFY(stox_helper, stold, strtold);
 #undef STOXIFY
-#define stox(name, s) strict_##name(#s)
 
 
 struct File_ptr {
