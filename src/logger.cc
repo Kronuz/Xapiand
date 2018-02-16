@@ -73,12 +73,13 @@ static const std::string priorities[] = {
 const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)", std::regex::optimize);
 
 
-static inline std::string
+static inline const std::string&
 detectColoring()
 {
 	const char* no_color = getenv("NO_COLOR");
 	if (no_color) {
-		return "";
+		static const std::string _ = "";
+		return _;
 	}
 	std::string colorterm;
 	const char* env_colorterm = getenv("COLORTERM");
@@ -91,13 +92,17 @@ detectColoring()
 		term = env_term;
 	}
 	if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
-		return "$1";
+		static const std::string _ = "$1";
+		return _;
 	} else if (term.find("256color") != std::string::npos) {
-		return "$2";
+		static const std::string _ = "$2";
+		return _;
 	} else if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
-		return "$3";
+		static const std::string _ = "$3";
+		return _;
 	} else {
-		return "$3";
+		static const std::string _ = "$3";
+		return _;
 	}
 }
 
@@ -222,7 +227,9 @@ Log::release()
 void
 StreamLogger::log(int priority, string_view str, bool with_priority, bool with_endl)
 {
-	ofs << Logging::colorized((with_priority ? priorities[priority] : "") + string_view_data_as_c_str(str), Logging::colors && !Logging::no_colors);
+	bool colorized = Logging::colors && !Logging::no_colors;
+	ofs << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
+	ofs << Logging::colorized(str, colorized);
 	if (with_endl) {
 		ofs << std::endl;
 	}
@@ -233,7 +240,9 @@ void
 StderrLogger::log(int priority, string_view str, bool with_priority, bool with_endl)
 {
 	static const bool is_tty = isatty(fileno(stderr));
-	std::cerr << Logging::colorized((with_priority ? priorities[priority] : "") + string_view_data_as_c_str(str), (is_tty || Logging::colors) && !Logging::no_colors);
+	bool colorized = (is_tty || Logging::colors) && !Logging::no_colors;
+	std::cerr << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
+	std::cerr << Logging::colorized(str, colorized);
 	if (with_endl) {
 		std::cerr << std::endl;
 	}
@@ -255,7 +264,10 @@ SysLog::~SysLog()
 void
 SysLog::log(int priority, string_view str, bool with_priority, bool)
 {
-	syslog(priority, "%s", Logging::colorized((with_priority ? priorities[priority] : "") + string_view_data_as_c_str(str), Logging::colors && !Logging::no_colors).c_str());
+	bool colorized = Logging::colors && !Logging::no_colors;
+	auto a = Logging::colorized(with_priority ? priorities[priority] : "", colorized);
+	auto b = Logging::colorized(str, colorized);
+	syslog(priority, "%s%s", a.c_str(), b.c_str());
 }
 
 
@@ -292,12 +304,13 @@ Logging::~Logging()
 std::string
 Logging::colorized(string_view str, bool try_coloring)
 {
-	if (try_coloring) {
-		static const auto coloring_group = detectColoring();
-		return std::regex_replace(string_view_data_as_c_str(str), coloring_re, coloring_group);
-	} else {
-		return std::regex_replace(string_view_data_as_c_str(str), coloring_re, "");
-	}
+	static const auto coloring_group = detectColoring();
+	static const std::string empty_group;
+	const auto& group = try_coloring ? coloring_group : empty_group;
+
+	std::string result;
+	std::regex_replace(std::back_inserter(result), str.begin(), str.end(), coloring_re, group);
+	return result;
 }
 
 
@@ -402,9 +415,9 @@ Logging::format_string(bool info, bool stacked, int priority, const char* file, 
 		result.append(STACKED_INDENT);
 	}
 
-	result.append(string_view_data_as_c_str(prefix));
-	result.append(string_view_data_as_c_str(msg));
-	result.append(string_view_data_as_c_str(suffix));
+	result.append(prefix.data(), prefix.size());
+	result.append(msg.data(), msg.size());
+	result.append(suffix.data(), suffix.size());
 
 	return result;
 }

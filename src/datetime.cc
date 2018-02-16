@@ -112,7 +112,7 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 							return;
 						}
 					}
-					THROW(DatetimeError, "Time: %s is out of range", string_view_data_as_c_str(str_time));
+					THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 				}
 				break;
 			case 8: // 00:00:00
@@ -128,7 +128,7 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 							}
 						}
 					}
-					THROW(DatetimeError, "Time: %s is out of range", string_view_data_as_c_str(str_time));
+					THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 				}
 				break;
 			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
@@ -150,9 +150,9 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 												computeTimeZone(tm, str_time[8], tz_h, tz_m);
 												return;
 											}
-											THROW(DatetimeError, "Time: %s is out of range", string_view_data_as_c_str(str_time));
+											THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 										}
-										THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", string_view_data_as_c_str(str_time));
+										THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", std::string(str_time).c_str());
 									case '.': {
 										auto it = str_time.begin() + 8;
 										const auto it_e = str_time.end();
@@ -170,11 +170,11 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 																tm.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, aux - it)));
 																return;
 															}
-															THROW(DatetimeError, "Time: %s is out of range", string_view_data_as_c_str(str_time));
+															THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 														}
 													}
 												}
-												THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", string_view_data_as_c_str(str_time));
+												THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(str_time).c_str());
 											}
 										}
 										tm.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
@@ -189,11 +189,11 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 				}
 				break;
 		}
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", string_view_data_as_c_str(str_time));
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", std::string(str_time).c_str());
 	} catch (const OutOfRange& er) {
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", string_view_data_as_c_str(str_time), er.what());
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", std::string(str_time).c_str(), er.what());
 	} catch (const InvalidArgument& er) {
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", string_view_data_as_c_str(str_time), er.what());
+		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", std::string(str_time).c_str(), er.what());
 	}
 }
 
@@ -222,9 +222,9 @@ Datetime::DateParser(string_view date)
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
-				THROW(DatetimeError, "Date: %s is out of range", string_view_data_as_c_str(date));
+				THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
 			default:
-				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", string_view_data_as_c_str(date));
+				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
 		}
 	} else {
 		auto format = Iso8601Parser(date.substr(0, pos), tm);
@@ -235,9 +235,9 @@ Datetime::DateParser(string_view date)
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
-				THROW(DatetimeError, "Date: %s is out of range", string_view_data_as_c_str(date));
+				THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
 			default:
-				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", string_view_data_as_c_str(date));
+				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
 		}
 	}
 
@@ -283,7 +283,7 @@ Datetime::DateParser(string_view date)
 		return tm;
 	}
 
-	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", string_view_data_as_c_str(date));
+	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
 }
 
 
@@ -1198,7 +1198,7 @@ Datetime::TimeParser(string_view _time)
 										default:
 											break;
 									}
-									THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", string_view_data_as_c_str(_time));
+									THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
 								}
 							}
 							clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
@@ -1210,11 +1210,11 @@ Datetime::TimeParser(string_view _time)
 				}
 				break;
 		}
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", string_view_data_as_c_str(_time));
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
 	} catch (const OutOfRange& er) {
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", string_view_data_as_c_str(_time), er.what());
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", std::string(_time).c_str(), er.what());
 	} catch (const InvalidArgument& er) {
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", string_view_data_as_c_str(_time), er.what());
+		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", std::string(_time).c_str(), er.what());
 	}
 }
 
@@ -1479,7 +1479,7 @@ Datetime::TimedeltaParser(string_view timedelta)
 							for (auto aux = it + 1; aux != it_e; ++aux) {
 								const auto& c = *aux;
 								if (c < '0' || c > '9') {
-									THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", string_view_data_as_c_str(timedelta));
+									THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
 								}
 							}
 							clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
@@ -1490,11 +1490,11 @@ Datetime::TimedeltaParser(string_view timedelta)
 				}
 				break;
 		}
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", string_view_data_as_c_str(timedelta));
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
 	} catch (const OutOfRange& er) {
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", string_view_data_as_c_str(timedelta), er.what());
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", std::string(timedelta).c_str(), er.what());
 	} catch (const InvalidArgument& er) {
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", string_view_data_as_c_str(timedelta), er.what());
+		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", std::string(timedelta).c_str(), er.what());
 	}
 }
 
