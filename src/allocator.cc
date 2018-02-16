@@ -57,7 +57,7 @@ namespace allocator {
 
 	// allocate/deallocate using ::malloc/::free
 
-	void* allocate(std::size_t size) noexcept {
+	static inline void* allocate(std::size_t size) noexcept {
     	if (size == 0) {
         	size = 1;
     	}
@@ -74,7 +74,7 @@ namespace allocator {
     	return p;
     }
 
-    void deallocate(void* p) noexcept {
+    static inline void deallocate(void* p) noexcept {
     	if (p) {
     		std::free(p);
     	}
@@ -83,14 +83,14 @@ namespace allocator {
 
     // VanillaAllocator
 
-	void* VanillaAllocator::allocate(std::size_t size) noexcept {
+	inline void* VanillaAllocator::allocate(std::size_t size) noexcept {
 		// fprintf(stderr, "{allocate %zu bytes}\n", size);
 		void* p = ::allocator::allocate(size);
 		if (!p) return nullptr;
 		return p;
 	}
 
-	void VanillaAllocator::deallocate(void* p) noexcept {
+	inline void VanillaAllocator::deallocate(void* p) noexcept {
 		if (p) {
 			// fprintf(stderr, "{deallocate}\n");
 			::allocator::deallocate(p);
@@ -100,13 +100,13 @@ namespace allocator {
 
 	// TrackedAllocator
 
-	std::atomic_llong& _total_allocated() noexcept {
+	static inline std::atomic_llong& _total_allocated() noexcept {
 		static std::atomic_llong t_allocated;
 		return t_allocated;
 	}
 
 #ifdef HAS_THREAD_LOCAL
-	static long long& _local_allocated() noexcept {
+	static inline long long& _local_allocated() noexcept {
 		thread_local static long long l_allocated;
 		return l_allocated;
 	}
@@ -127,7 +127,7 @@ namespace allocator {
 		allocator<std::pair<const std::thread::id, long long>, VanillaAllocator>
 	> tracked_sizes;
 
-	static long long& __local_allocated() noexcept {
+	static inline long long& __local_allocated() noexcept {
 		const auto id = std::this_thread::get_id();
 		auto it = tracked_sizes.find(id);
 		if (it != tracked_sizes.end()) return it->second;
@@ -135,7 +135,7 @@ namespace allocator {
 		return l_allocated;
 	}
 
-	static long long& _local_allocated() noexcept {
+	static inline long long& _local_allocated() noexcept {
 		std::lock_guard<std::mutex> lock(tracked_mutex);
 		return __local_allocated();
 	}
@@ -151,7 +151,7 @@ namespace allocator {
 		return _total_allocated();
 	}
 
-	void* TrackedAllocator::allocate(std::size_t size) noexcept {
+	inline void* TrackedAllocator::allocate(std::size_t size) noexcept {
 		// fprintf(stderr, "[allocate %zu bytes]\n", size);
 		void* p = ::allocator::allocate(size + alloc_alignment);
 		if (!p) return nullptr;
@@ -165,7 +165,7 @@ namespace allocator {
 		return p;
 	}
 
-	void TrackedAllocator::deallocate(void* p) noexcept {
+	inline void TrackedAllocator::deallocate(void* p) noexcept {
 		if (p) {
 			p = static_cast<char*>(p) - alloc_alignment;
 			// fprintf(stderr, "[deallocate %p]\n", p);
