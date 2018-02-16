@@ -311,7 +311,6 @@ inline std::string indent_string(string_view str, char sep, int level, bool inde
 	std::string result;
 	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
 
-	// std::string indentation(level, sep);
 	if (indent_first) {
 		result.append(level, sep);
 	}
@@ -322,10 +321,12 @@ inline std::string indent_string(string_view str, char sep, int level, bool inde
 	for (; !it.last(); ++it) {
 		const auto& line = *it;
 		result.append(line);
+		result.push_back('\n');
 		result.append(level, sep);
 	}
 	const auto& line = *it;
 	result.append(line);
+	result.push_back('\n');
 
 	return result;
 }
