@@ -50,6 +50,11 @@
 
 
 namespace allocator {
+	// Allocating Aligned Memory Blocks
+	// The address of a block returned by malloc or realloc is always a
+	// multiple of eight (or sixteen on 64-bit systems).
+	constexpr std::size_t alloc_alignment = sizeof(std::size_t) * 2;
+
 	// allocate/deallocate using ::malloc/::free
 
 	void* allocate(std::size_t size) noexcept {
@@ -79,16 +84,16 @@ namespace allocator {
     // VanillaAllocator
 
 	void* VanillaAllocator::allocate(std::size_t size) noexcept {
-		void* p = ::allocator::allocate(size + sizeof(std::size_t));
+		// fprintf(stderr, "{allocate %zu bytes}\n", size);
+		void* p = ::allocator::allocate(size);
 		if (!p) return nullptr;
-		// fprintf(stderr, "[allocated %zu bytes]\n", size);
 		return p;
 	}
 
 	void VanillaAllocator::deallocate(void* p) noexcept {
 		if (p) {
+			// fprintf(stderr, "{deallocate}\n");
 			::allocator::deallocate(p);
-			// fprintf(stderr, "[freed]\n");
 		}
 	}
 
@@ -111,6 +116,8 @@ namespace allocator {
 	}
 
 #else
+	#pragma message ("Threading without thread_local support is not well supported.")
+
 	static std::mutex tracked_mutex;
 	static std::unordered_map<
 		std::thread::id,
@@ -145,28 +152,30 @@ namespace allocator {
 	}
 
 	void* TrackedAllocator::allocate(std::size_t size) noexcept {
-		void* p = ::allocator::allocate(size + sizeof(std::size_t));
+		// fprintf(stderr, "[allocate %zu bytes]\n", size);
+		void* p = ::allocator::allocate(size + alloc_alignment);
 		if (!p) return nullptr;
 		auto& t_allocated = _total_allocated();
 		auto& l_allocated = _local_allocated();
 		t_allocated += size;
 		l_allocated += size;
 		*static_cast<std::size_t*>(p) = size;
-		p = static_cast<std::size_t*>(p) + 1;
-		// fprintf(stderr, "[allocated %zu bytes, %lld [%lld] are now allocated]\n", size, l_allocated, t_allocated.load());
+		// fprintf(stderr, "[allocated %zu bytes at %p, %lld [%lld] are now allocated]\n", size, p, l_allocated, t_allocated.load());
+		p = static_cast<char*>(p) + alloc_alignment;
 		return p;
 	}
 
 	void TrackedAllocator::deallocate(void* p) noexcept {
 		if (p) {
-			p = static_cast<std::size_t*>(p) - 1;
+			p = static_cast<char*>(p) - alloc_alignment;
+			// fprintf(stderr, "[deallocate %p]\n", p);
 			std::size_t size = *static_cast<std::size_t*>(p);
 			auto& t_allocated = _total_allocated();
 			auto& l_allocated = _local_allocated();
 			t_allocated -= size;
 			l_allocated -= size;
+			// fprintf(stderr, "[deallocating %zu bytes at %p, %lld [%lld] remain allocated]\n", size, p, l_allocated, t_allocated.load());
 			::allocator::deallocate(p);
-			// fprintf(stderr, "[freed %zu bytes, %lld [%lld] remain allocated]\n", size, l_allocated, t_allocated.load());
 		}
 	}
 }
