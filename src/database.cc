@@ -931,7 +931,14 @@ Database::reopen()
 					L_DATABASE("Endpoint %s fallback to local database!", repr(e.to_string()).c_str());
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					build_path_index(e.path);
-					wdb = Xapian::WritableDatabase(e.path, _flags);
+					try {
+						wdb = Xapian::WritableDatabase(e.path, _flags);
+					} catch (const Xapian::DatabaseOpeningError&) {
+						if ((flags & DB_SPAWN) && !exists(e.path + "/iamglass")) {
+							_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
+							wdb = Xapian::WritableDatabase(e.path, _flags);
+						}
+					}
 					local = true;
 					if (endpoints_size == 1) read_mastery(e);
 				}
@@ -949,7 +956,14 @@ Database::reopen()
 			}
 #endif
 			build_path_index(e.path);
-			wdb = Xapian::WritableDatabase(e.path, _flags);
+			try {
+				wdb = Xapian::WritableDatabase(e.path, _flags);
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if ((flags & DB_SPAWN) && !exists(e.path + "/iamglass")) {
+					_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
+					wdb = Xapian::WritableDatabase(e.path, _flags);
+				}
+			}
 			local = true;
 			if (endpoints_size == 1) read_mastery(e);
 		}
@@ -1047,7 +1061,13 @@ Database::reopen()
 					}
 					{
 						build_path_index(e.path);
-						Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
+						try {
+							Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
+						} catch (const Xapian::DatabaseOpeningError&) {
+							if (!exists(e.path + "/iamglass")) {
+								Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OVERWRITE);
+							}
+						}
 					}
 
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
