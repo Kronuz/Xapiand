@@ -24,6 +24,7 @@
 
 #include "xapiand.h"
 
+#include <algorithm>          // for std::count
 #include <cctype>             // for tolower, toupper
 #include <chrono>             // for system_clock, time_point, duration_cast, seconds
 #include <cstdarg>            // for va_list, va_end, va_start
@@ -54,59 +55,96 @@ struct is_callable {
 };
 
 
-/* Strict converter for unsigned types */
-#define stoux(func, s) \
-	[](const std::string& str) { \
-		if (str.empty() || str[0] < '0' || str[0] > '9') { \
-			THROW(InvalidArgument, "Cannot convert value: '%s'", str.c_str()); \
-		} else { \
-			std::size_t sz; \
-			try { \
-				auto ret = (func)(str, &sz); \
-				if (sz != str.length()) { \
-					THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
-				} \
-				return ret; \
-			} catch (const std::out_of_range&) { \
-				THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
-			} catch (const std::invalid_argument&) { \
-				THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
-			} \
-		} \
-	}(s)
+namespace std {
+	template<typename T, int N>
+	inline std::string to_string(const T (&s)[N])
+	{
+		return std::string(s, N - 1);
+	}
+
+	inline auto& to_string(std::string& str) {
+		return str;
+	}
+
+	inline const auto& to_string(const std::string& str) {
+		return str;
+	}
+
+	inline std::string to_string(string_view& str) {
+		return std::string(str);
+	}
+
+	inline const std::string to_string(const string_view& str) {
+		return std::string(str);
+	}
+}
 
 
-/* Strict converter for signed types */
-#define stosx(func, s) \
-	[](const std::string& str) { \
-		if (str.empty() || str[0] == ' ') { \
-			THROW(InvalidArgument, "Cannot convert value: '%s'", str.c_str()); \
-		} else { \
-			std::size_t sz; \
-			try { \
-				auto ret = (func)(str, &sz); \
-				if (sz != str.length()) { \
-					THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
-				} \
-				return ret; \
-			} catch (const std::out_of_range&) { \
-				THROW(OutOfRange, "Out of range value: %s", str.c_str()); \
-			} catch (const std::invalid_argument&) { \
-				THROW(InvalidArgument, "Cannot convert value: %s", str.c_str()); \
-			} \
-		} \
-	}(s)
+// Strict converter for unsigned types
+template <typename F>
+auto stoux(string_view str) {
+	if (str.empty() || str[0] < '0' || str[0] > '9') {
+		THROW(InvalidArgument, "Cannot convert value: '%s'", std::string(str).c_str());
+	} else {
+		std::size_t sz;
+		try {
+			auto ret = F::stox(std::string(str), &sz);
+			if (sz != str.size()) {
+				THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
+			}
+			return ret;
+		} catch (const std::out_of_range&) {
+			THROW(OutOfRange, "Out of range value: %s", std::string(str).c_str());
+		} catch (const std::invalid_argument&) {
+			THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
+		}
+	}
+}
 
 
-#define strict_stoul(s)     stoux(std::stoul, s)
-#define strict_stoull(s)    stoux(std::stoull, s)
-#define strict_stoi(s)      stosx(std::stoi, s)
-#define strict_stol(s)      stosx(std::stol, s)
-#define strict_stoll(s)     stosx(std::stoll, s)
-#define strict_stof(s)      stosx(std::stof, s)
-#define strict_stod(s)      stosx(std::stod, s)
-#define strict_stold(s)     stosx(std::stold, s)
-#define stox(func, s)       strict_##func(#s)
+// Strict converter for signed types
+template <typename F>
+auto stosx(string_view str) {
+	if (str.empty() || str[0] == ' ') {
+		THROW(InvalidArgument, "Cannot convert value: '%s'", std::string(str).c_str());
+	} else {
+		std::size_t sz;
+		try {
+			auto ret = F::stox(std::string(str), &sz);
+			if (sz != str.size()) {
+				THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
+			}
+			return ret;
+		} catch (const std::out_of_range&) {
+			THROW(OutOfRange, "Out of range value: %s", std::string(str).c_str());
+		} catch (const std::invalid_argument&) {
+			THROW(InvalidArgument, "Cannot convert value: %s", std::string(str).c_str());
+		}
+	}
+}
+
+
+#define STOXIFY(name, wrapper, func) \
+struct _Stox_##name { \
+	template <typename T> \
+	static inline auto stox(T&& str, std::size_t* sz) { \
+		return func(std::forward<T>(str), sz); \
+	} \
+}; \
+template <typename T> \
+inline auto strict_##name(T&& str) { \
+	return wrapper<_Stox_##name>(std::forward<T>(str)); \
+}
+STOXIFY(stoul, stoux, std::stoul);
+STOXIFY(stoull, stoux, std::stoull);
+STOXIFY(stoi, stosx, std::stoi);
+STOXIFY(stol, stosx, std::stol);
+STOXIFY(stoll, stosx, std::stoll);
+STOXIFY(stof, stosx, std::stof);
+STOXIFY(stod, stosx, std::stod);
+STOXIFY(stold, stosx, std::stold);
+#undef STOXIFY
+#define stox(name, s) strict_##name(#s)
 
 
 struct File_ptr {
@@ -131,14 +169,14 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
 
-void set_thread_name(const std::string& name);
+void set_thread_name(string_view name);
 std::string get_thread_name();
 
 
 std::string repr(const void* p, size_t size, bool friendly = true, char quote = '\'', size_t max_size = 0);
 
-inline std::string repr(const std::string& string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
-	return repr(string.c_str(), string.length(), friendly, quote, max_size);
+inline std::string repr(string_view string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
+	return repr(string.data(), string.size(), friendly, quote, max_size);
 }
 
 template<typename T, std::size_t N>
@@ -149,8 +187,8 @@ inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', size
 
 std::string escape(const void* p, size_t size, char quote = '\'');
 
-inline std::string escape(const std::string& string, char quote = '\'') {
-	return escape(string.c_str(), string.length(), quote);
+inline std::string escape(string_view string, char quote = '\'') {
+	return escape(string.data(), string.size(), quote);
 }
 
 template<typename T, std::size_t N>
@@ -194,40 +232,23 @@ std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 
-namespace std {
-	template<typename T, int N>
-	inline std::string to_string(const T (&s)[N])
-	{
-		return std::string(s, N - 1);
-	}
-
-	inline auto& to_string(std::string& str) {
-		return str;
-	}
-
-	inline const auto& to_string(const std::string& str) {
-		return str;
-	}
-}
-
-
-inline std::string vformat_string(const string_view& format, va_list argptr) {
+inline std::string vformat_string(string_view format, va_list argptr) {
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format.data(), argptr_copy);
+	auto len = vsnprintf(nullptr, 0, string_view_data_as_c_str(format), argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	std::string str;
 	str.resize(len + 1);
-	str.resize(vsnprintf(&str[0], len + 1, format.data(), argptr));
+	str.resize(vsnprintf(&str[0], len + 1, string_view_data_as_c_str(format), argptr));
 
 	return str;
 }
 
 
-inline std::string _format_string(const string_view& format, int n, ...) {
+inline std::string _format_string(string_view format, int n, ...) {
 	va_list argptr;
 
 	va_start(argptr, n);
@@ -239,13 +260,13 @@ inline std::string _format_string(const string_view& format, int n, ...) {
 
 
 template<typename... Args>
-inline std::string format_string(const string_view& format, Args&&... args) {
+inline std::string format_string(string_view format, Args&&... args) {
 	return _format_string(format, 0, std::forward<Args>(args)...);
 }
 
 
 template<typename T>
-inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter)
+inline std::string join_string(const std::vector<T>& values, string_view delimiter, string_view last_delimiter)
 {
 	auto it = values.begin();
 	auto it_e = values.end();
@@ -261,11 +282,11 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 		result.append(std::to_string(*it++));
 	}
 	for (; it != it_l; ++it) {
-		result.append(delimiter);
+		result.append(delimiter.data(), delimiter.size());
 		result.append(std::to_string(*it));
 	}
 	if (it != it_e) {
-		result.append(last_delimiter);
+		result.append(last_delimiter.data(), last_delimiter.size());
 		result.append(std::to_string(*it));
 	}
 
@@ -274,13 +295,13 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 
 
 template<typename T>
-inline std::string join_string(const std::vector<T>& values, const std::string& delimiter) {
+inline std::string join_string(const std::vector<T>& values, string_view delimiter) {
 	return join_string(values, delimiter, delimiter);
 }
 
 
 template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, const std::string& last_delimiter, UnaryPredicate pred) {
+inline std::string join_string(const std::vector<T>& values, string_view delimiter, string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
 	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
 	return join_string(filtered_values, delimiter, last_delimiter);
@@ -288,50 +309,58 @@ inline std::string join_string(const std::vector<T>& values, const std::string& 
 
 
 template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, const std::string& delimiter, UnaryPredicate pred) {
+inline std::string join_string(const std::vector<T>& values, string_view delimiter, UnaryPredicate pred) {
 	return join_string(values, delimiter, delimiter, pred);
 }
 
 
 template<typename T>
-inline std::vector<std::string> split_string(const std::string& value, const T& sep) {
-	std::vector<std::string> values;
+inline std::vector<string_view> split_string(string_view value, const T& sep) {
+	std::vector<string_view> values;
 	Split<T>::split(value, sep, std::back_inserter(values));
 	return values;
 }
 
 
-inline std::string indent_string(const std::string& str, char sep, int level, bool indent_first=true) {
-	std::string ret = str;
+inline std::string indent_string(string_view str, char sep, int level, bool indent_first=true) {
+	std::string result;
+	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
 
-	std::string indentation(level, sep);
-	if (indent_first) ret.insert(0, indentation);
-
-	std::string::size_type pos = ret.find('\n');
-	while (pos != std::string::npos) {
-		ret.insert(pos + 1, indentation);
-		pos = ret.find('\n', pos + level + 1);
+	// std::string indentation(level, sep);
+	if (indent_first) {
+		result.append(level, sep);
 	}
 
-	return ret;
+	Split<char> lines(str, '\n');
+	auto it = lines.begin();
+	assert(it != lines.end());
+	for (; !it.last(); ++it) {
+		const auto& line = *it;
+		result.append(line);
+		result.append(level, sep);
+	}
+	const auto& line = *it;
+	result.append(line);
+
+	return result;
 }
 
 
-inline std::string center_string(const std::string& str, int width) {
+inline std::string center_string(string_view str, int width) {
 	std::string result;
 	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
 		result += " ";
 	}
-	result += str;
+	result.append(str.data(), str.size());
 	return result;
 }
 
-inline std::string right_string(const std::string& str, int width) {
+inline std::string right_string(string_view str, int width) {
 	std::string result;
 	for (auto idx = int(width - str.size()); idx > 0; --idx) {
 		result += " ";
 	}
-	result += str;
+	result.append(str.data(), str.size());
 	return result;
 }
 
@@ -353,28 +382,28 @@ void to_upper(std::string& str);
 void to_lower(std::string& str);
 
 char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
-char* normalize_path(const std::string& src, char* dst, bool slashed=false);
-std::string normalize_path(const std::string& src, bool slashed=false);
+char* normalize_path(string_view src, char* dst, bool slashed=false);
+std::string normalize_path(string_view src, bool slashed=false);
 int url_qs(const char *, const char *, size_t);
 
-bool strhasupper(const std::string& str);
+bool strhasupper(string_view str);
 
 bool isRange(const std::string& str);
 
-bool startswith(const std::string& text, const std::string& token);
-bool startswith(const std::string& text, char ch);
-bool endswith(const std::string& text, const std::string& token);
-bool endswith(const std::string& text, char ch);
-void delete_files(const std::string& path);
-void move_files(const std::string& src, const std::string& dst);
-bool exists(const std::string& path);
-bool build_path(const std::string& path);
-bool build_path_index(const std::string& path_index);
+bool startswith(string_view text, string_view token);
+bool startswith(string_view text, char ch);
+bool endswith(string_view text, string_view token);
+bool endswith(string_view text, char ch);
+void delete_files(string_view path);
+void move_files(string_view src, string_view dst);
+bool exists(string_view path);
+bool build_path(string_view path);
+bool build_path_index(string_view path_index);
 
-void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
-DIR* opendir(const char* filename, bool create);
+DIR* opendir(string_view path, bool create);
+void find_file_dir(DIR* dir, File_ptr& fptr, string_view pattern, bool pre_suf_fix);
 // Copy all directory if file_name and new_name are empty
-int copy_file(const std::string& src, const std::string& dst, bool create=true, const std::string& file_name=std::string(), const std::string& new_name=std::string());
+int copy_file(string_view src, string_view dst, bool create=true, string_view file_name="", string_view new_name="");
 
 std::string bytes_string(size_t bytes, bool colored=false);
 std::string small_time_string(long double seconds, bool colored=false);

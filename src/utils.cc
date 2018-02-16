@@ -162,15 +162,15 @@ pthread_get_name_np(char* buffer, size_t size)
 #endif
 
 
-void set_thread_name(const std::string& name) {
+void set_thread_name(string_view name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
-	pthread_setname_np(name.c_str());
+	pthread_setname_np(string_view_data_as_c_str(name));
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
-	pthread_setname_np(pthread_self(), name.c_str());
+	pthread_setname_np(pthread_self(), string_view_data_as_c_str(name));
 #elif defined(HAVE_PTHREAD_SETNAME_NP_3)
-	pthread_setname_np(pthread_self(), name.c_str(), nullptr);
+	pthread_setname_np(pthread_self(), string_view_data_as_c_str(name), nullptr);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
-	pthread_set_name_np(pthread_self(), name.c_str());
+	pthread_set_name_np(pthread_self(), string_view_data_as_c_str(name));
 #endif
 #if defined(HAVE_PTHREAD_GET_NAME_NP_2)
 	pthread_get_name_np(nullptr, 0);
@@ -402,17 +402,19 @@ char* normalize_path(const char* src, const char* end, char* dst, bool slashed) 
 }
 
 
-char* normalize_path(const std::string& src, char* dst, bool slashed) {
+char* normalize_path(string_view src, char* dst, bool slashed) {
+	size_t src_size = src.size();
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.length(), dst, slashed);
+	return normalize_path(src_str, src_str + src_size, dst, slashed);
 }
 
 
-std::string normalize_path(const std::string& src, bool slashed) {
-	std::vector<char> dst;
-	dst.resize(src.size() + 2);
+std::string normalize_path(string_view src, bool slashed) {
+	size_t src_size = src.size();
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.length(), &dst[0], slashed);
+	std::vector<char> dst;
+	dst.resize(src_size + 2);
+	return normalize_path(src_str, src_str + src_size, &dst[0], slashed);
 }
 
 
@@ -426,7 +428,7 @@ void to_lower(std::string& str) {
 }
 
 
-bool strhasupper(const std::string& str) {
+bool strhasupper(string_view str) {
 	for (const auto& c : str) {
 		if (isupper(c)) {
 			return true;
@@ -448,41 +450,41 @@ bool isRange(const std::string& str) {
 }
 
 
-bool startswith(const std::string& text, const std::string& token) {
-	auto text_len = text.length();
-	auto token_len = token.length();
+bool startswith(string_view text, string_view token) {
+	auto text_len = text.size();
+	auto token_len = token.size();
 	return text_len >= token_len && text.compare(0, token_len, token) == 0;
 }
 
 
-bool startswith(const std::string& text, char ch) {
-	auto text_len = text.length();
+bool startswith(string_view text, char ch) {
+	auto text_len = text.size();
 	return text_len >= 1 && text.at(0) == ch;
 }
 
 
-bool endswith(const std::string& text, const std::string& token) {
-	auto text_len = text.length();
-	auto token_len = token.length();
+bool endswith(string_view text, string_view token) {
+	auto text_len = text.size();
+	auto token_len = token.size();
 	return text_len >= token_len && std::equal(text.begin() + text_len - token_len, text.end(), token.begin());
 }
 
 
-bool endswith(const std::string& text, char ch) {
-	auto text_len = text.length();
+bool endswith(string_view text, char ch) {
+	auto text_len = text.size();
 	return text_len >= 1 && text.at(text_len - 1) == ch;
 }
 
 
-void delete_files(const std::string& path) {
-	DIR *dirp = opendir(path.c_str());
+void delete_files(string_view path) {
+	DIR *dirp = ::opendir(string_view_data_as_c_str(path));
 	if (!dirp) {
 		return;
 	}
 
 	bool contains_folder = false;
 	struct dirent *ent;
-	while ((ent = readdir(dirp)) != nullptr) {
+	while ((ent = ::readdir(dirp)) != nullptr) {
 		const char *s = ent->d_name;
 		if (ent->d_type == DT_DIR) {
 			if (s[0] == '.' && (s[1] == '\0' || (s[1] == '.' && s[2] == '\0'))) {
@@ -491,8 +493,10 @@ void delete_files(const std::string& path) {
 			contains_folder = true;
 		}
 		if (ent->d_type == DT_REG) {
-			std::string file = path + "/" + std::string(ent->d_name);
-			if (remove(file.c_str()) != 0) {
+			std::string file(path);
+			file.push_back('/');
+			file.append(ent->d_name);
+			if (::remove(file.c_str()) != 0) {
 				L_ERR("File %s could not be deleted", ent->d_name);
 			}
 		}
@@ -500,24 +504,28 @@ void delete_files(const std::string& path) {
 
 	closedir(dirp);
 	if (!contains_folder) {
-		if (rmdir(path.c_str()) != 0) {
-			L_ERR("Directory %s could not be deleted", path.c_str());
+		if (::rmdir(string_view_data_as_c_str(path)) != 0) {
+			L_ERR("Directory %s could not be deleted", string_view_data_as_c_str(path));
 		}
 	}
 }
 
 
-void move_files(const std::string& src, const std::string& dst) {
-	DIR *dirp = opendir(src.c_str());
+void move_files(string_view src, string_view dst) {
+	DIR *dirp = ::opendir(string_view_data_as_c_str(src));
 	if (!dirp) {
 		return;
 	}
 
 	struct dirent *ent;
-	while ((ent = readdir(dirp)) != nullptr) {
+	while ((ent = ::readdir(dirp)) != nullptr) {
 		if (ent->d_type == DT_REG) {
-			std::string old_name = src + "/" + ent->d_name;
-			std::string new_name = dst + "/" + ent->d_name;
+			std::string old_name(src);
+			old_name.push_back('/');
+			old_name.append(ent->d_name);
+			std::string new_name(dst);
+			new_name.push_back('/');
+			new_name.append(ent->d_name);
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
 				L_ERR("Couldn't rename %s to %s", old_name.c_str(), new_name.c_str());
 			}
@@ -525,28 +533,28 @@ void move_files(const std::string& src, const std::string& dst) {
 	}
 
 	closedir(dirp);
-	if (rmdir(src.c_str()) != 0) {
-		L_ERR("Directory %s could not be deleted", src.c_str());
+	if (::rmdir(string_view_data_as_c_str(src)) != 0) {
+		L_ERR("Directory %s could not be deleted", string_view_data_as_c_str(src));
 	}
 }
 
 
-bool exists(const std::string& path) {
-	struct stat buffer;
-	return stat(path.c_str(), &buffer) == 0;
+bool exists(string_view path) {
+	struct stat buf;
+	return ::stat(string_view_data_as_c_str(path), &buf) == 0;
 }
 
 
-bool build_path(const std::string& path) {
+bool build_path(string_view path) {
 	if (exists(path)) {
 		return true;
 	} else {
 		Split<char> directories(path, '/');
 		std::string dir;
-		dir.reserve(path.length());
+		dir.reserve(path.size());
 		for (const auto& _dir : directories) {
 			dir.append(_dir).push_back('/');
-			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
+			if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
 				return false;
 			}
 		}
@@ -555,9 +563,9 @@ bool build_path(const std::string& path) {
 }
 
 
-bool build_path_index(const std::string& path_index) {
-	size_t found = path_index.find_last_of("/");
-	if (found == std::string::npos) {
+bool build_path_index(string_view path_index) {
+	size_t found = path_index.find_last_of('/');
+	if (found == string_view::npos) {
 		return build_path(path_index);
 	} else {
 		return build_path(path_index.substr(0, found));
@@ -565,14 +573,14 @@ bool build_path_index(const std::string& path_index) {
 }
 
 
-DIR* opendir(const char* filename, bool create) {
-	DIR* dirp = opendir(filename);
+DIR* opendir(string_view path, bool create) {
+	DIR* dirp = ::opendir(string_view_data_as_c_str(path));
 	if (!dirp) {
 		if (errno == ENOENT && create) {
-			if (::mkdir(filename, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+			if (::mkdir(string_view_data_as_c_str(path), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
 				return nullptr;
 			} else {
-				dirp = opendir(filename);
+				dirp = ::opendir(string_view_data_as_c_str(path));
 				if (!dirp) {
 					return nullptr;
 				}
@@ -585,8 +593,8 @@ DIR* opendir(const char* filename, bool create) {
 }
 
 
-void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix) {
-	bool(*match_pattern)(const std::string&, const std::string&);
+void find_file_dir(DIR* dir, File_ptr& fptr, string_view pattern, bool pre_suf_fix) {
+	bool(*match_pattern)(string_view, string_view);
 	if (pre_suf_fix) {
 		match_pattern = startswith;
 	} else {
@@ -603,9 +611,9 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 #endif
 	}
 
-	while ((fptr.ent = readdir(dir)) != nullptr) {
+	while ((fptr.ent = ::readdir(dir)) != nullptr) {
 		if (fptr.ent->d_type == DT_REG) {
-			std::string filename(fptr.ent->d_name);
+			string_view filename(fptr.ent->d_name);
 			if (match_pattern(filename, pattern)) {
 				return;
 			}
@@ -614,24 +622,24 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 }
 
 
-int copy_file(const std::string& src, const std::string& dst, bool create, const std::string& file_name, const std::string& new_name) {
-	DIR* dir_src = opendir(src.c_str());
+int copy_file(string_view src, string_view dst, bool create, string_view file_name, string_view new_name) {
+	DIR* dir_src = ::opendir(string_view_data_as_c_str(src));
 	if (!dir_src) {
 		L_ERR("ERROR: %s", strerror(errno));
 		return -1;
 	}
 
-	struct stat s;
-	int err = stat(dst.c_str(), &s);
+	struct stat buf;
+	int err = ::stat(string_view_data_as_c_str(dst), &buf);
 
 	if (-1 == err) {
 		if (ENOENT == errno && create) {
-			if (::mkdir(dst.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s (%s)", dst.c_str(), strerror(errno));
+			if (::mkdir(string_view_data_as_c_str(dst), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				L_ERR("ERROR: couldn't create directory %s (%s)", string_view_data_as_c_str(dst), strerror(errno));
 				return -1;
 			}
 		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s (%s)", dst.c_str(), strerror(errno));
+			L_ERR("ERROR: couldn't obtain directory information %s (%s)", string_view_data_as_c_str(dst), strerror(errno));
 			return -1;
 		}
 	}
@@ -640,19 +648,27 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 	struct dirent *ent;
 	unsigned char buffer[4096];
 
-	while ((ent = readdir(dir_src)) != nullptr and not ended) {
+	while ((ent = ::readdir(dir_src)) != nullptr and not ended) {
 		if (ent->d_type == DT_REG) {
 
 			if (not file_name.empty()) {
-				if (strcmp(ent->d_name, file_name.c_str()) != 0) {
-					continue;
-				} else {
+				if (file_name == ent->d_name) {
 					ended = true;
+				} else {
+					continue;
 				}
 			}
 
-			std::string src_path (src + "/" + std::string(ent->d_name));
-			std::string dst_path (dst + "/" + (new_name.empty() ? std::string(ent->d_name) : new_name));
+			std::string src_path(src);
+			src_path.push_back('/');
+			src_path.append(ent->d_name);
+			std::string dst_path(dst);
+			dst_path.push_back('/');
+			if (new_name.empty()) {
+				dst_path.append(ent->d_name);
+			} else {
+				dst_path.append(new_name.data(), new_name.size());
+			}
 
 			int src_fd = io::open(src_path.c_str(), O_RDONLY);
 			if (-1 == src_fd) {
@@ -713,7 +729,7 @@ static inline int find_val(long double val, const long double* input, int i=0) {
 }
 
 
-inline std::string bytes_string(size_t bytes, bool colored) {
+inline std::string _bytes_string(size_t bytes, bool colored) {
 	static const long double base = 1024;
 	static const long double div = logl(base);
 	static const long double scaling[] = { powl(base, 8), powl(base, 7), powl(base, 6), powl(base, 5), powl(base, 4), powl(base, 3), powl(base, 2), powl(base, 1), 1 };
@@ -725,8 +741,12 @@ inline std::string bytes_string(size_t bytes, bool colored) {
 	return humanize(bytes, colored, i, n, div, units, scaling, colors, 10.0L);
 }
 
+std::string bytes_string(size_t bytes, bool colored) {
+	return _bytes_string(bytes, colored);
+}
 
-inline std::string small_time_string(long double seconds, bool colored) {
+
+inline std::string _small_time_string(long double seconds, bool colored) {
 	static const long double base = 1000;
 	static const long double div = logl(base);
 	static const long double scaling[] = { 1, powl(base, -1), powl(base, -2), powl(base, -3), powl(base, -4) };
@@ -738,8 +758,12 @@ inline std::string small_time_string(long double seconds, bool colored) {
 	return humanize(seconds, colored, i, n, div, units, scaling, colors, 1000.0L);
 }
 
+std::string small_time_string(long double seconds, bool colored) {
+	return _small_time_string(seconds, colored);
+}
 
-inline std::string time_string(long double seconds, bool colored) {
+
+inline std::string _time_string(long double seconds, bool colored) {
 	static const long double base = 60;
 	static const long double div = logl(base);
 	static const long double scaling[] = { powl(base, 2), powl(base, 1), 1 };
@@ -751,15 +775,23 @@ inline std::string time_string(long double seconds, bool colored) {
 	return humanize(seconds, colored, i, n, div, units, scaling, colors, 100.0L);
 }
 
-
-inline std::string delta_string(long double nanoseconds, bool colored) {
-	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
-	return (seconds < 1) ? small_time_string(seconds, colored) : time_string(seconds, colored);
+std::string time_string(long double seconds, bool colored) {
+	return _time_string(seconds, colored);
 }
 
 
-inline std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
-	return delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
+inline std::string _delta_string(long double nanoseconds, bool colored) {
+	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
+	return (seconds < 1) ? _small_time_string(seconds, colored) : _time_string(seconds, colored);
+}
+
+std::string delta_string(long double nanoseconds, bool colored) {
+	return _delta_string(nanoseconds, colored);
+}
+
+
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
+	return _delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
 }
 
 

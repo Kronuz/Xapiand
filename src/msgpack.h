@@ -30,6 +30,7 @@
 #include "exception.h"
 #include "io_utils.h"
 #include "msgpack.hpp"
+#include "xchange/string_view.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"

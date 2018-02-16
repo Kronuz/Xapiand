@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+#include "string_view.h"
+
 
 template <typename T=char>
 class Split {
@@ -68,7 +70,7 @@ class Split {
 			if (end != std::string::npos) {
 				do {
 					start = end + inc;
-					if (start == split->str.length()) {
+					if (start == split->str.size()) {
 						start = std::string::npos;
 						end = std::string::npos;
 						return;
@@ -85,7 +87,7 @@ class Split {
 			} else {
 				do {
 					start = end + inc;
-					if (start == split->str.length()) {
+					if (start == split->str.size()) {
 						start = std::string::npos;
 						end = std::string::npos;
 						return;
@@ -168,7 +170,7 @@ public:
 			case Type::SKIP_BLANK_FIND:
 				skip_blank = false;
 			case Type::FIND:
-				inc = sep.length();
+				inc = sep.size();
 				search_func = &Split::find;
 				break;
 			case Type::SKIP_BLANK_FIND_FIRST_OF:
@@ -178,7 +180,7 @@ public:
 				search_func = &Split::find_first_of;
 				break;
 			default:
-				inc = sep.length();
+				inc = sep.size();
 				search_func = &Split::find;
 				break;
 		}
@@ -239,12 +241,12 @@ public:
 		return std::distance(begin(), end());
 	}
 
-	const std::string& get_str() const noexcept {
+	const auto& get_str() const noexcept {
 		return str;
 	}
 
 	template <typename OutputIt>
-	static void split(const std::string& str, const std::string& delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split(string_view str, string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -253,16 +255,16 @@ public:
 				*d_first = str.substr(prev, len);
 				++d_first;
 			}
-			prev = next + delimiter.length();
+			prev = next + delimiter.size();
 		}
 
-		if (prev < str.length()) {
+		if (prev < str.size()) {
 			*d_first = str.substr(prev);
 		}
 	}
 
 	template <typename OutputIt>
-	static void split(const std::string& str, char delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split(string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -274,13 +276,13 @@ public:
 			prev = next + 1;
 		}
 
-		if (prev < str.length()) {
+		if (prev < str.size()) {
 			*d_first = str.substr(prev);
 		}
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(const std::string& str, const std::string& delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split_first_of(string_view str, string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
@@ -292,13 +294,13 @@ public:
 			prev = next + 1;
 		}
 
-		if (prev < str.length()) {
+		if (prev < str.size()) {
 			*d_first = str.substr(prev);
 		}
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(const std::string& str, char delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split_first_of(string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		return split(str, delimiter, d_first, skip_blank);
 	}
 };
