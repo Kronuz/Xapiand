@@ -713,7 +713,7 @@ static inline int find_val(long double val, const long double* input, int i=0) {
 }
 
 
-std::string bytes_string(size_t bytes, bool colored) {
+inline std::string bytes_string(size_t bytes, bool colored) {
 	static const long double base = 1024;
 	static const long double div = logl(base);
 	static const long double scaling[] = { powl(base, 8), powl(base, 7), powl(base, 6), powl(base, 5), powl(base, 4), powl(base, 3), powl(base, 2), powl(base, 1), 1 };
@@ -726,7 +726,7 @@ std::string bytes_string(size_t bytes, bool colored) {
 }
 
 
-std::string small_time_string(long double seconds, bool colored) {
+inline std::string small_time_string(long double seconds, bool colored) {
 	static const long double base = 1000;
 	static const long double div = logl(base);
 	static const long double scaling[] = { 1, powl(base, -1), powl(base, -2), powl(base, -3), powl(base, -4) };
@@ -739,7 +739,7 @@ std::string small_time_string(long double seconds, bool colored) {
 }
 
 
-std::string time_string(long double seconds, bool colored) {
+inline std::string time_string(long double seconds, bool colored) {
 	static const long double base = 60;
 	static const long double div = logl(base);
 	static const long double scaling[] = { powl(base, 2), powl(base, 1), 1 };
@@ -752,13 +752,13 @@ std::string time_string(long double seconds, bool colored) {
 }
 
 
-std::string delta_string(long double nanoseconds, bool colored) {
+inline std::string delta_string(long double nanoseconds, bool colored) {
 	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
 	return (seconds < 1) ? small_time_string(seconds, colored) : time_string(seconds, colored);
 }
 
 
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
+inline std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
 	return delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
 }
 

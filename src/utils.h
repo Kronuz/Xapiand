@@ -377,6 +377,8 @@ DIR* opendir(const char* filename, bool create);
 int copy_file(const std::string& src, const std::string& dst, bool create=true, const std::string& file_name=std::string(), const std::string& new_name=std::string());
 
 std::string bytes_string(size_t bytes, bool colored=false);
+std::string small_time_string(long double seconds, bool colored=false);
+std::string time_string(long double seconds, bool colored=false);
 std::string delta_string(long double nanoseconds, bool colored=false);
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
