@@ -937,7 +937,7 @@ Database::reopen()
 						if ((flags & DB_SPAWN) && !exists(e.path + "/iamglass")) {
 							_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
 							wdb = Xapian::WritableDatabase(e.path, _flags);
-						}
+						} else throw;
 					}
 					local = true;
 					if (endpoints_size == 1) read_mastery(e);
@@ -962,7 +962,7 @@ Database::reopen()
 				if ((flags & DB_SPAWN) && !exists(e.path + "/iamglass")) {
 					_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
 					wdb = Xapian::WritableDatabase(e.path, _flags);
-				}
+				} else throw;
 			}
 			local = true;
 			if (endpoints_size == 1) read_mastery(e);
@@ -1066,7 +1066,7 @@ Database::reopen()
 						} catch (const Xapian::DatabaseOpeningError&) {
 							if (!exists(e.path + "/iamglass")) {
 								Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OVERWRITE);
-							}
+							} else throw;
 						}
 					}
 
