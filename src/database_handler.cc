@@ -467,8 +467,9 @@ DatabaseHandler::index(const std::string& _document_id, bool stored, const std::
 				try {
 					auto did = database->replace_document_term(prefixed_term_id, doc, commit_);
 					return std::make_pair(std::move(did), std::move(obj));
-				} catch (const Xapian::DatabaseError&) {
+				} catch (const Xapian::DatabaseError& exc) {
 					// Try to recover from DatabaseError (i.e when the index is manually deleted)
+					L_WARNING(this, "ERROR: %s (try recovery)", exc.get_description().c_str());
 					lk_db.unlock();
 					recover_index();
 					lk_db.lock();
