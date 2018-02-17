@@ -27,7 +27,9 @@ done
 # 	start=${2:-1}
 # 	end=${3:-100}
 # 	../index_fortune.sh "$endpoint" "$start" "$end" "$@"
+#   echo -n "." >&2
 # 	sleep 3
+#   echo "." >&2
 # 	for id in $(seq "$start" "$end"); do
 # 		curl -s "$endpoint/$id" "$@"
 # 	done
