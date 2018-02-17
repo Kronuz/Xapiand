@@ -24,7 +24,8 @@
 
 #include "ansi_color.hh"      // for ansi_color
 
-#define NO_COL no_col()
+#define NO_COLOR no_color()
+#define CLEAR_COLOR clear_color()
 
 
 #define ALICE_BLUE rgb(240, 248, 255)

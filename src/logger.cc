@@ -58,15 +58,15 @@ std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
 
 static const std::string priorities[] = {
-	EMERG_COL   + "█" + NO_COL, // LOG_EMERG    0 = System is unusable
-	ALERT_COL   + "▉" + NO_COL, // LOG_ALERT    1 = Action must be taken immediately
-	CRIT_COL    + "▊" + NO_COL, // LOG_CRIT     2 = Critical conditions
-	ERR_COL     + "▋" + NO_COL, // LOG_ERR      3 = Error conditions
-	WARNING_COL + "▌" + NO_COL, // LOG_WARNING  4 = Warning conditions
-	NOTICE_COL  + "▍" + NO_COL, // LOG_NOTICE   5 = Normal but significant condition
-	INFO_COL    + "▎" + NO_COL, // LOG_INFO     6 = Informational
-	DEBUG_COL   + "▏" + NO_COL, // LOG_DEBUG    7 = Debug-level messages
-	NO_COL,                     // VERBOSE    > 7 = Verbose messages
+	EMERG_COL   + "█" + CLEAR_COLOR, // LOG_EMERG    0 = System is unusable
+	ALERT_COL   + "▉" + CLEAR_COLOR, // LOG_ALERT    1 = Action must be taken immediately
+	CRIT_COL    + "▊" + CLEAR_COLOR, // LOG_CRIT     2 = Critical conditions
+	ERR_COL     + "▋" + CLEAR_COLOR, // LOG_ERR      3 = Error conditions
+	WARNING_COL + "▌" + CLEAR_COLOR, // LOG_WARNING  4 = Warning conditions
+	NOTICE_COL  + "▍" + CLEAR_COLOR, // LOG_NOTICE   5 = Normal but significant condition
+	INFO_COL    + "▎" + CLEAR_COLOR, // LOG_INFO     6 = Informational
+	DEBUG_COL   + "▏" + CLEAR_COLOR, // LOG_DEBUG    7 = Debug-level messages
+	CLEAR_COLOR,                     // VERBOSE    > 7 = Verbose messages
 };
 
 
@@ -383,7 +383,7 @@ Logging::run()
 	if (!exception.empty()) {
 		msg += DEBUG_COL.c_str();
 		msg += exception.get_traceback();
-		msg += NO_COL.c_str();
+		msg += CLEAR_COLOR.c_str();
 	}
 
 	log(priority, msg, stack_level * 2);
@@ -408,7 +408,7 @@ Logging::format_string(bool info, bool stacked, int priority, const char* file, 
 		ignore_unused(file);
 		ignore_unused(line);
 #endif
-		result.append(NO_COL.c_str());
+		result.append(CLEAR_COLOR.c_str());
 	}
 
 	if (stacked) {

@@ -50,8 +50,13 @@ class ansi_color {
 	static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
 
 	static constexpr auto noColor() {
-		constexpr auto noColor = static_str::literal(ESC "[0m");
+		constexpr auto noColor = static_str::literal("");
 		return noColor;
+	}
+
+	static constexpr auto clearColor() {
+		constexpr auto clearColor = static_str::literal(ESC "[0m");
+		return clearColor;
 	}
 
 	static constexpr auto trueColor() {
@@ -129,13 +134,18 @@ public:
 		return col;
 	}
 
-	static constexpr auto no_col() {
-		constexpr auto no_col = (
-			noColor() +
-			noColor() +
-			noColor()
+	static constexpr auto clear_color() {
+		constexpr auto clear_color = (
+			clearColor() +
+			clearColor() +
+			clearColor()
 		);
-		return no_col;
+		return clear_color;
+	}
+
+	static constexpr auto no_color() {
+		constexpr auto no_color = noColor();
+		return no_color;
 	}
 };
 
@@ -144,4 +154,5 @@ public:
 #define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col()
 #define brgb(r, g, b)     ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col()
 #define brgba(r, g, b, a) ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col()
-#define no_col()          ansi_color<0, 0, 0>::no_col()
+#define clear_color()     ansi_color<0, 0, 0>::clear_color()
+#define no_color()        ansi_color<0, 0, 0>::no_color()

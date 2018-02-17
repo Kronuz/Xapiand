@@ -29,7 +29,7 @@
 #include "logger_fwd.h"
 #include "colors.h"
 
-#define LOG_COL NO_COL
+#define LOG_COL CLEAR_COLOR
 #define DEBUG_COL rgb(105, 105, 105)
 #define INFO_COL rgb(63,119,179)
 #define NOTICE_COL rgb(116,185,255)

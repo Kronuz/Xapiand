@@ -111,7 +111,7 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSEGV:
 			case SIGSYS:
 				// create core image
-				res.push_back(format_string(LIGHT_RED + "Signal received: %s" + NO_COL + "\n", sig_str));
+				res.push_back(format_string(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGHUP:
 			case SIGINT:
@@ -129,14 +129,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSTKFLT:
 #endif
 				// terminate process
-				res.push_back(format_string(BROWN + "Signal received: %s" + NO_COL + "\n", sig_str));
+				res.push_back(format_string(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGSTOP:
 			case SIGTSTP:
 			case SIGTTIN:
 			case SIGTTOU:
 				// stop process
-				res.push_back(format_string(SADDLE_BROWN + "Signal received: %s" + NO_COL + "\n", sig_str));
+				res.push_back(format_string(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGURG:
 			case SIGCONT:
@@ -147,14 +147,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGINFO:
 #endif
 				// discard signal
-				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + NO_COL + "\n", sig_str));
+				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			default:
-				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + NO_COL + "\n", sig_str));
+				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 		}
 	}
-	res.push_back(STEEL_BLUE + "Signal received: unknown" + NO_COL + "\n");
+	res.push_back(STEEL_BLUE + "Signal received: unknown" + CLEAR_COLOR + "\n");
 	return res;
 }();
 
@@ -162,10 +162,10 @@ static const std::vector<std::string> vec_signame = []() {
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + NO_COL + "\n");
+		write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + CLEAR_COLOR + "\n");
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + NO_COL + "\n");
+		write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + CLEAR_COLOR + "\n");
 	}
 }
 
@@ -917,7 +917,7 @@ void banner() {
 	});
 
 	if (Logging::log_level >= LOG_NOTICE) {
-		L(-LOG_INFO, NO_COL,
+		L(-LOG_INFO, CLEAR_COLOR,
 			"\n\n" +
 			rgb(255, 255, 255) + "              __\n" +
 			rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
@@ -935,7 +935,7 @@ void banner() {
 			center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
 			center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
 	} else {
-		L(-LOG_INFO, NO_COL, "%s started.", Package::STRING.c_str());
+		L(-LOG_INFO, CLEAR_COLOR, "%s started.", Package::STRING.c_str());
 	}
 }
 
