@@ -2242,7 +2242,7 @@ HttpClient::log_request()
 {
 	std::string request_prefix = " 🌎  ";
 
-	constexpr auto no_col = CLEAR_COLOR;
+	constexpr auto no_col = NO_COLOR;
 	auto request_headers_color = no_col.c_str();
 	auto request_head_color = no_col.c_str();
 	auto request_body_color = no_col.c_str();
@@ -2333,7 +2333,7 @@ HttpClient::log_request()
 	};
 
 	auto request = request_head_color + request_head + "\n" + request_headers_color + request_headers + request_body_color + request_body;
-	L(LOG_DEBUG + 1, CLEAR_COLOR, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
 }
 
 
@@ -2342,7 +2342,7 @@ HttpClient::log_response()
 {
 	std::string response_prefix = " 💊  ";
 
-	constexpr auto no_col = CLEAR_COLOR;
+	constexpr auto no_col = NO_COLOR;
 	auto response_headers_color = no_col.c_str();
 	auto response_head_color = no_col.c_str();
 	auto response_body_color = no_col.c_str();
@@ -2389,7 +2389,7 @@ HttpClient::log_response()
 	}
 
 	auto response = response_head_color + response_head + "\n" + response_headers_color + response_headers + response_body_color + response_body;
-	L(LOG_DEBUG + 1, CLEAR_COLOR, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
 }
 
 

@@ -917,7 +917,7 @@ void banner() {
 	});
 
 	if (Logging::log_level >= LOG_NOTICE) {
-		L(-LOG_INFO, CLEAR_COLOR,
+		L(-LOG_INFO, NO_COLOR,
 			"\n\n" +
 			rgb(255, 255, 255) + "              __\n" +
 			rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
@@ -935,7 +935,7 @@ void banner() {
 			center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
 			center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
 	} else {
-		L(-LOG_INFO, CLEAR_COLOR, "%s started.", Package::STRING.c_str());
+		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING.c_str());
 	}
 }
 

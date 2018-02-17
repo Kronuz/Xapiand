@@ -66,7 +66,7 @@ static const std::string priorities[] = {
 	NOTICE_COL  + "▍" + CLEAR_COLOR, // LOG_NOTICE   5 = Normal but significant condition
 	INFO_COL    + "▎" + CLEAR_COLOR, // LOG_INFO     6 = Informational
 	DEBUG_COL   + "▏" + CLEAR_COLOR, // LOG_DEBUG    7 = Debug-level messages
-	CLEAR_COLOR,                     // VERBOSE    > 7 = Verbose messages
+	NO_COLOR,                        // VERBOSE    > 7 = Verbose messages
 };
 
 
