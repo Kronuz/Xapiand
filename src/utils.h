@@ -121,8 +121,12 @@ public:
 		  func(_func) { }
 
 	template <typename T, typename... Args>
-	auto stox_nothrow(const string_view& str, std::size_t* idx, Args&&... args) {
-		return _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
+	auto stox_nothrow(int& errno_save, const string_view& str, std::size_t* idx, Args&&... args) {
+		errno_save = errno;
+		errno = 0;
+		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
+		std::swap(errno, errno_save);
+		return r;
 	}
 
 	template <typename T, typename... Args>
@@ -144,16 +148,16 @@ public:
 };
 #define STOXIFY_BASE(name, func, T) \
 static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(std::nothrow_t, string_view str, std::size_t* idx = nullptr, int base = 10) noexcept { \
-	return _strict_##name.stox_nothrow<T>(str, idx, base); \
+inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr, int base = 10) noexcept { \
+	return _strict_##name.stox_nothrow<T>(errno_save, str, idx, base); \
 } \
 inline auto strict_##name(string_view str, std::size_t* idx = nullptr, int base = 10) { \
 	return _strict_##name.stox_throw<T>(str, idx, base); \
 }
 #define STOXIFY(name, func, T) \
 static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(std::nothrow_t, string_view str, std::size_t* idx = nullptr) noexcept { \
-	return _strict_##name.stox_nothrow<T>(str, idx); \
+inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr) noexcept { \
+	return _strict_##name.stox_nothrow<T>(errno_save, str, idx); \
 } \
 inline auto strict_##name(string_view str, std::size_t* idx = nullptr) { \
 	return _strict_##name.stox_throw<T>(str, idx); \
