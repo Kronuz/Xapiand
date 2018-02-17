@@ -29,12 +29,17 @@
 #include <type_traits>  // for forward
 #include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
 
+#include "string_view.h"
+
 
 #define TRACEBACK() traceback(__FILE__, __LINE__)
 
-std::string traceback(const std::string& filename, int line);
+std::string traceback(string_view filename, int line);
 
 class BaseException {
+	struct private_ctor {};
+	BaseException(private_ctor, const char *filename, int line, const char* type, string_view format, int n, ...);
+
 protected:
 	std::string type;
 	std::string filename;
@@ -54,10 +59,12 @@ public:
 
 	BaseException(const BaseException* exc);
 
-	BaseException(const char *filename, int line, const char* type, const char* format, ...);
+	template <typename... Args>
+	BaseException(const char *filename, int line, const char* type, string_view format, Args&&... args)
+		: BaseException(private_ctor{}, filename, line, type, format, 0, std::forward<Args>(args)...) { }
 
-	BaseException(const char *filename, int line, const char* type, const std::string& msg="")
-		: BaseException(filename, line, type, msg.c_str()) { }
+	BaseException(const char *filename, int line, const char* type, string_view msg = "")
+		: BaseException(private_ctor{}, filename, line, type, msg, 0) { }
 
 	virtual ~BaseException() = default;
 

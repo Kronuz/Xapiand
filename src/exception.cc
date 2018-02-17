@@ -34,9 +34,13 @@
 
 
 std::string
-traceback(const std::string& filename, int line, void *const * callstack, int frames)
+traceback(string_view filename, int line, void *const * callstack, int frames)
 {
-	std::string tb = "\n== Traceback at (" + filename + ":" + std::to_string(line) + ")";
+	std::string tb = "\n== Traceback at (";
+	tb.append(filename.data(), filename.size());
+	tb.push_back(':');
+	tb.append(std::to_string(line));
+	tb.push_back(')');
 
 	if (frames == 0) {
 		return tb;
@@ -75,7 +79,7 @@ traceback(const std::string& filename, int line, void *const * callstack, int fr
 
 
 std::string
-traceback(const std::string& filename, int line)
+traceback(string_view filename, int line)
 {
 	void* callstack[128];
 
@@ -128,24 +132,26 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(const char *filename, int line, const char* type, const char *format, ...)
+BaseException::BaseException(BaseException::private_ctor, const char *filename, int line, const char* type, string_view format, int n, ...)
 	: type(type),
 	  filename(filename),
 	  line(line),
 	  frames(0)
 {
 	va_list argptr;
-	va_start(argptr, format);
+	va_start(argptr, n);
+
+	auto format_c_str = string_view_data_as_c_str(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format, argptr_copy);
+	auto len = vsnprintf(nullptr, 0, format_c_str, argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	message.resize(len + 1);
-	message.resize(vsnprintf(&message[0], len + 1, format, argptr));
+	message.resize(vsnprintf(&message[0], len + 1, format_c_str, argptr));
 
 	va_end(argptr);
 
