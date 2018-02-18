@@ -225,7 +225,7 @@ class Storage {
 	LZ4DecompressFile decFile;
 	LZ4DecompressFile::iterator decFile_it;
 
-	XXH32_state_t* xxhash;
+	XXH32_state_t* xxh_state;
 	uint32_t bin_hash;
 
 	bool changed;
@@ -304,20 +304,20 @@ public:
 		  buffer_offset(0),
 		  bin_offset(0),
 		  bin_size(0),
-		  xxhash(XXH32_createState()),
+		  xxh_state(XXH32_createState()),
 		  bin_hash(0),
 		  changed(false),
 		  base_path(normalize_path(base_path_, true)) {
 		memset(&header, 0, sizeof(header));
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
-			XXH32_freeState(xxhash);
+			XXH32_freeState(xxh_state);
 			THROW(StorageException, "StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
 		}
 	}
 
 	virtual ~Storage() {
 		close();
-		XXH32_freeState(xxhash);
+		XXH32_freeState(xxh_state);
 	}
 
 	void initialize_file(void* args) {
@@ -568,8 +568,8 @@ public:
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 			data = buf_read;
 			file_size += it_size;
-			XXH32_reset(xxhash, STORAGE_MAGIC);
-			XXH32_update(xxhash, data, it_size);
+			XXH32_reset(xxh_state, STORAGE_MAGIC);
+			XXH32_update(xxh_state, data, it_size);
 		}
 
 		char* buffer = buffer_curr;
@@ -599,7 +599,7 @@ public:
 					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 					data = buf_read;
 					file_size += it_size;
-					XXH32_update(xxhash, data, it_size);
+					XXH32_update(xxh_state, data, it_size);
 				}
 			}
 			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
@@ -614,7 +614,7 @@ public:
 				_bin_footer.init(param, args, cmpFile.get_digest());
 			} else {
 				buffer_header->size = static_cast<uint32_t>(file_size);
-				_bin_footer.init(param, args, XXH32_digest(xxhash));
+				_bin_footer.init(param, args, XXH32_digest(xxh_state));
 				io::close(fd_write);
 			}
 
@@ -683,7 +683,7 @@ public:
 				decFile_it = decFile.begin();
 				bin_offset += bin_header.size;
 			} else {
-				XXH32_reset(xxhash, STORAGE_MAGIC);
+				XXH32_reset(xxh_state, STORAGE_MAGIC);
 			}
 		}
 
@@ -708,10 +708,10 @@ public:
 				}
 				bin_offset += r;
 				bin_size += r;
-				XXH32_update(xxhash, buf, r);
+				XXH32_update(xxh_state, buf, r);
 				return r;
 			}
-			bin_hash = XXH32_digest(xxhash);
+			bin_hash = XXH32_digest(xxh_state);
 		}
 
 		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
