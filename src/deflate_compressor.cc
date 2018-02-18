@@ -102,7 +102,7 @@ DeflateCompressData::next(const char* input, size_t input_size, int flush)
 			THROW(DeflateException, zerr(stream));
 		}
 		int compress_size = input_size - strm.avail_out;
-		result.append(std::string(out.data(), compress_size));
+		result.append(out.data(), compress_size);
 	} while (strm.avail_out == 0);
 
 	return result;
@@ -137,7 +137,7 @@ DeflateCompressData::next()
 		strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
 		stream = deflate(&strm, flush);    // no bad return value
 		int compress_size = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(std::string(cmpBuf, compress_size));
+		result.append(cmpBuf, compress_size);
 	} while (strm.avail_out == 0);
 
 	data_offset += DEFLATE_BLOCK_SIZE;
@@ -212,7 +212,7 @@ DeflateDecompressData::next()
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(std::string(buffer, bytes_decompressed));
+		result.append(buffer, bytes_decompressed);
 	} while (strm.avail_out == 0);
 
 	data_offset += DEFLATE_BLOCK_SIZE;
@@ -302,7 +302,7 @@ DeflateCompressFile::next()
 		strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
 		stream = deflate(&strm, flush);    /* no bad return value */
 		auto bytes_compressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(std::string(cmpBuf, bytes_compressed));
+		result.append(cmpBuf, bytes_compressed);
 	} while (strm.avail_out == 0);
 
 	return result;
@@ -378,7 +378,7 @@ DeflateDecompressFile::next()
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(std::string(buffer, bytes_decompressed));
+		result.append(buffer, bytes_decompressed);
 	} while (strm.avail_out == 0);
 
 	return result;

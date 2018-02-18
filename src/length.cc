@@ -298,7 +298,7 @@ unserialise_string(const char** p, const char* end) {
 	std::string string;
 
 	unsigned long long length = unserialise_length(&ptr, end, true);
-	string.append(std::string(ptr, length));
+	string.append(ptr, length);
 	ptr += length;
 
 	*p = ptr;

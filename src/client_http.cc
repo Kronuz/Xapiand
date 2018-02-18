@@ -1588,11 +1588,11 @@ HttpClient::search_view(enum http_method method, Command)
 				} else if (total_count < 65536) {
 					char buf[3];
 					buf[0] = static_cast<char>(0xdcu); _msgpack_store16(&buf[1], static_cast<uint16_t>(total_count));
-					first_chunk.append(std::string(buf, 3));
+					first_chunk.append(buf, 3);
 				} else {
 					char buf[5];
 					buf[0] = static_cast<char>(0xddu); _msgpack_store32(&buf[1], static_cast<uint32_t>(total_count));
-					first_chunk.append(std::string(buf, 5));
+					first_chunk.append(buf, 5);
 				}
 			} else if (is_acceptable_type(json_type, ct_type)) {
 				first_chunk = basic_response.to_string(indent);

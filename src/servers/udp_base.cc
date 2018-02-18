@@ -187,7 +187,7 @@ BaseUDP::send_message(char type, const std::string& content)
 {
 	if (!content.empty()) {
 		std::string message(1, type);
-		message.append(std::string((const char *)&version, sizeof(uint16_t)));
+		message.append((const char *)&version, sizeof(uint16_t));
 		message.append(serialise_string(opts.cluster_name));
 		message.append(content);
 		sending_message(message);
