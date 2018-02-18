@@ -30,6 +30,7 @@
 #include "exception.h"
 #include "io_utils.h"
 #include "msgpack.hpp"
+#include "strict_stox.hh"
 #include "xchange/string_view.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -1799,9 +1800,9 @@ inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
 				break;
 			}
 			case Type::ARRAY: {
-				std::string::size_type sz;
-				int pos = std::stoi(s, &sz);
-				if (pos < 0 || sz != s.size()) {
+				int errno_save;
+				auto pos = strict_stoz(errno_save, s);
+				if (errno_save) {
 					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
 				}
 				current = &current->at(pos);
@@ -1826,9 +1827,9 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 				break;
 			}
 			case Type::ARRAY: {
-				std::string::size_type sz;
-				int pos = std::stoi(s, &sz);
-				if (pos < 0 || sz != s.size()) {
+				int errno_save;
+				auto pos = strict_stoz(errno_save, s);
+				if (errno_save) {
 					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
 				}
 				current = &current->at(pos);
@@ -2074,6 +2075,7 @@ inline MsgPack::operator bool() const {
 
 
 inline MsgPack::operator unsigned long long() const {
+	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2086,17 +2088,9 @@ inline MsgPack::operator unsigned long long() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			try {
-				return std::stoull(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stoull(errno_save, string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			try {
-				return std::stoull(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stoull(errno_save, string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}
@@ -2104,6 +2098,7 @@ inline MsgPack::operator unsigned long long() const {
 
 
 inline MsgPack::operator long long() const {
+	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2116,17 +2111,9 @@ inline MsgPack::operator long long() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			try {
-				return std::stoll(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stoll(errno_save, string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			try {
-				return std::stoll(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stoll(errno_save, string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}
@@ -2178,6 +2165,7 @@ inline MsgPack::operator float() const {
 
 
 inline MsgPack::operator double() const {
+	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2190,17 +2178,9 @@ inline MsgPack::operator double() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			try {
-				return std::stod(std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stod(errno_save, string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			try {
-				return std::stod(std::string(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-			} catch (const std::out_of_range&) {
-			} catch (const std::invalid_argument&) { }
-			return 0;
+			return strict_stod(errno_save, string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}
