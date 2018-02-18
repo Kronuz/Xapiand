@@ -45,6 +45,7 @@
 #include "split.h"            // for Split
 #include "static_str.hh"      // for static_str
 #include "string_view.h"      // for string_view
+#include "strict_stox.hh"     // for strict_stox
 
 
 template<class T, class... Args>
@@ -78,104 +79,6 @@ namespace std {
 		return std::string(str);
 	}
 }
-
-
-// Types conversion strict_stox and strict_nothrow_stox
-template <typename F>
-class Stox {
-	const char * const name;
-	F func;
-
-	template <typename T, typename... Args>
-	auto _stox(std::true_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
-		auto b = str.data();
-		auto e = b + str.size();
-		auto ptr = const_cast<char*>(e);
-		auto r = func(b, &ptr, std::forward<Args>(args)...);
-		if (errno) return static_cast<decltype(r)>(0);
-		if (ptr == b) {
-			errno = EINVAL;
-			return static_cast<decltype(r)>(0);
-		}
-		if (idx) {
-			*idx = static_cast<size_t>(ptr - b);
-		} else if (ptr != e) {
-			errno = EINVAL;
-			return static_cast<decltype(r)>(0);
-		}
-		return r;
-	}
-
-	template <typename T, typename... Args>
-	auto _stox(std::false_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
-		auto r = _stox<void>(std::true_type{}, str, idx, std::forward<Args>(args)...);
-		if (errno) return static_cast<T>(0);
-		if (r < std::numeric_limits<T>::min() || std::numeric_limits<T>::max() < r) {
-			errno = ERANGE;
-			return static_cast<T>(0);
-		}
-		return static_cast<T>(r);
-	}
-
-public:
-	Stox(const char* _name, F _func)
-		: name(_name),
-		  func(_func) { }
-
-	template <typename T, typename... Args>
-	auto stox_nothrow(int& errno_save, const string_view& str, std::size_t* idx, Args&&... args) {
-		errno_save = errno;
-		errno = 0;
-		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
-		std::swap(errno, errno_save);
-		return r;
-	}
-
-	template <typename T, typename... Args>
-	auto stox_throw(const string_view& str, std::size_t* idx, Args&&... args) {
-		auto errno_save = errno;
-		errno = 0;
-		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
-		std::swap(errno, errno_save);
-		switch (errno) {
-			case EINVAL:
-				THROW(InvalidArgument, "%s: Cannot convert value: %s", name, std::string(str).c_str());
-			case ERANGE:
-				THROW(OutOfRange, "%s: Out of range value: %s", name, std::string(str).c_str());
-			default:
-				break;
-		}
-		return r;
-	}
-};
-#define STOXIFY_BASE(name, func, T) \
-static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr, int base = 10) noexcept { \
-	return _strict_##name.stox_nothrow<T>(errno_save, str, idx, base); \
-} \
-inline auto strict_##name(string_view str, std::size_t* idx = nullptr, int base = 10) { \
-	return _strict_##name.stox_throw<T>(str, idx, base); \
-}
-#define STOXIFY(name, func, T) \
-static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr) noexcept { \
-	return _strict_##name.stox_nothrow<T>(errno_save, str, idx); \
-} \
-inline auto strict_##name(string_view str, std::size_t* idx = nullptr) { \
-	return _strict_##name.stox_throw<T>(str, idx); \
-}
-STOXIFY_BASE(stoul, std::strtoul, void);
-STOXIFY_BASE(stoull, std::strtoull, void);
-STOXIFY_BASE(stoi, std::strtol, int);
-STOXIFY_BASE(stou, std::strtoul, unsigned);
-STOXIFY_BASE(stol, std::strtol, void);
-STOXIFY_BASE(stoll, std::strtoll, void);
-STOXIFY_BASE(stoz, std::strtoull, std::size_t);
-STOXIFY(stof, std::strtof, void);
-STOXIFY(stod, std::strtod, void);
-STOXIFY(stold, std::strtold, void);
-#undef STOXIFY_BASE
-#undef STOXIFY
 
 
 struct File_ptr {
