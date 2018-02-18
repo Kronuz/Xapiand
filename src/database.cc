@@ -1829,7 +1829,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 
 void
-Database::dump_metadata(int fd, XXH32_state_t& xxhash)
+Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 {
 	L_CALL("Database::dump_metadata()");
 
@@ -1846,15 +1846,15 @@ Database::dump_metadata(int fd, XXH32_state_t& xxhash)
 				key = *it;
 				auto value = db->get_metadata(key);
 				serialise_string(fd, key);
-				XXH32_update(&xxhash, key.data(), key.size());
+				XXH32_update(xxh_state, key.data(), key.size());
 				serialise_string(fd, value);
-				XXH32_update(&xxhash, value.data(), value.size());
+				XXH32_update(xxh_state, value.data(), value.size());
 			}
 			// mark end:
 			serialise_string(fd, "");
-			XXH32_update(&xxhash, "", 0);
+			XXH32_update(xxh_state, "", 0);
 			serialise_string(fd, "");
-			XXH32_update(&xxhash, "", 0);
+			XXH32_update(xxh_state, "", 0);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description().c_str());
@@ -1874,7 +1874,7 @@ Database::dump_metadata(int fd, XXH32_state_t& xxhash)
 
 
 void
-Database::dump_documents(int fd, XXH32_state_t& xxhash)
+Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 {
 	L_CALL("Database::dump_documents()");
 
@@ -1908,16 +1908,16 @@ Database::dump_documents(int fd, XXH32_state_t& xxhash)
 				}
 #endif
 				serialise_string(fd, obj_ser);
-				XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
+				XXH32_update(xxh_state, obj_ser.data(), obj_ser.size());
 
 				serialise_string(fd, blob);
-				XXH32_update(&xxhash, blob.data(), blob.size());
+				XXH32_update(xxh_state, blob.data(), blob.size());
 			}
 			// mark end:
 			serialise_string(fd, "");
-			XXH32_update(&xxhash, "", 0);
+			XXH32_update(xxh_state, "", 0);
 			serialise_string(fd, "");
-			XXH32_update(&xxhash, "", 0);
+			XXH32_update(xxh_state, "", 0);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description().c_str());

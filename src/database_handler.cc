@@ -782,19 +782,21 @@ DatabaseHandler::dump_metadata(int fd)
 
 	lock_database lk_db(this);
 
-	XXH32_state_t xxhash;
-	XXH32_reset(&xxhash, 0);
+	XXH32_state_t* xxh_state = XXH32_createState();
+	XXH32_reset(xxh_state, 0);
 
 	auto db_endpoints = endpoints.to_string();
 	serialise_string(fd, dump_metadata_header);
-	XXH32_update(&xxhash, dump_metadata_header.data(), dump_metadata_header.size());
+	XXH32_update(xxh_state, dump_metadata_header.data(), dump_metadata_header.size());
 
 	serialise_string(fd, db_endpoints);
-	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
-	database->dump_metadata(fd, xxhash);
+	database->dump_metadata(fd, xxh_state);
 
-	uint32_t current_hash = XXH32_digest(&xxhash);
+	uint32_t current_hash = XXH32_digest(xxh_state);
+	XXH32_freeState(xxh_state);
+
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is 0x%08x", current_hash);
 }
@@ -810,20 +812,22 @@ DatabaseHandler::dump_schema(int fd)
 
 	lock_database lk_db(this);
 
-	XXH32_state_t xxhash;
-	XXH32_reset(&xxhash, 0);
+	XXH32_state_t* xxh_state = XXH32_createState();
+	XXH32_reset(xxh_state, 0);
 
 	auto db_endpoints = endpoints.to_string();
 	serialise_string(fd, dump_schema_header);
-	XXH32_update(&xxhash, dump_schema_header.data(), dump_schema_header.size());
+	XXH32_update(xxh_state, dump_schema_header.data(), dump_schema_header.size());
 
 	serialise_string(fd, db_endpoints);
-	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
 	serialise_string(fd, saved_schema_ser);
-	XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+	XXH32_update(xxh_state, saved_schema_ser.data(), saved_schema_ser.size());
 
-	uint32_t current_hash = XXH32_digest(&xxhash);
+	uint32_t current_hash = XXH32_digest(xxh_state);
+	XXH32_freeState(xxh_state);
+
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is 0x%08x", current_hash);
 }
@@ -836,19 +840,21 @@ DatabaseHandler::dump_documents(int fd)
 
 	lock_database lk_db(this);
 
-	XXH32_state_t xxhash;
-	XXH32_reset(&xxhash, 0);
+	XXH32_state_t* xxh_state = XXH32_createState();
+	XXH32_reset(xxh_state, 0);
 
 	auto db_endpoints = endpoints.to_string();
 	serialise_string(fd, dump_documents_header);
-	XXH32_update(&xxhash, dump_documents_header.data(), dump_documents_header.size());
+	XXH32_update(xxh_state, dump_documents_header.data(), dump_documents_header.size());
 
 	serialise_string(fd, db_endpoints);
-	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
-	database->dump_documents(fd, xxhash);
+	database->dump_documents(fd, xxh_state);
 
-	uint32_t current_hash = XXH32_digest(&xxhash);
+	uint32_t current_hash = XXH32_digest(xxh_state);
+	XXH32_freeState(xxh_state);
+
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is 0x%08x", current_hash);
 }
@@ -864,17 +870,17 @@ DatabaseHandler::restore(int fd)
 
 	lock_database lk_db(this);
 
-	XXH32_state_t xxhash;
-	XXH32_reset(&xxhash, 0);
+	XXH32_state_t* xxh_state = XXH32_createState();
+	XXH32_reset(xxh_state, 0);
 
 	auto header = unserialise_string(fd, buffer, off);
-	XXH32_update(&xxhash, header.data(), header.size());
+	XXH32_update(xxh_state, header.data(), header.size());
 	if (header != dump_documents_header && header != dump_schema_header && header != dump_metadata_header) {
 		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
 	}
 
 	auto db_endpoints = unserialise_string(fd, buffer, off);
-	XXH32_update(&xxhash, db_endpoints.data(), db_endpoints.size());
+	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
 	// restore metadata (key, value)
 	if (header == dump_metadata_header) {
@@ -882,9 +888,9 @@ DatabaseHandler::restore(int fd)
 		do {
 			++i;
 			auto key = unserialise_string(fd, buffer, off);
-			XXH32_update(&xxhash, key.data(), key.size());
+			XXH32_update(xxh_state, key.data(), key.size());
 			auto value = unserialise_string(fd, buffer, off);
-			XXH32_update(&xxhash, value.data(), value.size());
+			XXH32_update(xxh_state, value.data(), value.size());
 			if (key.empty() && value.empty()) break;
 
 			if (key.empty()) {
@@ -900,7 +906,7 @@ DatabaseHandler::restore(int fd)
 	// restore schema
 	if (header == dump_schema_header) {
 		auto saved_schema_ser = unserialise_string(fd, buffer, off);
-		XXH32_update(&xxhash, saved_schema_ser.data(), saved_schema_ser.size());
+		XXH32_update(xxh_state, saved_schema_ser.data(), saved_schema_ser.size());
 
 		lk_db.unlock();
 		if (!saved_schema_ser.empty()) {
@@ -922,9 +928,9 @@ DatabaseHandler::restore(int fd)
 		do {
 			++i;
 			auto obj_ser = unserialise_string(fd, buffer, off);
-			XXH32_update(&xxhash, obj_ser.data(), obj_ser.size());
+			XXH32_update(xxh_state, obj_ser.data(), obj_ser.size());
 			auto blob = unserialise_string(fd, buffer, off);
-			XXH32_update(&xxhash, blob.data(), blob.size());
+			XXH32_update(xxh_state, blob.data(), blob.size());
 			if (obj_ser.empty() && blob.empty()) break;
 
 			Xapian::Document doc;
@@ -1012,7 +1018,9 @@ DatabaseHandler::restore(int fd)
 	}
 
 	uint32_t saved_hash = unserialise_length(fd, buffer, off);
-	uint32_t current_hash = XXH32_digest(&xxhash);
+	uint32_t current_hash = XXH32_digest(xxh_state);
+	XXH32_freeState(xxh_state);
+
 	if (saved_hash != current_hash) {
 		L_WARNING("Invalid dump hash (0x%08x != 0x%08x)", saved_hash, current_hash);
 	}
