@@ -27,12 +27,14 @@
 #include <cstdio>
 #include <string>
 
+#include "string_view.h"     // for string_view
+
 
 #define COMMAND_PREFIX ":"
 
 
 std::string urldecode(const void *p, size_t size);
-inline std::string urldecode(const std::string& string) {
+inline std::string urldecode(string_view string) {
 	return urldecode(string.data(), string.size());
 }
 template<typename T, std::size_t N>
@@ -52,7 +54,7 @@ public:
 
 	void clear() noexcept;
 	void rewind() noexcept;
-	int init(const std::string& q);
+	int init(string_view q);
 	int next(const char *name);
 
 	std::string get();
@@ -97,7 +99,7 @@ public:
 
 	void clear() noexcept;
 	void rewind() noexcept;
-	State init(const std::string& p);
+	State init(string_view p);
 	State next();
 
 	void skip_id() noexcept;

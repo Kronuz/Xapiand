@@ -85,7 +85,7 @@ QueryParser::rewind() noexcept
 
 
 int
-QueryParser::init(const std::string& q)
+QueryParser::init(string_view q)
 {
 	clear();
 	query = q;
@@ -204,7 +204,7 @@ PathParser::rewind() noexcept
 
 
 PathParser::State
-PathParser::init(const std::string& p)
+PathParser::init(string_view p)
 {
 	clear();
 	path = p;

@@ -1889,7 +1889,7 @@ HttpClient::url_resolve()
 		}
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
-			if (query_parser.init(std::string(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
+			if (query_parser.init(string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
 				return Command::BAD_QUERY;
 			}
 		}
