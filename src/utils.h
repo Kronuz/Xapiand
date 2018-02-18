@@ -92,15 +92,16 @@ class Stox {
 		auto e = b + str.size();
 		auto ptr = const_cast<char*>(e);
 		auto r = func(b, &ptr, std::forward<Args>(args)...);
-		if (errno) return r;
+		if (errno) return 0;
 		if (ptr == b) {
 			errno = EINVAL;
-			return r;
+			return 0;
 		}
 		if (idx) {
 			*idx = static_cast<size_t>(ptr - b);
 		} else if (ptr != e) {
 			errno = EINVAL;
+			return 0;
 		}
 		return r;
 	}
@@ -108,9 +109,10 @@ class Stox {
 	template <typename T, typename... Args>
 	auto _stox(std::false_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
 		auto r = _stox<void>(std::true_type{}, str, idx, std::forward<Args>(args)...);
-		if (errno) return r;
+		if (errno) return 0;
 		if (r < std::numeric_limits<T>::min() || std::numeric_limits<T>::max() < r) {
 			errno = ERANGE;
+			return 0;
 		}
 		return r;
 	}
