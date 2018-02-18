@@ -1113,18 +1113,18 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 	std::smatch m;
 	if (time_req.length() && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
 		int start = 0, end = 0, increment = 0;
-		start += 60 * 60 * (m.length(1) ? std::stoul(m.str(1)) : 0);
-		start += 60 * (m.length(2) ? std::stoul(m.str(2)) : 0);
-		start += (m.length(3) ? std::stoul(m.str(3)) : 0);
-		end += 60 * 60 * (m.length(5) ? std::stoul(m.str(5)) : 0);
-		end += 60 * (m.length(6) ? std::stoul(m.str(6)) : 0);
-		end += (m.length(7) ? std::stoul(m.str(7)) : 0);
+		start += 60 * 60 * (m.length(1) ? strict_stoul(m.str(1)) : 0);
+		start += 60 * (m.length(2) ? strict_stoul(m.str(2)) : 0);
+		start += (m.length(3) ? strict_stoul(m.str(3)) : 0);
+		end += 60 * 60 * (m.length(5) ? strict_stoul(m.str(5)) : 0);
+		end += 60 * (m.length(6) ? strict_stoul(m.str(6)) : 0);
+		end += (m.length(7) ? strict_stoul(m.str(7)) : 0);
 
 		if (gran_req.length()) {
 			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.length() && m.length(4) == 0) {
-				increment += 60 * 60 * (m.length(1) ? std::stoul(m.str(1)) : 0);
-				increment += 60 * (m.length(2) ? std::stoul(m.str(2)) : 0);
-				increment += (m.length(3) ? std::stoul(m.str(3)) : 0);
+				increment += 60 * 60 * (m.length(1) ? strict_stoul(m.str(1)) : 0);
+				increment += 60 * (m.length(2) ? strict_stoul(m.str(2)) : 0);
+				increment += (m.length(3) ? strict_stoul(m.str(3)) : 0);
 			} else {
 				THROW(ClientError, "Incorrect input: %s", gran_req.c_str());
 			}
