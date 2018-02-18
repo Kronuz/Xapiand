@@ -85,19 +85,12 @@ public:
 		UNDEFINED           = MSGPACK_EXT_BEGIN,
 	};
 
-	struct duplicate_key : public BaseException, public std::out_of_range {
+	using out_of_range = OutOfRange;
+	using invalid_argument = InvalidArgument;
+	class duplicate_key : public OutOfRange {
+	public:
 		template<typename... Args>
-		duplicate_key(Args&&... args) : BaseException(std::forward<Args>(args)...), std::out_of_range(message) { }
-	};
-
-	struct out_of_range : public BaseException, public std::out_of_range {
-		template<typename... Args>
-		out_of_range(Args&&... args) : BaseException(std::forward<Args>(args)...), std::out_of_range(message) { }
-	};
-
-	struct invalid_argument : public BaseException, public std::invalid_argument {
-		template<typename... Args>
-		invalid_argument(Args&&... args) : BaseException(std::forward<Args>(args)...), std::invalid_argument(message) { }
+		duplicate_key(Args&&... args) : OutOfRange(std::forward<Args>(args)...) { }
 	};
 
 	static msgpack::object _undefined() {
