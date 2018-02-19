@@ -88,7 +88,7 @@ int
 QueryParser::init(string_view q)
 {
 	clear();
-	query = q;
+	query = urldecode(q);
 	return 0;
 }
 
@@ -158,8 +158,8 @@ QueryParser::next(const char *name)
 std::string
 QueryParser::get()
 {
-	if (!off) return std::string();
-	return urldecode(off, len);
+	if (!off) return "";
+	return std::string(off, len);
 }
 
 
@@ -207,7 +207,7 @@ PathParser::State
 PathParser::init(string_view p)
 {
 	clear();
-	path = p;
+	path = urldecode(p);
 
 	L_URL_PARSER(repr(path));
 
@@ -519,56 +519,56 @@ PathParser::skip_id() noexcept
 std::string
 PathParser::get_pth()
 {
-	if (!off_pth) return std::string();
-	return urldecode(off_pth, len_pth);
+	if (!off_pth) return "";
+	return std::string(off_pth, len_pth);
 }
 
 
 std::string
 PathParser::get_hst()
 {
-	if (!off_hst) return std::string();
-	return urldecode(off_hst, len_hst);
+	if (!off_hst) return "";
+	return std::string(off_hst, len_hst);
 }
 
 
 std::string
 PathParser::get_nsp()
 {
-	if (!off_nsp) return std::string();
-	return urldecode(off_nsp, len_nsp);
+	if (!off_nsp) return "";
+	return std::string(off_nsp, len_nsp);
 }
 
 
 std::string
 PathParser::get_pmt()
 {
-	if (!off_pmt) return std::string();
-	return urldecode(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
+	if (!off_pmt) return "";
+	return std::string(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
 }
 
 
 std::string
 PathParser::get_ppmt()
 {
-	if (!off_ppmt) return std::string();
-	return urldecode(off_ppmt, len_ppmt - 1);
+	if (!off_ppmt) return "";
+	return std::string(off_ppmt, len_ppmt - 1);
 }
 
 
 std::string
 PathParser::get_cmd()
 {
-	if (!off_cmd) return std::string();
-	return urldecode(off_cmd, len_cmd);
+	if (!off_cmd) return "";
+	return std::string(off_cmd, len_cmd);
 }
 
 
 std::string
 PathParser::get_id()
 {
-	if (!off_id) return std::string();
-	return urldecode(off_id, len_id);
+	if (!off_id) return "";
+	return std::string(off_id, len_id);
 }
 
 
