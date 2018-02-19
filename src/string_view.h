@@ -22,12 +22,17 @@
 
 #pragma once
 
-#include "xapiand.h"               // for HAVE_STRING_VIEW
+#include "xapiand.h"                  // for HAVE_STRING_VIEW
 
-#ifdef HAVE_STRING_VIEW
+#if defined(HAVE_STRING_VIEW)
 
-#include <string_view>            // for std::string_view
+#include <string_view>               // for std::string_view
 using std::string_view;
+
+#elif defined(HAVE_EXPERIMENTAL_STRING_VIEW)
+
+#include <experimental/string_view>  // for std::experimental::string_view
+using std::experimental::string_view;
 
 #else /* HAVE_STRING_VIEW */
 
