@@ -198,7 +198,7 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 }
 
 
-static const std::unordered_map<std::string, void (*)(Datetime::tm_t&, const MsgPack&)> map_dispatch_date({
+static const std::unordered_map<string_view, void (*)(Datetime::tm_t&, const MsgPack&)> map_dispatch_date({
 	{ RESERVED_YEAR,    &process_date_year   },
 	{ RESERVED_MONTH,   &process_date_month  },
 	{ RESERVED_DAY,     &process_date_day    },
@@ -311,7 +311,7 @@ Datetime::DateParser(const MsgPack& value)
 			std::string str_time;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
+				auto str_key = it->str_view();
 				try {
 					auto func = map_dispatch_date.at(str_key);
 					(*func)(tm, it.value());
@@ -323,7 +323,7 @@ Datetime::DateParser(const MsgPack& value)
 							THROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
 						}
 					} else {
-						THROW(DatetimeError, "Unsupported Key: %s in date", str_key.c_str());
+						THROW(DatetimeError, "Unsupported Key: %s in date", repr(str_key).c_str());
 					}
 				}
 			}

@@ -34,6 +34,7 @@
 
 #include "aggregation_metric.h"     // for AGGREGATION_AGGS
 #include "msgpack.h"                // for MsgPack
+#include "string_view.h"            // for string_view
 
 
 class Schema;
@@ -69,7 +70,7 @@ public:
 using dispatch_aggregations = void (Aggregation::*)(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&);
 
 
-extern const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggregations;
+extern const std::unordered_map<string_view, dispatch_aggregations> map_dispatch_aggregations;
 
 
 // Class for calculating aggregations in the matching documents.

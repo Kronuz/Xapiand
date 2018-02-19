@@ -40,6 +40,7 @@
 #include "exception.h"         // for AggregationError, MSG_AggregationError
 #include "msgpack.h"           // for MsgPack, object::object
 #include "serialise_list.h"    // for StringList, RangeList
+#include "string_view.h"       // for string_view
 
 
 class Schema;
@@ -90,7 +91,7 @@ constexpr const char AGGREGATION_VALUE[]            = "_value";
 class SubAggregation;
 
 
-using func_value_handle = void (SubAggregation::*)(const std::string&, const Xapian::Document&);
+using func_value_handle = void (SubAggregation::*)(string_view, const Xapian::Document&);
 
 
 class ValueHandle {
@@ -149,7 +150,7 @@ public:
 		THROW(AggregationError, "boolean type is not supported");
 	}
 
-	virtual void aggregate_string(const std::string&, const Xapian::Document&) {
+	virtual void aggregate_string(string_view, const Xapian::Document&) {
 		THROW(AggregationError, "string type is not supported");
 	}
 
@@ -157,74 +158,74 @@ public:
 		THROW(AggregationError, "geo type is not supported");
 	}
 
-	virtual void aggregate_uuid(const std::string&, const Xapian::Document&) {
+	virtual void aggregate_uuid(string_view, const Xapian::Document&) {
 		THROW(AggregationError, "uuid type is not supported");
 	}
 
-	void _aggregate_float(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_float(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_float(Unserialise::_float(value), doc);
 		}
 	}
 
-	void _aggregate_integer(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_integer(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_integer(Unserialise::integer(value), doc);
 		}
 	}
 
-	void _aggregate_positive(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_positive(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_positive(Unserialise::positive(value), doc);
 		}
 	}
 
-	void _aggregate_date(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_date(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_date(Unserialise::timestamp(value), doc);
 		}
 	}
 
-	void _aggregate_time(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_time(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_time(Unserialise::time_d(value), doc);
 		}
 	}
 
-	void _aggregate_timedelta(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_timedelta(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_timedelta(Unserialise::timedelta_d(value), doc);
 		}
 	}
 
-	void _aggregate_boolean(const std::string& s, const Xapian::Document& doc)  {
+	void _aggregate_boolean(string_view s, const Xapian::Document& doc)  {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_boolean(Unserialise::boolean(value), doc);
 		}
 	}
 
-	void _aggregate_string(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_string(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_string(value, doc);
 		}
 	}
 
-	void _aggregate_geo(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_geo(string_view s, const Xapian::Document& doc) {
 		const auto ranges = Unserialise::ranges(s);
 		for (const auto& range : ranges) {
 			aggregate_geo(range, doc);
 		}
 	}
 
-	void _aggregate_uuid(const std::string& s, const Xapian::Document& doc) {
+	void _aggregate_uuid(string_view s, const Xapian::Document& doc) {
 		StringList values(s);
 		for (const auto& value : values) {
 			aggregate_uuid(Unserialise::uuid(value), doc);
@@ -297,7 +298,7 @@ public:
 		_aggregate();
 	}
 
-	void aggregate_string(const std::string&, const Xapian::Document&) override {
+	void aggregate_string(string_view, const Xapian::Document&) override {
 		_aggregate();
 	}
 
@@ -305,7 +306,7 @@ public:
 		_aggregate();
 	}
 
-	void aggregate_uuid(const std::string&, const Xapian::Document&) override {
+	void aggregate_uuid(string_view, const Xapian::Document&) override {
 		_aggregate();
 	}
 };

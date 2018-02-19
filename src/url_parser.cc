@@ -155,11 +155,11 @@ QueryParser::next(const char *name)
 }
 
 
-std::string
+string_view
 QueryParser::get()
 {
 	if (!off) return "";
-	return std::string(off, len);
+	return string_view(off, len);
 }
 
 
@@ -516,59 +516,59 @@ PathParser::skip_id() noexcept
 }
 
 
-std::string
+string_view
 PathParser::get_pth()
 {
 	if (!off_pth) return "";
-	return std::string(off_pth, len_pth);
+	return string_view(off_pth, len_pth);
 }
 
 
-std::string
+string_view
 PathParser::get_hst()
 {
 	if (!off_hst) return "";
-	return std::string(off_hst, len_hst);
+	return string_view(off_hst, len_hst);
 }
 
 
-std::string
+string_view
 PathParser::get_nsp()
 {
 	if (!off_nsp) return "";
-	return std::string(off_nsp, len_nsp);
+	return string_view(off_nsp, len_nsp);
 }
 
 
-std::string
+string_view
 PathParser::get_pmt()
 {
 	if (!off_pmt) return "";
-	return std::string(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
+	return string_view(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
 }
 
 
-std::string
+string_view
 PathParser::get_ppmt()
 {
 	if (!off_ppmt) return "";
-	return std::string(off_ppmt, len_ppmt - 1);
+	return string_view(off_ppmt, len_ppmt - 1);
 }
 
 
-std::string
+string_view
 PathParser::get_cmd()
 {
 	if (!off_cmd) return "";
-	return std::string(off_cmd, len_cmd);
+	return string_view(off_cmd, len_cmd);
 }
 
 
-std::string
+string_view
 PathParser::get_id()
 {
 	if (!off_id) return "";
-	return std::string(off_id, len_id);
+	return string_view(off_id, len_id);
 }
 
 

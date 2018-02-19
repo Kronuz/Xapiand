@@ -111,7 +111,7 @@ WalHeader::validate(void* param, void*)
 }
 
 
-DatabaseWAL::DatabaseWAL(const std::string& base_path_, Database* database_)
+DatabaseWAL::DatabaseWAL(string_view base_path_, Database* database_)
 	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
 	  modified(false),
 	  validate_uuid(true),
@@ -262,7 +262,7 @@ DatabaseWAL::create(uint32_t revision)
 
 
 MsgPack
-DatabaseWAL::repr_line(const std::string& line)
+DatabaseWAL::repr_line(string_view line)
 {
 	L_CALL("DatabaseWAL::repr_line(<line>)");
 
@@ -462,7 +462,7 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute(const std::string& line)
+DatabaseWAL::execute(string_view line)
 {
 	L_CALL("DatabaseWAL::execute(<line>)");
 
@@ -615,7 +615,7 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
+DatabaseWAL::write_line(Type type, string_view data, bool commit_)
 {
 	L_CALL("DatabaseWAL::write_line(...)");
 
@@ -627,7 +627,9 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	std::string revision_encode = database->get_revision_str();
 	std::string uuid = database->get_uuid();
-	std::string line(revision_encode + serialise_length(toUType(type)) + data);
+	std::string line = revision_encode;
+	line.append(serialise_length(toUType(type)));
+	line.append(data);
 
 	L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line, quote).c_str());
 
@@ -662,7 +664,8 @@ DatabaseWAL::write_add_document(const Xapian::Document& doc)
 {
 	L_CALL("DatabaseWAL::write_add_document(<doc>)");
 
-	write_line(Type::ADD_DOCUMENT, doc.serialise());
+	auto line = doc.serialise();
+	write_line(Type::ADD_DOCUMENT, line);
 }
 
 
@@ -676,11 +679,12 @@ DatabaseWAL::write_cancel()
 
 
 void
-DatabaseWAL::write_delete_document_term(const std::string& term)
+DatabaseWAL::write_delete_document_term(string_view term)
 {
 	L_CALL("DatabaseWAL::write_delete_document_term(<term>)");
 
-	write_line(Type::DELETE_DOCUMENT_TERM, serialise_length(term.size()) + term);
+	auto line = serialise_string(term);
+	write_line(Type::DELETE_DOCUMENT_TERM, line);
 }
 
 
@@ -698,16 +702,20 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 {
 	L_CALL("DatabaseWAL::write_replace_document(...)");
 
-	write_line(Type::REPLACE_DOCUMENT, serialise_length(did) + doc.serialise());
+	auto line = serialise_length(did);
+	line.append(doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT, line);
 }
 
 
 void
-DatabaseWAL::write_replace_document_term(const std::string& term, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document_term(string_view term, const Xapian::Document& doc)
 {
 	L_CALL("DatabaseWAL::write_replace_document_term(...)");
 
-	write_line(Type::REPLACE_DOCUMENT_TERM, serialise_length(term.size()) + term + doc.serialise());
+	auto line = serialise_string(term);
+	line.append(doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT_TERM, line);
 }
 
 
@@ -716,34 +724,41 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 {
 	L_CALL("DatabaseWAL::write_delete_document(<did>)");
 
-	write_line(Type::DELETE_DOCUMENT, serialise_length(did));
+	auto line = serialise_length(did);
+	write_line(Type::DELETE_DOCUMENT, line);
 }
 
 
 void
-DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
+DatabaseWAL::write_set_metadata(string_view key, string_view val)
 {
 	L_CALL("DatabaseWAL::write_set_metadata(...)");
 
-	write_line(Type::SET_METADATA, serialise_length(key.size()) + key + val);
+	auto line = serialise_string(key);
+	line.append(val);
+	write_line(Type::SET_METADATA, line);
 }
 
 
 void
-DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqinc)
+DatabaseWAL::write_add_spelling(string_view word, Xapian::termcount freqinc)
 {
 	L_CALL("DatabaseWAL::write_add_spelling(...)");
 
-	write_line(Type::ADD_SPELLING, serialise_length(freqinc) + word);
+	auto line = serialise_length(freqinc);
+	line.append(word);
+	write_line(Type::ADD_SPELLING, line);
 }
 
 
 void
-DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount freqdec)
+DatabaseWAL::write_remove_spelling(string_view word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWAL::write_remove_spelling(...)");
 
-	write_line(Type::REMOVE_SPELLING, serialise_length(freqdec) + word);
+	auto line = serialise_length(freqdec);
+	line.append(word);
+	write_line(Type::REMOVE_SPELLING, line);
 }
 
 #endif
@@ -784,7 +799,7 @@ DataHeader::validate(void* param, void*)
 }
 
 
-DataStorage::DataStorage(const std::string& base_path_, void* param_)
+DataStorage::DataStorage(string_view base_path_, void* param_)
 	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_)
 {
 	L_OBJ("CREATED DATABASE DATA STORAGE!");
@@ -1306,7 +1321,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get(const std::unique_ptr<DataStorage>& storage, const std::string& store) const
+Database::storage_get(const std::unique_ptr<DataStorage>& storage, string_view store) const
 {
 	L_CALL("Database::storage_get()");
 
@@ -1325,7 +1340,7 @@ Database::storage_get_blob(const Xapian::Document& doc) const
 	L_CALL("Database::storage_get_blob()");
 
 	auto data = doc.get_data();
-	auto blob = split_data_blob(data);
+	std::string blob(split_data_blob(data));
 
 	if (blob.empty()) {
 		auto store = split_data_store(data);
@@ -1350,7 +1365,7 @@ Database::storage_pull_blob(Xapian::Document& doc) const
 	L_CALL("Database::storage_pull_blob()");
 
 	auto data = doc.get_data();
-	auto blob = split_data_blob(data);
+	std::string blob(split_data_blob(data));
 
 	if (blob.empty()) {
 		auto store = split_data_store(data);
@@ -1382,7 +1397,7 @@ Database::storage_push_blob(Xapian::Document& doc) const
 	uint32_t offset;
 	auto data = doc.get_data();
 	auto blob = split_data_blob(data);
-	if (!blob.size()) {
+	if (blob.empty()) {
 		return;
 	}
 

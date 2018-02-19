@@ -439,7 +439,7 @@ bool strhasupper(string_view str) {
 }
 
 
-bool isRange(const std::string& str) {
+bool isRange(string_view str) {
 	try {
 		FieldParser fieldparser(str);
 		fieldparser.parse();

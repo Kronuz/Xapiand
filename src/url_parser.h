@@ -57,7 +57,7 @@ public:
 	int init(string_view q);
 	int next(const char *name);
 
-	std::string get();
+	string_view get();
 };
 
 
@@ -104,11 +104,11 @@ public:
 
 	void skip_id() noexcept;
 
-	std::string get_pth();
-	std::string get_hst();
-	std::string get_nsp();
-	std::string get_pmt();
-	std::string get_ppmt();
-	std::string get_cmd();
-	std::string get_id();
+	string_view get_pth();
+	string_view get_hst();
+	string_view get_nsp();
+	string_view get_pmt();
+	string_view get_ppmt();
+	string_view get_cmd();
+	string_view get_id();
 };

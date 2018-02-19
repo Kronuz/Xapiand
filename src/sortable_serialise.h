@@ -24,6 +24,9 @@
 
 #include <string>
 
-long double sortable_unserialise(const std::string & value);
+#include "string_view.h"
+
+
+long double sortable_unserialise(string_view value);
 
 std::string sortable_serialise(long double value);

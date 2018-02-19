@@ -50,7 +50,7 @@ class Schema;
 
 class BucketAggregation : public HandledSubAggregation {
 protected:
-	std::unordered_map<std::string, Aggregation> _aggs;
+	std::unordered_map<string_view, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _conf;
 
@@ -66,10 +66,11 @@ public:
 		}
 	}
 
-	void aggregate(const std::string& bucket, const Xapian::Document& doc) {
-		try {
-			_aggs.at(bucket)(doc);
-		} catch (const std::out_of_range&) {
+	void aggregate(string_view bucket, const Xapian::Document& doc) {
+		auto it = _aggs.find(bucket);
+		if (it != _aggs.end()) {
+			it->second(doc);
+		} else {
 			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(bucket), std::forward_as_tuple(_result[bucket], _conf, _schema));
 			p.first->second(doc);
 		}
@@ -117,7 +118,7 @@ public:
 		aggregate(bucket, doc);
 	}
 
-	void aggregate_string(const std::string& value, const Xapian::Document& doc) override {
+	void aggregate_string(string_view value, const Xapian::Document& doc) override {
 		aggregate(value, doc);
 	}
 
@@ -125,7 +126,7 @@ public:
 		aggregate(value.to_string(), doc);
 	}
 
-	void aggregate_uuid(const std::string& value, const Xapian::Document& doc) override {
+	void aggregate_uuid(string_view value, const Xapian::Document& doc) override {
 		aggregate(value, doc);
 	}
 };

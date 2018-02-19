@@ -23,9 +23,10 @@
 #include "geospatial.h"
 
 #include "../cast.h"
+#include "../utils.h"
 
 
-const std::unordered_map<std::string, GeoSpatial::dispatch_func> GeoSpatial::map_dispatch({
+const std::unordered_map<string_view, GeoSpatial::dispatch_func> GeoSpatial::map_dispatch({
 	{ GEO_LATITUDE,          &GeoSpatial::process_latitude    },
 	{ GEO_LONGITUDE,         &GeoSpatial::process_longitude   },
 	{ GEO_HEIGHT,            &GeoSpatial::process_height      },
@@ -161,10 +162,10 @@ GeoSpatial::get_data(const MsgPack& o, bool hradius)
 	static const auto dit_e = map_dispatch.end();
 	const auto it_e = o.end();
 	for (auto it = o.begin(); it != it_e; ++it) {
-		const auto str_key = it->str();
+		const auto str_key = it->str_view();
 		const auto dit = map_dispatch.find(str_key);
 		if (dit == dit_e) {
-			THROW(GeoSpatialError, "%s is a invalid word", str_key.c_str());
+			THROW(GeoSpatialError, "%s is a invalid word", repr(str_key).c_str());
 		} else {
 			(this->*dit->second)(data, it.value());
 		}

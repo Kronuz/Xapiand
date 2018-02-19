@@ -32,7 +32,7 @@ const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
 const dispatch_str_metric def_soundex_metric = &Multi_MultiValueKeyMaker::soundex_en;
 
 
-const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_soundex_metric({
+const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_soundex_metric({
 	{ "english",  &Multi_MultiValueKeyMaker::soundex_en     },
 	{ "en",       &Multi_MultiValueKeyMaker::soundex_en     },
 	{ "french",   &Multi_MultiValueKeyMaker::soundex_fr     },
@@ -44,7 +44,7 @@ const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_soundex_
 });
 
 
-const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric({
+const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_str_metric({
 	{ "levenshtein",   &Multi_MultiValueKeyMaker::levenshtein     },
 	{ "leven",         &Multi_MultiValueKeyMaker::levenshtein     },
 	{ "jaro",          &Multi_MultiValueKeyMaker::jaro            },
@@ -71,7 +71,7 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_STR_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	return values.front();
 }
@@ -85,7 +85,7 @@ SerialiseKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_STR_CMPVALUE;
 	}
 
-	StringList values(doc.get_value(_slot));
+	StringList values(multiValues);
 
 	return values.back();
 }
@@ -99,7 +99,7 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
@@ -136,7 +136,7 @@ FloatKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
@@ -166,7 +166,7 @@ IntegerKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
@@ -203,7 +203,7 @@ IntegerKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::integer(std::llabs(Unserialise::integer(values.front()) - _ref_val));
@@ -233,7 +233,7 @@ PositiveKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		uint64_t val = Unserialise::positive(values.front());
@@ -271,7 +271,7 @@ PositiveKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		uint64_t val = Unserialise::positive(values.front());
@@ -302,7 +302,7 @@ DateKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
@@ -339,7 +339,7 @@ DateKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.single()) {
 		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
@@ -369,7 +369,7 @@ BoolKey::findSmallest(const Xapian::Document& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.front().at(0) == _ref_val.at(0) || values.back().at(0) == _ref_val.at(0)) {
 		return SERIALISED_ZERO;
@@ -387,7 +387,7 @@ BoolKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	StringList values(std::move(multiValues));
+	StringList values(multiValues);
 
 	if (values.front().at(0) != _ref_val.at(0) || values.back().at(0) != _ref_val.at(0)) {
 		return SERIALISED_ONE;
@@ -454,7 +454,7 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 
 
 void
-Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, const std::string& value, const query_field_t& qf)
+Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf)
 {
 	if (value.empty()) {
 		if (field_spc.get_type() != FieldType::GEO) {

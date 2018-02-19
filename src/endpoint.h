@@ -40,6 +40,7 @@
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "utils.h"              // for lower_string
+#include "string_view.h"        // for string_view
 
 
 struct Node {
@@ -179,8 +180,8 @@ bool operator!=(const Endpoints& le, const Endpoints& re);
 
 
 class Endpoint {
-	std::string slice_after(std::string& subject, const std::string& delimiter) const;
-	std::string slice_before(std::string& subject, const std::string& delimiter) const;
+	string_view slice_after(string_view& subject, string_view delimiter) const;
+	string_view slice_before(string_view& subject, string_view delimiter) const;
 
 public:
 	static std::string cwd;
@@ -192,7 +193,7 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string& path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
+	Endpoint(string_view path_, const Node* node_=nullptr, long long mastery_level_=-1, string_view node_name="");
 
 	bool is_local() const {
 		auto local_node_ = local_node.load();

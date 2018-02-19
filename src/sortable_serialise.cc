@@ -214,13 +214,13 @@ std::string sortable_serialise(long double value) {
 /// Get a number from the character at a given position in a string, returning
 /// 0 if the string isn't long enough.
 static inline unsigned char
-numfromstr(const std::string & str, std::string::size_type pos)
+numfromstr(string_view str, std::size_t pos)
 {
 	return (pos < str.size()) ? static_cast<unsigned char>(str[pos]) : '\0';
 }
 
 long double
-sortable_unserialise(const std::string & value)
+sortable_unserialise(string_view value)
 {
 	// Zero.
 	if (value.size() == 1 && value[0] == '\x80') return 0.0;

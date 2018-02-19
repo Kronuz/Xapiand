@@ -23,6 +23,7 @@
 #pragma once
 
 #include "serialise.h"
+#include "string_view.h"   // for string_view
 
 
 constexpr char SERIALISED_LIST_MAGIC  = '\0';
@@ -121,8 +122,8 @@ class SerialiseList {
 			return &operator*();
 		}
 
-		int compare(const std::string& ref) const noexcept {
-			return -ref.compare(0, ref.length(), pos, length);
+		int compare(string_view ref) const noexcept {
+			return -ref.compare(0, ref.size(), pos, length);
 		}
 
 		bool operator==(const Iterator& other) const noexcept {
@@ -198,7 +199,7 @@ protected:
 		_i_cend = const_iterator(_i_end.owner, _i_end.pos, _i_end.length);
 	}
 
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
 	SerialiseList(S&& serialised)
 		: _serialised(std::forward<S>(serialised))
 	{
@@ -308,9 +309,9 @@ class StringList : public SerialiseList<StringList, std::string> {
 	friend class SerialiseList<StringList, std::string>;
 
 public:
-	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	StringList(T&& serialised)
-		: SerialiseList<StringList, std::string>(std::forward<T>(serialised)) { }
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	StringList(S&& serialised)
+		: SerialiseList<StringList, std::string>(std::forward<S>(serialised)) { }
 
 	template <typename InputIt>
 	static std::string serialise(InputIt first, InputIt last) {
@@ -346,9 +347,9 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
+	static void unserialise(string_view serialised, OutputIt d_first) {
+		auto ptr = serialised.data();
+		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);
 	}
 };
@@ -366,9 +367,9 @@ class CartesianList : public SerialiseList<CartesianList, Cartesian> {
 	friend class SerialiseList<CartesianList, Cartesian>;
 
 public:
-	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	CartesianList(T&& serialised)
-		: SerialiseList<CartesianList, Cartesian>(std::forward<T>(serialised))
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	CartesianList(S&& serialised)
+		: SerialiseList<CartesianList, Cartesian>(std::forward<S>(serialised))
 	{
 		if (((_end - _ptr) % SERIALISED_LENGTH_CARTESIAN) != 0) {
 			THROW(SerialisationError, "Bad encoded length: insufficient data");
@@ -420,9 +421,9 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
+	static void unserialise(string_view serialised, OutputIt d_first) {
+		auto ptr = serialised.data();
+		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);
 	}
 };
@@ -440,9 +441,9 @@ class RangeList : public SerialiseList<RangeList, range_t> {
 	friend class SerialiseList<RangeList, range_t>;
 
 public:
-	template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value>>
-	RangeList(T&& serialised)
-		: SerialiseList<RangeList, range_t>(std::forward<T>(serialised))
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	RangeList(S&& serialised)
+		: SerialiseList<RangeList, range_t>(std::forward<S>(serialised))
 	{
 		if (((_end - _ptr) % SERIALISED_LENGTH_RANGE) != 0) {
 			THROW(SerialisationError, "Bad encoded length: insufficient data");
@@ -494,9 +495,9 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const std::string& serialised, OutputIt d_first) {
-		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.length();
+	static void unserialise(string_view serialised, OutputIt d_first) {
+		auto ptr = serialised.data();
+		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);
 	}
 };

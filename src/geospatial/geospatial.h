@@ -25,6 +25,8 @@
 #include "../msgpack.h"
 #include "ewkt.h"
 
+#include "string_view.h"
+
 
 constexpr const char GEO_LATITUDE[]   = "_latitude";
 constexpr const char GEO_LONGITUDE[]  = "_longitude";
@@ -56,7 +58,7 @@ class GeoSpatial {
 
 	using dispatch_func = void (GeoSpatial::*)(data_t&, const MsgPack&);
 
-	static const std::unordered_map<std::string, dispatch_func> map_dispatch;
+	static const std::unordered_map<string_view, dispatch_func> map_dispatch;
 
 	std::shared_ptr<Geometry> geometry;
 

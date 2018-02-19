@@ -32,7 +32,7 @@
 #include "schema.h"                         // for Schema
 
 
-const std::unordered_map<std::string, dispatch_aggregations> map_dispatch_aggregations({
+const std::unordered_map<string_view, dispatch_aggregations> map_dispatch_aggregations({
 	{ AGGREGATION_COUNT,            &Aggregation::add_metric<AGGREGATION_COUNT, MetricCount>                       },
 	// { AGGREGATION_CARDINALITY,      &Aggregation::add_metric<AGGREGATION_CARDINALITY, MetricCardinality>           },
 	{ AGGREGATION_SUM,              &Aggregation::add_metric<AGGREGATION_SUM, MetricSum>                           },
@@ -85,7 +85,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 			auto sub_agg_name = agg.str();
 			if (is_valid(sub_agg_name)) {
 				const auto& sub_agg = aggs.at(sub_agg_name);
-				auto sub_agg_type = (*sub_agg.begin()).str();
+				auto sub_agg_type = sub_agg.begin()->str_view();
 				try {
 					auto func = map_dispatch_aggregations.at(sub_agg_type);
 					(this->*func)(_result[sub_agg_name], sub_agg, schema);

@@ -1214,7 +1214,7 @@ HttpClient::metadata_view(enum http_method method, Command)
 	std::string selector;
 	auto key = path_parser.get_pmt();
 	if (key.empty()) {
-		std::string cmd = path_parser.get_cmd();
+		auto cmd = path_parser.get_cmd();
 		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
@@ -1944,7 +1944,8 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 
 	std::string ns;
 	if (path_parser.off_nsp) {
-		ns = path_parser.get_nsp() + "/";
+		ns = path_parser.get_nsp();
+		ns.push_back('/');
 		if (startswith(ns, "/")) { /* ns without slash */
 			ns = ns.substr(1);
 		}
@@ -2089,18 +2090,18 @@ HttpClient::query_field_maker(int flag)
 
 		while (query_parser.next("query") != -1) {
 			L_SEARCH("query=%s", query_parser.get().c_str());
-			query_field->query.push_back(query_parser.get());
+			query_field->query.push_back(std::string(query_parser.get()));
 		}
 		query_parser.rewind();
 
 		while (query_parser.next("q") != -1) {
 			L_SEARCH("query=%s", query_parser.get().c_str());
-			query_field->query.push_back(query_parser.get());
+			query_field->query.push_back(std::string(query_parser.get()));
 		}
 		query_parser.rewind();
 
 		while (query_parser.next("sort") != -1) {
-			query_field->sort.push_back(query_parser.get());
+			query_field->sort.push_back(std::string(query_parser.get()));
 		}
 		query_parser.rewind();
 
@@ -2155,12 +2156,12 @@ HttpClient::query_field_maker(int flag)
 			query_parser.rewind();
 
 			while (query_parser.next("fuzzy.field") != -1) {
-				query_field->fuzzy.field.push_back(query_parser.get());
+				query_field->fuzzy.field.push_back(std::string(query_parser.get()));
 			}
 			query_parser.rewind();
 
 			while (query_parser.next("fuzzy.type") != -1) {
-				query_field->fuzzy.type.push_back(query_parser.get());
+				query_field->fuzzy.type.push_back(std::string(query_parser.get()));
 			}
 			query_parser.rewind();
 		}
@@ -2178,33 +2179,30 @@ HttpClient::query_field_maker(int flag)
 		if (query_field->is_nearest) {
 			query_field->nearest.n_rset = 5;
 			if (query_parser.next("nearest.n_rset") != -1) {
-				try {
-					query_field->nearest.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
-				} catch (const std::invalid_argument&) { }
+				int errno_save;
+				query_field->nearest.n_rset = strict_stoul(errno_save, query_parser.get());
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("nearest.n_eset") != -1) {
-				try {
-					query_field->nearest.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
-				} catch (const std::invalid_argument&) { }
+				int errno_save;
+				query_field->nearest.n_eset = strict_stoul(errno_save, query_parser.get());
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("nearest.n_term") != -1) {
-				try {
-					query_field->nearest.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
-				} catch (const std::invalid_argument&) { }
+				int errno_save;
+				query_field->nearest.n_term = strict_stoul(errno_save, query_parser.get());
 			}
 			query_parser.rewind();
 
 			while (query_parser.next("nearest.field") != -1) {
-				query_field->nearest.field.push_back(query_parser.get());
+				query_field->nearest.field.push_back(std::string(query_parser.get()));
 			}
 			query_parser.rewind();
 
 			while (query_parser.next("nearest.type") != -1) {
-				query_field->nearest.type.push_back(query_parser.get());
+				query_field->nearest.type.push_back(std::string(query_parser.get()));
 			}
 			query_parser.rewind();
 		}

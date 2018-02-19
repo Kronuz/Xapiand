@@ -42,6 +42,7 @@
 #include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
 #include "utils.h"                 // for repr, toUType, lower_string
+#include "string_view.h"           // for string_view
 
 
 enum class TypeIndex : uint8_t {
@@ -185,7 +186,7 @@ enum class FieldType : uint8_t {
 };
 
 
-const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language);
+const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language);
 
 
 inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
@@ -247,13 +248,13 @@ inline constexpr size_t getPos(size_t pos, size_t size) noexcept {
  * Unordered Maps used for reading user data specification.
  */
 
-extern const std::unordered_map<std::string, UnitTime> map_acc_date;
-extern const std::unordered_map<std::string, UnitTime> map_acc_time;
-extern const std::unordered_map<std::string, StopStrategy> map_stop_strategy;
-extern const std::unordered_map<std::string, StemStrategy> map_stem_strategy;
-extern const std::unordered_map<std::string, TypeIndex> map_index;
-extern const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
+extern const std::unordered_map<string_view, UnitTime> map_acc_date;
+extern const std::unordered_map<string_view, UnitTime> map_acc_time;
+extern const std::unordered_map<string_view, StopStrategy> map_stop_strategy;
+extern const std::unordered_map<string_view, StemStrategy> map_stem_strategy;
+extern const std::unordered_map<string_view, TypeIndex> map_index;
+extern const std::unordered_map<string_view, UUIDFieldIndex> map_index_uuid_field;
+extern const std::unordered_map<string_view, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -377,10 +378,10 @@ struct required_spc_t {
 		return get_ctype(sep_types[SPC_CONCRETE_TYPE]);
 	}
 
-	static const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(const std::string& str_type);
+	static const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(string_view str_type);
 	static const std::string& get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
 
-	void set_types(const std::string& str_type);
+	void set_types(string_view str_type);
 };
 
 
@@ -475,19 +476,19 @@ class DatabaseHandler;
 
 class Schema {
 	using dispatcher_set_default_spc   = void (Schema::*)(MsgPack&);
-	using dispatcher_write_reserved    = void (Schema::*)(MsgPack&, const std::string&, const MsgPack&);
-	using dispatcher_process_reserved  = void (Schema::*)(const std::string&, const MsgPack&);
+	using dispatcher_write_reserved    = void (Schema::*)(MsgPack&, string_view, const MsgPack&);
+	using dispatcher_process_reserved  = void (Schema::*)(string_view, const MsgPack&);
 	using dispatcher_update_reserved   = void (Schema::*)(const MsgPack&);
 	using dispatcher_readable          = bool (*)(MsgPack&, MsgPack&);
 
 	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
 
-	static const std::unordered_map<std::string, dispatcher_set_default_spc> map_dispatch_set_default_spc;
-	static const std::unordered_map<std::string, dispatcher_write_reserved> map_dispatch_write_properties;
-	static const std::unordered_map<std::string, dispatcher_update_reserved> map_dispatch_feed_properties;
-	static const std::unordered_map<std::string, dispatcher_process_reserved> map_dispatch_process_properties;
-	static const std::unordered_map<std::string, dispatcher_process_reserved> map_dispatch_process_concrete_properties;
-	static const std::unordered_map<std::string, dispatcher_readable> map_get_readable;
+	static const std::unordered_map<string_view, dispatcher_set_default_spc> map_dispatch_set_default_spc;
+	static const std::unordered_map<string_view, dispatcher_write_reserved> map_dispatch_write_properties;
+	static const std::unordered_map<string_view, dispatcher_update_reserved> map_dispatch_feed_properties;
+	static const std::unordered_map<string_view, dispatcher_process_reserved> map_dispatch_process_properties;
+	static const std::unordered_map<string_view, dispatcher_process_reserved> map_dispatch_process_concrete_properties;
+	static const std::unordered_map<string_view, dispatcher_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
@@ -527,17 +528,17 @@ class Schema {
 	/*
 	 * Returns full_meta_name properties of schema.
 	 */
-	const MsgPack& get_properties(const std::string& full_meta_name);
+	const MsgPack& get_properties(string_view full_meta_name);
 
 	/*
 	 * Returns mutable full_meta_name properties of mut_schema.
 	 */
-	MsgPack& get_mutable_properties(const std::string& full_meta_name);
+	MsgPack& get_mutable_properties(string_view full_meta_name);
 
 	/*
 	 * Returns newest full_meta_name properties.
 	 */
-	const MsgPack& get_newest_properties(const std::string& full_meta_name);
+	const MsgPack& get_newest_properties(string_view full_meta_name);
 
 	/*
 	 * Deletes the schema from the metadata and returns a reference to the mutable empty schema.
@@ -560,17 +561,17 @@ class Schema {
 	 */
 
 	template <typename T>
-	bool feed_subproperties(T& properties, const std::string& meta_name);
+	bool feed_subproperties(T& properties, string_view meta_name);
 
 	/*
 	 * Main functions to index objects and arrays
 	 */
 
-	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields, size_t pos);
-	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, size_t pos);
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, string_view name, const MsgPack& object, FieldVector& fields, size_t pos);
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, string_view name, size_t pos);
 
-	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
-	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
+	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, string_view name);
+	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, string_view name);
 
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
@@ -580,11 +581,11 @@ class Schema {
 	 * Main functions to update objects and arrays
 	 */
 
-	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name, const MsgPack& object, FieldVector& fields);
-	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name);
+	const MsgPack& update_subproperties(const MsgPack*& properties, string_view name, const MsgPack& object, FieldVector& fields);
+	const MsgPack& update_subproperties(const MsgPack*& properties, string_view name);
 
-	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
-	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
+	void update_object(const MsgPack*& parent_properties, const MsgPack& object, string_view name);
+	void update_array(const MsgPack*& parent_properties, const MsgPack& array, string_view name);
 
 	void update_item_value();
 	void update_item_value(const MsgPack*& properties, const FieldVector& fields);
@@ -593,11 +594,11 @@ class Schema {
 	 * Main functions to write objects and arrays
 	 */
 
-	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields);
-	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name);
+	MsgPack& write_subproperties(MsgPack*& mut_properties, string_view name, const MsgPack& object, FieldVector& fields);
+	MsgPack& write_subproperties(MsgPack*& mut_properties, string_view name);
 
-	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
-	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
+	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, string_view name);
+	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, string_view name);
 
 	void write_item_value(MsgPack*& mut_properties);
 	void write_item_value(MsgPack*& mut_properties, const FieldVector& fields);
@@ -656,7 +657,7 @@ class Schema {
 	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values=true);
 
 
-	static void index_simple_term(Xapian::Document& doc, const std::string& term, const specification_t& field_spc, size_t pos);
+	static void index_simple_term(Xapian::Document& doc, string_view term, const specification_t& field_spc, size_t pos);
 	static void index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
 	static void merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> ranges, std::vector<Cartesian> centroids);
@@ -671,12 +672,12 @@ class Schema {
 	/*
 	 * Verify if field_name is the meta field used for dynamic types.
 	 */
-	void verify_dynamic(const std::string& field_name);
+	void verify_dynamic(string_view field_name);
 
 	/*
 	 * Detect if field_name is dynamic type.
 	 */
-	void detect_dynamic(const std::string& field_name);
+	void detect_dynamic(string_view field_name);
 
 	/*
 	 * Update specification using object's properties.
@@ -750,89 +751,89 @@ class Schema {
 	 * Functions for reserved words that are in document and need to be written in schema properties.
 	 */
 
-	void write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight);
-	void write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position);
-	void write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling);
-	void write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions);
-	void write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index);
-	void write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store);
-	void write_recurse(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recurse);
-	void write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic);
-	void write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict);
-	void write_date_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_date_detection);
-	void write_time_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_time_detection);
-	void write_timedelta_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_timedelta_detection);
-	void write_numeric_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_numeric_detection);
-	void write_geo_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_geo_detection);
-	void write_bool_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_detection);
-	void write_string_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_string_detection);
-	void write_text_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_text_detection);
-	void write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_term_detection);
-	void write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection);
-	void write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_term);
-	void write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace);
-	void write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths);
-	void write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field);
-	void write_schema(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
-	void write_endpoint(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_schema);
+	void write_weight(MsgPack& properties, string_view prop_name, const MsgPack& doc_weight);
+	void write_position(MsgPack& properties, string_view prop_name, const MsgPack& doc_position);
+	void write_spelling(MsgPack& properties, string_view prop_name, const MsgPack& doc_spelling);
+	void write_positions(MsgPack& properties, string_view prop_name, const MsgPack& doc_positions);
+	void write_index(MsgPack& properties, string_view prop_name, const MsgPack& doc_index);
+	void write_store(MsgPack& properties, string_view prop_name, const MsgPack& doc_store);
+	void write_recurse(MsgPack& properties, string_view prop_name, const MsgPack& doc_recurse);
+	void write_dynamic(MsgPack& properties, string_view prop_name, const MsgPack& doc_dynamic);
+	void write_strict(MsgPack& properties, string_view prop_name, const MsgPack& doc_strict);
+	void write_date_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_date_detection);
+	void write_time_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_time_detection);
+	void write_timedelta_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_timedelta_detection);
+	void write_numeric_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_numeric_detection);
+	void write_geo_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_geo_detection);
+	void write_bool_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_detection);
+	void write_string_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_string_detection);
+	void write_text_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_text_detection);
+	void write_term_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_term_detection);
+	void write_uuid_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_uuid_detection);
+	void write_bool_term(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_term);
+	void write_namespace(MsgPack& properties, string_view prop_name, const MsgPack& doc_namespace);
+	void write_partial_paths(MsgPack& properties, string_view prop_name, const MsgPack& doc_partial_paths);
+	void write_index_uuid_field(MsgPack& properties, string_view prop_name, const MsgPack& doc_index_uuid_field);
+	void write_schema(MsgPack& properties, string_view prop_name, const MsgPack& doc_schema);
+	void write_endpoint(MsgPack& properties, string_view prop_name, const MsgPack& doc_schema);
 
 
 	/*
 	 * Functions for reserved words that are in the document.
 	 */
 
-	void process_weight(const std::string& prop_name, const MsgPack& doc_weight);
-	void process_position(const std::string& prop_name, const MsgPack& doc_position);
-	void process_spelling(const std::string& prop_name, const MsgPack& doc_spelling);
-	void process_positions(const std::string& prop_name, const MsgPack& doc_positions);
-	void process_language(const std::string& prop_name, const MsgPack& doc_language);
-	void process_prefix(const std::string& prop_name, const MsgPack& doc_slot);
-	void process_slot(const std::string& prop_name, const MsgPack& doc_slot);
-	void process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
-	void process_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
-	void process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
-	void process_type(const std::string& prop_name, const MsgPack& doc_type);
-	void process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
-	void process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix);
-	void process_index(const std::string& prop_name, const MsgPack& doc_index);
-	void process_store(const std::string& prop_name, const MsgPack& doc_store);
-	void process_recurse(const std::string& prop_name, const MsgPack& doc_recurse);
-	void process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths);
-	void process_index_uuid_field(const std::string& prop_name, const MsgPack& doc_index_uuid_field);
-	void process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
-	void process_partials(const std::string& prop_name, const MsgPack& doc_partials);
-	void process_error(const std::string& prop_name, const MsgPack& doc_error);
-	void process_value(const std::string& prop_name, const MsgPack& doc_value);
-	void process_endpoint(const std::string& prop_name, const MsgPack& doc_value);
-	void process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object);
-	void process_script(const std::string& prop_name, const MsgPack& doc_script);
+	void process_weight(string_view prop_name, const MsgPack& doc_weight);
+	void process_position(string_view prop_name, const MsgPack& doc_position);
+	void process_spelling(string_view prop_name, const MsgPack& doc_spelling);
+	void process_positions(string_view prop_name, const MsgPack& doc_positions);
+	void process_language(string_view prop_name, const MsgPack& doc_language);
+	void process_prefix(string_view prop_name, const MsgPack& doc_slot);
+	void process_slot(string_view prop_name, const MsgPack& doc_slot);
+	void process_stop_strategy(string_view prop_name, const MsgPack& doc_stop_strategy);
+	void process_stem_strategy(string_view prop_name, const MsgPack& doc_stem_strategy);
+	void process_stem_language(string_view prop_name, const MsgPack& doc_stem_language);
+	void process_type(string_view prop_name, const MsgPack& doc_type);
+	void process_accuracy(string_view prop_name, const MsgPack& doc_accuracy);
+	void process_acc_prefix(string_view prop_name, const MsgPack& doc_acc_prefix);
+	void process_index(string_view prop_name, const MsgPack& doc_index);
+	void process_store(string_view prop_name, const MsgPack& doc_store);
+	void process_recurse(string_view prop_name, const MsgPack& doc_recurse);
+	void process_partial_paths(string_view prop_name, const MsgPack& doc_partial_paths);
+	void process_index_uuid_field(string_view prop_name, const MsgPack& doc_index_uuid_field);
+	void process_bool_term(string_view prop_name, const MsgPack& doc_bool_term);
+	void process_partials(string_view prop_name, const MsgPack& doc_partials);
+	void process_error(string_view prop_name, const MsgPack& doc_error);
+	void process_value(string_view prop_name, const MsgPack& doc_value);
+	void process_endpoint(string_view prop_name, const MsgPack& doc_value);
+	void process_cast_object(string_view prop_name, const MsgPack& doc_cast_object);
+	void process_script(string_view prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
-	void consistency_language(const std::string& prop_name, const MsgPack& doc_language);
-	void consistency_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy);
-	void consistency_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy);
-	void consistency_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language);
-	void consistency_type(const std::string& prop_name, const MsgPack& doc_type);
-	void consistency_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term);
-	void consistency_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy);
-	void consistency_partials(const std::string& prop_name, const MsgPack& doc_partials);
-	void consistency_error(const std::string& prop_name, const MsgPack& doc_error);
-	void consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic);
-	void consistency_strict(const std::string& prop_name, const MsgPack& doc_strict);
-	void consistency_date_detection(const std::string& prop_name, const MsgPack& doc_date_detection);
-	void consistency_time_detection(const std::string& prop_name, const MsgPack& doc_time_detection);
-	void consistency_timedelta_detection(const std::string& prop_name, const MsgPack& doc_timedelta_detection);
-	void consistency_numeric_detection(const std::string& prop_name, const MsgPack& doc_numeric_detection);
-	void consistency_geo_detection(const std::string& prop_name, const MsgPack& doc_geo_detection);
-	void consistency_bool_detection(const std::string& prop_name, const MsgPack& doc_bool_detection);
-	void consistency_string_detection(const std::string& prop_name, const MsgPack& doc_string_detection);
-	void consistency_text_detection(const std::string& prop_name, const MsgPack& doc_text_detection);
-	void consistency_term_detection(const std::string& prop_name, const MsgPack& doc_term_detection);
-	void consistency_uuid_detection(const std::string& prop_name, const MsgPack& doc_uuid_detection);
-	void consistency_namespace(const std::string& prop_name, const MsgPack& doc_namespace);
-	void consistency_chai(const std::string& prop_name, const MsgPack& doc_chai);
-	void consistency_ecma(const std::string& prop_name, const MsgPack& doc_ecma);
-	void consistency_script(const std::string& prop_name, const MsgPack& doc_script);
-	void consistency_schema(const std::string& prop_name, const MsgPack& doc_schema);
+	void consistency_language(string_view prop_name, const MsgPack& doc_language);
+	void consistency_stop_strategy(string_view prop_name, const MsgPack& doc_stop_strategy);
+	void consistency_stem_strategy(string_view prop_name, const MsgPack& doc_stem_strategy);
+	void consistency_stem_language(string_view prop_name, const MsgPack& doc_stem_language);
+	void consistency_type(string_view prop_name, const MsgPack& doc_type);
+	void consistency_bool_term(string_view prop_name, const MsgPack& doc_bool_term);
+	void consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy);
+	void consistency_partials(string_view prop_name, const MsgPack& doc_partials);
+	void consistency_error(string_view prop_name, const MsgPack& doc_error);
+	void consistency_dynamic(string_view prop_name, const MsgPack& doc_dynamic);
+	void consistency_strict(string_view prop_name, const MsgPack& doc_strict);
+	void consistency_date_detection(string_view prop_name, const MsgPack& doc_date_detection);
+	void consistency_time_detection(string_view prop_name, const MsgPack& doc_time_detection);
+	void consistency_timedelta_detection(string_view prop_name, const MsgPack& doc_timedelta_detection);
+	void consistency_numeric_detection(string_view prop_name, const MsgPack& doc_numeric_detection);
+	void consistency_geo_detection(string_view prop_name, const MsgPack& doc_geo_detection);
+	void consistency_bool_detection(string_view prop_name, const MsgPack& doc_bool_detection);
+	void consistency_string_detection(string_view prop_name, const MsgPack& doc_string_detection);
+	void consistency_text_detection(string_view prop_name, const MsgPack& doc_text_detection);
+	void consistency_term_detection(string_view prop_name, const MsgPack& doc_term_detection);
+	void consistency_uuid_detection(string_view prop_name, const MsgPack& doc_uuid_detection);
+	void consistency_namespace(string_view prop_name, const MsgPack& doc_namespace);
+	void consistency_chai(string_view prop_name, const MsgPack& doc_chai);
+	void consistency_ecma(string_view prop_name, const MsgPack& doc_ecma);
+	void consistency_script(string_view prop_name, const MsgPack& doc_script);
+	void consistency_schema(string_view prop_name, const MsgPack& doc_schema);
 
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
@@ -890,10 +891,10 @@ class Schema {
 	 * If full_name is not valid field name throw a ClientError exception.
 	 */
 
-	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const;
+	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, string_view full_name) const;
 
 public:
-	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, const std::string& o);
+	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, string_view o);
 
 	Schema() = delete;
 	Schema(Schema&& schema) = delete;
@@ -926,7 +927,7 @@ public:
 	 * Function to index object in doc.
 	 */
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	MsgPack index(MsgPack& object, Xapian::Document& doc, const std::string& term_id = "", std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair = nullptr, DatabaseHandler* db_handler = nullptr);
+	MsgPack index(MsgPack& object, Xapian::Document& doc, string_view term_id = "", std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair = nullptr, DatabaseHandler* db_handler = nullptr);
 #else
 	MsgPack index(const MsgPack& object, Xapian::Document& doc);
 #endif
@@ -948,7 +949,7 @@ public:
 		}
 	}
 
-	const std::string& get_origin() const {
+	string_view get_origin() const {
 		return origin;
 	}
 
@@ -1009,6 +1010,6 @@ public:
 	 * Functions used for searching, return a field properties.
 	 */
 
-	std::pair<required_spc_t, std::string> get_data_field(const std::string& field_name, bool is_range=true) const;
-	required_spc_t get_slot_field(const std::string& field_name) const;
+	std::pair<required_spc_t, std::string> get_data_field(string_view field_name, bool is_range=true) const;
+	required_spc_t get_slot_field(string_view field_name) const;
 };

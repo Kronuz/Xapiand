@@ -184,5 +184,5 @@ public:
 
 	template <typename T>
 	SoundexEnglish(T&& str)
-		: Soundex<SoundexEnglish>(_encode(std::forward<T>(str))) { }
+		: Soundex<SoundexEnglish>(_encode(std::string(std::forward<T>(str)))) { }
 };

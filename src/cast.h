@@ -25,6 +25,7 @@
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "msgpack.h"             // for MsgPack
 #include "xxh64.hpp"             // for xxh64
+#include "string_view.h"         // for string_view
 
 
 enum class FieldType : uint8_t;
@@ -65,7 +66,7 @@ namespace Cast {
 	 */
 
 	MsgPack cast(const MsgPack& obj);
-	MsgPack cast(FieldType type, const std::string& field_value);
+	MsgPack cast(FieldType type, string_view field_value);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
 	double _float(const MsgPack& obj);
@@ -77,5 +78,5 @@ namespace Cast {
 	MsgPack timedelta(const MsgPack& obj);
 	std::string ewkt(const MsgPack& obj);
 
-	FieldType getType(const std::string& cast_word);
+	FieldType getType(string_view cast_word);
 };

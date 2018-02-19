@@ -42,7 +42,7 @@ class MultipleValueRange : public Xapian::ValuePostingSource {
 	bool insideRange() const noexcept;
 
 	// Get the geospatial query
-	static Xapian::Query query_geo(const std::string& str, const required_spc_t& field_spc);
+	static Xapian::Query query_geo(string_view str, const required_spc_t& field_spc);
 
 public:
 	/* Construct a new match decider which returns only documents with a

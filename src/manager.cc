@@ -334,10 +334,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
 
+	static const std::string reserved_schema(RESERVED_SCHEMA);
 	DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 	auto local_node_ = local_node.load();
 	try {
-		if (db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
+		if (db_handler.get_metadata(reserved_schema).empty()) {
 			THROW(CheckoutError);
 		}
 		db_handler.get_document(serialise_node_id(local_node_->id));
@@ -346,7 +347,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
-			db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 			db_handler.index(serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },

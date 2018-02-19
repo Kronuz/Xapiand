@@ -75,7 +75,7 @@ Cast::cast(const MsgPack& obj)
 
 
 MsgPack
-Cast::cast(FieldType type, const std::string& field_value)
+Cast::cast(FieldType type, string_view field_value)
 {
 	switch (type) {
 		case FieldType::INTEGER: {
@@ -332,7 +332,7 @@ Cast::ewkt(const MsgPack& obj)
 
 
 FieldType
-Cast::getType(const std::string& cast_word)
+Cast::getType(string_view cast_word)
 {
 	switch ((Hash)xxh64::hash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;
@@ -361,6 +361,6 @@ Cast::getType(const std::string& cast_word)
 		case Hash::CHAI:              return FieldType::SCRIPT;
 		case Hash::ECMA:              return FieldType::SCRIPT;
 		default:
-			THROW(CastError, "Unknown cast type %s", cast_word.c_str());
+			THROW(CastError, "Unknown cast type %s", repr(cast_word).c_str());
 	}
 }

@@ -26,7 +26,7 @@
 #include "../utils.h"      // for stox
 
 
-const std::unordered_map<std::string, Geometry::Type> EWKT::map_dispatch({
+const std::unordered_map<string_view, Geometry::Type> EWKT::map_dispatch({
 	{ "POINT",                    Geometry::Type::POINT          },
 	{ "CIRCLE",                   Geometry::Type::CIRCLE         },
 	{ "CONVEX",                   Geometry::Type::CONVEX         },
@@ -42,11 +42,11 @@ const std::unordered_map<std::string, Geometry::Type> EWKT::map_dispatch({
 });
 
 
-EWKT::EWKT(const std::string& str)
+EWKT::EWKT(string_view str)
 {
 	if (str.compare(0, 5, "SRID=") == 0) {
 		const auto str_srid = str.substr(5, 4);
-		if (str.length() > 9 && str[9] == ';') {
+		if (str.size() > 9 && str[9] == ';') {
 			try {
 				auto SRID = strict_stoi(str_srid);
 				if (!Cartesian::is_SRID_supported(SRID)) {
@@ -61,12 +61,12 @@ EWKT::EWKT(const std::string& str)
 				}
 				THROW(EWKTError, "Sintax error in '%s'", std::string(first, last).c_str());
 			} catch (const InvalidArgument& err) {
-				THROW(EWKTError, "Invalid SRID '%s' [%s]", str_srid.c_str(), err.what());
+				THROW(EWKTError, "Invalid SRID '%s' [%s]", std::string(str_srid).c_str(), err.what());
 			} catch (const OutOfRange& err) {
-				THROW(EWKTError, "Invalid SRID '%s' [%s]", str_srid.c_str(), err.what());
+				THROW(EWKTError, "Invalid SRID '%s' [%s]", std::string(str_srid).c_str(), err.what());
 			}
 		}
-		THROW(EWKTError, "Sintax error in %s", str.c_str());
+		THROW(EWKTError, "Sintax error in %s", std::string(str).c_str());
 	} else {
 		auto first = str.begin();
 		auto last = str.end();
@@ -75,7 +75,7 @@ EWKT::EWKT(const std::string& str)
 			parse_geometry(WGS84, data.first, data.second, first, last);
 			return;
 		}
-		THROW(EWKTError, "Sintax error in '%s'", str.c_str());
+		THROW(EWKTError, "Sintax error in '%s'", std::string(str).c_str());
 	}
 }
 
@@ -251,10 +251,10 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 				return std::make_pair(it->second, false);
 			}
 			case ' ': {
-				if (std::string(++first, last).compare("EMPTY") == 0) {
+				if (string_view(first + 1, last - first - 1).compare("EMPTY") == 0) {
 					return std::make_pair(it->second, true);
 				}
-				THROW(EWKTError, "Syntax error in '%s'", std::string(--first, last).c_str());
+				THROW(EWKTError, "Syntax error in '%s'", std::string(first, last).c_str());
 			}
 			default:
 				THROW(EWKTError, "Syntax error in '%s'", std::string(first, last).c_str());
@@ -273,18 +273,18 @@ EWKT::_parse_cartesian(int SRID, Iterator first, Iterator last)
 	if (first == last) {
 		THROW(InvalidArgument, "Expected ' ' after of longitude [%s]");
 	}
-	double lon = strict_stod(std::string(_first, first));
+	double lon = strict_stod(string_view(_first, first - _first));
 
 	_first = ++first;
 	while (first != last && *first != ' ') {
 		++first;
 	}
-	double lat = strict_stod(std::string(_first, first));
+	double lat = strict_stod(string_view(_first, first - _first));
 
 	if (first == last) {
 		return Cartesian(lat, lon, 0, Cartesian::Units::DEGREES, SRID);
 	}
-	double height = strict_stod(std::string(++first, last));
+	double height = strict_stod(string_view(first + 1, last - first - 1));
 	return Cartesian(lat, lon, height, Cartesian::Units::DEGREES, SRID);
 }
 
@@ -320,9 +320,9 @@ EWKT::_parse_circle(int SRID, Iterator first, Iterator last)
 	auto center = _parse_cartesian(SRID, _first, first);
 
 	if (++first != last && *first == ' ') {
-		return Circle(std::move(center), strict_stod(std::string(++first, last)));
+		return Circle(std::move(center), strict_stod(string_view(first + 1, last - first - 1)));
 	} else {
-		return Circle(std::move(center), strict_stod(std::string(first, last)));
+		return Circle(std::move(center), strict_stod(string_view(first, last - first)));
 	}
 }
 
@@ -748,10 +748,10 @@ EWKT::_isEWKT(Iterator first, Iterator last)
 
 
 bool
-EWKT::isEWKT(const std::string& str)
+EWKT::isEWKT(string_view str)
 {
 	if (str.compare(0, 5, "SRID=") == 0) {
-		if (str.length() > 9 && str[9] == ';') {
+		if (str.size() > 9 && str[9] == ';') {
 			return _isEWKT(str.begin() + 10, str.end());
 		}
 		return false;

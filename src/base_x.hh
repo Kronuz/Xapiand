@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include <type_traits>      // for std::enable_if_t
 
 #include "uinteger_t.hh"
+#include "string_view.h"
 
 
 class BaseX {
@@ -244,12 +245,12 @@ public:
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	void encode(Result& result, const std::string& binary) const {
+	void encode(Result& result, string_view binary) const {
 		return encode(result, binary.data(), binary.size());
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	Result encode(const std::string& binary) const {
+	Result encode(string_view binary) const {
 		Result result;
 		encode(result, binary.data(), binary.size());
 		return result;
@@ -358,12 +359,12 @@ public:
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
-	void decode(Result& result, const std::string& encoded) const {
+	void decode(Result& result, string_view encoded) const {
 		decode(result, encoded.data(), encoded.size());
 	}
 
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
-	Result decode(const std::string& encoded) const {
+	Result decode(string_view encoded) const {
 		Result result;
 		decode(result, encoded.data(), encoded.size());
 		return result;
@@ -396,7 +397,7 @@ public:
 		return is_valid(s, N - 1);
 	}
 
-	bool is_valid(const std::string& encoded) const {
+	bool is_valid(string_view encoded) const {
 		return is_valid(encoded.data(), encoded.size());
 	}
 };

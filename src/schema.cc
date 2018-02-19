@@ -91,7 +91,7 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  * Unordered Maps used for reading user data specification.
  */
 
-const std::unordered_map<std::string, UnitTime> map_acc_date({
+const std::unordered_map<string_view, UnitTime> map_acc_date({
 	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
 	{ "hour",       UnitTime::HOUR       }, { "day",     UnitTime::DAY     },
 	{ "month",      UnitTime::MONTH      }, { "year",    UnitTime::YEAR    },
@@ -100,20 +100,20 @@ const std::unordered_map<std::string, UnitTime> map_acc_date({
 });
 
 
-const std::unordered_map<std::string, UnitTime> map_acc_time({
+const std::unordered_map<string_view, UnitTime> map_acc_time({
 	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
 	{ "hour",       UnitTime::HOUR       },
 });
 
 
-const std::unordered_map<std::string, StopStrategy> map_stop_strategy({
+const std::unordered_map<string_view, StopStrategy> map_stop_strategy({
 	{ "stop_none",    StopStrategy::STOP_NONE    }, { "none",    StopStrategy::STOP_NONE    },
 	{ "stop_all",     StopStrategy::STOP_ALL     }, { "all",     StopStrategy::STOP_ALL     },
 	{ "stop_stemmed", StopStrategy::STOP_STEMMED }, { "stemmed", StopStrategy::STOP_STEMMED },
 });
 
 
-const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
+const std::unordered_map<string_view, StemStrategy> map_stem_strategy({
 	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
 	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
 	{ "stem_all",   StemStrategy::STEM_ALL    }, { "all",   StemStrategy::STEM_ALL    },
@@ -121,7 +121,7 @@ const std::unordered_map<std::string, StemStrategy> map_stem_strategy({
 });
 
 
-const std::unordered_map<std::string, TypeIndex> map_index({
+const std::unordered_map<string_view, TypeIndex> map_index({
 	{ "none",                      TypeIndex::NONE                      },
 	{ "field_terms",               TypeIndex::FIELD_TERMS               },
 	{ "field_values",              TypeIndex::FIELD_VALUES              },
@@ -168,13 +168,13 @@ const std::unordered_map<std::string, TypeIndex> map_index({
 });
 
 
-const std::unordered_map<std::string, UUIDFieldIndex> map_index_uuid_field({
+const std::unordered_map<string_view, UUIDFieldIndex> map_index_uuid_field({
 	{ "uuid",  UUIDFieldIndex::UUID }, { "uuid_field", UUIDFieldIndex::UUID_FIELD },
 	{ "both",  UUIDFieldIndex::BOTH },
 });
 
 
-const std::unordered_map<std::string, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
+const std::unordered_map<string_view, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
 	{ "undefined",                    {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
 	{ "array",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
 	{ "array/boolean",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
@@ -572,7 +572,7 @@ get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
  *  Function to generate a prefix given an field accuracy.
  */
 
-static std::pair<std::string, FieldType> get_acc_data(const std::string& field_acc) {
+static std::pair<std::string, FieldType> get_acc_data(string_view field_acc) {
 	auto it = map_acc_date.find(field_acc.substr(1));
 	static const auto it_e = map_acc_date.end();
 	if (it == it_e) {
@@ -641,12 +641,12 @@ static const std::string str_set_acc_time(get_map_keys(map_acc_time));
 specification_t default_spc;
 
 
-const std::unordered_map<std::string, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
+const std::unordered_map<string_view, Schema::dispatcher_set_default_spc> Schema::map_dispatch_set_default_spc({
 	{ ID_FIELD_NAME,           &Schema::set_default_spc_id },
 });
 
 
-const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema::map_dispatch_write_properties({
+const std::unordered_map<string_view, Schema::dispatcher_write_reserved> Schema::map_dispatch_write_properties({
 	{ RESERVED_WEIGHT,                 &Schema::write_weight                       },
 	{ RESERVED_POSITION,               &Schema::write_position                     },
 	{ RESERVED_SPELLING,               &Schema::write_spelling                     },
@@ -674,7 +674,7 @@ const std::unordered_map<std::string, Schema::dispatcher_write_reserved> Schema:
 });
 
 
-const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema::map_dispatch_feed_properties({
+const std::unordered_map<string_view, Schema::dispatcher_update_reserved> Schema::map_dispatch_feed_properties({
 	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
 	{ RESERVED_POSITION,               &Schema::feed_position                      },
 	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
@@ -714,7 +714,7 @@ const std::unordered_map<std::string, Schema::dispatcher_update_reserved> Schema
 });
 
 
-const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_properties({
+const std::unordered_map<string_view, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_properties({
 	{ RESERVED_LANGUAGE,               &Schema::process_language                   },
 	{ RESERVED_PREFIX,                 &Schema::process_prefix                     },
 	{ RESERVED_SLOT,                   &Schema::process_slot                       },
@@ -730,7 +730,7 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 });
 
 
-const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_concrete_properties({
+const std::unordered_map<string_view, Schema::dispatcher_process_reserved> Schema::map_dispatch_process_concrete_properties({
 	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
 	{ RESERVED_POSITION,               &Schema::process_position                   },
 	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
@@ -794,7 +794,7 @@ const std::unordered_map<std::string, Schema::dispatcher_process_reserved> Schem
 });
 
 
-const std::unordered_map<std::string, Schema::dispatcher_readable> Schema::map_get_readable({
+const std::unordered_map<string_view, Schema::dispatcher_readable> Schema::map_get_readable({
 	{ RESERVED_TYPE,                &Schema::readable_type               },
 	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
 	{ RESERVED_SLOT,                &Schema::readable_slot               },
@@ -804,7 +804,7 @@ const std::unordered_map<std::string, Schema::dispatcher_readable> Schema::map_g
 });
 
 
-const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_language({
+const std::unordered_map<string_view, std::pair<bool, std::string>> map_stem_language({
 	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
 	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
 	{ "danish",      { true,  "da" } },  { "da",               { true,  "da" } },  { "dutch",           { true,  "nl" } },
@@ -824,14 +824,14 @@ const std::unordered_map<std::string, std::pair<bool, std::string>> map_stem_lan
 });
 
 
-const std::unique_ptr<Xapian::SimpleStopper>& getStopper(const std::string& language) {
+const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language) {
 	static std::mutex mtx;
 	static std::string path_stopwords(getenv("XAPIAN_PATH_STOPWORDS") ? getenv("XAPIAN_PATH_STOPWORDS") : PATH_STOPWORDS);
-	static std::unordered_map<std::string, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
+	static std::unordered_map<string_view, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language);
 	if (it == stoppers.end()) {
-		auto path = path_stopwords + "/" + language + ".txt";
+		auto path = path_stopwords + "/" + std::string(language) + ".txt";
 		std::ifstream words;
 		words.open(path);
 		auto& stopper = stoppers[language];
@@ -992,7 +992,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 
 
 const std::array<FieldType, SPC_TOTAL_TYPES>&
-required_spc_t::get_types(const std::string& str_type)
+required_spc_t::get_types(string_view str_type)
 {
 	L_CALL("required_spc_t::get_types(%s)", repr(str_type).c_str());
 
@@ -1015,7 +1015,7 @@ required_spc_t::get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_t
 
 
 void
-required_spc_t::set_types(const std::string& str_type)
+required_spc_t::set_types(string_view str_type)
 {
 	L_CALL("required_spc_t::set_types(%s)", repr(str_type).c_str());
 
@@ -1477,7 +1477,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 }
 
 
-Schema::Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, const std::string& o)
+Schema::Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, string_view o)
 	: schema(s),
 	  mut_schema(std::move(m)),
 	  origin(o)
@@ -1506,7 +1506,7 @@ Schema::get_initial_schema()
 
 
 const MsgPack&
-Schema::get_properties(const std::string& full_meta_name)
+Schema::get_properties(string_view full_meta_name)
 {
 	L_CALL("Schema::get_properties(%s)", repr(full_meta_name).c_str());
 
@@ -1520,7 +1520,7 @@ Schema::get_properties(const std::string& full_meta_name)
 
 
 MsgPack&
-Schema::get_mutable_properties(const std::string& full_meta_name)
+Schema::get_mutable_properties(string_view full_meta_name)
 {
 	L_CALL("Schema::get_mutable_properties(%s)", repr(full_meta_name).c_str());
 
@@ -1534,7 +1534,7 @@ Schema::get_mutable_properties(const std::string& full_meta_name)
 
 
 const MsgPack&
-Schema::get_newest_properties(const std::string& full_meta_name)
+Schema::get_newest_properties(string_view full_meta_name)
 {
 	L_CALL("Schema::get_newest_properties(%s)", repr(full_meta_name).c_str());
 
@@ -1625,7 +1625,7 @@ struct FedSpecification : MsgPack::Data {
 
 template <typename T>
 inline bool
-Schema::feed_subproperties(T& properties, const std::string& meta_name)
+Schema::feed_subproperties(T& properties, string_view meta_name)
 {
 	L_CALL("Schema::feed_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(meta_name).c_str());
 
@@ -1678,7 +1678,7 @@ Schema::feed_subproperties(T& properties, const std::string& meta_name)
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 MsgPack
 Schema::index(MsgPack& object, Xapian::Document& doc,
-	const std::string& term_id,
+	string_view term_id,
 	std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair,
 	DatabaseHandler* db_handler)
 #else
@@ -1754,7 +1754,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, const MsgPack& object, FieldVector& fields, size_t pos)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_view name, const MsgPack& object, FieldVector& fields, size_t pos)
 {
 	L_CALL("Schema::index_subproperties(%s, %s, %s, %s, <fields>, %zu)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str(), pos);
 
@@ -1900,7 +1900,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const std::string& name, size_t pos)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_view name, size_t pos)
 {
 	L_CALL("Schema::index_subproperties(%s, %s, %s, %zu)", repr(properties->to_string()).c_str(), repr(data->to_string()).c_str(), repr(name).c_str(), pos);
 
@@ -2044,7 +2044,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, const st
 
 
 void
-Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, string_view name)
 {
 	L_CALL("Schema::index_object(%s, %s, %s, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(parent_data->to_string()).c_str(), repr(name).c_str());
 
@@ -2120,7 +2120,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, string_view name)
 {
 	L_CALL("Schema::index_array(%s, %s, <MsgPack*>, <Xapian::Document>, %s)", repr(parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
 
@@ -2443,7 +2443,7 @@ Schema::update(const MsgPack& object)
 
 
 const MsgPack&
-Schema::update_subproperties(const MsgPack*& properties, const std::string& name, const MsgPack& object, FieldVector& fields)
+Schema::update_subproperties(const MsgPack*& properties, string_view name, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL("Schema::update_subproperties(%s, %s, %s, <fields>)", repr(properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
@@ -2534,7 +2534,7 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 
 
 const MsgPack&
-Schema::update_subproperties(const MsgPack*& properties, const std::string& name)
+Schema::update_subproperties(const MsgPack*& properties, string_view name)
 {
 	L_CALL("Schema::update_subproperties(%s, %s)", repr(properties->to_string()).c_str(), repr(name).c_str());
 
@@ -2623,7 +2623,7 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 
 
 void
-Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
+Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, string_view name)
 {
 	L_CALL("Schema::update_object(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
 
@@ -2675,7 +2675,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 }
 
 void
-Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name)
+Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, string_view name)
 {
 	L_CALL("Schema::update_array(%s, %s, %s)", repr(parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
 
@@ -2885,7 +2885,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 
 MsgPack&
-Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, const MsgPack& object, FieldVector& fields)
+Schema::write_subproperties(MsgPack*& mut_properties, string_view name, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL("Schema::write_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()).c_str(), repr(name).c_str(), repr(object.to_string()).c_str());
 
@@ -2974,7 +2974,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name, c
 
 
 MsgPack&
-Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
+Schema::write_subproperties(MsgPack*& mut_properties, string_view name)
 {
 	L_CALL("Schema::write_subproperties(%s, %s)", repr(mut_properties->to_string()).c_str(), repr(name).c_str());
 
@@ -3061,7 +3061,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 
 
 void
-Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
+Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, string_view name)
 {
 	L_CALL("Schema::write_object(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(object.to_string()).c_str(), repr(name).c_str());
 
@@ -3114,7 +3114,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 
 
 void
-Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name)
+Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, string_view name)
 {
 	L_CALL("Schema::write_array(%s, %s, %s)", repr(mut_parent_properties->to_string()).c_str(), repr(array.to_string()).c_str(), repr(name).c_str());
 
@@ -4103,16 +4103,16 @@ Schema::index_partial_paths(Xapian::Document& doc)
 
 
 inline void
-Schema::index_simple_term(Xapian::Document& doc, const std::string& term, const specification_t& field_spc, size_t pos)
+Schema::index_simple_term(Xapian::Document& doc, string_view term, const specification_t& field_spc, size_t pos)
 {
 	L_CALL("Schema::void(<doc>, <field_spc>, %zu)", pos);
 
 	const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
 	const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 	if (position) {
-		doc.add_posting(term, position, weight);
+		doc.add_posting(std::string(term), position, weight);
 	} else {
-		doc.add_term(term, weight);
+		doc.add_term(std::string(term), weight);
 	}
 	L_INDEX("Field Term [%d] -> %s  Bool: %d  Posting: %d", pos, repr(term).c_str(), field_spc.flags.bool_term, position);
 }
@@ -4872,7 +4872,7 @@ Schema::update_prefixes()
 
 
 inline void
-Schema::verify_dynamic(const std::string& field_name)
+Schema::verify_dynamic(string_view field_name)
 {
 	L_CALL("Schema::verify_dynamic(%s)", repr(field_name).c_str());
 
@@ -4889,7 +4889,7 @@ Schema::verify_dynamic(const std::string& field_name)
 
 
 inline void
-Schema::detect_dynamic(const std::string& field_name)
+Schema::detect_dynamic(string_view field_name)
 {
 	L_CALL("Schema::detect_dynamic(%s)", repr(field_name).c_str());
 
@@ -5274,7 +5274,7 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 
 	try {
 		if (prop_stem_strategy.is_string()) {
-			const auto _stem_strategy = lower_string(prop_stem_strategy.str());
+			const auto _stem_strategy = lower_string(prop_stem_strategy.str_view());
 			static const auto ssit_e = map_stem_strategy.end();
 			const auto ssit = map_stem_strategy.find(_stem_strategy);
 			if (ssit == ssit_e) {
@@ -5722,7 +5722,7 @@ Schema::feed_endpoint(const MsgPack& prop_endpoint)
 
 
 void
-Schema::write_position(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_position)
+Schema::write_position(MsgPack& properties, string_view prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	L_CALL("Schema::write_position(%s)", repr(doc_position.to_string()).c_str());
@@ -5733,7 +5733,7 @@ Schema::write_position(MsgPack& properties, const std::string& prop_name, const 
 
 
 void
-Schema::write_weight(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_weight)
+Schema::write_weight(MsgPack& properties, string_view prop_name, const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
 	L_CALL("Schema::write_weight(%s)", repr(doc_weight.to_string()).c_str());
@@ -5744,7 +5744,7 @@ Schema::write_weight(MsgPack& properties, const std::string& prop_name, const Ms
 
 
 void
-Schema::write_spelling(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_spelling)
+Schema::write_spelling(MsgPack& properties, string_view prop_name, const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
 	L_CALL("Schema::write_spelling(%s)", repr(doc_spelling.to_string()).c_str());
@@ -5755,7 +5755,7 @@ Schema::write_spelling(MsgPack& properties, const std::string& prop_name, const 
 
 
 void
-Schema::write_positions(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_positions)
+Schema::write_positions(MsgPack& properties, string_view prop_name, const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	L_CALL("Schema::write_positions(%s)", repr(doc_positions.to_string()).c_str());
@@ -5766,7 +5766,7 @@ Schema::write_positions(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_index(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index)
+Schema::write_index(MsgPack& properties, string_view prop_name, const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change.
 	L_CALL("Schema::write_index(%s)", repr(doc_index.to_string()).c_str());
@@ -5777,7 +5777,7 @@ Schema::write_index(MsgPack& properties, const std::string& prop_name, const Msg
 
 
 void
-Schema::write_store(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_store)
+Schema::write_store(MsgPack& properties, string_view prop_name, const MsgPack& doc_store)
 {
 	L_CALL("Schema::write_store(%s)", repr(doc_store.to_string()).c_str());
 
@@ -5792,7 +5792,7 @@ Schema::write_store(MsgPack& properties, const std::string& prop_name, const Msg
 
 
 void
-Schema::write_recurse(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_recurse)
+Schema::write_recurse(MsgPack& properties, string_view prop_name, const MsgPack& doc_recurse)
 {
 	L_CALL("Schema::write_recurse(%s)", repr(doc_recurse.to_string()).c_str());
 
@@ -5807,7 +5807,7 @@ Schema::write_recurse(MsgPack& properties, const std::string& prop_name, const M
 
 
 void
-Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_dynamic)
+Schema::write_dynamic(MsgPack& properties, string_view prop_name, const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL("Schema::write_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
@@ -5822,7 +5822,7 @@ Schema::write_dynamic(MsgPack& properties, const std::string& prop_name, const M
 
 
 void
-Schema::write_strict(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_strict)
+Schema::write_strict(MsgPack& properties, string_view prop_name, const MsgPack& doc_strict)
 {
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL("Schema::write_strict(%s)", repr(doc_strict.to_string()).c_str());
@@ -5837,7 +5837,7 @@ Schema::write_strict(MsgPack& properties, const std::string& prop_name, const Ms
 
 
 void
-Schema::write_date_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_date_detection)
+Schema::write_date_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
@@ -5852,7 +5852,7 @@ Schema::write_date_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_time_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_time_detection)
+Schema::write_time_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
@@ -5867,7 +5867,7 @@ Schema::write_time_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_timedelta_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_timedelta_detection)
+Schema::write_timedelta_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
@@ -5882,7 +5882,7 @@ Schema::write_timedelta_detection(MsgPack& properties, const std::string& prop_n
 
 
 void
-Schema::write_numeric_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_numeric_detection)
+Schema::write_numeric_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
@@ -5897,7 +5897,7 @@ Schema::write_numeric_detection(MsgPack& properties, const std::string& prop_nam
 
 
 void
-Schema::write_geo_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_geo_detection)
+Schema::write_geo_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
@@ -5912,7 +5912,7 @@ Schema::write_geo_detection(MsgPack& properties, const std::string& prop_name, c
 
 
 void
-Schema::write_bool_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_detection)
+Schema::write_bool_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
@@ -5927,7 +5927,7 @@ Schema::write_bool_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_string_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_string_detection)
+Schema::write_string_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
@@ -5942,7 +5942,7 @@ Schema::write_string_detection(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_text_detection)
+Schema::write_text_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
@@ -5957,7 +5957,7 @@ Schema::write_text_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_term_detection)
+Schema::write_term_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_term_detection(%s)", repr(doc_term_detection.to_string()).c_str());
@@ -5972,7 +5972,7 @@ Schema::write_term_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_uuid_detection)
+Schema::write_uuid_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
@@ -5987,7 +5987,7 @@ Schema::write_uuid_detection(MsgPack& properties, const std::string& prop_name, 
 
 
 void
-Schema::write_bool_term(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_bool_term)
+Schema::write_bool_term(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
 	L_CALL("Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
@@ -5998,7 +5998,7 @@ Schema::write_bool_term(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_namespace)
+Schema::write_namespace(MsgPack& properties, string_view prop_name, const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL("Schema::write_namespace(%s)", repr(doc_namespace.to_string()).c_str());
@@ -6022,7 +6022,7 @@ Schema::write_namespace(MsgPack& properties, const std::string& prop_name, const
 
 
 void
-Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_partial_paths)
+Schema::write_partial_paths(MsgPack& properties, string_view prop_name, const MsgPack& doc_partial_paths)
 {
 	L_CALL("Schema::write_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
 
@@ -6036,7 +6036,7 @@ Schema::write_partial_paths(MsgPack& properties, const std::string& prop_name, c
 
 
 void
-Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_index_uuid_field)
+Schema::write_index_uuid_field(MsgPack& properties, string_view prop_name, const MsgPack& doc_index_uuid_field)
 {
 	L_CALL("Schema::write_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
 
@@ -6050,7 +6050,7 @@ Schema::write_index_uuid_field(MsgPack& properties, const std::string& prop_name
 
 
 void
-Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_schema)
+Schema::write_schema(MsgPack&, string_view prop_name, const MsgPack& doc_schema)
 {
 	L_CALL("Schema::write_schema(%s)", repr(doc_schema.to_string()).c_str());
 
@@ -6059,7 +6059,7 @@ Schema::write_schema(MsgPack&, const std::string& prop_name, const MsgPack& doc_
 
 
 void
-Schema::write_endpoint(MsgPack& properties, const std::string& prop_name, const MsgPack& doc_endpoint)
+Schema::write_endpoint(MsgPack& properties, string_view prop_name, const MsgPack& doc_endpoint)
 {
 	L_CALL("Schema::write_endpoint(%s)", repr(doc_endpoint.to_string()).c_str());
 
@@ -6070,7 +6070,7 @@ Schema::write_endpoint(MsgPack& properties, const std::string& prop_name, const 
 
 
 void
-Schema::process_language(const std::string& prop_name, const MsgPack& doc_language)
+Schema::process_language(string_view prop_name, const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
@@ -6093,7 +6093,7 @@ Schema::process_language(const std::string& prop_name, const MsgPack& doc_langua
 
 
 void
-Schema::process_prefix(const std::string& prop_name, const MsgPack& doc_prefix)
+Schema::process_prefix(string_view prop_name, const MsgPack& doc_prefix)
 {
 	// RESERVED_prefix isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_prefix(%s)", repr(doc_prefix.to_string()).c_str());
@@ -6107,7 +6107,7 @@ Schema::process_prefix(const std::string& prop_name, const MsgPack& doc_prefix)
 
 
 void
-Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
+Schema::process_slot(string_view prop_name, const MsgPack& doc_slot)
 {
 	// RESERVED_SLOT isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_slot(%s)", repr(doc_slot.to_string()).c_str());
@@ -6125,7 +6125,7 @@ Schema::process_slot(const std::string& prop_name, const MsgPack& doc_slot)
 
 
 void
-Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy)
+Schema::process_stop_strategy(string_view prop_name, const MsgPack& doc_stop_strategy)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
@@ -6147,13 +6147,13 @@ Schema::process_stop_strategy(const std::string& prop_name, const MsgPack& doc_s
 
 
 void
-Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy)
+Schema::process_stem_strategy(string_view prop_name, const MsgPack& doc_stem_strategy)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
 
 	try {
-		const auto _stem_strategy = lower_string(doc_stem_strategy.str());
+		const auto _stem_strategy = lower_string(doc_stem_strategy.str_view());
 		static const auto ssit_e = map_stem_strategy.end();
 		const auto ssit = map_stem_strategy.find(_stem_strategy);
 		if (ssit == ssit_e) {
@@ -6169,7 +6169,7 @@ Schema::process_stem_strategy(const std::string& prop_name, const MsgPack& doc_s
 
 
 void
-Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language)
+Schema::process_stem_language(string_view prop_name, const MsgPack& doc_stem_language)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
@@ -6191,7 +6191,7 @@ Schema::process_stem_language(const std::string& prop_name, const MsgPack& doc_s
 
 
 void
-Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
+Schema::process_type(string_view prop_name, const MsgPack& doc_type)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_type(%s)", repr(doc_type.to_string()).c_str());
@@ -6217,7 +6217,7 @@ Schema::process_type(const std::string& prop_name, const MsgPack& doc_type)
 
 
 void
-Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy)
+Schema::process_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_accuracy(%s)", repr(doc_accuracy.to_string()).c_str());
@@ -6231,7 +6231,7 @@ Schema::process_accuracy(const std::string& prop_name, const MsgPack& doc_accura
 
 
 void
-Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_prefix)
+Schema::process_acc_prefix(string_view prop_name, const MsgPack& doc_acc_prefix)
 {
 	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_acc_prefix(%s)", repr(doc_acc_prefix.to_string()).c_str());
@@ -6249,7 +6249,7 @@ Schema::process_acc_prefix(const std::string& prop_name, const MsgPack& doc_acc_
 
 
 void
-Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term)
+Schema::process_bool_term(string_view prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
 	L_CALL("Schema::process_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
@@ -6264,7 +6264,7 @@ Schema::process_bool_term(const std::string& prop_name, const MsgPack& doc_bool_
 
 
 void
-Schema::process_partials(const std::string& prop_name, const MsgPack& doc_partials)
+Schema::process_partials(string_view prop_name, const MsgPack& doc_partials)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_partials(%s)", repr(doc_partials.to_string()).c_str());
@@ -6278,7 +6278,7 @@ Schema::process_partials(const std::string& prop_name, const MsgPack& doc_partia
 
 
 void
-Schema::process_error(const std::string& prop_name, const MsgPack& doc_error)
+Schema::process_error(string_view prop_name, const MsgPack& doc_error)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
 	L_CALL("Schema::process_error(%s)", repr(doc_error.to_string()).c_str());
@@ -6292,7 +6292,7 @@ Schema::process_error(const std::string& prop_name, const MsgPack& doc_error)
 
 
 void
-Schema::process_position(const std::string& prop_name, const MsgPack& doc_position)
+Schema::process_position(string_view prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	L_CALL("Schema::process_position(%s)", repr(doc_position.to_string()).c_str());
@@ -6316,7 +6316,7 @@ Schema::process_position(const std::string& prop_name, const MsgPack& doc_positi
 
 
 void
-Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
+Schema::process_weight(string_view prop_name, const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
 	L_CALL("Schema::process_weight(%s)", repr(doc_weight.to_string()).c_str());
@@ -6340,7 +6340,7 @@ Schema::process_weight(const std::string& prop_name, const MsgPack& doc_weight)
 
 
 void
-Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelling)
+Schema::process_spelling(string_view prop_name, const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
 	L_CALL("Schema::process_spelling(%s)", repr(doc_spelling.to_string()).c_str());
@@ -6364,7 +6364,7 @@ Schema::process_spelling(const std::string& prop_name, const MsgPack& doc_spelli
 
 
 void
-Schema::process_positions(const std::string& prop_name, const MsgPack& doc_positions)
+Schema::process_positions(string_view prop_name, const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	L_CALL("Schema::process_positions(%s)", repr(doc_positions.to_string()).c_str());
@@ -6388,7 +6388,7 @@ Schema::process_positions(const std::string& prop_name, const MsgPack& doc_posit
 
 
 void
-Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
+Schema::process_index(string_view prop_name, const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change.
 	L_CALL("Schema::process_index(%s)", repr(doc_index.to_string()).c_str());
@@ -6411,7 +6411,7 @@ Schema::process_index(const std::string& prop_name, const MsgPack& doc_index)
 
 
 void
-Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
+Schema::process_store(string_view prop_name, const MsgPack& doc_store)
 {
 	L_CALL("Schema::process_store(%s)", repr(doc_store.to_string()).c_str());
 
@@ -6430,7 +6430,7 @@ Schema::process_store(const std::string& prop_name, const MsgPack& doc_store)
 
 
 void
-Schema::process_recurse(const std::string& prop_name, const MsgPack& doc_recurse)
+Schema::process_recurse(string_view prop_name, const MsgPack& doc_recurse)
 {
 	L_CALL("Schema::process_recurse(%s)", repr(doc_recurse.to_string()).c_str());
 
@@ -6448,7 +6448,7 @@ Schema::process_recurse(const std::string& prop_name, const MsgPack& doc_recurse
 
 
 void
-Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_partial_paths)
+Schema::process_partial_paths(string_view prop_name, const MsgPack& doc_partial_paths)
 {
 	L_CALL("Schema::process_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
 
@@ -6466,7 +6466,7 @@ Schema::process_partial_paths(const std::string& prop_name, const MsgPack& doc_p
 
 
 void
-Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& doc_index_uuid_field)
+Schema::process_index_uuid_field(string_view prop_name, const MsgPack& doc_index_uuid_field)
 {
 	L_CALL("Schema::process_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
 
@@ -6491,7 +6491,7 @@ Schema::process_index_uuid_field(const std::string& prop_name, const MsgPack& do
 
 
 void
-Schema::process_value(const std::string&, const MsgPack& doc_value)
+Schema::process_value(string_view, const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	L_CALL("Schema::process_value(%s)", repr(doc_value.to_string()).c_str());
@@ -6505,7 +6505,7 @@ Schema::process_value(const std::string&, const MsgPack& doc_value)
 
 
 void
-Schema::process_script(const std::string&, const MsgPack& doc_script)
+Schema::process_script(string_view, const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable.
 	L_CALL("Schema::process_script(%s)", repr(doc_script.to_string()).c_str());
@@ -6521,17 +6521,17 @@ Schema::process_script(const std::string&, const MsgPack& doc_script)
 
 
 void
-Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoint)
+Schema::process_endpoint(string_view prop_name, const MsgPack& doc_endpoint)
 {
 	// RESERVED_ENDPOINT isn't heritable.
 	L_CALL("Schema::process_endpoint(%s)", repr(doc_endpoint.to_string()).c_str());
 
 	try {
-		const auto _endpoint = doc_endpoint.str();
+		const auto _endpoint = doc_endpoint.str_view();
 		if (_endpoint.empty()) {
 			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
 		}
-		std::string _path, _id;
+		string_view _path, _id;
 		split_path_id(_endpoint, _path, _id);
 		if (_path.empty() || _id.empty()) {
 			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name).c_str());
@@ -6547,8 +6547,7 @@ Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoi
 				THROW(ClientError, "Data inconsistency, %s cannot be used in non-foreign fields", repr(prop_name).c_str());
 			}
 			specification.flags.static_endpoint = false;
-			specification.endpoint = _endpoint;
-
+			specification.endpoint.assign(_endpoint);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -6557,7 +6556,7 @@ Schema::process_endpoint(const std::string& prop_name, const MsgPack& doc_endpoi
 
 
 void
-Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cast_object)
+Schema::process_cast_object(string_view prop_name, const MsgPack& doc_cast_object)
 {
 	// This property isn't heritable and is not saved in schema.
 	L_CALL("Schema::process_cast_object(%s)", repr(doc_cast_object.to_string()).c_str());
@@ -6572,7 +6571,7 @@ Schema::process_cast_object(const std::string& prop_name, const MsgPack& doc_cas
 
 
 void
-Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_language)
+Schema::consistency_language(string_view prop_name, const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_language(%s)", repr(doc_language.to_string()).c_str());
@@ -6589,7 +6588,7 @@ Schema::consistency_language(const std::string& prop_name, const MsgPack& doc_la
 
 
 void
-Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& doc_stop_strategy)
+Schema::consistency_stop_strategy(string_view prop_name, const MsgPack& doc_stop_strategy)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
@@ -6611,7 +6610,7 @@ Schema::consistency_stop_strategy(const std::string& prop_name, const MsgPack& d
 
 
 void
-Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& doc_stem_strategy)
+Schema::consistency_stem_strategy(string_view prop_name, const MsgPack& doc_stem_strategy)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_stem_strategy(%s)", repr(doc_stem_strategy.to_string()).c_str());
@@ -6633,7 +6632,7 @@ Schema::consistency_stem_strategy(const std::string& prop_name, const MsgPack& d
 
 
 void
-Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& doc_stem_language)
+Schema::consistency_stem_language(string_view prop_name, const MsgPack& doc_stem_language)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
@@ -6654,7 +6653,7 @@ Schema::consistency_stem_language(const std::string& prop_name, const MsgPack& d
 
 
 void
-Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
+Schema::consistency_type(string_view prop_name, const MsgPack& doc_type)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_type(%s)", repr(doc_type.to_string()).c_str());
@@ -6684,7 +6683,7 @@ Schema::consistency_type(const std::string& prop_name, const MsgPack& doc_type)
 
 
 void
-Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_accuracy)
+Schema::consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_accuracy(%s)", repr(doc_accuracy.to_string()).c_str());
@@ -6809,7 +6808,7 @@ Schema::consistency_accuracy(const std::string& prop_name, const MsgPack& doc_ac
 
 
 void
-Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_bool_term)
+Schema::consistency_bool_term(string_view prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
 	L_CALL("Schema::consistency_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
@@ -6830,7 +6829,7 @@ Schema::consistency_bool_term(const std::string& prop_name, const MsgPack& doc_b
 
 
 void
-Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_partials)
+Schema::consistency_partials(string_view prop_name, const MsgPack& doc_partials)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_partials(%s)", repr(doc_partials.to_string()).c_str());
@@ -6851,7 +6850,7 @@ Schema::consistency_partials(const std::string& prop_name, const MsgPack& doc_pa
 
 
 void
-Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error)
+Schema::consistency_error(string_view prop_name, const MsgPack& doc_error)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_error(%s)", repr(doc_error.to_string()).c_str());
@@ -6872,7 +6871,7 @@ Schema::consistency_error(const std::string& prop_name, const MsgPack& doc_error
 
 
 void
-Schema::consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dynamic)
+Schema::consistency_dynamic(string_view prop_name, const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL("Schema::consistency_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
@@ -6889,7 +6888,7 @@ Schema::consistency_dynamic(const std::string& prop_name, const MsgPack& doc_dyn
 
 
 void
-Schema::consistency_strict(const std::string& prop_name, const MsgPack& doc_strict)
+Schema::consistency_strict(string_view prop_name, const MsgPack& doc_strict)
 {
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL("Schema::consistency_strict(%s)", repr(doc_strict.to_string()).c_str());
@@ -6906,7 +6905,7 @@ Schema::consistency_strict(const std::string& prop_name, const MsgPack& doc_stri
 
 
 void
-Schema::consistency_date_detection(const std::string& prop_name, const MsgPack& doc_date_detection)
+Schema::consistency_date_detection(string_view prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
@@ -6923,7 +6922,7 @@ Schema::consistency_date_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_time_detection(const std::string& prop_name, const MsgPack& doc_time_detection)
+Schema::consistency_time_detection(string_view prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
@@ -6940,7 +6939,7 @@ Schema::consistency_time_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_timedelta_detection(const std::string& prop_name, const MsgPack& doc_timedelta_detection)
+Schema::consistency_timedelta_detection(string_view prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
@@ -6957,7 +6956,7 @@ Schema::consistency_timedelta_detection(const std::string& prop_name, const MsgP
 
 
 void
-Schema::consistency_numeric_detection(const std::string& prop_name, const MsgPack& doc_numeric_detection)
+Schema::consistency_numeric_detection(string_view prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
@@ -6974,7 +6973,7 @@ Schema::consistency_numeric_detection(const std::string& prop_name, const MsgPac
 
 
 void
-Schema::consistency_geo_detection(const std::string& prop_name, const MsgPack& doc_geo_detection)
+Schema::consistency_geo_detection(string_view prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
@@ -6991,7 +6990,7 @@ Schema::consistency_geo_detection(const std::string& prop_name, const MsgPack& d
 
 
 void
-Schema::consistency_bool_detection(const std::string& prop_name, const MsgPack& doc_bool_detection)
+Schema::consistency_bool_detection(string_view prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
@@ -7008,7 +7007,7 @@ Schema::consistency_bool_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_string_detection(const std::string& prop_name, const MsgPack& doc_string_detection)
+Schema::consistency_string_detection(string_view prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
@@ -7025,7 +7024,7 @@ Schema::consistency_string_detection(const std::string& prop_name, const MsgPack
 
 
 void
-Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& doc_text_detection)
+Schema::consistency_text_detection(string_view prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
@@ -7042,7 +7041,7 @@ Schema::consistency_text_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& doc_term_detection)
+Schema::consistency_term_detection(string_view prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_term_detection(%s)", repr(doc_term_detection.to_string()).c_str());
@@ -7059,7 +7058,7 @@ Schema::consistency_term_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_uuid_detection(const std::string& prop_name, const MsgPack& doc_uuid_detection)
+Schema::consistency_uuid_detection(string_view prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
@@ -7076,7 +7075,7 @@ Schema::consistency_uuid_detection(const std::string& prop_name, const MsgPack& 
 
 
 void
-Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_namespace)
+Schema::consistency_namespace(string_view prop_name, const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL("Schema::consistency_namespace(%s)", repr(doc_namespace.to_string()).c_str());
@@ -7093,7 +7092,7 @@ Schema::consistency_namespace(const std::string& prop_name, const MsgPack& doc_n
 
 
 void
-Schema::consistency_schema(const std::string& prop_name, const MsgPack& doc_schema)
+Schema::consistency_schema(string_view prop_name, const MsgPack& doc_schema)
 {
 	// RESERVED_SCHEMA isn't heritable and is only allowed in root object.
 	L_CALL("Schema::consistency_schema(%s)", repr(doc_schema.to_string()).c_str());
@@ -7393,14 +7392,14 @@ Schema::get_data_script() const
 
 
 std::pair<required_spc_t, std::string>
-Schema::get_data_field(const std::string& field_name, bool is_range) const
+Schema::get_data_field(string_view field_name, bool is_range) const
 {
 	L_CALL("Schema::get_data_field(%s, %d)", repr(field_name).c_str(), is_range);
 
 	required_spc_t res;
 
 	if (field_name.empty()) {
-		return std::make_pair(res, std::string());
+		return std::make_pair(res, "");
 	}
 
 	try {
@@ -7418,7 +7417,7 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 
 			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
 			if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
-				return std::make_pair(std::move(res), std::string());
+				return std::make_pair(std::move(res), "");
 			}
 
 			if (is_range) {
@@ -7493,12 +7492,12 @@ Schema::get_data_field(const std::string& field_name, bool is_range) const
 		L_DEBUG("%s", exc.what());
 	}
 
-	return std::make_pair(std::move(res), std::string());
+	return std::make_pair(std::move(res), "");
 }
 
 
 required_spc_t
-Schema::get_slot_field(const std::string& field_name) const
+Schema::get_slot_field(string_view field_name) const
 {
 	L_CALL("Schema::get_slot_field(%s)", repr(field_name).c_str());
 
@@ -7564,7 +7563,7 @@ Schema::get_slot_field(const std::string& field_name) const
 
 
 Schema::dynamic_spc_t
-Schema::get_dynamic_subproperties(const MsgPack& properties, const std::string& full_name) const
+Schema::get_dynamic_subproperties(const MsgPack& properties, string_view full_name) const
 {
 	L_CALL("Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()).c_str(), repr(full_name).c_str());
 

@@ -221,54 +221,58 @@ Endpoint::Endpoint()
 	  mastery_level(-1) { }
 
 
-Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery_level_, const std::string& node_name_)
+Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_, string_view node_name_)
 	: node_name(node_name_),
 	  mastery_level(mastery_level_)
 {
-	std::string uri(uri_);
 	char buffer[PATH_MAX + 1];
-	std::string protocol = slice_before(uri, "://");
+	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
 		protocol = "file";
 	}
-	search = slice_after(uri, "?");
-	path = slice_after(uri, "/");
-	std::string userpass = slice_before(uri, "@");
-	password = slice_after(userpass, ":");
-	user = userpass;
-	std::string portstring = slice_after(uri, ":");
-	port = atoi(portstring.c_str());
+	auto _search = slice_after(uri, "?");
+	auto _path = slice_after(uri, "/");
+	auto _user = slice_before(uri, "@");
+	auto _password = slice_after(_user, ":");
+	int errno_save;
+	port = strict_stoi(errno_save, slice_after(uri, ":"));
 	if (protocol == "file") {
-		if (path.empty()) {
-			path = uri;
+		if (_path.empty()) {
+			_path = uri;
 		} else {
-			path = uri + "/" + path;
+			path.assign(uri);
+			path.push_back('/');
+			path.append(_path);
+			_path = path;
 		}
 		port = 0;
-		search = "";
-		password = "";
-		user = "";
 	} else {
 		host = uri;
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
+		search = _search;
+		password = _password;
+		user = _user;
 	}
 
-	if (!startswith(path, "/")) {
-		path = Endpoint::cwd + path;
+	if (!startswith(_path, '/')) {
+		path.assign(Endpoint::cwd);
+		path.append(_path);
+		_path = path;
 	}
-	path = normalize_path(path, buffer);
-	if (path.substr(0, Endpoint::cwd.size()) == Endpoint::cwd) {
-		path.erase(0, Endpoint::cwd.size());
+	path = normalize_path(_path, buffer);
+	_path = path;
+	if (startswith(_path, Endpoint::cwd)) {
+		_path.remove_prefix(Endpoint::cwd.size());
 	}
 
-	if (path.size() != 1 && endswith(path, '/')) {
-		path = path.substr(0, path.size() - 1);
+	if (_path.size() != 1 && endswith(_path, '/')) {
+		_path.remove_suffix(1);
 	}
 
 	if (opts.uuid_partition) {
-		path = normalizer<normalize_and_partition>(path.data(), path.size());
+		path = normalizer<normalize_and_partition>(_path.data(), _path.size());
 	} else {
-		path = normalizer<normalize>(path.data(), path.size());
+		path = normalizer<normalize>(_path.data(), _path.size());
 	}
 
 	if (protocol == "file") {
@@ -283,14 +287,14 @@ Endpoint::Endpoint(const std::string& uri_, const Node* node_, long long mastery
 }
 
 
-inline std::string
-Endpoint::slice_after(std::string& subject, const std::string& delimiter) const
+inline string_view
+Endpoint::slice_after(string_view& subject, string_view delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	std::string output;
-	if (delimiter_location != std::string::npos) {
-		size_t start = delimiter_location + delimiter.length();
-		output = subject.substr(start, subject.length() - start);
+	string_view output;
+	if (delimiter_location != std::string_view::npos) {
+		size_t start = delimiter_location + delimiter.size();
+		output = subject.substr(start, subject.size() - start);
 		if (!output.empty()) {
 			subject = subject.substr(0, delimiter_location);
 		}
@@ -299,11 +303,11 @@ Endpoint::slice_after(std::string& subject, const std::string& delimiter) const
 }
 
 
-inline std::string
-Endpoint::slice_before(std::string& subject, const std::string& delimiter) const
+inline string_view
+Endpoint::slice_before(string_view& subject, string_view delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	std::string output;
+	string_view output;
 	if (delimiter_location != std::string::npos) {
 		size_t start = delimiter_location + delimiter.length();
 		output = subject.substr(0, delimiter_location);

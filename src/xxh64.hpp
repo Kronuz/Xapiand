@@ -104,7 +104,7 @@ public:
 		return hash(s, N - 1, seed);
 	}
 
-	static uint64_t hash(const std::string& str, uint64_t seed=0) {
+	static uint64_t hash(string_view str, uint64_t seed=0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
 };

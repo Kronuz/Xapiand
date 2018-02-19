@@ -31,7 +31,7 @@
 #include "v8pp/v8pp.h"
 
 
-const std::unordered_map<std::string, Script::dispatch_func> Script::map_dispatch_script({
+const std::unordered_map<string_view, Script::dispatch_func> Script::map_dispatch_script({
 	{ RESERVED_TYPE,   &Script::process_type   },
 	{ RESERVED_VALUE,  &Script::process_value  },
 	{ RESERVED_CHAI,   &Script::process_chai   },
@@ -41,7 +41,7 @@ const std::unordered_map<std::string, Script::dispatch_func> Script::map_dispatc
 });
 
 
-const std::unordered_map<std::string, Script::dispatch_func> Script::map_dispatch_value({
+const std::unordered_map<string_view, Script::dispatch_func> Script::map_dispatch_value({
 	{ RESERVED_BODY,   &Script::process_body   },
 	{ RESERVED_NAME,   &Script::process_name   },
 });

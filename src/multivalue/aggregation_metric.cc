@@ -28,7 +28,7 @@
 #include "utils.h"                 // for repr, toUType
 
 
-static func_value_handle get_func_value_handle(FieldType type, const std::string& field_name) {
+static func_value_handle get_func_value_handle(FieldType type, string_view field_name) {
 	switch (type) {
 		case FieldType::FLOAT:
 			return &SubAggregation::_aggregate_float;
@@ -53,7 +53,7 @@ static func_value_handle get_func_value_handle(FieldType type, const std::string
 		case FieldType::UUID:
 			return &SubAggregation::_aggregate_uuid;
 		case FieldType::EMPTY:
-			THROW(AggregationError, "Field: %s has not been indexed", field_name.c_str());
+			THROW(AggregationError, "Field: %s has not been indexed", repr(field_name).c_str());
 		default:
 			THROW(AggregationError, "Type: '%c' is not supported", toUType(type));
 	}

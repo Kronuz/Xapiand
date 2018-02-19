@@ -56,6 +56,29 @@ struct is_callable {
 };
 
 
+template<typename T, int N>
+inline std::string as_string(const T (&s)[N])
+{
+	return std::string(s, N - 1);
+}
+
+inline auto& as_string(std::string& str) {
+	return str;
+}
+
+inline const auto& as_string(const std::string& str) {
+	return str;
+}
+
+inline std::string as_string(string_view& str) {
+	return std::string(str);
+}
+
+inline const std::string as_string(const string_view& str) {
+	return std::string(str);
+}
+
+
 namespace std {
 	template<typename T, int N>
 	inline std::string to_string(const T (&s)[N])
@@ -323,7 +346,7 @@ int url_qs(const char *, const char *, size_t);
 
 bool strhasupper(string_view str);
 
-bool isRange(const std::string& str);
+bool isRange(string_view str);
 
 bool startswith(string_view text, string_view token);
 bool startswith(string_view text, char ch);
@@ -448,8 +471,8 @@ inline M modulus(T val, M mod) {
 }
 
 
-template <typename T>
-inline std::string get_map_keys(const std::unordered_map<std::string, T>& map) {
+template <typename S, typename T>
+inline std::string get_map_keys(const std::unordered_map<S, T>& map) {
 	std::string res("{ ");
 	char comma[3] = { '\0', ' ', '\0' };
 	for (const auto& p : map) {

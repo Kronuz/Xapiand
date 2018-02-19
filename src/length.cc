@@ -279,7 +279,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 
 
 std::string
-serialise_string(const std::string &input) {
+serialise_string(string_view input) {
 	std::string output;
 	unsigned long long input_size = input.size();
 	output.reserve(max_length_size + input_size);
@@ -341,7 +341,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off)
 
 
 void
-serialise_string(int fd, const std::string &input)
+serialise_string(int fd, string_view input)
 {
 	serialise_length(fd, input.size());
 
@@ -386,10 +386,10 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 
 
 std::string
-serialise_strings(const std::vector<std::reference_wrapper<const std::string>>& strings)
+serialise_strings(const std::vector<string_view>& strings)
 {
 	std::string output;
-	for (const std::string& s : strings) {
+	for (const auto& s : strings) {
 		output.append(serialise_string(s));
 	}
 	return output;

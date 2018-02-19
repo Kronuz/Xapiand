@@ -44,13 +44,14 @@
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "split.h"                                    // for Split
 #include "utils.h"                                    // for toUType, stox, repr
+#include "string_view.h"                              // for string_view
 
 
 constexpr char UUID_SEPARATOR_LIST = ';';
 
 
 bool
-Serialise::possiblyUUID(const std::string& field_value) noexcept
+Serialise::possiblyUUID(string_view field_value) noexcept
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
@@ -86,7 +87,7 @@ Serialise::possiblyUUID(const std::string& field_value) noexcept
 
 
 bool
-Serialise::isUUID(const std::string& field_value) noexcept
+Serialise::isUUID(string_view field_value) noexcept
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
@@ -137,7 +138,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::FLOAT:
 			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.str());
+			return string(field_spc, field_value.str_view());
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
@@ -150,7 +151,7 @@ std::string
 Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 {
 	if (o.size() == 1) {
-		auto str_key = o.begin()->str();
+		auto str_key = o.begin()->str_view();
 		switch ((Cast::Hash)xxh64::hash(str_key)) {
 			case Cast::Hash::INTEGER:
 				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
@@ -187,7 +188,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::Hash::GEO_INTERSECTION:
 				return geospatial(field_spc.get_type(), o);
 			default:
-				THROW(SerialisationError, "Unknown cast type %s", str_key.c_str());
+				THROW(SerialisationError, "Unknown cast type %s", repr(str_key).c_str());
 		}
 	}
 
@@ -222,7 +223,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		case FieldType::GEO:
 			return geospatial(field_value);
 		case FieldType::UUID:
-			return uuid(field_value.str());
+			return uuid(field_value.str_view());
 		default:
 			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
 	}
@@ -230,7 +231,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 
 
 std::string
-Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
+Serialise::serialise(const required_spc_t& field_spc, string_view field_value)
 {
 	auto field_type = field_spc.get_type();
 
@@ -252,7 +253,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 		case FieldType::TERM:
 		case FieldType::TEXT:
 		case FieldType::STRING:
-			return field_value;
+			return std::string(field_value);
 		case FieldType::GEO:
 			return geospatial(field_value);
 		case FieldType::UUID:
@@ -264,7 +265,7 @@ Serialise::serialise(const required_spc_t& field_spc, const std::string& field_v
 
 
 std::string
-Serialise::string(const required_spc_t& field_spc, const std::string& field_value)
+Serialise::string(const required_spc_t& field_spc, string_view field_value)
 {
 	switch (field_spc.get_type()) {
 		case FieldType::DATE:
@@ -278,7 +279,7 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 		case FieldType::TERM:
 		case FieldType::TEXT:
 		case FieldType::STRING:
-			return field_value;
+			return std::string(field_value);
 		case FieldType::GEO:
 			return geospatial(field_value);
 		case FieldType::UUID:
@@ -286,6 +287,13 @@ Serialise::string(const required_spc_t& field_spc, const std::string& field_valu
 		default:
 			THROW(SerialisationError, "Type: %s is not string", type(field_spc.get_type()).c_str());
 	}
+}
+
+
+std::string
+Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
+{
+	return serialise(field_spc, string_view(field_value));
 }
 
 
@@ -300,7 +308,7 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::FLOAT:
 			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.str());
+			return string(field_spc, field_value.str_view());
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
@@ -333,7 +341,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::FLOAT:
 			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.str());
+			return string(field_spc, field_value.str_view());
 		default:
 			THROW(SerialisationError, "Type: %s is not a time", field_value.getStrType().c_str());
 	}
@@ -351,7 +359,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::FLOAT:
 			return _float(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
-			return string(field_spc, field_value.str());
+			return string(field_spc, field_value.str_view());
 		default:
 			THROW(SerialisationError, "Type: %s is not a timedelta", field_value.getStrType().c_str());
 	}
@@ -446,7 +454,7 @@ Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 
 
 std::string
-Serialise::date(const std::string& field_value)
+Serialise::date(string_view field_value)
 {
 	return date(Datetime::DateParser(field_value));
 }
@@ -468,7 +476,7 @@ Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
 
 
 std::string
-Serialise::time(const std::string& field_value)
+Serialise::time(string_view field_value)
 {
 	return timestamp(Datetime::time_to_double(Datetime::TimeParser(field_value)));
 }
@@ -495,7 +503,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = field_value.f64();
 			return time(t_val);
 		case MsgPack::Type::STR:
-			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str()));
+			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not time", field_value.getStrType().c_str());
@@ -515,7 +523,7 @@ Serialise::time(double field_value)
 
 
 std::string
-Serialise::timedelta(const std::string& field_value)
+Serialise::timedelta(string_view field_value)
 {
 	return timestamp(Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value)));
 }
@@ -542,7 +550,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = field_value.f64();
 			return timedelta(t_val);
 		case MsgPack::Type::STR:
-			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str()));
+			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
 			THROW(SerialisationError, "Type: %s is not timedelta", field_value.getStrType().c_str());
@@ -562,46 +570,46 @@ Serialise::timedelta(double field_value)
 
 
 std::string
-Serialise::_float(const std::string& field_value)
+Serialise::_float(string_view field_value)
 {
 	try {
 		return _float(strict_stod(field_value));
 	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid float format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid float format: %s", repr(field_value).c_str());
 	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range float format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range float format: %s", repr(field_value).c_str());
 	}
 }
 
 
 std::string
-Serialise::integer(const std::string& field_value)
+Serialise::integer(string_view field_value)
 {
 	try {
 		return integer(strict_stoll(field_value));
 	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid integer format: %s", repr(field_value).c_str());
 	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range integer format: %s", repr(field_value).c_str());
 	}
 }
 
 
 std::string
-Serialise::positive(const std::string& field_value)
+Serialise::positive(string_view field_value)
 {
 	try {
 		return positive(strict_stoull(field_value));
 	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid positive integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Invalid positive integer format: %s", repr(field_value).c_str());
 	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range positive integer format: %s", field_value.c_str());
+		THROW(SerialisationError, "Out of range positive integer format: %s", repr(field_value).c_str());
 	}
 }
 
 
 std::string
-Serialise::uuid(const std::string& field_value)
+Serialise::uuid(string_view field_value)
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
@@ -639,14 +647,14 @@ Serialise::uuid(const std::string& field_value)
 		}
 		return serialised;
 	}
-	THROW(SerialisationError, "Invalid UUID format in: '%s'", field_value.c_str());
+	THROW(SerialisationError, "Invalid UUID format in: %s", repr(field_value).c_str());
 }
 
 
 std::string
-Serialise::boolean(const std::string& field_value)
+Serialise::boolean(string_view field_value)
 {
-	const char *value = field_value.c_str();
+	auto value = string_view_data_as_c_str(field_value);
 	switch (value[0]) {
 		case '\0':
 			return std::string(1, SERIALISED_FALSE);
@@ -668,12 +676,12 @@ Serialise::boolean(const std::string& field_value)
 			break;
 	}
 
-	THROW(SerialisationError, "Boolean format is not valid");
+	THROW(SerialisationError, "Boolean format is not valid: %s", repr(string_view_data_as_c_str(field_value)).c_str());
 }
 
 
 std::string
-Serialise::geospatial(const std::string& field_value)
+Serialise::geospatial(string_view field_value)
 {
 	EWKT ewkt(field_value);
 	return Serialise::ranges(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
@@ -700,7 +708,7 @@ std::string
 Serialise::ranges(const std::vector<range_t>& ranges)
 {
 	if (ranges.empty()) {
-		return std::string();
+		return "";
 	}
 
 	size_t hash = 0;
@@ -791,7 +799,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			return FieldType::BOOLEAN;
 
 		case MsgPack::Type::STR: {
-			const auto str_value = field_value.str();
+			const auto str_value = field_value.str_view();
 
 			if (isUUID(str_value)) {
 				return FieldType::UUID;
@@ -826,7 +834,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
-				const auto str_key = field_value.begin()->str();
+				const auto str_key = field_value.begin()->str_view();
 				switch ((Cast::Hash)xxh64::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return FieldType::INTEGER;
@@ -864,7 +872,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::GEO_INTERSECTION:
 						return FieldType::GEO;
 					default:
-						THROW(SerialisationError, "Unknown cast type: %s", str_key.c_str());
+						THROW(SerialisationError, "Unknown cast type: %s", repr(str_key).c_str());
 				}
 			} else {
 				THROW(SerialisationError, "Expected map with one element");
@@ -903,7 +911,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.boolean()));
 
 		case MsgPack::Type::STR: {
-			auto str_obj = field_value.str();
+			auto str_obj = field_value.str_view();
 
 			// Try like UUID
 			try {
@@ -931,22 +939,22 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			} catch (const EWKTError&) { }
 
 			if (bool_term) {
-				return std::make_pair(FieldType::TERM, str_obj);
+				return std::make_pair(FieldType::TERM, std::string(str_obj));
 			}
 
 			// Like TEXT
 			if (isText(str_obj, bool_term)) {
-				return std::make_pair(FieldType::TEXT, str_obj);
+				return std::make_pair(FieldType::TEXT, std::string(str_obj));
 			}
 
 			// Default type STRING.
-			return std::make_pair(FieldType::STRING, str_obj);
+			return std::make_pair(FieldType::STRING, std::string(str_obj));
 		}
 
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
 				const auto it = field_value.begin();
-				const auto str_key = it->str();
+				const auto str_key = it->str_view();
 				switch ((Cast::Hash)xxh64::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));
@@ -984,7 +992,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::GEO_INTERSECTION:
 						return std::make_pair(FieldType::GEO, geospatial(field_value));
 					default:
-						THROW(SerialisationError, "Unknown cast type: %s", str_key.c_str());
+						THROW(SerialisationError, "Unknown cast type: %s", repr(str_key).c_str());
 				}
 			} else {
 				THROW(SerialisationError, "Expected map with one element");
@@ -994,11 +1002,11 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::UNDEFINED:
 		case MsgPack::Type::NIL:
 			if (bool_term) {
-				return std::make_pair(FieldType::TERM, std::string());
+				return std::make_pair(FieldType::TERM, "");
 			}
 
 			// Default type STRING.
-			return std::make_pair(FieldType::STRING, std::string());
+			return std::make_pair(FieldType::STRING, "");
 
 		default:
 			THROW(SerialisationError, "Unexpected type %s", field_value.getStrType().c_str());
@@ -1007,7 +1015,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 
 
 MsgPack
-Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
+Unserialise::MsgPack(FieldType field_type, string_view serialised_val)
 {
 	class MsgPack result;
 	switch (field_type) {
@@ -1063,21 +1071,21 @@ Unserialise::MsgPack(FieldType field_type, const std::string& serialised_val)
 
 
 std::string
-Unserialise::date(const std::string& serialised_date)
+Unserialise::date(string_view serialised_date)
 {
 	return Datetime::iso8601(timestamp(serialised_date));
 }
 
 
 std::string
-Unserialise::time(const std::string& serialised_time)
+Unserialise::time(string_view serialised_time)
 {
 	return Datetime::time_to_string(sortable_unserialise(serialised_time));
 }
 
 
 double
-Unserialise::time_d(const std::string& serialised_time)
+Unserialise::time_d(string_view serialised_time)
 {
 	auto t = sortable_unserialise(serialised_time);
 	if (Datetime::isvalidTime(t)) {
@@ -1089,14 +1097,14 @@ Unserialise::time_d(const std::string& serialised_time)
 
 
 std::string
-Unserialise::timedelta(const std::string& serialised_timedelta)
+Unserialise::timedelta(string_view serialised_timedelta)
 {
 	return Datetime::timedelta_to_string(sortable_unserialise(serialised_timedelta));
 }
 
 
 double
-Unserialise::timedelta_d(const std::string& serialised_time)
+Unserialise::timedelta_d(string_view serialised_time)
 {
 	auto t = sortable_unserialise(serialised_time);
 	if (Datetime::isvalidTimedelta(t)) {
@@ -1108,7 +1116,7 @@ Unserialise::timedelta_d(const std::string& serialised_time)
 
 
 std::string
-Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
+Unserialise::uuid(string_view serialised_uuid, UUIDRepr repr)
 {
 	std::string result;
 	std::vector<UUID> uuids;
@@ -1149,14 +1157,14 @@ Unserialise::uuid(const std::string& serialised_uuid, UUIDRepr repr)
 
 
 std::pair<RangeList, CartesianList>
-Unserialise::ranges_centroids(const std::string& serialised_geo)
+Unserialise::ranges_centroids(string_view serialised_geo)
 {
 	StringList data(serialised_geo);
 	switch (data.size()) {
 		case 0:
-			return std::make_pair(RangeList(std::string()), CartesianList(std::string()));
+			return std::make_pair(RangeList(string_view("")), CartesianList(string_view("")));
 		case 1:
-			return std::make_pair(RangeList(data.front()), CartesianList(std::string()));
+			return std::make_pair(RangeList(data.front()), CartesianList(string_view("")));
 		case 2:
 			return std::make_pair(RangeList(data.front()), CartesianList(data.back()));
 		default:
@@ -1166,12 +1174,12 @@ Unserialise::ranges_centroids(const std::string& serialised_geo)
 
 
 RangeList
-Unserialise::ranges(const std::string& serialised_geo)
+Unserialise::ranges(string_view serialised_geo)
 {
 	StringList data(serialised_geo);
 	switch (data.size()) {
 		case 0:
-			return RangeList(std::string());
+			return RangeList(string_view(""));
 		case 1:
 		case 2:
 			return RangeList(data.front());
@@ -1182,13 +1190,13 @@ Unserialise::ranges(const std::string& serialised_geo)
 
 
 CartesianList
-Unserialise::centroids(const std::string& serialised_geo)
+Unserialise::centroids(string_view serialised_geo)
 {
 	StringList data(serialised_geo);
 	switch (data.size()) {
 		case 0:
 		case 1:
-			return CartesianList(std::string());
+			return CartesianList(string_view(""));
 		case 2:
 			return CartesianList(data.back());
 		default:
@@ -1198,7 +1206,7 @@ Unserialise::centroids(const std::string& serialised_geo)
 
 
 Cartesian
-Unserialise::cartesian(const std::string& serialised_val)
+Unserialise::cartesian(string_view serialised_val)
 {
 	if (serialised_val.size() != SERIALISED_LENGTH_CARTESIAN) {
 		THROW(SerialisationError, "Cannot unserialise cartesian: %s [%zu]", repr(serialised_val).c_str(), serialised_val.size());
@@ -1212,7 +1220,7 @@ Unserialise::cartesian(const std::string& serialised_val)
 
 
 uint64_t
-Unserialise::trixel_id(const std::string& serialised_id)
+Unserialise::trixel_id(string_view serialised_id)
 {
 	if (serialised_id.size() != HTM_BYTES_ID) {
 		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", repr(serialised_id).c_str(), serialised_id.size());
@@ -1227,7 +1235,7 @@ Unserialise::trixel_id(const std::string& serialised_id)
 
 
 range_t
-Unserialise::range(const std::string& serialised_range)
+Unserialise::range(string_view serialised_range)
 {
 	if (serialised_range.size() != SERIALISED_LENGTH_RANGE) {
 		THROW(SerialisationError, "Cannot unserialise range_t: %s [%zu]", repr(serialised_range).c_str(), serialised_range.size());
@@ -1248,9 +1256,9 @@ Unserialise::range(const std::string& serialised_range)
 
 
 FieldType
-Unserialise::type(const std::string& str_type)
+Unserialise::type(string_view str_type)
 {
-	const char *value = str_type.c_str();
+	auto value = string_view_data_as_c_str(str_type);
 	switch (tolower(value[0])) {
 		case ' ':
 			if (value[1] == '\0') {
@@ -1348,5 +1356,5 @@ Unserialise::type(const std::string& str_type)
 			break;
 	}
 
-	THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
+	THROW(SerialisationError, "Type: %s is an unsupported type", repr(string_view_data_as_c_str(str_type)).c_str());
 }

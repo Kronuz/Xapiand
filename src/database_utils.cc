@@ -46,12 +46,12 @@
 #include "utils.h"                                   // for random_int
 
 
-inline static long long save_mastery(const std::string& dir)
+inline static long long save_mastery(string_view dir)
 {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
-	int fd = io::open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	int fd = io::open((std::string(dir) + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		snprintf(buf, sizeof(buf), "%llx", mastery_level);
 		io::write(fd, buf, strlen(buf));
@@ -61,19 +61,19 @@ inline static long long save_mastery(const std::string& dir)
 }
 
 
-std::string prefixed(const std::string& term, const std::string& field_prefix, char field_type)
+std::string prefixed(string_view term, string_view field_prefix, char field_type)
 {
 	std::string result;
-	result.reserve(field_prefix.length() + term.length() + 1);
+	result.reserve(field_prefix.size() + term.size() + 1);
 	result.assign(field_prefix).push_back(field_type);
 	result.append(term);
 	return result;
 }
 
 
-Xapian::valueno get_slot(const std::string& field_prefix, char field_type)
+Xapian::valueno get_slot(string_view field_prefix, char field_type)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh64::hash(field_prefix + field_type));
+	auto slot = static_cast<Xapian::valueno>(xxh64::hash(std::string(field_prefix) + field_type));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -89,16 +89,21 @@ std::string get_prefix(unsigned long long field_number)
 }
 
 
-std::string get_prefix(const std::string& field_name)
+std::string get_prefix(string_view field_name)
 {
 	// Mask 0x1fffff for maximum length prefix of 4.
 	return serialise_length(xxh64::hash(field_name) & 0x1fffff);
 }
 
 
-std::string normalize_uuid(const std::string& uuid)
+std::string normalize_uuid(string_view uuid)
 {
 	return Unserialise::uuid(Serialise::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
+}
+
+
+std::string normalize_uuid(const std::string& uuid) {
+	return normalize_uuid(string_view(uuid));
 }
 
 
@@ -111,19 +116,20 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 }
 
 
-long long read_mastery(const std::string& dir, bool force)
+long long read_mastery(string_view dir, bool force)
 {
-	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", dir.c_str());
+	auto sdir = std::string(dir);
+	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir.c_str());
 
 	struct stat info;
-	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
-		L_DATABASE("- NO MASTERY OF INDEX '%s'", dir.c_str());
+	if (::stat(sdir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
+		L_DATABASE("- NO MASTERY OF INDEX '%s'", sdir.c_str());
 		return -1;
 	}
 
 	long long mastery_level = -1;
 
-	int fd = io::open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
+	int fd = io::open((sdir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		if (force) {
 			mastery_level = save_mastery(dir);
@@ -142,17 +148,18 @@ long long read_mastery(const std::string& dir, bool force)
 		}
 	}
 
-	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
+	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", sdir.c_str(), mastery_level);
 
 	return mastery_level;
 }
 
 
-void json_load(rapidjson::Document& doc, const std::string& str)
+void json_load(rapidjson::Document& doc, string_view str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data());
 	if (!parse_done) {
 		constexpr size_t tabsize = 3;
+		std::string tabs(tabsize, ' ');
 		auto offset = parse_done.Offset();
 		char buffer[20];
 		auto a = str.substr(0, offset);
@@ -169,10 +176,16 @@ void json_load(rapidjson::Document& doc, const std::string& str)
 		auto tsz = std::count(a.begin(), a.end(), '\t');
 		auto col = a.size() + 1;
 		auto sz = col - 1 - tsz + tsz * tabsize;
-		auto snippet = std::string(buffer) + a + b + "\n" + std::string(sz + strlen(buffer), ' ') + '^';
+		std::string snippet(buffer);
+		auto indent = sz + snippet.size();
+		snippet.append(a);
+		snippet.append(b);
+		snippet.push_back('\n');
+		snippet.append(indent, ' ');
+		snippet.push_back('^');
 		size_t p = 0;
 		while ((p = snippet.find("\t", p)) != std::string::npos) {
-			snippet.replace(p, 1, std::string(tabsize, ' '));
+			snippet.replace(p, 1, tabs);
 			++p;
 		}
 		THROW(ClientError, "JSON parse error at line %zu, col: %zu : %s\n%s", line, col, GetParseError_En(parse_done.Code()), snippet.c_str());
@@ -180,7 +193,7 @@ void json_load(rapidjson::Document& doc, const std::string& str)
 }
 
 
-rapidjson::Document to_json(const std::string& str)
+rapidjson::Document to_json(string_view str)
 {
 	rapidjson::Document doc;
 	json_load(doc, str);
@@ -254,7 +267,7 @@ std::string msgpack_to_html(const msgpack::object& o)
 		return o.via.boolean ? "True" : "False";
 	}
 
-	return std::string();
+	return "";
 }
 
 
@@ -277,7 +290,7 @@ std::string msgpack_map_value_to_html(const msgpack::object& o)
 		return tag_head + msgpack_to_html(o) + tag_tail;
 	}
 
-	return std::string();
+	return "";
 }
 
 
@@ -312,7 +325,7 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 }
 
 
-std::string join_data(bool stored, const std::string& stored_locator, const std::string& obj, const std::string& blob)
+std::string join_data(bool stored, string_view stored_locator, string_view obj, string_view blob)
 {
 	/* Joined data is as follows:
 	 * For stored (in storage) blobs:
@@ -346,44 +359,44 @@ std::string join_data(bool stored, const std::string& stored_locator, const std:
 }
 
 
-std::pair<bool, std::string> split_data_store(const std::string& data)
+std::pair<bool, string_view> split_data_store(string_view data)
 {
 	L_CALL("::split_data_store(<data>)");
 
-	std::string stored_locator;
+	string_view stored_locator = "";
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	if (*p == DATABASE_DATA_HEADER_MAGIC) {
-		return std::make_pair(false, std::string());
+		return std::make_pair(false, "");
 	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
 		++p;
 		try {
 			length = unserialise_length(&p, p_end, true);
 		} catch (const Xapian::SerialisationError&) {
-			return std::make_pair(false, std::string());
+			return std::make_pair(false, "");
 		}
-		stored_locator = std::string(p, length);
+		stored_locator = string_view(p, length);
 		p += length;
 	} else {
-		return std::make_pair(false, std::string());
+		return std::make_pair(false, "");
 	}
 
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (Xapian::SerialisationError) {
-		return std::make_pair(false, std::string());
+		return std::make_pair(false, "");
 	}
 
 	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
 		return std::make_pair(true, stored_locator);
 	}
 
-	return std::make_pair(false, std::string());
+	return std::make_pair(false, "");
 }
 
 
-std::string split_data_obj(const std::string& data)
+string_view split_data_obj(string_view data)
 {
 	L_CALL("::split_data_obj(<data>)");
 
@@ -397,28 +410,28 @@ std::string split_data_obj(const std::string& data)
 		try {
 			length = unserialise_length(&p, p_end, true);
 		} catch (const Xapian::SerialisationError&) {
-			return std::string();
+			return "";
 		}
 		p += length;
 	} else {
-		return std::string();
+		return "";
 	}
 
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (const Xapian::SerialisationError&) {
-		return std::string();
+		return "";
 	}
 
 	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
-		return std::string(p, length);
+		return string_view(p, length);
 	}
 
-	return std::string();
+	return "";
 }
 
 
-std::string get_data_content_type(const std::string& data)
+std::string get_data_content_type(string_view data)
 {
 	L_CALL("::get_data_content_type(<data>)");
 
@@ -463,7 +476,7 @@ std::string get_data_content_type(const std::string& data)
 }
 
 
-std::string split_data_blob(const std::string& data)
+string_view split_data_blob(string_view data)
 {
 	L_CALL("::split_data_blob(<data>)");
 
@@ -493,28 +506,28 @@ std::string split_data_blob(const std::string& data)
 
 	if (*p == DATABASE_DATA_FOOTER_MAGIC) {
 		++p;
-		return std::string(p, p_end - p);
+		return string_view(p, p_end - p);
 	}
 
 	return data;
 }
 
 
-void split_path_id(const std::string& path_id, std::string& path, std::string& id)
+void split_path_id(string_view path_id, string_view& path, string_view& id)
 {
 	std::size_t found = path_id.find_last_of('/');
 	if (found != std::string::npos) {
 		path = path_id.substr(0, found);
 		id = path_id.substr(found + 1);
 	} else {
-		path.empty();
-		id.empty();
+		path.clear();
+		id.clear();
 	}
 }
 
 
 #ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(const std::string& store)
+std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(string_view store)
 {
 	ssize_t volume;
 	size_t offset, size;
@@ -553,7 +566,7 @@ std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(con
 }
 
 
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, const std::string& content_type)
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, string_view content_type)
 {
 	std::string ret;
 	ret.append(1, STORAGE_BIN_HEADER_MAGIC);

@@ -27,6 +27,8 @@
 
 #include "collection.h"
 
+#include "string_view.h"       // for string_view
+
 
 class GeoSpatial;
 
@@ -54,8 +56,8 @@ class GeoSpatial;
  * polygons are not required to be repeated first coordinate to end like EWKT.
  */
 class EWKT {
-	using Iterator = std::string::const_iterator;
-	static const std::unordered_map<std::string, Geometry::Type> map_dispatch;
+	using Iterator = std::string_view::const_iterator;
+	static const std::unordered_map<string_view, Geometry::Type> map_dispatch;
 
 	std::shared_ptr<Geometry> geometry;
 
@@ -79,7 +81,7 @@ class EWKT {
 	static bool _isEWKT(Iterator first, Iterator last);
 
 public:
-	explicit EWKT(const std::string& str);
+	explicit EWKT(string_view str);
 
 	EWKT(const EWKT& ewkt) noexcept
 		: geometry(ewkt.geometry) { }
@@ -91,7 +93,7 @@ public:
 
 	~EWKT() = default;
 
-	static bool isEWKT(const std::string& str);
+	static bool isEWKT(string_view str);
 
 	std::shared_ptr<Geometry> getGeometry() const {
 		geometry->simplify();

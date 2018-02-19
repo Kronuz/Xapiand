@@ -27,18 +27,22 @@
 #include "opts.h"
 
 
+static const std::string reserved_schema(RESERVED_SCHEMA);
+static const std::hash<string_view> hasher;
+
+
 template <typename ErrorType>
 inline std::pair<const MsgPack*, const MsgPack*>
-SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_path, std::string& foreign_id)
+SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, string_view& foreign, string_view& foreign_path, string_view& foreign_id)
 {
 	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()).c_str());
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
-		const auto aux_schema_str = checked.first->str();
-		split_path_id(aux_schema_str, foreign_path, foreign_id);
+		foreign = checked.first->str_view();
+		split_path_id(foreign, foreign_path, foreign_id);
 		if (foreign_path.empty() || foreign_id.empty()) {
-			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, aux_schema_str.c_str());
+			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, repr(foreign).c_str());
 		}
 	}
 	return checked;
@@ -46,9 +50,9 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 
 
 MsgPack
-SchemasLRU::get_shared(const Endpoint& endpoint, const std::string& id, std::shared_ptr<std::unordered_set<size_t>> context)
+SchemasLRU::get_shared(const Endpoint& endpoint, string_view id, std::shared_ptr<std::unordered_set<size_t>> context)
 {
-	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), id.c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), repr(id).c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
 
 	auto hash = endpoint.hash();
 	if (!context) {
@@ -80,7 +84,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 {
 	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
 
-	std::string foreign_path, foreign_id;
+	string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const MsgPack* schema_obj = nullptr;
@@ -94,10 +98,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	auto local_schema_ptr = atom_local_schema->load();
 
 	if (obj && obj->is_map()) {
-		const auto it = obj->find(RESERVED_SCHEMA);
+		const auto it = obj->find(reserved_schema);
 		if (it != obj->end()) {
 			schema_obj = &it.value();
-			validate_schema<Error>(*schema_obj, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+			validate_schema<Error>(*schema_obj, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 		}
 	}
 
@@ -109,7 +113,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		} else {
 			// Schema not found in cache, try loading from metadata.
 			bool new_metadata = false;
-			auto str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
+			auto str_schema = db_handler->get_metadata(reserved_schema);
 			if (str_schema.empty()) {
 				new_metadata = true;
 				schema_ptr = Schema::get_initial_schema();
@@ -129,10 +133,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 				}
 				try {
 					// Try writing (only if there's no metadata there alrady)
-					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						// or fallback to load from metadata (again).
 						local_schema_ptr = schema_ptr;
-						str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
+						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
 							schema_ptr = Schema::get_initial_schema();
 						} else {
@@ -156,13 +160,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		// New FOREIGN schema, write the foreign link to metadata:
 		schema_ptr = std::make_shared<MsgPack>(MsgPack({
 			{ RESERVED_TYPE, "foreign/object" },
-			{ RESERVED_ENDPOINT, foreign_path + "/" + foreign_id },
+			{ RESERVED_ENDPOINT, foreign },
 		}));
 		schema_ptr->lock();
 		if (atom_local_schema->compare_exchange_strong(local_schema_ptr, schema_ptr)) {
 			if (write) {
 				try {
-					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						// It doesn't matter if new metadata cannot be set
 						// it should continue with newly created foreign
 						// schema, as requested by user.
@@ -176,15 +180,12 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		}
 	}
 
-	std::string foreign;
-
 	// Try validating loaded/created schema as LOCAL or FOREIGN
-	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 	if (!foreign_path.empty()) {
 		// FOREIGN Schema, get from the cache or use `get_shared()`
 		// to load from `foreign_path/foreign_id` endpoint:
-		foreign = foreign_path + "/" + foreign_id;
-		const auto foreign_schema_hash = std::hash<std::string>{}(foreign);
+		const auto foreign_schema_hash = hasher(foreign);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -239,11 +240,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		std::unique_ptr<MsgPack> mut_schema;
 		schema.swap(mut_schema);
 		if (mut_schema) {
-			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), foreign);
+			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), std::string(foreign));
 		}
 	}
 
-	return std::make_tuple(std::move(schema_ptr), nullptr, foreign);
+	return std::make_tuple(std::move(schema_ptr), nullptr, std::string(foreign));
 }
 
 
@@ -253,7 +254,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
 	bool failure = false;
-	std::string foreign_path, foreign_id;
+	string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
@@ -265,14 +266,14 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	}
 	auto local_schema_ptr = atom_local_schema->load();
 
-	validate_schema<Error>(*new_schema, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+	validate_schema<Error>(*new_schema, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 	if (foreign_path.empty()) {
 		// LOCAL new schema.
 		if (local_schema_ptr) {
 			// found in cache
 			schema_ptr = local_schema_ptr;
 		} else {
-			auto str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
+			auto str_schema = db_handler->get_metadata(reserved_schema);
 			if (str_schema.empty()) {
 				new_metadata = true;
 				schema_ptr = new_schema;
@@ -289,10 +290,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 			if (new_metadata) {
 				try {
-					if (!db_handler->set_metadata(RESERVED_SCHEMA, schema_ptr->serialise(), false)) {
-						str_schema = db_handler->get_metadata(RESERVED_SCHEMA);
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
-							THROW(Error, "Cannot set metadata: '%s'", RESERVED_SCHEMA);
+							THROW(Error, "Cannot set metadata: %s", repr(reserved_schema).c_str());
 						}
 						new_metadata = false;
 						local_schema_ptr = schema_ptr;
@@ -312,7 +313,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			}
 		}
 
-		validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+		validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 		if (foreign_path.empty()) {
 			// LOCAL new schema *and* LOCAL metadata schema.
 			if (old_schema != schema_ptr) {
@@ -325,7 +326,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			} else if (atom_local_schema->compare_exchange_strong(schema_ptr, new_schema)) {
 				if (*schema_ptr != *new_schema) {
 					try {
-						db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+						db_handler->set_metadata(reserved_schema, new_schema->serialise());
 					} catch(...) {
 						// On error, try reverting
 						std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
@@ -336,7 +337,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				return true;
 			}
 
-			validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+			validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 			if (foreign_path.empty()) {
 				// it faield, but metadata continues to be local
 				old_schema = schema_ptr;
@@ -348,7 +349,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	} else {
 		// FOREIGN new schema, write the foreign link to metadata:
 		if (old_schema != local_schema_ptr) {
-			const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+			const auto foreign_schema_hash = hasher(foreign);
 			atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 			{
 				std::lock_guard<std::mutex> lk(smtx);
@@ -364,7 +365,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
 			if (*local_schema_ptr != *new_schema) {
 				try {
-					db_handler->set_metadata(RESERVED_SCHEMA, new_schema->serialise());
+					db_handler->set_metadata(reserved_schema, new_schema->serialise());
 				} catch(...) {
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
@@ -375,7 +376,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			return true;
 		}
 
-		validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+		validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 		if (foreign_path.empty()) {
 			// it faield, but metadata continues to be local
 			old_schema = local_schema_ptr;
@@ -387,7 +388,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	// FOREIGN Schema, get from the cache or use `get_shared()`
 	// to load from `foreign_path/foreign_id` endpoint:
-	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+	const auto foreign_schema_hash = hasher(foreign);
 	atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -406,8 +407,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
 					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
-					if (_db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
-						_db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+					if (_db_handler.get_metadata(reserved_schema).empty()) {
+						_db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 					}
 					// FIXME: Process the foreign_path's subfields instead of ignoring.
 					auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
@@ -433,7 +434,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 {
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
-	std::string foreign_path, foreign_id;
+	string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const auto local_schema_hash = db_handler->endpoints.hash();
@@ -444,13 +445,13 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	}
 	auto local_schema_ptr = atom_local_schema->load();
 	if (old_schema != local_schema_ptr) {
-		validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+		validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 		if (foreign_path.empty()) {
 			// it faield, but metadata continues to be local
 			old_schema = local_schema_ptr;
 			return false;
 		}
-		const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+		const auto foreign_schema_hash = hasher(foreign);
 		atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -468,7 +469,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		return true;
 	} else if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
 		try {
-			db_handler->set_metadata(RESERVED_SCHEMA, "");
+			db_handler->set_metadata(reserved_schema, "");
 		} catch(...) {
 			// On error, try reverting
 			atom_local_schema->compare_exchange_strong(new_schema, local_schema_ptr);
@@ -477,14 +478,14 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		return true;
 	}
 
-	validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign_path, foreign_id);
+	validate_schema<Error>(*local_schema_ptr, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 	if (foreign_path.empty()) {
 		// it faield, but metadata continues to be local
 		old_schema = local_schema_ptr;
 		return false;
 	}
 
-	const auto foreign_schema_hash = std::hash<std::string>{}(foreign_path + "/" + foreign_id);
+	const auto foreign_schema_hash = hasher(foreign);
 	atomic_shared_ptr<const MsgPack>* atom_shared_schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);

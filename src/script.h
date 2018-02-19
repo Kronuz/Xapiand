@@ -43,8 +43,8 @@ public:
 
 class Script {
 	using dispatch_func = void (Script::*)(const MsgPack&);
-	static const std::unordered_map<std::string, dispatch_func> map_dispatch_script;
-	static const std::unordered_map<std::string, dispatch_func> map_dispatch_value;
+	static const std::unordered_map<string_view, dispatch_func> map_dispatch_script;
+	static const std::unordered_map<string_view, dispatch_func> map_dispatch_value;
 
 	enum class Type : uint8_t {
 		EMPTY,

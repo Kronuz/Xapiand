@@ -92,13 +92,13 @@ struct required_spc_t;
 
 
 namespace Serialise {
-	inline static bool isText(const std::string& field_value, bool bool_term) noexcept {
+	inline static bool isText(string_view field_value, bool bool_term) noexcept {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
 
 	// Returns if field_value is UUID.
-	bool possiblyUUID(const std::string& field_value) noexcept;
-	bool isUUID(const std::string& field_value) noexcept;
+	bool possiblyUUID(string_view field_value) noexcept;
+	bool isUUID(string_view field_value) noexcept;
 
 
 	/*
@@ -108,8 +108,9 @@ namespace Serialise {
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string object(const required_spc_t& field_spc, const class MsgPack& o);
 	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string serialise(const required_spc_t& field_spc, string_view field_value);
 	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
-	std::string string(const required_spc_t& field_spc, const std::string& field_value);
+	std::string string(const required_spc_t& field_spc, string_view field_value);
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string time(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string timedelta(const required_spc_t& field_spc, const class MsgPack& field_value);
@@ -126,7 +127,7 @@ namespace Serialise {
 	std::string geospatial(FieldType field_type, const class MsgPack& field_value);
 
 	// Serialise field_value like date.
-	std::string date(const std::string& field_value);
+	std::string date(string_view field_value);
 	std::string date(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
@@ -141,50 +142,50 @@ namespace Serialise {
 	}
 
 	// Serialise value like time.
-	std::string time(const std::string& field_value);
+	std::string time(string_view field_value);
 	std::string time(const class MsgPack& field_value);
 	std::string time(const class MsgPack& field_value, double& t_val);
 	std::string time(double field_value);
 
 	// Serialise value like timedelta.
-	std::string timedelta(const std::string& field_value);
+	std::string timedelta(string_view field_value);
 	std::string timedelta(const class MsgPack& field_value);
 	std::string timedelta(const class MsgPack& field_value, double& t_val);
 	std::string timedelta(double field_value);
 
 	// Serialise field_value like float.
-	std::string _float(const std::string& field_value);
+	std::string _float(string_view field_value);
 
 	inline std::string _float(double field_value) {
 		return sortable_serialise(field_value);
 	}
 
 	// Serialise field_value like integer.
-	std::string integer(const std::string& field_value);
+	std::string integer(string_view field_value);
 
 	inline std::string integer(int64_t field_value) {
 		return sortable_serialise(field_value);
 	}
 
 	// Serialise field_value like positive integer.
-	std::string positive(const std::string& field_value);
+	std::string positive(string_view field_value);
 
 	inline std::string positive(uint64_t field_value) {
 		return sortable_serialise(field_value);
 	}
 
 	// Serialise field_value like UUID.
-	std::string uuid(const std::string& field_value);
+	std::string uuid(string_view field_value);
 
 	// Serialise field_value like boolean.
-	std::string boolean(const std::string& field_value);
+	std::string boolean(string_view field_value);
 
 	inline std::string boolean(bool field_value) {
 		return std::string(1, field_value ? SERIALISED_TRUE : SERIALISED_FALSE);
 	}
 
 	// Serialise field_value like geospatial.
-	std::string geospatial(const std::string& field_value);
+	std::string geospatial(string_view field_value);
 	std::string geospatial(const class MsgPack& field_value);
 
 	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
@@ -217,8 +218,8 @@ namespace Serialise {
 
 	std::pair<FieldType, std::string> guess_serialise(const class MsgPack& field_value, bool bool_term=false);
 
-	inline std::string serialise(const std::string& val) {
-		return val;
+	inline std::string serialise(string_view val) {
+		return std::string(val);
 	}
 
 	inline std::string serialise(int64_t val) {
@@ -249,69 +250,69 @@ namespace Serialise {
 
 namespace Unserialise {
 	// Unserialise serialised_val according to field_type and returns a MsgPack.
-	MsgPack MsgPack(FieldType field_type, const std::string& serialised_val);
+	MsgPack MsgPack(FieldType field_type, string_view serialised_val);
 
 	// Unserialise a serialised date.
-	std::string date(const std::string& serialised_date);
+	std::string date(string_view serialised_date);
 
 	// Unserialise a serialised date returns the timestamp.
-	inline double timestamp(const std::string& serialised_timestamp) {
+	inline double timestamp(string_view serialised_timestamp) {
 		return sortable_unserialise(serialised_timestamp);
 	}
 
 	// Unserialise a serialised time.
-	std::string time(const std::string& serialised_time);
+	std::string time(string_view serialised_time);
 
 	// Unserialise a serialised time and returns the timestamp.
-	double time_d(const std::string& serialised_time);
+	double time_d(string_view serialised_time);
 
 	// Unserialise a serialised timedelta.
-	std::string timedelta(const std::string& serialised_timedelta);
+	std::string timedelta(string_view serialised_timedelta);
 
 	// Unserialise a serialised timedelta and returns the timestamp.
-	double timedelta_d(const std::string& serialised_timedelta);
+	double timedelta_d(string_view serialised_timedelta);
 
 	// Unserialise a serialised float.
-	inline double _float(const std::string& serialised_float) {
+	inline double _float(string_view serialised_float) {
 		return sortable_unserialise(serialised_float);
 	}
 
 	// Unserialise a serialised integer.
-	inline int64_t integer(const std::string& serialised_integer) {
+	inline int64_t integer(string_view serialised_integer) {
 		return sortable_unserialise(serialised_integer);
 	}
 
 	// Unserialise a serialised positive.
-	inline uint64_t positive(const std::string& serialised_positive) {
+	inline uint64_t positive(string_view serialised_positive) {
 		return sortable_unserialise(serialised_positive);
 	}
 
 	// Unserialise a serialised boolean.
-	inline bool boolean(const std::string& serialised_boolean) {
+	inline bool boolean(string_view serialised_boolean) {
 		return serialised_boolean.at(0) == SERIALISED_TRUE;
 	}
 
 	// Unserialise a serialised pair of ranges and centroids.
-	std::pair<RangeList, CartesianList> ranges_centroids(const std::string& serialised_geo);
+	std::pair<RangeList, CartesianList> ranges_centroids(string_view serialised_geo);
 
 	// Unserialise ranges from serialised pair of ranges and centroids.
-	RangeList ranges(const std::string& serialised_geo);
+	RangeList ranges(string_view serialised_geo);
 
 	// Unserialise centroids from serialised pair of ranges and centroids.
-	CartesianList centroids(const std::string& serialised_geo);
+	CartesianList centroids(string_view serialised_geo);
 
 	// Unserialise a serialised UUID.
-	std::string uuid(const std::string& serialised_uuid, UUIDRepr repr=UUIDRepr::simple);
+	std::string uuid(string_view serialised_uuid, UUIDRepr repr=UUIDRepr::simple);
 
 	// Unserialise a serialised cartesian coordinate.
-	Cartesian cartesian(const std::string& serialised_cartesian);
+	Cartesian cartesian(string_view serialised_cartesian);
 
 	// Unserialise a serialised HTM trixel's id.
-	uint64_t trixel_id(const std::string& serialised_id);
+	uint64_t trixel_id(string_view serialised_id);
 
 	// Unserialise a serialised range_t
-	range_t range(const std::string& serialised_range);
+	range_t range(string_view serialised_range);
 
 	// Unserialise str_type to its FieldType.
-	FieldType type(const std::string& str_type);
+	FieldType type(string_view str_type);
 };

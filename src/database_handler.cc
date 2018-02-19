@@ -82,11 +82,11 @@ const std::string dump_documents_header("xapiand-dump-docs");
 
 
 Xapian::docid
-to_docid(const std::string& document_id)
+to_docid(string_view document_id)
 {
 	size_t sz = document_id.size();
 	if (sz > 2 && document_id[0] == ':' && document_id[1] == ':') {
-		std::string did_str(document_id.begin() + 2, document_id.end());
+		string_view did_str(document_id.data() + 2, document_id.size() - 2);
 		try {
 			return static_cast<Xapian::docid>(strict_stol(did_str));
 		} catch (const InvalidArgument& er) {
@@ -276,6 +276,13 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 }
 
 
+Document
+DatabaseHandler::get_document_term(string_view term_id)
+{
+	return get_document_term(std::string(term_id));
+}
+
+
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 std::mutex DatabaseHandler::documents_mtx;
 std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> DatabaseHandler::documents;
@@ -283,10 +290,10 @@ std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> Da
 
 template<typename Processor>
 MsgPack&
-DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t script_hash, size_t body_hash, const std::string& script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+DatabaseHandler::call_script(MsgPack& data, string_view term_id, size_t script_hash, size_t body_hash, string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	try {
-		auto processor = Processor::compile(script_hash, body_hash, script_body);
+		auto processor = Processor::compile(script_hash, body_hash, std::string(script_body));
 		switch (method) {
 			case HTTP_PUT:
 				old_document_pair = get_document_change_seq(term_id);
@@ -353,7 +360,7 @@ DatabaseHandler::call_script(MsgPack& data, const std::string& term_id, size_t s
 
 
 MsgPack&
-DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script)
+DatabaseHandler::run_script(MsgPack& data, string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script)
 {
 	L_CALL("DatabaseHandler::run_script(...)");
 
@@ -388,7 +395,7 @@ DatabaseHandler::run_script(MsgPack& data, const std::string& term_id, std::shar
 
 
 DataType
-DatabaseHandler::index(const std::string& document_id, bool stored, const std::string& stored_locator, MsgPack& obj, const std::string& blob, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(string_view document_id, bool stored, string_view stored_locator, MsgPack& obj, string_view blob, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::index(%s, %s, <stored_locator>, %s, <blob>, %s, <ct_type>)", repr(document_id).c_str(), stored ? "true" : "false", repr(obj.to_string()).c_str(), commit_ ? "true" : "false");
 
@@ -580,7 +587,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const std::s
 
 
 DataType
-DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", repr(body.to_string()).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
@@ -606,7 +613,7 @@ DatabaseHandler::index(const std::string& document_id, bool stored, const MsgPac
 
 
 DataType
-DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::patch(string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id).c_str(), commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
@@ -637,7 +644,7 @@ DatabaseHandler::patch(const std::string& document_id, const MsgPack& patches, b
 
 
 DataType
-DatabaseHandler::merge(const std::string& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::merge(string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id).c_str(), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first.c_str(), ct_type.second.c_str());
 
@@ -1193,7 +1200,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 
 
 std::string
-DatabaseHandler::get_prefixed_term_id(const std::string& document_id)
+DatabaseHandler::get_prefixed_term_id(string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id).c_str());
 
@@ -1232,6 +1239,13 @@ DatabaseHandler::get_metadata(const std::string& key)
 }
 
 
+std::string
+DatabaseHandler::get_metadata(string_view key)
+{
+	return get_metadata(std::string(key));
+}
+
+
 bool
 DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool overwrite)
 {
@@ -1249,6 +1263,13 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 }
 
 
+bool
+DatabaseHandler::set_metadata(string_view key, string_view value, bool overwrite)
+{
+	return set_metadata(std::string(key), std::string(value), overwrite);
+}
+
+
 Document
 DatabaseHandler::get_document(const Xapian::docid& did)
 {
@@ -1260,7 +1281,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 
 
 Document
-DatabaseHandler::get_document(const std::string& document_id)
+DatabaseHandler::get_document(string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_document((std::string)%s)", repr(document_id).c_str());
 
@@ -1278,7 +1299,7 @@ DatabaseHandler::get_document(const std::string& document_id)
 
 
 Xapian::docid
-DatabaseHandler::get_docid(const std::string& document_id)
+DatabaseHandler::get_docid(string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_docid(%s)", repr(document_id).c_str());
 
@@ -1295,7 +1316,7 @@ DatabaseHandler::get_docid(const std::string& document_id)
 
 
 void
-DatabaseHandler::delete_document(const std::string& document_id, bool commit_, bool wal_)
+DatabaseHandler::delete_document(string_view document_id, bool commit_, bool wal_)
 {
 	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id).c_str());
 
@@ -1313,7 +1334,7 @@ DatabaseHandler::delete_document(const std::string& document_id, bool commit_, b
 
 
 MsgPack
-DatabaseHandler::get_document_info(const std::string& document_id)
+DatabaseHandler::get_document_info(string_view document_id)
 {
 	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id).c_str());
 
@@ -1431,8 +1452,9 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 	const auto document_id = get_hashed(endpoint.path);
 
 	try {
-		if (db_handler.get_metadata(RESERVED_SCHEMA).empty()) {
-			db_handler.set_metadata(RESERVED_SCHEMA, Schema::get_initial_schema()->serialise());
+		static const std::string reserved_schema(RESERVED_SCHEMA);
+		if (db_handler.get_metadata(reserved_schema).empty()) {
+			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 		}
 		try {
 			db_handler.get_document(document_id);
@@ -1541,11 +1563,11 @@ DatabaseHandler::get_master_count()
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 const std::shared_ptr<std::pair<size_t, const MsgPack>>
-DatabaseHandler::get_document_change_seq(const std::string& term_id)
+DatabaseHandler::get_document_change_seq(string_view term_id)
 {
 	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
 
-	static std::hash<std::string> hash_fn_string;
+	static std::hash<string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
 
 	bool is_local = endpoints[0].is_local();
@@ -1582,11 +1604,11 @@ DatabaseHandler::get_document_change_seq(const std::string& term_id)
 
 
 bool
-DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+DatabaseHandler::set_document_change_seq(string_view term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
 {
 	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str(), std::to_string(new_document_pair->first).c_str(), old_document_pair ? std::to_string(old_document_pair->first).c_str() : "nullptr");
 
-	static std::hash<std::string> hash_fn_string;
+	static std::hash<string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
 
 	bool is_local = endpoints[0].is_local();
@@ -1638,11 +1660,11 @@ DatabaseHandler::set_document_change_seq(const std::string& term_id, const std::
 
 
 void
-DatabaseHandler::dec_document_change_cnt(const std::string& term_id)
+DatabaseHandler::dec_document_change_cnt(string_view term_id)
 {
 	L_CALL("DatabaseHandler::dec_document_change_cnt(%s, %s)", endpoints.to_string().c_str(), repr(term_id).c_str());
 
-	static std::hash<std::string> hash_fn_string;
+	static std::hash<string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
 
 	bool is_local = endpoints[0].is_local();
@@ -1799,7 +1821,7 @@ Document::get_blob(size_t retries)
 		}
 #endif
 		auto data = doc.get_data();
-		return split_data_blob(data);
+		return std::string(split_data_blob(data));
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
 			return get_blob(--retries);
@@ -1879,7 +1901,7 @@ Document::get_values(size_t retries)
 
 
 MsgPack
-Document::get_value(const std::string& slot_name)
+Document::get_value(string_view slot_name)
 {
 	L_CALL("Document::get_value(%s)", slot_name.c_str());
 
@@ -1892,7 +1914,7 @@ Document::get_value(const std::string& slot_name)
 }
 
 
-std::pair<bool, std::string>
+std::pair<bool, string_view>
 Document::get_store()
 {
 	L_CALL("Document::get_store()");
@@ -1911,7 +1933,7 @@ Document::get_obj()
 
 
 MsgPack
-Document::get_field(const std::string& slot_name)
+Document::get_field(string_view slot_name)
 {
 	L_CALL("Document::get_field(%s)", slot_name.c_str());
 
@@ -1920,7 +1942,7 @@ Document::get_field(const std::string& slot_name)
 
 
 MsgPack
-Document::get_field(const std::string& slot_name, const MsgPack& obj)
+Document::get_field(string_view slot_name, const MsgPack& obj)
 {
 	L_CALL("Document::get_field(%s, <obj>)", slot_name.c_str());
 
