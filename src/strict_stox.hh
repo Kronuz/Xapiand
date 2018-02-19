@@ -43,6 +43,9 @@ class Stox {
 	auto _stox(std::true_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
 		auto b = str.data();
 		auto e = b + str.size();
+		if (!b) {
+			e = b = "";
+		}
 		auto ptr = const_cast<char*>(e);
 		auto r = func(b, &ptr, std::forward<Args>(args)...);
 		if (errno) return static_cast<decltype(r)>(0);
