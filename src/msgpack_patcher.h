@@ -37,25 +37,26 @@
 #include "utils.h"                          // for stox
 #include "string_view.h"                    // for string_view
 
-#define PATCH_PATH   "path"
-#define PATCH_FROM   "from"
-#define PATCH_VALUE  "value"
-#define PATCH_LIMIT  "limit"
-#define PATCH_OP     "op"
-#define PATCH_ADD    "add"
-#define PATCH_REM    "remove"
-#define PATCH_REP    "replace"
-#define PATCH_MOV    "move"
-#define PATCH_COP    "copy"
-#define PATCH_TES    "test"
-#define PATCH_INC    "incr"
-#define PATCH_DEC    "decr"
+
+constexpr const char PATCH_PATH[]                   = "path";
+constexpr const char PATCH_FROM[]                   = "from";
+constexpr const char PATCH_VALUE[]                  = "value";
+constexpr const char PATCH_LIMIT[]                  = "limit";
+constexpr const char PATCH_OP[]                     = "op";
+constexpr const char PATCH_ADD[]                    = "add";
+constexpr const char PATCH_REM[]                    = "remove";
+constexpr const char PATCH_REP[]                    = "replace";
+constexpr const char PATCH_MOV[]                    = "move";
+constexpr const char PATCH_COP[]                    = "copy";
+constexpr const char PATCH_TES[]                    = "test";
+constexpr const char PATCH_INC[]                    = "incr";
+constexpr const char PATCH_DEC[]                    = "decr";
 
 
 using dispatch_patch_op = void (*)(const MsgPack&, MsgPack&);
 
 
-extern const std::unordered_map<std::string, dispatch_patch_op> map_dispatch_patch_op;
+extern const std::unordered_map<string_view, dispatch_patch_op> map_dispatch_patch_op;
 
 
 /* Support for RFC 6902 */

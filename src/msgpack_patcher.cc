@@ -28,7 +28,7 @@
 #include "utils.h"      // for repr, stox
 
 
-const std::unordered_map<std::string, dispatch_patch_op> map_dispatch_patch_op({
+const std::unordered_map<string_view, dispatch_patch_op> map_dispatch_patch_op({
 	{ PATCH_ADD,  &patch_add         },
 	{ PATCH_REM,  &patch_remove      },
 	{ PATCH_REP,  &patch_replace     },
@@ -45,12 +45,12 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 		for (const auto& elem : patch) {
 			try {
 				const auto& op = elem.at(PATCH_OP);
-				auto op_str = op.str();
+				auto op_str = op.str_view();
 				try {
 					auto func = map_dispatch_patch_op.at(op_str);
 					(*func)(elem, object);
 				} catch (const std::out_of_range&){
-					THROW(ClientError, "In patch op: %s is not a valid value", op_str.c_str());
+					THROW(ClientError, "In patch op: %s is not a valid value", std::string(op_str).c_str());
 				}
 			} catch (const std::out_of_range&) {
 				THROW(ClientError, "Patch Object MUST have exactly one '%s' member", PATCH_OP);
