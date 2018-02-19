@@ -259,8 +259,8 @@ public:
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
 
-	MsgPack& path(const std::vector<std::string>& path);
-	const MsgPack& path(const std::vector<std::string>& path) const;
+	MsgPack& path(const std::vector<string_view>& path);
+	const MsgPack& path(const std::vector<string_view>& path) const;
 	MsgPack select(string_view selector) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
@@ -1794,7 +1794,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 }
 
 
-inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
+inline MsgPack& MsgPack::path(const std::vector<string_view>& path) {
 	auto current = this;
 	for (const auto& s : path) {
 		switch (current->_const_body->getType()) {
@@ -1806,14 +1806,14 @@ inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
 				int errno_save;
 				auto pos = strict_stoz(errno_save, s);
 				if (errno_save) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", std::string(s).c_str());
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", s.c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", std::string(s).c_str());
 		}
 	}
 
@@ -1821,7 +1821,7 @@ inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
 }
 
 
-inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const {
+inline const MsgPack& MsgPack::path(const std::vector<string_view>& path) const {
 	auto current = this;
 	for (const auto& s : path) {
 		switch (current->getType()) {
@@ -1833,14 +1833,14 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 				int errno_save;
 				auto pos = strict_stoz(errno_save, s);
 				if (errno_save) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s.c_str());
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", std::string(s).c_str());
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", s.c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", std::string(s).c_str());
 		}
 	}
 

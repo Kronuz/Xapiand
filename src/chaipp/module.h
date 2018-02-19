@@ -226,8 +226,8 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(&MsgPack::append<MsgPack&>),            "append" },
 			{ chaiscript::fun(&MsgPack::append<const MsgPack&>),      "append" },
 
-			{ chaiscript::fun<MsgPack&, MsgPack, const std::vector<std::string>&>(&MsgPack::path),              "path" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, const std::vector<std::string>&>(&MsgPack::path),  "path" },
+			{ chaiscript::fun<MsgPack&, MsgPack, const std::vector<string_view>&>(&MsgPack::path),              "path" },
+			{ chaiscript::fun<const MsgPack&, const MsgPack, const std::vector<string_view>&>(&MsgPack::path),  "path" },
 
 			// Specific instantiation of the template MsgPack::put<const MsgPack&, T>.
 			{ chaiscript::fun(&MsgPack::put<const MsgPack&, unsigned>),                                                                          "put" },
