@@ -303,6 +303,7 @@ public:
 	uint64_t u64() const;
 	int64_t i64() const;
 	double f64() const;
+	string_view str_view() const;
 	std::string str() const;
 	bool boolean() const;
 
@@ -332,6 +333,7 @@ public:
 	MsgPack& operator+=(double val);
 	std::ostream& operator<<(std::ostream& s) const;
 
+	string_view unformatted_string_view() const;
 	std::string unformatted_string() const;
 	std::string to_string(int indent=-1) const;
 
@@ -847,7 +849,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		}
 		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
-		auto str_key = string_view(p->key.via.str.ptr, p->key.via.str.size);
+		string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
 			THROW(duplicate_key, "Duplicate key: %s", std::string(str_key).c_str());
@@ -864,7 +866,7 @@ inline void MsgPack::_update_map(size_t pos) {
 	assert(!_body->_lock);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
-		std::string str_key(p->key.via.str.ptr, p->key.via.str.size);
+		string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto it = _body->map.find(str_key);
 		assert(it != _body->map.end());
 		auto& elem = it->second;
@@ -2050,8 +2052,10 @@ inline std::size_t MsgPack::hash() const {
 			}
 			return hash;
 		}
-		default:
-			return std::hash<std::string>{}(serialise());
+		default: {
+			static const std::hash<std::string> hasher;
+			return hasher(serialise());
+		}
 	}
 }
 
@@ -2264,12 +2268,17 @@ inline double MsgPack::f64() const {
 }
 
 
-inline std::string MsgPack::str() const {
+inline string_view MsgPack::str_view() const {
 	if (_const_body->getType() == Type::STR) {
-		return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
+		return string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
 
 	THROW(msgpack::type_error);
+}
+
+
+inline std::string MsgPack::str() const {
+	return std::string(str_view());
 }
 
 
@@ -2476,11 +2485,15 @@ inline std::ostream& MsgPack::operator<<(std::ostream& s) const {
 }
 
 
-inline std::string MsgPack::unformatted_string() const {
+inline string_view MsgPack::unformatted_string_view() const {
 	if (_body->getType() == Type::STR) {
-		return std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+		return string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
 	}
 	THROW(msgpack::type_error);
+}
+
+inline std::string MsgPack::unformatted_string() const {
+	return std::string(unformatted_string_view());
 }
 
 
