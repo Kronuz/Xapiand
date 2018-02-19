@@ -37,7 +37,7 @@
 constexpr const char cmd_prefix = COMMAND_PREFIX[0];
 
 std::string
-urldecode(const void *p, size_t size)
+urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 {
 	std::string buf;
 	buf.reserve(size);
@@ -46,15 +46,24 @@ urldecode(const void *p, size_t size)
 	while (q != p_end) {
 		char c = *q++;
 		switch (c) {
-			case '+':
-				buf.push_back(' ');
-				break;
 			case '%': {
 				auto dec = hexdec(&q);
 				if (dec != -1) {
 					c = dec;
 				}
 			}
+			case '+':
+				buf.push_back(plus);
+				break;
+			case '&':
+				buf.push_back(amp);
+				break;
+			case ';':
+				buf.push_back(colon);
+				break;
+			case '=':
+				buf.push_back(eq);
+				break;
 			default:
 				buf.push_back(c);
 		}
@@ -88,7 +97,7 @@ int
 QueryParser::init(string_view q)
 {
 	clear();
-	query = urldecode(q);
+	query = urldecode(q, ' ', '\x01', '\x01', '\x02');
 	return 0;
 }
 
@@ -97,9 +106,11 @@ int
 QueryParser::next(const char *name)
 {
 	const char *ni = query.data();
-	const char *nf = ni + query.length();
+	const char *nf = ni + query.size();
 	const char *n0, *n1 = nullptr;
 	const char *v0 = nullptr;
+
+	auto name_len = strlen(name);
 
 	if (off == nullptr) {
 		n0 = n1 = ni;
@@ -113,12 +124,11 @@ QueryParser::next(const char *name)
 			cn = '\0';
 		}
 		switch (cn) {
-			case '=' :
+			case '\x02' :  // '='
 				v0 = n1;
 			case '\0':
-			case '&' :
-			case ';' :
-				if (strlen(name) == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
+			case '\x01' :  // '&'
+				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
 					if (v0) {
 						const char *v1 = v0 + 1;
 						while (1) {
@@ -128,10 +138,9 @@ QueryParser::next(const char *name)
 							}
 							switch(cv) {
 								case '\0':
-								case '&' :
-								case ';' :
-								off = v0 + 1;
-								len = v1 - v0 - 1;
+								case '\x01' :  // '&'
+									off = v0 + 1;
+									len = v1 - v0 - 1;
 								return 0;
 							}
 							++v1;
@@ -143,7 +152,7 @@ QueryParser::next(const char *name)
 					}
 				} else if (!cn) {
 					return -1;
-				} else if (cn != '=') {
+				} else if (cn != '\x02') {  // '='
 					n0 = n1 + 1;
 					v0 = nullptr;
 				}
@@ -214,7 +223,7 @@ PathParser::init(string_view p)
 	char cn, cn1, cn2, cp1;
 	size_t length;
 	const char *ni = path.data();
-	const char *nf = ni + path.length();
+	const char *nf = ni + path.size();
 	const char *n0, *n1 = nullptr;
 	State state;
 
@@ -386,7 +395,7 @@ PathParser::next()
 	char cn, cn1, cp1;
 	size_t length;
 	const char *ni = path.data();
-	const char *nf = ni + path.length();
+	const char *nf = ni + path.size();
 	const char *n0, *n1 = nullptr;
 	State state;
 

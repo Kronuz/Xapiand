@@ -33,13 +33,13 @@
 #define COMMAND_PREFIX ":"
 
 
-std::string urldecode(const void *p, size_t size);
-inline std::string urldecode(string_view string) {
-	return urldecode(string.data(), string.size());
+std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=');
+inline std::string urldecode(string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
+	return urldecode(string.data(), string.size(), plus, amp, colon, eq);
 }
 template<typename T, std::size_t N>
-inline std::string urldecode(T (&s)[N]) {
-	return urldecode(s, N - 1);
+inline std::string urldecode(T (&s)[N], char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
+	return urldecode(s, N - 1, plus, amp, colon, eq);
 }
 
 
