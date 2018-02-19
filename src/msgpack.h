@@ -31,6 +31,7 @@
 #include "io_utils.h"
 #include "msgpack.hpp"
 #include "strict_stox.hh"
+#include "string_view.h"
 #include "xchange/string_view.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -149,14 +150,14 @@ private:
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
 
-	MsgPack::iterator _find(const std::string& key);
-	MsgPack::const_iterator _find(const std::string& key) const;
+	MsgPack::iterator _find(string_view key);
+	MsgPack::const_iterator _find(string_view key) const;
 	MsgPack::iterator _find(size_t pos);
 	MsgPack::const_iterator _find(size_t pos) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<size_t, MsgPack::iterator> _erase(M&& o);
-	std::pair<size_t, MsgPack::iterator> _erase(const std::string& key);
+	std::pair<size_t, MsgPack::iterator> _erase(string_view key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
 	void _clear() noexcept;
@@ -164,7 +165,7 @@ private:
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
 	template <typename T>
-	std::pair<MsgPack*, bool> _put(const std::string& key, T&& val, bool overwrite);
+	std::pair<MsgPack*, bool> _put(string_view key, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _put(size_t pos, T&& val, bool overwrite);
 
@@ -190,7 +191,7 @@ public:
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	size_t erase(M&& o);
-	size_t erase(const std::string& s);
+	size_t erase(string_view s);
 	size_t erase(size_t pos);
 	iterator erase(iterator it);
 
@@ -199,20 +200,20 @@ public:
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack::iterator replace(M&& o, T&& val);
 	template <typename T>
-	MsgPack::iterator replace(const std::string& s, T&& val);
+	MsgPack::iterator replace(string_view s, T&& val);
 	template <typename T>
 	MsgPack::iterator replace(size_t pos, T&& val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack::iterator, bool> emplace(M&& o, T&& val);
 	template <typename T>
-	std::pair<MsgPack::iterator, bool> emplace(const std::string& s, T&& val);
+	std::pair<MsgPack::iterator, bool> emplace(string_view s, T&& val);
 	template <typename T>
 	std::pair<MsgPack::iterator, bool> emplace(size_t pos, T&& val);
 
 	template <typename K, typename V>
 	std::pair<MsgPack::iterator, bool> insert(const std::pair<K&&, V&&>& val);
-	std::pair<MsgPack::iterator, bool> insert(const std::string& s);
+	std::pair<MsgPack::iterator, bool> insert(string_view s);
 
 	template <typename T>
 	void push_back(T&& v);
@@ -224,7 +225,7 @@ public:
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& put(M&& o, T&& val);
 	template <typename T>
-	MsgPack& put(const std::string& s, T&& val);
+	MsgPack& put(string_view s, T&& val);
 	template <typename T>
 	MsgPack& put(size_t pos, T&& val);
 
@@ -232,7 +233,7 @@ public:
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& add(M&& o, T&& val);
 	template <typename T>
-	MsgPack& add(const std::string& s, T&& val);
+	MsgPack& add(string_view s, T&& val);
 	template <typename T>
 	MsgPack& add(size_t pos, T&& val);
 
@@ -244,8 +245,8 @@ public:
 	MsgPack& operator[](M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	const MsgPack& operator[](M&& o) const;
-	MsgPack& operator[](const std::string& s);
-	const MsgPack& operator[](const std::string& s) const;
+	MsgPack& operator[](string_view s);
+	const MsgPack& operator[](string_view s) const;
 	MsgPack& operator[](size_t pos);
 	const MsgPack& operator[](size_t pos) const;
 
@@ -253,21 +254,21 @@ public:
 	MsgPack& at(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	const MsgPack& at(M&& o) const;
-	MsgPack& at(const std::string& s);
-	const MsgPack& at(const std::string& s) const;
+	MsgPack& at(string_view s);
+	const MsgPack& at(string_view s) const;
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
-	MsgPack select(const std::string& selector) const;
+	MsgPack select(string_view selector) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	iterator find(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	const_iterator find(M&& o) const;
-	iterator find(const std::string& s);
-	const_iterator find(const std::string& s) const;
+	iterator find(string_view s);
+	const_iterator find(string_view s) const;
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
@@ -323,7 +324,7 @@ public:
 	bool is_string() const noexcept;
 
 	MsgPack::Type getType() const noexcept;
-	std::string getStrType() const noexcept;
+	const std::string& getStrType() const noexcept;
 
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
@@ -339,8 +340,8 @@ public:
 	void serialise(int fd) const;
 	static MsgPack unserialise(const char* data, std::size_t len, std::size_t& off);
 	static MsgPack unserialise(const char* data, std::size_t len);
-	static MsgPack unserialise(const std::string& s, std::size_t& off);
-	static MsgPack unserialise(const std::string& s);
+	static MsgPack unserialise(string_view s, std::size_t& off);
+	static MsgPack unserialise(string_view s);
 
 	static MsgPack unserialise(int fd, std::string& buffer, std::size_t& off);
 
@@ -452,7 +453,7 @@ public:
 
 
 struct MsgPack::Body {
-	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
+	std::unordered_map<string_view, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
 
 	mutable atomic_shared_ptr<const Data> _data;
@@ -523,11 +524,11 @@ struct MsgPack::Body {
 		return array.at(pos);
 	}
 
-	MsgPack& at(const std::string& key) {
+	MsgPack& at(string_view key) {
 		return map.at(key).second;
 	}
 
-	const MsgPack& at(const std::string& key) const {
+	const MsgPack& at(string_view key) const {
 		return map.at(key).second;
 	}
 
@@ -697,8 +698,8 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 			// If there's a parent, and it's initialized...
 			if (parent_body->_initialized) {
 				// Change key in the parent's map:
-				auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-				auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
+				auto val = string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+				auto str_key = string_view(obj.via.str.ptr, obj.via.str.size);
 				if (str_key == val) {
 					return;
 				}
@@ -707,7 +708,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Cannot rename to duplicate key: %s", str_key.c_str());
+						THROW(duplicate_key, "Cannot rename to duplicate key: %s", std::string(str_key).c_str());
 					}
 					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -846,10 +847,10 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		}
 		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
-		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
+		auto str_key = string_view(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key: %s", str_key.c_str());
+			THROW(duplicate_key, "Duplicate key: %s", std::string(str_key).c_str());
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -986,7 +987,7 @@ inline void MsgPack::_reserve_array(size_t rsize) {
 }
 
 
-inline MsgPack::iterator MsgPack::_find(const std::string& key) {
+inline MsgPack::iterator MsgPack::_find(string_view key) {
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return end();
@@ -1003,7 +1004,7 @@ inline MsgPack::iterator MsgPack::_find(const std::string& key) {
 }
 
 
-inline MsgPack::const_iterator MsgPack::_find(const std::string& key) const {
+inline MsgPack::const_iterator MsgPack::_find(string_view key) const {
 	switch (_const_body->getType()) {
 		case Type::UNDEFINED:
 			return cend();
@@ -1028,7 +1029,7 @@ inline MsgPack::iterator MsgPack::_find(size_t pos) {
 			if (pos >= _body->_obj->via.map.size) {
 				return end();
 			}
-			auto it = _body->map.find(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
+			auto it = _body->map.find(string_view(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 			if (it == _body->map.end()) {
 				return end();
 			}
@@ -1058,7 +1059,7 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 			if (pos >= _const_body->_obj->via.map.size) {
 				return cend();
 			}
-			auto it = _const_body->map.find(std::string(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
+			auto it = _const_body->map.find(string_view(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
 			if (it == _const_body->map.end()) {
 				return cend();
 			}
@@ -1085,7 +1086,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return _erase(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return _erase(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1099,7 +1100,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 }
 
 
-inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& key) {
+inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(string_view key) {
 	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1120,7 +1121,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(const std::string& k
 			_body->map.erase(it);
 			_update_map(pos_);
 
-			auto next = _body->map.find(std::string(p->key.via.str.ptr, p->key.via.str.size));
+			auto next = _body->map.find(string_view(p->key.via.str.ptr, p->key.via.str.size));
 			if (next == _body->map.end()) {
 				return std::make_pair(0, end());
 			}
@@ -1142,7 +1143,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 			if (pos >= _body->_obj->via.map.size) {
 				return std::make_pair(0, end());
 			}
-			return _erase(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
+			return _erase(string_view(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		}
 		case Type::ARRAY: {
 			if (pos >= _body->_obj->via.array.size) {
@@ -1203,7 +1204,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
+			return _put(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1218,7 +1219,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 
 
 template <typename T>
-inline std::pair<MsgPack*, bool> MsgPack::_put(const std::string& key, T&& val, bool overwrite) {
+inline std::pair<MsgPack*, bool> MsgPack::_put(string_view key, T&& val, bool overwrite) {
 	assert(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1296,7 +1297,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 	assert(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return _put(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
+			return _put(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1389,7 +1390,7 @@ template <typename M, typename>
 inline MsgPack::iterator MsgPack::_find(M&& o) {
 	switch (o._body->getType()) {
 		case Type::STR:
-			return _find(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return _find(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1407,7 +1408,7 @@ template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::_find(M&& o) const {
 	switch (o._const_body->getType()) {
 		case Type::STR:
-			return _find(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
+			return _find(string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1444,7 +1445,7 @@ inline size_t MsgPack::erase(M&& o) {
 }
 
 
-inline size_t MsgPack::erase(const std::string& s) {
+inline size_t MsgPack::erase(string_view s) {
 	_fill(false, false);
 	return _erase(s).first;
 }
@@ -1477,7 +1478,7 @@ inline MsgPack::iterator MsgPack::replace(M&& o, T&& val) {
 
 
 template <typename T>
-inline MsgPack::iterator MsgPack::replace(const std::string& s, T&& val) {
+inline MsgPack::iterator MsgPack::replace(string_view s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), true);
 	return MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos);
@@ -1501,7 +1502,7 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(M&& o, T&& val) {
 
 
 template <typename T>
-inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(const std::string& s, T&& val) {
+inline std::pair<MsgPack::iterator, bool> MsgPack::emplace(string_view s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), false);
 	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
@@ -1522,7 +1523,7 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::pair<K&&, V
 }
 
 
-inline std::pair<MsgPack::iterator, bool> MsgPack::insert(const std::string& key) {
+inline std::pair<MsgPack::iterator, bool> MsgPack::insert(string_view key) {
 	_fill(false, false);
 	auto pair = _put(key, MsgPack::undefined(), false);
 	return std::make_pair(MsgPack::Iterator<MsgPack>(this, pair.first->_body->_pos), pair.second);
@@ -1571,7 +1572,7 @@ inline MsgPack& MsgPack::put(M&& o, T&& val) {
 
 
 template <typename T>
-inline MsgPack& MsgPack::put(const std::string& s, T&& val) {
+inline MsgPack& MsgPack::put(string_view s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), true);
 	return *pair.first;
@@ -1595,7 +1596,7 @@ inline MsgPack& MsgPack::add(M&& o, T&& val) {
 
 
 template <typename T>
-inline MsgPack& MsgPack::add(const std::string& s, T&& val) {
+inline MsgPack& MsgPack::add(string_view s, T&& val) {
 	_fill(false, false);
 	auto pair = _put(s, std::forward<T>(val), false);
 	return *pair.first;
@@ -1623,7 +1624,7 @@ inline MsgPack& MsgPack::operator[](M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return operator[](std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return operator[](string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1642,7 +1643,7 @@ inline const MsgPack& MsgPack::operator[](M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
-			return operator[](std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
+			return operator[](string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1656,7 +1657,7 @@ inline const MsgPack& MsgPack::operator[](M&& o) const {
 }
 
 
-inline MsgPack& MsgPack::operator[](const std::string& key) {
+inline MsgPack& MsgPack::operator[](string_view key) {
 	auto it = find(key);
 	if (it == end()) {
 		return *_put(key, MsgPack::undefined(), false).first;
@@ -1665,7 +1666,7 @@ inline MsgPack& MsgPack::operator[](const std::string& key) {
 }
 
 
-inline const MsgPack& MsgPack::operator[](const std::string& key) const {
+inline const MsgPack& MsgPack::operator[](string_view key) const {
 	auto it = find(key);
 	if (it == cend()) {
 		return MsgPack::undefined();
@@ -1697,7 +1698,7 @@ inline MsgPack& MsgPack::at(M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return at(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1716,7 +1717,7 @@ inline const MsgPack& MsgPack::at(M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
-			return at(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
+			return at(string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
@@ -1730,7 +1731,7 @@ inline const MsgPack& MsgPack::at(M&& o) const {
 }
 
 
-inline MsgPack& MsgPack::at(const std::string& key) {
+inline MsgPack& MsgPack::at(string_view key) {
 	_fill(false, false);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1742,7 +1743,7 @@ inline MsgPack& MsgPack::at(const std::string& key) {
 	}
 }
 
-inline const MsgPack& MsgPack::at(const std::string& key) const {
+inline const MsgPack& MsgPack::at(string_view key) const {
 	_fill(false, false);
 	switch (_const_body->getType()) {
 		case Type::UNDEFINED:
@@ -1764,7 +1765,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 			if (pos >= _body->_obj->via.map.size) {
 				THROW(out_of_range, "The map only contains %u elements", _body->_obj->via.map.size);
 			}
-			return at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
+			return at(string_view(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
 			return _body->at(pos);
 		default:
@@ -1782,7 +1783,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 			if (pos >= _const_body->_obj->via.map.size) {
 				THROW(out_of_range, "The map only contains %u elements", _const_body->_obj->via.map.size);
 			}
-			return at(std::string(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
+			return at(string_view(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
 			return _const_body->at(pos);
 		default:
@@ -1845,7 +1846,7 @@ inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const 
 }
 
 
-inline MsgPack MsgPack::select(const std::string& selector) const {
+inline MsgPack MsgPack::select(string_view selector) const {
 	// .field.subfield.name
 	// {field{subfield{name}other{name}}}
 
@@ -1859,16 +1860,16 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 	auto input = base;
 	auto output = &ret;
 
-	std::string name;
+	string_view name;
 	const char* name_off = nullptr;
 	const char* off = selector.data();
-	const char* end = off + selector.length();
+	const char* end = off + selector.size();
 
 	for (; off != end; ++off) {
 		switch (*off) {
 			case '.':
 				if (name_off) {
-					name = std::string(name_off, off - name_off);
+					name = string_view(name_off, off - name_off);
 					name_off = nullptr;
 				}
 				if (!name.empty()) {
@@ -1886,7 +1887,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 				break;
 			case '{':
 				if (name_off) {
-					name = std::string(name_off, off - name_off);
+					name = string_view(name_off, off - name_off);
 					name_off = nullptr;
 				}
 				base_stack.push_back(base);
@@ -1911,7 +1912,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 				break;
 			case '}':
 				if (name_off) {
-					name = std::string(name_off, off - name_off);
+					name = string_view(name_off, off - name_off);
 					name_off = nullptr;
 				}
 				if (!name.empty()) {
@@ -1942,7 +1943,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 			case '\r':
 				input = base;
 				if (name_off) {
-					name = std::string(name_off, off - name_off);
+					name = string_view(name_off, off - name_off);
 					name_off = nullptr;
 				}
 				break;
@@ -1969,7 +1970,7 @@ inline MsgPack MsgPack::select(const std::string& selector) const {
 	}
 
 	if (name_off) {
-		name = std::string(name_off, off - name_off);
+		name = string_view(name_off, off - name_off);
 		name_off = nullptr;
 	}
 	if (!name.empty()) {
@@ -2001,13 +2002,13 @@ inline MsgPack::const_iterator MsgPack::find(M&& o) const {
 }
 
 
-inline MsgPack::iterator MsgPack::find(const std::string& s) {
+inline MsgPack::iterator MsgPack::find(string_view s) {
 	_fill(false, false);
 	return _find(s);
 }
 
 
-inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
+inline MsgPack::const_iterator MsgPack::find(string_view s) const {
 	_fill(false, false);
 	return _find(s);
 }
@@ -2043,7 +2044,8 @@ inline std::size_t MsgPack::hash() const {
 					THROW(msgpack::type_error);
 				}
 				auto val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->val));
-				hash ^= std::hash<std::string>{}(std::string(p->key.via.str.ptr, p->key.via.str.size));
+				static const std::hash<string_view> hasher;
+				hash ^= hasher(string_view(p->key.via.str.ptr, p->key.via.str.size));
 				hash ^= val.hash();
 			}
 			return hash;
@@ -2400,7 +2402,7 @@ inline MsgPack::Type MsgPack::getType() const noexcept {
 }
 
 
-inline std::string MsgPack::getStrType() const noexcept {
+inline const std::string& MsgPack::getStrType() const noexcept {
 	return _const_body->getStrType();
 }
 
@@ -2502,7 +2504,7 @@ inline MsgPack MsgPack::unserialise(const char* data, std::size_t len, std::size
 }
 
 
-inline MsgPack MsgPack::unserialise(const std::string& s, std::size_t& off) {
+inline MsgPack MsgPack::unserialise(string_view s, std::size_t& off) {
 	return unserialise(s.data(), s.size(), off);
 }
 
@@ -2513,7 +2515,7 @@ inline MsgPack MsgPack::unserialise(const char* data, std::size_t len) {
 }
 
 
-inline MsgPack MsgPack::unserialise(const std::string& s) {
+inline MsgPack MsgPack::unserialise(string_view s) {
 	std::size_t off = 0;
 	return unserialise(s, off);
 }
