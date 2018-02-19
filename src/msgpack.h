@@ -1876,11 +1876,10 @@ inline MsgPack MsgPack::select(string_view selector) const {
 				}
 				if (!name.empty()) {
 					if (input) {
-						try {
-							input = &input->at(name);
-						} catch (const std::out_of_range&) {
-							input = nullptr;
-						} catch (const msgpack::type_error&) {
+						auto it = input->find(name);
+						if (it != input->end()) {
+							input = &*it;
+						} else {
 							input = nullptr;
 						}
 					}
@@ -1897,14 +1896,12 @@ inline MsgPack MsgPack::select(string_view selector) const {
 				output_stack.push_back(output);
 				if (!name.empty()) {
 					if (input && output) {
-						try {
-							input = &input->at(name);
+						auto it = input->find(name);
+						if (it != input->end()) {
+							input = &*it;
 							base = input;
 							output = &(*output)[name];
-						} catch (const std::out_of_range&) {
-							input = nullptr;
-							output = nullptr;
-						} catch (const msgpack::type_error&) {
+						} else {
 							input = nullptr;
 							output = nullptr;
 						}
@@ -1919,11 +1916,10 @@ inline MsgPack MsgPack::select(string_view selector) const {
 				}
 				if (!name.empty()) {
 					if (input && output) {
-						try {
-							const auto& val = input->at(name);
-							(*output)[name] = val;
-						} catch (const std::out_of_range&) {
-						} catch (const msgpack::type_error&) { }
+						auto it = input->find(name);
+						if (it != input->end()) {
+							(*output)[name] = *it;
+						}
 					}
 					name.clear();
 				}
@@ -1952,11 +1948,10 @@ inline MsgPack MsgPack::select(string_view selector) const {
 			default:
 				if (!name.empty()) {
 					if (input && output) {
-						try {
-							const auto& val = input->at(name);
-							(*output)[name] = val;
-						} catch (const std::out_of_range&) {
-						} catch (const msgpack::type_error&) { }
+						auto it = input->find(name);
+						if (it != input->end()) {
+							(*output)[name] = *it;
+						}
 					}
 					name.clear();
 				}
@@ -1977,11 +1972,10 @@ inline MsgPack MsgPack::select(string_view selector) const {
 	}
 	if (!name.empty()) {
 		if (input && output) {
-			try {
-				const auto& val = input->at(name);
-				*output = val;
-			} catch (const std::out_of_range&) {
-			} catch (const msgpack::type_error&) { }
+			auto it = input->find(name);
+			if (it != input->end()) {
+				*output = *it;
+			}
 		}
 		name.clear();
 	}
