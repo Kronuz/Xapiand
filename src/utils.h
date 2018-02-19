@@ -322,22 +322,28 @@ inline std::string right_string(string_view str, int width) {
 	return result;
 }
 
-template<typename... Args>
-inline std::string upper_string(Args&&... args) {
-	std::string tmp(std::forward<Args>(args)...);
-	for (auto& c : tmp) c = toupper(c);
-	return tmp;
+
+inline std::string upper_string(string_view str) {
+	std::string result;
+	std::transform(str.begin(), str.end(), std::back_inserter(result), ::toupper);
+	return result;
 }
 
-template<typename... Args>
-inline std::string lower_string(Args&&... args) {
-	std::string tmp(std::forward<Args>(args)...);
-	for (auto& c : tmp) c = tolower(c);
-	return tmp;
+inline std::string lower_string(string_view str) {
+	std::string result;
+	std::transform(str.begin(), str.end(), std::back_inserter(result), ::tolower);
+	return result;
 }
 
-void to_upper(std::string& str);
-void to_lower(std::string& str);
+
+inline void to_upper(std::string& str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+
+inline void to_lower(std::string& str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
 
 char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
 char* normalize_path(string_view src, char* dst, bool slashed=false);

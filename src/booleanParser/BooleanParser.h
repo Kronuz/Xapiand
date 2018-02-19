@@ -31,11 +31,12 @@
 #include "ContentReader.h"
 #include "Lexer.h"
 #include "Node.h"
+#include "string_view.h"    // for string_view
 
 
 class BooleanTree {
 public:
-	explicit BooleanTree(const std::string& input);
+	explicit BooleanTree(string_view input);
 	~BooleanTree() = default;
 
 	std::unique_ptr<BaseNode> root;

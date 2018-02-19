@@ -36,10 +36,11 @@
 #include "XorNode.h"
 
 
-BooleanTree::BooleanTree(const std::string& input_)
+BooleanTree::BooleanTree(string_view input_)
 	: input(std::make_unique<char[]>(input_.size() + 1))
 {
-	std::strcpy(input.get(), input_.c_str());
+	std::strncpy(input.get(), input_.data(), input_.size());
+	input[input_.size()] = '\0';
 	lexer = std::make_unique<Lexer>(input.get());
 	toRPN();
 }

@@ -418,16 +418,6 @@ std::string normalize_path(string_view src, bool slashed) {
 }
 
 
-void to_upper(std::string& str) {
-	for (auto& c : str) c = toupper(c);
-}
-
-
-void to_lower(std::string& str) {
-	for (auto& c : str) c = tolower(c);
-}
-
-
 bool strhasupper(string_view str) {
 	for (const auto& c : str) {
 		if (isupper(c)) {
