@@ -243,17 +243,39 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.f64() != 0;
 		case MsgPack::Type::STR: {
-			auto str = obj.str_view();
-			switch (str.size()) {
+			auto value = obj.str_view();
+			switch (value.size()) {
 				case 0:
 					return false;
 				case 1:
-					return str[0] != '0' && str[0] != 'f' && str[0] != 'F';
+					switch (value[0]) {
+						case '0':
+						case 'f':
+						case 'F':
+							return false;
+						// case '1':
+						// case 't':
+						// case 'T':
+						// 	return true;
+					}
+					break;
 				case 4:
-					return lower_string(str) != "false";
-				default:
-					return true;
+					switch (value[0]) {
+						case 'f':
+						case 'F':
+						case 't':
+						case 'T': {
+							auto lower_value = lower_string(value);
+							if (lower_value == "false") {
+								return false;
+							// } else if (lower_value == "true") {
+							// 	return true;
+							}
+						}
+					}
+					break;
 			}
+			return true;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();

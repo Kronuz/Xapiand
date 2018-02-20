@@ -647,29 +647,40 @@ Serialise::uuid(string_view field_value)
 std::string
 Serialise::boolean(string_view field_value)
 {
-	auto value = string_view_data_as_c_str(field_value);
-	switch (value[0]) {
-		case '\0':
+	switch (field_value.size()) {
+		case 0:
 			return std::string(1, SERIALISED_FALSE);
-		case '1':
-		case 't':
-		case 'T':
-			if (value[1] == '\0' || strcasecmp(value, "true") == 0) {
-				return std::string(1, SERIALISED_TRUE);
+		case 1:
+			switch (field_value[0]) {
+				case '0':
+				case 'f':
+				case 'F':
+					return std::string(1, SERIALISED_FALSE);
+				case '1':
+				case 't':
+				case 'T':
+					return std::string(1, SERIALISED_TRUE);
 			}
 			break;
-		case '0':
-		case 'f':
-		case 'F':
-			if (value[1] == '\0' || strcasecmp(value, "false") == 0) {
-				return std::string(1, SERIALISED_FALSE);
+		case 4: {
+			switch (field_value[0]) {
+				case 'f':
+				case 'F':
+				case 't':
+				case 'T': {
+					auto lower_value = lower_string(field_value);
+					if (lower_value == "false") {
+						return std::string(1, SERIALISED_FALSE);
+					} else if (lower_value == "true") {
+						return std::string(1, SERIALISED_TRUE);
+					}
+				}
 			}
 			break;
-		default:
-			break;
+		}
 	}
 
-	THROW(SerialisationError, "Boolean format is not valid: %s", repr(string_view_data_as_c_str(field_value)).c_str());
+	THROW(SerialisationError, "Boolean format is not valid: %s", repr(std::string(field_value)).c_str());
 }
 
 
