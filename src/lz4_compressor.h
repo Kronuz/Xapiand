@@ -22,26 +22,28 @@
 
 #pragma once
 
-#include "xapiand.h"     // for unlikely
+#include "xapiand.h"        // for unlikely
 
-#include <algorithm>     // for move
-#include <cstring>       // for size_t, memcpy
+#include <algorithm>        // for move
+#include <cstring>          // for size_t, memcpy
 #include <fcntl.h>
-#include <functional>    // for function, __base
+#include <functional>       // for function, __base
 #include <iostream>
-#include <iterator>      // for input_iterator_tag, iterator
-#include <stdlib.h>      // for malloc, free
+#include <iterator>         // for input_iterator_tag, iterator
+#include <stdlib.h>         // for malloc, free
 #include <string.h>
-#include <string>        // for string
-#include <sys/fcntl.h>   // for O_RDONLY
+#include <string>           // for string
+#include <sys/fcntl.h>      // for O_RDONLY
 #include <sys/stat.h>
-#include <sys/types.h>   // for off_t, uint16_t, ssize_t, uint32_t
-#include <type_traits>   // for forward
+#include <sys/types.h>      // for off_t, uint16_t, ssize_t, uint32_t
+#include <type_traits>      // for forward
 
-#include "exception.h"   // for Error
-#include "io_utils.h"    // for close, open
-#include "lz4/lz4.h"     // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
-#include "lz4/xxhash.h"  // for XXH32_createState, XXH32_reset, XXH32_digest
+#include "exception.h"      // for Error
+#include "io_utils.h"       // for close, open
+#include "lz4/lz4.h"        // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
+#include "lz4/xxhash.h"     // for XXH32_createState, XXH32_reset, XXH32_digest
+#include "string_view.h"    // for string_view
+
 
 constexpr size_t LZ4_BLOCK_SIZE        = 1024 * 2;
 constexpr size_t LZ4_MAX_CMP_SIZE      = sizeof(uint16_t) + LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE);
@@ -294,7 +296,7 @@ protected:
 
 	std::function<size_t()> get_read_size;
 
-	LZ4File(size_t block_size_, const std::string& filename)
+	LZ4File(size_t block_size_, string_view filename)
 		: block_size(block_size_)
 	{
 		open(filename);
@@ -313,10 +315,10 @@ protected:
 	}
 
 public:
-	inline void open(const std::string& filename) {
-		fd = io::open(filename.c_str(), O_RDONLY);
+	inline void open(string_view filename) {
+		fd = io::open(string_view_data_as_c_str(filename), O_RDONLY);
 		if unlikely(fd < 0) {
-			THROW(LZ4IOError, "Cannot open file: %s", filename.c_str());
+			THROW(LZ4IOError, "Cannot open file: %s", string_view_data_as_c_str(filename));
 		}
 		fd_offset = 0;
 		fd_internal = true;
@@ -340,7 +342,7 @@ public:
 		}
 	}
 
-	inline void add_file(const std::string& filename) {
+	inline void add_file(string_view filename) {
 		open(filename);
 	}
 };
@@ -358,7 +360,7 @@ class LZ4CompressFile : public LZ4File, public LZ4BlockStreaming<LZ4CompressFile
 	friend class LZ4BlockStreaming<LZ4CompressFile>;
 
 public:
-	LZ4CompressFile(const std::string& filename, int seed=0);
+	LZ4CompressFile(string_view filename, int seed=0);
 	LZ4CompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4CompressFile();
 
@@ -368,7 +370,7 @@ public:
 		LZ4_resetStream(lz4Stream);
 	}
 
-	inline void reset(const std::string& filename, int seed=0) {
+	inline void reset(string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 		LZ4_resetStream(lz4Stream);
@@ -392,7 +394,7 @@ class LZ4DecompressFile : public LZ4File, public LZ4BlockStreaming<LZ4Decompress
 	friend class LZ4BlockStreaming<LZ4DecompressFile>;
 
 public:
-	LZ4DecompressFile(const std::string& filename, int seed=0);
+	LZ4DecompressFile(string_view filename, int seed=0);
 	LZ4DecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4DecompressFile();
 
@@ -401,7 +403,7 @@ public:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(const std::string& filename, int seed=0) {
+	inline void reset(string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 	}

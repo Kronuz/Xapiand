@@ -176,7 +176,7 @@ LZ4DecompressData::next()
 }
 
 
-LZ4CompressFile::LZ4CompressFile(const std::string& filename, int seed)
+LZ4CompressFile::LZ4CompressFile(string_view filename, int seed)
 	: LZ4File(LZ4_BLOCK_SIZE, filename),
 	  LZ4BlockStreaming(seed),
 	  lz4Stream(LZ4_createStream()) { }
@@ -240,7 +240,7 @@ LZ4CompressFile::next()
 }
 
 
-LZ4DecompressFile::LZ4DecompressFile(const std::string& filename, int seed)
+LZ4DecompressFile::LZ4DecompressFile(string_view filename, int seed)
 	: LZ4File(LZ4_MAX_CMP_SIZE, filename),
 	  LZ4BlockStreaming(seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
