@@ -27,17 +27,17 @@
 #include <cstdlib>            // for free
 #include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
+#include <dlfcn.h>            // for dladdr
 #include <execinfo.h>         // for backtrace, backtrace_symbols
 
 
 #define BUFFER_SIZE 1024
 
 #ifdef __APPLE__
-#include <util.h>
-#include <dlfcn.h>
-#include <unistd.h>
-#include <termios.h>
-#include <sys/select.h>
+#include <util.h>             // for forkpty
+#include <unistd.h>           // for execlp
+#include <termios.h>          // for termios, cfmakeraw
+#include <sys/select.h>       // for select
 /* Use `atos` to do symbol lookup, can lookup non-dynamic symbols and also line
  * numbers. This function is more complicated than you'd expect because `atos`
  * doesn't flush after each line, so plain pipe() or socketpair() won't work
@@ -47,12 +47,15 @@
  * run in, and thus will use line-buffering for stdout, and then we can get
  * each line.
  */
-inline static std::string atos(string_view address) {
+static std::string
+atos(const void* address)
+{
+	char tmp[20];
 	static int fd = -1;
 	if (fd == -1) {
 		Dl_info info;
 		memset(&info, 0, sizeof(Dl_info));
-		if (!dladdr((const void*)&atos, &info)) {
+		if (!dladdr(reinterpret_cast<const void*>(&atos), &info)) {
 			perror("Could not get base address for `atos`.");
 			return "";
 		}
@@ -66,15 +69,14 @@ inline static std::string atos(string_view address) {
 		}
 
 		if (childpid == 0) {
-			char base[20];
-			snprintf(base, 20, "%p", info.dli_fbase);
-			execlp("/usr/bin/atos", "atos", "-o", info.dli_fname, "-l", base, (char*)0);
+			snprintf(tmp, sizeof(tmp), "%p", info.dli_fbase);
+			execlp("/usr/bin/atos", "atos", "-o", info.dli_fname, "-l", tmp, nullptr);
 			fprintf(stderr,"Could not exec `atos` for stack trace!\n");
 			exit(1);
 		}
 
-		write(fd, address.data(), address.size());
-		write(fd, "\n", 1);
+		int size = snprintf(tmp, sizeof(tmp), "%p\n", address);
+		write(fd, tmp, size);
 
 		// atos can take a while to parse symbol table on first request, which
 		// is why we leave it running if we see a delay, explain what's going on...
@@ -89,8 +91,8 @@ inline static std::string atos(string_view address) {
 			fprintf(stderr, "Generating... first call takes some time for `atos` to cache the symbol table.\n");
 		}
 	} else {
-		write(fd, address.data(), address.size());
-		write(fd, "\n", 1);
+		int size = snprintf(tmp, sizeof(tmp), "%p\n", address);
+		write(fd, tmp, size);
 	}
 
 	const unsigned int MAXLINE = 1024;
@@ -111,10 +113,13 @@ inline static std::string atos(string_view address) {
 	if (nread < MAXLINE) {
 		return std::string(line, nread);
 	}
+	fprintf(stderr, "Line read from `atos` was too long.\n");
 	return "";
 }
 #else
-inline static std::string atos(string_view address) {
+inline static std::string
+atos(const void* address)
+{
 	return "";
 }
 #endif
@@ -123,53 +128,68 @@ inline static std::string atos(string_view address) {
 std::string
 traceback(string_view filename, int line, void *const * callstack, int frames)
 {
-	std::string tb = "\n== Traceback at (";
+	char tmp[20];
+
+	std::string tb = "\n== Traceback at ";
 	tb.append(filename.data(), filename.size());
 	tb.push_back(':');
 	tb.append(std::to_string(line));
-	tb.push_back(')');
+	tb.append(" (most recent call last)");
 
-	if (frames == 0) {
+	if (frames < 2) {
 		return tb;
 	}
 
 	tb.push_back(':');
 
-	// resolve addresses into strings containing "filename(function+address)"
-	char** strs = backtrace_symbols(callstack, frames);
+	// Iterate over the callstack. Skip the first, it is the address of this function.
+	std::string result;
+	for (int i = frames - 1; i; --i) {
+		auto address = callstack[i];
 
-	// iterate over the returned symbol lines. skip the first, it is the
-	// address of this function.
-	for (int i = 1; i < frames; ++i) {
-		const char *sep = "\t ()+";
-		char *mangled, *lasts;
-		std::string result;
-		for (mangled = strtok_r(strs[i], sep, &lasts); mangled; mangled = strtok_r(nullptr, sep, &lasts)) {
-			int status = 0;
-			char* unmangled = abi::__cxa_demangle(mangled, nullptr, 0, &status);
-			if (!result.empty()) {
-				result.push_back(' ');
-			}
-			if (status) {
-				string_view address(mangled);
-				if (address.size() > 2 && address.compare(0, 2, "0x") == 0) {
-					auto tmp = atos(address);
-					if (tmp.size() > 2 && tmp.compare(0, 2, "0x") != 0) {
-						result.append(tmp);
-						break;
+		result.assign(std::to_string(frames - i - 1));
+		result.push_back(' ');
+
+		auto address_string = atos(address);
+		if (address_string.size() > 2 && address_string.compare(0, 2, "0x") != 0) {
+			result.append(address_string);
+		} else {
+			Dl_info info;
+			memset(&info, 0, sizeof(Dl_info));
+			if (dladdr(address, &info)) {
+				// Address:
+				snprintf(tmp, sizeof(tmp), "%p ", address);
+				result.append(tmp);
+				// Symbol name:
+				if (info.dli_sname) {
+					int status = 0;
+					char* unmangled = abi::__cxa_demangle(info.dli_sname, nullptr, 0, &status);
+					if (status) {
+						result.append(info.dli_sname);
+					} else {
+						try {
+							result.append(unmangled);
+							free(unmangled);
+						} catch(...) {
+							free(unmangled);
+							throw;
+						}
 					}
+				} else {
+					result.append("[unknown symbol]");
 				}
-				result.append(mangled);
+				// Offset:
+				snprintf(tmp, sizeof(tmp), " + %zu", static_cast<const char*>(address) - static_cast<const char*>(info.dli_saddr));
+				result.append(tmp);
 			} else {
-				result.append(unmangled);
-				free(unmangled);
+				snprintf(tmp, sizeof(tmp), "%p [unknown symbol]", address);
+				result.append(tmp);
 			}
 		}
 		tb.append("\n    ");
 		tb.append(result);
 	}
 
-	free(strs);
 	return tb;
 }
 
