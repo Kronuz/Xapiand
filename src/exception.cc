@@ -266,17 +266,17 @@ BaseException::BaseException(BaseException::private_ctor, const char *filename, 
 	va_list argptr;
 	va_start(argptr, n);
 
-	auto format_c_str = string_view_data_as_c_str(format);
+	std::string format_string(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format_c_str, argptr_copy);
+	auto len = vsnprintf(nullptr, 0, format_string.c_str(), argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	message.resize(len + 1);
-	message.resize(vsnprintf(&message[0], len + 1, format_c_str, argptr));
+	message.resize(vsnprintf(&message[0], len + 1, format_string.c_str(), argptr));
 
 	va_end(argptr);
 

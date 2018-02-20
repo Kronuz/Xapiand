@@ -560,9 +560,10 @@ public:
 			it_size = cmpFile_it.size();
 			data = cmpFile_it->data();
 		} else {
-			fd_write = io::open(string_view_data_as_c_str(filename), O_RDONLY, 0644);
+			std::string filename_string(filename);
+			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
-				THROW(LZ4IOError, "Cannot open file: %s", string_view_data_as_c_str(filename));
+				THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());
 			}
 			_bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));

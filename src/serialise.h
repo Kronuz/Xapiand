@@ -224,7 +224,7 @@ namespace Serialise {
 	std::string range(const range_t& range);
 
 	// Serialise type to its string representation.
-	std::string type(FieldType type);
+	const std::string& type(FieldType type);
 
 	// Guess type of field_value. If bool_term can not return FieldType::TEXT.
 	FieldType guess_type(const class MsgPack& field_value, bool bool_term=false);

@@ -283,9 +283,10 @@ protected:
 
 public:
 	inline void open(string_view filename) {
-		fd = io::open(string_view_data_as_c_str(filename), O_RDONLY);
+		std::string filename_string(filename);
+		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
-			THROW(DeflateIOError, "Cannot open file: %s", string_view_data_as_c_str(filename));
+			THROW(DeflateIOError, "Cannot open file: %s", filename_string.c_str());
 		}
 		fd_offset = 0;
 		fd_nbytes = -1;

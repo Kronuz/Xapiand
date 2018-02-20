@@ -760,28 +760,82 @@ Serialise::range(const range_t& range)
 }
 
 
-std::string
+const std::string&
 Serialise::type(FieldType field_type)
 {
 	switch (field_type) {
-		case FieldType::TERM:       return TERM_STR;
-		case FieldType::TEXT:       return TEXT_STR;
-		case FieldType::STRING:     return STRING_STR;
-		case FieldType::FLOAT:      return FLOAT_STR;
-		case FieldType::INTEGER:    return INTEGER_STR;
-		case FieldType::POSITIVE:   return POSITIVE_STR;
-		case FieldType::BOOLEAN:    return BOOLEAN_STR;
-		case FieldType::GEO:        return GEO_STR;
-		case FieldType::DATE:       return DATE_STR;
-		case FieldType::TIME:       return TIME_STR;
-		case FieldType::TIMEDELTA:  return TIMEDELTA_STR;
-		case FieldType::UUID:       return UUID_STR;
-		case FieldType::SCRIPT:     return SCRIPT_STR;
-		case FieldType::OBJECT:     return OBJECT_STR;
-		case FieldType::ARRAY:      return ARRAY_STR;
-		case FieldType::FOREIGN:    return FOREIGN_STR;
-		case FieldType::EMPTY:      return EMPTY_STR;
-		default:                    return "unknown";
+		case FieldType::TERM: {
+			static const std::string term_str(TERM_STR);
+			return term_str;
+		}
+		case FieldType::TEXT: {
+			static const std::string text_str(TEXT_STR);
+			return text_str;
+		}
+		case FieldType::STRING: {
+			static const std::string string_str(STRING_STR);
+			return string_str;
+		}
+		case FieldType::FLOAT: {
+			static const std::string float_str(FLOAT_STR);
+			return float_str;
+		}
+		case FieldType::INTEGER: {
+			static const std::string integer_str(INTEGER_STR);
+			return integer_str;
+		}
+		case FieldType::POSITIVE: {
+			static const std::string positive_str(POSITIVE_STR);
+			return positive_str;
+		}
+		case FieldType::BOOLEAN: {
+			static const std::string boolean_str(BOOLEAN_STR);
+			return boolean_str;
+		}
+		case FieldType::GEO: {
+			static const std::string geo_str(GEO_STR);
+			return geo_str;
+		}
+		case FieldType::DATE: {
+			static const std::string date_str(DATE_STR);
+			return date_str;
+		}
+		case FieldType::TIME: {
+			static const std::string time_str(TIME_STR);
+			return time_str;
+		}
+		case FieldType::TIMEDELTA: {
+			static const std::string timedelta_str(TIMEDELTA_STR);
+			return timedelta_str;
+		}
+		case FieldType::UUID: {
+			static const std::string uuid_str(UUID_STR);
+			return uuid_str;
+		}
+		case FieldType::SCRIPT: {
+			static const std::string script_str(SCRIPT_STR);
+			return script_str;
+		}
+		case FieldType::OBJECT: {
+			static const std::string object_str(OBJECT_STR);
+			return object_str;
+		}
+		case FieldType::ARRAY: {
+			static const std::string array_str(ARRAY_STR);
+			return array_str;
+		}
+		case FieldType::FOREIGN: {
+			static const std::string foreign_str(FOREIGN_STR);
+			return foreign_str;
+		}
+		case FieldType::EMPTY: {
+			static const std::string empty_str(EMPTY_STR);
+			return empty_str;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
 	}
 }
 
@@ -1262,103 +1316,213 @@ Unserialise::range(string_view serialised_range)
 FieldType
 Unserialise::type(string_view str_type)
 {
-	auto value = string_view_data_as_c_str(str_type);
-	switch (tolower(value[0])) {
-		case ' ':
-			if (value[1] == '\0') {
-				return FieldType::EMPTY;
-			}
-			break;
-		case 'a':
-			if (value[1] == '\0' || strcasecmp(value, ARRAY_STR) == 0) {
-				return FieldType::ARRAY;
-			}
-			break;
-		case 'b':
-			if (value[1] == '\0' || strcasecmp(value, BOOLEAN_STR) == 0) {
-				return FieldType::BOOLEAN;
-			}
-			break;
-		case 'd':
-			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
-				return FieldType::DATE;
-			}
-			break;
-		case 'e':
-			if (value[1] == '\0' || strcasecmp(value, EMPTY_STR) == 0) {
-				return FieldType::EMPTY;
-			}
-			break;
-		case 'f':
-			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
-				return FieldType::FLOAT;
-			}
-			if (strcasecmp(value, FOREIGN_STR) == 0) {
-				return FieldType::FOREIGN;
-			}
-			break;
-		case 'g':
-			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
-				return FieldType::GEO;
-			}
-			break;
-		case 'i':
-			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
-				return FieldType::INTEGER;
-			}
-			break;
-		case 'o':
-			if (value[1] == '\0' || strcasecmp(value, OBJECT_STR) == 0) {
-				return FieldType::OBJECT;
-			}
-			break;
-		case 'p':
-			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
-				return FieldType::POSITIVE;
-			}
-			break;
-		case 's':
-			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
-				return FieldType::STRING;
-			}
-			break;
-		case 't':
-			switch (tolower(value[1])) {
-				case '\0':
-					return FieldType::TERM;
+	switch (str_type.size()) {
+		case 1:
+			switch (str_type[0]) {
+				case ' ':
 				case 'e':
-					if (strcasecmp(value, TERM_STR) == 0) {
-						return FieldType::TERM;
-					}
-					if (strcasecmp(value, TEXT_STR) == 0) {
-						return FieldType::TEXT;
+				case 'E':
+					return FieldType::EMPTY;
+				case 'a':
+				case 'A':
+					return FieldType::ARRAY;
+				case 'b':
+				case 'B':
+					return FieldType::BOOLEAN;
+				case 'd':
+				case 'D':
+					return FieldType::DATE;
+				case 'f':
+				case 'F':
+					return FieldType::FLOAT;
+				case 'g':
+				case 'G':
+					return FieldType::GEO;
+				case 'i':
+				case 'I':
+					return FieldType::INTEGER;
+				case 'o':
+				case 'O':
+					return FieldType::OBJECT;
+				case 'p':
+				case 'P':
+					return FieldType::POSITIVE;
+				case 's':
+				case 'S':
+					return FieldType::STRING;
+				case 't':
+				case 'T':
+					return FieldType::TERM;
+				case 'u':
+				case 'U':
+					return FieldType::UUID;
+				case 'x':
+				case 'X':
+					return FieldType::SCRIPT;
+			}
+			break;
+
+		case 4:
+			switch (str_type[0]) {
+				case 'd':
+				case 'D': {
+					static_assert(xxh64::hash(DATE_STR) == xxh64::hash("date"), "DATE_STR is not 'date', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == DATE_STR) {
+						return FieldType::DATE;
 					}
 					break;
-				case 'i':
-					if (strcasecmp(value, TIME_STR) == 0) {
+				}
+				case 't':
+				case 'T': {
+					static_assert(xxh64::hash(TERM_STR) == xxh64::hash("term"), "TERM_STR is not 'term', reorder switch.");
+					static_assert(xxh64::hash(TEXT_STR) == xxh64::hash("text"), "TEXT_STR is not 'text', reorder switch.");
+					static_assert(xxh64::hash(TIME_STR) == xxh64::hash("time"), "TIME_STR is not 'time', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == TERM_STR) {
+						return FieldType::TERM;
+					} else if (lower_str_type == TEXT_STR) {
+						return FieldType::TEXT;
+					} else if (lower_str_type == TIME_STR) {
 						return FieldType::TIME;
 					}
-					if (strcasecmp(value, TIMEDELTA_STR) == 0) {
+					break;
+				}
+			}
+			break;
+
+		case 5:
+			switch (str_type[0]) {
+				case 'a':
+				case 'A': {
+					static_assert(xxh64::hash(ARRAY_STR) == xxh64::hash("array"), "ARRAY_STR is not 'array', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == ARRAY_STR) {
+						return FieldType::ARRAY;
+					}
+					break;
+				}
+				case 'e':
+				case 'E': {
+					static_assert(xxh64::hash(EMPTY_STR) == xxh64::hash("empty"), "EMPTY_STR is not 'empty', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == EMPTY_STR) {
+						return FieldType::EMPTY;
+					}
+					break;
+				}
+				case 'f':
+				case 'F': {
+					static_assert(xxh64::hash(FLOAT_STR) == xxh64::hash("float"), "FLOAT_STR is not 'float', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == FLOAT_STR) {
+						return FieldType::FLOAT;
+					}
+					break;
+				}
+			}
+			break;
+
+		case 6:
+			switch (str_type[0]) {
+				case 'o':
+				case 'O': {
+					static_assert(xxh64::hash(OBJECT_STR) == xxh64::hash("object"), "OBJECT_STR is not 'object', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == OBJECT_STR) {
+						return FieldType::OBJECT;
+					}
+					break;
+				}
+				case 's':
+				case 'S': {
+					static_assert(xxh64::hash(SCRIPT_STR) == xxh64::hash("script"), "SCRIPT_STR is not 'script', reorder switch.");
+					static_assert(xxh64::hash(STRING_STR) == xxh64::hash("string"), "STRING_STR is not 'string', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == SCRIPT_STR) {
+						return FieldType::SCRIPT;
+					} else if (lower_str_type == STRING_STR) {
+						return FieldType::STRING;
+					}
+					break;
+				}
+			}
+			break;
+
+		case 7:
+			switch (str_type[0]) {
+				case 'b':
+				case 'B': {
+					static_assert(xxh64::hash(BOOLEAN_STR) == xxh64::hash("boolean"), "BOOLEAN_STR is not 'boolean', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == BOOLEAN_STR) {
+						return FieldType::BOOLEAN;
+					}
+					break;
+				}
+				case 'f':
+				case 'F': {
+					static_assert(xxh64::hash(FOREIGN_STR) == xxh64::hash("foreign"), "FOREIGN_STR is not 'foreign', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == FOREIGN_STR) {
+						return FieldType::FOREIGN;
+					}
+					break;
+				}
+				case 'i':
+				case 'I': {
+					static_assert(xxh64::hash(INTEGER_STR) == xxh64::hash("integer"), "INTEGER_STR is not 'integer', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == INTEGER_STR) {
+						return FieldType::INTEGER;
+					}
+					break;
+				}
+			}
+			break;
+
+		case 8:
+			switch (str_type[0]) {
+				case 'p':
+				case 'P': {
+					static_assert(xxh64::hash(POSITIVE_STR) == xxh64::hash("positive"), "POSITIVE_STR is not 'positive', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == POSITIVE_STR) {
+						return FieldType::POSITIVE;
+					}
+					break;
+				}
+			}
+			break;
+
+		case 9:
+			switch (str_type[0]) {
+				case 't':
+				case 'T': {
+					static_assert(xxh64::hash(TIMEDELTA_STR) == xxh64::hash("timedelta"), "TIMEDELTA_STR is not 'timedelta', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == TIMEDELTA_STR) {
 						return FieldType::TIMEDELTA;
 					}
 					break;
-				default:
+				}
+			}
+			break;
+
+		case 10:
+			switch (str_type[0]) {
+				case 'g':
+				case 'G': {
+					static_assert(xxh64::hash(GEO_STR) == xxh64::hash("geospatial"), "GEO_STR is not 'geospatial', reorder switch.");
+					auto lower_str_type = lower_string(str_type);
+					if (lower_str_type == GEO_STR) {
+						return FieldType::GEO;
+					}
 					break;
+				}
 			}
-			break;
-		case 'u':
-			if (value[1] == '\0' || strcasecmp(value, UUID_STR) == 0) {
-				return FieldType::UUID;
-			}
-			break;
-		case 'x':
-			if (value[1] == '\0' || strcasecmp(value, SCRIPT_STR) == 0) {
-				return FieldType::SCRIPT;
-			}
-			break;
-		default:
 			break;
 	}
 
-	THROW(SerialisationError, "Type: %s is an unsupported type", repr(string_view_data_as_c_str(str_type)).c_str());
+	THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
 }

@@ -190,16 +190,18 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 
 inline std::string vformat_string(string_view format, va_list argptr) {
+	std::string format_string(format);
+
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
 	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, string_view_data_as_c_str(format), argptr_copy);
+	auto len = vsnprintf(nullptr, 0, format_string.c_str(), argptr_copy);
 	va_end(argptr_copy);
 
 	// Make a string to hold the formatted message.
 	std::string str;
 	str.resize(len + 1);
-	str.resize(vsnprintf(&str[0], len + 1, string_view_data_as_c_str(format), argptr));
+	str.resize(vsnprintf(&str[0], len + 1, format_string.c_str(), argptr));
 
 	return str;
 }

@@ -164,13 +164,13 @@ pthread_get_name_np(char* buffer, size_t size)
 
 void set_thread_name(string_view name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
-	pthread_setname_np(string_view_data_as_c_str(name));
+	pthread_setname_np(std::string(name).c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
-	pthread_setname_np(pthread_self(), string_view_data_as_c_str(name));
+	pthread_setname_np(pthread_self(), std::string(name).c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_3)
-	pthread_setname_np(pthread_self(), string_view_data_as_c_str(name), nullptr);
+	pthread_setname_np(pthread_self(), std::string(name).c_str(), nullptr);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
-	pthread_set_name_np(pthread_self(), string_view_data_as_c_str(name));
+	pthread_set_name_np(pthread_self(), std::string(name).c_str());
 #endif
 #if defined(HAVE_PTHREAD_GET_NAME_NP_2)
 	pthread_get_name_np(nullptr, 0);
@@ -467,7 +467,8 @@ bool endswith(string_view text, char ch) {
 
 
 void delete_files(string_view path) {
-	DIR *dirp = ::opendir(string_view_data_as_c_str(path));
+	std::string path_string(path);
+	DIR *dirp = ::opendir(path_string.c_str());
 	if (!dirp) {
 		return;
 	}
@@ -494,15 +495,16 @@ void delete_files(string_view path) {
 
 	closedir(dirp);
 	if (!contains_folder) {
-		if (::rmdir(string_view_data_as_c_str(path)) != 0) {
-			L_ERR("Directory %s could not be deleted", string_view_data_as_c_str(path));
+		if (::rmdir(path_string.c_str()) != 0) {
+			L_ERR("Directory %s could not be deleted", path_string.c_str());
 		}
 	}
 }
 
 
 void move_files(string_view src, string_view dst) {
-	DIR *dirp = ::opendir(string_view_data_as_c_str(src));
+	std::string src_string(src);
+	DIR *dirp = ::opendir(src_string.c_str());
 	if (!dirp) {
 		return;
 	}
@@ -523,15 +525,15 @@ void move_files(string_view src, string_view dst) {
 	}
 
 	closedir(dirp);
-	if (::rmdir(string_view_data_as_c_str(src)) != 0) {
-		L_ERR("Directory %s could not be deleted", string_view_data_as_c_str(src));
+	if (::rmdir(src_string.c_str()) != 0) {
+		L_ERR("Directory %s could not be deleted", src_string.c_str());
 	}
 }
 
 
 bool exists(string_view path) {
 	struct stat buf;
-	return ::stat(string_view_data_as_c_str(path), &buf) == 0;
+	return ::stat(std::string(path).c_str(), &buf) == 0;
 }
 
 
@@ -564,13 +566,14 @@ bool build_path_index(string_view path_index) {
 
 
 DIR* opendir(string_view path, bool create) {
-	DIR* dirp = ::opendir(string_view_data_as_c_str(path));
+	std::string path_string(path);
+	DIR* dirp = ::opendir(path_string.c_str());
 	if (!dirp) {
 		if (errno == ENOENT && create) {
-			if (::mkdir(string_view_data_as_c_str(path), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+			if (::mkdir(path_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
 				return nullptr;
 			} else {
-				dirp = ::opendir(string_view_data_as_c_str(path));
+				dirp = ::opendir(path_string.c_str());
 				if (!dirp) {
 					return nullptr;
 				}
@@ -613,23 +616,25 @@ void find_file_dir(DIR* dir, File_ptr& fptr, string_view pattern, bool pre_suf_f
 
 
 int copy_file(string_view src, string_view dst, bool create, string_view file_name, string_view new_name) {
-	DIR* dir_src = ::opendir(string_view_data_as_c_str(src));
+	std::string src_string(src);
+	DIR* dir_src = ::opendir(src_string.c_str());
 	if (!dir_src) {
-		L_ERR("ERROR: %s", strerror(errno));
+		L_ERR("ERROR: couldn't open directory %s: %s", strerror(errno));
 		return -1;
 	}
 
 	struct stat buf;
-	int err = ::stat(string_view_data_as_c_str(dst), &buf);
+	std::string dst_string(dst);
+	int err = ::stat(dst_string.c_str(), &buf);
 
 	if (-1 == err) {
 		if (ENOENT == errno && create) {
-			if (::mkdir(string_view_data_as_c_str(dst), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s (%s)", string_view_data_as_c_str(dst), strerror(errno));
+			if (::mkdir(dst_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				L_ERR("ERROR: couldn't create directory %s: %s", dst_string.c_str(), strerror(errno));
 				return -1;
 			}
 		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s (%s)", string_view_data_as_c_str(dst), strerror(errno));
+			L_ERR("ERROR: couldn't obtain directory information %s: %s", dst_string.c_str(), strerror(errno));
 			return -1;
 		}
 	}
@@ -675,7 +680,7 @@ int copy_file(string_view src, string_view dst, bool create, string_view file_na
 			while (1) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (-1 == bytes) {
-					L_ERR("ERROR: reading file. %s (%s)\n", src_path.c_str(), strerror(errno));
+					L_ERR("ERROR: reading file. %s: %s\n", src_path.c_str(), strerror(errno));
 					return -1;
 				}
 
@@ -683,7 +688,7 @@ int copy_file(string_view src, string_view dst, bool create, string_view file_na
 
 				bytes = write(dst_fd, buffer, bytes);
 				if (-1 == bytes) {
-					L_ERR("ERROR: writing file. %s (%s)\n", dst_path.c_str(), strerror(errno));
+					L_ERR("ERROR: writing file. %s: %s\n", dst_path.c_str(), strerror(errno));
 					return -1;
 				}
 			}

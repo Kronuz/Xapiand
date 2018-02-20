@@ -1352,8 +1352,3 @@ namespace bpstd {
 using bpstd::string_view;
 
 #endif /* HAVE_STRING_VIEW */
-
-inline const char* string_view_data_as_c_str(string_view str) {
-    assert(str.size() == strlen(str.data()));
-    return str.data();
-}
