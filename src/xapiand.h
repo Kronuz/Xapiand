@@ -24,7 +24,8 @@
 
 #include "config.h"
 
-#include <assert.h>
+#include <stdio.h>            // for fprintf
+#include <assert.h>           // for assert
 
 
 #define XAPIAND_TAGLINE              "You Know, Also for Search"
@@ -74,4 +75,27 @@
 
 #ifdef XAPIAND_UUID_ENCODED
 	#define UUID_ENCODER (Base59::dubaluchk())
+#endif
+
+#ifdef XAPIAND_TRACEBACKS
+#ifdef assert
+#undef assert
+#ifdef __cplusplus
+extern "C" {
+#endif
+	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __FUNCTION__
+#define assert(e) \
+	((void) (likely(e) ? ((void)0) : __assert_tb(__FUNCTION__, __FILE__, __LINE__, #e)))
+#elif defined __func__
+#define assert(e) \
+	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
+#else
+#define assert(e) \
+	((void) (likely(e) ? ((void)0) : __assert_tb("<unknown>", __FILE__, __LINE__, #e)))
+#endif
+#endif
 #endif

@@ -95,6 +95,16 @@ traceback(string_view filename, int line)
 }
 
 
+extern "C" void
+__assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
+{
+	(void)fprintf(stderr, "Assertion failed: %s, function %s, file %s, line %u.%s\n",
+		expression, function, filename, line, traceback(filename, line).c_str());
+	abort();
+}
+
+
+
 BaseException::BaseException()
 	: line{0},
 	  callstack{{}},
