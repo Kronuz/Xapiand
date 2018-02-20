@@ -50,8 +50,8 @@ static const Initializer initializer;
 
 #if (TESTING_LOGS == 1)
 #  include "../src/log.h"
-#  define RETURN(x) { Logging::finish(); return x; }
-#  define INIT_LOG Logging::handlers.push_back(std::make_unique<StderrLogger>());
+#  define RETURN(x) { Logging::dump_collected(); return x; }
+#  define INIT_LOG if (Logging::handlers.empty()) Logging::handlers.push_back(std::make_unique<StderrLogger>());
 #else
 template <typename... Args>
 inline void log(std::string fmt, Args&&... args) {
