@@ -28,12 +28,13 @@ opts_t opts;
 Initializer::Initializer()
 {
 	if (!XapiandManager::manager) {
-		opts = {
+		opts = opts_t{
 			/* int verbosity = */ 3,
 			/* bool detach = */ false,
 			/* bool chert = */ false,
 			/* bool solo = */ true,
 			/* bool strict = */ false,
+			/* bool foreign = */ false,
 			/* bool optimal = */ false,
 			/* bool colors = */ false,
 			/* bool no_colors = */ false,
