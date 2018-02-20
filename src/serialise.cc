@@ -291,13 +291,6 @@ Serialise::string(const required_spc_t& field_spc, string_view field_value)
 
 
 std::string
-Serialise::serialise(const required_spc_t& field_spc, const std::string& field_value)
-{
-	return serialise(field_spc, string_view(field_value));
-}
-
-
-std::string
 Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {

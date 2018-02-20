@@ -109,8 +109,10 @@ namespace Datetime {
 	extern const std::regex date_math_re;
 
 	tm_t DateParser(string_view date);
+	inline tm_t DateParser(const std::string& date) {
+		return DateParser(string_view(date));
+	}
 	tm_t DateParser(const MsgPack& date);
-	tm_t DateParser(const std::string& date);
 	Format Iso8601Parser(string_view date, tm_t& tm);
 	Format Iso8601Parser(string_view date);
 	void processDateMath(string_view date_math, tm_t& tm);

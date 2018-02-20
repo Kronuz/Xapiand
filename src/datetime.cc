@@ -341,13 +341,6 @@ Datetime::DateParser(const MsgPack& value)
 }
 
 
-Datetime::tm_t
-Datetime::DateParser(const std::string& date)
-{
-	return Datetime::DateParser(string_view(date));
-}
-
-
 /*
  * Full struct tm according to the date in ISO 8601 format.
  */

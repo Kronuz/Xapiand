@@ -106,13 +106,21 @@ namespace Serialise {
 	 */
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
+
 	std::string object(const required_spc_t& field_spc, const class MsgPack& o);
+
 	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
 	std::string serialise(const required_spc_t& field_spc, string_view field_value);
-	std::string serialise(const required_spc_t& field_spc, const std::string& field_value);
+	inline std::string serialise(const required_spc_t& field_spc, const std::string& field_value) {
+		return serialise(field_spc, string_view(field_value));
+	}
+
 	std::string string(const required_spc_t& field_spc, string_view field_value);
+
 	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
+
 	std::string time(const required_spc_t& field_spc, const class MsgPack& field_value);
+
 	std::string timedelta(const required_spc_t& field_spc, const class MsgPack& field_value);
 
 
@@ -128,6 +136,9 @@ namespace Serialise {
 
 	// Serialise field_value like date.
 	std::string date(string_view field_value);
+	inline std::string date(const std::string& field_value) {
+		return date(string_view(field_value));
+	}
 	std::string date(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
@@ -143,12 +154,18 @@ namespace Serialise {
 
 	// Serialise value like time.
 	std::string time(string_view field_value);
+	inline std::string time(const std::string& field_value) {
+		return time(string_view(field_value));
+	}
 	std::string time(const class MsgPack& field_value);
 	std::string time(const class MsgPack& field_value, double& t_val);
 	std::string time(double field_value);
 
 	// Serialise value like timedelta.
 	std::string timedelta(string_view field_value);
+	inline std::string timedelta(const std::string& field_value) {
+		return timedelta(string_view(field_value));
+	}
 	std::string timedelta(const class MsgPack& field_value);
 	std::string timedelta(const class MsgPack& field_value, double& t_val);
 	std::string timedelta(double field_value);
@@ -186,6 +203,9 @@ namespace Serialise {
 
 	// Serialise field_value like geospatial.
 	std::string geospatial(string_view field_value);
+	inline std::string geospatial(const std::string& field_value) {
+		return geospatial(string_view(field_value));
+	}
 	std::string geospatial(const class MsgPack& field_value);
 
 	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
