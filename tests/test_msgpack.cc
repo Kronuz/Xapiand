@@ -507,7 +507,7 @@ int test_msgpack_path() {
 	MsgPack obj(doc_path);
 
 	std::string path_str("/AMERICA/COUNTRY/1");
-	std::vector<std::string> paths;
+	std::vector<string_view> paths;
 	Split<>::split(path_str, '/', std::back_inserter(paths));
 
 	const auto& path_msgpack = obj.path(paths);

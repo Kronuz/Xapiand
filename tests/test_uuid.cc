@@ -274,7 +274,7 @@ int test_expanded_uuids() {
 
 
 int test_several_uuids() {
-	UUIDGenerator generator();
+	UUIDGenerator generator;
 	size_t cont = 0;
 	for (auto i = 0; i < NUM_TESTS; ++i) {
 		std::vector<std::string> str_uuids;
@@ -356,8 +356,7 @@ int test_several_uuids() {
 			if (uuid_sz) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
-						UUID uuid(uuid);
-						uuids_serialised.append(uuid.serialise());
+						uuids_serialised.append(UUID(uuid).serialise());
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}

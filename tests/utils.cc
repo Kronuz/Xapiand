@@ -22,6 +22,7 @@
 
 #include "utils.h"
 #include "../src/opts.h"
+#include "../src/xxh64.hpp"                 // for xxh64
 
 opts_t opts;
 
@@ -63,7 +64,7 @@ Initializer::Initializer()
 			/* ssize_t max_files = */ 1000,
 			/* unsigned int ev_flags = */ 0,
 			/* bool uuid_compact = */ true,
-			/* UUIDRepr uuid_repr = */ UUIDRepr::simple,
+			/* UUIDRepr uuid_repr = */ xxh64::hash("simple"),
 			/* bool uuid_partition = */ true,
 			/* std::string dump_metadata = */ "",
 			/* std::string dump_schema = */ "",
