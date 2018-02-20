@@ -63,8 +63,6 @@ int test_lru() {
 		RETURN(1);
 	}
 
-	L_ERR("Test LRU is correct!");
-
 	RETURN(0);
 }
 
