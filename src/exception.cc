@@ -126,7 +126,7 @@ atos(const void* address)
 
 
 std::string
-traceback(string_view filename, int line, void *const * callstack, int frames)
+traceback(string_view filename, int line, void *const * callstack, int frames, int skip = 1)
 {
 	char tmp[20];
 
@@ -144,7 +144,7 @@ traceback(string_view filename, int line, void *const * callstack, int frames)
 
 	// Iterate over the callstack. Skip the first, it is the address of this function.
 	std::string result;
-	for (int i = 1; i < frames; ++i) {
+	for (int i = skip; i < frames; ++i) {
 		auto address = callstack[i];
 
 		result.assign(std::to_string(frames - i - 1));
@@ -195,14 +195,14 @@ traceback(string_view filename, int line, void *const * callstack, int frames)
 
 
 std::string
-traceback(string_view filename, int line)
+traceback(string_view filename, int line, int skip)
 {
 	void* callstack[128];
 
 	// retrieve current stack addresses
 	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
 
-	auto tb = traceback(filename, line, callstack, frames);
+	auto tb = traceback(filename, line, callstack, frames, skip);
 	if (frames == 0) {
 		tb.append(":\n    <empty, possibly corrupt>");
 	}
@@ -215,10 +215,9 @@ extern "C" void
 __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
 {
 	(void)fprintf(stderr, "Assertion failed: %s, function %s, file %s, line %u.%s\n",
-		expression, function, filename, line, traceback(filename, line).c_str());
+		expression, function, filename, line, traceback(filename, line, 2).c_str());
 	abort();
 }
-
 
 
 BaseException::BaseException()

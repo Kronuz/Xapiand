@@ -34,7 +34,7 @@
 
 #define TRACEBACK() traceback(__FILE__, __LINE__)
 
-std::string traceback(string_view filename, int line);
+std::string traceback(string_view filename, int line, int skip = 1);
 
 class BaseException {
 	struct private_ctor {};
