@@ -305,10 +305,10 @@ Datetime::DateParser(const MsgPack& value)
 			_timestamp = value.f64();
 			return Datetime::to_tm_t(_timestamp);
 		case MsgPack::Type::STR:
-			return Datetime::DateParser(value.str());
+			return Datetime::DateParser(value.str_view());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
-			std::string str_time;
+			string_view str_time;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
@@ -318,7 +318,7 @@ Datetime::DateParser(const MsgPack& value)
 				} catch (const std::out_of_range&) {
 					if (str_key == RESERVED_TIME) {
 						try {
-							str_time = it.value().str();
+							str_time = it.value().str_view();
 						} catch (const msgpack::type_error&) {
 							THROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
 						}
@@ -1322,7 +1322,7 @@ Datetime::time_to_double(const MsgPack& _time)
 			THROW(TimeError, "Time: %f is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
-			return time_to_double(TimeParser(_time.str()));
+			return time_to_double(TimeParser(_time.str_view()));
 		default:
 			THROW(TimeError, "Time must be numeric or string");
 	}
@@ -1564,7 +1564,7 @@ Datetime::timedelta_to_double(const MsgPack& timedelta)
 			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
-			return timedelta_to_double(TimedeltaParser(timedelta.str()));
+			return timedelta_to_double(TimedeltaParser(timedelta.str_view()));
 		default:
 			THROW(TimedeltaError, "Timedelta must be numeric or string");
 	}

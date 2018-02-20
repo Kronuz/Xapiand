@@ -1406,7 +1406,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			if (!type.is_string()) {
 				THROW(ErrorType, "%s'%s' field must be a string", prefix, RESERVED_TYPE);
 			}
-			auto type_name = type.str();
+			auto type_name = type.str_view();
 			const auto& sep_types = required_spc_t::get_types(type_name);
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				auto endpoint_it = object.find(RESERVED_ENDPOINT);
@@ -1420,7 +1420,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 				return std::make_pair(&endpoint, &object);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
+				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, std::string(type_name).c_str());
 			}
 		}
 	} else {
@@ -1467,10 +1467,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 		if (!type.is_string()) {
 			THROW(ErrorType, "%s'%s.%s' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
 		}
-		auto type_name = type.str();
+		auto type_name = type.str_view();
 		const auto& sep_types = required_spc_t::get_types(type_name);
 		if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-			THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name.c_str());
+			THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, std::string(type_name).c_str());
 		}
 	}
 	return std::make_pair(nullptr, &schema);
@@ -3694,7 +3694,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					for (const auto& _accuracy : *specification.doc_acc) {
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
-							const auto str_accuracy = lower_string(_accuracy.str());
+							const auto str_accuracy = lower_string(_accuracy.str_view());
 							const auto adit = map_acc_date.find(str_accuracy);
 							if (adit == adit_e) {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
@@ -3725,7 +3725,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				try {
 					static const auto adit_e = map_acc_time.end();
 					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto str_accuracy = lower_string(_accuracy.str());
+						const auto str_accuracy = lower_string(_accuracy.str_view());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
@@ -3925,7 +3925,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			}
 			break;
 		case MsgPack::Type::STR: {
-			const auto str_value = item_doc.str();
+			const auto str_value = item_doc.str_view();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::UUID;
 				return;
@@ -4568,7 +4568,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::UUID: {
 			try {
-				auto ser_value = Serialise::uuid(value.str());
+				auto ser_value = Serialise::uuid(value.str_view());
 				if (field_spc) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
@@ -4794,7 +4794,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::UUID: {
 			try {
-				auto ser_value = Serialise::uuid(value.str());
+				auto ser_value = Serialise::uuid(value.str_view());
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
@@ -5249,7 +5249,7 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 
 	try {
 		if (prop_stop_strategy.is_string()) {
-			const auto _stop_strategy = lower_string(prop_stop_strategy.str());
+			const auto _stop_strategy = lower_string(prop_stop_strategy.str_view());
 			static const auto ssit_e = map_stop_strategy.end();
 			const auto ssit = map_stop_strategy.find(_stop_strategy);
 			if (ssit == ssit_e) {
@@ -5312,7 +5312,7 @@ Schema::feed_type(const MsgPack& prop_type)
 
 	try {
 		if (prop_type.is_string()) {
-			specification.set_types(prop_type.str());
+			specification.set_types(prop_type.str_view());
 		} else {
 			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
 			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
@@ -5338,7 +5338,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 			uint64_t accuracy;
 			if (_accuracy.is_string()) {
 				static const auto adit_e = map_acc_date.end();
-				const auto str_accuracy = lower_string(_accuracy.str());
+				const auto str_accuracy = lower_string(_accuracy.str_view());
 				const auto adit = map_acc_date.find(str_accuracy);
 				if (adit == adit_e) {
 					THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
@@ -5379,7 +5379,7 @@ Schema::feed_prefix(const MsgPack& prop_prefix)
 	L_CALL("Schema::feed_prefix(%s)", repr(prop_prefix.to_string()).c_str());
 
 	try {
-		specification.local_prefix.field = prop_prefix.str();
+		specification.local_prefix.field.assign(prop_prefix.str_view());
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PREFIX, repr(specification.full_meta_name).c_str());
 	}
@@ -5405,7 +5405,7 @@ Schema::feed_index(const MsgPack& prop_index)
 	L_CALL("Schema::feed_index(%s)", repr(prop_index.to_string()).c_str());
 
 	try {
-		const auto str_index = lower_string(prop_index.str());
+		const auto str_index = lower_string(prop_index.str_view());
 		static const auto miit_e = map_index.end();
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
@@ -5677,7 +5677,7 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 	L_CALL("Schema::feed_index_uuid_field(%s)", repr(prop_index_uuid_field.to_string()).c_str());
 
 	try {
-		const auto str_index_uuid_field = lower_string(prop_index_uuid_field.str());
+		const auto str_index_uuid_field = lower_string(prop_index_uuid_field.str_view());
 		static const auto mdit_e = map_index_uuid_field.end();
 		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
 		if (mdit == mdit_e) {
@@ -5713,7 +5713,7 @@ Schema::feed_endpoint(const MsgPack& prop_endpoint)
 	L_CALL("Schema::feed_endpoint(%s)", repr(prop_endpoint.to_string()).c_str());
 
 	try {
-		specification.endpoint = prop_endpoint.str();
+		specification.endpoint.assign(prop_endpoint.str_view());
 		specification.flags.static_endpoint = true;
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ENDPOINT, repr(specification.full_meta_name).c_str());
@@ -6076,7 +6076,7 @@ Schema::process_language(string_view prop_name, const MsgPack& doc_language)
 	L_CALL("Schema::process_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		const auto _str_language = lower_string(doc_language.str());
+		const auto _str_language = lower_string(doc_language.str_view());
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_str_language);
 		if (slit != slit_e && slit->second.first) {
@@ -6099,7 +6099,7 @@ Schema::process_prefix(string_view prop_name, const MsgPack& doc_prefix)
 	L_CALL("Schema::process_prefix(%s)", repr(doc_prefix.to_string()).c_str());
 
 	try {
-		specification.local_prefix.field = doc_prefix.str();
+		specification.local_prefix.field.assign(doc_prefix.str_view());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
@@ -6131,7 +6131,7 @@ Schema::process_stop_strategy(string_view prop_name, const MsgPack& doc_stop_str
 	L_CALL("Schema::process_stop_strategy(%s)", repr(doc_stop_strategy.to_string()).c_str());
 
 	try {
-		const auto _stop_strategy = lower_string(doc_stop_strategy.str());
+		const auto _stop_strategy = lower_string(doc_stop_strategy.str_view());
 		static const auto ssit_e = map_stop_strategy.end();
 		const auto ssit = map_stop_strategy.find(_stop_strategy);
 		if (ssit == ssit_e) {
@@ -6175,7 +6175,7 @@ Schema::process_stem_language(string_view prop_name, const MsgPack& doc_stem_lan
 	L_CALL("Schema::process_stem_language(%s)", repr(doc_stem_language.to_string()).c_str());
 
 	try {
-		const auto _stem_language = lower_string(doc_stem_language.str());
+		const auto _stem_language = lower_string(doc_stem_language.str_view());
 		static const auto slit_e = map_stem_language.end();
 		const auto slit = map_stem_language.find(_stem_language);
 		if (slit == slit_e) {
@@ -6198,7 +6198,7 @@ Schema::process_type(string_view prop_name, const MsgPack& doc_type)
 
 	try {
 		if (doc_type.is_string()) {
-			specification.set_types(doc_type.str());
+			specification.set_types(doc_type.str_view());
 		} else {
 			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)doc_type.at(SPC_FOREIGN_TYPE).u64();
 			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)doc_type.at(SPC_OBJECT_TYPE).u64();
@@ -6394,7 +6394,7 @@ Schema::process_index(string_view prop_name, const MsgPack& doc_index)
 	L_CALL("Schema::process_index(%s)", repr(doc_index.to_string()).c_str());
 
 	try {
-		const auto str_index = lower_string(doc_index.str());
+		const auto str_index = lower_string(doc_index.str_view());
 		static const auto miit_e = map_index.end();
 		const auto miit = map_index.find(str_index);
 		if (miit == miit_e) {
@@ -6475,7 +6475,7 @@ Schema::process_index_uuid_field(string_view prop_name, const MsgPack& doc_index
 	 */
 
 	try {
-		const auto str_index_uuid_field = lower_string(doc_index_uuid_field.str());
+		const auto str_index_uuid_field = lower_string(doc_index_uuid_field.str_view());
 		static const auto mdit_e = map_index_uuid_field.end();
 		const auto mdit = map_index_uuid_field.find(str_index_uuid_field);
 		if (mdit == mdit_e) {
@@ -6577,7 +6577,7 @@ Schema::consistency_language(string_view prop_name, const MsgPack& doc_language)
 	L_CALL("Schema::consistency_language(%s)", repr(doc_language.to_string()).c_str());
 
 	try {
-		const auto _str_language = lower_string(doc_language.str());
+		const auto _str_language = lower_string(doc_language.str_view());
 		if (specification.language != _str_language) {
 			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.language.c_str(), _str_language.c_str(), specification.full_meta_name.c_str());
 		}
@@ -6595,7 +6595,7 @@ Schema::consistency_stop_strategy(string_view prop_name, const MsgPack& doc_stop
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stop_strategy = lower_string(doc_stop_strategy.str());
+			const auto _stop_strategy = lower_string(doc_stop_strategy.str_view());
 			const auto stop_strategy = ::get_str_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
@@ -6617,7 +6617,7 @@ Schema::consistency_stem_strategy(string_view prop_name, const MsgPack& doc_stem
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stem_strategy = lower_string(doc_stem_strategy.str());
+			const auto _stem_strategy = lower_string(doc_stem_strategy.str_view());
 			const auto stem_strategy = ::get_str_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
@@ -6639,7 +6639,7 @@ Schema::consistency_stem_language(string_view prop_name, const MsgPack& doc_stem
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stem_language = lower_string(doc_stem_language.str());
+			const auto _stem_language = lower_string(doc_stem_language.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
 			}
@@ -6659,7 +6659,7 @@ Schema::consistency_type(string_view prop_name, const MsgPack& doc_type)
 	L_CALL("Schema::consistency_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		const auto _str_type = lower_string(doc_type.str());
+		const auto _str_type = lower_string(doc_type.str_view());
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
@@ -6717,7 +6717,7 @@ Schema::consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 					for (const auto& _accuracy : doc_accuracy) {
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
-							const auto str_accuracy = lower_string(_accuracy.str());
+							const auto str_accuracy = lower_string(_accuracy.str_view());
 							const auto adit = map_acc_date.find(str_accuracy);
 							if (adit == adit_e) {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(str_accuracy).c_str());
@@ -6753,7 +6753,7 @@ Schema::consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 				try {
 					static const auto adit_e = map_acc_time.end();
 					for (const auto& _accuracy : doc_accuracy) {
-						const auto str_accuracy = lower_string(_accuracy.str());
+						const auto str_accuracy = lower_string(_accuracy.str_view());
 						const auto adit = map_acc_time.find(str_accuracy);
 						if (adit == adit_e) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(str_accuracy).c_str());
@@ -7244,7 +7244,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 	L_CALL("Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
 
 	// Readable accuracy.
-	const auto& sep_types = required_spc_t::get_types(prop_type.str());
+	const auto& sep_types = required_spc_t::get_types(prop_type.str_view());
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::DATE:
 		case FieldType::TIME:
@@ -7289,8 +7289,8 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 {
 	L_CALL("Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
 
-	const auto language = properties[RESERVED_LANGUAGE].str();
-	const auto stem_language = prop_stem_language.str();
+	const auto language = properties[RESERVED_LANGUAGE].str_view();
+	const auto stem_language = prop_stem_language.str_view();
 
 	return (language != stem_language);
 }
@@ -7359,7 +7359,7 @@ Schema::get_data_id() const
 		const auto& properties = get_newest_properties().at(ID_FIELD_NAME);
 		res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
 		res.slot = static_cast<Xapian::valueno>(properties.at(RESERVED_SLOT).u64());
-		res.prefix.field = properties.at(RESERVED_PREFIX).str();
+		res.prefix.field.assign(properties.at(RESERVED_PREFIX).str_view());
 		// Get required specification.
 		switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::GEO:
@@ -7415,7 +7415,7 @@ Schema::get_data_field(string_view field_name, bool is_range) const
 		if (!res.flags.inside_namespace) {
 			const auto& properties = *spc.properties;
 
-			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str())[SPC_CONCRETE_TYPE];
+			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(properties.at(RESERVED_TYPE).str_view())[SPC_CONCRETE_TYPE];
 			if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
 				return std::make_pair(std::move(res), "");
 			}

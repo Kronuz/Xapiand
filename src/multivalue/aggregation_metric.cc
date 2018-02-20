@@ -77,7 +77,7 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& con
 	try {
 		const auto& agg = conf.at(AGGREGATION_FIELD);
 		try {
-			auto field_name = agg.str();
+			auto field_name = agg.str_view();
 			auto field_spc = schema->get_slot_field(field_name);
 			_handle.set(field_spc.slot, get_func_value_handle(field_spc.get_type(), field_name));
 		}  catch (const msgpack::type_error&) {

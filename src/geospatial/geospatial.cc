@@ -40,7 +40,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
-			EWKT ewkt(obj.str());
+			EWKT ewkt(obj.str_view());
 			geometry = ewkt.getGeometry();
 			return;
 		}
@@ -50,7 +50,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 			switch ((Cast::Hash)xxh64::hash(str_key)) {
 				case Cast::Hash::EWKT: {
 					try {
-						EWKT ewkt(it.value().str());
+						EWKT ewkt(it.value().str_view());
 						geometry = ewkt.getGeometry();
 						return;
 					} catch (const msgpack::type_error&) {
@@ -128,7 +128,7 @@ inline void
 GeoSpatial::process_units(data_t& data, const MsgPack& units)
 {
 	try {
-		const auto str = units.str();
+		const auto str = units.str_view();
 		if (str == "degrees") {
 			data.units = Cartesian::Units::DEGREES;
 		} else if (str == "radians") {

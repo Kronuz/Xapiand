@@ -222,7 +222,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		o.erase(RESERVED_ENDPOINT);
-		auto sep_types = required_spc_t::get_types(o[RESERVED_TYPE].str());
+		auto sep_types = required_spc_t::get_types(o[RESERVED_TYPE].str_view());
 		sep_types[SPC_FOREIGN_TYPE] = FieldType::EMPTY;
 		o[RESERVED_TYPE] = required_spc_t::get_str_type(sep_types);
 		o[RESERVED_RECURSE] = false;

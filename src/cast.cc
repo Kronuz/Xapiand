@@ -146,7 +146,7 @@ Cast::integer(const MsgPack& obj)
 			return obj.f64();
 		case MsgPack::Type::STR: {
 			int errno_save;
-			auto r = strict_stoll(errno_save, obj.str());
+			auto r = strict_stoll(errno_save, obj.str_view());
 			if (errno_save) {
 				THROW(CastError, "Value %s cannot be cast to integer", obj.getStrType().c_str());
 			}
@@ -172,7 +172,7 @@ Cast::positive(const MsgPack& obj)
 			return obj.f64();
 		case MsgPack::Type::STR: {
 			int errno_save;
-			auto r = strict_stoull(errno_save, obj.str());
+			auto r = strict_stoull(errno_save, obj.str_view());
 			if (errno_save) {
 				THROW(CastError, "Value %s cannot be cast to positive", obj.getStrType().c_str());
 			}
@@ -198,7 +198,7 @@ Cast::_float(const MsgPack& obj)
 			return obj.f64();
 		case MsgPack::Type::STR: {
 			int errno_save;
-			auto r = strict_stod(errno_save, obj.str());
+			auto r = strict_stod(errno_save, obj.str_view());
 			if (errno_save) {
 				THROW(CastError, "Value %s cannot be cast to float", obj.getStrType().c_str());
 			}
@@ -243,16 +243,14 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::FLOAT:
 			return obj.f64() != 0;
 		case MsgPack::Type::STR: {
-			const char *value = obj.str().c_str();
-			switch (value[0]) {
-				case '\0':
+			auto str = obj.str_view();
+			switch (str.size()) {
+				case 0:
 					return false;
-				case '0':
-				case 'f':
-				case 'F':
-					if (value[1] == '\0' || strcasecmp(value, "false") == 0) {
-						return false;
-					}
+				case 1:
+					return str[0] != '0' && str[0] != 'f' && str[0] != 'F';
+				case 4:
+					return lower_string(str) != "false";
 				default:
 					return true;
 			}

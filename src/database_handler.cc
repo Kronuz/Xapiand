@@ -366,7 +366,7 @@ DatabaseHandler::run_script(MsgPack& data, string_view term_id, std::shared_ptr<
 
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
-		const auto& sep_type = required_spc_t::get_types(type.str());
+		const auto& sep_type = required_spc_t::get_types(type.str_view());
 		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			THROW(ClientError, "Missing Implementation for Foreign scripts");
 		} else {
@@ -374,14 +374,14 @@ DatabaseHandler::run_script(MsgPack& data, string_view term_id, std::shared_ptr<
 			if (it_s == data_script.end()) {
 #if defined(XAPIAND_V8)
 				const auto& ecma = data_script.at(RESERVED_ECMA);
-				return call_script<v8pp::Processor>(data, term_id, ecma.at(RESERVED_HASH).u64(), ecma.at(RESERVED_BODY_HASH).u64(), ecma.at(RESERVED_BODY).str(), old_document_pair);
+				return call_script<v8pp::Processor>(data, term_id, ecma.at(RESERVED_HASH).u64(), ecma.at(RESERVED_BODY_HASH).u64(), ecma.at(RESERVED_BODY).str_view(), old_document_pair);
 #else
 				THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
 			} else {
 #if defined(XAPIAND_CHAISCRIPT)
 				const auto& chai = it_s.value();
-				return call_script<chaipp::Processor>(data, term_id, chai.at(RESERVED_HASH).u64(), chai.at(RESERVED_BODY_HASH).u64(), chai.at(RESERVED_BODY).str(), old_document_pair);
+				return call_script<chaipp::Processor>(data, term_id, chai.at(RESERVED_HASH).u64(), chai.at(RESERVED_BODY_HASH).u64(), chai.at(RESERVED_BODY).str_view(), old_document_pair);
 #else
 				THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
@@ -460,7 +460,7 @@ DatabaseHandler::index(string_view document_id, bool stored, string_view stored_
 								if (!type.is_string()) {
 									THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 								}
-								spc_id.set_types(type.str());
+								spc_id.set_types(type.str_view());
 								id_type = spc_id.get_type();
 								if (did != 0) {
 									if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
@@ -596,10 +596,10 @@ DatabaseHandler::index(string_view document_id, bool stored, const MsgPack& body
 	}
 
 	MsgPack obj;
-	std::string blob;
+	string_view blob;
 	switch (body.getType()) {
 		case MsgPack::Type::STR:
-			blob = body.str();
+			blob = body.str_view();
 			break;
 		case MsgPack::Type::MAP:
 			obj = body.clone();
@@ -667,7 +667,7 @@ DatabaseHandler::merge(string_view document_id, bool stored, const MsgPack& body
 	auto obj = MsgPack::unserialise(split_data_obj(data));
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
-			const auto blob = body.str();
+			const auto blob = body.str_view();
 			return index(document_id, stored, "", obj, blob, commit_, ct_type);
 		}
 		case MsgPack::Type::MAP: {
@@ -968,7 +968,7 @@ DatabaseHandler::restore(int fd)
 							if (!type.is_string()) {
 								THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 							}
-							spc_id.set_types(type.str());
+							spc_id.set_types(type.str_view());
 						}
 					}
 					auto fv_it = field.find(RESERVED_VALUE);
