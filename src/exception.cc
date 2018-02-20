@@ -134,7 +134,7 @@ traceback(string_view filename, int line, void *const * callstack, int frames)
 	tb.append(filename.data(), filename.size());
 	tb.push_back(':');
 	tb.append(std::to_string(line));
-	tb.append(" (most recent call last)");
+	tb.append(" (most recent call first)");
 
 	if (frames < 2) {
 		return tb;
@@ -144,7 +144,7 @@ traceback(string_view filename, int line, void *const * callstack, int frames)
 
 	// Iterate over the callstack. Skip the first, it is the address of this function.
 	std::string result;
-	for (int i = frames - 1; i; --i) {
+	for (int i = 1; i < frames; ++i) {
 		auto address = callstack[i];
 
 		result.assign(std::to_string(frames - i - 1));
