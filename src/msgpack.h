@@ -259,8 +259,11 @@ public:
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
 
-	MsgPack& path(const std::vector<string_view>& path);
-	const MsgPack& path(const std::vector<string_view>& path) const;
+	template <typename T>
+	MsgPack& path(const std::vector<T>& path);
+	template <typename T>
+	const MsgPack& path(const std::vector<T>& path) const;
+
 	MsgPack select(string_view selector) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
@@ -1794,7 +1797,8 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 }
 
 
-inline MsgPack& MsgPack::path(const std::vector<string_view>& path) {
+template <typename T>
+inline MsgPack& MsgPack::path(const std::vector<T>& path) {
 	auto current = this;
 	for (const auto& s : path) {
 		switch (current->_const_body->getType()) {
@@ -1821,7 +1825,8 @@ inline MsgPack& MsgPack::path(const std::vector<string_view>& path) {
 }
 
 
-inline const MsgPack& MsgPack::path(const std::vector<string_view>& path) const {
+template <typename T>
+inline const MsgPack& MsgPack::path(const std::vector<T>& path) const {
 	auto current = this;
 	for (const auto& s : path) {
 		switch (current->getType()) {
