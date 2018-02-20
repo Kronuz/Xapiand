@@ -66,7 +66,7 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 
 void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_ADD);
 		if (path_split.size() != 0) {
 			const auto target = path_split.back();
@@ -91,7 +91,7 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_REM);
 		if (path_split.size() != 0) {
 			const auto target = path_split.back();
@@ -115,7 +115,7 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_REP);
 		auto& o = object.path(path_split);
 		o = get_patch_value(obj_patch, PATCH_REP);
@@ -133,10 +133,10 @@ void patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_MOV);
 		if (path_split.size() != 0) {
-			std::vector<string_view> from_split;
+			std::vector<std::string> from_split;
 			_tokenizer(obj_patch, from_split, PATCH_FROM, PATCH_MOV);
 			if (from_split.size() != 0) {
 				const auto target = path_split.back();
@@ -169,10 +169,10 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_COP);
 		if (path_split.size() != 0) {
-			std::vector<string_view> from_split;
+			std::vector<std::string> from_split;
 			_tokenizer(obj_patch, from_split, PATCH_FROM, PATCH_COP);
 			if (from_split.size() != 0) {
 				const auto target = path_split.back();
@@ -200,7 +200,7 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_TES);
 		const auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_TES);
@@ -221,7 +221,7 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_incr(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_INC);
 		auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_INC);
@@ -248,7 +248,7 @@ void patch_incr(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_decr(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		std::vector<string_view> path_split;
+		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_DEC);
 		auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_DEC);

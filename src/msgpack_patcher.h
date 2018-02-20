@@ -147,7 +147,7 @@ inline void _incr(MsgPack& o, double val, double limit) {
 
 
 // Support for RFC 6901
-inline void _tokenizer(const MsgPack& obj, std::vector<string_view>& path_split, const char* path_c, const char* patch_op) {
+inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c, const char* patch_op) {
 	try {
 		const auto& path = obj.at(path_c);
 		auto path_str = path.unformatted_string_view();
@@ -156,7 +156,7 @@ inline void _tokenizer(const MsgPack& obj, std::vector<string_view>& path_split,
 
 		for (size_t i = 0; i < n_tok; ++i) {
 			auto& t = json_pointer.GetTokens()[i];
-			path_split.push_back(string_view(t.name, t.length));
+			path_split.push_back(std::string(t.name, t.length));
 		}
 
 		if (path_split.size() == 0 and path_str != "") {
