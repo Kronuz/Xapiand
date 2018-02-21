@@ -210,7 +210,7 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 
 std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
-	const char* q = (const char *)p;
+	const char* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
 	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
@@ -223,7 +223,7 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 	if (quote == '\1') quote = '\'';
 	if (quote) *d++ = quote;
 	while (q != p_end) {
-		char c = *q++;
+		unsigned char c = *q++;
 		if (q >= max_a && q <= max_b) {
 			if (q == max_a) {
 				*d++ = '.';
@@ -265,11 +265,11 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 					*d++ = '\\';
 					break;
 				default:
-					if (c == quote) {
+					if (quote && c == quote) {
 						*d++ = '\\';
 						*d++ = quote;
 					} else if (c < ' ' || c >= 0x7f) {
-						sprintf(d, "\\x%02x", (unsigned char)c);
+						sprintf(d, "\\x%02x", c);
 						d += 4;
 					} else {
 						*d++ = c;
@@ -277,10 +277,10 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 					break;
 			}
 		} else {
-			sprintf(d, "\\x%02x", (unsigned char)c);
+			sprintf(d, "\\x%02x", c);
 			d += 4;
 		}
-		// fprintf(stderr, "%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size));
+		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
 	}
 	if (quote) *d++ = quote;
 	ret.resize(d - buff);
@@ -289,7 +289,7 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 
 std::string escape(const void* p, size_t size, char quote) {
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
-	const char* q = (const char *)p;
+	const char* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	size = size * 4 + 2;  // Consider "\xNN" and two quotes
 	std::string ret;
@@ -299,7 +299,7 @@ std::string escape(const void* p, size_t size, char quote) {
 	if (quote == '\1') quote = '\'';
 	if (quote) *d++ = quote;
 	while (q != p_end) {
-		char c = *q++;
+		unsigned char c = *q++;
 		switch (c) {
 			// case '\a':
 			// 	*d++ = '\\';
@@ -334,18 +334,18 @@ std::string escape(const void* p, size_t size, char quote) {
 				*d++ = '\\';
 				break;
 			default:
-				if (c == quote) {
+				if (quote && c == quote) {
 					*d++ = '\\';
 					*d++ = quote;
 				} else if (c < ' ' || c >= 0x7f) {
-					sprintf(d, "\\x%02x", (unsigned char)c);
+					sprintf(d, "\\x%02x", c);
 					d += 4;
 				} else {
 					*d++ = c;
 				}
 				break;
 		}
-		// fprintf(stderr, "%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size));
+		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
 	}
 	if (quote) *d++ = quote;
 	ret.resize(d - buff);
