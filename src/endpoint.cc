@@ -225,7 +225,6 @@ Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_,
 	: node_name(node_name_),
 	  mastery_level(mastery_level_)
 {
-	char buffer[PATH_MAX + 1];
 	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
 		protocol = "file";
@@ -234,20 +233,19 @@ Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_,
 	auto _path = slice_after(uri, "/");
 	auto _user = slice_before(uri, "@");
 	auto _password = slice_after(_user, ":");
-	int errno_save;
-	port = strict_stoi(errno_save, slice_after(uri, ":"));
+	auto _port = slice_after(uri, ":");
+
 	if (protocol == "file") {
 		if (_path.empty()) {
 			_path = uri;
 		} else {
-			path.assign(uri);
-			path.push_back('/');
-			path.append(_path);
-			_path = path;
+			_path = path = std::string(uri) + "/" + std::string(_path);
 		}
 		port = 0;
 	} else {
 		host = uri;
+		int errno_save;
+		port = strict_stoi(errno_save, _port);
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 		search = _search;
 		password = _password;
@@ -255,11 +253,9 @@ Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_,
 	}
 
 	if (!startswith(_path, '/')) {
-		path.assign(Endpoint::cwd);
-		path.append(_path);
-		_path = path;
+		_path = path = Endpoint::cwd + std::string(_path);
 	}
-	path = normalize_path(_path, buffer);
+	path = normalize_path(_path);
 	_path = path;
 	if (startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());
