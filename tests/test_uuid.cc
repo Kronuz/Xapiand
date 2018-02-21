@@ -128,7 +128,7 @@ int test_special_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
+			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 	}
 
@@ -148,7 +148,7 @@ int test_compacted_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
+			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -184,7 +184,7 @@ int test_condensed_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
+			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -249,7 +249,7 @@ int test_expanded_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
+			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec.c_str(), uuid_orig.c_str());
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -383,14 +383,14 @@ int test_several_uuids() {
 		UUID::unserialise(uuids_serialised, std::back_inserter(uuids));
 		if (uuids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR("ERROR: Different sizes: %zu != %zu\n\tResult: %s\n\tExpected: %s", uuids.size(), str_uuids.size(), repr(uuids_serialised).c_str(), repr(str_uuids_serialised).c_str());
+			L_ERR("ERROR: Different sizes: %zu != %zu\n\t  Result: %s\n\tExpected: %s", uuids.size(), str_uuids.size(), repr(uuids_serialised).c_str(), repr(str_uuids_serialised).c_str());
 		} else {
 			auto it = str_uuids.begin();
 			for (const auto& uuid : uuids) {
 				const auto str_uuid = uuid.to_string();
 				if (str_uuid != *it) {
 					++cont;
-					L_ERR("ERROR:\n\tResult: %s\n\tExpected: %s", str_uuid.c_str(), it->c_str());
+					L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", str_uuid.c_str(), it->c_str());
 				}
 				++it;
 			}
