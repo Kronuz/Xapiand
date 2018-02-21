@@ -132,6 +132,10 @@ std::string get_thread_name();
 
 std::string repr(const void* p, size_t size, bool friendly = true, char quote = '\'', size_t max_size = 0);
 
+inline std::string repr(const void* p, const void* e, bool friendly = true, char quote = '\'', size_t max_size = 0) {
+	return repr(p, static_cast<const char*>(e) - static_cast<const char*>(p), friendly, quote, max_size);
+}
+
 inline std::string repr(string_view string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
 	return repr(string.data(), string.size(), friendly, quote, max_size);
 }

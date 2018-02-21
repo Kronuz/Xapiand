@@ -680,7 +680,7 @@ Serialise::boolean(string_view field_value)
 		}
 	}
 
-	THROW(SerialisationError, "Boolean format is not valid: %s", repr(std::string(field_value)).c_str());
+	THROW(SerialisationError, "Boolean format is not valid: %s", repr(field_value).c_str());
 }
 
 
