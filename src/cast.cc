@@ -259,17 +259,24 @@ Cast::boolean(const MsgPack& obj)
 						// 	return true;
 					}
 					break;
-				case 4:
+				// case 4:
+				// 	switch (value[0]) {
+				// 		case 't':
+				// 		case 'T': {
+				// 			auto lower_value = lower_string(value);
+				// 			if (lower_value == "true") {
+				// 				return true;
+				// 			}
+				// 		}
+				// 	}
+				// 	break;
+				case 5:
 					switch (value[0]) {
 						case 'f':
-						case 'F':
-						case 't':
-						case 'T': {
+						case 'F': {
 							auto lower_value = lower_string(value);
 							if (lower_value == "false") {
 								return false;
-							// } else if (lower_value == "true") {
-							// 	return true;
 							}
 						}
 					}

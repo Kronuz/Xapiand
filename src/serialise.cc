@@ -662,22 +662,28 @@ Serialise::boolean(string_view field_value)
 					return std::string(1, SERIALISED_TRUE);
 			}
 			break;
-		case 4: {
+		case 4:
 			switch (field_value[0]) {
-				case 'f':
-				case 'F':
 				case 't':
 				case 'T': {
 					auto lower_value = lower_string(field_value);
-					if (lower_value == "false") {
-						return std::string(1, SERIALISED_FALSE);
-					} else if (lower_value == "true") {
+					if (lower_value == "true") {
 						return std::string(1, SERIALISED_TRUE);
 					}
 				}
 			}
 			break;
-		}
+		case 5:
+			switch (field_value[0]) {
+				case 'f':
+				case 'F': {
+					auto lower_value = lower_string(field_value);
+					if (lower_value == "false") {
+						return std::string(1, SERIALISED_FALSE);
+					}
+				}
+			}
+			break;
 	}
 
 	THROW(SerialisationError, "Boolean format is not valid: %s", repr(field_value).c_str());
