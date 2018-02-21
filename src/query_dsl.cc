@@ -474,14 +474,15 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, string_view field_
 {
 	L_CALL("QueryDSL::get_acc_date_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
-	auto it = map_acc_date.find(field_accuracy.substr(1));
-	static const auto it_e = map_acc_date.end();
-	if (it != it_e) {
+	UnitTime acc;
+	try {
+		acc = get_accuracy_date(field_accuracy.substr(1));
+	} catch (const std::out_of_range&) {
 		THROW(QueryDslError, "Invalid field name: %s", std::string(field_accuracy).c_str());
 	}
 
 	Datetime::tm_t tm = Datetime::DateParser(obj);
-	switch (it->second) {
+	switch (acc) {
 		case UnitTime::SECOND: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
@@ -527,14 +528,15 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, string_view field_
 {
 	L_CALL("QueryDSL::get_acc_time_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
-	auto it = map_acc_time.find(field_accuracy.substr(2));
-	static const auto it_e = map_acc_time.end();
-	if (it == it_e) {
+	UnitTime acc;
+	try {
+		acc = get_accuracy_time(field_accuracy.substr(2));
+	} catch (const std::out_of_range&) {
 		THROW(QueryDslError, "Invalid field name: %s", std::string(field_accuracy).c_str());
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(it->second))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
 }
 
 
@@ -543,14 +545,15 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, string_view f
 {
 	L_CALL("QueryDSL::get_acc_timedelta_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
-	auto it = map_acc_time.find(field_accuracy.substr(3));
-	static const auto it_e = map_acc_time.end();
-	if (it == it_e) {
+	UnitTime acc;
+	try {
+		acc = get_accuracy_time(field_accuracy.substr(3));
+	} catch (const std::out_of_range&) {
 		THROW(QueryDslError, "Invalid field name: %s", std::string(field_accuracy).c_str());
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(it->second))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
 }
 
 

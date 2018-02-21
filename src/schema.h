@@ -244,17 +244,8 @@ inline constexpr size_t getPos(size_t pos, size_t size) noexcept {
 };
 
 
-/*
- * Unordered Maps used for reading user data specification.
- */
-
-extern const std::unordered_map<string_view, UnitTime> map_acc_date;
-extern const std::unordered_map<string_view, UnitTime> map_acc_time;
-extern const std::unordered_map<string_view, StopStrategy> map_stop_strategy;
-extern const std::unordered_map<string_view, StemStrategy> map_stem_strategy;
-extern const std::unordered_map<string_view, TypeIndex> map_index;
-extern const std::unordered_map<string_view, UUIDFieldIndex> map_index_uuid_field;
-extern const std::unordered_map<string_view, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type;
+extern UnitTime get_accuracy_time(string_view str_accuracy_time);
+extern UnitTime get_accuracy_date(string_view str_accuracy_date);
 
 
 MSGPACK_ADD_ENUM(UnitTime);
@@ -475,19 +466,25 @@ class DatabaseHandler;
 
 
 class Schema {
-	using dispatcher_set_default_spc   = void (Schema::*)(MsgPack&);
-	using dispatcher_write_reserved    = void (Schema::*)(MsgPack&, string_view, const MsgPack&);
-	using dispatcher_process_reserved  = void (Schema::*)(string_view, const MsgPack&);
-	using dispatcher_update_reserved   = void (Schema::*)(const MsgPack&);
-	using dispatcher_readable          = bool (*)(MsgPack&, MsgPack&);
+	using dispatcher_set_default_spc     = void (Schema::*)(MsgPack&);
+	using dispatcher_write_properties    = void (Schema::*)(MsgPack&, string_view, const MsgPack&);
+	using dispatcher_process_properties  = void (Schema::*)(string_view, const MsgPack&);
+	using dispatcher_feed_properties     = void (Schema::*)(const MsgPack&);
+	using dispatcher_readable            = bool (*)(MsgPack&, MsgPack&);
 
 	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
 
-	static const std::unordered_map<string_view, dispatcher_set_default_spc> map_dispatch_set_default_spc;
-	static const std::unordered_map<string_view, dispatcher_write_reserved> map_dispatch_write_properties;
-	static const std::unordered_map<string_view, dispatcher_update_reserved> map_dispatch_feed_properties;
-	static const std::unordered_map<string_view, dispatcher_process_reserved> map_dispatch_process_properties;
-	static const std::unordered_map<string_view, dispatcher_process_reserved> map_dispatch_process_concrete_properties;
+	Schema::dispatcher_set_default_spc get_set_default_spc_dispatcher(string_view set_default_spc);
+	Schema::dispatcher_write_properties get_write_properties_dispatcher(string_view write_properties);
+	Schema::dispatcher_feed_properties get_feed_properties_dispatcher(string_view feed_properties);
+	Schema::dispatcher_process_properties get_process_properties_dispatcher(string_view process_properties);
+	Schema::dispatcher_process_properties get_process_concrete_properties_dispatcher(string_view process_concrete_properties);
+	Schema::dispatcher_readable get_readable_dispatcher(string_view readable);
+
+	static const std::unordered_map<string_view, dispatcher_write_properties> map_dispatch_write_properties;
+	static const std::unordered_map<string_view, dispatcher_feed_properties> map_dispatch_feed_properties;
+	static const std::unordered_map<string_view, dispatcher_process_properties> map_dispatch_process_properties;
+	static const std::unordered_map<string_view, dispatcher_process_properties> map_dispatch_process_concrete_properties;
 	static const std::unordered_map<string_view, dispatcher_readable> map_get_readable;
 
 	std::shared_ptr<const MsgPack> schema;
