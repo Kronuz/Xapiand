@@ -93,7 +93,7 @@ public:
 		errno = 0;
 		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
 		std::swap(errno, errno_save);
-		switch (errno) {
+		switch (errno_save) {
 			case EINVAL:
 				THROW(InvalidArgument, "%s: Cannot convert value: %s", name, std::string(str).c_str());
 			case ERANGE:
