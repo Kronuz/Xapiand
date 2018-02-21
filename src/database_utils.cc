@@ -73,7 +73,7 @@ std::string prefixed(string_view term, string_view field_prefix, char field_type
 
 Xapian::valueno get_slot(string_view field_prefix, char field_type)
 {
-	auto slot = static_cast<Xapian::valueno>(xxh64::hash(std::string(field_prefix) + field_type));
+	auto slot = static_cast<Xapian::valueno>(xxh32::hash(std::string(field_prefix) + field_type));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -92,7 +92,7 @@ std::string get_prefix(unsigned long long field_number)
 std::string get_prefix(string_view field_name)
 {
 	// Mask 0x1fffff for maximum length prefix of 4.
-	return serialise_length(xxh64::hash(field_name) & 0x1fffff);
+	return serialise_length(xxh32::hash(field_name) & 0x1fffff);
 }
 
 

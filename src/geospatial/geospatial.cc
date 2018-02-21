@@ -47,7 +47,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 		case MsgPack::Type::MAP: {
 			auto it = obj.begin();
 			const auto str_key = it->str();
-			switch ((Cast::Hash)xxh64::hash(str_key)) {
+			switch ((Cast::Hash)fnv1a32::hash(str_key)) {
 				case Cast::Hash::EWKT: {
 					try {
 						EWKT ewkt(it.value().str_view());
@@ -439,7 +439,7 @@ GeoSpatial::make_multipolygon(const MsgPack& o)
 			const auto it_e = o.end();
 			for (auto it = o.begin(); it != it_e; ++it) {
 				const auto str_key = it->str();
-				switch ((Cast::Hash)xxh64::hash(str_key)) {
+				switch ((Cast::Hash)fnv1a32::hash(str_key)) {
 					case Cast::Hash::POLYGON:
 						multipolygon.add(make_polygon(it.value(), Geometry::Type::POLYGON));
 						break;
@@ -524,7 +524,7 @@ GeoSpatial::make_collection(const MsgPack& o)
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
 			const auto str_key = it->str();
-			switch ((Cast::Hash)xxh64::hash(str_key)) {
+			switch ((Cast::Hash)fnv1a32::hash(str_key)) {
 				case Cast::Hash::POINT:
 					collection.add_point(make_point(it.value()));
 					break;
@@ -575,7 +575,7 @@ GeoSpatial::make_intersection(const MsgPack& o)
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
 			const auto str_key = it->str();
-			switch ((Cast::Hash)xxh64::hash(str_key)) {
+			switch ((Cast::Hash)fnv1a32::hash(str_key)) {
 				case Cast::Hash::POINT:
 					intersection.add(std::make_shared<Point>(make_point(it.value())));
 					break;

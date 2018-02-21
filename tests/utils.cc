@@ -22,7 +22,7 @@
 
 #include "utils.h"
 #include "../src/opts.h"
-#include "../src/hashes.hh"                 // for xxh64
+#include "../src/hashes.hh"                 // for fnv1a32
 
 opts_t opts;
 
@@ -64,7 +64,7 @@ Initializer::Initializer()
 			/* ssize_t max_files = */ 1000,
 			/* unsigned int ev_flags = */ 0,
 			/* bool uuid_compact = */ true,
-			/* UUIDRepr uuid_repr = */ xxh64::hash("simple"),
+			/* UUIDRepr uuid_repr = */ fnv1a32::hash("simple"),
 			/* bool uuid_partition = */ true,
 			/* std::string dump_metadata = */ "",
 			/* std::string dump_schema = */ "",
@@ -153,8 +153,8 @@ DB_Test::get_body(const std::string& body, const std::string& ct_type)
 {
 	MsgPack msgpack;
 	rapidjson::Document rdoc;
-	switch (xxh64::hash(ct_type)) {
-		case xxh64::hash(FORM_URLENCODED_CONTENT_TYPE):
+	switch (fnv1a32::hash(ct_type)) {
+		case fnv1a32::hash(FORM_URLENCODED_CONTENT_TYPE):
 			try {
 				json_load(rdoc, body);
 				msgpack = MsgPack(rdoc);
@@ -162,12 +162,12 @@ DB_Test::get_body(const std::string& body, const std::string& ct_type)
 				msgpack = MsgPack(body);
 			}
 			break;
-		case xxh64::hash(JSON_CONTENT_TYPE):
+		case fnv1a32::hash(JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
 			msgpack = MsgPack(rdoc);
 			break;
-		case xxh64::hash(MSGPACK_CONTENT_TYPE):
-		case xxh64::hash(X_MSGPACK_CONTENT_TYPE):
+		case fnv1a32::hash(MSGPACK_CONTENT_TYPE):
+		case fnv1a32::hash(X_MSGPACK_CONTENT_TYPE):
 			msgpack = MsgPack::unserialise(body);
 			break;
 		default:

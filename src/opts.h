@@ -61,7 +61,7 @@ extern struct opts_t {
 	ssize_t max_files;
 	unsigned int ev_flags;
 	bool uuid_compact;
-	uint64_t uuid_repr;
+	uint32_t uuid_repr;
 	bool uuid_partition;
 	std::string dump_metadata;
 	std::string dump_schema;

@@ -45,7 +45,7 @@
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
-#include "hashes.hh"                       // for xxh64
+#include "hashes.hh"                       // for fnv1a32
 
 
 #ifndef L_SCHEMA
@@ -895,8 +895,8 @@ _get_stem_language(string_view str_stem_language)
 inline bool
 has_set_default_spc(string_view set_default_spc)
 {
-	switch (xxh64::hash(set_default_spc)) {
-		case xxh64::hash(ID_FIELD_NAME):
+	switch (fnv1a32::hash(set_default_spc)) {
+		case fnv1a32::hash(ID_FIELD_NAME):
 			return true;
 		default:
 			return false;
@@ -5135,8 +5135,8 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
 	L_CALL("Schema::dispatch_set_default_spc(%s)", repr(mut_properties.to_string()).c_str());
 
-	switch (xxh64::hash(specification.full_meta_name)) {
-		case xxh64::hash(ID_FIELD_NAME):
+	switch (fnv1a32::hash(specification.full_meta_name)) {
+		case fnv1a32::hash(ID_FIELD_NAME):
 			set_default_spc_id(mut_properties);
 			break;
 	}

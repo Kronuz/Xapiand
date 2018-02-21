@@ -66,7 +66,7 @@
 #include "schema.h"                  // for default_spc
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
-#include "hashes.hh"                 // for xxh64
+#include "hashes.hh"                 // for fnv1a32
 
 #include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
 
@@ -466,40 +466,40 @@ void parseOptions(int argc, char** argv) {
 			opts.uuid_compact = true;
 			opts.uuid_partition = true;
 #if defined XAPIAND_UUID_ENCODED
-			opts.uuid_repr = xxh64::hash("encoded");
+			opts.uuid_repr = fnv1a32::hash("encoded");
 #else
-			opts.uuid_repr = xxh64::hash("simple");
+			opts.uuid_repr = fnv1a32::hash("simple");
 #endif
 		} else {
 			opts.uuid_compact = false;
 			opts.uuid_partition = false;
-			opts.uuid_repr = xxh64::hash("simple");
+			opts.uuid_repr = fnv1a32::hash("simple");
 		}
 
 		for (const auto& u : uuid.getValue()) {
-			switch (xxh64::hash(u)) {
-				case xxh64::hash("simple"):
-					opts.uuid_repr = xxh64::hash("simple");
+			switch (fnv1a32::hash(u)) {
+				case fnv1a32::hash("simple"):
+					opts.uuid_repr = fnv1a32::hash("simple");
 					break;
-				case xxh64::hash("compact"):
+				case fnv1a32::hash("compact"):
 					opts.uuid_compact = true;
 					break;
-				case xxh64::hash("partition"):
+				case fnv1a32::hash("partition"):
 					opts.uuid_partition = true;
 					break;
 #ifdef XAPIAND_UUID_GUID
-				case xxh64::hash("guid"):
-					opts.uuid_repr = xxh64::hash("guid");
+				case fnv1a32::hash("guid"):
+					opts.uuid_repr = fnv1a32::hash("guid");
 					break;
 #endif
 #ifdef XAPIAND_UUID_URN
-				case xxh64::hash("urn"):
-					opts.uuid_repr = xxh64::hash("urn");
+				case fnv1a32::hash("urn"):
+					opts.uuid_repr = fnv1a32::hash("urn");
 					break;
 #endif
 #ifdef XAPIAND_UUID_ENCODED
-				case xxh64::hash("encoded"):
-					opts.uuid_repr = xxh64::hash("encoded");
+				case fnv1a32::hash("encoded"):
+					opts.uuid_repr = fnv1a32::hash("encoded");
 					break;
 #endif
 			}

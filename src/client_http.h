@@ -47,7 +47,7 @@
 #include "lru.h"                // for LRU
 #include "msgpack.h"            // for MsgPack
 #include "url_parser.h"         // for PathParser, QueryParser
-#include "hashes.hh"            // for xxh64
+#include "hashes.hh"            // for fnv1a32
 
 
 class UUIDGenerator;
@@ -146,23 +146,23 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
-	enum class Command : uint64_t {
+	enum class Command : uint32_t {
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_COMMIT    = xxh64::hash(COMMAND_COMMIT),
-		CMD_INFO      = xxh64::hash(COMMAND_INFO),
-		CMD_METADATA  = xxh64::hash(COMMAND_METADATA),
-		CMD_NODES     = xxh64::hash(COMMAND_NODES),
+		CMD_COMMIT    = fnv1a32::hash(COMMAND_COMMIT),
+		CMD_INFO      = fnv1a32::hash(COMMAND_INFO),
+		CMD_METADATA  = fnv1a32::hash(COMMAND_METADATA),
+		CMD_NODES     = fnv1a32::hash(COMMAND_NODES),
 #ifndef NDEBUG
-		CMD_QUIT      = xxh64::hash(COMMAND_QUIT),
+		CMD_QUIT      = fnv1a32::hash(COMMAND_QUIT),
 #endif
-		CMD_SCHEMA    = xxh64::hash(COMMAND_SCHEMA),
-		CMD_SEARCH    = xxh64::hash(COMMAND_SEARCH),
-		CMD_STATS     = xxh64::hash(COMMAND_STATS),
-		CMD_TOUCH     = xxh64::hash(COMMAND_TOUCH),
+		CMD_SCHEMA    = fnv1a32::hash(COMMAND_SCHEMA),
+		CMD_SEARCH    = fnv1a32::hash(COMMAND_SEARCH),
+		CMD_STATS     = fnv1a32::hash(COMMAND_STATS),
+		CMD_TOUCH     = fnv1a32::hash(COMMAND_TOUCH),
 #if XAPIAND_DATABASE_WAL
-		CMD_WAL       = xxh64::hash(COMMAND_WAL),
+		CMD_WAL       = fnv1a32::hash(COMMAND_WAL),
 #endif
 	};
 
