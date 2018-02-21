@@ -163,8 +163,8 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 													if ((it_e - aux) == 6) {
 														auto aux_end = aux + 3;
 														if (*aux_end == ':') {
-															auto tz_h = string_view(aux + 1, aux_end - aux + 1);
-															auto tz_m = string_view(aux_end + 1, it_e - aux_end + 1);
+															string_view tz_h(aux + 1, aux_end - aux - 1);
+															string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 															if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																computeTimeZone(tm, c, tz_h, tz_m);
 																tm.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, aux - it)));
@@ -453,11 +453,11 @@ Datetime::Iso8601Parser(string_view date, tm_t& tm)
 															if ((it_e - aux) == 6) {
 																auto aux_end = aux + 3;
 																if (*aux_end == ':') {
-																	string_view tz_h(aux + 1, aux_end - aux + 1);
-																	string_view tz_m(aux_end + 1, it_e - aux_end + 1);
+																	string_view tz_h(aux + 1, aux_end - aux - 1);
+																	string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-																		computeTimeZone(tm, c, tz_h, tz_m);
 																		tm.fsec = normalize_fsec(strict_stod(string_view(it, aux - it)));
+																																				computeTimeZone(tm, c, tz_h, tz_m);
 																		return Format::VALID;
 																	}
 																	return Format::OUT_OF_RANGE;
@@ -591,8 +591,8 @@ Datetime::Iso8601Parser(string_view date)
 															if ((it_e - aux) == 6) {
 																auto aux_end = aux + 3;
 																if (*aux_end == ':') {
-																	auto tz_h = std::string(aux + 1, aux_end);
-																	auto tz_m = std::string(aux_end + 1, it_e);
+																	string_view tz_h(aux + 1, aux_end - aux - 1);
+																	string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																		return Format::VALID;
 																	}
@@ -1181,8 +1181,8 @@ Datetime::TimeParser(string_view _time)
 											if ((it_e - aux) == 6) {
 												auto aux_end = aux + 3;
 												if (*aux_end == ':') {
-													clk.tz_h = strict_stoul(string_view(aux + 1, aux_end - aux + 1));
-													clk.tz_m = strict_stoul(string_view(aux_end + 1, it_e - aux_end + 1));
+													clk.tz_h = strict_stoul(string_view(aux + 1, aux_end - aux - 1));
+													clk.tz_m = strict_stoul(string_view(aux_end + 1, it_e - aux_end - 1));
 													clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, aux - it)));
 													return clk;
 												}
