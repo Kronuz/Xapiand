@@ -87,15 +87,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#ifdef __FUNCTION__
-#define assert(e) \
-	((void) (likely(e) ? ((void)0) : __assert_tb(__FUNCTION__, __FILE__, __LINE__, #e)))
-#elif defined __func__
 #define assert(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
-#else
-#define assert(e) \
-	((void) (likely(e) ? ((void)0) : __assert_tb("<unknown>", __FILE__, __LINE__, #e)))
-#endif
 #endif
 #endif

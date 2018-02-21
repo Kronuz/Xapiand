@@ -567,10 +567,10 @@ Serialise::_float(string_view field_value)
 {
 	try {
 		return _float(strict_stod(field_value));
-	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid float format: %s", repr(field_value).c_str());
-	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range float format: %s", repr(field_value).c_str());
+	} catch (const std::invalid_argument& exc) {
+		RETHROW(SerialisationError, "Invalid float format: %s", repr(field_value).c_str());
+	} catch (const std::out_of_range& exc) {
+		RETHROW(SerialisationError, "Out of range float format: %s", repr(field_value).c_str());
 	}
 }
 
@@ -580,10 +580,10 @@ Serialise::integer(string_view field_value)
 {
 	try {
 		return integer(strict_stoll(field_value));
-	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid integer format: %s", repr(field_value).c_str());
-	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range integer format: %s", repr(field_value).c_str());
+	} catch (const std::invalid_argument& exc) {
+		RETHROW(SerialisationError, "Invalid integer format: %s", repr(field_value).c_str());
+	} catch (const std::out_of_range& exc) {
+		RETHROW(SerialisationError, "Out of range integer format: %s", repr(field_value).c_str());
 	}
 }
 
@@ -593,10 +593,10 @@ Serialise::positive(string_view field_value)
 {
 	try {
 		return positive(strict_stoull(field_value));
-	} catch (const std::invalid_argument&) {
-		THROW(SerialisationError, "Invalid positive integer format: %s", repr(field_value).c_str());
-	} catch (const std::out_of_range&) {
-		THROW(SerialisationError, "Out of range positive integer format: %s", repr(field_value).c_str());
+	} catch (const std::invalid_argument& exc) {
+		RETHROW(SerialisationError, "Invalid positive integer format: %s", repr(field_value).c_str());
+	} catch (const std::out_of_range& exc) {
+		RETHROW(SerialisationError, "Out of range positive integer format: %s", repr(field_value).c_str());
 	}
 }
 

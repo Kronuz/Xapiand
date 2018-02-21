@@ -113,9 +113,9 @@ class Logging : public ScheduledTask {
 	Logging& operator=(Logging&&) = delete;
 	Logging& operator=(const Logging&) = delete;
 
-	bool _unlog(int _priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, int n, ...);
+	bool _unlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...);
 
-	static std::string format_string(bool info, bool stacked, int priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
+	static std::string format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
 	static Log add(string_view str, const BaseException* exc, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
@@ -135,13 +135,13 @@ public:
 	static void dump_collected();
 
 	static void do_println(bool collect, bool with_endl, string_view format, va_list argptr);
-	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
+	static Log do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
 
 	template <typename... Args>
-	bool unlog(int _priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, Args&&... args) {
-		return _unlog(_priority, file, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+	bool unlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, Args&&... args) {
+		return _unlog(_priority, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 	}
-	bool vunlog(int _priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
+	bool vunlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr);
 
 	void cleanup();
 

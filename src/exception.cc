@@ -126,15 +126,16 @@ atos(const void* address)
 
 
 std::string
-traceback(string_view filename, int line, void *const * callstack, int frames, int skip = 1)
+traceback(const char* function, const char* filename, int line, void *const * callstack, int frames, int skip = 1)
 {
 	char tmp[20];
 
-	std::string tb = "\n== Traceback at ";
-	tb.append(filename.data(), filename.size());
+	std::string tb = "\n== Traceback (most recent call first): ";
+	tb.append(filename);
 	tb.push_back(':');
 	tb.append(std::to_string(line));
-	tb.append(" (most recent call first)");
+	tb.append(" at ");
+	tb.append(function);
 
 	if (frames < 2) {
 		return tb;
@@ -195,14 +196,14 @@ traceback(string_view filename, int line, void *const * callstack, int frames, i
 
 
 std::string
-traceback(string_view filename, int line, int skip)
+traceback(const char* function, const char* filename, int line, int skip)
 {
 	void* callstack[128];
 
 	// retrieve current stack addresses
 	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
 
-	auto tb = traceback(filename, line, callstack, frames, skip);
+	auto tb = traceback(function, filename, line, callstack, frames, skip);
 	if (frames == 0) {
 		tb.append(":\n    <empty, possibly corrupt>");
 	}
@@ -215,7 +216,7 @@ extern "C" void
 __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
 {
 	(void)fprintf(stderr, "Assertion failed: %s, function %s, file %s, line %u.%s\n",
-		expression, function, filename, line, traceback(filename, line, 2).c_str());
+		expression, function, filename, line, traceback(function, filename, line, 2).c_str());
 	abort();
 }
 
@@ -229,6 +230,7 @@ BaseException::BaseException()
 
 BaseException::BaseException(const BaseException& exc)
 	: type{exc.type},
+	  function{exc.function},
 	  filename{exc.filename},
 	  line{exc.line},
 	  frames{exc.frames},
@@ -242,6 +244,7 @@ BaseException::BaseException(const BaseException& exc)
 
 BaseException::BaseException(BaseException&& exc)
 	: type{std::move(exc.type)},
+	  function{std::move(exc.function)},
 	  filename{std::move(exc.filename)},
 	  line{std::move(exc.line)},
 	  callstack{std::move(exc.callstack)},
@@ -257,10 +260,11 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(BaseException::private_ctor, const char *filename, int line, const char* type, string_view format, int n, ...)
+BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, string_view format, int n, ...)
 	: type(type),
-	  filename(filename),
-	  line(line),
+	  function(function_),
+	  filename(filename_),
+	  line(line_),
 	  frames(0)
 {
 	va_list argptr;
@@ -280,9 +284,19 @@ BaseException::BaseException(BaseException::private_ctor, const char *filename, 
 
 	va_end(argptr);
 
+	if (!exc.type.empty() && exc.frames) {
+		function = exc.function;
+		filename = exc.filename;
+		line = exc.line;
 #ifdef XAPIAND_TRACEBACKS
-	frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
+		frames = exc.frames;
+		memcpy(callstack, exc.callstack, frames * sizeof(void*));
 #endif
+	} else {
+#ifdef XAPIAND_TRACEBACKS
+		frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
+#endif
+	}
 }
 
 const char*
@@ -299,7 +313,13 @@ const char*
 BaseException::get_context() const
 {
 	if (context.empty()) {
-		context.assign(filename + ":" + std::to_string(line) + ": " + get_message());
+		context.append(filename);
+		context.push_back(':');
+		context.append(std::to_string(line));
+		context.append(" at ");
+		context.append(function);
+		context.append(": ");
+		context.append(get_message());
 	}
 	return context.c_str();
 }
@@ -309,7 +329,7 @@ const char*
 BaseException::get_traceback() const
 {
 	if (traceback.empty()) {
-		traceback = ::traceback(filename, line, callstack, frames);
+		traceback = ::traceback(function, filename, line, callstack, frames);
 	}
 	return traceback.c_str();
 }

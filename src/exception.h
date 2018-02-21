@@ -32,17 +32,22 @@
 #include "string_view.h"
 
 
-#define TRACEBACK() traceback(__FILE__, __LINE__)
+#define TRACEBACK() traceback(__func__, __FILE__, __LINE__)
 
-std::string traceback(string_view filename, int line, int skip = 1);
+std::string traceback(const char* function, const char* filename, int line, int skip = 1);
 
 class BaseException {
-	struct private_ctor {};
-	BaseException(private_ctor, const char *filename, int line, const char* type, string_view format, int n, ...);
+	static const BaseException& default_exc() {
+		static const BaseException default_exc;
+		return default_exc;
+	}
+
+	BaseException(const BaseException& exc, const char *function, const char *filename, int line, const char* type, string_view format, int n, ...);
 
 protected:
 	std::string type;
-	std::string filename;
+	const char* function;
+	const char* filename;
 	int line;
 	void* callstack[128];
 	size_t frames;
@@ -60,11 +65,22 @@ public:
 	BaseException(const BaseException* exc);
 
 	template <typename... Args>
-	BaseException(const char *filename, int line, const char* type, string_view format, Args&&... args)
-		: BaseException(private_ctor{}, filename, line, type, format, 0, std::forward<Args>(args)...) { }
+	BaseException(const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+		: BaseException(default_exc(), function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
+	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
+	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+		: BaseException(*exc, function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
+	template <typename... Args>
+	BaseException(const void*, const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+		: BaseException(default_exc(), function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
 
-	BaseException(const char *filename, int line, const char* type, string_view msg = "")
-		: BaseException(private_ctor{}, filename, line, type, msg, 0) { }
+	BaseException(const char *function, const char *filename, int line, const char* type, string_view msg = "")
+		: BaseException(default_exc(), function, filename, line, type, msg, 0) { }
+	template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
+	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, string_view msg = "")
+		: BaseException(*exc, function, filename, line, type, msg, 0) { }
+	BaseException(const void*, const char *function, const char *filename, int line, const char* type, string_view msg = "")
+		: BaseException(default_exc(), function, filename, line, type, msg, 0) { }
 
 	virtual ~BaseException() = default;
 
@@ -87,7 +103,7 @@ public:
 
 class DummyException : public BaseException, public std::runtime_error {
 public:
-	DummyException() : BaseException(__FILE__, __LINE__, "DummyException"), std::runtime_error(message) { }
+	DummyException() : BaseException(__func__, __FILE__, __LINE__, "DummyException"), std::runtime_error(message) { }
 };
 
 
@@ -122,7 +138,7 @@ public:
 class Exit : public BaseException, public std::runtime_error {
 public:
 	int code;
-	explicit Exit(int code_) : BaseException(__FILE__, __LINE__, "Exit"), std::runtime_error(message), code(code_) { }
+	explicit Exit(int code_) : BaseException(__func__, __FILE__, __LINE__, "Exit"), std::runtime_error(message), code(code_) { }
 };
 
 
@@ -251,6 +267,8 @@ public:
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
-#define THROW(exc, ...) throw exc(__FILE__, __LINE__, #exc, ##__VA_ARGS__)
+#define THROW(exception, ...) throw exception(__func__, __FILE__, __LINE__, #exception, ##__VA_ARGS__)
+
+#define RETHROW(exception, ...) throw exception(&exc, __func__, __FILE__, __LINE__, #exception, ##__VA_ARGS__)
 
 #pragma GCC diagnostic pop

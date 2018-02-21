@@ -138,18 +138,18 @@ _println(bool collect, bool with_endl, string_view format, int n, ...)
 
 
 Log
-vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
 {
-	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
+	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, function, filename, line, suffix, prefix, format, argptr);
 }
 
 
 Log
-_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* file, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
-	auto ret = vlog(cleanup, info, stacked, wakeup, async, priority, exc, file, line, suffix, prefix, format, argptr);
+	auto ret = vlog(cleanup, info, stacked, wakeup, async, priority, exc, function, filename, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
 }
@@ -185,18 +185,18 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::vunlog(int priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Log::vunlog(int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
 {
-	return log->vunlog(priority, file, line, suffix, prefix, format, argptr);
+	return log->vunlog(priority, function, filename, line, suffix, prefix, format, argptr);
 }
 
 
 bool
-Log::_unlog(int priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+Log::_unlog(int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
-	auto ret = vunlog(priority, file, line, suffix, prefix, format, argptr);
+	auto ret = vunlog(priority, function, filename, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 	return ret;
 }
@@ -391,7 +391,7 @@ Logging::run()
 
 
 std::string
-Logging::format_string(bool info, bool stacked, int priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
 {
 	auto msg = vformat_string(format, argptr);
 
@@ -403,9 +403,10 @@ Logging::format_string(bool info, bool stacked, int priority, const char* file, 
 		result.push_back(' ');
 
 #ifdef LOG_LOCATION
-		result += std::string(file) + ":" + std::to_string(line) + ": ";
+		result += std::string(filename) + ":" + std::to_string(line) + " at " + std::string(function) + ": ";
 #else
-		ignore_unused(file);
+		ignore_unused(function);
+		ignore_unused(filename);
 		ignore_unused(line);
 #endif
 		result.append(CLEAR_COLOR.c_str());
@@ -424,12 +425,12 @@ Logging::format_string(bool info, bool stacked, int priority, const char* file, 
 
 
 bool
-Logging::vunlog(int _priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::vunlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
 			_priority = validated_priority(_priority);
-			auto str = format_string(true, stacked, _priority, file, line, suffix, prefix, format, argptr);
+			auto str = format_string(true, stacked, _priority, function, filename, line, suffix, prefix, format, argptr);
 			add(str, nullptr, false, stacked, std::chrono::system_clock::now(), async, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
@@ -439,11 +440,11 @@ Logging::vunlog(int _priority, const char* file, int line, string_view suffix, s
 
 
 bool
-Logging::_unlog(int _priority, const char* file, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+Logging::_unlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
-	auto ret = vunlog(_priority, file, line, suffix, prefix, format, argptr);
+	auto ret = vunlog(_priority, function, filename, line, suffix, prefix, format, argptr);
 	va_end(argptr);
 
 	return ret;
@@ -464,11 +465,11 @@ Logging::do_println(bool collect, bool with_endl, string_view format, va_list ar
 
 
 Log
-Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const BaseException* exc, const char* file, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
 {
 	if (_priority <= log_level) {
 		_priority = validated_priority(_priority);
-		auto str = format_string(info, stacked, _priority, file, line, suffix, prefix, format, argptr);  // TODO: Slow!
+		auto str = format_string(info, stacked, _priority, function, filename, line, suffix, prefix, format, argptr);  // TODO: Slow!
 		return add(str, exc, clean, stacked, wakeup, async, _priority);
 	}
 
