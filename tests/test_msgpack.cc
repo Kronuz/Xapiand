@@ -800,17 +800,17 @@ int test_msgpack_map() {
 
 int test_msgpack_array() {
 	INIT_LOG
-	size_t r0 = 4;
+	size_t r0 = 5;
 	std::string f1 = "villain";
-	std::string r1 = "Mr. Freeze";
+	std::string e1 = "Mr. Freeze";
 	std::string f2 = "name";
-	std::string r2 = "Dr. Victor Fries";
+	std::string e2 = "Dr. Victor Fries";
 	std::string f3 = "super_power";
-	std::string r3 = "Sub-zero physiology";
+	std::string e3 = "Sub-zero physiology";
 	std::string f4 = "enemy";
-	std::string r4 = "Batman";
+	std::string e4 = "Batman";
 	std::string f5 = "creation";
-	std::string r5 = "1956";
+	std::string e5 = "1956";
 
 	std::string buffer;
 	std::string filename(path_test_msgpack + "json/object_to_patch.txt");
@@ -832,35 +832,80 @@ int test_msgpack_array() {
 	}
 
 	try {
-		sub_obj[f1];
+		auto& r1 = sub_obj[f1];
+		try {
+			if (r1.str() != e1) {
+				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r1.str().c_str(), e1.c_str());
+			}
+		} catch (const msgpack::type_error&) {
+			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r1.to_string().c_str(), e1.c_str());
+			RETURN(1);
+		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working. Expected: %s\n", r1.c_str());
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e1.c_str());
 		RETURN(1);
 	}
+
 	try {
-		sub_obj[f2];
+		auto& r2 = sub_obj[f2];
+		try {
+			if (r2.str() != e2) {
+				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r2.str().c_str(), e2.c_str());
+			}
+		} catch (const msgpack::type_error&) {
+			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r2.to_string().c_str(), e2.c_str());
+			RETURN(1);
+		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working. Expected: %s\n", r2.c_str());
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e2.c_str());
 		RETURN(1);
 	}
+
 	try {
-		sub_obj[f3];
+		auto& r3 = sub_obj[f3];
+		try {
+			if (r3.str() != e3) {
+				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r3.str().c_str(), e3.c_str());
+			}
+		} catch (const msgpack::type_error&) {
+			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r3.to_string().c_str(), e3.c_str());
+			RETURN(1);
+		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working. Expected: %s\n", r3.c_str());
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e3.c_str());
 		RETURN(1);
 	}
+
 	try {
-		sub_obj[f4];
+		auto& r4 = sub_obj[f4];
+		try {
+			if (r4.str() != e4) {
+				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r4.str().c_str(), e4.c_str());
+			}
+		} catch (const msgpack::type_error&) {
+			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r4.to_string().c_str(), e4.c_str());
+			RETURN(1);
+		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working. Expected: %s\n", r4.c_str());
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e4.c_str());
 		RETURN(1);
 	}
+
 	try {
-		sub_obj[f5];
+		auto& r5 = sub_obj[f5];
+		try {
+			if (r5.str() != e5) {
+				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r5.str().c_str(), e5.c_str());
+			}
+		} catch (const msgpack::type_error&) {
+			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r5.to_string().c_str(), e5.c_str());
+			RETURN(1);
+		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working. Expected: %s\n", r5.c_str());
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e5.c_str());
 		RETURN(1);
 	}
+
 
 	RETURN(0);
 }
