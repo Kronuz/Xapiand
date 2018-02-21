@@ -46,12 +46,6 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 	while (q != p_end) {
 		char c = *q++;
 		switch (c) {
-			case '%': {
-				auto dec = hexdec(&q);
-				if (dec != -1) {
-					c = dec;
-				}
-			}
 			case '+':
 				buf.push_back(plus);
 				break;
@@ -64,6 +58,12 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 			case '=':
 				buf.push_back(eq);
 				break;
+			case '%': {
+				auto dec = hexdec(&q);
+				if (dec != -1) {
+					c = dec;
+				}
+			}
 			default:
 				buf.push_back(c);
 		}
