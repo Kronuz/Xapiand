@@ -120,13 +120,13 @@ const std::vector<test_date_t> test_unserialisedate({
 
 const std::vector<test_cartesian_t> test_seri_cartesian({
 	// Cartesian.                                             Expected serialise Cartesian.
-	{ Cartesian( 0.925602814,  0.336891873,  0.172520422),    "\\xaea\\'\\xfe\\x8bJ#\\xe1\\x81~\\x07\\xe6"                },
-	{ Cartesian( 0.837915107,  0.224518676,  0.497483301),    "\\xa9\\'%\\xe3\\x84\\x97v\\x14\\x94\\xdc\\x92%"            },
-	{ Cartesian( 0.665250371,  0.384082481,  0.640251974),    "\\x9e\\xdc~C\\x8e\\x1a61\\x9d_\\fF"                        },
+	{ Cartesian( 0.925602814,  0.336891873,  0.172520422),    "\\xaea'\\xfe\\x8bJ#\\xe1\\x81~\\x07\\xe6"                  },
+	{ Cartesian( 0.837915107,  0.224518676,  0.497483301),    "\\xa9'%\\xe3\\x84\\x97v\\x14\\x94\\xdc\\x92%"              },
+	{ Cartesian( 0.665250371,  0.384082481,  0.640251974),    "\\x9e\\xdc~C\\x8e\\x1a61\\x9d_\\x0cF"                      },
 	{ Cartesian( 0.765933665,  0.407254153,  0.497483341),    "\\xa4\\xdc\\xcca\\x8f{\\xc8\\x89\\x94\\xdc\\x92M"          },
-	{ Cartesian( 0.925602814, -0.336891873, -0.172520422),    "\\xaea\\'\\xfec!\\x04\\x1fl\\xed \\x1a"                    },
-	{ Cartesian( 0.837915107,  0.224518676, -0.497483301),    "\\xa9\\'%\\xe3\\x84\\x97v\\x14Y\\x8e\\x95\\xdb"            },
-	{ Cartesian( 0.665250371, -0.384082481,  0.640251974),    "\\x9e\\xdc~C`P\\xf1\\xcf\\x9d_\\fF"                        },
+	{ Cartesian( 0.925602814, -0.336891873, -0.172520422),    "\\xaea'\\xfec!\\x04\\x1fl\\xed \\x1a"                      },
+	{ Cartesian( 0.837915107,  0.224518676, -0.497483301),    "\\xa9'%\\xe3\\x84\\x97v\\x14Y\\x8e\\x95\\xdb"              },
+	{ Cartesian( 0.665250371, -0.384082481,  0.640251974),    "\\x9e\\xdc~C`P\\xf1\\xcf\\x9d_\\x0cF"                      },
 	{ Cartesian( 0.765933705,  0.407254175,  0.497483262),    "\\xa4\\xdc\\xcc\\x89\\x8f{\\xc8\\x9f\\x94\\xdc\\x91\\xfe"  },
 	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),    "I\\x8e[w^\\xef_aY\\x8e\\x96\\x02",                         },
 	{ Cartesian(-1.000000000,  0.000000000,  0.000000000),    ";\\x9a\\xca\\x00w5\\x94\\x00w5\\x94\\x00",                 },
@@ -153,7 +153,7 @@ const std::vector<test_uuid_t> test_seri_uuids({
 	{ "00000000-0000-1000-8000-000000000000",   "\\x1c\\x00\\x00\\x00",                                                                   "00000000-0000-1000-8000-000000000000" },
 	{ "11111111-1111-1111-8111-111111111111",   "\\x0f\\x88\\x88\\x88\\x88\\x88\\x88\\x88\\x82\"\"\"\"\"\"\"",                            "11111111-1111-1111-8111-111111111111" },
 	// Condensed + Compacted:
-	{ "230c0800-dc3c-11e7-b966-a3ab262e682b",   "\\x06,\\x02[\\b9fW",                                                                   "230c0800-dc3c-11e7-b966-a3ab262e682b" },
+	{ "230c0800-dc3c-11e7-b966-a3ab262e682b",   "\\x06,\\x02[\\x089fW",                                                                   "230c0800-dc3c-11e7-b966-a3ab262e682b" },
 	{ "f2238800-debf-11e7-bbf7-dffcee0c03ab",   "\\x06.\\x86*\\x1f\\xbb\\xf7W",                                                           "f2238800-debf-11e7-bbf7-dffcee0c03ab" },
 	// Condensed + Expanded:
 	{ "60579016-dec5-11e7-b616-34363bc9ddd6",   "\\xe1\\x17E\\xcc)\\xc4\\x0bl,hlw\\x93\\xbb\\xac",                                        "60579016-dec5-11e7-b616-34363bc9ddd6" },
@@ -179,7 +179,7 @@ const std::vector<test_uuid_t> test_seri_uuids({
 	},
 	{
 		"230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab",
-		"\\x06,\\x02[\\b9fW\\x06.\\x86*\\x1f\\xbb\\xf7W",
+		"\\x06,\\x02[\\x089fW\\x06.\\x86*\\x1f\\xbb\\xf7W",
 		"230c0800-dc3c-11e7-b966-a3ab262e682b;f2238800-debf-11e7-bbf7-dffcee0c03ab",
 	},
 	{
@@ -205,7 +205,7 @@ const std::vector<test_uuid_t> test_seri_uuids({
 	},
 	{
 		"d095e48f-c64f-4f08-91ec-888e6068dfe0;c5c52a08-c3b4-11e6-9231-339cb51d7742;c5c52a08-c3b4-51e6-7231-339cb51d7742",
-		"\\x01\\xd0\\x95\\xe4\\x8f\\xc6OO\\b\\x91\\xec\\x88\\x8e`h\\xdf\\xe0\\x0f\\xf3a\\xdab\\xe2\\x95\\x04$bg9j:\\xee\\x84\\x01\\xc5\\xc5*\\b\\xc3\\xb4Q\\xe6r13\\x9c\\xb5\\x1dwB",
+		"\\x01\\xd0\\x95\\xe4\\x8f\\xc6OO\\x08\\x91\\xec\\x88\\x8e`h\\xdf\\xe0\\x0f\\xf3a\\xdab\\xe2\\x95\\x04$bg9j:\\xee\\x84\\x01\\xc5\\xc5*\\x08\\xc3\\xb4Q\\xe6r13\\x9c\\xb5\\x1dwB",
 		"d095e48f-c64f-4f08-91ec-888e6068dfe0;c5c52a08-c3b4-11e6-9231-339cb51d7742;c5c52a08-c3b4-51e6-7231-339cb51d7742",
 	},
 });
