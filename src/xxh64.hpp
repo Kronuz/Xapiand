@@ -27,6 +27,8 @@
 #include <string>
 #include <cstdint>
 
+#include "string_view.h"
+
 #include "lz4/xxhash.h"
 
 class xxh64 {
