@@ -283,7 +283,7 @@ protected:
 
 public:
 	inline void open(string_view filename) {
-		std::string filename_string(filename);
+		stringified_view filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
 			THROW(DeflateIOError, "Cannot open file: %s", filename_string.c_str());

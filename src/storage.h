@@ -560,7 +560,7 @@ public:
 			it_size = cmpFile_it.size();
 			data = cmpFile_it->data();
 		} else {
-			std::string filename_string(filename);
+			stringified_view filename_string(filename);
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
 				THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());

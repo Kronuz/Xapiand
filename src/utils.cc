@@ -164,13 +164,13 @@ pthread_get_name_np(char* buffer, size_t size)
 
 void set_thread_name(string_view name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
-	pthread_setname_np(std::string(name).c_str());
+	pthread_setname_np(stringified_view(name).c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
-	pthread_setname_np(pthread_self(), std::string(name).c_str());
+	pthread_setname_np(pthread_self(), stringified_view(name).c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_3)
-	pthread_setname_np(pthread_self(), std::string(name).c_str(), nullptr);
+	pthread_setname_np(pthread_self(), stringified_view(name).c_str(), nullptr);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
-	pthread_set_name_np(pthread_self(), std::string(name).c_str());
+	pthread_set_name_np(pthread_self(), stringified_view(name).c_str());
 #endif
 #if defined(HAVE_PTHREAD_GET_NAME_NP_2)
 	pthread_get_name_np(nullptr, 0);
@@ -467,7 +467,7 @@ bool endswith(string_view text, char ch) {
 
 
 void delete_files(string_view path) {
-	std::string path_string(path);
+	stringified_view path_string(path);
 	DIR *dirp = ::opendir(path_string.c_str());
 	if (!dirp) {
 		return;
@@ -503,7 +503,7 @@ void delete_files(string_view path) {
 
 
 void move_files(string_view src, string_view dst) {
-	std::string src_string(src);
+	stringified_view src_string(src);
 	DIR *dirp = ::opendir(src_string.c_str());
 	if (!dirp) {
 		return;
@@ -533,7 +533,7 @@ void move_files(string_view src, string_view dst) {
 
 bool exists(string_view path) {
 	struct stat buf;
-	return ::stat(std::string(path).c_str(), &buf) == 0;
+	return ::stat(stringified_view(path).c_str(), &buf) == 0;
 }
 
 
@@ -566,7 +566,7 @@ bool build_path_index(string_view path_index) {
 
 
 DIR* opendir(string_view path, bool create) {
-	std::string path_string(path);
+	stringified_view path_string(path);
 	DIR* dirp = ::opendir(path_string.c_str());
 	if (!dirp) {
 		if (errno == ENOENT && create) {
@@ -616,7 +616,7 @@ void find_file_dir(DIR* dir, File_ptr& fptr, string_view pattern, bool pre_suf_f
 
 
 int copy_file(string_view src, string_view dst, bool create, string_view file_name, string_view new_name) {
-	std::string src_string(src);
+	stringified_view src_string(src);
 	DIR* dir_src = ::opendir(src_string.c_str());
 	if (!dir_src) {
 		L_ERR("ERROR: couldn't open directory %s: %s", strerror(errno));
@@ -624,7 +624,7 @@ int copy_file(string_view src, string_view dst, bool create, string_view file_na
 	}
 
 	struct stat buf;
-	std::string dst_string(dst);
+	stringified_view dst_string(dst);
 	int err = ::stat(dst_string.c_str(), &buf);
 
 	if (-1 == err) {

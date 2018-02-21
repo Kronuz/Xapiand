@@ -270,7 +270,7 @@ BaseException::BaseException(const BaseException& exc, const char *function_, co
 	va_list argptr;
 	va_start(argptr, n);
 
-	std::string format_string(format);
+	stringified_view format_string(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;

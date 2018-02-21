@@ -1352,3 +1352,114 @@ namespace bpstd {
 using bpstd::string_view;
 
 #endif /* HAVE_STRING_VIEW */
+
+/*
+ * The stringified_view class is a wrapper for string_view which makes it
+ * so it ensures c_str() always returns a null-terminated c string.
+ * This class only copies the data to ensure this when is needed.
+ */
+class stringified_view {
+    mutable std::string _str;
+    mutable string_view _str_view;
+
+public:
+    stringified_view(const stringified_view& v)
+        : _str_view(v._str_view)
+    { }
+
+    stringified_view(stringified_view&& v) noexcept
+        : _str(std::move(v._str)),
+          _str_view(std::move(v._str_view))
+    { }
+
+    stringified_view& operator=(const stringified_view& o) {
+        _str_view = o._str_view;
+        return *this;
+    }
+
+    stringified_view& operator=(stringified_view&& o) noexcept {
+        _str = std::move(o._str);
+        _str_view = std::move(o._str_view);
+        return *this;
+    }
+
+    explicit stringified_view(const std::string& str)
+        : _str_view(str)
+    { }
+
+    explicit stringified_view(std::string&& str)
+        : _str(str),
+          _str_view(_str)
+    { }
+
+    stringified_view(const string_view& str_view)
+        : _str_view(str_view)
+    { }
+
+    stringified_view(string_view&& str_view)
+        : _str_view(std::move(str_view))
+    { }
+
+    auto empty() const noexcept {
+        return _str_view.empty();
+    }
+
+    auto length() const noexcept {
+        return _str_view.size();
+    }
+
+    auto c_str() const {
+        auto str_data = _str.data();
+        auto str_view_data = _str_view.data();
+        if (str_data != str_view_data && *(str_view_data + _str_view.size()) != '\0') {
+            _str = _str_view;
+            _str_view = _str;
+            str_view_data = str_data;
+        }
+        return str_view_data;
+    }
+
+    auto size() const noexcept {
+        return _str_view.size();
+    }
+
+    auto data() const {
+        return _str_view.data();
+    }
+
+    auto operator[](std::size_t pos) const noexcept {
+        return _str_view[pos];
+    }
+
+    auto at(std::size_t pos) const {
+        return _str_view.at(pos);
+    }
+
+    auto front() const noexcept {
+        return _str_view.front();
+    }
+
+    auto back() const noexcept {
+        return _str_view.back();
+    }
+
+    auto begin() const noexcept {
+        return _str_view.begin();
+    }
+
+    auto end() const noexcept {
+        return _str_view.end();
+    }
+
+    auto cbegin() const noexcept {
+        return _str_view.cbegin();
+    }
+
+    auto cend() const noexcept {
+        return _str_view.cend();
+    }
+
+    operator string_view() const noexcept {
+        return _str_view;
+    }
+};

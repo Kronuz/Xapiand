@@ -56,29 +56,6 @@ struct is_callable {
 };
 
 
-template<typename T, int N>
-inline std::string as_string(const T (&s)[N])
-{
-	return std::string(s, N - 1);
-}
-
-inline auto& as_string(std::string& str) {
-	return str;
-}
-
-inline const auto& as_string(const std::string& str) {
-	return str;
-}
-
-inline std::string as_string(string_view& str) {
-	return std::string(str);
-}
-
-inline const std::string as_string(const string_view& str) {
-	return std::string(str);
-}
-
-
 namespace std {
 	template<typename T, int N>
 	inline std::string to_string(const T (&s)[N])
@@ -194,7 +171,7 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 
 inline std::string vformat_string(string_view format, va_list argptr) {
-	std::string format_string(format);
+	stringified_view format_string(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
