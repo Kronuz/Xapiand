@@ -29,7 +29,7 @@
 
 #include "exception.h"        // for BaseException
 #include "string_view.h"      // for string_view
-#include "xxh64.hpp"          // for xxh64
+#include "hashes.hh"          // for xxh64
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 

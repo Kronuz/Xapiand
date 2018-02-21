@@ -21,15 +21,18 @@
  */
 #pragma once
 
-#ifndef XXH64_HPP
-#define XXH64_HPP
-
 #include <string>
 #include <cstdint>
 
 #include "string_view.h"
-
 #include "lz4/xxhash.h"
+
+
+//             _               _
+// __  ____  _| |__   __ _ ___| |__
+// \ \/ /\ \/ / '_ \ / _` / __| '_ \
+//  >  <  >  <| | | | (_| \__ \ | | |
+// /_/\_\/_/\_\_| |_|\__,_|___/_| |_|
 
 class xxh64 {
 	static constexpr uint64_t PRIME1 = 11400714785074694791ULL;
@@ -111,8 +114,76 @@ public:
 	}
 };
 
+
+class xxh32 {
+	/* constexpr xxh32::hash() not implemented! */
+
+public:
+	static uint32_t hash(string_view str, uint32_t seed=0) {
+		return XXH32(str.data(), str.size(), seed);
+	}
+};
+
+
 constexpr uint32_t operator"" _XXH(const char* s, size_t size) {
 	return xxh64::hash(s, size, 0);
 }
 
-#endif /* !defined XXH64_HPP */
+
+//   __            _
+//  / _|_ ____   _/ | __ _
+// | |_| '_ \ \ / / |/ _` |
+// |  _| | | \ V /| | (_| |
+// |_| |_| |_|\_/ |_|\__,_|
+
+template <typename T, T prime, T offset>
+struct fnv1a {
+	static constexpr T hash(const char *p, std::size_t len) {
+        return len == 1 ? (offset ^ static_cast<unsigned char>(*p)) * prime : (hash(p, len - 1) ^ static_cast<unsigned char>(p[len - 1])) * prime;
+	}
+
+	template <size_t N>
+	static constexpr T hash(const char(&s)[N]) {
+		return hash(s, N - 1);
+	}
+
+	static T hash(string_view str) {
+        T hash = offset;
+		for (char c : str) {
+            hash = (hash ^ static_cast<unsigned char>(c)) * prime;
+        }
+        return hash;
+    }
+};
+using fnv1a32 = fnv1a<std::uint32_t, 0x1000193UL, 0x811c9dc5UL>;
+using fnv1a64 = fnv1a<std::uint64_t, 0x100000001b3ULL, 0xcbf29ce484222325ULL>;
+// using fnv1a128 = fnv1a<__uint128_t, 0x10000000000000000000159ULL, 0xcf470aac6cb293d2f52f88bf32307f8fULL>;
+
+
+//      _        _               _               _
+//  ___| |_ _ __(_)_ __   __ _  | |__   __ _ ___| |__
+// / __| __| '__| | '_ \ / _` | | '_ \ / _` / __| '_ \
+// \__ \ |_| |  | | | | | (_| | | | | | (_| \__ \ | | |
+// |___/\__|_|  |_|_| |_|\__, | |_| |_|\__,_|___/_| |_|
+//                       |___/
+template <typename T>
+struct strh {
+	static constexpr std::uint64_t hash(const char *p, std::size_t len) {
+        return len == 1 ? static_cast<unsigned char>(*p) : (hash(p, len - 1) * 256) + static_cast<unsigned char>(p[len - 1]);
+	}
+
+	template <size_t N>
+	static constexpr std::uint64_t hash(const char(&s)[N]) {
+		return hash(s, N - 1);
+	}
+
+	static std::uint64_t hash(string_view str) {
+		std::uint64_t hash = 0;
+		for (char c : str) {
+			hash = (hash * 256) + static_cast<unsigned char>(c);
+		}
+		return hash;
+	}
+};
+using strh64 = strh<std::uint64_t>;
+using strh128 = strh<__uint128_t>;

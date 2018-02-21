@@ -24,7 +24,7 @@
 
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "msgpack.h"             // for MsgPack
-#include "xxh64.hpp"             // for xxh64
+#include "hashes.hh"             // for xxh64
 #include "string_view.h"         // for string_view
 
 

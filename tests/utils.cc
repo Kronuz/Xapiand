@@ -22,7 +22,7 @@
 
 #include "utils.h"
 #include "../src/opts.h"
-#include "../src/xxh64.hpp"                 // for xxh64
+#include "../src/hashes.hh"                 // for xxh64
 
 opts_t opts;
 

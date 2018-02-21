@@ -66,7 +66,7 @@
 #include "schema.h"                  // for default_spc
 #include "utils.h"                   // for format_string, center_string
 #include "worker.h"                  // for Worker
-#include "xxh64.hpp"                 // for xxh64
+#include "hashes.hh"                 // for xxh64
 
 #include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
 

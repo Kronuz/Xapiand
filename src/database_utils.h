@@ -31,7 +31,7 @@
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
 #include "sortable_serialise.h"    // for sortable_serialise
-#include "xxh64.hpp"               // for xxh64
+#include "hashes.hh"               // for xxh64
 #include "string_view.h"           // for string_view
 
 

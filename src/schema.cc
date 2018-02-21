@@ -45,7 +45,7 @@
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
-#include "xxh64.hpp"                       // for xxh64
+#include "hashes.hh"                       // for xxh64
 
 
 #ifndef L_SCHEMA

@@ -47,7 +47,7 @@
 #include "lru.h"                // for LRU
 #include "msgpack.h"            // for MsgPack
 #include "url_parser.h"         // for PathParser, QueryParser
-#include "xxh64.hpp"            // for xxh64
+#include "hashes.hh"            // for xxh64
 
 
 class UUIDGenerator;

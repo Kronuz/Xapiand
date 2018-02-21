@@ -40,7 +40,7 @@
 #include "length.h"                 // for serialise_length, unserialise_length
 #include "msgpack.h"                // for MsgPack
 #include "sortable_serialise.h"     // for sortable_serialise, sortable_unseria...
-#include "xxh64.hpp"                // for xxh64
+#include "hashes.hh"                // for xxh64
 
 constexpr const char FLOAT_STR[]     = "float";
 constexpr const char INTEGER_STR[]   = "integer";

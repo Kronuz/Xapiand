@@ -65,7 +65,7 @@
 #include "threadpool.h"                     // for ThreadPool
 #include "utils.h"                          // for delta_string
 #include "package.h"                        // for Package
-#include "xxh64.hpp"                        // for xxh64
+#include "hashes.hh"                        // for xxh64
 
 
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
