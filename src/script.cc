@@ -29,22 +29,23 @@
 #include "ignore_unused.h"
 #include "serialise.h"
 #include "v8pp/v8pp.h"
+#include "hashes.hh"        // for fnv1a32
 
 
-const std::unordered_map<string_view, Script::dispatch_func> Script::map_dispatch_script({
-	{ RESERVED_TYPE,   &Script::process_type   },
-	{ RESERVED_VALUE,  &Script::process_value  },
-	{ RESERVED_CHAI,   &Script::process_chai   },
-	{ RESERVED_ECMA,   &Script::process_ecma   },
-	{ RESERVED_BODY,   &Script::process_body   },
-	{ RESERVED_NAME,   &Script::process_name   },
-});
+static const auto str_set_dispatch_script(join_string<std::string>({
+	RESERVED_TYPE,
+	RESERVED_VALUE,
+	RESERVED_CHAI,
+	RESERVED_ECMA,
+	RESERVED_BODY,
+	RESERVED_NAME,
+}, ",", " or "));
 
 
-const std::unordered_map<string_view, Script::dispatch_func> Script::map_dispatch_value({
-	{ RESERVED_BODY,   &Script::process_body   },
-	{ RESERVED_NAME,   &Script::process_name   },
-});
+static const auto str_set_dispatch_value(join_string<std::string>({
+	RESERVED_BODY,
+	RESERVED_NAME,
+}, ",", " or "));
 
 
 Script::Script(const MsgPack& _obj)
@@ -59,16 +60,31 @@ Script::Script(const MsgPack& _obj)
 			break;
 		}
 		case MsgPack::Type::MAP: {
-			static const auto dsit_e = map_dispatch_script.end();
 			const auto it_e = _obj.end();
 			for (auto it = _obj.begin(); it != it_e; ++it) {
-				const auto str_key = it->str();
-				auto dsit = map_dispatch_script.find(str_key);
-				if (dsit == dsit_e) {
-					static const auto str_set_dispatch_script = get_map_keys(map_dispatch_script);
-					THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_SCRIPT, str_set_dispatch_script.c_str());
-				} else {
-					(this->*dsit->second)(it.value());
+				const auto str_key = it->str_view();
+				auto& value = it.value();
+				switch (fnv1a32::hash(str_key)) {
+					case fnv1a32::hash(RESERVED_TYPE):
+						process_type(value);
+						break;
+					case fnv1a32::hash(RESERVED_VALUE):
+						process_value(value);
+						break;
+					case fnv1a32::hash(RESERVED_CHAI):
+						process_chai(value);
+						break;
+					case fnv1a32::hash(RESERVED_ECMA):
+						process_ecma(value);
+						break;
+					case fnv1a32::hash(RESERVED_BODY):
+						process_body(value);
+						break;
+					case fnv1a32::hash(RESERVED_NAME):
+						process_name(value);
+						break;
+					default:
+						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_SCRIPT, str_set_dispatch_script.c_str());
 				}
 			}
 			if (body.empty()) {
@@ -145,16 +161,19 @@ Script::process_value(const MsgPack& _value)
 			body = _value.str();
 			break;
 		case MsgPack::Type::MAP: {
-			static const auto dsit_e = map_dispatch_value.end();
 			const auto it_e = _value.end();
 			for (auto it = _value.begin(); it != it_e; ++it) {
-				const auto str_key = it->str();
-				auto dsit = map_dispatch_value.find(str_key);
-				if (dsit == dsit_e) {
-					static const auto str_set_dispatch_value = get_map_keys(map_dispatch_value);
-					THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_VALUE, str_set_dispatch_value.c_str());
-				} else {
-					(this->*dsit->second)(it.value());
+				const auto str_key = it->str_view();
+				auto& value = it.value();
+				switch (fnv1a32::hash(str_key)) {
+					case fnv1a32::hash(RESERVED_BODY):
+						process_body(value);
+						break;
+					case fnv1a32::hash(RESERVED_NAME):
+						process_name(value);
+						break;
+					default:
+						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_VALUE, str_set_dispatch_value.c_str());
 				}
 			}
 			if (body.empty()) {

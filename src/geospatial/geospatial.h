@@ -56,10 +56,6 @@ class GeoSpatial {
 			  srid(WGS84) { }
 	};
 
-	using dispatch_func = void (GeoSpatial::*)(data_t&, const MsgPack&);
-
-	static const std::unordered_map<string_view, dispatch_func> map_dispatch;
-
 	std::shared_ptr<Geometry> geometry;
 
 	void process_latitude(data_t& data, const MsgPack& latitude);

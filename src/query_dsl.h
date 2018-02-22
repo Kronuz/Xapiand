@@ -50,10 +50,6 @@ constexpr const char QUERYDSL_TO[]     = "_to";
 class QueryDSL {
 	std::shared_ptr<Schema> schema;
 
-	using dispatch_func = Xapian::Query (QueryDSL::*)(string_view, Xapian::Query::op, string_view, const MsgPack&, Xapian::termcount, int, bool, bool, bool);
-
-	static const std::unordered_map<string_view, dispatch_func> map_dispatch;
-
 	FieldType get_in_type(const MsgPack& obj);
 
 	std::pair<FieldType, MsgPack> parse_guess_range(const required_spc_t& field_spc, string_view range);

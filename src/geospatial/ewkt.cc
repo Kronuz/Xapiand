@@ -24,22 +24,41 @@
 
 #include "../split.h"      // for Split
 #include "../utils.h"      // for stox
+#include "../hashes.hh"    // for fnv1a32
 
 
-const std::unordered_map<string_view, Geometry::Type> EWKT::map_dispatch({
-	{ "POINT",                    Geometry::Type::POINT          },
-	{ "CIRCLE",                   Geometry::Type::CIRCLE         },
-	{ "CONVEX",                   Geometry::Type::CONVEX         },
-	{ "POLYGON",                  Geometry::Type::POLYGON        },
-	{ "CHULL",                    Geometry::Type::CHULL          },
-	{ "MULTIPOINT",               Geometry::Type::MULTIPOINT     },
-	{ "MULTICIRCLE",              Geometry::Type::MULTICIRCLE    },
-	{ "MULTICONVEX",              Geometry::Type::MULTICONVEX    },
-	{ "MULTIPOLYGON",             Geometry::Type::MULTIPOLYGON   },
-	{ "MULTICHULL",               Geometry::Type::MULTICHULL     },
-	{ "GEOMETRYCOLLECTION",       Geometry::Type::COLLECTION     },
-	{ "GEOMETRYINTERSECTION",     Geometry::Type::INTERSECTION   },
-});
+inline Geometry::Type
+get_geometry_type(string_view str_geometry_type)
+{
+	switch (fnv1a32::hash(str_geometry_type)) {
+		case fnv1a32::hash("POINT"):
+			return Geometry::Type::POINT;
+		case fnv1a32::hash("CIRCLE"):
+			return Geometry::Type::CIRCLE;
+		case fnv1a32::hash("CONVEX"):
+			return Geometry::Type::CONVEX;
+		case fnv1a32::hash("POLYGON"):
+			return Geometry::Type::POLYGON;
+		case fnv1a32::hash("CHULL"):
+			return Geometry::Type::CHULL;
+		case fnv1a32::hash("MULTIPOINT"):
+			return Geometry::Type::MULTIPOINT;
+		case fnv1a32::hash("MULTICIRCLE"):
+			return Geometry::Type::MULTICIRCLE;
+		case fnv1a32::hash("MULTICONVEX"):
+			return Geometry::Type::MULTICONVEX;
+		case fnv1a32::hash("MULTIPOLYGON"):
+			return Geometry::Type::MULTIPOLYGON;
+		case fnv1a32::hash("MULTICHULL"):
+			return Geometry::Type::MULTICHULL;
+		case fnv1a32::hash("GEOMETRYCOLLECTION"):
+			return Geometry::Type::COLLECTION;
+		case fnv1a32::hash("GEOMETRYINTERSECTION"):
+			return Geometry::Type::INTERSECTION;
+		default:
+			throw std::out_of_range("Invalid geometry");
+	}
+}
 
 
 EWKT::EWKT(string_view str)
@@ -232,13 +251,14 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 	}
 
 	if (first == last) {
-		THROW(EWKTError, "Syntax error in '%s'", std::string(_first, last).c_str());
+		THROW(EWKTError, "Syntax error in '%s'", repr(_first, last).c_str());
 	} else {
-		static const auto it_e = map_dispatch.end();
-		const std::string geometry(_first, first);
-		auto it = map_dispatch.find(geometry);
-		if (it == it_e) {
-			THROW(EWKTError, "Geometry '%s' is not supported", geometry.c_str());
+		const string_view geometry(_first, first - _first);
+		Geometry::Type geometry_type;
+		try {
+			geometry_type = get_geometry_type(geometry);
+		} catch (const std::out_of_range&) {
+			THROW(EWKTError, "Geometry %s is not supported", repr(geometry).c_str());
 		}
 		switch (*first) {
 			case '(': {
@@ -248,16 +268,16 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 				} else {
 					last = closed_it;
 				}
-				return std::make_pair(it->second, false);
+				return std::make_pair(geometry_type, false);
 			}
 			case ' ': {
 				if (string_view(first + 1, last - first - 1).compare("EMPTY") == 0) {
-					return std::make_pair(it->second, true);
+					return std::make_pair(geometry_type, true);
 				}
-				THROW(EWKTError, "Syntax error in '%s'", std::string(first, last).c_str());
+				THROW(EWKTError, "Syntax error in '%s'", repr(first, last).c_str());
 			}
 			default:
-				THROW(EWKTError, "Syntax error in '%s'", std::string(first, last).c_str());
+				THROW(EWKTError, "Syntax error in '%s'", repr(first, last).c_str());
 		}
 	}
 }
@@ -724,10 +744,9 @@ EWKT::_isEWKT(Iterator first, Iterator last)
 	if (first == last) {
 		return false;
 	} else {
-		static const auto it_e = map_dispatch.end();
-		const std::string geometry(_first, first);
-		auto it = map_dispatch.find(geometry);
-		if (it == it_e) {
+		try {
+			get_geometry_type(string_view(_first, first - _first));
+		} catch (const std::out_of_range&) {
 			return false;
 		}
 		switch (*first) {

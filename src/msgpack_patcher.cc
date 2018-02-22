@@ -26,18 +26,7 @@
 
 #include "exception.h"  // for ClientError, MSG_ClientError, Error, MSG_Error
 #include "utils.h"      // for repr, stox
-
-
-const std::unordered_map<string_view, dispatch_patch_op> map_dispatch_patch_op({
-	{ PATCH_ADD,  &patch_add         },
-	{ PATCH_REM,  &patch_remove      },
-	{ PATCH_REP,  &patch_replace     },
-	{ PATCH_MOV,  &patch_move        },
-	{ PATCH_COP,  &patch_copy        },
-	{ PATCH_TES,  &patch_test        },
-	{ PATCH_INC,  &patch_incr        },
-	{ PATCH_DEC,  &patch_decr        }
-});
+#include "hashes.hh"    // for fnv1a32
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
@@ -46,11 +35,33 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 			try {
 				const auto& op = elem.at(PATCH_OP);
 				auto op_str = op.str_view();
-				try {
-					auto func = map_dispatch_patch_op.at(op_str);
-					(*func)(elem, object);
-				} catch (const std::out_of_range&){
-					THROW(ClientError, "In patch op: %s is not a valid value", std::string(op_str).c_str());
+				switch (fnv1a32::hash(op_str)) {
+					case fnv1a32::hash(PATCH_ADD):
+						patch_add(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_REM):
+						patch_remove(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_REP):
+						patch_replace(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_MOV):
+						patch_move(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_COP):
+						patch_copy(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_TES):
+						patch_test(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_INC):
+						patch_incr(elem, object);
+						break;
+					case fnv1a32::hash(PATCH_DEC):
+						patch_decr(elem, object);
+						break;
+					default:
+						THROW(ClientError, "In patch op: %s is not a valid value", repr(op_str).c_str());
 				}
 			} catch (const std::out_of_range&) {
 				THROW(ClientError, "Patch Object MUST have exactly one '%s' member", PATCH_OP);

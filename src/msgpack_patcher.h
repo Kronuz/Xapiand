@@ -25,7 +25,6 @@
 #include <stddef.h>                         // for size_t
 #include <stdexcept>                        // for out_of_range, invalid_arg...
 #include <string>                           // for string, basic_string, stoul
-#include <unordered_map>                    // for unordered_map
 #include <vector>                           // for vector
 
 #include "exception.h"                      // for ClientError, MSG_ClientError
@@ -51,12 +50,6 @@ constexpr const char PATCH_COP[]                    = "copy";
 constexpr const char PATCH_TES[]                    = "test";
 constexpr const char PATCH_INC[]                    = "incr";
 constexpr const char PATCH_DEC[]                    = "decr";
-
-
-using dispatch_patch_op = void (*)(const MsgPack&, MsgPack&);
-
-
-extern const std::unordered_map<string_view, dispatch_patch_op> map_dispatch_patch_op;
 
 
 /* Support for RFC 6902 */

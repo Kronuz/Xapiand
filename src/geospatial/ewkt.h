@@ -57,7 +57,6 @@ class GeoSpatial;
  */
 class EWKT {
 	using Iterator = std::string_view::const_iterator;
-	static const std::unordered_map<string_view, Geometry::Type> map_dispatch;
 
 	std::shared_ptr<Geometry> geometry;
 

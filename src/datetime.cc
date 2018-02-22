@@ -32,6 +32,7 @@
 #include "msgpack.h"        // for MsgPack
 #include "utils.h"          // for stox
 #include "string_view.h"    // for string_view
+#include "hashes.hh"        // for fnv1a32
 
 constexpr const char RESERVED_YEAR[]                = "_year";
 constexpr const char RESERVED_MONTH[]               = "_month";
@@ -198,13 +199,6 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 }
 
 
-static const std::unordered_map<string_view, void (*)(Datetime::tm_t&, const MsgPack&)> map_dispatch_date({
-	{ RESERVED_YEAR,    &process_date_year   },
-	{ RESERVED_MONTH,   &process_date_month  },
-	{ RESERVED_DAY,     &process_date_day    },
-});
-
-
 /*
  * Returnd struct tm according to the date specified by date.
  */
@@ -312,19 +306,26 @@ Datetime::DateParser(const MsgPack& value)
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
-				try {
-					auto func = map_dispatch_date.at(str_key);
-					(*func)(tm, it.value());
-				} catch (const std::out_of_range&) {
-					if (str_key == RESERVED_TIME) {
+				auto& it_value = it.value();
+				switch (fnv1a32::hash(str_key)) {
+					case fnv1a32::hash(RESERVED_YEAR):
+						process_date_year(tm, it_value);
+						break;
+					case fnv1a32::hash(RESERVED_MONTH):
+						process_date_month(tm, it_value);
+						break;
+					case fnv1a32::hash(RESERVED_DAY):
+						process_date_day(tm, it_value);
+						break;
+					case fnv1a32::hash(RESERVED_TIME):
 						try {
-							str_time = it.value().str_view();
-						} catch (const msgpack::type_error&) {
-							THROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
+							str_time = it_value.str_view();
+						} catch (const msgpack::type_error& exc) {
+							RETHROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
 						}
-					} else {
+						break;
+					default:
 						THROW(DatetimeError, "Unsupported Key: %s in date", repr(str_key).c_str());
-					}
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {

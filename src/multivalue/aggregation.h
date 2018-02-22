@@ -67,12 +67,6 @@ public:
 };
 
 
-using dispatch_aggregations = void (Aggregation::*)(MsgPack&, const MsgPack&, const std::shared_ptr<Schema>&);
-
-
-extern const std::unordered_map<string_view, dispatch_aggregations> map_dispatch_aggregations;
-
-
 // Class for calculating aggregations in the matching documents.
 class AggregationMatchSpy : public Xapian::MatchSpy {
 	// Total number of documents seen by the match spy.

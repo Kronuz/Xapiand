@@ -92,148 +92,6 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  * Unordered Maps used for reading user data specification.
  */
 
-const std::unordered_map<string_view, UnitTime> map_acc_date({
-	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
-	{ "hour",       UnitTime::HOUR       }, { "day",     UnitTime::DAY     },
-	{ "month",      UnitTime::MONTH      }, { "year",    UnitTime::YEAR    },
-	{ "decade",     UnitTime::DECADE     }, { "century", UnitTime::CENTURY },
-	{ "millennium", UnitTime::MILLENNIUM },
-});
-
-
-const std::unordered_map<string_view, UnitTime> map_acc_time({
-	{ "second",     UnitTime::SECOND     }, { "minute",  UnitTime::MINUTE  },
-	{ "hour",       UnitTime::HOUR       },
-});
-
-
-const std::unordered_map<string_view, StopStrategy> map_stop_strategy({
-	{ "stop_none",    StopStrategy::STOP_NONE    }, { "none",    StopStrategy::STOP_NONE    },
-	{ "stop_all",     StopStrategy::STOP_ALL     }, { "all",     StopStrategy::STOP_ALL     },
-	{ "stop_stemmed", StopStrategy::STOP_STEMMED }, { "stemmed", StopStrategy::STOP_STEMMED },
-});
-
-
-const std::unordered_map<string_view, StemStrategy> map_stem_strategy({
-	{ "stem_none",  StemStrategy::STEM_NONE   }, { "none",  StemStrategy::STEM_NONE   },
-	{ "stem_some",  StemStrategy::STEM_SOME   }, { "some",  StemStrategy::STEM_SOME   },
-	{ "stem_all",   StemStrategy::STEM_ALL    }, { "all",   StemStrategy::STEM_ALL    },
-	{ "stem_all_z", StemStrategy::STEM_ALL_Z  }, { "all_z", StemStrategy::STEM_ALL_Z  },
-});
-
-
-const std::unordered_map<string_view, TypeIndex> map_index({
-	{ "none",                      TypeIndex::NONE                      },
-	{ "field_terms",               TypeIndex::FIELD_TERMS               },
-	{ "field_values",              TypeIndex::FIELD_VALUES              },
-	{ "field_terms,field_values",  TypeIndex::FIELD_ALL                 },
-	{ "field_values,field_terms",  TypeIndex::FIELD_ALL                 },
-	{ "field",                     TypeIndex::FIELD_ALL                 },
-	{ "field_all",                 TypeIndex::FIELD_ALL                 },
-	{ "global_terms",              TypeIndex::GLOBAL_TERMS              },
-	{ "field_terms,global_terms",  TypeIndex::TERMS                     },
-	{ "global_terms,field_terms",  TypeIndex::TERMS                     },
-	{ "terms",                     TypeIndex::TERMS                     },
-	{ "global_terms,field_values", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
-	{ "field_values,global_terms", TypeIndex::GLOBAL_TERMS_FIELD_VALUES },
-	{ "global_terms,field",        TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
-	{ "global_terms,field_all",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
-	{ "field,global_terms",        TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
-	{ "field_all,global_terms",    TypeIndex::GLOBAL_TERMS_FIELD_ALL    },
-	{ "global_values",             TypeIndex::GLOBAL_VALUES             },
-	{ "global_values,field_terms", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
-	{ "field_terms,global_values", TypeIndex::GLOBAL_VALUES_FIELD_TERMS },
-	{ "field_values,global_values",TypeIndex::VALUES                    },
-	{ "global_values,field_values",TypeIndex::VALUES                    },
-	{ "values",                    TypeIndex::VALUES                    },
-	{ "global_values,field",       TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
-	{ "global_values,field_all",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
-	{ "field,global_values",       TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
-	{ "field_all,global_values",   TypeIndex::GLOBAL_VALUES_FIELD_ALL   },
-	{ "global",                    TypeIndex::GLOBAL_ALL                },
-	{ "global_all",                TypeIndex::GLOBAL_ALL                },
-	{ "global_values,global_terms",TypeIndex::GLOBAL_ALL                },
-	{ "global_terms,global_values",TypeIndex::GLOBAL_ALL                },
-	{ "global,field_terms",        TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
-	{ "global,field_terms",        TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
-	{ "global_all,field_terms",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
-	{ "field_terms,global",        TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
-	{ "field_terms,global_all",    TypeIndex::GLOBAL_ALL_FIELD_TERMS    },
-	{ "global_all,field_values",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
-	{ "global,field_values",       TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
-	{ "field_values,global",       TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
-	{ "field_values,global_all",   TypeIndex::GLOBAL_ALL_FIELD_VALUES   },
-	{ "field_all,global_all",      TypeIndex::ALL                       },
-	{ "global_all,field_all",      TypeIndex::ALL                       },
-	{ "all",                       TypeIndex::ALL                       },
-});
-
-
-const std::unordered_map<string_view, UUIDFieldIndex> map_index_uuid_field({
-	{ "uuid",  UUIDFieldIndex::UUID }, { "uuid_field", UUIDFieldIndex::UUID_FIELD },
-	{ "both",  UUIDFieldIndex::BOTH },
-});
-
-
-const std::unordered_map<string_view, const std::array<FieldType, SPC_TOTAL_TYPES>> map_type({
-	{ "undefined",                    {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "array",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }} },
-	{ "array/boolean",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }} },
-	{ "array/date",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }} },
-	{ "array/float",                  {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }} },
-	{ "array/geospatial",             {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }} },
-	{ "array/integer",                {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }} },
-	{ "array/positive",               {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }} },
-	{ "array/string",                 {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }} },
-	{ "array/term",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }} },
-	{ "array/text",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }} },
-	{ "array/time",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }} },
-	{ "array/timedelta",              {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }} },
-	{ "array/uuid",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }} },
-	{ "boolean",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }} },
-	{ "date",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }} },
-	{ "float",                        {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "foreign",                      {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "foreign/object",               {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "foreign/script",               {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }} },
-	{ "geospatial",                   {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }} },
-	{ "integer",                      {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }} },
-	{ "object",                       {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }} },
-	{ "object/array",                 {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }} },
-	{ "object/array/boolean",         {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }} },
-	{ "object/array/date",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }} },
-	{ "object/array/float",           {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }} },
-	{ "object/array/geospatial",      {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }} },
-	{ "object/array/integer",         {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }} },
-	{ "object/array/positive",        {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }} },
-	{ "object/array/string",          {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }} },
-	{ "object/array/term",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }} },
-	{ "object/array/text",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }} },
-	{ "object/array/time",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }} },
-	{ "object/array/timedelta",       {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }} },
-	{ "object/array/uuid",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }} },
-	{ "object/boolean",               {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }} },
-	{ "object/date",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }} },
-	{ "object/float",                 {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }} },
-	{ "object/geospatial",            {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }} },
-	{ "object/integer",               {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }} },
-	{ "object/positive",              {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }} },
-	{ "object/string",                {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }} },
-	{ "object/term",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }} },
-	{ "object/text",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }} },
-	{ "object/time",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }} },
-	{ "object/timedelta",             {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }} },
-	{ "object/uuid",                  {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }} },
-	{ "positive",                     {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }} },
-	{ "script",                       {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }} },
-	{ "string",                       {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }} },
-	{ "term",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }} },
-	{ "text",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }} },
-	{ "time",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }} },
-	{ "timedelta",                    {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }} },
-	{ "uuid",                         {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }} },
-});
-
 
 namespace std {
 	template<typename T, size_t N>
@@ -247,67 +105,6 @@ namespace std {
 		}
 	};
 }
-
-const std::unordered_map<const std::array<FieldType, SPC_TOTAL_TYPES>, std::string> map_str_type({
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "undefined"                     },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }}, "array"                         },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }}, "array/boolean"                 },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }}, "array/date"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }}, "array/float"                   },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }}, "array/geospatial"              },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }}, "array/integer"                 },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }}, "array/positive"                },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }}, "array/string"                  },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }}, "array/term"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }}, "array/text"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }}, "array/time"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }}, "array/timedelta"               },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }}, "array/uuid"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }}, "boolean"                       },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }}, "date"                          },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }}, "float"                         },
-	{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "foreign"                       },
-	{ {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "foreign/object"                },
-	{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "foreign/script"                },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }}, "geospatial"                    },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }}, "integer"                       },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "object"                        },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }}, "object/array"                  },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }}, "object/array/boolean"          },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }}, "object/array/date"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }}, "object/array/float"            },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }}, "object/array/geospatial"       },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }}, "object/array/integer"          },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }}, "object/array/positive"         },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }}, "object/array/string"           },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }}, "object/array/term"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }}, "object/array/text"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }}, "object/array/time"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }}, "object/array/timedelta"        },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }}, "object/array/uuid"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }}, "object/boolean"                },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }}, "object/date"                   },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }}, "object/float"                  },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }}, "object/geospatial"             },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }}, "object/integer"                },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }}, "object/positive"               },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }}, "object/string"                 },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }}, "object/term"                   },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }}, "object/text"                   },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }}, "object/time"                   },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }}, "object/timedelta"              },
-	{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }}, "object/uuid"                   },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }}, "positive"                      },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "script"                        },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }}, "string"                        },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }}, "term"                          },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }}, "text"                          },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }}, "time"                          },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }}, "timedelta"                     },
-	{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }}, "uuid"                          },
-});
-
-
 
 /*
  * Default accuracies.
@@ -519,12 +316,45 @@ _get_str_index(TypeIndex index) noexcept
 }
 
 
+static const std::string str_set_acc_date(join_string<std::string>({
+	"second",
+	"minute",
+	"hour",
+	"day",
+	"month",
+	"year",
+	"decade",
+	"century",
+	"millennium",
+}, ",", " or "));
+
+
 inline UnitTime
 _get_accuracy_date(string_view str_accuracy_date)
 {
-	return map_acc_date.at(str_accuracy_date);
+	switch (fnv1a32::hash(str_accuracy_date)) {
+		case fnv1a32::hash("second"):
+			return UnitTime::SECOND;
+		case fnv1a32::hash("minute"):
+			return UnitTime::MINUTE;
+		case fnv1a32::hash("hour"):
+			return UnitTime::HOUR;
+		case fnv1a32::hash("day"):
+			return UnitTime::DAY;
+		case fnv1a32::hash("month"):
+			return UnitTime::MONTH;
+		case fnv1a32::hash("year"):
+			return UnitTime::YEAR;
+		case fnv1a32::hash("decade"):
+			return UnitTime::DECADE;
+		case fnv1a32::hash("century"):
+			return UnitTime::CENTURY;
+		case fnv1a32::hash("millennium"):
+			return UnitTime::MILLENNIUM;
+		default:
+			throw std::out_of_range("Invalid accuracy");
+	}
 }
-
 
 UnitTime
 get_accuracy_date(string_view str_accuracy_date)
@@ -533,10 +363,25 @@ get_accuracy_date(string_view str_accuracy_date)
 }
 
 
+static const std::string str_set_acc_time(join_string<std::string>({
+	"second",
+	"minute",
+	"hour",
+}, ",", " or "));
+
 inline UnitTime
 _get_accuracy_time(string_view str_accuracy_time)
 {
-	return map_acc_time.at(str_accuracy_time);
+	switch (fnv1a32::hash(str_accuracy_time)) {
+		case fnv1a32::hash("second"):
+			return UnitTime::SECOND;
+		case fnv1a32::hash("minute"):
+			return UnitTime::MINUTE;
+		case fnv1a32::hash("hour"):
+			return UnitTime::HOUR;
+		default:
+			throw std::out_of_range("Invalid accuracy");
+	}
 }
 
 
@@ -547,39 +392,467 @@ get_accuracy_time(string_view str_accuracy_time)
 }
 
 
+static const std::string str_set_stop_strategy(join_string<std::string>({
+	"stop_none",
+	"none",
+	"stop_all",
+	"all",
+	"stop_stemmed",
+	"stemmed",
+}, ",", " or "));
+
 inline StopStrategy
 _get_stop_strategy(string_view str_stop_strategy)
 {
-	return map_stop_strategy.at(str_stop_strategy);
-
+	switch (fnv1a32::hash(str_stop_strategy)) {
+		case fnv1a32::hash("stop_none"):
+			return StopStrategy::STOP_NONE;
+		case fnv1a32::hash("none"):
+			return StopStrategy::STOP_NONE;
+		case fnv1a32::hash("stop_all"):
+			return StopStrategy::STOP_ALL;
+		case fnv1a32::hash("all"):
+			return StopStrategy::STOP_ALL;
+		case fnv1a32::hash("stop_stemmed"):
+			return StopStrategy::STOP_STEMMED;
+		case fnv1a32::hash("stemmed"):
+			return StopStrategy::STOP_STEMMED;
+		default:
+			throw std::out_of_range("Invalid stop strategy");
+	}
 }
 
+
+static const std::string str_set_stem_strategy(join_string<std::string>({
+	"stem_none",
+	"none",
+	"stem_some",
+	"some",
+	"stem_all",
+	"all",
+	"stem_all_z",
+	"all_z",
+}, ",", " or "));
 
 static inline StemStrategy
 _get_stem_strategy(string_view str_stem_strategy)
 {
-	return map_stem_strategy.at(str_stem_strategy);
+	switch (fnv1a32::hash(str_stem_strategy)) {
+		case fnv1a32::hash("stem_none"):
+			return  StemStrategy::STEM_NONE;
+		case fnv1a32::hash("none"):
+			return  StemStrategy::STEM_NONE;
+		case fnv1a32::hash("stem_some"):
+			return  StemStrategy::STEM_SOME;
+		case fnv1a32::hash("some"):
+			return  StemStrategy::STEM_SOME;
+		case fnv1a32::hash("stem_all"):
+			return  StemStrategy::STEM_ALL;
+		case fnv1a32::hash("all"):
+			return  StemStrategy::STEM_ALL;
+		case fnv1a32::hash("stem_all_z"):
+			return  StemStrategy::STEM_ALL_Z;
+		case fnv1a32::hash("all_z"):
+			return  StemStrategy::STEM_ALL_Z;
+		default:
+			throw std::out_of_range("Invalid stem strategy");
+	}
 }
 
+
+static const std::string str_set_index_uuid_field(join_string<std::string>({
+	"uuid",
+	"uuid_field",
+	"both",
+}, ",", " or "));
 
 static inline UUIDFieldIndex
 _get_index_uuid_field(string_view str_index_uuid_field)
 {
-	return map_index_uuid_field.at(str_index_uuid_field);
+	switch (fnv1a32::hash(str_index_uuid_field)) {
+		case fnv1a32::hash("uuid"):
+			return UUIDFieldIndex::UUID;
+		case fnv1a32::hash("uuid_field"):
+			return UUIDFieldIndex::UUID_FIELD;
+		case fnv1a32::hash("both"):
+			return UUIDFieldIndex::BOTH;
+		default:
+			throw std::out_of_range("Invalid index uuid_field");
+	}
 }
 
+
+
+static const std::string str_set_index(join_string<std::string>({
+	"none",
+	"field_terms",
+	"field_values",
+	"field_terms,field_values",
+	"field_values,field_terms",
+	"field",
+	"field_all",
+	"global_terms",
+	"field_terms,global_terms",
+	"global_terms,field_terms",
+	"terms",
+	"global_terms,field_values",
+	"field_values,global_terms",
+	"global_terms,field",
+	"global_terms,field_all",
+	"field,global_terms",
+	"field_all,global_terms",
+	"global_values",
+	"global_values,field_terms",
+	"field_terms,global_values",
+	"field_values,global_values",
+	"global_values,field_values",
+	"values",
+	"global_values,field",
+	"global_values,field_all",
+	"field,global_values",
+	"field_all,global_values",
+	"global",
+	"global_all",
+	"global_values,global_terms",
+	"global_terms,global_values",
+	"global,field_terms",
+	"global_all,field_terms",
+	"field_terms,global",
+	"field_terms,global_all",
+	"global_all,field_values",
+	"global,field_values",
+	"field_values,global",
+	"field_values,global_all",
+	"field_all,global_all",
+	"global_all,field_all",
+	"all",
+}, ",", " or "));
 
 static inline TypeIndex
 _get_index(string_view str_index)
 {
-	return map_index.at(str_index);
+	switch(fnv1a32::hash(str_index)) {
+		case fnv1a32::hash("none"):
+			return TypeIndex::NONE;
+		case fnv1a32::hash("field_terms"):
+			return TypeIndex::FIELD_TERMS;
+		case fnv1a32::hash("field_values"):
+			return TypeIndex::FIELD_VALUES;
+		case fnv1a32::hash("field_terms,field_values"):
+			return TypeIndex::FIELD_ALL;
+		case fnv1a32::hash("field_values,field_terms"):
+			return TypeIndex::FIELD_ALL;
+		case fnv1a32::hash("field"):
+			return TypeIndex::FIELD_ALL;
+		case fnv1a32::hash("field_all"):
+			return TypeIndex::FIELD_ALL;
+		case fnv1a32::hash("global_terms"):
+			return TypeIndex::GLOBAL_TERMS;
+		case fnv1a32::hash("field_terms,global_terms"):
+			return TypeIndex::TERMS;
+		case fnv1a32::hash("global_terms,field_terms"):
+			return TypeIndex::TERMS;
+		case fnv1a32::hash("terms"):
+			return TypeIndex::TERMS;
+		case fnv1a32::hash("global_terms,field_values"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
+		case fnv1a32::hash("field_values,global_terms"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
+		case fnv1a32::hash("global_terms,field"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
+		case fnv1a32::hash("global_terms,field_all"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
+		case fnv1a32::hash("field,global_terms"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
+		case fnv1a32::hash("field_all,global_terms"):
+			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
+		case fnv1a32::hash("global_values"):
+			return TypeIndex::GLOBAL_VALUES;
+		case fnv1a32::hash("global_values,field_terms"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
+		case fnv1a32::hash("field_terms,global_values"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
+		case fnv1a32::hash("field_values,global_values"):
+			return TypeIndex::VALUES;
+		case fnv1a32::hash("global_values,field_values"):
+			return TypeIndex::VALUES;
+		case fnv1a32::hash("values"):
+			return TypeIndex::VALUES;
+		case fnv1a32::hash("global_values,field"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
+		case fnv1a32::hash("global_values,field_all"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
+		case fnv1a32::hash("field,global_values"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
+		case fnv1a32::hash("field_all,global_values"):
+			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
+		case fnv1a32::hash("global"):
+			return TypeIndex::GLOBAL_ALL;
+		case fnv1a32::hash("global_all"):
+			return TypeIndex::GLOBAL_ALL;
+		case fnv1a32::hash("global_values,global_terms"):
+			return TypeIndex::GLOBAL_ALL;
+		case fnv1a32::hash("global_terms,global_values"):
+			return TypeIndex::GLOBAL_ALL;
+		case fnv1a32::hash("global,field_terms"):
+			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
+		case fnv1a32::hash("global_all,field_terms"):
+			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
+		case fnv1a32::hash("field_terms,global"):
+			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
+		case fnv1a32::hash("field_terms,global_all"):
+			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
+		case fnv1a32::hash("global_all,field_values"):
+			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
+		case fnv1a32::hash("global,field_values"):
+			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
+		case fnv1a32::hash("field_values,global"):
+			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
+		case fnv1a32::hash("field_values,global_all"):
+			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
+		case fnv1a32::hash("field_all,global_all"):
+			return TypeIndex::ALL;
+		case fnv1a32::hash("global_all,field_all"):
+			return TypeIndex::ALL;
+		case fnv1a32::hash("all"):
+			return TypeIndex::ALL;
+		default:
+			throw std::out_of_range("Invalid index");
+	}
 }
 
 
 static inline const std::array<FieldType, SPC_TOTAL_TYPES>&
 _get_type(string_view str_type)
 {
-	return map_type.at(str_type);
+	switch(fnv1a32::hash(str_type)) {
+		case fnv1a32::hash("undefined"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("array/boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case fnv1a32::hash("array/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
+		case fnv1a32::hash("array/float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
+			return _;
+		}
+		case fnv1a32::hash("array/geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
+			return _;
+		}
+		case fnv1a32::hash("array/integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
+			return _;
+		}
+		case fnv1a32::hash("array/positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case fnv1a32::hash("array/string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
+			return _;
+		}
+		case fnv1a32::hash("array/term"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }};
+			return _;
+		}
+		case fnv1a32::hash("array/text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
+			return _;
+		}
+		case fnv1a32::hash("array/time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
+			return _;
+		}
+		case fnv1a32::hash("array/timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case fnv1a32::hash("array/uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
+			return _;
+		}
+		case fnv1a32::hash("boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case fnv1a32::hash("date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
+			return _;
+		}
+		case fnv1a32::hash("float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }};
+			return _;
+		}
+		case fnv1a32::hash("foreign"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("foreign/object"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("foreign/script"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
+			return _;
+		}
+		case fnv1a32::hash("geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }};
+			return _;
+		}
+		case fnv1a32::hash("integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }};
+			return _;
+		}
+		case fnv1a32::hash("object"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("object/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/term"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case fnv1a32::hash("object/array/uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
+			return _;
+		}
+		case fnv1a32::hash("object/boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case fnv1a32::hash("object/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
+			return _;
+		}
+		case fnv1a32::hash("object/float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
+			return _;
+		}
+		case fnv1a32::hash("object/geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
+			return _;
+		}
+		case fnv1a32::hash("object/integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
+			return _;
+		}
+		case fnv1a32::hash("object/positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case fnv1a32::hash("object/string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
+			return _;
+		}
+		case fnv1a32::hash("object/term"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }};
+			return _;
+		}
+		case fnv1a32::hash("object/text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
+			return _;
+		}
+		case fnv1a32::hash("object/time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
+			return _;
+		}
+		case fnv1a32::hash("object/timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case fnv1a32::hash("object/uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
+			return _;
+		}
+		case fnv1a32::hash("positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case fnv1a32::hash("script"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
+			return _;
+		}
+		case fnv1a32::hash("string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }};
+			return _;
+		}
+		case fnv1a32::hash("term"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }};
+			return _;
+		}
+		case fnv1a32::hash("text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }};
+			return _;
+		}
+		case fnv1a32::hash("time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }};
+			return _;
+		}
+		case fnv1a32::hash("timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case fnv1a32::hash("uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }};
+			return _;
+		}
+		default:
+			throw std::out_of_range("Invalid type");
+	}
 }
 
 
@@ -610,6 +883,64 @@ _get_str_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept
 static inline const std::string&
 _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
+	static const std::unordered_map<const std::array<FieldType, SPC_TOTAL_TYPES>, std::string> map_str_type({
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "undefined"                     },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }}, "array"                         },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }}, "array/boolean"                 },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }}, "array/date"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }}, "array/float"                   },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }}, "array/geospatial"              },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }}, "array/integer"                 },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }}, "array/positive"                },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }}, "array/string"                  },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }}, "array/term"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }}, "array/text"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }}, "array/time"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }}, "array/timedelta"               },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }}, "array/uuid"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }}, "boolean"                       },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }}, "date"                          },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }}, "float"                         },
+		{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "foreign"                       },
+		{ {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "foreign/object"                },
+		{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "foreign/script"                },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }}, "geospatial"                    },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }}, "integer"                       },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "object"                        },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }}, "object/array"                  },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }}, "object/array/boolean"          },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }}, "object/array/date"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }}, "object/array/float"            },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }}, "object/array/geospatial"       },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }}, "object/array/integer"          },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }}, "object/array/positive"         },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }}, "object/array/string"           },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }}, "object/array/term"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }}, "object/array/text"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }}, "object/array/time"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }}, "object/array/timedelta"        },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }}, "object/array/uuid"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }}, "object/boolean"                },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }}, "object/date"                   },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }}, "object/float"                  },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }}, "object/geospatial"             },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }}, "object/integer"                },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }}, "object/positive"               },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }}, "object/string"                 },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }}, "object/term"                   },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }}, "object/text"                   },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }}, "object/time"                   },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }}, "object/timedelta"              },
+		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }}, "object/uuid"                   },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }}, "positive"                      },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "script"                        },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }}, "string"                        },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }}, "term"                          },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }}, "text"                          },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }}, "time"                          },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }}, "timedelta"                     },
+		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }}, "uuid"                          },
+	});
 	static const auto tit_e = map_str_type.end();
 	auto tit = map_str_type.find(sep_types);
 	if (tit == tit_e) {
@@ -696,212 +1027,207 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
  * Acceptable values string used when there is a data inconsistency.
  */
 
-static const std::string str_set_index_uuid_field(get_map_keys(map_index_uuid_field));
-static const std::string str_set_stem_strategy(get_map_keys(map_stem_strategy));
-static const std::string str_set_stop_strategy(get_map_keys(map_stop_strategy));
-static const std::string str_set_index(get_map_keys(map_index));
-static const std::string str_set_acc_date(get_map_keys(map_acc_date));
-static const std::string str_set_acc_time(get_map_keys(map_acc_time));
-
 
 specification_t default_spc;
-
-
-const std::unordered_map<string_view, Schema::dispatcher_write_properties> Schema::map_dispatch_write_properties({
-	{ RESERVED_WEIGHT,                 &Schema::write_weight                       },
-	{ RESERVED_POSITION,               &Schema::write_position                     },
-	{ RESERVED_SPELLING,               &Schema::write_spelling                     },
-	{ RESERVED_POSITIONS,              &Schema::write_positions                    },
-	{ RESERVED_INDEX,                  &Schema::write_index                        },
-	{ RESERVED_STORE,                  &Schema::write_store                        },
-	{ RESERVED_RECURSE,                &Schema::write_recurse                      },
-	{ RESERVED_DYNAMIC,                &Schema::write_dynamic                      },
-	{ RESERVED_STRICT,                 &Schema::write_strict                       },
-	{ RESERVED_DATE_DETECTION,         &Schema::write_date_detection               },
-	{ RESERVED_TIME_DETECTION,         &Schema::write_time_detection               },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::write_timedelta_detection          },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::write_numeric_detection            },
-	{ RESERVED_GEO_DETECTION,          &Schema::write_geo_detection                },
-	{ RESERVED_BOOL_DETECTION,         &Schema::write_bool_detection               },
-	{ RESERVED_STRING_DETECTION,       &Schema::write_string_detection             },
-	{ RESERVED_TEXT_DETECTION,         &Schema::write_text_detection               },
-	{ RESERVED_TERM_DETECTION,         &Schema::write_term_detection               },
-	{ RESERVED_UUID_DETECTION,         &Schema::write_uuid_detection               },
-	{ RESERVED_BOOL_TERM,              &Schema::write_bool_term                    },
-	{ RESERVED_NAMESPACE,              &Schema::write_namespace                    },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::write_partial_paths                },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::write_index_uuid_field             },
-	{ RESERVED_SCHEMA,                 &Schema::write_schema                       },
-});
-
-
-const std::unordered_map<string_view, Schema::dispatcher_feed_properties> Schema::map_dispatch_feed_properties({
-	{ RESERVED_WEIGHT,                 &Schema::feed_weight                        },
-	{ RESERVED_POSITION,               &Schema::feed_position                      },
-	{ RESERVED_SPELLING,               &Schema::feed_spelling                      },
-	{ RESERVED_POSITIONS,              &Schema::feed_positions                     },
-	{ RESERVED_TYPE,                   &Schema::feed_type                          },
-	{ RESERVED_PREFIX,                 &Schema::feed_prefix                        },
-	{ RESERVED_SLOT,                   &Schema::feed_slot                          },
-	{ RESERVED_INDEX,                  &Schema::feed_index                         },
-	{ RESERVED_STORE,                  &Schema::feed_store                         },
-	{ RESERVED_RECURSE,                &Schema::feed_recurse                       },
-	{ RESERVED_DYNAMIC,                &Schema::feed_dynamic                       },
-	{ RESERVED_STRICT,                 &Schema::feed_strict                        },
-	{ RESERVED_DATE_DETECTION,         &Schema::feed_date_detection                },
-	{ RESERVED_TIME_DETECTION,         &Schema::feed_time_detection                },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::feed_timedelta_detection           },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::feed_numeric_detection             },
-	{ RESERVED_GEO_DETECTION,          &Schema::feed_geo_detection                 },
-	{ RESERVED_BOOL_DETECTION,         &Schema::feed_bool_detection                },
-	{ RESERVED_STRING_DETECTION,       &Schema::feed_string_detection              },
-	{ RESERVED_TEXT_DETECTION,         &Schema::feed_text_detection                },
-	{ RESERVED_TERM_DETECTION,         &Schema::feed_term_detection                },
-	{ RESERVED_UUID_DETECTION,         &Schema::feed_uuid_detection                },
-	{ RESERVED_BOOL_TERM,              &Schema::feed_bool_term                     },
-	{ RESERVED_ACCURACY,               &Schema::feed_accuracy                      },
-	{ RESERVED_ACC_PREFIX,             &Schema::feed_acc_prefix                    },
-	{ RESERVED_LANGUAGE,               &Schema::feed_language                      },
-	{ RESERVED_STOP_STRATEGY,          &Schema::feed_stop_strategy                 },
-	{ RESERVED_STEM_STRATEGY,          &Schema::feed_stem_strategy                 },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::feed_stem_language                 },
-	{ RESERVED_PARTIALS,               &Schema::feed_partials                      },
-	{ RESERVED_ERROR,                  &Schema::feed_error                         },
-	{ RESERVED_NAMESPACE,              &Schema::feed_namespace                     },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::feed_partial_paths                 },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::feed_index_uuid_field              },
-	{ RESERVED_SCRIPT,                 &Schema::feed_script                        },
-	{ RESERVED_ENDPOINT,               &Schema::feed_endpoint                      },
-});
-
-
-const std::unordered_map<string_view, Schema::dispatcher_process_properties> Schema::map_dispatch_process_properties({
-	{ RESERVED_LANGUAGE,               &Schema::process_language                   },
-	{ RESERVED_PREFIX,                 &Schema::process_prefix                     },
-	{ RESERVED_SLOT,                   &Schema::process_slot                       },
-	{ RESERVED_STOP_STRATEGY,          &Schema::process_stop_strategy              },
-	{ RESERVED_STEM_STRATEGY,          &Schema::process_stem_strategy              },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::process_stem_language              },
-	{ RESERVED_TYPE,                   &Schema::process_type                       },
-	{ RESERVED_BOOL_TERM,              &Schema::process_bool_term                  },
-	{ RESERVED_ACCURACY,               &Schema::process_accuracy                   },
-	{ RESERVED_ACC_PREFIX,             &Schema::process_acc_prefix                 },
-	{ RESERVED_PARTIALS,               &Schema::process_partials                   },
-	{ RESERVED_ERROR,                  &Schema::process_error                      },
-});
-
-
-const std::unordered_map<string_view, Schema::dispatcher_process_properties> Schema::map_dispatch_process_concrete_properties({
-	{ RESERVED_WEIGHT,                 &Schema::process_weight                     },
-	{ RESERVED_POSITION,               &Schema::process_position                   },
-	{ RESERVED_SPELLING,               &Schema::process_spelling                   },
-	{ RESERVED_POSITIONS,              &Schema::process_positions                  },
-	{ RESERVED_INDEX,                  &Schema::process_index                      },
-	{ RESERVED_STORE,                  &Schema::process_store                      },
-	{ RESERVED_RECURSE,                &Schema::process_recurse                    },
-	{ RESERVED_PARTIAL_PATHS,          &Schema::process_partial_paths              },
-	{ RESERVED_INDEX_UUID_FIELD,       &Schema::process_index_uuid_field           },
-	{ RESERVED_VALUE,                  &Schema::process_value                      },
-	{ RESERVED_ENDPOINT,               &Schema::process_endpoint                   },
-	{ RESERVED_SCRIPT,                 &Schema::process_script                     },
-	{ RESERVED_FLOAT,                  &Schema::process_cast_object                },
-	{ RESERVED_POSITIVE,               &Schema::process_cast_object                },
-	{ RESERVED_INTEGER,                &Schema::process_cast_object                },
-	{ RESERVED_BOOLEAN,                &Schema::process_cast_object                },
-	{ RESERVED_TERM,                   &Schema::process_cast_object                },
-	{ RESERVED_TEXT,                   &Schema::process_cast_object                },
-	{ RESERVED_STRING,                 &Schema::process_cast_object                },
-	{ RESERVED_DATE,                   &Schema::process_cast_object                },
-	{ RESERVED_UUID,                   &Schema::process_cast_object                },
-	{ RESERVED_EWKT,                   &Schema::process_cast_object                },
-	{ RESERVED_POINT,                  &Schema::process_cast_object                },
-	{ RESERVED_CIRCLE,                 &Schema::process_cast_object                },
-	{ RESERVED_CONVEX,                 &Schema::process_cast_object                },
-	{ RESERVED_POLYGON,                &Schema::process_cast_object                },
-	{ RESERVED_CHULL,                  &Schema::process_cast_object                },
-	{ RESERVED_MULTIPOINT,             &Schema::process_cast_object                },
-	{ RESERVED_MULTICIRCLE,            &Schema::process_cast_object                },
-	{ RESERVED_MULTICONVEX,            &Schema::process_cast_object                },
-	{ RESERVED_MULTIPOLYGON,           &Schema::process_cast_object                },
-	{ RESERVED_MULTICHULL,             &Schema::process_cast_object                },
-	{ RESERVED_GEO_COLLECTION,         &Schema::process_cast_object                },
-	{ RESERVED_GEO_INTERSECTION,       &Schema::process_cast_object                },
-	{ RESERVED_CHAI,                   &Schema::process_cast_object                },
-	{ RESERVED_ECMA,                   &Schema::process_cast_object                },
-	// Next functions only check the consistency of user provided data.
-	{ RESERVED_LANGUAGE,               &Schema::consistency_language               },
-	{ RESERVED_STOP_STRATEGY,          &Schema::consistency_stop_strategy          },
-	{ RESERVED_STEM_STRATEGY,          &Schema::consistency_stem_strategy          },
-	{ RESERVED_STEM_LANGUAGE,          &Schema::consistency_stem_language          },
-	{ RESERVED_TYPE,                   &Schema::consistency_type                   },
-	{ RESERVED_BOOL_TERM,              &Schema::consistency_bool_term              },
-	{ RESERVED_ACCURACY,               &Schema::consistency_accuracy               },
-	{ RESERVED_PARTIALS,               &Schema::consistency_partials               },
-	{ RESERVED_ERROR,                  &Schema::consistency_error                  },
-	{ RESERVED_DYNAMIC,                &Schema::consistency_dynamic                },
-	{ RESERVED_STRICT,                 &Schema::consistency_strict                 },
-	{ RESERVED_DATE_DETECTION,         &Schema::consistency_date_detection         },
-	{ RESERVED_TIME_DETECTION,         &Schema::consistency_time_detection         },
-	{ RESERVED_TIMEDELTA_DETECTION,    &Schema::consistency_timedelta_detection    },
-	{ RESERVED_NUMERIC_DETECTION,      &Schema::consistency_numeric_detection      },
-	{ RESERVED_GEO_DETECTION,          &Schema::consistency_geo_detection          },
-	{ RESERVED_BOOL_DETECTION,         &Schema::consistency_bool_detection         },
-	{ RESERVED_STRING_DETECTION,       &Schema::consistency_string_detection       },
-	{ RESERVED_TEXT_DETECTION,         &Schema::consistency_text_detection         },
-	{ RESERVED_TERM_DETECTION,         &Schema::consistency_term_detection         },
-	{ RESERVED_UUID_DETECTION,         &Schema::consistency_uuid_detection         },
-	{ RESERVED_NAMESPACE,              &Schema::consistency_namespace              },
-	{ RESERVED_SCHEMA,                 &Schema::consistency_schema                 },
-});
-
-
-const std::unordered_map<string_view, Schema::dispatcher_readable> Schema::map_get_readable({
-	{ RESERVED_TYPE,                &Schema::readable_type               },
-	{ RESERVED_PREFIX,              &Schema::readable_prefix             },
-	{ RESERVED_SLOT,                &Schema::readable_slot               },
-	{ RESERVED_STEM_LANGUAGE,       &Schema::readable_stem_language      },
-	{ RESERVED_ACC_PREFIX,          &Schema::readable_acc_prefix         },
-	{ RESERVED_SCRIPT,              &Schema::readable_script             },
-});
-
-
-const std::unordered_map<string_view, std::pair<bool, const std::string>> map_stem_language({
-	{ "armenian",    { true,  "hy" } },  { "hy",               { true,  "hy" } },  { "basque",          { true,  "ue" } },
-	{ "eu",          { true,  "eu" } },  { "catalan",          { true,  "ca" } },  { "ca",              { true,  "ca" } },
-	{ "danish",      { true,  "da" } },  { "da",               { true,  "da" } },  { "dutch",           { true,  "nl" } },
-	{ "nl",          { true,  "nl" } },  { "kraaij_pohlmann",  { false, "nl" } },  { "english",         { true,  "en" } },
-	{ "en",          { true,  "en" } },  { "earlyenglish",     { false, "en" } },  { "english_lovins",  { false, "en" } },
-	{ "lovins",      { false, "en" } },  { "english_porter",   { false, "en" } },  { "porter",          { false, "en" } },
-	{ "finnish",     { true,  "fi" } },  { "fi",               { true,  "fi" } },  { "french",          { true,  "fr" } },
-	{ "fr",          { true,  "fr" } },  { "german",           { true,  "de" } },  { "de",              { true,  "de" } },
-	{ "german2",     { false, "de" } },  { "hungarian",        { true,  "hu" } },  { "hu",              { true,  "hu" } },
-	{ "italian",     { true,  "it" } },  { "it",               { true,  "it" } },  { "norwegian",       { true,  "no" } },
-	{ "nb",          { false, "no" } },  { "nn",               { false, "no" } },  { "no",              { true,  "no" } },
-	{ "portuguese",  { true,  "pt" } },  { "pt",               { true,  "pt" } },  { "romanian",        { true,  "ro" } },
-	{ "ro",          { true,  "ro" } },  { "russian",          { true,  "ru" } },  { "ru",              { true,  "ru" } },
-	{ "spanish",     { true,  "es" } },  { "es",               { true,  "es" } },  { "swedish",         { true,  "sv" } },
-	{ "sv",          { true,  "sv" } },  { "turkish",          { true,  "tr" } },  { "tr",              { true,  "tr" } },
-	{ "none",        { false, DEFAULT_LANGUAGE } },
-});
 
 
 static inline const std::pair<bool, const std::string>&
 _get_stem_language(string_view str_stem_language)
 {
-	return map_stem_language.at(str_stem_language);
-}
-
-
-inline bool
-has_set_default_spc(string_view set_default_spc)
-{
-	switch (fnv1a32::hash(set_default_spc)) {
-		case fnv1a32::hash(ID_FIELD_NAME):
-			return true;
+	switch(fnv1a32::hash(str_stem_language)) {
+		case fnv1a32::hash("armenian"): {
+			static const std::pair<bool, const std::string> hy{ true,  "hy" };
+			return hy;
+		}
+		case fnv1a32::hash("hy"): {
+			static const std::pair<bool, const std::string> hy{ true,  "hy" };
+			return hy;
+		}
+		case fnv1a32::hash("basque"): {
+			static const std::pair<bool, const std::string> ue{ true,  "ue" };
+			return ue;
+		}
+		case fnv1a32::hash("eu"): {
+			static const std::pair<bool, const std::string> eu{ true,  "eu" };
+			return eu;
+		}
+		case fnv1a32::hash("catalan"): {
+			static const std::pair<bool, const std::string> ca{ true,  "ca" };
+			return ca;
+		}
+		case fnv1a32::hash("ca"): {
+			static const std::pair<bool, const std::string> ca{ true,  "ca" };
+			return ca;
+		}
+		case fnv1a32::hash("danish"): {
+			static const std::pair<bool, const std::string> da{ true,  "da" };
+			return da;
+		}
+		case fnv1a32::hash("da"): {
+			static const std::pair<bool, const std::string> da{ true,  "da" };
+			return da;
+		}
+		case fnv1a32::hash("dutch"): {
+			static const std::pair<bool, const std::string> nl{ true,  "nl" };
+			return nl;
+		}
+		case fnv1a32::hash("nl"): {
+			static const std::pair<bool, const std::string> nl{ true,  "nl" };
+			return nl;
+		}
+		case fnv1a32::hash("kraaij_pohlmann"): {
+			static const std::pair<bool, const std::string> nl{ false, "nl" };
+			return nl;
+		}
+		case fnv1a32::hash("english"): {
+			static const std::pair<bool, const std::string> en{ true,  "en" };
+			return en;
+		}
+		case fnv1a32::hash("en"): {
+			static const std::pair<bool, const std::string> en{ true,  "en" };
+			return en;
+		}
+		case fnv1a32::hash("earlyenglish"): {
+			static const std::pair<bool, const std::string> en{ false, "en" };
+			return en;
+		}
+		case fnv1a32::hash("english_lovins"): {
+			static const std::pair<bool, const std::string> en{ false, "en" };
+			return en;
+		}
+		case fnv1a32::hash("lovins"): {
+			static const std::pair<bool, const std::string> en{ false, "en" };
+			return en;
+		}
+		case fnv1a32::hash("english_porter"): {
+			static const std::pair<bool, const std::string> en{ false, "en" };
+			return en;
+		}
+		case fnv1a32::hash("porter"): {
+			static const std::pair<bool, const std::string> en{ false, "en" };
+			return en;
+		}
+		case fnv1a32::hash("finnish"): {
+			static const std::pair<bool, const std::string> fi{ true,  "fi" };
+			return fi;
+		}
+		case fnv1a32::hash("fi"): {
+			static const std::pair<bool, const std::string> fi{ true,  "fi" };
+			return fi;
+		}
+		case fnv1a32::hash("french"): {
+			static const std::pair<bool, const std::string> fr{ true,  "fr" };
+			return fr;
+		}
+		case fnv1a32::hash("fr"): {
+			static const std::pair<bool, const std::string> fr{ true,  "fr" };
+			return fr;
+		}
+		case fnv1a32::hash("german"): {
+			static const std::pair<bool, const std::string> de{ true,  "de" };
+			return de;
+		}
+		case fnv1a32::hash("de"): {
+			static const std::pair<bool, const std::string> de{ true,  "de" };
+			return de;
+		}
+		case fnv1a32::hash("german2"): {
+			static const std::pair<bool, const std::string> de{ false, "de" };
+			return de;
+		}
+		case fnv1a32::hash("hungarian"): {
+			static const std::pair<bool, const std::string> hu{ true,  "hu" };
+			return hu;
+		}
+		case fnv1a32::hash("hu"): {
+			static const std::pair<bool, const std::string> hu{ true,  "hu" };
+			return hu;
+		}
+		case fnv1a32::hash("italian"): {
+			static const std::pair<bool, const std::string> it{ true,  "it" };
+			return it;
+		}
+		case fnv1a32::hash("it"): {
+			static const std::pair<bool, const std::string> it{ true,  "it" };
+			return it;
+		}
+		case fnv1a32::hash("norwegian"): {
+			static const std::pair<bool, const std::string> no{ true,  "no" };
+			return no;
+		}
+		case fnv1a32::hash("nb"): {
+			static const std::pair<bool, const std::string> no{ false, "no" };
+			return no;
+		}
+		case fnv1a32::hash("nn"): {
+			static const std::pair<bool, const std::string> no{ false, "no" };
+			return no;
+		}
+		case fnv1a32::hash("no"): {
+			static const std::pair<bool, const std::string> no{ true,  "no" };
+			return no;
+		}
+		case fnv1a32::hash("portuguese"): {
+			static const std::pair<bool, const std::string> pt{ true,  "pt" };
+			return pt;
+		}
+		case fnv1a32::hash("pt"): {
+			static const std::pair<bool, const std::string> pt{ true,  "pt" };
+			return pt;
+		}
+		case fnv1a32::hash("romanian"): {
+			static const std::pair<bool, const std::string> ro{ true,  "ro" };
+			return ro;
+		}
+		case fnv1a32::hash("ro"): {
+			static const std::pair<bool, const std::string> ro{ true,  "ro" };
+			return ro;
+		}
+		case fnv1a32::hash("russian"): {
+			static const std::pair<bool, const std::string> ru{ true,  "ru" };
+			return ru;
+		}
+		case fnv1a32::hash("ru"): {
+			static const std::pair<bool, const std::string> ru{ true,  "ru" };
+			return ru;
+		}
+		case fnv1a32::hash("spanish"): {
+			static const std::pair<bool, const std::string> es{ true,  "es" };
+			return es;
+		}
+		case fnv1a32::hash("es"): {
+			static const std::pair<bool, const std::string> es{ true,  "es" };
+			return es;
+		}
+		case fnv1a32::hash("swedish"): {
+			static const std::pair<bool, const std::string> sv{ true,  "sv" };
+			return sv;
+		}
+		case fnv1a32::hash("sv"): {
+			static const std::pair<bool, const std::string> sv{ true,  "sv" };
+			return sv;
+		}
+		case fnv1a32::hash("turkish"): {
+			static const std::pair<bool, const std::string> tr{ true,  "tr" };
+			return tr;
+		}
+		case fnv1a32::hash("tr"): {
+			static const std::pair<bool, const std::string> tr{ true,  "tr" };
+			return tr;
+		}
+		case fnv1a32::hash("none"): {
+			static const std::pair<bool, const std::string> _{ false, DEFAULT_LANGUAGE };
+			return _;
+		}
 		default:
-			return false;
+			throw std::out_of_range("Invalid language");
 	}
 }
+
+
+bool has_dispatch_set_default_spc(string_view set_default_spc);
+bool has_dispatch_process_properties(uint32_t key);
+bool has_dispatch_process_concrete_properties(uint32_t key);
 
 
 const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language) {
@@ -1800,15 +2126,12 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			}
 			// Rebuild fields with new values.
 			fields.clear();
-			static const auto wtit_e = map_dispatch_process_properties.end();
-			static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 			const auto it_e = object.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str();
-				const auto wtit = map_dispatch_process_properties.find(str_key);
-				if (wtit == wtit_e) {
-					const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-					if (ddit == ddit_e) {
+				auto str_key = it->str_view();
+				auto key = fnv1a32::hash(str_key);
+				if (!has_dispatch_process_properties(key)) {
+					if (!has_dispatch_process_concrete_properties(key)) {
 						fields.emplace_back(std::move(str_key), &it.value());
 					}
 				}
@@ -1870,7 +2193,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_v
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -1932,7 +2255,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_v
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -2015,7 +2338,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_v
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -2077,7 +2400,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, string_v
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -2548,7 +2871,7 @@ Schema::update_subproperties(const MsgPack*& properties, string_view name, const
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -2587,7 +2910,7 @@ Schema::update_subproperties(const MsgPack*& properties, string_view name, const
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -2638,7 +2961,7 @@ Schema::update_subproperties(const MsgPack*& properties, string_view name)
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -2677,7 +3000,7 @@ Schema::update_subproperties(const MsgPack*& properties, string_view name)
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -2990,7 +3313,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, string_view name, const Ms
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -3028,7 +3351,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, string_view name, const Ms
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -3078,7 +3401,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, string_view name)
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 			}
 			restart_specification();
@@ -3116,7 +3439,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, string_view name)
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
 			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name).c_str(), repr(field_name).c_str(), repr(specification.full_meta_name).c_str());
 		}
 		restart_specification();
@@ -4995,15 +5318,15 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 {
 	L_CALL("Schema::dispatch_process_concrete_properties(%s, <fields>)", repr(object.to_string()).c_str());
 
-	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str();
-		const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-		if (ddit == ddit_e) {
-			fields.emplace_back(std::move(str_key), &it.value());
-		} else {
-			(this->*ddit->second)(str_key, it.value());
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto &value = it.value();
+		try {
+			_dispatch_process_concrete_properties(key, str_key, value);
+		} catch (const std::out_of_range&) {
+			fields.emplace_back(std::move(str_key), &value);
 		}
 	}
 
@@ -5018,21 +5341,19 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 {
 	L_CALL("Schema::dispatch_process_all_properties(%s, <fields>)", repr(object.to_string()).c_str());
 
-	static const auto wtit_e = map_dispatch_process_properties.end();
-	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str();
-		const auto wtit = map_dispatch_process_properties.find(str_key);
-		if (wtit == wtit_e) {
-			const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-			if (ddit == ddit_e) {
-				fields.emplace_back(std::move(str_key), &it.value());
-			} else {
-				(this->*ddit->second)(str_key, it.value());
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto& value = it.value();
+		try {
+			_dispatch_process_properties(key, str_key, value);
+		} catch (const std::out_of_range&) {
+			try {
+				_dispatch_process_concrete_properties(key, str_key, value);
+			} catch (const std::out_of_range&) {
+				fields.emplace_back(std::move(str_key), &value);
 			}
-		} else {
-			(this->*wtit->second)(str_key, it.value());
 		}
 	}
 
@@ -5058,21 +5379,19 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 {
 	L_CALL("Schema::dispatch_write_concrete_properties(%s, %s, <fields>)", repr(mut_properties.to_string()).c_str(), repr(object.to_string()).c_str());
 
-	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str();
-		const auto wpit = map_dispatch_write_properties.find(str_key);
-		if (wpit == wpit_e) {
-			const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-			if (ddit == ddit_e) {
-				fields.emplace_back(std::move(str_key), &it.value());
-			} else {
-				(this->*ddit->second)(str_key, it.value());
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto& value = it.value();
+		try {
+			_dispatch_write_properties(key, mut_properties, str_key, value);
+		} catch (const std::out_of_range&) {
+			try {
+				_dispatch_process_concrete_properties(key, str_key, value);
+			} catch (const std::out_of_range&) {
+				fields.emplace_back(std::move(str_key), &value);
 			}
-		} else {
-			(this->*wpit->second)(mut_properties, str_key, it.value());
 		}
 	}
 
@@ -5082,32 +5401,630 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 }
 
 
+inline void
+Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, string_view prop_name, const MsgPack& value)
+{
+	L_CALL("Schema::_dispatch_write_properties(%s)", repr(mut_properties.to_string()).c_str());
+
+	switch (key) {
+		case fnv1a32::hash(RESERVED_WEIGHT):
+			write_weight(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITION):
+			write_position(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SPELLING):
+			write_spelling(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITIONS):
+			write_positions(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX):
+			write_index(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STORE):
+			write_store(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_RECURSE):
+			write_recurse(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_DYNAMIC):
+			write_dynamic(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STRICT):
+			write_strict(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+			write_date_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+			write_time_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+			write_timedelta_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+			write_numeric_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+			write_geo_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+			write_bool_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+			write_string_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+			write_text_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+			write_term_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+			write_uuid_detection(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			write_bool_term(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_NAMESPACE):
+			write_namespace(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+			write_partial_paths(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+			write_index_uuid_field(mut_properties, prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SCHEMA):
+			write_schema(mut_properties, prop_name, value);
+			break;
+		default:
+			throw std::out_of_range("Invalid write property");
+	}
+}
+
+
+inline void
+Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
+{
+	L_CALL("Schema::_dispatch_feed_properties(%s)", repr(value.to_string()).c_str());
+
+	switch (key) {
+		case fnv1a32::hash(RESERVED_WEIGHT):
+			Schema::feed_weight(value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITION):
+			Schema::feed_position(value);
+			break;
+		case fnv1a32::hash(RESERVED_SPELLING):
+			Schema::feed_spelling(value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITIONS):
+			Schema::feed_positions(value);
+			break;
+		case fnv1a32::hash(RESERVED_TYPE):
+			Schema::feed_type(value);
+			break;
+		case fnv1a32::hash(RESERVED_PREFIX):
+			Schema::feed_prefix(value);
+			break;
+		case fnv1a32::hash(RESERVED_SLOT):
+			Schema::feed_slot(value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX):
+			Schema::feed_index(value);
+			break;
+		case fnv1a32::hash(RESERVED_STORE):
+			Schema::feed_store(value);
+			break;
+		case fnv1a32::hash(RESERVED_RECURSE):
+			Schema::feed_recurse(value);
+			break;
+		case fnv1a32::hash(RESERVED_DYNAMIC):
+			Schema::feed_dynamic(value);
+			break;
+		case fnv1a32::hash(RESERVED_STRICT):
+			Schema::feed_strict(value);
+			break;
+		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+			Schema::feed_date_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+			Schema::feed_time_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+			Schema::feed_timedelta_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+			Schema::feed_numeric_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+			Schema::feed_geo_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+			Schema::feed_bool_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+			Schema::feed_string_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+			Schema::feed_text_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+			Schema::feed_term_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+			Schema::feed_uuid_detection(value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			Schema::feed_bool_term(value);
+			break;
+		case fnv1a32::hash(RESERVED_ACCURACY):
+			Schema::feed_accuracy(value);
+			break;
+		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+			Schema::feed_acc_prefix(value);
+			break;
+		case fnv1a32::hash(RESERVED_LANGUAGE):
+			Schema::feed_language(value);
+			break;
+		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+			Schema::feed_stop_strategy(value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+			Schema::feed_stem_strategy(value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			Schema::feed_stem_language(value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIALS):
+			Schema::feed_partials(value);
+			break;
+		case fnv1a32::hash(RESERVED_ERROR):
+			Schema::feed_error(value);
+			break;
+		case fnv1a32::hash(RESERVED_NAMESPACE):
+			Schema::feed_namespace(value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+			Schema::feed_partial_paths(value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+			Schema::feed_index_uuid_field(value);
+			break;
+		case fnv1a32::hash(RESERVED_SCRIPT):
+			Schema::feed_script(value);
+			break;
+		case fnv1a32::hash(RESERVED_ENDPOINT):
+			Schema::feed_endpoint(value);
+			break;
+		default:
+			throw std::out_of_range("Invalid feed property");
+	}
+}
+
+
+inline bool
+has_dispatch_process_properties(uint32_t key)
+{
+	switch (key) {
+		case fnv1a32::hash(RESERVED_LANGUAGE):
+			return true;
+		case fnv1a32::hash(RESERVED_PREFIX):
+			return true;
+		case fnv1a32::hash(RESERVED_SLOT):
+			return true;
+		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+			return true;
+		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+			return true;
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			return true;
+		case fnv1a32::hash(RESERVED_TYPE):
+			return true;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			return true;
+		case fnv1a32::hash(RESERVED_ACCURACY):
+			return true;
+		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+			return true;
+		case fnv1a32::hash(RESERVED_PARTIALS):
+			return true;
+		case fnv1a32::hash(RESERVED_ERROR):
+			return true;
+		default:
+			return false;
+	}
+}
+
+inline void
+Schema::_dispatch_process_properties(uint32_t key, string_view prop_name, const MsgPack& value)
+{
+	L_CALL("Schema::_dispatch_process_properties(%s)", repr(prop_name).c_str());
+
+	switch (key) {
+		case fnv1a32::hash(RESERVED_LANGUAGE):
+			Schema::process_language(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_PREFIX):
+			Schema::process_prefix(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SLOT):
+			Schema::process_slot(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+			Schema::process_stop_strategy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+			Schema::process_stem_strategy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			Schema::process_stem_language(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TYPE):
+			Schema::process_type(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			Schema::process_bool_term(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ACCURACY):
+			Schema::process_accuracy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+			Schema::process_acc_prefix(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIALS):
+			Schema::process_partials(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ERROR):
+			Schema::process_error(prop_name, value);
+			break;
+		default:
+			throw std::out_of_range("Invalid process property");
+	}
+}
+
+inline bool
+has_dispatch_process_concrete_properties(uint32_t key)
+{
+	switch (key) {
+		case fnv1a32::hash(RESERVED_WEIGHT):
+			return true;
+		case fnv1a32::hash(RESERVED_POSITION):
+			return true;
+		case fnv1a32::hash(RESERVED_SPELLING):
+			return true;
+		case fnv1a32::hash(RESERVED_POSITIONS):
+			return true;
+		case fnv1a32::hash(RESERVED_INDEX):
+			return true;
+		case fnv1a32::hash(RESERVED_STORE):
+			return true;
+		case fnv1a32::hash(RESERVED_RECURSE):
+			return true;
+		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+			return true;
+		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+			return true;
+		case fnv1a32::hash(RESERVED_VALUE):
+			return true;
+		case fnv1a32::hash(RESERVED_ENDPOINT):
+			return true;
+		case fnv1a32::hash(RESERVED_SCRIPT):
+			return true;
+		case fnv1a32::hash(RESERVED_FLOAT):
+			return true;
+		case fnv1a32::hash(RESERVED_POSITIVE):
+			return true;
+		case fnv1a32::hash(RESERVED_INTEGER):
+			return true;
+		case fnv1a32::hash(RESERVED_BOOLEAN):
+			return true;
+		case fnv1a32::hash(RESERVED_TERM):
+			return true;
+		case fnv1a32::hash(RESERVED_TEXT):
+			return true;
+		case fnv1a32::hash(RESERVED_STRING):
+			return true;
+		case fnv1a32::hash(RESERVED_DATE):
+			return true;
+		case fnv1a32::hash(RESERVED_UUID):
+			return true;
+		case fnv1a32::hash(RESERVED_EWKT):
+			return true;
+		case fnv1a32::hash(RESERVED_POINT):
+			return true;
+		case fnv1a32::hash(RESERVED_CIRCLE):
+			return true;
+		case fnv1a32::hash(RESERVED_CONVEX):
+			return true;
+		case fnv1a32::hash(RESERVED_POLYGON):
+			return true;
+		case fnv1a32::hash(RESERVED_CHULL):
+			return true;
+		case fnv1a32::hash(RESERVED_MULTIPOINT):
+			return true;
+		case fnv1a32::hash(RESERVED_MULTICIRCLE):
+			return true;
+		case fnv1a32::hash(RESERVED_MULTICONVEX):
+			return true;
+		case fnv1a32::hash(RESERVED_MULTIPOLYGON):
+			return true;
+		case fnv1a32::hash(RESERVED_MULTICHULL):
+			return true;
+		case fnv1a32::hash(RESERVED_GEO_COLLECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_GEO_INTERSECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_CHAI):
+			return true;
+		case fnv1a32::hash(RESERVED_ECMA):
+			return true;
+		// Next functions only check the consistency of user provided data.
+		case fnv1a32::hash(RESERVED_LANGUAGE):
+			return true;
+		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+			return true;
+		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+			return true;
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			return true;
+		case fnv1a32::hash(RESERVED_TYPE):
+			return true;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			return true;
+		case fnv1a32::hash(RESERVED_ACCURACY):
+			return true;
+		case fnv1a32::hash(RESERVED_PARTIALS):
+			return true;
+		case fnv1a32::hash(RESERVED_ERROR):
+			return true;
+		case fnv1a32::hash(RESERVED_DYNAMIC):
+			return true;
+		case fnv1a32::hash(RESERVED_STRICT):
+			return true;
+		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+			return true;
+		case fnv1a32::hash(RESERVED_NAMESPACE):
+			return true;
+		case fnv1a32::hash(RESERVED_SCHEMA):
+			return true;
+		default:
+			return false;
+	}
+}
+
+inline void
+Schema::_dispatch_process_concrete_properties(uint32_t key, string_view prop_name, const MsgPack& value)
+{
+	L_CALL("Schema::_dispatch_process_concrete_properties(%s)", repr(prop_name).c_str());
+
+	switch (key) {
+		case fnv1a32::hash(RESERVED_WEIGHT):
+			Schema::process_weight(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITION):
+			Schema::process_position(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SPELLING):
+			Schema::process_spelling(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITIONS):
+			Schema::process_positions(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX):
+			Schema::process_index(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STORE):
+			Schema::process_store(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_RECURSE):
+			Schema::process_recurse(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+			Schema::process_partial_paths(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+			Schema::process_index_uuid_field(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_VALUE):
+			Schema::process_value(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ENDPOINT):
+			Schema::process_endpoint(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SCRIPT):
+			Schema::process_script(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_FLOAT):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POSITIVE):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_INTEGER):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOLEAN):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TERM):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TEXT):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STRING):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_DATE):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_UUID):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_EWKT):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POINT):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_CIRCLE):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_CONVEX):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_POLYGON):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_CHULL):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_MULTIPOINT):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_MULTICIRCLE):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_MULTICONVEX):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_MULTIPOLYGON):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_MULTICHULL):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_GEO_COLLECTION):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_GEO_INTERSECTION):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_CHAI):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ECMA):
+			Schema::process_cast_object(prop_name, value);
+			break;
+		// Next functions only check the consistency of user provided data.
+		case fnv1a32::hash(RESERVED_LANGUAGE):
+			Schema::consistency_language(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+			Schema::consistency_stop_strategy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+			Schema::consistency_stem_strategy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			Schema::consistency_stem_language(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TYPE):
+			Schema::consistency_type(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_TERM):
+			Schema::consistency_bool_term(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ACCURACY):
+			Schema::consistency_accuracy(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_PARTIALS):
+			Schema::consistency_partials(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_ERROR):
+			Schema::consistency_error(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_DYNAMIC):
+			Schema::consistency_dynamic(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STRICT):
+			Schema::consistency_strict(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+			Schema::consistency_date_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+			Schema::consistency_time_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+			Schema::consistency_timedelta_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+			Schema::consistency_numeric_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+			Schema::consistency_geo_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+			Schema::consistency_bool_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+			Schema::consistency_string_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+			Schema::consistency_text_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+			Schema::consistency_term_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+			Schema::consistency_uuid_detection(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_NAMESPACE):
+			Schema::consistency_namespace(prop_name, value);
+			break;
+		case fnv1a32::hash(RESERVED_SCHEMA):
+			Schema::consistency_schema(prop_name, value);
+			break;
+		default:
+			throw std::out_of_range("Invalid process concrete property");
+	}
+}
+
+
 void
 Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
 {
 	L_CALL("Schema::dispatch_write_all_properties(%s, %s, <fields>)", repr(mut_properties.to_string()).c_str(), repr(object.to_string()).c_str());
 
-	static const auto wpit_e = map_dispatch_write_properties.end();
-	static const auto wtit_e = map_dispatch_process_properties.end();
-	static const auto ddit_e = map_dispatch_process_concrete_properties.end();
-	const auto it_e = object.end();
+	auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str();
-		const auto wpit = map_dispatch_write_properties.find(str_key);
-		if (wpit == wpit_e) {
-			const auto wtit = map_dispatch_process_properties.find(str_key);
-			if (wtit == wtit_e) {
-				const auto ddit = map_dispatch_process_concrete_properties.find(str_key);
-				if (ddit == ddit_e) {
-					fields.emplace_back(std::move(str_key), &it.value());
-				} else {
-					(this->*ddit->second)(str_key, it.value());
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto& value = it.value();
+		try {
+			_dispatch_write_properties(key, mut_properties, str_key, value);
+		} catch (const std::out_of_range&) {
+			try {
+				_dispatch_process_properties(key, str_key, value);
+			} catch (const std::out_of_range&) {
+				try {
+					_dispatch_process_concrete_properties(key, str_key, value);
+				} catch (const std::out_of_range&) {
+					fields.emplace_back(std::move(str_key), &value);
 				}
-			} else {
-				(this->*wtit->second)(str_key, it.value());
 			}
-		} else {
-			(this->*wpit->second)(mut_properties, str_key, it.value());
 		}
 	}
 
@@ -5130,6 +6047,17 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 }
 
 
+inline bool
+has_dispatch_set_default_spc(string_view set_default_spc)
+{
+	switch (fnv1a32::hash(set_default_spc)) {
+		case fnv1a32::hash(ID_FIELD_NAME):
+			return true;
+		default:
+			return false;
+	}
+}
+
 inline void
 Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
@@ -5141,6 +6069,7 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 			break;
 	}
 }
+
 
 
 void
@@ -5215,13 +6144,14 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 {
 	L_CALL("Schema::dispatch_feed_properties(%s)", repr(properties.to_string()).c_str());
 
-	static const auto dpit_e = map_dispatch_feed_properties.end();
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
-		const auto dpit = map_dispatch_feed_properties.find(it->str());
-		if (dpit != dpit_e) {
-			(this->*dpit->second)(it.value());
-		}
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto& value = it.value();
+		try {
+			_dispatch_feed_properties(key, value);
+		} catch (const std::out_of_range&) { }
 	}
 }
 
@@ -6366,7 +7296,7 @@ Schema::process_position(string_view prop_name, const MsgPack& doc_position)
 }
 
 
-void
+inline void
 Schema::process_weight(string_view prop_name, const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
@@ -6390,7 +7320,7 @@ Schema::process_weight(string_view prop_name, const MsgPack& doc_weight)
 }
 
 
-void
+inline void
 Schema::process_spelling(string_view prop_name, const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
@@ -6414,7 +7344,7 @@ Schema::process_spelling(string_view prop_name, const MsgPack& doc_spelling)
 }
 
 
-void
+inline void
 Schema::process_positions(string_view prop_name, const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
@@ -6438,7 +7368,7 @@ Schema::process_positions(string_view prop_name, const MsgPack& doc_positions)
 }
 
 
-void
+inline void
 Schema::process_index(string_view prop_name, const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change.
@@ -6458,7 +7388,7 @@ Schema::process_index(string_view prop_name, const MsgPack& doc_index)
 }
 
 
-void
+inline void
 Schema::process_store(string_view prop_name, const MsgPack& doc_store)
 {
 	L_CALL("Schema::process_store(%s)", repr(doc_store.to_string()).c_str());
@@ -6477,7 +7407,7 @@ Schema::process_store(string_view prop_name, const MsgPack& doc_store)
 }
 
 
-void
+inline void
 Schema::process_recurse(string_view prop_name, const MsgPack& doc_recurse)
 {
 	L_CALL("Schema::process_recurse(%s)", repr(doc_recurse.to_string()).c_str());
@@ -6495,7 +7425,7 @@ Schema::process_recurse(string_view prop_name, const MsgPack& doc_recurse)
 }
 
 
-void
+inline void
 Schema::process_partial_paths(string_view prop_name, const MsgPack& doc_partial_paths)
 {
 	L_CALL("Schema::process_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
@@ -6513,7 +7443,7 @@ Schema::process_partial_paths(string_view prop_name, const MsgPack& doc_partial_
 }
 
 
-void
+inline void
 Schema::process_index_uuid_field(string_view prop_name, const MsgPack& doc_index_uuid_field)
 {
 	L_CALL("Schema::process_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
@@ -6533,7 +7463,7 @@ Schema::process_index_uuid_field(string_view prop_name, const MsgPack& doc_index
 }
 
 
-void
+inline void
 Schema::process_value(string_view, const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
@@ -6547,7 +7477,7 @@ Schema::process_value(string_view, const MsgPack& doc_value)
 }
 
 
-void
+inline void
 Schema::process_script(string_view, const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable.
@@ -6563,7 +7493,7 @@ Schema::process_script(string_view, const MsgPack& doc_script)
 }
 
 
-void
+inline void
 Schema::process_endpoint(string_view prop_name, const MsgPack& doc_endpoint)
 {
 	// RESERVED_ENDPOINT isn't heritable.
@@ -6598,7 +7528,7 @@ Schema::process_endpoint(string_view prop_name, const MsgPack& doc_endpoint)
 }
 
 
-void
+inline void
 Schema::process_cast_object(string_view prop_name, const MsgPack& doc_cast_object)
 {
 	// This property isn't heritable and is not saved in schema.
@@ -6613,7 +7543,7 @@ Schema::process_cast_object(string_view prop_name, const MsgPack& doc_cast_objec
 }
 
 
-void
+inline void
 Schema::consistency_language(string_view prop_name, const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
@@ -6630,7 +7560,7 @@ Schema::consistency_language(string_view prop_name, const MsgPack& doc_language)
 }
 
 
-void
+inline void
 Schema::consistency_stop_strategy(string_view prop_name, const MsgPack& doc_stop_strategy)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
@@ -6652,7 +7582,7 @@ Schema::consistency_stop_strategy(string_view prop_name, const MsgPack& doc_stop
 }
 
 
-void
+inline void
 Schema::consistency_stem_strategy(string_view prop_name, const MsgPack& doc_stem_strategy)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
@@ -6674,7 +7604,7 @@ Schema::consistency_stem_strategy(string_view prop_name, const MsgPack& doc_stem
 }
 
 
-void
+inline void
 Schema::consistency_stem_language(string_view prop_name, const MsgPack& doc_stem_language)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
@@ -6695,7 +7625,7 @@ Schema::consistency_stem_language(string_view prop_name, const MsgPack& doc_stem
 }
 
 
-void
+inline void
 Schema::consistency_type(string_view prop_name, const MsgPack& doc_type)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
@@ -6725,7 +7655,7 @@ Schema::consistency_type(string_view prop_name, const MsgPack& doc_type)
 }
 
 
-void
+inline void
 Schema::consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
@@ -6844,7 +7774,7 @@ Schema::consistency_accuracy(string_view prop_name, const MsgPack& doc_accuracy)
 }
 
 
-void
+inline void
 Schema::consistency_bool_term(string_view prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
@@ -6865,7 +7795,7 @@ Schema::consistency_bool_term(string_view prop_name, const MsgPack& doc_bool_ter
 }
 
 
-void
+inline void
 Schema::consistency_partials(string_view prop_name, const MsgPack& doc_partials)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
@@ -6886,7 +7816,7 @@ Schema::consistency_partials(string_view prop_name, const MsgPack& doc_partials)
 }
 
 
-void
+inline void
 Schema::consistency_error(string_view prop_name, const MsgPack& doc_error)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
@@ -6907,7 +7837,7 @@ Schema::consistency_error(string_view prop_name, const MsgPack& doc_error)
 }
 
 
-void
+inline void
 Schema::consistency_dynamic(string_view prop_name, const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
@@ -6924,7 +7854,7 @@ Schema::consistency_dynamic(string_view prop_name, const MsgPack& doc_dynamic)
 }
 
 
-void
+inline void
 Schema::consistency_strict(string_view prop_name, const MsgPack& doc_strict)
 {
 	// RESERVED_STRICT is heritable but can't change.
@@ -6941,7 +7871,7 @@ Schema::consistency_strict(string_view prop_name, const MsgPack& doc_strict)
 }
 
 
-void
+inline void
 Schema::consistency_date_detection(string_view prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
@@ -6958,7 +7888,7 @@ Schema::consistency_date_detection(string_view prop_name, const MsgPack& doc_dat
 }
 
 
-void
+inline void
 Schema::consistency_time_detection(string_view prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
@@ -6975,7 +7905,7 @@ Schema::consistency_time_detection(string_view prop_name, const MsgPack& doc_tim
 }
 
 
-void
+inline void
 Schema::consistency_timedelta_detection(string_view prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
@@ -6992,7 +7922,7 @@ Schema::consistency_timedelta_detection(string_view prop_name, const MsgPack& do
 }
 
 
-void
+inline void
 Schema::consistency_numeric_detection(string_view prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
@@ -7009,7 +7939,7 @@ Schema::consistency_numeric_detection(string_view prop_name, const MsgPack& doc_
 }
 
 
-void
+inline void
 Schema::consistency_geo_detection(string_view prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
@@ -7026,7 +7956,7 @@ Schema::consistency_geo_detection(string_view prop_name, const MsgPack& doc_geo_
 }
 
 
-void
+inline void
 Schema::consistency_bool_detection(string_view prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
@@ -7043,7 +7973,7 @@ Schema::consistency_bool_detection(string_view prop_name, const MsgPack& doc_boo
 }
 
 
-void
+inline void
 Schema::consistency_string_detection(string_view prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
@@ -7060,7 +7990,7 @@ Schema::consistency_string_detection(string_view prop_name, const MsgPack& doc_s
 }
 
 
-void
+inline void
 Schema::consistency_text_detection(string_view prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
@@ -7077,7 +8007,7 @@ Schema::consistency_text_detection(string_view prop_name, const MsgPack& doc_tex
 }
 
 
-void
+inline void
 Schema::consistency_term_detection(string_view prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
@@ -7094,7 +8024,7 @@ Schema::consistency_term_detection(string_view prop_name, const MsgPack& doc_ter
 }
 
 
-void
+inline void
 Schema::consistency_uuid_detection(string_view prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
@@ -7111,7 +8041,7 @@ Schema::consistency_uuid_detection(string_view prop_name, const MsgPack& doc_uui
 }
 
 
-void
+inline void
 Schema::consistency_namespace(string_view prop_name, const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
@@ -7128,7 +8058,7 @@ Schema::consistency_namespace(string_view prop_name, const MsgPack& doc_namespac
 }
 
 
-void
+inline void
 Schema::consistency_schema(string_view prop_name, const MsgPack& doc_schema)
 {
 	// RESERVED_SCHEMA isn't heritable and is only allowed in root object.
@@ -7145,7 +8075,7 @@ Schema::consistency_schema(string_view prop_name, const MsgPack& doc_schema)
 
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-void
+inline void
 Schema::write_script(MsgPack& properties)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
@@ -7238,36 +8168,58 @@ Schema::get_full(bool readable) const
 }
 
 
+inline bool
+Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
+{
+	L_CALL("Schema::_dispatch_readable(%s)", repr(value.to_string()).c_str());
+
+	switch (key) {
+		case fnv1a32::hash(RESERVED_TYPE):
+			return Schema::readable_type(value, properties);
+		case fnv1a32::hash(RESERVED_PREFIX):
+			return Schema::readable_prefix(value, properties);
+		case fnv1a32::hash(RESERVED_SLOT):
+			return Schema::readable_slot(value, properties);
+		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+			return Schema::readable_stem_language(value, properties);
+		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+			return Schema::readable_acc_prefix(value, properties);
+		case fnv1a32::hash(RESERVED_SCRIPT):
+			return Schema::readable_script(value, properties);
+		default:
+			throw std::out_of_range("Invalid readable");
+	}
+}
+
+
 void
 Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 {
 	L_CALL("Schema::dispatch_readable(%s, %s)", repr(item_schema.to_string()).c_str(), at_root ? "true" : "false");
 
 	// Change this item of schema in readable form.
-	static const auto drit_e = map_get_readable.end();
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
-		const auto str_key = it->str();
-		const auto drit = map_get_readable.find(str_key);
-		if (drit == drit_e) {
+		auto str_key = it->str_view();
+		auto key = fnv1a32::hash(str_key);
+		auto& value = it.value();
+		try {
+			if (!_dispatch_readable(key, value, item_schema)) {
+				it = item_schema.erase(it);
+				continue;
+			}
+		} catch (const std::out_of_range&) {
 			if (is_valid(str_key)) {
-				auto& value = it.value();
 				if (value.is_map()) {
 					dispatch_readable(value, false);
 				}
-			} else if (has_set_default_spc(str_key)) {
+			} else if (has_dispatch_set_default_spc(str_key)) {
 				if (at_root) {
 					it = item_schema.erase(it);
 					continue;
 				}
-				auto& value = it.value();
 				if (value.is_map()) {
 					dispatch_readable(value, false);
 				}
-			}
-		} else {
-			if (!(*drit->second)(it.value(), item_schema)) {
-				it = item_schema.erase(it);
-				continue;
 			}
 		}
 		++it;
@@ -7275,7 +8227,7 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 }
 
 
-bool
+inline bool
 Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	L_CALL("Schema::readable_type(%s, %s)", repr(prop_type.to_string()).c_str(), repr(properties.to_string()).c_str());
@@ -7303,7 +8255,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 }
 
 
-bool
+inline bool
 Schema::readable_prefix(MsgPack&, MsgPack&)
 {
 	L_CALL("Schema::readable_prefix(...)");
@@ -7312,7 +8264,7 @@ Schema::readable_prefix(MsgPack&, MsgPack&)
 }
 
 
-bool
+inline bool
 Schema::readable_slot(MsgPack&, MsgPack&)
 {
 	L_CALL("Schema::readable_slot(...)");
@@ -7321,7 +8273,7 @@ Schema::readable_slot(MsgPack&, MsgPack&)
 }
 
 
-bool
+inline bool
 Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 {
 	L_CALL("Schema::readable_stem_language(%s)", repr(prop_stem_language.to_string()).c_str());
@@ -7333,7 +8285,7 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 }
 
 
-bool
+inline bool
 Schema::readable_acc_prefix(MsgPack&, MsgPack&)
 {
 	L_CALL("Schema::readable_acc_prefix(...)");
@@ -7342,7 +8294,7 @@ Schema::readable_acc_prefix(MsgPack&, MsgPack&)
 }
 
 
-bool
+inline bool
 Schema::readable_script(MsgPack& prop_script, MsgPack&)
 {
 	L_CALL("Schema::readable_script(%s)", repr(prop_script.to_string()).c_str());
@@ -7615,7 +8567,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, string_view full_na
 		if (!is_valid(field_name)) {
 			// Check if the field_name is accuracy.
 			if (it == it_b) {
-				if (!has_set_default_spc(field_name)) {
+				if (!has_dispatch_set_default_spc(field_name)) {
 					if (++it == it_e) {
 						auto acc_data = _get_acc_data(field_name);
 						spc.prefix.append(acc_data.first);

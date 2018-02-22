@@ -40,6 +40,7 @@
 #include "serialise_list.h"               // for StringList, ...
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
 #include "utils.h"                        // for stox
+#include "hashes.hh"                      // for fnv1a32
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
@@ -57,12 +58,6 @@ class Multi_MultiValueKeyMaker;
 
 
 using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const required_spc_t&, bool, string_view, const query_field_t&);
-
-
-extern const dispatch_str_metric def_str_metric;
-extern const dispatch_str_metric def_soundex_metric;
-extern const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_str_metric;
-extern const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_soundex_metric;
 
 
 // Base class for creating keys.
@@ -311,11 +306,24 @@ public:
 	}
 
 	void soundex(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
-		try {
-			auto func = map_dispatch_soundex_metric.at(field_spc.language);
-			(this->*func)(field_spc, reverse, value, qf);
-		} catch (const std::out_of_range&) {
-			(this->*def_soundex_metric)(field_spc, reverse, value, qf);
+		switch (fnv1a32::hash(field_spc.language)) {
+			case fnv1a32::hash("english"):
+			case fnv1a32::hash("en"):
+			default:
+				soundex_en(field_spc, reverse, value, qf);
+				break;
+			case fnv1a32::hash("french"):
+			case fnv1a32::hash("fr"):
+				soundex_fr(field_spc, reverse, value, qf);
+				break;
+			case fnv1a32::hash("german"):
+			case fnv1a32::hash("de"):
+				soundex_de(field_spc, reverse, value, qf);
+				break;
+			case fnv1a32::hash("spanish"):
+			case fnv1a32::hash("es"):
+				soundex_es(field_spc, reverse, value, qf);
+				break;
 		}
 	}
 };

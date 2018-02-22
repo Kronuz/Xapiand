@@ -28,41 +28,6 @@
 #include "geospatial/ewkt.h"    // for EWKT
 
 
-const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
-const dispatch_str_metric def_soundex_metric = &Multi_MultiValueKeyMaker::soundex_en;
-
-
-const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_soundex_metric({
-	{ "english",  &Multi_MultiValueKeyMaker::soundex_en     },
-	{ "en",       &Multi_MultiValueKeyMaker::soundex_en     },
-	{ "french",   &Multi_MultiValueKeyMaker::soundex_fr     },
-	{ "fr",       &Multi_MultiValueKeyMaker::soundex_fr     },
-	{ "german",   &Multi_MultiValueKeyMaker::soundex_de     },
-	{ "de",       &Multi_MultiValueKeyMaker::soundex_de     },
-	{ "spanish",  &Multi_MultiValueKeyMaker::soundex_es     },
-	{ "es",       &Multi_MultiValueKeyMaker::soundex_es     }
-});
-
-
-const std::unordered_map<string_view, dispatch_str_metric> map_dispatch_str_metric({
-	{ "levenshtein",   &Multi_MultiValueKeyMaker::levenshtein     },
-	{ "leven",         &Multi_MultiValueKeyMaker::levenshtein     },
-	{ "jaro",          &Multi_MultiValueKeyMaker::jaro            },
-	{ "jarowinkler",   &Multi_MultiValueKeyMaker::jaro_winkler    },
-	{ "jarow",         &Multi_MultiValueKeyMaker::jaro_winkler    },
-	{ "sorensendice",  &Multi_MultiValueKeyMaker::sorensen_dice   },
-	{ "sorensen",      &Multi_MultiValueKeyMaker::sorensen_dice   },
-	{ "dice",          &Multi_MultiValueKeyMaker::sorensen_dice   },
-	{ "jaccard",       &Multi_MultiValueKeyMaker::jaccard         },
-	{ "lcsubstr",      &Multi_MultiValueKeyMaker::lcs             },
-	{ "lcs",           &Multi_MultiValueKeyMaker::lcs             },
-	{ "lcsubsequence", &Multi_MultiValueKeyMaker::lcsq            },
-	{ "lcsq",          &Multi_MultiValueKeyMaker::lcsq            },
-	{ "soundex",       &Multi_MultiValueKeyMaker::soundex         },
-	{ "sound",         &Multi_MultiValueKeyMaker::soundex         }
-});
-
-
 std::string
 SerialiseKey::findSmallest(const Xapian::Document& doc) const
 {
@@ -464,37 +429,65 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 		switch (field_spc.get_type()) {
 			case FieldType::FLOAT:
 				slots.push_back(std::make_unique<FloatKey>(field_spc.slot, reverse, value));
-				return;
+				break;
 			case FieldType::INTEGER:
 				slots.push_back(std::make_unique<IntegerKey>(field_spc.slot, reverse, value));
-				return;
+				break;
 			case FieldType::POSITIVE:
 				slots.push_back(std::make_unique<PositiveKey>(field_spc.slot, reverse, value));
-				return;
+				break;
 			case FieldType::DATE:
 				slots.push_back(std::make_unique<DateKey>(field_spc.slot, reverse, value));
-				return;
+				break;
 			case FieldType::BOOLEAN:
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
-				return;
+				break;
 			case FieldType::UUID:
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::STRING:
-				try {
-					auto func = map_dispatch_str_metric.at(qf.metric);
-					(this->*func)(field_spc, reverse, value, qf);
-				} catch (const std::out_of_range&) {
-					(this->*def_str_metric)(field_spc, reverse, value, qf);
+				switch (fnv1a32::hash(qf.metric)) {
+					case fnv1a32::hash("levenshtein"):
+					case fnv1a32::hash("leven"):
+						levenshtein(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("jarowinkler"):
+					case fnv1a32::hash("jarow"):
+						jaro_winkler(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("sorensendice"):
+					case fnv1a32::hash("sorensen"):
+					case fnv1a32::hash("dice"):
+						sorensen_dice(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("jaccard"):
+						jaccard(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("lcsubstr"):
+					case fnv1a32::hash("lcs"):
+						lcs(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("lcsubsequence"):
+					case fnv1a32::hash("lcsq"):
+						lcsq(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("soundex"):
+					case fnv1a32::hash("sound"):
+						soundex(field_spc, reverse, value, qf);
+						break;
+					case fnv1a32::hash("jaro"):
+					default:
+						jaro(field_spc, reverse, value, qf);
+						break;
 				}
-				return;
+				break;
 			case FieldType::GEO: {
 				EWKT ewkt(value);
 				auto centroids = ewkt.getGeometry()->getCentroids();
 				if (!centroids.empty()) {
 					slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, std::move(centroids)));
 				}
-				return;
+				break;
 			}
 			default:
 				THROW(InvalidArgumentError, "Type '%c' is not supported", field_spc.get_type());

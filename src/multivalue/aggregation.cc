@@ -30,39 +30,7 @@
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "schema.h"                         // for Schema
-
-
-const std::unordered_map<string_view, dispatch_aggregations> map_dispatch_aggregations({
-	{ AGGREGATION_COUNT,            &Aggregation::add_metric<AGGREGATION_COUNT, MetricCount>                       },
-	// { AGGREGATION_CARDINALITY,      &Aggregation::add_metric<AGGREGATION_CARDINALITY, MetricCardinality>           },
-	{ AGGREGATION_SUM,              &Aggregation::add_metric<AGGREGATION_SUM, MetricSum>                           },
-	{ AGGREGATION_AVG,              &Aggregation::add_metric<AGGREGATION_AVG, MetricAvg>                           },
-	{ AGGREGATION_MIN,              &Aggregation::add_metric<AGGREGATION_MIN, MetricMin>                           },
-	{ AGGREGATION_MAX,              &Aggregation::add_metric<AGGREGATION_MAX, MetricMax>                           },
-	{ AGGREGATION_VARIANCE,         &Aggregation::add_metric<AGGREGATION_VARIANCE, MetricVariance>                 },
-	{ AGGREGATION_STD,              &Aggregation::add_metric<AGGREGATION_STD, MetricSTD>                           },
-	{ AGGREGATION_MEDIAN,           &Aggregation::add_metric<AGGREGATION_MEDIAN, MetricMedian>                     },
-	{ AGGREGATION_MODE,             &Aggregation::add_metric<AGGREGATION_MODE, MetricMode>                         },
-	{ AGGREGATION_STATS,            &Aggregation::add_metric<AGGREGATION_STATS, MetricStats>                       },
-	{ AGGREGATION_EXT_STATS,        &Aggregation::add_metric<AGGREGATION_EXT_STATS, MetricExtendedStats>           },
-	// { AGGREGATION_GEO_BOUNDS,       &Aggregation::add_metric<AGGREGATION_GEO_BOUNDS, MetricGeoBounds>              },
-	// { AGGREGATION_GEO_CENTROID,     &Aggregation::add_metric<AGGREGATION_GEO_CENTROID, MetricGeoCentroid>          },
-	// { AGGREGATION_PERCENTILES,      &Aggregation::add_metric<AGGREGATION_PERCENTILES, MetricPercentiles>           },
-	// { AGGREGATION_PERCENTILES_RANK, &Aggregation::add_metric<AGGREGATION_PERCENTILES_RANK, MetricPercentilesRank>  },
-	// { AGGREGATION_SCRIPTED_METRIC,  &Aggregation::add_metric<AGGREGATION_SCRIPTED_METRIC, MetricScripted>          },
-
-	{ AGGREGATION_FILTER,           &Aggregation::add_bucket<FilterAggregation>                                    },
-	{ AGGREGATION_VALUE,            &Aggregation::add_bucket<ValueAggregation>                                     },
-	// { AGGREGATION_DATE_HISTOGRAM,   &Aggregation::add_bucket<DateHistogramAggregation>                             },
-	// { AGGREGATION_DATE_RANGE,       &Aggregation::add_bucket<DateRangeAggregation>                                 },
-	// { AGGREGATION_GEO_DISTANCE,     &Aggregation::add_bucket<GeoDistanceAggregation>                               },
-	// { AGGREGATION_GEO_TRIXELS,      &Aggregation::add_bucket<GeoTrixelsAggregation>                                },
-	{ AGGREGATION_HISTOGRAM,        &Aggregation::add_bucket<HistogramAggregation>                                 },
-	// { AGGREGATION_MISSING,          &Aggregation::add_bucket<MissingAggregation>                                   },
-	{ AGGREGATION_RANGE,            &Aggregation::add_bucket<RangeAggregation>                                     },
-	// { AGGREGATION_IP_RANGE,         &Aggregation::add_bucket<IPRangeAggregation>                                   },
-	// { AGGREGATION_GEO_IP,           &Aggregation::add_bucket<GeoIPAggregation>                                     },
-});
+#include "hashes.hh"                        // for fnv1a32
 
 
 Aggregation::Aggregation(MsgPack& result)
@@ -86,11 +54,93 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 			if (is_valid(sub_agg_name)) {
 				const auto& sub_agg = aggs.at(sub_agg_name);
 				auto sub_agg_type = sub_agg.begin()->str_view();
-				try {
-					auto func = map_dispatch_aggregations.at(sub_agg_type);
-					(this->*func)(_result[sub_agg_name], sub_agg, schema);
-				} catch (const std::out_of_range&) {
-					THROW(AggregationError, "Aggregation type: %s is not valid", repr(sub_agg_name).c_str());
+				switch (fnv1a32::hash(sub_agg_type)) {
+					case fnv1a32::hash(AGGREGATION_COUNT):
+						add_metric<AGGREGATION_COUNT, MetricCount>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					// case fnv1a32::hash(AGGREGATION_CARDINALITY):
+					// 	add_metric<AGGREGATION_CARDINALITY, MetricCardinality>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					case fnv1a32::hash(AGGREGATION_SUM):
+						add_metric<AGGREGATION_SUM, MetricSum>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_AVG):
+						add_metric<AGGREGATION_AVG, MetricAvg>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_MIN):
+						add_metric<AGGREGATION_MIN, MetricMin>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_MAX):
+						add_metric<AGGREGATION_MAX, MetricMax>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_VARIANCE):
+						add_metric<AGGREGATION_VARIANCE, MetricVariance>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_STD):
+						add_metric<AGGREGATION_STD, MetricSTD>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_MEDIAN):
+						add_metric<AGGREGATION_MEDIAN, MetricMedian>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_MODE):
+						add_metric<AGGREGATION_MODE, MetricMode>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_STATS):
+						add_metric<AGGREGATION_STATS, MetricStats>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_EXT_STATS):
+						add_metric<AGGREGATION_EXT_STATS, MetricExtendedStats>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					// case fnv1a32::hash(AGGREGATION_GEO_BOUNDS):
+					// 	add_metric<AGGREGATION_GEO_BOUNDS, MetricGeoBounds>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_GEO_CENTROID):
+					// 	add_metric<AGGREGATION_GEO_CENTROID, MetricGeoCentroid>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_PERCENTILES):
+					// 	add_metric<AGGREGATION_PERCENTILES, MetricPercentiles>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_PERCENTILES_RANK):
+					// 	add_metric<AGGREGATION_PERCENTILES_RANK, MetricPercentilesRank>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_SCRIPTED_METRIC):
+					// 	add_metric<AGGREGATION_SCRIPTED_METRIC, MetricScripted>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					case fnv1a32::hash(AGGREGATION_FILTER):
+						add_bucket<FilterAggregation>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case fnv1a32::hash(AGGREGATION_VALUE):
+						add_bucket<ValueAggregation>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					// case fnv1a32::hash(AGGREGATION_DATE_HISTOGRAM):
+					// 	add_bucket<DateHistogramAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_DATE_RANGE):
+					// 	add_bucket<DateRangeAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_GEO_DISTANCE):
+					// 	add_bucket<GeoDistanceAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_GEO_TRIXELS):
+					// 	add_bucket<GeoTrixelsAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					case fnv1a32::hash(AGGREGATION_HISTOGRAM):
+						add_bucket<HistogramAggregation>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					// case fnv1a32::hash(AGGREGATION_MISSING):
+					// 	add_bucket<MissingAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					case fnv1a32::hash(AGGREGATION_RANGE):
+						add_bucket<RangeAggregation>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					// case fnv1a32::hash(AGGREGATION_IP_RANGE):
+					// 	add_bucket<IPRangeAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					// case fnv1a32::hash(AGGREGATION_GEO_IP):
+					// 	add_bucket<GeoIPAggregation>(_result[sub_agg_name], sub_agg, schema);
+					// 	break;
+					default:
+						THROW(AggregationError, "Aggregation type: %s is not valid", repr(sub_agg_name).c_str());
 				}
 			} else {
 				THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", repr(sub_agg_name).c_str());

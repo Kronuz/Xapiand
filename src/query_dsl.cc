@@ -36,60 +36,13 @@
 #include "serialise.h"                         // for MsgPack, get_range_type...
 #include "utils.h"                             // for repr, startswith
 #include "string_view.h"                       // for string_view
+#include "hashes.hh"                           // for fnv1a32
 
 
 #ifndef L_QUERY
 #define L_QUERY_DEFINED
 #define L_QUERY L_NOTHING
 #endif
-
-
-const std::unordered_map<string_view, QueryDSL::dispatch_func> QueryDSL::map_dispatch({
-	// Leaf query clauses.
-	{ QUERYDSL_IN,                    &QueryDSL::process_in            },
-	{ QUERYDSL_RANGE,                 &QueryDSL::process_range         },
-	{ QUERYDSL_RAW,                   &QueryDSL::process_raw           },
-	{ RESERVED_VALUE,                 &QueryDSL::process_value         },
-	// Compound query clauses
-	{ "_and",                         &QueryDSL::process_and           },
-	{ "_and_maybe",                   &QueryDSL::process_and_maybe     },
-	{ "_and_not",                     &QueryDSL::process_and_not       },
-	{ "_elite_set",                   &QueryDSL::process_elite_set     },
-	{ "_filter",                      &QueryDSL::process_filter        },
-	{ "_max",                         &QueryDSL::process_max           },
-	{ "_near",                        &QueryDSL::process_near          },
-	{ "_not",                         &QueryDSL::process_and_not       },
-	{ "_or",                          &QueryDSL::process_or            },
-	{ "_phrase",                      &QueryDSL::process_phrase        },
-	{ "_scale_weight",                &QueryDSL::process_scale_weight  },
-	{ "_synonym",                     &QueryDSL::process_synonym       },
-	{ "_value_ge",                    &QueryDSL::process_value_ge      },
-	{ "_value_le",                    &QueryDSL::process_value_le      },
-	{ "_value_range",                 &QueryDSL::process_value_range   },
-	{ "_wildcard",                    &QueryDSL::process_wildcard      },
-	{ "_xor",                         &QueryDSL::process_xor           },
-	// Reserved cast words
-	{ RESERVED_FLOAT,                 &QueryDSL::process_cast          },
-	{ RESERVED_POSITIVE,              &QueryDSL::process_cast          },
-	{ RESERVED_INTEGER,               &QueryDSL::process_cast          },
-	{ RESERVED_BOOLEAN,               &QueryDSL::process_cast          },
-	{ RESERVED_TERM,                  &QueryDSL::process_cast          },
-	{ RESERVED_TEXT,                  &QueryDSL::process_cast          },
-	{ RESERVED_DATE,                  &QueryDSL::process_cast          },
-	{ RESERVED_UUID,                  &QueryDSL::process_cast          },
-	{ RESERVED_EWKT,                  &QueryDSL::process_cast          },
-	{ RESERVED_POINT,                 &QueryDSL::process_cast          },
-	{ RESERVED_POLYGON,               &QueryDSL::process_cast          },
-	{ RESERVED_CIRCLE,                &QueryDSL::process_cast          },
-	{ RESERVED_CHULL,                 &QueryDSL::process_cast          },
-	{ RESERVED_MULTIPOINT,            &QueryDSL::process_cast          },
-	{ RESERVED_MULTIPOLYGON,          &QueryDSL::process_cast          },
-	{ RESERVED_MULTICIRCLE,           &QueryDSL::process_cast          },
-	{ RESERVED_MULTICONVEX,           &QueryDSL::process_cast          },
-	{ RESERVED_MULTICHULL,            &QueryDSL::process_cast          },
-	{ RESERVED_GEO_COLLECTION,        &QueryDSL::process_cast          },
-	{ RESERVED_GEO_INTERSECTION,      &QueryDSL::process_cast          },
-});
 
 
 /* A domain-specific language (DSL) for query */
@@ -190,7 +143,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, string_view range)
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_in(string_view, Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_in(...)");
@@ -199,7 +152,7 @@ QueryDSL::process_in(string_view, Xapian::Query::op op, string_view parent, cons
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_range(string_view word, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_range(...)");
@@ -208,7 +161,7 @@ QueryDSL::process_range(string_view word, Xapian::Query::op, string_view parent,
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_raw(string_view, Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_raw(...)");
@@ -217,7 +170,7 @@ QueryDSL::process_raw(string_view, Xapian::Query::op op, string_view parent, con
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_value(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value(...)");
@@ -226,7 +179,7 @@ QueryDSL::process_value(string_view, Xapian::Query::op, string_view parent, cons
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_and(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and(...)");
@@ -235,7 +188,7 @@ QueryDSL::process_and(string_view, Xapian::Query::op, string_view parent, const 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_and_maybe(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_maybe(...)");
@@ -244,7 +197,7 @@ QueryDSL::process_and_maybe(string_view, Xapian::Query::op, string_view parent, 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_and_not(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_not(...)");
@@ -253,7 +206,7 @@ QueryDSL::process_and_not(string_view, Xapian::Query::op, string_view parent, co
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_elite_set(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_elite_set(...)");
@@ -262,7 +215,7 @@ QueryDSL::process_elite_set(string_view, Xapian::Query::op, string_view parent, 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_filter(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_filter(...)");
@@ -271,7 +224,7 @@ QueryDSL::process_filter(string_view, Xapian::Query::op, string_view parent, con
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_max(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_max(...)");
@@ -280,7 +233,7 @@ QueryDSL::process_max(string_view, Xapian::Query::op, string_view parent, const 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_near(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_near(...)");
@@ -289,7 +242,7 @@ QueryDSL::process_near(string_view, Xapian::Query::op, string_view parent, const
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_or(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_or(...)");
@@ -298,7 +251,7 @@ QueryDSL::process_or(string_view, Xapian::Query::op, string_view parent, const M
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_phrase(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_phrase(...)");
@@ -307,7 +260,7 @@ QueryDSL::process_phrase(string_view, Xapian::Query::op, string_view parent, con
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_scale_weight(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_scale_weight(...)");
@@ -316,7 +269,7 @@ QueryDSL::process_scale_weight(string_view, Xapian::Query::op, string_view paren
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_synonym(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_synonym(...)");
@@ -325,7 +278,7 @@ QueryDSL::process_synonym(string_view, Xapian::Query::op, string_view parent, co
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_value_ge(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_ge(...)");
@@ -334,7 +287,7 @@ QueryDSL::process_value_ge(string_view, Xapian::Query::op, string_view parent, c
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_value_le(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_le(...)");
@@ -343,7 +296,7 @@ QueryDSL::process_value_le(string_view, Xapian::Query::op, string_view parent, c
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_value_range(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_range(...)");
@@ -352,7 +305,7 @@ QueryDSL::process_value_range(string_view, Xapian::Query::op, string_view parent
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_wildcard(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool)
 {
 	L_CALL("QueryDSL::process_wildcard(...)");
@@ -361,7 +314,7 @@ QueryDSL::process_wildcard(string_view, Xapian::Query::op, string_view parent, c
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_xor(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_xor(...)");
@@ -370,7 +323,7 @@ QueryDSL::process_xor(string_view, Xapian::Query::op, string_view parent, const 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process_cast(string_view word, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_cast(%s, ...)", repr(word).c_str());
@@ -379,7 +332,7 @@ QueryDSL::process_cast(string_view word, Xapian::Query::op, string_view parent, 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::process(Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
@@ -398,21 +351,143 @@ QueryDSL::process(Xapian::Query::op op, string_view parent, const MsgPack& obj, 
 
 				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(field_name).c_str(), o.to_string().c_str());
 
-				static const auto it_de = map_dispatch.end();
-
 				Xapian::Query query;
-				auto it_d = map_dispatch.find(field_name);
-				if (it_d == it_de) {
-					if (parent.empty()) {
-						query = process(op, field_name, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-					} else {
-						std::string n_parent;
-						n_parent.reserve(parent.length() + 1 + field_name.length());
-						n_parent.append(parent).append(1, DB_OFFSPRING_UNION).append(field_name);
-						query = process(op, n_parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-					}
-				} else {
-					query = (this->*it_d->second)(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+				switch (fnv1a32::hash(field_name)) {
+					// Leaf query clauses.
+					case fnv1a32::hash(QUERYDSL_IN):
+						query = process_in(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(QUERYDSL_RANGE):
+						query = process_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(QUERYDSL_RAW):
+						query = process_raw(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_VALUE):
+						query = process_value(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					// Compound query clauses
+					case fnv1a32::hash("_and"):
+						query = process_and(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_and_maybe"):
+						query = process_and_maybe(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_and_not"):
+						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_elite_set"):
+						query = process_elite_set(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_filter"):
+						query = process_filter(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_max"):
+						query = process_max(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_near"):
+						query = process_near(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_not"):
+						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_or"):
+						query = process_or(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_phrase"):
+						query = process_phrase(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_scale_weight"):
+						query = process_scale_weight(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_synonym"):
+						query = process_synonym(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_value_ge"):
+						query = process_value_ge(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_value_le"):
+						query = process_value_le(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_value_range"):
+						query = process_value_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_wildcard"):
+						query = process_wildcard(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash("_xor"):
+						query = process_xor(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					// Reserved cast words
+					case fnv1a32::hash(RESERVED_FLOAT):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_POSITIVE):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_INTEGER):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_BOOLEAN):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_TERM):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_TEXT):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_DATE):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_UUID):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_EWKT):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_POINT):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_POLYGON):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_CIRCLE):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_CHULL):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_MULTIPOINT):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_MULTIPOLYGON):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_MULTICIRCLE):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_MULTICONVEX):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_MULTICHULL):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_GEO_COLLECTION):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case fnv1a32::hash(RESERVED_GEO_INTERSECTION):
+						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					default:
+						if (parent.empty()) {
+							query = process(op, field_name, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						} else {
+							std::string n_parent;
+							n_parent.reserve(parent.length() + 1 + field_name.length());
+							n_parent.append(parent).append(1, DB_OFFSPRING_UNION).append(field_name);
+							query = process(op, n_parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						}
 				}
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			}
@@ -437,7 +512,7 @@ QueryDSL::process(Xapian::Query::op op, string_view parent, const MsgPack& obj, 
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_value_query(string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>, %s, %s, %s)", repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
@@ -469,7 +544,7 @@ QueryDSL::get_value_query(string_view path, const MsgPack& obj, Xapian::termcoun
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_acc_date_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_date_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
@@ -523,7 +598,7 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, string_view field_
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_acc_time_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_time_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
@@ -540,7 +615,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, string_view field_
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_timedelta_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
@@ -557,7 +632,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, string_view f
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_acc_num_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_num_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
@@ -572,7 +647,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, string_view field_a
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_geo_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
@@ -592,7 +667,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, string_view field_a
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_accuracy_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf, bool is_in)
 {
 	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, %s, %s, <wqf>, %s)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), is_in ? "true" : "false");
@@ -618,7 +693,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, string_view field_
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
@@ -668,7 +743,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()).c_str(), is_in ? "true" : "false", is_wildcard ? "true" : "false");
@@ -702,7 +777,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_term_query(const required_spc_t& field_spc, string_view serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>, %s)", repr(serialised_term).c_str(), is_wildcard ? "true" : "false");
@@ -754,7 +829,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, string_view serialised
 }
 
 
-Xapian::Query
+inline Xapian::Query
 QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	L_CALL("QueryDSL::get_in_query(<field_spc>, %s)", repr(obj.to_string()).c_str());

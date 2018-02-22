@@ -24,16 +24,7 @@
 
 #include "../cast.h"
 #include "../utils.h"
-
-
-const std::unordered_map<string_view, GeoSpatial::dispatch_func> GeoSpatial::map_dispatch({
-	{ GEO_LATITUDE,          &GeoSpatial::process_latitude    },
-	{ GEO_LONGITUDE,         &GeoSpatial::process_longitude   },
-	{ GEO_HEIGHT,            &GeoSpatial::process_height      },
-	{ GEO_RADIUS,            &GeoSpatial::process_radius      },
-	{ GEO_UNITS,             &GeoSpatial::process_units       },
-	{ GEO_SRID,              &GeoSpatial::process_srid        },
-});
+#include "../hashes.hh"       // for fnv1a32
 
 
 GeoSpatial::GeoSpatial(const MsgPack& obj)
@@ -159,15 +150,32 @@ GeoSpatial::data_t
 GeoSpatial::get_data(const MsgPack& o, bool hradius)
 {
 	data_t data(hradius);
-	static const auto dit_e = map_dispatch.end();
+
 	const auto it_e = o.end();
 	for (auto it = o.begin(); it != it_e; ++it) {
+		auto& value = it.value();
 		const auto str_key = it->str_view();
-		const auto dit = map_dispatch.find(str_key);
-		if (dit == dit_e) {
-			THROW(GeoSpatialError, "%s is a invalid word", repr(str_key).c_str());
-		} else {
-			(this->*dit->second)(data, it.value());
+		switch (fnv1a32::hash(str_key)) {
+			case fnv1a32::hash(GEO_LATITUDE):
+				process_latitude(data, value);
+				break;
+			case fnv1a32::hash(GEO_LONGITUDE):
+				process_longitude(data, value);
+				break;
+			case fnv1a32::hash(GEO_HEIGHT):
+				process_height(data, value);
+				break;
+			case fnv1a32::hash(GEO_RADIUS):
+				process_radius(data, value);
+				break;
+			case fnv1a32::hash(GEO_UNITS):
+				process_units(data, value);
+				break;
+			case fnv1a32::hash(GEO_SRID):
+				process_srid(data, value);
+				break;
+			default:
+				THROW(GeoSpatialError, "%s is a invalid word", repr(str_key).c_str());
 		}
 	}
 	return data;

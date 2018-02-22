@@ -474,18 +474,11 @@ class Schema {
 
 	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
 
-	Schema::dispatcher_set_default_spc get_set_default_spc_dispatcher(string_view set_default_spc);
-	Schema::dispatcher_write_properties get_write_properties_dispatcher(string_view write_properties);
-	Schema::dispatcher_feed_properties get_feed_properties_dispatcher(string_view feed_properties);
-	Schema::dispatcher_process_properties get_process_properties_dispatcher(string_view process_properties);
-	Schema::dispatcher_process_properties get_process_concrete_properties_dispatcher(string_view process_concrete_properties);
-	Schema::dispatcher_readable get_readable_dispatcher(string_view readable);
-
-	static const std::unordered_map<string_view, dispatcher_write_properties> map_dispatch_write_properties;
-	static const std::unordered_map<string_view, dispatcher_feed_properties> map_dispatch_feed_properties;
-	static const std::unordered_map<string_view, dispatcher_process_properties> map_dispatch_process_properties;
-	static const std::unordered_map<string_view, dispatcher_process_properties> map_dispatch_process_concrete_properties;
-	static const std::unordered_map<string_view, dispatcher_readable> map_get_readable;
+	void _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, string_view prop_name, const MsgPack& value);
+	void _dispatch_feed_properties(uint32_t key, const MsgPack& value);
+	void _dispatch_process_properties(uint32_t key, string_view prop_name, const MsgPack& value);
+	void _dispatch_process_concrete_properties(uint32_t key, string_view prop_name, const MsgPack& value);
+	static bool _dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties);
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
