@@ -165,24 +165,42 @@ inline constexpr void operator^=(TypeIndex& a, const TypeIndex& b) {
 }
 
 
+constexpr uint8_t EMPTY_CHAR         = ' ';
+constexpr uint8_t STRING_CHAR        = 's';
+constexpr uint8_t TIMEDELTA_CHAR     = 'z';
+constexpr uint8_t ARRAY_CHAR         = 'A';
+constexpr uint8_t BOOLEAN_CHAR       = 'B';
+constexpr uint8_t DATE_CHAR          = 'D';
+constexpr uint8_t FOREIGN_CHAR       = 'E';
+constexpr uint8_t FLOAT_CHAR         = 'F';
+constexpr uint8_t GEO_CHAR           = 'G';
+constexpr uint8_t INTEGER_CHAR       = 'I';
+constexpr uint8_t OBJECT_CHAR        = 'O';
+constexpr uint8_t POSITIVE_CHAR      = 'P';
+constexpr uint8_t TEXT_CHAR          = 'S';
+constexpr uint8_t TERM_CHAR          = 'T';
+constexpr uint8_t UUID_CHAR          = 'U';
+constexpr uint8_t SCRIPT_CHAR        = 'X';
+constexpr uint8_t TIME_CHAR          = 'Z';
+
 enum class FieldType : uint8_t {
-	EMPTY         =  ' ',
-	STRING        =  's',
-	TIMEDELTA     =  'z',
-	ARRAY         =  'A',
-	BOOLEAN       =  'B',
-	DATE          =  'D',
-	FOREIGN       =  'E',
-	FLOAT         =  'F',
-	GEO           =  'G',
-	INTEGER       =  'I',
-	OBJECT        =  'O',
-	POSITIVE      =  'P',
-	TEXT          =  'S',
-	TERM          =  'T',
-	UUID          =  'U',
-	SCRIPT        =  'X',
-	TIME          =  'Z',
+	EMPTY         = EMPTY_CHAR,
+	STRING        = STRING_CHAR,
+	TIMEDELTA     = TIMEDELTA_CHAR,
+	ARRAY         = ARRAY_CHAR,
+	BOOLEAN       = BOOLEAN_CHAR,
+	DATE          = DATE_CHAR,
+	FOREIGN       = FOREIGN_CHAR,
+	FLOAT         = FLOAT_CHAR,
+	GEO           = GEO_CHAR,
+	INTEGER       = INTEGER_CHAR,
+	OBJECT        = OBJECT_CHAR,
+	POSITIVE      = POSITIVE_CHAR,
+	TEXT          = TEXT_CHAR,
+	TERM          = TERM_CHAR,
+	UUID          = UUID_CHAR,
+	SCRIPT        = SCRIPT_CHAR,
+	TIME          = TIME_CHAR,
 };
 
 

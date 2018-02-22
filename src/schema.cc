@@ -46,7 +46,7 @@
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
 #include "hashes.hh"                       // for fnv1ah32
-
+#include "static_string.hh"                // for static_string
 
 #ifndef L_SCHEMA
 #define L_SCHEMA_DEFINED
@@ -883,86 +883,269 @@ _get_str_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept
 static inline const std::string&
 _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
-	static const std::unordered_map<const std::array<FieldType, SPC_TOTAL_TYPES>, std::string> map_str_type({
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "undefined"                     },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }}, "array"                         },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }}, "array/boolean"                 },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }}, "array/date"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }}, "array/float"                   },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }}, "array/geospatial"              },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }}, "array/integer"                 },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }}, "array/positive"                },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }}, "array/string"                  },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }}, "array/term"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }}, "array/text"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }}, "array/time"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }}, "array/timedelta"               },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }}, "array/uuid"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }}, "boolean"                       },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }}, "date"                          },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }}, "float"                         },
-		{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }}, "foreign"                       },
-		{ {{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "foreign/object"                },
-		{ {{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "foreign/script"                },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }}, "geospatial"                    },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }}, "integer"                       },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }}, "object"                        },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }}, "object/array"                  },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }}, "object/array/boolean"          },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }}, "object/array/date"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }}, "object/array/float"            },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }}, "object/array/geospatial"       },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }}, "object/array/integer"          },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }}, "object/array/positive"         },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }}, "object/array/string"           },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }}, "object/array/term"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }}, "object/array/text"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }}, "object/array/time"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }}, "object/array/timedelta"        },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }}, "object/array/uuid"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }}, "object/boolean"                },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }}, "object/date"                   },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }}, "object/float"                  },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }}, "object/geospatial"             },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }}, "object/integer"                },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }}, "object/positive"               },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }}, "object/string"                 },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }}, "object/term"                   },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }}, "object/text"                   },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }}, "object/time"                   },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }}, "object/timedelta"              },
-		{ {{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }}, "object/uuid"                   },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }}, "positive"                      },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }}, "script"                        },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }}, "string"                        },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }}, "term"                          },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }}, "text"                          },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }}, "time"                          },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }}, "timedelta"                     },
-		{ {{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }}, "uuid"                          },
-	});
-	static const auto tit_e = map_str_type.end();
-	auto tit = map_str_type.find(sep_types);
-	if (tit == tit_e) {
-		std::string result;
-		if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+	constexpr auto EMPTY      = static_string::string(EMPTY_CHAR);
+	constexpr auto STRING     = static_string::string(STRING_CHAR);
+	constexpr auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
+	constexpr auto ARRAY      = static_string::string(ARRAY_CHAR);
+	constexpr auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
+	constexpr auto DATE       = static_string::string(DATE_CHAR);
+	constexpr auto FOREIGN    = static_string::string(FOREIGN_CHAR);
+	constexpr auto FLOAT      = static_string::string(FLOAT_CHAR);
+	constexpr auto GEO        = static_string::string(GEO_CHAR);
+	constexpr auto INTEGER    = static_string::string(INTEGER_CHAR);
+	constexpr auto OBJECT     = static_string::string(OBJECT_CHAR);
+	constexpr auto POSITIVE   = static_string::string(POSITIVE_CHAR);
+	constexpr auto TEXT       = static_string::string(TEXT_CHAR);
+	constexpr auto TERM       = static_string::string(TERM_CHAR);
+	constexpr auto UUID       = static_string::string(UUID_CHAR);
+	constexpr auto SCRIPT     = static_string::string(SCRIPT_CHAR);
+	constexpr auto TIME       = static_string::string(TIME_CHAR);
+
+	switch (fnv1ah32::hash(reinterpret_cast<const char*>(sep_types.data()), SPC_TOTAL_TYPES)) {
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + EMPTY): {
+			static const std::string str_type("undefined");
+			return str_type;
 		}
-		if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + EMPTY): {
+			static const std::string str_type("array");
+			return str_type;
 		}
-		if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + BOOLEAN): {
+			static const std::string str_type("array/boolean");
+			return str_type;
 		}
-		if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-			if (!result.empty()) result += "/";
-			result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + DATE): {
+			static const std::string str_type("array/date");
+			return str_type;
 		}
-		THROW(ClientError, "%s not supported.", repr(result).c_str(), RESERVED_TYPE);
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + FLOAT): {
+			static const std::string str_type("array/float");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + GEO): {
+			static const std::string str_type("array/geospatial");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + INTEGER): {
+			static const std::string str_type("array/integer");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + POSITIVE): {
+			static const std::string str_type("array/positive");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + STRING): {
+			static const std::string str_type("array/string");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + TERM): {
+			static const std::string str_type("array/term");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + TEXT): {
+			static const std::string str_type("array/text");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + TIME): {
+			static const std::string str_type("array/time");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + TIMEDELTA): {
+			static const std::string str_type("array/timedelta");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + ARRAY  + UUID): {
+			static const std::string str_type("array/uuid");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + BOOLEAN): {
+			static const std::string str_type("boolean");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + DATE): {
+			static const std::string str_type("date");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + FLOAT): {
+			static const std::string str_type("float");
+			return str_type;
+		}
+		case fnv1ah32::hash(FOREIGN + EMPTY   + EMPTY  + EMPTY): {
+			static const std::string str_type("foreign");
+			return str_type;
+		}
+		case fnv1ah32::hash(FOREIGN + OBJECT  + EMPTY  + EMPTY): {
+			static const std::string str_type("foreign/object");
+			return str_type;
+		}
+		case fnv1ah32::hash(FOREIGN + EMPTY   + EMPTY  + SCRIPT): {
+			static const std::string str_type("foreign/script");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + GEO): {
+			static const std::string str_type("geospatial");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + INTEGER): {
+			static const std::string str_type("integer");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + EMPTY): {
+			static const std::string str_type("object");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + EMPTY): {
+			static const std::string str_type("object/array");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + BOOLEAN): {
+			static const std::string str_type("object/array/boolean");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + DATE): {
+			static const std::string str_type("object/array/date");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + FLOAT): {
+			static const std::string str_type("object/array/float");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + GEO): {
+			static const std::string str_type("object/array/geospatial");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + INTEGER): {
+			static const std::string str_type("object/array/integer");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + POSITIVE): {
+			static const std::string str_type("object/array/positive");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + STRING): {
+			static const std::string str_type("object/array/string");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + TERM): {
+			static const std::string str_type("object/array/term");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + TEXT): {
+			static const std::string str_type("object/array/text");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + TIME): {
+			static const std::string str_type("object/array/time");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + TIMEDELTA): {
+			static const std::string str_type("object/array/timedelta");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + ARRAY  + UUID): {
+			static const std::string str_type("object/array/uuid");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + BOOLEAN): {
+			static const std::string str_type("object/boolean");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + DATE): {
+			static const std::string str_type("object/date");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + FLOAT): {
+			static const std::string str_type("object/float");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + GEO): {
+			static const std::string str_type("object/geospatial");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + INTEGER): {
+			static const std::string str_type("object/integer");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + POSITIVE): {
+			static const std::string str_type("object/positive");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + STRING): {
+			static const std::string str_type("object/string");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + TERM): {
+			static const std::string str_type("object/term");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + TEXT): {
+			static const std::string str_type("object/text");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + TIME): {
+			static const std::string str_type("object/time");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + TIMEDELTA): {
+			static const std::string str_type("object/timedelta");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + OBJECT  + EMPTY  + UUID): {
+			static const std::string str_type("object/uuid");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + POSITIVE): {
+			static const std::string str_type("positive");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + SCRIPT): {
+			static const std::string str_type("script");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + STRING): {
+			static const std::string str_type("string");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + TERM): {
+			static const std::string str_type("term");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + TEXT): {
+			static const std::string str_type("text");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + TIME): {
+			static const std::string str_type("time");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + TIMEDELTA): {
+			static const std::string str_type("timedelta");
+			return str_type;
+		}
+		case fnv1ah32::hash(EMPTY   + EMPTY   + EMPTY  + UUID): {
+			static const std::string str_type("uuid");
+			return str_type;
+		}
+		default: {
+			std::string result;
+			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+				result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+			}
+			if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+				if (!result.empty()) result += "/";
+				result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+			}
+			if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
+				if (!result.empty()) result += "/";
+				result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+			}
+			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+				if (!result.empty()) result += "/";
+				result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
+			}
+			THROW(ClientError, "%s not supported.", repr(result).c_str(), RESERVED_TYPE);
+		}
 	}
-	return tit->second;
 }
 
 
