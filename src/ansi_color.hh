@@ -23,23 +23,9 @@
 #include <string>             // for string
 #include <stdlib.h>           // for getenv
 
-#include "static_str.hh"
+#include "static_string.hh"
 
 #define ESC "\033"
-
-template <int N, int num, char... a>
-struct explode : explode<N + 1, num / 10, ('0' + num % 10), a...> { };
-
-template <int N, char... a>
-struct explode<N, 0, a...> {
-	constexpr static const char value[N + 1]{a..., 0};
-};
-
-template <unsigned num>
-struct to_string : explode<0, num> { };
-
-template <>
-struct to_string<0> : explode<1, 0, '0'> { };
 
 
 // Ansi colors:
@@ -50,23 +36,23 @@ class ansi_color {
 	static constexpr uint8_t b = blue < 0 ? 0 : blue > 255 ? 255 : blue;
 
 	static constexpr auto noColor() {
-		constexpr auto noColor = static_str::literal("");
+		constexpr auto noColor = static_string::string("");
 		return noColor;
 	}
 
 	static constexpr auto clearColor() {
-		constexpr auto clearColor = static_str::literal(ESC "[0m");
+		constexpr auto clearColor = static_string::string(ESC "[0m");
 		return clearColor;
 	}
 
 	static constexpr auto trueColor() {
 		constexpr auto trueColor = (
-			static_str::literal(ESC "[") +
-			to_string<bold>::value +
+			static_string::string(ESC "[") +
+			static_string::explode<bold>::value +
 			";38;2;" +
-			to_string<r>::value + ";" +
-			to_string<g>::value + ";" +
-			to_string<b>::value +
+			static_string::explode<r>::value + ";" +
+			static_string::explode<g>::value + ";" +
+			static_string::explode<b>::value +
 			"m"
 		);
 		return trueColor;
@@ -84,10 +70,10 @@ class ansi_color {
 			(static_cast<int>(b / 255.0f * 5.0f + 0.5f))
 		));
 		constexpr auto standard256 = (
-			static_str::literal(ESC "[") +
-			to_string<bold>::value +
+			static_string::string(ESC "[") +
+			static_string::explode<bold>::value +
 			";38;5;" +
-			to_string<color>::value +
+			static_string::explode<color>::value +
 			"m"
 		);
 		return standard256;
@@ -115,10 +101,10 @@ class ansi_color {
 			)
 		));
 		constexpr auto standard16 = (
-			static_str::literal(ESC "[") +
-			to_string<bold>::value +
+			static_string::string(ESC "[") +
+			static_string::explode<bold>::value +
 			";38;5;" +
-			to_string<color>::value +
+			static_string::explode<color>::value +
 			"m"
 		);
 		return standard16;

@@ -43,7 +43,6 @@
 #include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "exception.h"        // for InvalidArgument, OutOfRange
 #include "split.h"            // for Split
-#include "static_str.hh"      // for static_str
 #include "string_view.h"      // for string_view
 #include "strict_stox.hh"     // for strict_stox
 
