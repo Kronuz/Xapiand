@@ -135,17 +135,7 @@ to_string() {
 template <char ch>
 constexpr static auto
 char_to_string() {
-	constexpr chars_to_string<1, ch> data;
-	return string_char_array<sizeof(data.value) - 1>(data.value);
-}
-
-
-// # A function that converts raw string literal into string_literal_ref and deduces the size.
-
-template <std::size_t N_PLUS_1>
-constexpr static auto
-string(const char (&data)[N_PLUS_1]) {
-	return string_literal_ref<N_PLUS_1 - 1>(data);
+	return string_char_array<1>(ch);
 }
 
 
@@ -165,6 +155,10 @@ class static_string<N, char_array> {
 	constexpr explicit static_string(private_ctor, const static_string<N, T>& l, std::integer_sequence<std::size_t, Il...>)
 	  : _data{l[Il]..., 0} { }
 
+	template <std::size_t... Il>
+	constexpr explicit static_string(private_ctor, const char* p, std::size_t size, std::integer_sequence<std::size_t, Il...>)
+	  : _data{p[Il]..., 0} { constexpr_assert(N == size); }
+
 public:
 	template <std::size_t M, typename TL, typename TR, typename std::enable_if<(M < N), bool>::type = true>
 	constexpr explicit static_string(static_string<M, TL> l, static_string<N - M, TR> r)
@@ -172,6 +166,9 @@ public:
 
 	constexpr static_string(string_literal_ref<N> l) // converting
 	  : static_string(private_ctor{}, l, std::make_integer_sequence<std::size_t, N>{}) { }
+
+	constexpr static_string(const char* p, std::size_t size)
+	  : static_string(private_ctor{}, p, size, std::make_integer_sequence<std::size_t, N>{}) { }
 
 	constexpr static_string(char ch)
 	  : _data{(constexpr_assert(N == 1), ch), 0} { }
@@ -208,6 +205,26 @@ public:
 	constexpr operator string_view() const { return string_view(_data, N); }
 	operator std::string() const { return std::string(_data, N); }
 };
+
+
+// # A function that converts raw string literal into string_literal_ref and deduces the size.
+
+template <std::size_t N_PLUS_1>
+constexpr static auto
+string(const char (&data)[N_PLUS_1]) {
+	return string_literal_ref<N_PLUS_1 - 1>(data);
+}
+
+constexpr static auto
+string(const char ch) {
+	return string_char_array<1>(&ch, 1);
+}
+
+// template <std::size_t N>
+// constexpr static auto
+// string(const char* p, std::size_t size) {
+// 	return string_char_array<N>(p, size);
+// }
 
 
 // # A set of concatenating operators, for different combinations of raw literals, string_literal_ref<>, and string_char_array<>
