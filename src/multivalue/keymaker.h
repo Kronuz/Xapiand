@@ -40,7 +40,7 @@
 #include "serialise_list.h"               // for StringList, ...
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
 #include "utils.h"                        // for stox
-#include "hashes.hh"                      // for fnv1a32
+#include "hashes.hh"                      // for fnv1ah32
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
@@ -306,22 +306,22 @@ public:
 	}
 
 	void soundex(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
-		switch (fnv1a32::hash(field_spc.language)) {
-			case fnv1a32::hash("english"):
-			case fnv1a32::hash("en"):
+		switch (fnv1ah32::hash(field_spc.language)) {
+			case fnv1ah32::hash("english"):
+			case fnv1ah32::hash("en"):
 			default:
 				soundex_en(field_spc, reverse, value, qf);
 				break;
-			case fnv1a32::hash("french"):
-			case fnv1a32::hash("fr"):
+			case fnv1ah32::hash("french"):
+			case fnv1ah32::hash("fr"):
 				soundex_fr(field_spc, reverse, value, qf);
 				break;
-			case fnv1a32::hash("german"):
-			case fnv1a32::hash("de"):
+			case fnv1ah32::hash("german"):
+			case fnv1ah32::hash("de"):
 				soundex_de(field_spc, reverse, value, qf);
 				break;
-			case fnv1a32::hash("spanish"):
-			case fnv1a32::hash("es"):
+			case fnv1ah32::hash("spanish"):
+			case fnv1ah32::hash("es"):
 				soundex_es(field_spc, reverse, value, qf);
 				break;
 		}

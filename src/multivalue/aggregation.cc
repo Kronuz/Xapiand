@@ -30,7 +30,7 @@
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "schema.h"                         // for Schema
-#include "hashes.hh"                        // for fnv1a32
+#include "hashes.hh"                        // for fnv1ah32
 
 
 Aggregation::Aggregation(MsgPack& result)
@@ -54,89 +54,89 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 			if (is_valid(sub_agg_name)) {
 				const auto& sub_agg = aggs.at(sub_agg_name);
 				auto sub_agg_type = sub_agg.begin()->str_view();
-				switch (fnv1a32::hash(sub_agg_type)) {
-					case fnv1a32::hash(AGGREGATION_COUNT):
+				switch (fnv1ah32::hash(sub_agg_type)) {
+					case fnv1ah32::hash(AGGREGATION_COUNT):
 						add_metric<AGGREGATION_COUNT, MetricCount>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					// case fnv1a32::hash(AGGREGATION_CARDINALITY):
+					// case fnv1ah32::hash(AGGREGATION_CARDINALITY):
 					// 	add_metric<AGGREGATION_CARDINALITY, MetricCardinality>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					case fnv1a32::hash(AGGREGATION_SUM):
+					case fnv1ah32::hash(AGGREGATION_SUM):
 						add_metric<AGGREGATION_SUM, MetricSum>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_AVG):
+					case fnv1ah32::hash(AGGREGATION_AVG):
 						add_metric<AGGREGATION_AVG, MetricAvg>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_MIN):
+					case fnv1ah32::hash(AGGREGATION_MIN):
 						add_metric<AGGREGATION_MIN, MetricMin>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_MAX):
+					case fnv1ah32::hash(AGGREGATION_MAX):
 						add_metric<AGGREGATION_MAX, MetricMax>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_VARIANCE):
+					case fnv1ah32::hash(AGGREGATION_VARIANCE):
 						add_metric<AGGREGATION_VARIANCE, MetricVariance>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_STD):
+					case fnv1ah32::hash(AGGREGATION_STD):
 						add_metric<AGGREGATION_STD, MetricSTD>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_MEDIAN):
+					case fnv1ah32::hash(AGGREGATION_MEDIAN):
 						add_metric<AGGREGATION_MEDIAN, MetricMedian>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_MODE):
+					case fnv1ah32::hash(AGGREGATION_MODE):
 						add_metric<AGGREGATION_MODE, MetricMode>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_STATS):
+					case fnv1ah32::hash(AGGREGATION_STATS):
 						add_metric<AGGREGATION_STATS, MetricStats>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_EXT_STATS):
+					case fnv1ah32::hash(AGGREGATION_EXT_STATS):
 						add_metric<AGGREGATION_EXT_STATS, MetricExtendedStats>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					// case fnv1a32::hash(AGGREGATION_GEO_BOUNDS):
+					// case fnv1ah32::hash(AGGREGATION_GEO_BOUNDS):
 					// 	add_metric<AGGREGATION_GEO_BOUNDS, MetricGeoBounds>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_GEO_CENTROID):
+					// case fnv1ah32::hash(AGGREGATION_GEO_CENTROID):
 					// 	add_metric<AGGREGATION_GEO_CENTROID, MetricGeoCentroid>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_PERCENTILES):
+					// case fnv1ah32::hash(AGGREGATION_PERCENTILES):
 					// 	add_metric<AGGREGATION_PERCENTILES, MetricPercentiles>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_PERCENTILES_RANK):
+					// case fnv1ah32::hash(AGGREGATION_PERCENTILES_RANK):
 					// 	add_metric<AGGREGATION_PERCENTILES_RANK, MetricPercentilesRank>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_SCRIPTED_METRIC):
+					// case fnv1ah32::hash(AGGREGATION_SCRIPTED_METRIC):
 					// 	add_metric<AGGREGATION_SCRIPTED_METRIC, MetricScripted>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					case fnv1a32::hash(AGGREGATION_FILTER):
+					case fnv1ah32::hash(AGGREGATION_FILTER):
 						add_bucket<FilterAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case fnv1a32::hash(AGGREGATION_VALUE):
+					case fnv1ah32::hash(AGGREGATION_VALUE):
 						add_bucket<ValueAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					// case fnv1a32::hash(AGGREGATION_DATE_HISTOGRAM):
+					// case fnv1ah32::hash(AGGREGATION_DATE_HISTOGRAM):
 					// 	add_bucket<DateHistogramAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_DATE_RANGE):
+					// case fnv1ah32::hash(AGGREGATION_DATE_RANGE):
 					// 	add_bucket<DateRangeAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_GEO_DISTANCE):
+					// case fnv1ah32::hash(AGGREGATION_GEO_DISTANCE):
 					// 	add_bucket<GeoDistanceAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_GEO_TRIXELS):
+					// case fnv1ah32::hash(AGGREGATION_GEO_TRIXELS):
 					// 	add_bucket<GeoTrixelsAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					case fnv1a32::hash(AGGREGATION_HISTOGRAM):
+					case fnv1ah32::hash(AGGREGATION_HISTOGRAM):
 						add_bucket<HistogramAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					// case fnv1a32::hash(AGGREGATION_MISSING):
+					// case fnv1ah32::hash(AGGREGATION_MISSING):
 					// 	add_bucket<MissingAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					case fnv1a32::hash(AGGREGATION_RANGE):
+					case fnv1ah32::hash(AGGREGATION_RANGE):
 						add_bucket<RangeAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					// case fnv1a32::hash(AGGREGATION_IP_RANGE):
+					// case fnv1ah32::hash(AGGREGATION_IP_RANGE):
 					// 	add_bucket<IPRangeAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
-					// case fnv1a32::hash(AGGREGATION_GEO_IP):
+					// case fnv1ah32::hash(AGGREGATION_GEO_IP):
 					// 	add_bucket<GeoIPAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
 					default:

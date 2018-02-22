@@ -24,7 +24,7 @@
 
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "msgpack.h"             // for MsgPack
-#include "hashes.hh"             // for fnv1a32
+#include "hashes.hh"             // for fnv1ah32
 #include "string_view.h"         // for string_view
 
 
@@ -33,32 +33,32 @@ enum class FieldType : uint8_t;
 
 namespace Cast {
 	enum class Hash : uint32_t {
-		INTEGER           = fnv1a32::hash(RESERVED_INTEGER),
-		POSITIVE          = fnv1a32::hash(RESERVED_POSITIVE),
-		FLOAT             = fnv1a32::hash(RESERVED_FLOAT),
-		BOOLEAN           = fnv1a32::hash(RESERVED_BOOLEAN),
-		TERM              = fnv1a32::hash(RESERVED_TERM),
-		TEXT              = fnv1a32::hash(RESERVED_TEXT),
-		STRING            = fnv1a32::hash(RESERVED_STRING),
-		UUID              = fnv1a32::hash(RESERVED_UUID),
-		DATE              = fnv1a32::hash(RESERVED_DATE),
-		TIME              = fnv1a32::hash(RESERVED_TIME),
-		TIMEDELTA         = fnv1a32::hash(RESERVED_TIMEDELTA),
-		EWKT              = fnv1a32::hash(RESERVED_EWKT),
-		POINT             = fnv1a32::hash(RESERVED_POINT),
-		CIRCLE            = fnv1a32::hash(RESERVED_CIRCLE),
-		CONVEX            = fnv1a32::hash(RESERVED_CONVEX),
-		POLYGON           = fnv1a32::hash(RESERVED_POLYGON),
-		CHULL             = fnv1a32::hash(RESERVED_CHULL),
-		MULTIPOINT        = fnv1a32::hash(RESERVED_MULTIPOINT),
-		MULTICIRCLE       = fnv1a32::hash(RESERVED_MULTICIRCLE),
-		MULTICONVEX       = fnv1a32::hash(RESERVED_MULTICONVEX),
-		MULTIPOLYGON      = fnv1a32::hash(RESERVED_MULTIPOLYGON),
-		MULTICHULL        = fnv1a32::hash(RESERVED_MULTICHULL),
-		GEO_COLLECTION    = fnv1a32::hash(RESERVED_GEO_COLLECTION),
-		GEO_INTERSECTION  = fnv1a32::hash(RESERVED_GEO_INTERSECTION),
-		CHAI              = fnv1a32::hash(RESERVED_CHAI),
-		ECMA              = fnv1a32::hash(RESERVED_ECMA),
+		INTEGER           = fnv1ah32::hash(RESERVED_INTEGER),
+		POSITIVE          = fnv1ah32::hash(RESERVED_POSITIVE),
+		FLOAT             = fnv1ah32::hash(RESERVED_FLOAT),
+		BOOLEAN           = fnv1ah32::hash(RESERVED_BOOLEAN),
+		TERM              = fnv1ah32::hash(RESERVED_TERM),
+		TEXT              = fnv1ah32::hash(RESERVED_TEXT),
+		STRING            = fnv1ah32::hash(RESERVED_STRING),
+		UUID              = fnv1ah32::hash(RESERVED_UUID),
+		DATE              = fnv1ah32::hash(RESERVED_DATE),
+		TIME              = fnv1ah32::hash(RESERVED_TIME),
+		TIMEDELTA         = fnv1ah32::hash(RESERVED_TIMEDELTA),
+		EWKT              = fnv1ah32::hash(RESERVED_EWKT),
+		POINT             = fnv1ah32::hash(RESERVED_POINT),
+		CIRCLE            = fnv1ah32::hash(RESERVED_CIRCLE),
+		CONVEX            = fnv1ah32::hash(RESERVED_CONVEX),
+		POLYGON           = fnv1ah32::hash(RESERVED_POLYGON),
+		CHULL             = fnv1ah32::hash(RESERVED_CHULL),
+		MULTIPOINT        = fnv1ah32::hash(RESERVED_MULTIPOINT),
+		MULTICIRCLE       = fnv1ah32::hash(RESERVED_MULTICIRCLE),
+		MULTICONVEX       = fnv1ah32::hash(RESERVED_MULTICONVEX),
+		MULTIPOLYGON      = fnv1ah32::hash(RESERVED_MULTIPOLYGON),
+		MULTICHULL        = fnv1ah32::hash(RESERVED_MULTICHULL),
+		GEO_COLLECTION    = fnv1ah32::hash(RESERVED_GEO_COLLECTION),
+		GEO_INTERSECTION  = fnv1ah32::hash(RESERVED_GEO_INTERSECTION),
+		CHAI              = fnv1ah32::hash(RESERVED_CHAI),
+		ECMA              = fnv1ah32::hash(RESERVED_ECMA),
 	};
 
 	/*

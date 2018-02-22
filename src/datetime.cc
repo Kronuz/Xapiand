@@ -32,7 +32,7 @@
 #include "msgpack.h"        // for MsgPack
 #include "utils.h"          // for stox
 #include "string_view.h"    // for string_view
-#include "hashes.hh"        // for fnv1a32
+#include "hashes.hh"        // for fnv1ah32
 
 constexpr const char RESERVED_YEAR[]                = "_year";
 constexpr const char RESERVED_MONTH[]               = "_month";
@@ -307,17 +307,17 @@ Datetime::DateParser(const MsgPack& value)
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
 				auto& it_value = it.value();
-				switch (fnv1a32::hash(str_key)) {
-					case fnv1a32::hash(RESERVED_YEAR):
+				switch (fnv1ah32::hash(str_key)) {
+					case fnv1ah32::hash(RESERVED_YEAR):
 						process_date_year(tm, it_value);
 						break;
-					case fnv1a32::hash(RESERVED_MONTH):
+					case fnv1ah32::hash(RESERVED_MONTH):
 						process_date_month(tm, it_value);
 						break;
-					case fnv1a32::hash(RESERVED_DAY):
+					case fnv1ah32::hash(RESERVED_DAY):
 						process_date_day(tm, it_value);
 						break;
-					case fnv1a32::hash(RESERVED_TIME):
+					case fnv1ah32::hash(RESERVED_TIME):
 						try {
 							str_time = it_value.str_view();
 						} catch (const msgpack::type_error& exc) {

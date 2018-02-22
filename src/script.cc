@@ -29,7 +29,7 @@
 #include "ignore_unused.h"
 #include "serialise.h"
 #include "v8pp/v8pp.h"
-#include "hashes.hh"        // for fnv1a32
+#include "hashes.hh"        // for fnv1ah32
 
 
 static const auto str_set_dispatch_script(join_string<std::string>({
@@ -64,23 +64,23 @@ Script::Script(const MsgPack& _obj)
 			for (auto it = _obj.begin(); it != it_e; ++it) {
 				const auto str_key = it->str_view();
 				auto& value = it.value();
-				switch (fnv1a32::hash(str_key)) {
-					case fnv1a32::hash(RESERVED_TYPE):
+				switch (fnv1ah32::hash(str_key)) {
+					case fnv1ah32::hash(RESERVED_TYPE):
 						process_type(value);
 						break;
-					case fnv1a32::hash(RESERVED_VALUE):
+					case fnv1ah32::hash(RESERVED_VALUE):
 						process_value(value);
 						break;
-					case fnv1a32::hash(RESERVED_CHAI):
+					case fnv1ah32::hash(RESERVED_CHAI):
 						process_chai(value);
 						break;
-					case fnv1a32::hash(RESERVED_ECMA):
+					case fnv1ah32::hash(RESERVED_ECMA):
 						process_ecma(value);
 						break;
-					case fnv1a32::hash(RESERVED_BODY):
+					case fnv1ah32::hash(RESERVED_BODY):
 						process_body(value);
 						break;
-					case fnv1a32::hash(RESERVED_NAME):
+					case fnv1ah32::hash(RESERVED_NAME):
 						process_name(value);
 						break;
 					default:
@@ -165,11 +165,11 @@ Script::process_value(const MsgPack& _value)
 			for (auto it = _value.begin(); it != it_e; ++it) {
 				const auto str_key = it->str_view();
 				auto& value = it.value();
-				switch (fnv1a32::hash(str_key)) {
-					case fnv1a32::hash(RESERVED_BODY):
+				switch (fnv1ah32::hash(str_key)) {
+					case fnv1ah32::hash(RESERVED_BODY):
 						process_body(value);
 						break;
-					case fnv1a32::hash(RESERVED_NAME):
+					case fnv1ah32::hash(RESERVED_NAME):
 						process_name(value);
 						break;
 					default:

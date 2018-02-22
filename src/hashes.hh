@@ -28,11 +28,11 @@
 #include "lz4/xxhash.h"
 
 
-//             _               _
-// __  ____  _| |__   __ _ ___| |__
-// \ \/ /\ \/ / '_ \ / _` / __| '_ \
-//  >  <  >  <| | | | (_| \__ \ | | |
-// /_/\_\/_/\_\_| |_|\__,_|___/_| |_|
+ //               _               _
+ // __  ____  __ | |__   __ _ ___| |__
+ // \ \/ /\ \/ / | '_ \ / _` / __| '_ \
+ //  >  <  >  <  | | | | (_| \__ \ | | |
+ // /_/\_\/_/\_\ |_| |_|\__,_|___/_| |_|
 
 class xxh64 {
 	static constexpr uint64_t PRIME1 = 11400714785074694791ULL;
@@ -119,7 +119,7 @@ class xxh32 {
 	/* constexpr xxh32::hash() not implemented! */
 
 public:
-	static uint32_t hash(string_view str, uint32_t seed=0) {
+	static uint32_t hash(string_view str, uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
 };
@@ -130,60 +130,65 @@ constexpr uint32_t operator"" _XXH(const char* s, size_t size) {
 }
 
 
-//   __            _
-//  / _|_ ____   _/ | __ _
-// | |_| '_ \ \ / / |/ _` |
-// |  _| | | \ V /| | (_| |
-// |_| |_| |_|\_/ |_|\__,_|
-
+//   __            _         _               _
+//  / _|_ ____   _/ | __ _  | |__   __ _ ___| |__
+// | |_| '_ \ \ / / |/ _` | | '_ \ / _` / __| '_ \
+// |  _| | | \ V /| | (_| | | | | | (_| \__ \ | | |
+// |_| |_| |_|\_/ |_|\__,_| |_| |_|\__,_|___/_| |_|
 template <typename T, T prime, T offset>
-struct fnv1a {
-	static constexpr T hash(const char *p, std::size_t len) {
-        return len == 1 ? (offset ^ static_cast<unsigned char>(*p)) * prime : (hash(p, len - 1) ^ static_cast<unsigned char>(p[len - 1])) * prime;
+struct fnv1ah {
+	static constexpr T hash(const char *p, std::size_t len, T seed = offset) {
+        return len == 1 ? (seed ^ static_cast<unsigned char>(*p)) * prime : (hash(p, len - 1, seed) ^ static_cast<unsigned char>(p[len - 1])) * prime;
 	}
 
 	template <size_t N>
-	static constexpr T hash(const char(&s)[N]) {
-		return hash(s, N - 1);
+	static constexpr T hash(const char(&s)[N], T seed = offset) {
+		return hash(s, N - 1, seed);
 	}
 
-	static T hash(string_view str) {
-        T hash = offset;
+	static T hash(string_view str, T seed = offset) {
+        T hash = seed;
 		for (char c : str) {
             hash = (hash ^ static_cast<unsigned char>(c)) * prime;
         }
         return hash;
     }
 };
-using fnv1a32 = fnv1a<std::uint32_t, 0x1000193UL, 0x811c9dc5UL>;
-using fnv1a64 = fnv1a<std::uint64_t, 0x100000001b3ULL, 0xcbf29ce484222325ULL>;
-// using fnv1a128 = fnv1a<__uint128_t, 0x10000000000000000000159ULL, 0xcf470aac6cb293d2f52f88bf32307f8fULL>;
+using fnv1ah16 = fnv1ah<std::uint16_t, 0x21dU, 51363UL>;  // shouldn't exist, figured out the prime and offset
+using fnv1ah32 = fnv1ah<std::uint32_t, 0x1000193UL, 2166136261UL>;
+using fnv1ah64 = fnv1ah<std::uint64_t, 0x100000001b3ULL, 14695981039346656037ULL>;
+// using fnv1ah128 = fnv1ah<__uint128_t, 0x10000000000000000000159ULLL, 275519064689413815358837431229664493455ULLL>;  // too big for compiler
 
 
-//      _        _               _               _
-//  ___| |_ _ __(_)_ __   __ _  | |__   __ _ ___| |__
-// / __| __| '__| | '_ \ / _` | | '_ \ / _` / __| '_ \
-// \__ \ |_| |  | | | | | (_| | | | | | (_| \__ \ | | |
-// |___/\__|_|  |_|_| |_|\__, | |_| |_|\__,_|___/_| |_|
-//                       |___/
-template <typename T>
-struct strh {
-	static constexpr std::uint64_t hash(const char *p, std::size_t len) {
-        return len == 1 ? static_cast<unsigned char>(*p) : (hash(p, len - 1) * 256) + static_cast<unsigned char>(p[len - 1]);
+//      _  _ _    ____    _               _
+//   __| |(_) |__|___ \  | |__   __ _ ___| |__
+//  / _` || | '_ \ __) | | '_ \ / _` / __| '_ \
+// | (_| || | |_) / __/  | | | | (_| \__ \ | | |
+//  \__,_|/ |_.__/_____| |_| |_|\__,_|___/_| |_|
+//      |__/
+
+template <typename T, T mul, T offset>
+struct djb2h {
+	static constexpr T hash(const char *p, std::size_t len, T seed = offset) {
+        return len == 1 ? static_cast<unsigned char>(*p) : (hash(p, len - 1, seed) * mul) + static_cast<unsigned char>(p[len - 1]);
 	}
 
 	template <size_t N>
-	static constexpr std::uint64_t hash(const char(&s)[N]) {
-		return hash(s, N - 1);
+	static constexpr T hash(const char(&s)[N], T seed = offset) {
+		return hash(s, N - 1, seed);
 	}
 
-	static std::uint64_t hash(string_view str) {
-		std::uint64_t hash = 0;
+	static T hash(string_view str, T seed = offset) {
+		T hash = seed;
 		for (char c : str) {
-			hash = (hash * 256) + static_cast<unsigned char>(c);
+			hash = (hash * mul) + static_cast<unsigned char>(c);
 		}
 		return hash;
 	}
 };
-using strh64 = strh<std::uint64_t>;
-using strh128 = strh<__uint128_t>;
+
+// from https://stackoverflow.com/a/41849998/167522, used primeth with bits size
+using djb2h8 = djb2h<std::uint8_t, 7, 5>;  // (h << 3) - h <-- mul should? be prime 7 or 11
+using djb2h16 = djb2h<std::uint16_t, 13, 31>;  // (h << 2) + (h << 3) + h <-- mul should? be prime 13 or 17
+using djb2h32 = djb2h<std::uint32_t, 33, 5381>;  // the one implemented everywhere: (h << 5) + h <-- mul should? be prime 31 or 37
+using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul should? be prime 61 or 67

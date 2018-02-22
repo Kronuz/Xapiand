@@ -29,7 +29,7 @@
 
 #include "exception.h"        // for BaseException
 #include "string_view.h"      // for string_view
-#include "hashes.hh"          // for fnv1a32
+#include "hashes.hh"          // for fnv1ah32
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
@@ -132,7 +132,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 // ::log <- (cleanup, info, stacked, delay, async, priority, exc, function, filename, line, suffix, prefix, format, args)
 #define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
 
-#define HOOK_LOG(hook, stacked, level, color, args...) if ((logger_info_hook.load() & fnv1a32::hash(hook)) == fnv1a32::hash(hook)) { ::log(false, true, stacked, 0ms, true, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args); }
+#define HOOK_LOG(hook, stacked, level, color, args...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, true, stacked, 0ms, true, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args); }
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)

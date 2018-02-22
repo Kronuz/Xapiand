@@ -45,7 +45,7 @@
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
-#include "hashes.hh"                       // for fnv1a32
+#include "hashes.hh"                       // for fnv1ah32
 
 
 #ifndef L_SCHEMA
@@ -332,24 +332,24 @@ static const std::string str_set_acc_date(join_string<std::string>({
 inline UnitTime
 _get_accuracy_date(string_view str_accuracy_date)
 {
-	switch (fnv1a32::hash(str_accuracy_date)) {
-		case fnv1a32::hash("second"):
+	switch (fnv1ah32::hash(str_accuracy_date)) {
+		case fnv1ah32::hash("second"):
 			return UnitTime::SECOND;
-		case fnv1a32::hash("minute"):
+		case fnv1ah32::hash("minute"):
 			return UnitTime::MINUTE;
-		case fnv1a32::hash("hour"):
+		case fnv1ah32::hash("hour"):
 			return UnitTime::HOUR;
-		case fnv1a32::hash("day"):
+		case fnv1ah32::hash("day"):
 			return UnitTime::DAY;
-		case fnv1a32::hash("month"):
+		case fnv1ah32::hash("month"):
 			return UnitTime::MONTH;
-		case fnv1a32::hash("year"):
+		case fnv1ah32::hash("year"):
 			return UnitTime::YEAR;
-		case fnv1a32::hash("decade"):
+		case fnv1ah32::hash("decade"):
 			return UnitTime::DECADE;
-		case fnv1a32::hash("century"):
+		case fnv1ah32::hash("century"):
 			return UnitTime::CENTURY;
-		case fnv1a32::hash("millennium"):
+		case fnv1ah32::hash("millennium"):
 			return UnitTime::MILLENNIUM;
 		default:
 			throw std::out_of_range("Invalid accuracy");
@@ -372,12 +372,12 @@ static const std::string str_set_acc_time(join_string<std::string>({
 inline UnitTime
 _get_accuracy_time(string_view str_accuracy_time)
 {
-	switch (fnv1a32::hash(str_accuracy_time)) {
-		case fnv1a32::hash("second"):
+	switch (fnv1ah32::hash(str_accuracy_time)) {
+		case fnv1ah32::hash("second"):
 			return UnitTime::SECOND;
-		case fnv1a32::hash("minute"):
+		case fnv1ah32::hash("minute"):
 			return UnitTime::MINUTE;
-		case fnv1a32::hash("hour"):
+		case fnv1ah32::hash("hour"):
 			return UnitTime::HOUR;
 		default:
 			throw std::out_of_range("Invalid accuracy");
@@ -404,18 +404,18 @@ static const std::string str_set_stop_strategy(join_string<std::string>({
 inline StopStrategy
 _get_stop_strategy(string_view str_stop_strategy)
 {
-	switch (fnv1a32::hash(str_stop_strategy)) {
-		case fnv1a32::hash("stop_none"):
+	switch (fnv1ah32::hash(str_stop_strategy)) {
+		case fnv1ah32::hash("stop_none"):
 			return StopStrategy::STOP_NONE;
-		case fnv1a32::hash("none"):
+		case fnv1ah32::hash("none"):
 			return StopStrategy::STOP_NONE;
-		case fnv1a32::hash("stop_all"):
+		case fnv1ah32::hash("stop_all"):
 			return StopStrategy::STOP_ALL;
-		case fnv1a32::hash("all"):
+		case fnv1ah32::hash("all"):
 			return StopStrategy::STOP_ALL;
-		case fnv1a32::hash("stop_stemmed"):
+		case fnv1ah32::hash("stop_stemmed"):
 			return StopStrategy::STOP_STEMMED;
-		case fnv1a32::hash("stemmed"):
+		case fnv1ah32::hash("stemmed"):
 			return StopStrategy::STOP_STEMMED;
 		default:
 			throw std::out_of_range("Invalid stop strategy");
@@ -437,22 +437,22 @@ static const std::string str_set_stem_strategy(join_string<std::string>({
 static inline StemStrategy
 _get_stem_strategy(string_view str_stem_strategy)
 {
-	switch (fnv1a32::hash(str_stem_strategy)) {
-		case fnv1a32::hash("stem_none"):
+	switch (fnv1ah32::hash(str_stem_strategy)) {
+		case fnv1ah32::hash("stem_none"):
 			return  StemStrategy::STEM_NONE;
-		case fnv1a32::hash("none"):
+		case fnv1ah32::hash("none"):
 			return  StemStrategy::STEM_NONE;
-		case fnv1a32::hash("stem_some"):
+		case fnv1ah32::hash("stem_some"):
 			return  StemStrategy::STEM_SOME;
-		case fnv1a32::hash("some"):
+		case fnv1ah32::hash("some"):
 			return  StemStrategy::STEM_SOME;
-		case fnv1a32::hash("stem_all"):
+		case fnv1ah32::hash("stem_all"):
 			return  StemStrategy::STEM_ALL;
-		case fnv1a32::hash("all"):
+		case fnv1ah32::hash("all"):
 			return  StemStrategy::STEM_ALL;
-		case fnv1a32::hash("stem_all_z"):
+		case fnv1ah32::hash("stem_all_z"):
 			return  StemStrategy::STEM_ALL_Z;
-		case fnv1a32::hash("all_z"):
+		case fnv1ah32::hash("all_z"):
 			return  StemStrategy::STEM_ALL_Z;
 		default:
 			throw std::out_of_range("Invalid stem strategy");
@@ -469,12 +469,12 @@ static const std::string str_set_index_uuid_field(join_string<std::string>({
 static inline UUIDFieldIndex
 _get_index_uuid_field(string_view str_index_uuid_field)
 {
-	switch (fnv1a32::hash(str_index_uuid_field)) {
-		case fnv1a32::hash("uuid"):
+	switch (fnv1ah32::hash(str_index_uuid_field)) {
+		case fnv1ah32::hash("uuid"):
 			return UUIDFieldIndex::UUID;
-		case fnv1a32::hash("uuid_field"):
+		case fnv1ah32::hash("uuid_field"):
 			return UUIDFieldIndex::UUID_FIELD;
-		case fnv1a32::hash("both"):
+		case fnv1ah32::hash("both"):
 			return UUIDFieldIndex::BOTH;
 		default:
 			throw std::out_of_range("Invalid index uuid_field");
@@ -531,90 +531,90 @@ static const std::string str_set_index(join_string<std::string>({
 static inline TypeIndex
 _get_index(string_view str_index)
 {
-	switch(fnv1a32::hash(str_index)) {
-		case fnv1a32::hash("none"):
+	switch(fnv1ah32::hash(str_index)) {
+		case fnv1ah32::hash("none"):
 			return TypeIndex::NONE;
-		case fnv1a32::hash("field_terms"):
+		case fnv1ah32::hash("field_terms"):
 			return TypeIndex::FIELD_TERMS;
-		case fnv1a32::hash("field_values"):
+		case fnv1ah32::hash("field_values"):
 			return TypeIndex::FIELD_VALUES;
-		case fnv1a32::hash("field_terms,field_values"):
+		case fnv1ah32::hash("field_terms,field_values"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1a32::hash("field_values,field_terms"):
+		case fnv1ah32::hash("field_values,field_terms"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1a32::hash("field"):
+		case fnv1ah32::hash("field"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1a32::hash("field_all"):
+		case fnv1ah32::hash("field_all"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1a32::hash("global_terms"):
+		case fnv1ah32::hash("global_terms"):
 			return TypeIndex::GLOBAL_TERMS;
-		case fnv1a32::hash("field_terms,global_terms"):
+		case fnv1ah32::hash("field_terms,global_terms"):
 			return TypeIndex::TERMS;
-		case fnv1a32::hash("global_terms,field_terms"):
+		case fnv1ah32::hash("global_terms,field_terms"):
 			return TypeIndex::TERMS;
-		case fnv1a32::hash("terms"):
+		case fnv1ah32::hash("terms"):
 			return TypeIndex::TERMS;
-		case fnv1a32::hash("global_terms,field_values"):
+		case fnv1ah32::hash("global_terms,field_values"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case fnv1a32::hash("field_values,global_terms"):
+		case fnv1ah32::hash("field_values,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case fnv1a32::hash("global_terms,field"):
+		case fnv1ah32::hash("global_terms,field"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1a32::hash("global_terms,field_all"):
+		case fnv1ah32::hash("global_terms,field_all"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1a32::hash("field,global_terms"):
+		case fnv1ah32::hash("field,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1a32::hash("field_all,global_terms"):
+		case fnv1ah32::hash("field_all,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1a32::hash("global_values"):
+		case fnv1ah32::hash("global_values"):
 			return TypeIndex::GLOBAL_VALUES;
-		case fnv1a32::hash("global_values,field_terms"):
+		case fnv1ah32::hash("global_values,field_terms"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case fnv1a32::hash("field_terms,global_values"):
+		case fnv1ah32::hash("field_terms,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case fnv1a32::hash("field_values,global_values"):
+		case fnv1ah32::hash("field_values,global_values"):
 			return TypeIndex::VALUES;
-		case fnv1a32::hash("global_values,field_values"):
+		case fnv1ah32::hash("global_values,field_values"):
 			return TypeIndex::VALUES;
-		case fnv1a32::hash("values"):
+		case fnv1ah32::hash("values"):
 			return TypeIndex::VALUES;
-		case fnv1a32::hash("global_values,field"):
+		case fnv1ah32::hash("global_values,field"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1a32::hash("global_values,field_all"):
+		case fnv1ah32::hash("global_values,field_all"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1a32::hash("field,global_values"):
+		case fnv1ah32::hash("field,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1a32::hash("field_all,global_values"):
+		case fnv1ah32::hash("field_all,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1a32::hash("global"):
+		case fnv1ah32::hash("global"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1a32::hash("global_all"):
+		case fnv1ah32::hash("global_all"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1a32::hash("global_values,global_terms"):
+		case fnv1ah32::hash("global_values,global_terms"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1a32::hash("global_terms,global_values"):
+		case fnv1ah32::hash("global_terms,global_values"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1a32::hash("global,field_terms"):
+		case fnv1ah32::hash("global,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1a32::hash("global_all,field_terms"):
+		case fnv1ah32::hash("global_all,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1a32::hash("field_terms,global"):
+		case fnv1ah32::hash("field_terms,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1a32::hash("field_terms,global_all"):
+		case fnv1ah32::hash("field_terms,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1a32::hash("global_all,field_values"):
+		case fnv1ah32::hash("global_all,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1a32::hash("global,field_values"):
+		case fnv1ah32::hash("global,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1a32::hash("field_values,global"):
+		case fnv1ah32::hash("field_values,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1a32::hash("field_values,global_all"):
+		case fnv1ah32::hash("field_values,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1a32::hash("field_all,global_all"):
+		case fnv1ah32::hash("field_all,global_all"):
 			return TypeIndex::ALL;
-		case fnv1a32::hash("global_all,field_all"):
+		case fnv1ah32::hash("global_all,field_all"):
 			return TypeIndex::ALL;
-		case fnv1a32::hash("all"):
+		case fnv1ah32::hash("all"):
 			return TypeIndex::ALL;
 		default:
 			throw std::out_of_range("Invalid index");
@@ -625,228 +625,228 @@ _get_index(string_view str_index)
 static inline const std::array<FieldType, SPC_TOTAL_TYPES>&
 _get_type(string_view str_type)
 {
-	switch(fnv1a32::hash(str_type)) {
-		case fnv1a32::hash("undefined"): {
+	switch(fnv1ah32::hash(str_type)) {
+		case fnv1ah32::hash("undefined"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("array"): {
+		case fnv1ah32::hash("array"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("array/boolean"): {
+		case fnv1ah32::hash("array/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case fnv1a32::hash("array/date"): {
+		case fnv1ah32::hash("array/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
 			return _;
 		}
-		case fnv1a32::hash("array/float"): {
+		case fnv1ah32::hash("array/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
 			return _;
 		}
-		case fnv1a32::hash("array/geospatial"): {
+		case fnv1ah32::hash("array/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
 			return _;
 		}
-		case fnv1a32::hash("array/integer"): {
+		case fnv1ah32::hash("array/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
 			return _;
 		}
-		case fnv1a32::hash("array/positive"): {
+		case fnv1ah32::hash("array/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case fnv1a32::hash("array/string"): {
+		case fnv1ah32::hash("array/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case fnv1a32::hash("array/term"): {
+		case fnv1ah32::hash("array/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }};
 			return _;
 		}
-		case fnv1a32::hash("array/text"): {
+		case fnv1ah32::hash("array/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
 			return _;
 		}
-		case fnv1a32::hash("array/time"): {
+		case fnv1ah32::hash("array/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
 			return _;
 		}
-		case fnv1a32::hash("array/timedelta"): {
+		case fnv1ah32::hash("array/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case fnv1a32::hash("array/uuid"): {
+		case fnv1ah32::hash("array/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
 			return _;
 		}
-		case fnv1a32::hash("boolean"): {
+		case fnv1ah32::hash("boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case fnv1a32::hash("date"): {
+		case fnv1ah32::hash("date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
 			return _;
 		}
-		case fnv1a32::hash("float"): {
+		case fnv1ah32::hash("float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }};
 			return _;
 		}
-		case fnv1a32::hash("foreign"): {
+		case fnv1ah32::hash("foreign"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("foreign/object"): {
+		case fnv1ah32::hash("foreign/object"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("foreign/script"): {
+		case fnv1ah32::hash("foreign/script"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
-		case fnv1a32::hash("geospatial"): {
+		case fnv1ah32::hash("geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }};
 			return _;
 		}
-		case fnv1a32::hash("integer"): {
+		case fnv1ah32::hash("integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }};
 			return _;
 		}
-		case fnv1a32::hash("object"): {
+		case fnv1ah32::hash("object"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("object/array"): {
+		case fnv1ah32::hash("object/array"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/boolean"): {
+		case fnv1ah32::hash("object/array/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/date"): {
+		case fnv1ah32::hash("object/array/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/float"): {
+		case fnv1ah32::hash("object/array/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/geospatial"): {
+		case fnv1ah32::hash("object/array/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/integer"): {
+		case fnv1ah32::hash("object/array/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/positive"): {
+		case fnv1ah32::hash("object/array/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/string"): {
+		case fnv1ah32::hash("object/array/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/term"): {
+		case fnv1ah32::hash("object/array/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/text"): {
+		case fnv1ah32::hash("object/array/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/time"): {
+		case fnv1ah32::hash("object/array/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/timedelta"): {
+		case fnv1ah32::hash("object/array/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case fnv1a32::hash("object/array/uuid"): {
+		case fnv1ah32::hash("object/array/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
 			return _;
 		}
-		case fnv1a32::hash("object/boolean"): {
+		case fnv1ah32::hash("object/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case fnv1a32::hash("object/date"): {
+		case fnv1ah32::hash("object/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
 			return _;
 		}
-		case fnv1a32::hash("object/float"): {
+		case fnv1ah32::hash("object/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
 			return _;
 		}
-		case fnv1a32::hash("object/geospatial"): {
+		case fnv1ah32::hash("object/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
 			return _;
 		}
-		case fnv1a32::hash("object/integer"): {
+		case fnv1ah32::hash("object/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
 			return _;
 		}
-		case fnv1a32::hash("object/positive"): {
+		case fnv1ah32::hash("object/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case fnv1a32::hash("object/string"): {
+		case fnv1ah32::hash("object/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case fnv1a32::hash("object/term"): {
+		case fnv1ah32::hash("object/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }};
 			return _;
 		}
-		case fnv1a32::hash("object/text"): {
+		case fnv1ah32::hash("object/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
 			return _;
 		}
-		case fnv1a32::hash("object/time"): {
+		case fnv1ah32::hash("object/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
 			return _;
 		}
-		case fnv1a32::hash("object/timedelta"): {
+		case fnv1ah32::hash("object/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case fnv1a32::hash("object/uuid"): {
+		case fnv1ah32::hash("object/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
 			return _;
 		}
-		case fnv1a32::hash("positive"): {
+		case fnv1ah32::hash("positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case fnv1a32::hash("script"): {
+		case fnv1ah32::hash("script"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
-		case fnv1a32::hash("string"): {
+		case fnv1ah32::hash("string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case fnv1a32::hash("term"): {
+		case fnv1ah32::hash("term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }};
 			return _;
 		}
-		case fnv1a32::hash("text"): {
+		case fnv1ah32::hash("text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }};
 			return _;
 		}
-		case fnv1a32::hash("time"): {
+		case fnv1ah32::hash("time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }};
 			return _;
 		}
-		case fnv1a32::hash("timedelta"): {
+		case fnv1ah32::hash("timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case fnv1a32::hash("uuid"): {
+		case fnv1ah32::hash("uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }};
 			return _;
 		}
@@ -1034,188 +1034,188 @@ specification_t default_spc;
 static inline const std::pair<bool, const std::string>&
 _get_stem_language(string_view str_stem_language)
 {
-	switch(fnv1a32::hash(str_stem_language)) {
-		case fnv1a32::hash("armenian"): {
+	switch(fnv1ah32::hash(str_stem_language)) {
+		case fnv1ah32::hash("armenian"): {
 			static const std::pair<bool, const std::string> hy{ true,  "hy" };
 			return hy;
 		}
-		case fnv1a32::hash("hy"): {
+		case fnv1ah32::hash("hy"): {
 			static const std::pair<bool, const std::string> hy{ true,  "hy" };
 			return hy;
 		}
-		case fnv1a32::hash("basque"): {
+		case fnv1ah32::hash("basque"): {
 			static const std::pair<bool, const std::string> ue{ true,  "ue" };
 			return ue;
 		}
-		case fnv1a32::hash("eu"): {
+		case fnv1ah32::hash("eu"): {
 			static const std::pair<bool, const std::string> eu{ true,  "eu" };
 			return eu;
 		}
-		case fnv1a32::hash("catalan"): {
+		case fnv1ah32::hash("catalan"): {
 			static const std::pair<bool, const std::string> ca{ true,  "ca" };
 			return ca;
 		}
-		case fnv1a32::hash("ca"): {
+		case fnv1ah32::hash("ca"): {
 			static const std::pair<bool, const std::string> ca{ true,  "ca" };
 			return ca;
 		}
-		case fnv1a32::hash("danish"): {
+		case fnv1ah32::hash("danish"): {
 			static const std::pair<bool, const std::string> da{ true,  "da" };
 			return da;
 		}
-		case fnv1a32::hash("da"): {
+		case fnv1ah32::hash("da"): {
 			static const std::pair<bool, const std::string> da{ true,  "da" };
 			return da;
 		}
-		case fnv1a32::hash("dutch"): {
+		case fnv1ah32::hash("dutch"): {
 			static const std::pair<bool, const std::string> nl{ true,  "nl" };
 			return nl;
 		}
-		case fnv1a32::hash("nl"): {
+		case fnv1ah32::hash("nl"): {
 			static const std::pair<bool, const std::string> nl{ true,  "nl" };
 			return nl;
 		}
-		case fnv1a32::hash("kraaij_pohlmann"): {
+		case fnv1ah32::hash("kraaij_pohlmann"): {
 			static const std::pair<bool, const std::string> nl{ false, "nl" };
 			return nl;
 		}
-		case fnv1a32::hash("english"): {
+		case fnv1ah32::hash("english"): {
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case fnv1a32::hash("en"): {
+		case fnv1ah32::hash("en"): {
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case fnv1a32::hash("earlyenglish"): {
+		case fnv1ah32::hash("earlyenglish"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case fnv1a32::hash("english_lovins"): {
+		case fnv1ah32::hash("english_lovins"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case fnv1a32::hash("lovins"): {
+		case fnv1ah32::hash("lovins"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case fnv1a32::hash("english_porter"): {
+		case fnv1ah32::hash("english_porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case fnv1a32::hash("porter"): {
+		case fnv1ah32::hash("porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case fnv1a32::hash("finnish"): {
+		case fnv1ah32::hash("finnish"): {
 			static const std::pair<bool, const std::string> fi{ true,  "fi" };
 			return fi;
 		}
-		case fnv1a32::hash("fi"): {
+		case fnv1ah32::hash("fi"): {
 			static const std::pair<bool, const std::string> fi{ true,  "fi" };
 			return fi;
 		}
-		case fnv1a32::hash("french"): {
+		case fnv1ah32::hash("french"): {
 			static const std::pair<bool, const std::string> fr{ true,  "fr" };
 			return fr;
 		}
-		case fnv1a32::hash("fr"): {
+		case fnv1ah32::hash("fr"): {
 			static const std::pair<bool, const std::string> fr{ true,  "fr" };
 			return fr;
 		}
-		case fnv1a32::hash("german"): {
+		case fnv1ah32::hash("german"): {
 			static const std::pair<bool, const std::string> de{ true,  "de" };
 			return de;
 		}
-		case fnv1a32::hash("de"): {
+		case fnv1ah32::hash("de"): {
 			static const std::pair<bool, const std::string> de{ true,  "de" };
 			return de;
 		}
-		case fnv1a32::hash("german2"): {
+		case fnv1ah32::hash("german2"): {
 			static const std::pair<bool, const std::string> de{ false, "de" };
 			return de;
 		}
-		case fnv1a32::hash("hungarian"): {
+		case fnv1ah32::hash("hungarian"): {
 			static const std::pair<bool, const std::string> hu{ true,  "hu" };
 			return hu;
 		}
-		case fnv1a32::hash("hu"): {
+		case fnv1ah32::hash("hu"): {
 			static const std::pair<bool, const std::string> hu{ true,  "hu" };
 			return hu;
 		}
-		case fnv1a32::hash("italian"): {
+		case fnv1ah32::hash("italian"): {
 			static const std::pair<bool, const std::string> it{ true,  "it" };
 			return it;
 		}
-		case fnv1a32::hash("it"): {
+		case fnv1ah32::hash("it"): {
 			static const std::pair<bool, const std::string> it{ true,  "it" };
 			return it;
 		}
-		case fnv1a32::hash("norwegian"): {
+		case fnv1ah32::hash("norwegian"): {
 			static const std::pair<bool, const std::string> no{ true,  "no" };
 			return no;
 		}
-		case fnv1a32::hash("nb"): {
+		case fnv1ah32::hash("nb"): {
 			static const std::pair<bool, const std::string> no{ false, "no" };
 			return no;
 		}
-		case fnv1a32::hash("nn"): {
+		case fnv1ah32::hash("nn"): {
 			static const std::pair<bool, const std::string> no{ false, "no" };
 			return no;
 		}
-		case fnv1a32::hash("no"): {
+		case fnv1ah32::hash("no"): {
 			static const std::pair<bool, const std::string> no{ true,  "no" };
 			return no;
 		}
-		case fnv1a32::hash("portuguese"): {
+		case fnv1ah32::hash("portuguese"): {
 			static const std::pair<bool, const std::string> pt{ true,  "pt" };
 			return pt;
 		}
-		case fnv1a32::hash("pt"): {
+		case fnv1ah32::hash("pt"): {
 			static const std::pair<bool, const std::string> pt{ true,  "pt" };
 			return pt;
 		}
-		case fnv1a32::hash("romanian"): {
+		case fnv1ah32::hash("romanian"): {
 			static const std::pair<bool, const std::string> ro{ true,  "ro" };
 			return ro;
 		}
-		case fnv1a32::hash("ro"): {
+		case fnv1ah32::hash("ro"): {
 			static const std::pair<bool, const std::string> ro{ true,  "ro" };
 			return ro;
 		}
-		case fnv1a32::hash("russian"): {
+		case fnv1ah32::hash("russian"): {
 			static const std::pair<bool, const std::string> ru{ true,  "ru" };
 			return ru;
 		}
-		case fnv1a32::hash("ru"): {
+		case fnv1ah32::hash("ru"): {
 			static const std::pair<bool, const std::string> ru{ true,  "ru" };
 			return ru;
 		}
-		case fnv1a32::hash("spanish"): {
+		case fnv1ah32::hash("spanish"): {
 			static const std::pair<bool, const std::string> es{ true,  "es" };
 			return es;
 		}
-		case fnv1a32::hash("es"): {
+		case fnv1ah32::hash("es"): {
 			static const std::pair<bool, const std::string> es{ true,  "es" };
 			return es;
 		}
-		case fnv1a32::hash("swedish"): {
+		case fnv1ah32::hash("swedish"): {
 			static const std::pair<bool, const std::string> sv{ true,  "sv" };
 			return sv;
 		}
-		case fnv1a32::hash("sv"): {
+		case fnv1ah32::hash("sv"): {
 			static const std::pair<bool, const std::string> sv{ true,  "sv" };
 			return sv;
 		}
-		case fnv1a32::hash("turkish"): {
+		case fnv1ah32::hash("turkish"): {
 			static const std::pair<bool, const std::string> tr{ true,  "tr" };
 			return tr;
 		}
-		case fnv1a32::hash("tr"): {
+		case fnv1ah32::hash("tr"): {
 			static const std::pair<bool, const std::string> tr{ true,  "tr" };
 			return tr;
 		}
-		case fnv1a32::hash("none"): {
+		case fnv1ah32::hash("none"): {
 			static const std::pair<bool, const std::string> _{ false, DEFAULT_LANGUAGE };
 			return _;
 		}
@@ -2129,7 +2129,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			const auto it_e = object.end();
 			for (auto it = object.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
-				auto key = fnv1a32::hash(str_key);
+				auto key = fnv1ah32::hash(str_key);
 				if (!has_dispatch_process_properties(key)) {
 					if (!has_dispatch_process_concrete_properties(key)) {
 						fields.emplace_back(std::move(str_key), &it.value());
@@ -5321,7 +5321,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto &value = it.value();
 		try {
 			_dispatch_process_concrete_properties(key, str_key, value);
@@ -5344,7 +5344,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto& value = it.value();
 		try {
 			_dispatch_process_properties(key, str_key, value);
@@ -5382,7 +5382,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto& value = it.value();
 		try {
 			_dispatch_write_properties(key, mut_properties, str_key, value);
@@ -5407,76 +5407,76 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, string
 	L_CALL("Schema::_dispatch_write_properties(%s)", repr(mut_properties.to_string()).c_str());
 
 	switch (key) {
-		case fnv1a32::hash(RESERVED_WEIGHT):
+		case fnv1ah32::hash(RESERVED_WEIGHT):
 			write_weight(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITION):
+		case fnv1ah32::hash(RESERVED_POSITION):
 			write_position(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SPELLING):
+		case fnv1ah32::hash(RESERVED_SPELLING):
 			write_spelling(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITIONS):
+		case fnv1ah32::hash(RESERVED_POSITIONS):
 			write_positions(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX):
+		case fnv1ah32::hash(RESERVED_INDEX):
 			write_index(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STORE):
+		case fnv1ah32::hash(RESERVED_STORE):
 			write_store(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_RECURSE):
+		case fnv1ah32::hash(RESERVED_RECURSE):
 			write_recurse(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_DYNAMIC):
+		case fnv1ah32::hash(RESERVED_DYNAMIC):
 			write_dynamic(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STRICT):
+		case fnv1ah32::hash(RESERVED_STRICT):
 			write_strict(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+		case fnv1ah32::hash(RESERVED_DATE_DETECTION):
 			write_date_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIME_DETECTION):
 			write_time_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIMEDELTA_DETECTION):
 			write_timedelta_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+		case fnv1ah32::hash(RESERVED_NUMERIC_DETECTION):
 			write_numeric_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+		case fnv1ah32::hash(RESERVED_GEO_DETECTION):
 			write_geo_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+		case fnv1ah32::hash(RESERVED_BOOL_DETECTION):
 			write_bool_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+		case fnv1ah32::hash(RESERVED_STRING_DETECTION):
 			write_string_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+		case fnv1ah32::hash(RESERVED_TEXT_DETECTION):
 			write_text_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+		case fnv1ah32::hash(RESERVED_TERM_DETECTION):
 			write_term_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+		case fnv1ah32::hash(RESERVED_UUID_DETECTION):
 			write_uuid_detection(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			write_bool_term(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_NAMESPACE):
+		case fnv1ah32::hash(RESERVED_NAMESPACE):
 			write_namespace(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+		case fnv1ah32::hash(RESERVED_PARTIAL_PATHS):
 			write_partial_paths(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+		case fnv1ah32::hash(RESERVED_INDEX_UUID_FIELD):
 			write_index_uuid_field(mut_properties, prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SCHEMA):
+		case fnv1ah32::hash(RESERVED_SCHEMA):
 			write_schema(mut_properties, prop_name, value);
 			break;
 		default:
@@ -5491,112 +5491,112 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	L_CALL("Schema::_dispatch_feed_properties(%s)", repr(value.to_string()).c_str());
 
 	switch (key) {
-		case fnv1a32::hash(RESERVED_WEIGHT):
+		case fnv1ah32::hash(RESERVED_WEIGHT):
 			Schema::feed_weight(value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITION):
+		case fnv1ah32::hash(RESERVED_POSITION):
 			Schema::feed_position(value);
 			break;
-		case fnv1a32::hash(RESERVED_SPELLING):
+		case fnv1ah32::hash(RESERVED_SPELLING):
 			Schema::feed_spelling(value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITIONS):
+		case fnv1ah32::hash(RESERVED_POSITIONS):
 			Schema::feed_positions(value);
 			break;
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			Schema::feed_type(value);
 			break;
-		case fnv1a32::hash(RESERVED_PREFIX):
+		case fnv1ah32::hash(RESERVED_PREFIX):
 			Schema::feed_prefix(value);
 			break;
-		case fnv1a32::hash(RESERVED_SLOT):
+		case fnv1ah32::hash(RESERVED_SLOT):
 			Schema::feed_slot(value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX):
+		case fnv1ah32::hash(RESERVED_INDEX):
 			Schema::feed_index(value);
 			break;
-		case fnv1a32::hash(RESERVED_STORE):
+		case fnv1ah32::hash(RESERVED_STORE):
 			Schema::feed_store(value);
 			break;
-		case fnv1a32::hash(RESERVED_RECURSE):
+		case fnv1ah32::hash(RESERVED_RECURSE):
 			Schema::feed_recurse(value);
 			break;
-		case fnv1a32::hash(RESERVED_DYNAMIC):
+		case fnv1ah32::hash(RESERVED_DYNAMIC):
 			Schema::feed_dynamic(value);
 			break;
-		case fnv1a32::hash(RESERVED_STRICT):
+		case fnv1ah32::hash(RESERVED_STRICT):
 			Schema::feed_strict(value);
 			break;
-		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+		case fnv1ah32::hash(RESERVED_DATE_DETECTION):
 			Schema::feed_date_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIME_DETECTION):
 			Schema::feed_time_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIMEDELTA_DETECTION):
 			Schema::feed_timedelta_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+		case fnv1ah32::hash(RESERVED_NUMERIC_DETECTION):
 			Schema::feed_numeric_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+		case fnv1ah32::hash(RESERVED_GEO_DETECTION):
 			Schema::feed_geo_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+		case fnv1ah32::hash(RESERVED_BOOL_DETECTION):
 			Schema::feed_bool_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+		case fnv1ah32::hash(RESERVED_STRING_DETECTION):
 			Schema::feed_string_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+		case fnv1ah32::hash(RESERVED_TEXT_DETECTION):
 			Schema::feed_text_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+		case fnv1ah32::hash(RESERVED_TERM_DETECTION):
 			Schema::feed_term_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+		case fnv1ah32::hash(RESERVED_UUID_DETECTION):
 			Schema::feed_uuid_detection(value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			Schema::feed_bool_term(value);
 			break;
-		case fnv1a32::hash(RESERVED_ACCURACY):
+		case fnv1ah32::hash(RESERVED_ACCURACY):
 			Schema::feed_accuracy(value);
 			break;
-		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+		case fnv1ah32::hash(RESERVED_ACC_PREFIX):
 			Schema::feed_acc_prefix(value);
 			break;
-		case fnv1a32::hash(RESERVED_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_LANGUAGE):
 			Schema::feed_language(value);
 			break;
-		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STOP_STRATEGY):
 			Schema::feed_stop_strategy(value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STEM_STRATEGY):
 			Schema::feed_stem_strategy(value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			Schema::feed_stem_language(value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIALS):
+		case fnv1ah32::hash(RESERVED_PARTIALS):
 			Schema::feed_partials(value);
 			break;
-		case fnv1a32::hash(RESERVED_ERROR):
+		case fnv1ah32::hash(RESERVED_ERROR):
 			Schema::feed_error(value);
 			break;
-		case fnv1a32::hash(RESERVED_NAMESPACE):
+		case fnv1ah32::hash(RESERVED_NAMESPACE):
 			Schema::feed_namespace(value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+		case fnv1ah32::hash(RESERVED_PARTIAL_PATHS):
 			Schema::feed_partial_paths(value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+		case fnv1ah32::hash(RESERVED_INDEX_UUID_FIELD):
 			Schema::feed_index_uuid_field(value);
 			break;
-		case fnv1a32::hash(RESERVED_SCRIPT):
+		case fnv1ah32::hash(RESERVED_SCRIPT):
 			Schema::feed_script(value);
 			break;
-		case fnv1a32::hash(RESERVED_ENDPOINT):
+		case fnv1ah32::hash(RESERVED_ENDPOINT):
 			Schema::feed_endpoint(value);
 			break;
 		default:
@@ -5609,29 +5609,29 @@ inline bool
 has_dispatch_process_properties(uint32_t key)
 {
 	switch (key) {
-		case fnv1a32::hash(RESERVED_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_LANGUAGE):
 			return true;
-		case fnv1a32::hash(RESERVED_PREFIX):
+		case fnv1ah32::hash(RESERVED_PREFIX):
 			return true;
-		case fnv1a32::hash(RESERVED_SLOT):
+		case fnv1ah32::hash(RESERVED_SLOT):
 			return true;
-		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STOP_STRATEGY):
 			return true;
-		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STEM_STRATEGY):
 			return true;
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			return true;
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			return true;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			return true;
-		case fnv1a32::hash(RESERVED_ACCURACY):
+		case fnv1ah32::hash(RESERVED_ACCURACY):
 			return true;
-		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+		case fnv1ah32::hash(RESERVED_ACC_PREFIX):
 			return true;
-		case fnv1a32::hash(RESERVED_PARTIALS):
+		case fnv1ah32::hash(RESERVED_PARTIALS):
 			return true;
-		case fnv1a32::hash(RESERVED_ERROR):
+		case fnv1ah32::hash(RESERVED_ERROR):
 			return true;
 		default:
 			return false;
@@ -5644,40 +5644,40 @@ Schema::_dispatch_process_properties(uint32_t key, string_view prop_name, const 
 	L_CALL("Schema::_dispatch_process_properties(%s)", repr(prop_name).c_str());
 
 	switch (key) {
-		case fnv1a32::hash(RESERVED_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_LANGUAGE):
 			Schema::process_language(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_PREFIX):
+		case fnv1ah32::hash(RESERVED_PREFIX):
 			Schema::process_prefix(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SLOT):
+		case fnv1ah32::hash(RESERVED_SLOT):
 			Schema::process_slot(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STOP_STRATEGY):
 			Schema::process_stop_strategy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STEM_STRATEGY):
 			Schema::process_stem_strategy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			Schema::process_stem_language(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			Schema::process_type(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			Schema::process_bool_term(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ACCURACY):
+		case fnv1ah32::hash(RESERVED_ACCURACY):
 			Schema::process_accuracy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+		case fnv1ah32::hash(RESERVED_ACC_PREFIX):
 			Schema::process_acc_prefix(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIALS):
+		case fnv1ah32::hash(RESERVED_PARTIALS):
 			Schema::process_partials(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ERROR):
+		case fnv1ah32::hash(RESERVED_ERROR):
 			Schema::process_error(prop_name, value);
 			break;
 		default:
@@ -5689,124 +5689,124 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	switch (key) {
-		case fnv1a32::hash(RESERVED_WEIGHT):
+		case fnv1ah32::hash(RESERVED_WEIGHT):
 			return true;
-		case fnv1a32::hash(RESERVED_POSITION):
+		case fnv1ah32::hash(RESERVED_POSITION):
 			return true;
-		case fnv1a32::hash(RESERVED_SPELLING):
+		case fnv1ah32::hash(RESERVED_SPELLING):
 			return true;
-		case fnv1a32::hash(RESERVED_POSITIONS):
+		case fnv1ah32::hash(RESERVED_POSITIONS):
 			return true;
-		case fnv1a32::hash(RESERVED_INDEX):
+		case fnv1ah32::hash(RESERVED_INDEX):
 			return true;
-		case fnv1a32::hash(RESERVED_STORE):
+		case fnv1ah32::hash(RESERVED_STORE):
 			return true;
-		case fnv1a32::hash(RESERVED_RECURSE):
+		case fnv1ah32::hash(RESERVED_RECURSE):
 			return true;
-		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+		case fnv1ah32::hash(RESERVED_PARTIAL_PATHS):
 			return true;
-		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+		case fnv1ah32::hash(RESERVED_INDEX_UUID_FIELD):
 			return true;
-		case fnv1a32::hash(RESERVED_VALUE):
+		case fnv1ah32::hash(RESERVED_VALUE):
 			return true;
-		case fnv1a32::hash(RESERVED_ENDPOINT):
+		case fnv1ah32::hash(RESERVED_ENDPOINT):
 			return true;
-		case fnv1a32::hash(RESERVED_SCRIPT):
+		case fnv1ah32::hash(RESERVED_SCRIPT):
 			return true;
-		case fnv1a32::hash(RESERVED_FLOAT):
+		case fnv1ah32::hash(RESERVED_FLOAT):
 			return true;
-		case fnv1a32::hash(RESERVED_POSITIVE):
+		case fnv1ah32::hash(RESERVED_POSITIVE):
 			return true;
-		case fnv1a32::hash(RESERVED_INTEGER):
+		case fnv1ah32::hash(RESERVED_INTEGER):
 			return true;
-		case fnv1a32::hash(RESERVED_BOOLEAN):
+		case fnv1ah32::hash(RESERVED_BOOLEAN):
 			return true;
-		case fnv1a32::hash(RESERVED_TERM):
+		case fnv1ah32::hash(RESERVED_TERM):
 			return true;
-		case fnv1a32::hash(RESERVED_TEXT):
+		case fnv1ah32::hash(RESERVED_TEXT):
 			return true;
-		case fnv1a32::hash(RESERVED_STRING):
+		case fnv1ah32::hash(RESERVED_STRING):
 			return true;
-		case fnv1a32::hash(RESERVED_DATE):
+		case fnv1ah32::hash(RESERVED_DATE):
 			return true;
-		case fnv1a32::hash(RESERVED_UUID):
+		case fnv1ah32::hash(RESERVED_UUID):
 			return true;
-		case fnv1a32::hash(RESERVED_EWKT):
+		case fnv1ah32::hash(RESERVED_EWKT):
 			return true;
-		case fnv1a32::hash(RESERVED_POINT):
+		case fnv1ah32::hash(RESERVED_POINT):
 			return true;
-		case fnv1a32::hash(RESERVED_CIRCLE):
+		case fnv1ah32::hash(RESERVED_CIRCLE):
 			return true;
-		case fnv1a32::hash(RESERVED_CONVEX):
+		case fnv1ah32::hash(RESERVED_CONVEX):
 			return true;
-		case fnv1a32::hash(RESERVED_POLYGON):
+		case fnv1ah32::hash(RESERVED_POLYGON):
 			return true;
-		case fnv1a32::hash(RESERVED_CHULL):
+		case fnv1ah32::hash(RESERVED_CHULL):
 			return true;
-		case fnv1a32::hash(RESERVED_MULTIPOINT):
+		case fnv1ah32::hash(RESERVED_MULTIPOINT):
 			return true;
-		case fnv1a32::hash(RESERVED_MULTICIRCLE):
+		case fnv1ah32::hash(RESERVED_MULTICIRCLE):
 			return true;
-		case fnv1a32::hash(RESERVED_MULTICONVEX):
+		case fnv1ah32::hash(RESERVED_MULTICONVEX):
 			return true;
-		case fnv1a32::hash(RESERVED_MULTIPOLYGON):
+		case fnv1ah32::hash(RESERVED_MULTIPOLYGON):
 			return true;
-		case fnv1a32::hash(RESERVED_MULTICHULL):
+		case fnv1ah32::hash(RESERVED_MULTICHULL):
 			return true;
-		case fnv1a32::hash(RESERVED_GEO_COLLECTION):
+		case fnv1ah32::hash(RESERVED_GEO_COLLECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_GEO_INTERSECTION):
+		case fnv1ah32::hash(RESERVED_GEO_INTERSECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_CHAI):
+		case fnv1ah32::hash(RESERVED_CHAI):
 			return true;
-		case fnv1a32::hash(RESERVED_ECMA):
+		case fnv1ah32::hash(RESERVED_ECMA):
 			return true;
 		// Next functions only check the consistency of user provided data.
-		case fnv1a32::hash(RESERVED_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_LANGUAGE):
 			return true;
-		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STOP_STRATEGY):
 			return true;
-		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STEM_STRATEGY):
 			return true;
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			return true;
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			return true;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			return true;
-		case fnv1a32::hash(RESERVED_ACCURACY):
+		case fnv1ah32::hash(RESERVED_ACCURACY):
 			return true;
-		case fnv1a32::hash(RESERVED_PARTIALS):
+		case fnv1ah32::hash(RESERVED_PARTIALS):
 			return true;
-		case fnv1a32::hash(RESERVED_ERROR):
+		case fnv1ah32::hash(RESERVED_ERROR):
 			return true;
-		case fnv1a32::hash(RESERVED_DYNAMIC):
+		case fnv1ah32::hash(RESERVED_DYNAMIC):
 			return true;
-		case fnv1a32::hash(RESERVED_STRICT):
+		case fnv1ah32::hash(RESERVED_STRICT):
 			return true;
-		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+		case fnv1ah32::hash(RESERVED_DATE_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIME_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIMEDELTA_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+		case fnv1ah32::hash(RESERVED_NUMERIC_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+		case fnv1ah32::hash(RESERVED_GEO_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+		case fnv1ah32::hash(RESERVED_BOOL_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+		case fnv1ah32::hash(RESERVED_STRING_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+		case fnv1ah32::hash(RESERVED_TEXT_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+		case fnv1ah32::hash(RESERVED_TERM_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+		case fnv1ah32::hash(RESERVED_UUID_DETECTION):
 			return true;
-		case fnv1a32::hash(RESERVED_NAMESPACE):
+		case fnv1ah32::hash(RESERVED_NAMESPACE):
 			return true;
-		case fnv1a32::hash(RESERVED_SCHEMA):
+		case fnv1ah32::hash(RESERVED_SCHEMA):
 			return true;
 		default:
 			return false;
@@ -5819,182 +5819,182 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, string_view prop_nam
 	L_CALL("Schema::_dispatch_process_concrete_properties(%s)", repr(prop_name).c_str());
 
 	switch (key) {
-		case fnv1a32::hash(RESERVED_WEIGHT):
+		case fnv1ah32::hash(RESERVED_WEIGHT):
 			Schema::process_weight(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITION):
+		case fnv1ah32::hash(RESERVED_POSITION):
 			Schema::process_position(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SPELLING):
+		case fnv1ah32::hash(RESERVED_SPELLING):
 			Schema::process_spelling(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITIONS):
+		case fnv1ah32::hash(RESERVED_POSITIONS):
 			Schema::process_positions(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX):
+		case fnv1ah32::hash(RESERVED_INDEX):
 			Schema::process_index(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STORE):
+		case fnv1ah32::hash(RESERVED_STORE):
 			Schema::process_store(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_RECURSE):
+		case fnv1ah32::hash(RESERVED_RECURSE):
 			Schema::process_recurse(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIAL_PATHS):
+		case fnv1ah32::hash(RESERVED_PARTIAL_PATHS):
 			Schema::process_partial_paths(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_INDEX_UUID_FIELD):
+		case fnv1ah32::hash(RESERVED_INDEX_UUID_FIELD):
 			Schema::process_index_uuid_field(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_VALUE):
+		case fnv1ah32::hash(RESERVED_VALUE):
 			Schema::process_value(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ENDPOINT):
+		case fnv1ah32::hash(RESERVED_ENDPOINT):
 			Schema::process_endpoint(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SCRIPT):
+		case fnv1ah32::hash(RESERVED_SCRIPT):
 			Schema::process_script(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_FLOAT):
+		case fnv1ah32::hash(RESERVED_FLOAT):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POSITIVE):
+		case fnv1ah32::hash(RESERVED_POSITIVE):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_INTEGER):
+		case fnv1ah32::hash(RESERVED_INTEGER):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOLEAN):
+		case fnv1ah32::hash(RESERVED_BOOLEAN):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TERM):
+		case fnv1ah32::hash(RESERVED_TERM):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TEXT):
+		case fnv1ah32::hash(RESERVED_TEXT):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STRING):
+		case fnv1ah32::hash(RESERVED_STRING):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_DATE):
+		case fnv1ah32::hash(RESERVED_DATE):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_UUID):
+		case fnv1ah32::hash(RESERVED_UUID):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_EWKT):
+		case fnv1ah32::hash(RESERVED_EWKT):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POINT):
+		case fnv1ah32::hash(RESERVED_POINT):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_CIRCLE):
+		case fnv1ah32::hash(RESERVED_CIRCLE):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_CONVEX):
+		case fnv1ah32::hash(RESERVED_CONVEX):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_POLYGON):
+		case fnv1ah32::hash(RESERVED_POLYGON):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_CHULL):
+		case fnv1ah32::hash(RESERVED_CHULL):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_MULTIPOINT):
+		case fnv1ah32::hash(RESERVED_MULTIPOINT):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_MULTICIRCLE):
+		case fnv1ah32::hash(RESERVED_MULTICIRCLE):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_MULTICONVEX):
+		case fnv1ah32::hash(RESERVED_MULTICONVEX):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_MULTIPOLYGON):
+		case fnv1ah32::hash(RESERVED_MULTIPOLYGON):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_MULTICHULL):
+		case fnv1ah32::hash(RESERVED_MULTICHULL):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_GEO_COLLECTION):
+		case fnv1ah32::hash(RESERVED_GEO_COLLECTION):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_GEO_INTERSECTION):
+		case fnv1ah32::hash(RESERVED_GEO_INTERSECTION):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_CHAI):
+		case fnv1ah32::hash(RESERVED_CHAI):
 			Schema::process_cast_object(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ECMA):
+		case fnv1ah32::hash(RESERVED_ECMA):
 			Schema::process_cast_object(prop_name, value);
 			break;
 		// Next functions only check the consistency of user provided data.
-		case fnv1a32::hash(RESERVED_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_LANGUAGE):
 			Schema::consistency_language(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STOP_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STOP_STRATEGY):
 			Schema::consistency_stop_strategy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_STRATEGY):
+		case fnv1ah32::hash(RESERVED_STEM_STRATEGY):
 			Schema::consistency_stem_strategy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			Schema::consistency_stem_language(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			Schema::consistency_type(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_TERM):
+		case fnv1ah32::hash(RESERVED_BOOL_TERM):
 			Schema::consistency_bool_term(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ACCURACY):
+		case fnv1ah32::hash(RESERVED_ACCURACY):
 			Schema::consistency_accuracy(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_PARTIALS):
+		case fnv1ah32::hash(RESERVED_PARTIALS):
 			Schema::consistency_partials(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_ERROR):
+		case fnv1ah32::hash(RESERVED_ERROR):
 			Schema::consistency_error(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_DYNAMIC):
+		case fnv1ah32::hash(RESERVED_DYNAMIC):
 			Schema::consistency_dynamic(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STRICT):
+		case fnv1ah32::hash(RESERVED_STRICT):
 			Schema::consistency_strict(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_DATE_DETECTION):
+		case fnv1ah32::hash(RESERVED_DATE_DETECTION):
 			Schema::consistency_date_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TIME_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIME_DETECTION):
 			Schema::consistency_time_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TIMEDELTA_DETECTION):
+		case fnv1ah32::hash(RESERVED_TIMEDELTA_DETECTION):
 			Schema::consistency_timedelta_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_NUMERIC_DETECTION):
+		case fnv1ah32::hash(RESERVED_NUMERIC_DETECTION):
 			Schema::consistency_numeric_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_GEO_DETECTION):
+		case fnv1ah32::hash(RESERVED_GEO_DETECTION):
 			Schema::consistency_geo_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_BOOL_DETECTION):
+		case fnv1ah32::hash(RESERVED_BOOL_DETECTION):
 			Schema::consistency_bool_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_STRING_DETECTION):
+		case fnv1ah32::hash(RESERVED_STRING_DETECTION):
 			Schema::consistency_string_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TEXT_DETECTION):
+		case fnv1ah32::hash(RESERVED_TEXT_DETECTION):
 			Schema::consistency_text_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_TERM_DETECTION):
+		case fnv1ah32::hash(RESERVED_TERM_DETECTION):
 			Schema::consistency_term_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_UUID_DETECTION):
+		case fnv1ah32::hash(RESERVED_UUID_DETECTION):
 			Schema::consistency_uuid_detection(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_NAMESPACE):
+		case fnv1ah32::hash(RESERVED_NAMESPACE):
 			Schema::consistency_namespace(prop_name, value);
 			break;
-		case fnv1a32::hash(RESERVED_SCHEMA):
+		case fnv1ah32::hash(RESERVED_SCHEMA):
 			Schema::consistency_schema(prop_name, value);
 			break;
 		default:
@@ -6011,7 +6011,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 	auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto& value = it.value();
 		try {
 			_dispatch_write_properties(key, mut_properties, str_key, value);
@@ -6050,8 +6050,8 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 inline bool
 has_dispatch_set_default_spc(string_view set_default_spc)
 {
-	switch (fnv1a32::hash(set_default_spc)) {
-		case fnv1a32::hash(ID_FIELD_NAME):
+	switch (fnv1ah32::hash(set_default_spc)) {
+		case fnv1ah32::hash(ID_FIELD_NAME):
 			return true;
 		default:
 			return false;
@@ -6063,8 +6063,8 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
 	L_CALL("Schema::dispatch_set_default_spc(%s)", repr(mut_properties.to_string()).c_str());
 
-	switch (fnv1a32::hash(specification.full_meta_name)) {
-		case fnv1a32::hash(ID_FIELD_NAME):
+	switch (fnv1ah32::hash(specification.full_meta_name)) {
+		case fnv1ah32::hash(ID_FIELD_NAME):
 			set_default_spc_id(mut_properties);
 			break;
 	}
@@ -6147,7 +6147,7 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto& value = it.value();
 		try {
 			_dispatch_feed_properties(key, value);
@@ -8174,17 +8174,17 @@ Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
 	L_CALL("Schema::_dispatch_readable(%s)", repr(value.to_string()).c_str());
 
 	switch (key) {
-		case fnv1a32::hash(RESERVED_TYPE):
+		case fnv1ah32::hash(RESERVED_TYPE):
 			return Schema::readable_type(value, properties);
-		case fnv1a32::hash(RESERVED_PREFIX):
+		case fnv1ah32::hash(RESERVED_PREFIX):
 			return Schema::readable_prefix(value, properties);
-		case fnv1a32::hash(RESERVED_SLOT):
+		case fnv1ah32::hash(RESERVED_SLOT):
 			return Schema::readable_slot(value, properties);
-		case fnv1a32::hash(RESERVED_STEM_LANGUAGE):
+		case fnv1ah32::hash(RESERVED_STEM_LANGUAGE):
 			return Schema::readable_stem_language(value, properties);
-		case fnv1a32::hash(RESERVED_ACC_PREFIX):
+		case fnv1ah32::hash(RESERVED_ACC_PREFIX):
 			return Schema::readable_acc_prefix(value, properties);
-		case fnv1a32::hash(RESERVED_SCRIPT):
+		case fnv1ah32::hash(RESERVED_SCRIPT):
 			return Schema::readable_script(value, properties);
 		default:
 			throw std::out_of_range("Invalid readable");
@@ -8200,7 +8200,7 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 	// Change this item of schema in readable form.
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->str_view();
-		auto key = fnv1a32::hash(str_key);
+		auto key = fnv1ah32::hash(str_key);
 		auto& value = it.value();
 		try {
 			if (!_dispatch_readable(key, value, item_schema)) {

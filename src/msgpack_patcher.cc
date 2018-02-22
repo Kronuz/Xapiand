@@ -26,7 +26,7 @@
 
 #include "exception.h"  // for ClientError, MSG_ClientError, Error, MSG_Error
 #include "utils.h"      // for repr, stox
-#include "hashes.hh"    // for fnv1a32
+#include "hashes.hh"    // for fnv1ah32
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
@@ -35,29 +35,29 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 			try {
 				const auto& op = elem.at(PATCH_OP);
 				auto op_str = op.str_view();
-				switch (fnv1a32::hash(op_str)) {
-					case fnv1a32::hash(PATCH_ADD):
+				switch (fnv1ah32::hash(op_str)) {
+					case fnv1ah32::hash(PATCH_ADD):
 						patch_add(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_REM):
+					case fnv1ah32::hash(PATCH_REM):
 						patch_remove(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_REP):
+					case fnv1ah32::hash(PATCH_REP):
 						patch_replace(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_MOV):
+					case fnv1ah32::hash(PATCH_MOV):
 						patch_move(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_COP):
+					case fnv1ah32::hash(PATCH_COP):
 						patch_copy(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_TES):
+					case fnv1ah32::hash(PATCH_TES):
 						patch_test(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_INC):
+					case fnv1ah32::hash(PATCH_INC):
 						patch_incr(elem, object);
 						break;
-					case fnv1a32::hash(PATCH_DEC):
+					case fnv1ah32::hash(PATCH_DEC):
 						patch_decr(elem, object);
 						break;
 					default:

@@ -30,7 +30,7 @@ Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
 		const auto str_key = obj.begin()->str();
-		switch ((Hash)fnv1a32::hash(str_key)) {
+		switch ((Hash)fnv1ah32::hash(str_key)) {
 			case Hash::INTEGER:
 				return integer(obj.at(str_key));
 			case Hash::POSITIVE:
@@ -361,7 +361,7 @@ Cast::ewkt(const MsgPack& obj)
 FieldType
 Cast::getType(string_view cast_word)
 {
-	switch ((Hash)fnv1a32::hash(cast_word)) {
+	switch ((Hash)fnv1ah32::hash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;
 		case Hash::POSITIVE:          return FieldType::POSITIVE;
 		case Hash::FLOAT:             return FieldType::FLOAT;

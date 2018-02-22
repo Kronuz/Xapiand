@@ -152,7 +152,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 {
 	if (o.size() == 1) {
 		auto str_key = o.begin()->str_view();
-		switch ((Cast::Hash)fnv1a32::hash(str_key)) {
+		switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
 			case Cast::Hash::INTEGER:
 				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
 			case Cast::Hash::POSITIVE:
@@ -899,7 +899,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
 				const auto str_key = field_value.begin()->str_view();
-				switch ((Cast::Hash)fnv1a32::hash(str_key)) {
+				switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return FieldType::INTEGER;
 					case Cast::Hash::POSITIVE:
@@ -1019,7 +1019,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			if (field_value.size() == 1) {
 				const auto it = field_value.begin();
 				const auto str_key = it->str_view();
-				switch ((Cast::Hash)fnv1a32::hash(str_key)) {
+				switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));
 					case Cast::Hash::POSITIVE:
@@ -1372,7 +1372,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'd':
 				case 'D': {
-					static_assert(fnv1a32::hash(DATE_STR) == fnv1a32::hash("date"), "DATE_STR is not 'date', reorder switch.");
+					static_assert(fnv1ah32::hash(DATE_STR) == fnv1ah32::hash("date"), "DATE_STR is not 'date', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == DATE_STR) {
 						return FieldType::DATE;
@@ -1381,9 +1381,9 @@ Unserialise::type(string_view str_type)
 				}
 				case 't':
 				case 'T': {
-					static_assert(fnv1a32::hash(TERM_STR) == fnv1a32::hash("term"), "TERM_STR is not 'term', reorder switch.");
-					static_assert(fnv1a32::hash(TEXT_STR) == fnv1a32::hash("text"), "TEXT_STR is not 'text', reorder switch.");
-					static_assert(fnv1a32::hash(TIME_STR) == fnv1a32::hash("time"), "TIME_STR is not 'time', reorder switch.");
+					static_assert(fnv1ah32::hash(TERM_STR) == fnv1ah32::hash("term"), "TERM_STR is not 'term', reorder switch.");
+					static_assert(fnv1ah32::hash(TEXT_STR) == fnv1ah32::hash("text"), "TEXT_STR is not 'text', reorder switch.");
+					static_assert(fnv1ah32::hash(TIME_STR) == fnv1ah32::hash("time"), "TIME_STR is not 'time', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == TERM_STR) {
 						return FieldType::TERM;
@@ -1401,7 +1401,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'a':
 				case 'A': {
-					static_assert(fnv1a32::hash(ARRAY_STR) == fnv1a32::hash("array"), "ARRAY_STR is not 'array', reorder switch.");
+					static_assert(fnv1ah32::hash(ARRAY_STR) == fnv1ah32::hash("array"), "ARRAY_STR is not 'array', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == ARRAY_STR) {
 						return FieldType::ARRAY;
@@ -1410,7 +1410,7 @@ Unserialise::type(string_view str_type)
 				}
 				case 'e':
 				case 'E': {
-					static_assert(fnv1a32::hash(EMPTY_STR) == fnv1a32::hash("empty"), "EMPTY_STR is not 'empty', reorder switch.");
+					static_assert(fnv1ah32::hash(EMPTY_STR) == fnv1ah32::hash("empty"), "EMPTY_STR is not 'empty', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == EMPTY_STR) {
 						return FieldType::EMPTY;
@@ -1419,7 +1419,7 @@ Unserialise::type(string_view str_type)
 				}
 				case 'f':
 				case 'F': {
-					static_assert(fnv1a32::hash(FLOAT_STR) == fnv1a32::hash("float"), "FLOAT_STR is not 'float', reorder switch.");
+					static_assert(fnv1ah32::hash(FLOAT_STR) == fnv1ah32::hash("float"), "FLOAT_STR is not 'float', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == FLOAT_STR) {
 						return FieldType::FLOAT;
@@ -1433,7 +1433,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'o':
 				case 'O': {
-					static_assert(fnv1a32::hash(OBJECT_STR) == fnv1a32::hash("object"), "OBJECT_STR is not 'object', reorder switch.");
+					static_assert(fnv1ah32::hash(OBJECT_STR) == fnv1ah32::hash("object"), "OBJECT_STR is not 'object', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == OBJECT_STR) {
 						return FieldType::OBJECT;
@@ -1442,8 +1442,8 @@ Unserialise::type(string_view str_type)
 				}
 				case 's':
 				case 'S': {
-					static_assert(fnv1a32::hash(SCRIPT_STR) == fnv1a32::hash("script"), "SCRIPT_STR is not 'script', reorder switch.");
-					static_assert(fnv1a32::hash(STRING_STR) == fnv1a32::hash("string"), "STRING_STR is not 'string', reorder switch.");
+					static_assert(fnv1ah32::hash(SCRIPT_STR) == fnv1ah32::hash("script"), "SCRIPT_STR is not 'script', reorder switch.");
+					static_assert(fnv1ah32::hash(STRING_STR) == fnv1ah32::hash("string"), "STRING_STR is not 'string', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == SCRIPT_STR) {
 						return FieldType::SCRIPT;
@@ -1459,7 +1459,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'b':
 				case 'B': {
-					static_assert(fnv1a32::hash(BOOLEAN_STR) == fnv1a32::hash("boolean"), "BOOLEAN_STR is not 'boolean', reorder switch.");
+					static_assert(fnv1ah32::hash(BOOLEAN_STR) == fnv1ah32::hash("boolean"), "BOOLEAN_STR is not 'boolean', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == BOOLEAN_STR) {
 						return FieldType::BOOLEAN;
@@ -1468,7 +1468,7 @@ Unserialise::type(string_view str_type)
 				}
 				case 'f':
 				case 'F': {
-					static_assert(fnv1a32::hash(FOREIGN_STR) == fnv1a32::hash("foreign"), "FOREIGN_STR is not 'foreign', reorder switch.");
+					static_assert(fnv1ah32::hash(FOREIGN_STR) == fnv1ah32::hash("foreign"), "FOREIGN_STR is not 'foreign', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == FOREIGN_STR) {
 						return FieldType::FOREIGN;
@@ -1477,7 +1477,7 @@ Unserialise::type(string_view str_type)
 				}
 				case 'i':
 				case 'I': {
-					static_assert(fnv1a32::hash(INTEGER_STR) == fnv1a32::hash("integer"), "INTEGER_STR is not 'integer', reorder switch.");
+					static_assert(fnv1ah32::hash(INTEGER_STR) == fnv1ah32::hash("integer"), "INTEGER_STR is not 'integer', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == INTEGER_STR) {
 						return FieldType::INTEGER;
@@ -1491,7 +1491,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'p':
 				case 'P': {
-					static_assert(fnv1a32::hash(POSITIVE_STR) == fnv1a32::hash("positive"), "POSITIVE_STR is not 'positive', reorder switch.");
+					static_assert(fnv1ah32::hash(POSITIVE_STR) == fnv1ah32::hash("positive"), "POSITIVE_STR is not 'positive', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == POSITIVE_STR) {
 						return FieldType::POSITIVE;
@@ -1505,7 +1505,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 't':
 				case 'T': {
-					static_assert(fnv1a32::hash(TIMEDELTA_STR) == fnv1a32::hash("timedelta"), "TIMEDELTA_STR is not 'timedelta', reorder switch.");
+					static_assert(fnv1ah32::hash(TIMEDELTA_STR) == fnv1ah32::hash("timedelta"), "TIMEDELTA_STR is not 'timedelta', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == TIMEDELTA_STR) {
 						return FieldType::TIMEDELTA;
@@ -1519,7 +1519,7 @@ Unserialise::type(string_view str_type)
 			switch (str_type[0]) {
 				case 'g':
 				case 'G': {
-					static_assert(fnv1a32::hash(GEO_STR) == fnv1a32::hash("geospatial"), "GEO_STR is not 'geospatial', reorder switch.");
+					static_assert(fnv1ah32::hash(GEO_STR) == fnv1ah32::hash("geospatial"), "GEO_STR is not 'geospatial', reorder switch.");
 					auto lower_str_type = lower_string(str_type);
 					if (lower_str_type == GEO_STR) {
 						return FieldType::GEO;

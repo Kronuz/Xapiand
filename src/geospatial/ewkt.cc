@@ -24,36 +24,36 @@
 
 #include "../split.h"      // for Split
 #include "../utils.h"      // for stox
-#include "../hashes.hh"    // for fnv1a32
+#include "../hashes.hh"    // for fnv1ah32
 
 
 inline Geometry::Type
 get_geometry_type(string_view str_geometry_type)
 {
-	switch (fnv1a32::hash(str_geometry_type)) {
-		case fnv1a32::hash("POINT"):
+	switch (fnv1ah32::hash(str_geometry_type)) {
+		case fnv1ah32::hash("POINT"):
 			return Geometry::Type::POINT;
-		case fnv1a32::hash("CIRCLE"):
+		case fnv1ah32::hash("CIRCLE"):
 			return Geometry::Type::CIRCLE;
-		case fnv1a32::hash("CONVEX"):
+		case fnv1ah32::hash("CONVEX"):
 			return Geometry::Type::CONVEX;
-		case fnv1a32::hash("POLYGON"):
+		case fnv1ah32::hash("POLYGON"):
 			return Geometry::Type::POLYGON;
-		case fnv1a32::hash("CHULL"):
+		case fnv1ah32::hash("CHULL"):
 			return Geometry::Type::CHULL;
-		case fnv1a32::hash("MULTIPOINT"):
+		case fnv1ah32::hash("MULTIPOINT"):
 			return Geometry::Type::MULTIPOINT;
-		case fnv1a32::hash("MULTICIRCLE"):
+		case fnv1ah32::hash("MULTICIRCLE"):
 			return Geometry::Type::MULTICIRCLE;
-		case fnv1a32::hash("MULTICONVEX"):
+		case fnv1ah32::hash("MULTICONVEX"):
 			return Geometry::Type::MULTICONVEX;
-		case fnv1a32::hash("MULTIPOLYGON"):
+		case fnv1ah32::hash("MULTIPOLYGON"):
 			return Geometry::Type::MULTIPOLYGON;
-		case fnv1a32::hash("MULTICHULL"):
+		case fnv1ah32::hash("MULTICHULL"):
 			return Geometry::Type::MULTICHULL;
-		case fnv1a32::hash("GEOMETRYCOLLECTION"):
+		case fnv1ah32::hash("GEOMETRYCOLLECTION"):
 			return Geometry::Type::COLLECTION;
-		case fnv1a32::hash("GEOMETRYINTERSECTION"):
+		case fnv1ah32::hash("GEOMETRYINTERSECTION"):
 			return Geometry::Type::INTERSECTION;
 		default:
 			throw std::out_of_range("Invalid geometry");

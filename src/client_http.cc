@@ -65,7 +65,7 @@
 #include "threadpool.h"                     // for ThreadPool
 #include "utils.h"                          // for delta_string
 #include "package.h"                        // for Package
-#include "hashes.hh"                        // for fnv1a32
+#include "hashes.hh"                        // for fnv1ah32
 
 
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
@@ -441,12 +441,12 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 		if (state == 50) {
 			std::string name = lower_string(self->header_name);
 
-			switch (fnv1a32::hash(name)) {
-				case fnv1a32::hash("host"):
+			switch (fnv1ah32::hash(name)) {
+				case fnv1ah32::hash("host"):
 					self->host = self->header_value;
 					break;
-				case fnv1a32::hash("expect"):
-				case fnv1a32::hash("100-continue"):
+				case fnv1ah32::hash("expect"):
+				case fnv1ah32::hash("100-continue"):
 					if (p->content_length > MAX_BODY_SIZE) {
 						self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
 						self->close();
@@ -456,13 +456,13 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					self->expect_100 = true;
 					break;
 
-				case fnv1a32::hash("content-type"):
+				case fnv1ah32::hash("content-type"):
 					self->content_type = lower_string(self->header_value);
 					break;
-				case fnv1a32::hash("content-length"):
+				case fnv1ah32::hash("content-length"):
 					self->content_length = self->header_value;
 					break;
-				case fnv1a32::hash("accept"): {
+				case fnv1ah32::hash("accept"): {
 					static AcceptLRU accept_sets;
 					auto value = lower_string(self->header_value);
 					try {
@@ -497,7 +497,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 				}
 
-				case fnv1a32::hash("accept-encoding"): {
+				case fnv1ah32::hash("accept-encoding"): {
 					static AcceptEncodingLRU accept_encoding_sets;
 					auto value = lower_string(self->header_value);
 					try {
@@ -528,24 +528,24 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 				}
 
-				case fnv1a32::hash("x-http-method-override"):
-					switch (fnv1a32::hash(upper_string(self->header_value))) {
-						case fnv1a32::hash("PUT"):
+				case fnv1ah32::hash("x-http-method-override"):
+					switch (fnv1ah32::hash(upper_string(self->header_value))) {
+						case fnv1ah32::hash("PUT"):
 							p->method = HTTP_PUT;
 							break;
-						case fnv1a32::hash("PATCH"):
+						case fnv1ah32::hash("PATCH"):
 							p->method = HTTP_PATCH;
 							break;
-						case fnv1a32::hash("MERGE"):
+						case fnv1ah32::hash("MERGE"):
 							p->method = HTTP_MERGE;
 							break;
-						case fnv1a32::hash("DELETE"):
+						case fnv1ah32::hash("DELETE"):
 							p->method = HTTP_DELETE;
 							break;
-						case fnv1a32::hash("GET"):
+						case fnv1ah32::hash("GET"):
 							p->method = HTTP_GET;
 							break;
-						case fnv1a32::hash("POST"):
+						case fnv1ah32::hash("POST"):
 							p->method = HTTP_POST;
 							break;
 						default:
@@ -953,9 +953,9 @@ HttpClient::get_decoded_body()
 		MsgPack msgpack;
 		if (!body.empty()) {
 			rapidjson::Document rdoc;
-			switch (fnv1a32::hash(ct_type_str)) {
-				case fnv1a32::hash(FORM_URLENCODED_CONTENT_TYPE):
-				case fnv1a32::hash(X_FORM_URLENCODED_CONTENT_TYPE):
+			switch (fnv1ah32::hash(ct_type_str)) {
+				case fnv1ah32::hash(FORM_URLENCODED_CONTENT_TYPE):
+				case fnv1ah32::hash(X_FORM_URLENCODED_CONTENT_TYPE):
 					try {
 						json_load(rdoc, body);
 						msgpack = MsgPack(rdoc);
@@ -965,13 +965,13 @@ HttpClient::get_decoded_body()
 						ct_type = msgpack_type;
 					}
 					break;
-				case fnv1a32::hash(JSON_CONTENT_TYPE):
+				case fnv1ah32::hash(JSON_CONTENT_TYPE):
 					json_load(rdoc, body);
 					msgpack = MsgPack(rdoc);
 					ct_type = json_type;
 					break;
-				case fnv1a32::hash(MSGPACK_CONTENT_TYPE):
-				case fnv1a32::hash(X_MSGPACK_CONTENT_TYPE):
+				case fnv1ah32::hash(MSGPACK_CONTENT_TYPE):
+				case fnv1ah32::hash(X_MSGPACK_CONTENT_TYPE):
 					msgpack = MsgPack::unserialise(body);
 					ct_type = msgpack_type;
 					break;
@@ -1914,7 +1914,7 @@ HttpClient::url_resolve()
 		} else {
 			auto cmd = path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return static_cast<Command>(fnv1a32::hash(lower_string(cmd.substr(0, needle))));
+			return static_cast<Command>(fnv1ah32::hash(lower_string(cmd.substr(0, needle))));
 		}
 
 	} else {
@@ -2690,14 +2690,14 @@ HttpClient::resolve_encoding()
 		return Encoding::none;
 	} else {
 		for (const auto& encoding : accept_encoding_set) {
-			switch(fnv1a32::hash(std::get<2>(encoding))) {
-				case fnv1a32::hash("gzip"):
+			switch(fnv1ah32::hash(std::get<2>(encoding))) {
+				case fnv1ah32::hash("gzip"):
 					return Encoding::gzip;
-				case fnv1a32::hash("deflate"):
+				case fnv1ah32::hash("deflate"):
 					return Encoding::deflate;
-				case fnv1a32::hash("identity"):
+				case fnv1ah32::hash("identity"):
 					return Encoding::identity;
-				case fnv1a32::hash("*"):
+				case fnv1ah32::hash("*"):
 					return Encoding::identity;
 				default:
 					continue;

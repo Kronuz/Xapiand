@@ -446,36 +446,36 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 			case FieldType::TERM:
 			case FieldType::TEXT:
 			case FieldType::STRING:
-				switch (fnv1a32::hash(qf.metric)) {
-					case fnv1a32::hash("levenshtein"):
-					case fnv1a32::hash("leven"):
+				switch (fnv1ah32::hash(qf.metric)) {
+					case fnv1ah32::hash("levenshtein"):
+					case fnv1ah32::hash("leven"):
 						levenshtein(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("jarowinkler"):
-					case fnv1a32::hash("jarow"):
+					case fnv1ah32::hash("jarowinkler"):
+					case fnv1ah32::hash("jarow"):
 						jaro_winkler(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("sorensendice"):
-					case fnv1a32::hash("sorensen"):
-					case fnv1a32::hash("dice"):
+					case fnv1ah32::hash("sorensendice"):
+					case fnv1ah32::hash("sorensen"):
+					case fnv1ah32::hash("dice"):
 						sorensen_dice(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("jaccard"):
+					case fnv1ah32::hash("jaccard"):
 						jaccard(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("lcsubstr"):
-					case fnv1a32::hash("lcs"):
+					case fnv1ah32::hash("lcsubstr"):
+					case fnv1ah32::hash("lcs"):
 						lcs(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("lcsubsequence"):
-					case fnv1a32::hash("lcsq"):
+					case fnv1ah32::hash("lcsubsequence"):
+					case fnv1ah32::hash("lcsq"):
 						lcsq(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("soundex"):
-					case fnv1a32::hash("sound"):
+					case fnv1ah32::hash("soundex"):
+					case fnv1ah32::hash("sound"):
 						soundex(field_spc, reverse, value, qf);
 						break;
-					case fnv1a32::hash("jaro"):
+					case fnv1ah32::hash("jaro"):
 					default:
 						jaro(field_spc, reverse, value, qf);
 						break;

@@ -40,7 +40,7 @@
 #include "length.h"                 // for serialise_length, unserialise_length
 #include "msgpack.h"                // for MsgPack
 #include "sortable_serialise.h"     // for sortable_serialise, sortable_unseria...
-#include "hashes.hh"                // for fnv1a32
+#include "hashes.hh"                // for fnv1ah32
 
 constexpr const char FLOAT_STR[]     = "float";
 constexpr const char INTEGER_STR[]   = "integer";
@@ -73,15 +73,15 @@ constexpr uint32_t DOUBLE2INT = 1000000000;
 constexpr uint32_t MAXDOU2INT = 2000000000;
 
 enum class UUIDRepr : uint32_t {
-	simple = fnv1a32::hash("simple"),
+	simple = fnv1ah32::hash("simple"),
 #ifdef XAPIAND_UUID_GUID
-	guid = fnv1a32::hash("guid"),
+	guid = fnv1ah32::hash("guid"),
 #endif
 #ifdef XAPIAND_UUID_URN
-	urn = fnv1a32::hash("urn"),
+	urn = fnv1ah32::hash("urn"),
 #endif
 #ifdef XAPIAND_UUID_ENCODED
-	encoded = fnv1a32::hash("encoded"),
+	encoded = fnv1ah32::hash("encoded"),
 #endif
 };
 
