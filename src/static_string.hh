@@ -107,24 +107,36 @@ public:
 
 // # A function to convert integers to string.
 
+template <std::size_t N, char... a>
+struct chars_to_string {
+	constexpr static char value[N + 1]{a..., 0};
+};
+
 template <int num, std::size_t N = 0, char... a>
 struct explode : explode<num / 10, N + 1, ('0' + num % 10), a...> { };
 
 template <std::size_t N, char... a>
 struct explode<0, N, a...> {
-	constexpr static const char value[N + 1]{a..., 0};
-
+	constexpr static char value[N + 1]{a..., 0};
 };
 
 template <>
 struct explode<0, 0> {
-	constexpr static const char value[2]{'0', 0};
+	constexpr static char value[2]{'0', 0};
 };
 
 template <int num>
 static constexpr auto
 to_string() {
-	return string_char_array<sizeof(explode<num>::value) - 1>(explode<num>::value);
+	constexpr explode<num> data;
+	return string_char_array<sizeof(data.value) - 1>(data.value);
+}
+
+template <char ch>
+constexpr static auto
+char_to_string() {
+	constexpr chars_to_string<1, ch> data;
+	return string_char_array<sizeof(data.value) - 1>(data.value);
 }
 
 
@@ -135,6 +147,7 @@ constexpr static auto
 string(const char (&data)[N_PLUS_1]) {
 	return string_literal_ref<N_PLUS_1 - 1>(data);
 }
+
 
 // # This implements a null-terminated array that stores elements on stack.
 
@@ -159,6 +172,9 @@ public:
 
 	constexpr static_string(string_literal_ref<N> l) // converting
 	  : static_string(private_ctor{}, l, std::make_integer_sequence<std::size_t, N>{}) { }
+
+	constexpr static_string(char ch)
+	  : _data{(constexpr_assert(N == 1), ch), 0} { }
 
 	constexpr std::size_t length() const { return N; }
 	constexpr const char* c_str() const { return _data; }
@@ -197,21 +213,28 @@ public:
 // # A set of concatenating operators, for different combinations of raw literals, string_literal_ref<>, and string_char_array<>
 
 template <std::size_t NL, typename TL, std::size_t NR, typename TR>
-constexpr string_char_array<NL + NR> operator+(const static_string<NL, TL>& l, const static_string<NR, TR>& r)
-{
+constexpr auto operator+(const static_string<NL, TL>& l, const static_string<NR, TR>& r) {
 	return string_char_array<NL + NR>(l, r);
 }
 
 template <std::size_t NL_PLUS_1, std::size_t NR, typename TR>
-constexpr string_char_array<NL_PLUS_1 - 1 + NR> operator+(const char (&l)[NL_PLUS_1], const static_string<NR, TR>& r)
-{
+constexpr auto operator+(const char (&l)[NL_PLUS_1], const static_string<NR, TR>& r) {
 	return string_char_array<NL_PLUS_1 - 1 + NR>(string_literal_ref<NL_PLUS_1 - 1>(l), r);
 }
 
 template <std::size_t NL, typename TL, std::size_t NR_PLUS_1>
-constexpr string_char_array<NL + NR_PLUS_1 - 1> operator+(const static_string<NL, TL>& l, const char (&r)[NR_PLUS_1])
-{
+constexpr auto operator+(const static_string<NL, TL>& l, const char (&r)[NR_PLUS_1]) {
 	return string_char_array<NL + NR_PLUS_1 - 1>(l, string_literal_ref<NR_PLUS_1 - 1>(r));
+}
+
+template <std::size_t NR, typename TR>
+constexpr auto operator+(char l, const static_string<NR, TR>& r) {
+	return string_char_array<1 + NR>(string_char_array<1>(l), r);
+}
+
+template <std::size_t NL, typename TL>
+constexpr auto operator+(const static_string<NL, TL>& l, char r) {
+	return string_char_array<NL + 1>(l, string_char_array<1>(r));
 }
 
 template <std::size_t NL, typename TL, typename TR>
