@@ -24,6 +24,7 @@
 #include <string>
 #include <cstdint>
 
+#include "static_string.hh"
 #include "string_view.h"
 #include "lz4/xxhash.h"
 
@@ -100,16 +101,21 @@ class xxh64 {
 	}
 
 public:
-	static constexpr uint64_t hash(const char *p, uint64_t len, uint64_t seed=0) {
+	static constexpr uint64_t hash(const char *p, uint64_t len, uint64_t seed = 0) {
 		return finalize((len >= 32 ? h32bytes(p, len, seed) : seed + PRIME5) + len, p + (len & ~0x1F), len & 0x1F);
 	}
 
 	template <size_t N>
-	static constexpr uint64_t hash(const char(&s)[N], uint64_t seed=0) {
+	static constexpr uint64_t hash(const char(&s)[N], uint64_t seed = 0) {
 		return hash(s, N - 1, seed);
 	}
 
-	static uint64_t hash(string_view str, uint64_t seed=0) {
+	template <std::size_t SN, typename ST>
+	static constexpr uint64_t hash(const static_string::static_string<SN, ST>& str, uint64_t seed = 0) {
+		return hash(str.data(), str.size(), seed);
+	}
+
+	static uint64_t hash(string_view str, uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
 };
@@ -146,6 +152,11 @@ struct fnv1ah {
 		return hash(s, N - 1, seed);
 	}
 
+	template <std::size_t SN, typename ST>
+	static constexpr T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
+		return hash(str.data(), str.size(), seed);
+	}
+
 	static T hash(string_view str, T seed = offset) {
         T hash = seed;
 		for (char c : str) {
@@ -176,6 +187,11 @@ struct djb2h {
 	template <size_t N>
 	static constexpr T hash(const char(&s)[N], T seed = offset) {
 		return hash(s, N - 1, seed);
+	}
+
+	template <std::size_t SN, typename ST>
+	static constexpr T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
+		return hash(str.data(), str.size(), seed);
 	}
 
 	static T hash(string_view str, T seed = offset) {
