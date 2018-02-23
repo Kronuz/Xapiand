@@ -2510,7 +2510,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()).c_str(), repr(ct_type.to_string().data()).c_str());
+	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()).c_str(), repr(ct_type.to_string()).c_str());
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
