@@ -385,3 +385,80 @@ init(const T (&items)[N]) {
 }
 
 } // namespace pmh
+
+
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+
+#define PMH_INIT_BEGIN(name) static constexpr auto pmh_##name = pmh::init({
+#define PMH_OPTION_INIT(option, arg) fnv1ah32::hash(#option),
+#define PMH_INIT_END(name) });
+
+#define PMH_SWITCH_BEGIN(arg, name) switch (pmh_##name.find(fnv1ah32::hash(arg))) {
+#define PMH_OPTION_CASE(option, name) case pmh_##name.find(fnv1ah32::hash(#option))
+#define PMH_OPTION_CASE_RETURN_STRING(option, name) PMH_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
+#define PMH_OPTION_CASE_DISPATCH(option, name, args...) PMH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(args);
+#define PMH_SWITCH_END(arg) }
+
+
+#ifdef PMH_EXAMPLE_MAIN
+/*
+ * This is an eample of usage for pmh
+ */
+
+#define EXAMPLE_OPTIONS(args...) \
+  OPTION(abate, args) \
+  OPTION(justicehood, args) \
+  OPTION(sign, args) \
+  OPTION(unfunny, args) \
+  OPTION(zoanthropy, args)
+
+PMH_INIT_BEGIN(example)
+	#define OPTION PMH_OPTION_INIT
+	EXAMPLE_OPTIONS(name)
+	#undef OPTION
+PMH_INIT_END()
+
+// to_string returns a reference to a static std::string
+const std::string& to_string(std::string_view name) {
+	PMH_SWITCH_BEGIN(name, example)
+		#define OPTION PMH_OPTION_CASE_RETURN_STRING
+		EXAMPLE_OPTIONS(example)
+		#undef OPTION
+		default: {
+			static const std::string _;
+			return _;
+		}
+	PMH_SWITCH_END()
+}
+
+void _xxx_dispatcher_abate() { std::cerr << "dispatcher -> " << "YOUVE" << std::endl; }
+void _xxx_dispatcher_justicehood() { std::cerr << "dispatcher -> " << "JUSTICEHOOD" << std::endl; }
+void _xxx_dispatcher_sign() { std::cerr << "dispatcher -> " << "SIGN" << std::endl; }
+void _xxx_dispatcher_unfunny() { std::cerr << "dispatcher -> " << "UNFUNNY" << std::endl; }
+void _xxx_dispatcher_zoanthropy() { std::cerr << "dispatcher -> " << "ZOANTHROPY" << std::endl; }
+
+void dispatch(std::string_view name) {
+	PMH_SWITCH_BEGIN(name, example)
+		#define OPTION PMH_OPTION_CASE_DISPATCH
+		EXAMPLE_OPTIONS(example)
+		#undef OPTION
+	PMH_SWITCH_END()
+}
+
+int main(int argc, char const *argv[])
+{
+	const char* arg = argc > 1 ? argv[1] : "zoanthropy";
+
+	auto pos = pmh_xxx.find(fnv1ah32::hash(arg));
+	if (pos != decltype(pmh_xxx)::npos) {
+		std::cerr << arg << " found at " << pos << " / " << pmh_xxx.size() - 1 << std::endl;
+	} else {
+		std::cerr << arg << " not found." << std::endl;
+	}
+
+	std::cerr << "to_string -> " <<  to_string(arg) << std::endl;
+	dispatch(arg);
+}
+
+#endif
