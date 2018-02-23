@@ -321,7 +321,7 @@ public:
 	}
 
 	void initialize_file(void* args) {
-		L_CALL(this, "Storage::initialize_file()");
+		L_CALL("Storage::initialize_file()");
 
 		if unlikely(fd < 0) {
 			close();
