@@ -714,7 +714,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 void
 DatabaseHandler::delete_schema()
 {
-	L_CALL("DatabaseHandler::write_schema(%s)", repr(obj.to_string()).c_str());
+	L_CALL("DatabaseHandler::delete_schema()");
 
 	auto schema_begins = std::chrono::system_clock::now();
 	bool done;
@@ -1903,7 +1903,7 @@ Document::get_values(size_t retries)
 MsgPack
 Document::get_value(string_view slot_name)
 {
-	L_CALL("Document::get_value(%s)", slot_name.c_str());
+	L_CALL("Document::get_value(%s)", slot_name);
 
 	if (db_handler) {
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
@@ -1935,7 +1935,7 @@ Document::get_obj()
 MsgPack
 Document::get_field(string_view slot_name)
 {
-	L_CALL("Document::get_field(%s)", slot_name.c_str());
+	L_CALL("Document::get_field(%s)", slot_name);
 
 	return get_field(slot_name, get_obj());
 }
@@ -1944,7 +1944,7 @@ Document::get_field(string_view slot_name)
 MsgPack
 Document::get_field(string_view slot_name, const MsgPack& obj)
 {
-	L_CALL("Document::get_field(%s, <obj>)", slot_name.c_str());
+	L_CALL("Document::get_field(%s, <obj>)", slot_name);
 
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {
