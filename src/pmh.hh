@@ -39,7 +39,6 @@ auto constexpr log(T v) {
 	return n;
 }
 
-
 constexpr std::size_t bit_weight(std::size_t n) {
 	return (
 		(n <= 8 * sizeof(unsigned int)) +
@@ -167,15 +166,17 @@ private:
 		T slot1;
 		T slot2;
 		T hash;
+		T item;
 		std::size_t pos;
 
-		constexpr hashed_item_t() : cnt{0}, slot1{0}, slot2{0}, hash{0}, pos{npos} { }
+		constexpr hashed_item_t() : cnt{0}, slot1{0}, slot2{0}, hash{0}, item{0}, pos{npos} { }
 
 		constexpr hashed_item_t(const hashed_item_t& other) :
 			cnt{other.cnt},
 			slot1{other.slot1},
 			slot2{other.slot2},
 			hash{other.hash},
+			item{other.item},
 			pos{other.pos} { }
 
 		constexpr hashed_item_t(hashed_item_t&& other) noexcept :
@@ -183,6 +184,7 @@ private:
 			slot1{std::move(other.slot1)},
 			slot2{std::move(other.slot2)},
 			hash{std::move(other.hash)},
+			item{std::move(other.item)},
 			pos{std::move(other.pos)} { }
 
 		constexpr hashed_item_t& operator=(const hashed_item_t& other) {
@@ -190,6 +192,7 @@ private:
 			slot1 = other.slot1;
 			slot2 = other.slot2;
 			hash = other.hash;
+			item = other.item;
 			pos = other.pos;
 			return *this;
 		}
@@ -199,6 +202,7 @@ private:
 			slot1 = std::move(other.slot1);
 			slot2 = std::move(other.slot2);
 			hash = std::move(other.hash);
+			item = std::move(other.item);
 			pos = std::move(other.pos);
 			return *this;
 		}
@@ -236,12 +240,14 @@ public:
 		for (int try_first = 0; try_first < max_first_tries; ++try_first) {
 			_seed = prg();
 			for (std::size_t pos = 0; pos < N; ++pos) {
-				auto& item = hashed_items[pos];
-				auto hashed = hash(_items[pos], _seed);
-				item.hash = hashed;
-				item.slot1 = hashed % N;
-				item.pos = pos;
-				item.cnt = 0;
+				auto& item = _items[pos];
+				auto& hashed_item = hashed_items[pos];
+				auto hashed = hash(item, _seed);
+				hashed_item.item = item;
+				hashed_item.hash = hashed;
+				hashed_item.slot1 = hashed % N;
+				hashed_item.pos = pos;
+				hashed_item.cnt = 0;
 			}
 
 			quicksort(&hashed_items[0], &hashed_items[N - 1]);
@@ -300,14 +306,13 @@ public:
 
 							auto frm_ = frm;
 							for (; frm_ != to; ++frm_) {
-								auto item = _items[frm_->pos];
-								auto hashed = hash(item, seed);
+								auto hashed = hash(frm_->item, seed);
 								frm_->slot2 = hashed % N;
 								auto& second_bucket = _second[frm_->slot2];
 								if (second_bucket.pos != npos) {
 									break;
 								}
-								second_bucket.item = item;
+								second_bucket.item = frm_->item;
 								second_bucket.pos = frm_->pos;
 							}
 							if (frm_ == to) {
@@ -325,8 +330,7 @@ public:
 						}
 					} else {
 						// no slot clash
-						auto item = _items[frm->pos];
-						first_bucket.item = item;
+						first_bucket.item = frm->item;
 						first_bucket.pos = frm->pos;
 						++frm;
 					}
