@@ -401,10 +401,17 @@ init(const T (&items)[N]) {
 #define PMH_SWITCH_END(arg) }
 
 
-#ifdef PMH_EXAMPLE_MAIN
-/*
- * This is an eample of usage for pmh
- */
+/* This is an eample of usage for pmh
+
+// c++ -std=c++14 -pedantic -Wall -Wextra -g -fsanitize=address -O2 -I. -I./src -I../src -I.. -o tst ../tst-pmh.cc && ./tst
+
+#include <iostream>
+#include <string>
+#include <string_view>
+
+#include "pmh.hh"
+#include "hashes.hh"
+
 
 #define EXAMPLE_OPTIONS(args...) \
   OPTION(abate, args) \
@@ -461,4 +468,4 @@ int main(int argc, char const *argv[])
 	dispatch(arg);
 }
 
-#endif
+/**/
