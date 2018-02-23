@@ -228,19 +228,18 @@ private:
 	}
 
 	std::size_t _seed;
-	const T (&_items)[N];
 	bucket_t _first[N];
 	bucket_t _second[N];
 
 public:
-	constexpr pmh(const T (&items)[N]) : _items{items} {
+	constexpr pmh(const T (&items)[N]) {
 		RNG prg;
 		hashed_item_t hashed_items[N];
 
 		for (int try_first = 0; try_first < max_first_tries; ++try_first) {
 			_seed = prg();
 			for (std::size_t pos = 0; pos < N; ++pos) {
-				auto& item = _items[pos];
+				auto& item = items[pos];
 				auto& hashed_item = hashed_items[pos];
 				auto hashed = hash(item, _seed);
 				hashed_item.item = item;
