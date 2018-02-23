@@ -2510,7 +2510,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string().data()).c_str(), repr(ct_type.to_string().data()).c_str());
+	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()).c_str(), repr(ct_type.to_string().data()).c_str());
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -2533,7 +2533,7 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
-	L_CALL("HttpClient::is_acceptable_type((%s, <ct_types>)", repr(ct_type_pattern.to_string().data()).c_str());
+	L_CALL("HttpClient::is_acceptable_type((%s, <ct_types>)", repr(ct_type_pattern.to_string()).c_str());
 
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {

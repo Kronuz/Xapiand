@@ -1903,7 +1903,7 @@ Document::get_values(size_t retries)
 MsgPack
 Document::get_value(string_view slot_name)
 {
-	L_CALL("Document::get_value(%s)", slot_name);
+	L_CALL("Document::get_value(%s)", repr(slot_name).c_str());
 
 	if (db_handler) {
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
@@ -1935,7 +1935,7 @@ Document::get_obj()
 MsgPack
 Document::get_field(string_view slot_name)
 {
-	L_CALL("Document::get_field(%s)", slot_name);
+	L_CALL("Document::get_field(%s)", repr(slot_name).c_str());
 
 	return get_field(slot_name, get_obj());
 }
@@ -1944,7 +1944,7 @@ Document::get_field(string_view slot_name)
 MsgPack
 Document::get_field(string_view slot_name, const MsgPack& obj)
 {
-	L_CALL("Document::get_field(%s, <obj>)", slot_name);
+	L_CALL("Document::get_field(%s, <obj>)", repr(slot_name).c_str());
 
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {
