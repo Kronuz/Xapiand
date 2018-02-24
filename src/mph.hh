@@ -261,7 +261,7 @@ private:
 	bucket_t _second[N];
 
 public:
-	constexpr mph(const T (&items)[N]) {
+	constexpr mph(const T (&items)[N]) : _seed(0) {
 		RNG rng;
 		hashed_item_t hashed_items[N];
 
