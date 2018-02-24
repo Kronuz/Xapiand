@@ -29,15 +29,8 @@
 
 namespace mph {
 
-template <typename T>
-auto constexpr log(T v) {
-	std::size_t n = 0;
-	while (v > 1) {
-		n += 1;
-		v >>= 1;
-	}
-	return n;
-}
+////////////////////////////////////////////////////////////////////////////////
+// Constexpr linear congruential random number engine
 
 constexpr std::size_t bit_weight(std::size_t n) {
 	return (
@@ -59,6 +52,16 @@ unsigned long long select_uint_least(std::integral_constant<std::size_t, N>) {
 template<std::size_t N>
 using select_uint_least_t = decltype(select_uint_least(std::integral_constant<std::size_t, bit_weight(N)>()));
 
+template <typename T>
+auto constexpr log(T v) {
+	std::size_t n = 0;
+	while (v > 1) {
+		n += 1;
+		v >>= 1;
+	}
+	return n;
+}
+
 template <typename T, T a, T c, T m>
 class linear_congruential_engine {
 	static_assert(std::is_unsigned<T>::value, "Only supports unsigned integral types");
@@ -71,24 +74,40 @@ public:
 	static constexpr result_type default_seed = 1u;
 
 	linear_congruential_engine() = default;
-	constexpr linear_congruential_engine(result_type s) { seed(s); }
 
-	void seed(result_type s = default_seed) { state_ = s; }
+	constexpr linear_congruential_engine(result_type s) {
+		seed(s);
+	}
+
+	void seed(result_type s = default_seed) {
+		state_ = s;
+	}
+
 	constexpr result_type operator()() {
 		using uint_least_t = select_uint_least_t<log(a) + log(m) + 4>;
 		uint_least_t tmp = static_cast<uint_least_t>(multiplier) * state_ + increment;
-		if(modulus)
+		if (modulus) {
 			state_ = tmp % modulus;
-		else
+		} else {
 			state_ = tmp;
+		}
 		return state_;
 	}
+
 	constexpr void discard(unsigned long long n) {
-		while (n--)
+		while (n--) {
 			operator()();
+		}
 	}
-	static constexpr result_type min() { return increment == 0u ? 1u : 0u; };
-	static constexpr result_type max() { return modulus - 1u; };
+
+	static constexpr result_type min() {
+		return increment == 0u ? 1u : 0u;
+	};
+
+	static constexpr result_type max() {
+		return modulus - 1u;
+	};
+
 	friend constexpr bool operator==(const linear_congruential_engine& self,
 									 const linear_congruential_engine& other) {
 		return self.state_ == other.state_;
@@ -104,9 +123,10 @@ private:
 
 using minstd_rand0 = linear_congruential_engine<std::uint_fast32_t, 16807, 0, 2147483647>;
 using minstd_rand = linear_congruential_engine<std::uint_fast32_t, 48271, 0, 2147483647>;
-using default_prg_t = minstd_rand;
+
 
 ////////////////////////////////////////////////////////////////////////////////
+// Constexpr quicksort
 
 template <class T>
 constexpr void swap(T& a, T& b) {
@@ -139,20 +159,25 @@ constexpr void quicksort(It left, It right) {
 	}
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
+// Computes a constexpr minimal perfect hash table
+// Based on:
+// "Practical minimal perfect hash functions for large databases", CACM, 35(1):105-121
+// Edward A. Fox, Lenwood S. Heath, Qi Fan Chen and Amjad M. Daoud,
 
-#define MPH_RESORT
+#define MPH_SORT_CLASHES
 
-template <typename T, std::size_t N, typename RNG = default_prg_t>
+constexpr static auto npos = std::numeric_limits<std::size_t>::max();
+
+
+template <typename T, std::size_t N, typename RNG = minstd_rand>
 class mph {
 	static_assert(N > 0, "Must have at least one element");
 	static_assert(std::is_unsigned<T>::value, "Only supports unsigned integral types");
 
 public:
-	constexpr static int max_first_tries = 100;
-	constexpr static int max_second_tries = 100;
 	constexpr static int max_clashes = 2 * (1u << (log(N) / 2));
-	constexpr static auto npos = std::numeric_limits<std::size_t>::max();
 
 	struct bucket_t {
 		T item;
@@ -235,11 +260,12 @@ private:
 
 public:
 	constexpr mph(const T (&items)[N]) {
-		RNG prg;
+		RNG rng;
 		hashed_item_t hashed_items[N];
 
-		for (int try_first = 0; try_first < max_first_tries; ++try_first) {
-			_seed = prg();
+		for (int retry = 1000; retry; --retry) {
+			_seed = rng();
+
 			for (std::size_t pos = 0; pos < N; ++pos) {
 				auto& item = items[pos];
 				auto& hashed_item = hashed_items[pos];
@@ -259,13 +285,11 @@ public:
 
 			auto frm = &hashed_items[0];
 			auto to = frm;
-			bool last = false;
 
-#ifdef MPH_RESORT
-			while (!last) {
+#ifdef MPH_SORT_CLASHES
+			do {
 				++to;
-				last = to == end;
-				if (last || frm->slot1 != to->slot1) {
+				if (to == end || frm->slot1 != to->slot1) {
 					auto cnt = to - frm;
 					if (cnt > max_clashes) {
 						break;
@@ -274,35 +298,30 @@ public:
 						frm->cnt = cnt;
 					}
 				}
-			}
-			if (!last) {
+			} while (to != end);
+			if (to != end) {
 				continue;
 			}
+
 			quicksort(&hashed_items[0], &hashed_items[N - 1]);
 
 			///
 			frm = &hashed_items[0];
 			to = frm;
-			last = false;
 #endif
 
-			while (!last) {
+			do {
 				++to;
-				last = to == end;
-
-				if (last || frm->slot1 != to->slot1) {
+				if (to == end || frm->slot1 != to->slot1) {
 					auto& first_bucket = _first[frm->slot1];
 					auto cnt = to - frm;
 					if (cnt > 1) {
 						// slot clash
-#ifndef MPH_RESORT
 						if (cnt > max_clashes) {
 							break;
 						}
-#endif
-						int try_second = 0;
-						for (; try_second < max_second_tries; ++try_second) {
-							auto seed = prg();
+						for (int retry = 1000; retry; --retry) {
+							auto seed = rng();
 							first_bucket.item = seed;
 
 							auto frm_ = frm;
@@ -326,7 +345,7 @@ public:
 								second_bucket.pos = npos;
 							}
 						}
-						if (try_second == max_second_tries) {
+						if (frm != to) {
 							break;
 						}
 					} else {
@@ -336,11 +355,13 @@ public:
 						++frm;
 					}
 				}
+			} while (to != end);
+			if (to != end) {
+				continue;
 			}
-			if (last) {
-				return;
-			}
+			return;
 		}
+
 		throw std::invalid_argument("Cannot figure out a suitable MPH table");
 	}
 
@@ -350,10 +371,6 @@ public:
 			throw std::out_of_range("Item not found");
 		}
 		return pos;
-	}
-
-	constexpr auto size() const {
-		return N;
 	}
 
 	constexpr std::size_t find(const T& item) const {
@@ -377,6 +394,9 @@ public:
 		return npos;
 	}
 
+	constexpr auto size() const {
+		return N;
+	}
 };
 
 
@@ -392,12 +412,13 @@ init(const T (&items)[N]) {
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
-#define MPH_INIT_BEGIN(name) static constexpr auto mph_##name = mph::init({
+#define MPH_VAR(name) mph_##name
+#define MPH_INIT_BEGIN(name) static constexpr auto MPH_VAR(name) = mph::init({
 #define MPH_OPTION_INIT(option, arg) fnv1ah32::hash(#option),
 #define MPH_INIT_END(name) });
 
-#define MPH_SWITCH_BEGIN(arg, name) switch (mph_##name.find(fnv1ah32::hash(arg))) {
-#define MPH_OPTION_CASE(option, name) case mph_##name.find(fnv1ah32::hash(#option))
+#define MPH_SWITCH_BEGIN(arg, name) switch (MPH_VAR(name).find(fnv1ah32::hash(arg))) {
+#define MPH_OPTION_CASE(option, name) case MPH_VAR(name).find(fnv1ah32::hash(#option))
 #define MPH_OPTION_CASE_RETURN_STRING(option, name) MPH_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
 #define MPH_OPTION_CASE_DISPATCH(option, name, args...) MPH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(args);
 #define MPH_SWITCH_END(arg) }
