@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
+ * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
  * Copyright (C) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Andrzej Krzemienski.
- * Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
+ * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
 
  * Boost Software License - Version 1.0 - August 17th, 2003
  *
