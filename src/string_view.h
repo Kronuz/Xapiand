@@ -20,9 +20,11 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef STATIC_STRING_H
+#define STATIC_STRING_H
 
 #include "xapiand.h"                  // for HAVE_STRING_VIEW
+
 
 #if defined(HAVE_STRING_VIEW)
 
@@ -1463,3 +1465,5 @@ public:
         return _str_view;
     }
 };
+
+#endif // STATIC_STRING_H

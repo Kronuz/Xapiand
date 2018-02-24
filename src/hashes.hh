@@ -20,22 +20,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#pragma once
+
+#ifndef HASHES_HH
+#define HASHES_HH
 
 #include <string>
 #include <cstdint>
 
-#include "static_string.hh"
 #include "string_view.h"
+#include "static_string.hh"
+
 #include "lz4/xxhash.h"
 
 
- //               _               _
- // __  ____  __ | |__   __ _ ___| |__
- // \ \/ /\ \/ / | '_ \ / _` / __| '_ \
- //  >  <  >  <  | | | | (_| \__ \ | | |
- // /_/\_\/_/\_\ |_| |_|\__,_|___/_| |_|
-
+/*               _               _
+ * __  ____  __ | |__   __ _ ___| |__
+ * \ \/ /\ \/ / | '_ \ / _` / __| '_ \
+ *  >  <  >  <  | | | | (_| \__ \ | | |
+ * /_/\_\/_/\_\ |_| |_|\__,_|___/_| |_|
+ */
 class xxh64 {
 	static constexpr uint64_t PRIME1 = 11400714785074694791ULL;
 	static constexpr uint64_t PRIME2 = 14029467366897019727ULL;
@@ -111,14 +114,18 @@ public:
 		return hash(s, N - 1, seed);
 	}
 
+#ifdef STATIC_STRING_H
 	template <std::size_t SN, typename ST>
 	static constexpr uint64_t hash(const static_string::static_string<SN, ST>& str, uint64_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
 	}
+#endif
 
+#ifdef STRING_VIEW_HH
 	static uint64_t hash(string_view str, uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
+#endif
 };
 
 
@@ -126,9 +133,18 @@ class xxh32 {
 	/* constexpr xxh32::hash() not implemented! */
 
 public:
+#ifdef STATIC_STRING_H
+	template <std::size_t SN, typename ST>
+	static constexpr uint32_t hash(const static_string::static_string<SN, ST>& str, uint32_t seed = 0) {
+		return hash(str.data(), str.size(), seed);
+	}
+#endif
+
+#ifdef STRING_VIEW_HH
 	static uint32_t hash(string_view str, uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
+#endif
 };
 
 
@@ -137,11 +153,12 @@ constexpr uint32_t operator"" _XXH(const char* s, size_t size) {
 }
 
 
-//   __            _         _               _
-//  / _|_ ____   _/ | __ _  | |__   __ _ ___| |__
-// | |_| '_ \ \ / / |/ _` | | '_ \ / _` / __| '_ \
-// |  _| | | \ V /| | (_| | | | | | (_| \__ \ | | |
-// |_| |_| |_|\_/ |_|\__,_| |_| |_|\__,_|___/_| |_|
+/*   __            _         _               _
+ *  / _|_ ____   _/ | __ _  | |__   __ _ ___| |__
+ * | |_| '_ \ \ / / |/ _` | | '_ \ / _` / __| '_ \
+ * |  _| | | \ V /| | (_| | | | | | (_| \__ \ | | |
+ * |_| |_| |_|\_/ |_|\__,_| |_| |_|\__,_|___/_| |_|
+ */
 template <typename T, T prime, T offset>
 struct fnv1ah {
 	static constexpr T hash(const char *p, std::size_t len, T seed = offset) {
@@ -153,11 +170,14 @@ struct fnv1ah {
 		return hash(s, N - 1, seed);
 	}
 
+#ifdef STATIC_STRING_H
 	template <std::size_t SN, typename ST>
 	static constexpr T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
+#endif
 
+#ifdef STRING_VIEW_HH
 	static T hash(string_view str, T seed = offset) {
         T hash = seed;
 		for (char c : str) {
@@ -165,6 +185,7 @@ struct fnv1ah {
         }
         return hash;
     }
+#endif
 };
 using fnv1ah16 = fnv1ah<std::uint16_t, 0x21dU, 51363UL>;  // shouldn't exist, figured out the prime and offset
 using fnv1ah32 = fnv1ah<std::uint32_t, 0x1000193UL, 2166136261UL>;
@@ -172,13 +193,13 @@ using fnv1ah64 = fnv1ah<std::uint64_t, 0x100000001b3ULL, 14695981039346656037ULL
 // using fnv1ah128 = fnv1ah<__uint128_t, 0x10000000000000000000159ULLL, 275519064689413815358837431229664493455ULLL>;  // too big for compiler
 
 
-//      _  _ _    ____    _               _
-//   __| |(_) |__|___ \  | |__   __ _ ___| |__
-//  / _` || | '_ \ __) | | '_ \ / _` / __| '_ \
-// | (_| || | |_) / __/  | | | | (_| \__ \ | | |
-//  \__,_|/ |_.__/_____| |_| |_|\__,_|___/_| |_|
-//      |__/
-
+/*      _  _ _    ____    _               _
+ *   __| |(_) |__|___ \  | |__   __ _ ___| |__
+ *  / _` || | '_ \ __) | | '_ \ / _` / __| '_ \
+ * | (_| || | |_) / __/  | | | | (_| \__ \ | | |
+ *  \__,_|/ |_.__/_____| |_| |_|\__,_|___/_| |_|
+ *      |__/
+ */
 template <typename T, T mul, T offset>
 struct djb2h {
 	static constexpr T hash(const char *p, std::size_t len, T seed = offset) {
@@ -190,11 +211,14 @@ struct djb2h {
 		return hash(s, N - 1, seed);
 	}
 
+#ifdef STATIC_STRING_H
 	template <std::size_t SN, typename ST>
 	static constexpr T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
+#endif
 
+#ifdef STRING_VIEW_HH
 	static T hash(string_view str, T seed = offset) {
 		T hash = seed;
 		for (char c : str) {
@@ -202,6 +226,7 @@ struct djb2h {
 		}
 		return hash;
 	}
+#endif
 };
 
 // from https://stackoverflow.com/a/41849998/167522, used primeth with bits size
@@ -209,3 +234,5 @@ using djb2h8 = djb2h<std::uint8_t, 7, 5>;  // (h << 3) - h <-- mul should? be pr
 using djb2h16 = djb2h<std::uint16_t, 13, 31>;  // (h << 2) + (h << 3) + h <-- mul should? be prime 13 or 17
 using djb2h32 = djb2h<std::uint32_t, 33, 5381>;  // the one implemented everywhere: (h << 5) + h <-- mul should? be prime 31 or 37
 using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul should? be prime 61 or 67
+
+#endif // HASHES_HH

@@ -26,7 +26,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef STATIC_STRING_HH
+#define STATIC_STRING_HH
 
 #include <cassert>
 #include <cstddef>
@@ -99,7 +101,9 @@ public:
 	}
 
 	constexpr operator const char* () const { return _data; }
+#ifdef STRING_VIEW_HH
 	constexpr operator string_view() const { return string_view(_data, N); }
+#endif
 	operator std::string() const { return std::string(_data, N); }
 
 };
@@ -202,7 +206,9 @@ public:
 	}
 
 	constexpr operator const char* () const { return _data; }
+#ifdef STRING_VIEW_HH
 	constexpr operator string_view() const { return string_view(_data, N); }
+#endif
 	operator std::string() const { return std::string(_data, N); }
 };
 
@@ -271,3 +277,5 @@ std::string operator+(const TL& l, const static_string<NR, TR>& r)
 }
 
 } // namespace static_string
+
+#endif // STATIC_STRING_HH_
