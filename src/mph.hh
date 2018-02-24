@@ -411,20 +411,18 @@ init(const T (&items)[N]) {
 } // namespace mph
 
 
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-
+#define MPH_HASH(arg) fnv1ah32::hash(arg)
 #define MPH_VAR(name) mph_##name
-#define MPH_FIND(option, name) MPH_VAR(name).find(fnv1ah32::hash(#option))
+#define MPH_FIND(arg, name) MPH_VAR(name).find(MPH_HASH(arg))
 
 #define MPH_INIT_BEGIN(name) static constexpr auto MPH_VAR(name) = mph::init({
-#define MPH_OPTION_INIT(option, arg) fnv1ah32::hash(#option),
+#define MPH_OPTION_INIT(option, arg) MPH_HASH(#option),
 #define MPH_INIT_END(name) });
 
-#define MPH_SWITCH_BEGIN(arg, name) switch (MPH_VAR(name).find(fnv1ah32::hash(arg))) {
-#define MPH_OPTION_CASE(option, name) case MPH_FIND(option, name)
+#define MPH_SWITCH_BEGIN(arg, name) switch (MPH_FIND(arg, name)) {
+#define MPH_OPTION_CASE(option, name) case MPH_FIND(#option, name)
 #define MPH_OPTION_CASE_RETURN_STRING(option, name) MPH_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
-#define MPH_OPTION_CASE_DISPATCH(option, name, args...) MPH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(args);
+#define MPH_OPTION_CASE_DISPATCH(option, name, ...) MPH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(__VA_ARGS__);
 #define MPH_SWITCH_END(arg) }
 
 #endif // MPH_HH
