@@ -27,7 +27,7 @@
 #include <stdexcept>
 
 
-namespace pmh {
+namespace mph {
 
 template <typename T>
 auto constexpr log(T v) {
@@ -53,7 +53,7 @@ unsigned long select_uint_least(std::integral_constant<std::size_t, 3>);
 unsigned long long select_uint_least(std::integral_constant<std::size_t, 2>);
 template<std::size_t N>
 unsigned long long select_uint_least(std::integral_constant<std::size_t, N>) {
-	static_assert(N < 2, "unsupported type size");
+	static_assert(N < 2, "Unsupported type size");
 	return {};
 }
 template<std::size_t N>
@@ -115,8 +115,8 @@ constexpr void swap(T& a, T& b) {
 	b = tmp;
 }
 
-template <typename Iterator>
-constexpr Iterator partition(Iterator left, Iterator right) {
+template <typename It>
+constexpr It partition(It left, It right) {
 	auto pivot = left + (right - left) / 2;
 	auto value = *pivot;
 	swap(*right, *pivot);
@@ -130,19 +130,21 @@ constexpr Iterator partition(Iterator left, Iterator right) {
 	return left;
 }
 
-template <typename Iterator>
-constexpr void quicksort(Iterator left, Iterator right) {
+template <typename It>
+constexpr void quicksort(It left, It right) {
 	if (left < right) {
-		auto new_pivot = partition(left, right);
-		quicksort(left, new_pivot);
-		quicksort(new_pivot + 1, right);
+		auto pivot = partition(left, right);
+		quicksort(left, pivot);
+		quicksort(pivot + 1, right);
 	}
 }
 
-#define PMH_RESORT
+////////////////////////////////////////////////////////////////////////////////
+
+#define MPH_RESORT
 
 template <typename T, std::size_t N, typename RNG = default_prg_t>
-class pmh {
+class mph {
 	static_assert(N > 0, "Must have at least one element");
 	static_assert(std::is_unsigned<T>::value, "Only supports unsigned integral types");
 
@@ -232,7 +234,7 @@ private:
 	bucket_t _second[N];
 
 public:
-	constexpr pmh(const T (&items)[N]) {
+	constexpr mph(const T (&items)[N]) {
 		RNG prg;
 		hashed_item_t hashed_items[N];
 
@@ -259,7 +261,7 @@ public:
 			auto to = frm;
 			bool last = false;
 
-#ifdef PMH_RESORT
+#ifdef MPH_RESORT
 			while (!last) {
 				++to;
 				last = to == end;
@@ -293,7 +295,7 @@ public:
 					auto cnt = to - frm;
 					if (cnt > 1) {
 						// slot clash
-#ifndef PMH_RESORT
+#ifndef MPH_RESORT
 						if (cnt > max_clashes) {
 							break;
 						}
@@ -339,7 +341,7 @@ public:
 				return;
 			}
 		}
-		throw std::invalid_argument("Cannot figure out a suitable PMH table");
+		throw std::invalid_argument("Cannot figure out a suitable MPH table");
 	}
 
 	constexpr std::size_t operator[](const T& item) const {
@@ -381,91 +383,21 @@ public:
 template <typename T, std::size_t N>
 constexpr static auto
 init(const T (&items)[N]) {
-	return pmh<T, N>(items);
+	return mph<T, N>(items);
 }
 
-} // namespace pmh
+} // namespace mph
 
 
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
-#define PMH_INIT_BEGIN(name) static constexpr auto pmh_##name = pmh::init({
-#define PMH_OPTION_INIT(option, arg) fnv1ah32::hash(#option),
-#define PMH_INIT_END(name) });
+#define MPH_INIT_BEGIN(name) static constexpr auto mph_##name = mph::init({
+#define MPH_OPTION_INIT(option, arg) fnv1ah32::hash(#option),
+#define MPH_INIT_END(name) });
 
-#define PMH_SWITCH_BEGIN(arg, name) switch (pmh_##name.find(fnv1ah32::hash(arg))) {
-#define PMH_OPTION_CASE(option, name) case pmh_##name.find(fnv1ah32::hash(#option))
-#define PMH_OPTION_CASE_RETURN_STRING(option, name) PMH_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
-#define PMH_OPTION_CASE_DISPATCH(option, name, args...) PMH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(args);
-#define PMH_SWITCH_END(arg) }
-
-
-/* This is an eample of usage for pmh
-
-// c++ -std=c++14 -pedantic -Wall -Wextra -g -fsanitize=address -O2 -I. -I./src -I../src -I.. -o tst ../tst-pmh.cc && ./tst
-
-#include <iostream>
-#include <string>
-#include <string_view>
-
-#include "pmh.hh"
-#include "hashes.hh"
-
-
-#define EXAMPLE_OPTIONS(args...) \
-  OPTION(abate, args) \
-  OPTION(justicehood, args) \
-  OPTION(sign, args) \
-  OPTION(unfunny, args) \
-  OPTION(zoanthropy, args)
-
-PMH_INIT_BEGIN(example)
-	#define OPTION PMH_OPTION_INIT
-	EXAMPLE_OPTIONS(name)
-	#undef OPTION
-PMH_INIT_END()
-
-// to_string returns a reference to a static std::string
-const std::string& to_string(std::string_view name) {
-	PMH_SWITCH_BEGIN(name, example)
-		#define OPTION PMH_OPTION_CASE_RETURN_STRING
-		EXAMPLE_OPTIONS(example)
-		#undef OPTION
-		default: {
-			static const std::string _;
-			return _;
-		}
-	PMH_SWITCH_END()
-}
-
-void _xxx_dispatcher_abate() { std::cerr << "dispatcher -> " << "YOUVE" << std::endl; }
-void _xxx_dispatcher_justicehood() { std::cerr << "dispatcher -> " << "JUSTICEHOOD" << std::endl; }
-void _xxx_dispatcher_sign() { std::cerr << "dispatcher -> " << "SIGN" << std::endl; }
-void _xxx_dispatcher_unfunny() { std::cerr << "dispatcher -> " << "UNFUNNY" << std::endl; }
-void _xxx_dispatcher_zoanthropy() { std::cerr << "dispatcher -> " << "ZOANTHROPY" << std::endl; }
-
-void dispatch(std::string_view name) {
-	PMH_SWITCH_BEGIN(name, example)
-		#define OPTION PMH_OPTION_CASE_DISPATCH
-		EXAMPLE_OPTIONS(example)
-		#undef OPTION
-	PMH_SWITCH_END()
-}
-
-int main(int argc, char const *argv[])
-{
-	const char* arg = argc > 1 ? argv[1] : "zoanthropy";
-
-	auto pos = pmh_xxx.find(fnv1ah32::hash(arg));
-	if (pos != decltype(pmh_xxx)::npos) {
-		std::cerr << arg << " found at " << pos << " / " << pmh_xxx.size() - 1 << std::endl;
-	} else {
-		std::cerr << arg << " not found." << std::endl;
-	}
-
-	std::cerr << "to_string -> " <<  to_string(arg) << std::endl;
-	dispatch(arg);
-}
-
-/**/
+#define MPH_SWITCH_BEGIN(arg, name) switch (mph_##name.find(fnv1ah32::hash(arg))) {
+#define MPH_OPTION_CASE(option, name) case mph_##name.find(fnv1ah32::hash(#option))
+#define MPH_OPTION_CASE_RETURN_STRING(option, name) MPH_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
+#define MPH_OPTION_CASE_DISPATCH(option, name, args...) MPH_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(args);
+#define MPH_SWITCH_END(arg) }
