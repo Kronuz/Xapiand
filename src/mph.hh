@@ -165,7 +165,7 @@ public:
 #ifdef MPH_SORT_CLASHES
 		do {
 			++to;
-			if (to == end || (frm->item % N) != (to->item % N)) {
+			if (to == end || frm->slot != to->slot) {
 				auto cnt = to - frm;
 				for (; frm != to; ++frm) {
 					frm->cnt = cnt;
@@ -185,6 +185,9 @@ public:
 				auto& index = _index[frm->slot];
 				while (true) {
 					auto rnd = rng();
+					if (!rnd) {
+						continue;
+					}
 					auto frm_ = frm;
 					std::size_t used_zero = npos;
 					for (; frm_ != to; ++frm_) {
@@ -215,10 +218,7 @@ public:
 
 	constexpr std::size_t find(const T& item) const {
 		auto slot = (item ^ _index[item % N]) % N;
-		if (_items[slot] == item) {
-			return slot;
-		}
-		return npos;
+		return _items[slot] == item ? slot : npos;
 	}
 
 	constexpr std::size_t operator[](const T& item) const {
