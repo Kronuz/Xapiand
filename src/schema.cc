@@ -8339,7 +8339,7 @@ Schema::get_full(bool readable) const
 {
 	L_CALL("Schema::get_full(%s)", readable ? "true" : "false");
 
-	auto full_schema = get_schema();
+	auto full_schema = get_schema().clone();
 	if (readable) {
 		dispatch_readable(full_schema, true);
 	}
