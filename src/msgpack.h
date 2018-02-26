@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -715,7 +717,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					} else {
 						THROW(duplicate_key, "Cannot rename to duplicate key: %s", std::string(str_key).c_str());
 					}
-					assert(parent_body->_obj->via.map.size == parent_body->map.size());
+					ASSERT(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
 			}
 		}
@@ -734,7 +736,7 @@ inline MsgPack::MsgPack(const MsgPack& other)
 	: _body(std::make_shared<Body>(other)),
 	  _const_body(_body.get())
 {
-	assert(!other._body->_lock);
+	ASSERT(!other._body->_lock);
 }
 
 
@@ -816,7 +818,7 @@ inline MsgPack MsgPack::clone() const {
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	assert(!other._body->_lock);
+	ASSERT(!other._body->_lock);
 	_assignment(msgpack::object(other, *_body->_zone));
 	return *this;
 }
@@ -842,7 +844,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 
 
 inline MsgPack* MsgPack::_init_map(size_t pos) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
@@ -859,19 +861,19 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		}
 		ret = &inserted.first->second.second;
 	}
-	assert(_body->_obj->via.map.size == _body->map.size());
+	ASSERT(_body->_obj->via.map.size == _body->map.size());
 	_body->_initialized = true;
 	return ret;
 }
 
 
 inline void MsgPack::_update_map(size_t pos) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto it = _body->map.find(str_key);
-		assert(it != _body->map.end());
+		ASSERT(it != _body->map.end());
 		auto& elem = it->second;
 		elem.first._body->_obj = &p->key;
 		elem.second._body->_obj = &p->val;
@@ -882,7 +884,7 @@ inline void MsgPack::_update_map(size_t pos) {
 
 
 inline MsgPack* MsgPack::_init_array(size_t pos) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	if (pos < _body->array.size()) {
 		// Destroy the previous objects to update
 		_body->array.resize(pos);
@@ -895,14 +897,14 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
 		ret = &*_body->array.insert(_body->array.end(), std::move(last_val));
 	}
-	assert(_body->_obj->via.array.size == _body->array.size());
+	ASSERT(_body->_obj->via.array.size == _body->array.size());
 	_body->_initialized = true;
 	return ret;
 }
 
 
 inline void MsgPack::_update_array(size_t pos) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 		// If the previous item was a MAP, force map update.
@@ -916,7 +918,7 @@ inline void MsgPack::_update_array(size_t pos) {
 
 
 inline void MsgPack::_init() {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::MAP:
 			_init_map(0);
@@ -932,7 +934,7 @@ inline void MsgPack::_init() {
 
 
 inline void MsgPack::_deinit() {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
@@ -949,7 +951,7 @@ inline void MsgPack::_deinit() {
 
 
 inline void MsgPack::_reserve_map(size_t rsize) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity < MSGPACK_MAP_INIT_SIZE ? MSGPACK_MAP_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
@@ -971,7 +973,7 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 
 inline void MsgPack::_reserve_array(size_t rsize) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity >= MSGPACK_ARRAY_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < rsize) {
@@ -1088,7 +1090,7 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 
 template <typename M, typename>
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _erase(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1106,7 +1108,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(string_view key) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1118,7 +1120,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(string_view key) {
 
 			auto& mobj = it->second.second;
 			auto pos_ = mobj._body->_pos;
-			assert(pos_ < _body->_obj->via.map.size);
+			ASSERT(pos_ < _body->_obj->via.map.size);
 			auto p = &_body->_obj->via.map.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.map.size - pos_ - 1) * sizeof(msgpack::object_kv));
 			--_body->_obj->via.map.size;
@@ -1140,7 +1142,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(string_view key) {
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1161,7 +1163,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 
 			auto& mobj = *it;
 			auto pos_ = mobj._body->_pos;
-			assert(pos_ < _body->_obj->via.array.size);
+			ASSERT(pos_ < _body->_obj->via.array.size);
 			auto p = &_body->_obj->via.array.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.array.size - pos_ - 1) * sizeof(msgpack::object));
 			--_body->_obj->via.array.size;
@@ -1183,7 +1185,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 
 
 inline void MsgPack::_clear() noexcept {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
@@ -1206,7 +1208,7 @@ inline void MsgPack::_clear() noexcept {
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1225,7 +1227,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(string_view key, T&& val, bool overwrite) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::MAP;
@@ -1262,7 +1264,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(string_view key, T&& val, bool ov
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwrite) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;
@@ -1299,7 +1301,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrite) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1318,7 +1320,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool overwrite) {
-	assert(!_body->_lock);
+	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_body->_obj->type = msgpack::type::ARRAY;

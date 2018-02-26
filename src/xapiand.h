@@ -82,9 +82,8 @@
 	#define UUID_ENCODER (Base59::dubaluchk())
 #endif
 
+
 #ifdef XAPIAND_TRACEBACKS
-#ifdef assert
-#undef assert
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -92,8 +91,12 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#define assert(e) \
+#define ASSERT(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
-#endif // assert
-#endif // XAPIAND_TRACEBACKS
+#ifdef assert
+#undef assert
+#define assert ASSERT
+#endif // ASSERT
+#else // XAPIAND_TRACEBACKS
 #define ASSERT assert
+#endif // XAPIAND_TRACEBACKS
