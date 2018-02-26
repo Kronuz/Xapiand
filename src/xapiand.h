@@ -24,8 +24,13 @@
 
 #include "config.h"
 
-#include <stdio.h>            // for fprintf
+#if defined(__cpluplus)
+#include <cassert>           // for assert
+#include <cstdio>            // for fprintf
+#else
 #include <assert.h>           // for assert
+#include <stdio.h>            // for fprintf
+#endif
 
 
 #define XAPIAND_TAGLINE              "You Know, Also for Search"
@@ -82,12 +87,13 @@
 #undef assert
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 #define assert(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
-#endif
-#endif
+#endif // assert
+#endif // XAPIAND_TRACEBACKS
+#define ASSERT assert
