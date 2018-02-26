@@ -114,14 +114,14 @@ public:
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_H
+#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static std::uint64_t hash(const static_string::static_string<SN, ST>& str, std::uint64_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
 	}
 #endif
 
-#ifdef STRING_VIEW_HH
+#ifdef STRING_VIEW_H
 	static std::uint64_t hash(string_view str, std::uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
@@ -137,14 +137,14 @@ class xxh32 {
 	/* constexpr xxh32::hash() not implemented! */
 
 public:
-#ifdef STATIC_STRING_H
+#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static std::uint32_t hash(const static_string::static_string<SN, ST>& str, std::uint32_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
 	}
 #endif
 
-#ifdef STRING_VIEW_HH
+#ifdef STRING_VIEW_H
 	static std::uint32_t hash(string_view str, std::uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
@@ -181,14 +181,14 @@ struct fnv1ah {
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_H
+#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 #endif
 
-#ifdef STRING_VIEW_HH
+#ifdef STRING_VIEW_H
 	constexpr static T hash(string_view str, T seed = offset) {
         return hash(str.data(), str.size(), seed);
     }
@@ -226,14 +226,14 @@ struct djb2h {
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_H
+#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 #endif
 
-#ifdef STRING_VIEW_HH
+#ifdef STRING_VIEW_H
 	constexpr static T hash(string_view str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}

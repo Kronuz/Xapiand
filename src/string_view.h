@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef STATIC_STRING_H
-#define STATIC_STRING_H
+#ifndef STRING_VIEW_H
+#define STRING_VIEW_H
 
 #include "xapiand.h"                  // for HAVE_STRING_VIEW
 
@@ -1466,4 +1466,4 @@ public:
     }
 };
 
-#endif // STATIC_STRING_H
+#endif // STRING_VIEW_H
