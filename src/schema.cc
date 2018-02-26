@@ -6891,62 +6891,62 @@ Schema::feed_endpoint(const MsgPack& prop_endpoint)
 
 
 void
-Schema::write_position(MsgPack& properties, string_view prop_name, const MsgPack& doc_position)
+Schema::write_position(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	L_CALL("Schema::write_position(%s)", repr(doc_position.to_string()).c_str());
 
 	process_position(prop_name, doc_position);
-	properties[prop_name] = specification.position;
+	mut_properties[prop_name] = specification.position;
 }
 
 
 void
-Schema::write_weight(MsgPack& properties, string_view prop_name, const MsgPack& doc_weight)
+Schema::write_weight(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
 	L_CALL("Schema::write_weight(%s)", repr(doc_weight.to_string()).c_str());
 
 	process_weight(prop_name, doc_weight);
-	properties[prop_name] = specification.weight;
+	mut_properties[prop_name] = specification.weight;
 }
 
 
 void
-Schema::write_spelling(MsgPack& properties, string_view prop_name, const MsgPack& doc_spelling)
+Schema::write_spelling(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
 	L_CALL("Schema::write_spelling(%s)", repr(doc_spelling.to_string()).c_str());
 
 	process_spelling(prop_name, doc_spelling);
-	properties[prop_name] = specification.spelling;
+	mut_properties[prop_name] = specification.spelling;
 }
 
 
 void
-Schema::write_positions(MsgPack& properties, string_view prop_name, const MsgPack& doc_positions)
+Schema::write_positions(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	L_CALL("Schema::write_positions(%s)", repr(doc_positions.to_string()).c_str());
 
 	process_positions(prop_name, doc_positions);
-	properties[prop_name] = specification.positions;
+	mut_properties[prop_name] = specification.positions;
 }
 
 
 void
-Schema::write_index(MsgPack& properties, string_view prop_name, const MsgPack& doc_index)
+Schema::write_index(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change.
 	L_CALL("Schema::write_index(%s)", repr(doc_index.to_string()).c_str());
 
 	process_index(prop_name, doc_index);
-	properties[prop_name] = _get_str_index(specification.index);
+	mut_properties[prop_name] = _get_str_index(specification.index);
 }
 
 
 void
-Schema::write_store(MsgPack& properties, string_view prop_name, const MsgPack& doc_store)
+Schema::write_store(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_store)
 {
 	L_CALL("Schema::write_store(%s)", repr(doc_store.to_string()).c_str());
 
@@ -6956,12 +6956,12 @@ Schema::write_store(MsgPack& properties, string_view prop_name, const MsgPack& d
 	 */
 
 	process_store(prop_name, doc_store);
-	properties[prop_name] = doc_store.boolean();
+	mut_properties[prop_name] = doc_store.boolean();
 }
 
 
 void
-Schema::write_recurse(MsgPack& properties, string_view prop_name, const MsgPack& doc_recurse)
+Schema::write_recurse(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_recurse)
 {
 	L_CALL("Schema::write_recurse(%s)", repr(doc_recurse.to_string()).c_str());
 
@@ -6971,19 +6971,19 @@ Schema::write_recurse(MsgPack& properties, string_view prop_name, const MsgPack&
 	 */
 
 	process_recurse(prop_name, doc_recurse);
-	properties[prop_name] = static_cast<bool>(specification.flags.is_recurse);
+	mut_properties[prop_name] = static_cast<bool>(specification.flags.is_recurse);
 }
 
 
 void
-Schema::write_dynamic(MsgPack& properties, string_view prop_name, const MsgPack& doc_dynamic)
+Schema::write_dynamic(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
 	L_CALL("Schema::write_dynamic(%s)", repr(doc_dynamic.to_string()).c_str());
 
 	try {
 		specification.flags.dynamic = doc_dynamic.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -6991,14 +6991,14 @@ Schema::write_dynamic(MsgPack& properties, string_view prop_name, const MsgPack&
 
 
 void
-Schema::write_strict(MsgPack& properties, string_view prop_name, const MsgPack& doc_strict)
+Schema::write_strict(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_strict)
 {
 	// RESERVED_STRICT is heritable but can't change.
 	L_CALL("Schema::write_strict(%s)", repr(doc_strict.to_string()).c_str());
 
 	try {
 		specification.flags.strict = doc_strict.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.strict);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7006,14 +7006,14 @@ Schema::write_strict(MsgPack& properties, string_view prop_name, const MsgPack& 
 
 
 void
-Schema::write_date_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_date_detection)
+Schema::write_date_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_date_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_date_detection(%s)", repr(doc_date_detection.to_string()).c_str());
 
 	try {
 		specification.flags.date_detection = doc_date_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7021,14 +7021,14 @@ Schema::write_date_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_time_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_time_detection)
+Schema::write_time_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_time_detection)
 {
 	// RESERVED_TI_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_time_detection(%s)", repr(doc_time_detection.to_string()).c_str());
 
 	try {
 		specification.flags.time_detection = doc_time_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7036,14 +7036,14 @@ Schema::write_time_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_timedelta_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_timedelta_detection)
+Schema::write_timedelta_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_timedelta_detection)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_timedelta_detection(%s)", repr(doc_timedelta_detection.to_string()).c_str());
 
 	try {
 		specification.flags.timedelta_detection = doc_timedelta_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7051,14 +7051,14 @@ Schema::write_timedelta_detection(MsgPack& properties, string_view prop_name, co
 
 
 void
-Schema::write_numeric_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_numeric_detection)
+Schema::write_numeric_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_numeric_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_numeric_detection(%s)", repr(doc_numeric_detection.to_string()).c_str());
 
 	try {
 		specification.flags.numeric_detection = doc_numeric_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7066,14 +7066,14 @@ Schema::write_numeric_detection(MsgPack& properties, string_view prop_name, cons
 
 
 void
-Schema::write_geo_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_geo_detection)
+Schema::write_geo_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_geo_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_geo_detection(%s)", repr(doc_geo_detection.to_string()).c_str());
 
 	try {
 		specification.flags.geo_detection = doc_geo_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7081,14 +7081,14 @@ Schema::write_geo_detection(MsgPack& properties, string_view prop_name, const Ms
 
 
 void
-Schema::write_bool_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_detection)
+Schema::write_bool_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_bool_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_bool_detection(%s)", repr(doc_bool_detection.to_string()).c_str());
 
 	try {
 		specification.flags.bool_detection = doc_bool_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7096,14 +7096,14 @@ Schema::write_bool_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_string_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_string_detection)
+Schema::write_string_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_string_detection)
 {
 	// RESERVED_S_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_string_detection(%s)", repr(doc_string_detection.to_string()).c_str());
 
 	try {
 		specification.flags.string_detection = doc_string_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7111,14 +7111,14 @@ Schema::write_string_detection(MsgPack& properties, string_view prop_name, const
 
 
 void
-Schema::write_text_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_text_detection)
+Schema::write_text_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_text_detection(%s)", repr(doc_text_detection.to_string()).c_str());
 
 	try {
 		specification.flags.text_detection = doc_text_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7126,14 +7126,14 @@ Schema::write_text_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_term_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_term_detection)
+Schema::write_term_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_term_detection)
 {
 	// RESERVED_TE_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_term_detection(%s)", repr(doc_term_detection.to_string()).c_str());
 
 	try {
 		specification.flags.term_detection = doc_term_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7141,14 +7141,14 @@ Schema::write_term_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_uuid_detection(MsgPack& properties, string_view prop_name, const MsgPack& doc_uuid_detection)
+Schema::write_uuid_detection(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_uuid_detection)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_uuid_detection(%s)", repr(doc_uuid_detection.to_string()).c_str());
 
 	try {
 		specification.flags.uuid_detection = doc_uuid_detection.boolean();
-		properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7156,18 +7156,18 @@ Schema::write_uuid_detection(MsgPack& properties, string_view prop_name, const M
 
 
 void
-Schema::write_bool_term(MsgPack& properties, string_view prop_name, const MsgPack& doc_bool_term)
+Schema::write_bool_term(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
 	L_CALL("Schema::write_bool_term(%s)", repr(doc_bool_term.to_string()).c_str());
 
 	process_bool_term(prop_name, doc_bool_term);
-	properties[prop_name] = static_cast<bool>(specification.flags.bool_term);
+	mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_term);
 }
 
 
 void
-Schema::write_namespace(MsgPack& properties, string_view prop_name, const MsgPack& doc_namespace)
+Schema::write_namespace(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_namespace)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
 	L_CALL("Schema::write_namespace(%s)", repr(doc_namespace.to_string()).c_str());
@@ -7183,7 +7183,7 @@ Schema::write_namespace(MsgPack& properties, string_view prop_name, const MsgPac
 			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
 		}
 		specification.flags.has_namespace = true;
-		properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name).c_str());
 	}
@@ -7191,7 +7191,7 @@ Schema::write_namespace(MsgPack& properties, string_view prop_name, const MsgPac
 
 
 void
-Schema::write_partial_paths(MsgPack& properties, string_view prop_name, const MsgPack& doc_partial_paths)
+Schema::write_partial_paths(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_partial_paths)
 {
 	L_CALL("Schema::write_partial_paths(%s)", repr(doc_partial_paths.to_string()).c_str());
 
@@ -7200,12 +7200,12 @@ Schema::write_partial_paths(MsgPack& properties, string_view prop_name, const Ms
 	 */
 
 	process_partial_paths(prop_name, doc_partial_paths);
-	properties[prop_name] = static_cast<bool>(specification.flags.partial_paths);
+	mut_properties[prop_name] = static_cast<bool>(specification.flags.partial_paths);
 }
 
 
 void
-Schema::write_index_uuid_field(MsgPack& properties, string_view prop_name, const MsgPack& doc_index_uuid_field)
+Schema::write_index_uuid_field(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_index_uuid_field)
 {
 	L_CALL("Schema::write_index_uuid_field(%s)", repr(doc_index_uuid_field.to_string()).c_str());
 
@@ -7214,7 +7214,7 @@ Schema::write_index_uuid_field(MsgPack& properties, string_view prop_name, const
 	 */
 
 	process_index_uuid_field(prop_name, doc_index_uuid_field);
-	properties[prop_name] = _get_str_index_uuid_field(specification.index_uuid_field);
+	mut_properties[prop_name] = _get_str_index_uuid_field(specification.index_uuid_field);
 }
 
 
@@ -7228,13 +7228,13 @@ Schema::write_schema(MsgPack&, string_view prop_name, const MsgPack& doc_schema)
 
 
 void
-Schema::write_endpoint(MsgPack& properties, string_view prop_name, const MsgPack& doc_endpoint)
+Schema::write_endpoint(MsgPack& mut_properties, string_view prop_name, const MsgPack& doc_endpoint)
 {
 	L_CALL("Schema::write_endpoint(%s)", repr(doc_endpoint.to_string()).c_str());
 
 	process_endpoint(prop_name, doc_endpoint);
 	specification.flags.static_endpoint = true;
-	properties[prop_name] = specification.endpoint;
+	mut_properties[prop_name] = specification.endpoint;
 }
 
 
@@ -8259,15 +8259,15 @@ Schema::consistency_schema(string_view prop_name, const MsgPack& doc_schema)
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 inline void
-Schema::write_script(MsgPack& properties)
+Schema::write_script(MsgPack& mut_properties)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
-	L_CALL("Schema::write_script(%s)", repr(properties.to_string()).c_str());
+	L_CALL("Schema::write_script(%s)", repr(mut_properties.to_string()).c_str());
 
 	if (specification.script) {
 		Script script(*specification.script);
 		specification.script = std::make_unique<const MsgPack>(script.process_script(specification.flags.strict));
-		properties[RESERVED_SCRIPT] = *specification.script;
+		mut_properties[RESERVED_SCRIPT] = *specification.script;
 		specification.flags.normalized_script = true;
 	}
 }
@@ -8303,19 +8303,19 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 
 
 void
-Schema::set_default_spc_id(MsgPack& properties)
+Schema::set_default_spc_id(MsgPack& mut_properties)
 {
-	L_CALL("Schema::set_default_spc_id(%s)", repr(properties.to_string()).c_str());
+	L_CALL("Schema::set_default_spc_id(%s)", repr(mut_properties.to_string()).c_str());
 
 	specification.flags.bool_term = true;
 	specification.flags.has_bool_term = true;
-	properties[RESERVED_BOOL_TERM] = true;  // force bool term
+	mut_properties[RESERVED_BOOL_TERM] = true;  // force bool term
 
 	if (!specification.flags.has_index) {
 		const auto index = specification.index | TypeIndex::FIELD_ALL;  // force field_all
 		if (specification.index != index) {
 			specification.index = index;
-			properties[RESERVED_INDEX] = _get_str_index(index);
+			mut_properties[RESERVED_INDEX] = _get_str_index(index);
 		}
 		specification.flags.has_index = true;
 	}
