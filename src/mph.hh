@@ -231,7 +231,7 @@ public:
 
 template <typename T, std::size_t N>
 constexpr static auto
-init(const T (&items)[N]) {
+make_mph(const T (&items)[N]) {
 	return mph<T, N>(items);
 }
 
@@ -242,7 +242,7 @@ init(const T (&items)[N]) {
 #define MPH_VAR(name) mph_##name
 #define MPH_FIND(arg, name) MPH_VAR(name).find(MPH_HASH(arg))
 
-#define MPH_INIT_BEGIN(name) static constexpr auto MPH_VAR(name) = mph::init({
+#define MPH_INIT_BEGIN(name) static constexpr auto MPH_VAR(name) = mph::make_mph({
 #define MPH_OPTION_INIT(option, arg) MPH_HASH(#option),
 #define MPH_INIT_END(name) });
 
