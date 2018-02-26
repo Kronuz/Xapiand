@@ -97,29 +97,25 @@ class mph {
 
 	struct hashed_item_t {
 		T item;
-		T slot;
+		std::size_t slot;
 		std::size_t cnt;
-		std::size_t pos;
 
-		constexpr hashed_item_t() : item{0}, slot{0}, cnt{0}, pos{npos} { }
+		constexpr hashed_item_t() : item{0}, slot{0}, cnt{0} { }
 
 		constexpr hashed_item_t(const hashed_item_t& other) :
 			item{other.item},
 			slot{other.slot},
-			cnt{other.cnt},
-			pos{other.pos} { }
+			cnt{other.cnt} { }
 
 		constexpr hashed_item_t(hashed_item_t&& other) noexcept :
 			item{std::move(other.item)},
 			slot{std::move(other.slot)},
-			cnt{std::move(other.cnt)},
-			pos{std::move(other.pos)} { }
+			cnt{std::move(other.cnt)} { }
 
 		constexpr hashed_item_t& operator=(const hashed_item_t& other) {
 			item = other.item;
 			slot = other.slot;
 			cnt = other.cnt;
-			pos = other.pos;
 			return *this;
 		}
 
@@ -127,7 +123,6 @@ class mph {
 			item = std::move(other.item);
 			slot = std::move(other.slot);
 			cnt = std::move(other.cnt);
-			pos = std::move(other.pos);
 			return *this;
 		}
 
@@ -152,8 +147,7 @@ public:
 			auto& hashed_item = hashed_items[pos];
 			auto hashed = item;
 			hashed_item.item = item;
-			hashed_item.slot = hashed % N;
-			hashed_item.pos = pos;
+			hashed_item.slot = static_cast<std::size_t>(hashed % N);
 		}
 
 		quicksort(&hashed_items[0], &hashed_items[N - 1]);
@@ -217,16 +211,16 @@ public:
 	}
 
 	constexpr std::size_t find(const T& item) const {
-		auto slot = (item ^ _index[item % N]) % N;
+		auto slot = static_cast<std::size_t>((item ^ _index[item % N]) % N);
 		return _items[slot] == item ? slot : npos;
 	}
 
 	constexpr std::size_t operator[](const T& item) const {
-		auto pos = find(item);
-		if (pos == npos) {
+		auto slot = find(item);
+		if (slot == npos) {
 			throw std::out_of_range("Item not found");
 		}
-		return pos;
+		return slot;
 	}
 
 	constexpr auto size() const {
