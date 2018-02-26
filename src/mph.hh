@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2018 German Mendez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,99 +32,20 @@
 namespace mph {
 
 ////////////////////////////////////////////////////////////////////////////////
-// Constexpr linear congruential random number engine
+// Constexpr linear congruential random number generator
 
-constexpr std::size_t bit_weight(std::size_t n) {
-	return (
-		(n <= 8 * sizeof(unsigned int)) +
-		(n <= 8 * sizeof(unsigned long)) +
-		(n <= 8 * sizeof(unsigned long long)) +
-		(n <= 128)
-	);
-}
-
-unsigned int select_uint_least(std::integral_constant<std::size_t, 4>);
-unsigned long select_uint_least(std::integral_constant<std::size_t, 3>);
-unsigned long long select_uint_least(std::integral_constant<std::size_t, 2>);
-template<std::size_t N>
-unsigned long long select_uint_least(std::integral_constant<std::size_t, N>) {
-	static_assert(N < 2, "Unsupported type size");
-	return {};
-}
-template<std::size_t N>
-using select_uint_least_t = decltype(select_uint_least(std::integral_constant<std::size_t, bit_weight(N)>()));
-
-template <typename T>
-auto constexpr log(T v) {
-	std::size_t n = 0;
-	while (v > 1) {
-		n += 1;
-		v >>= 1;
-	}
-	return n;
-}
-
-template <typename T, T a, T c, T m>
-class linear_congruential_engine {
+template <typename T, T multiplier, T increment, T modulus>
+class linear_congruential_generator {
 	static_assert(std::is_unsigned<T>::value, "Only supports unsigned integral types");
 
+	T seed = 1u;
+
 public:
-	using result_type = T;
-	static constexpr result_type multiplier = a;
-	static constexpr result_type increment = c;
-	static constexpr result_type modulus = m;
-	static constexpr result_type default_seed = 1u;
-
-	linear_congruential_engine() = default;
-
-	constexpr linear_congruential_engine(result_type s) {
-		seed(s);
+	constexpr T operator()() {
+		seed = (seed * multiplier + increment) % modulus;
+		return seed;
 	}
-
-	void seed(result_type s = default_seed) {
-		state_ = s;
-	}
-
-	constexpr result_type operator()() {
-		using uint_least_t = select_uint_least_t<log(a) + log(m) + 4>;
-		uint_least_t tmp = static_cast<uint_least_t>(multiplier) * state_ + increment;
-		if (modulus) {
-			state_ = tmp % modulus;
-		} else {
-			state_ = tmp;
-		}
-		return state_;
-	}
-
-	constexpr void discard(unsigned long long n) {
-		while (n--) {
-			operator()();
-		}
-	}
-
-	static constexpr result_type min() {
-		return increment == 0u ? 1u : 0u;
-	};
-
-	static constexpr result_type max() {
-		return modulus - 1u;
-	};
-
-	friend constexpr bool operator==(const linear_congruential_engine& self,
-									 const linear_congruential_engine& other) {
-		return self.state_ == other.state_;
-	}
-	friend constexpr bool operator!=(const linear_congruential_engine& self,
-									 const linear_congruential_engine& other) {
-		return !(self == other);
-	}
-
-private:
-	result_type state_ = default_seed;
 };
-
-using minstd_rand0 = linear_congruential_engine<std::uint_fast32_t, 16807, 0, 2147483647>;
-using minstd_rand = linear_congruential_engine<std::uint_fast32_t, 48271, 0, 2147483647>;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -164,207 +85,140 @@ constexpr void quicksort(It left, It right) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Computes a constexpr minimal perfect hash table
-// Based on:
-// "Practical minimal perfect hash functions for large databases", CACM, 35(1):105-121
-// Edward A. Fox, Lenwood S. Heath, Qi Fan Chen and Amjad M. Daoud,
-
-#define MPH_SORT_CLASHES
 
 constexpr static auto npos = std::numeric_limits<std::size_t>::max();
 
+#define MPH_SORT_CLASHES
 
-template <typename T, std::size_t N, typename RNG = minstd_rand>
+template <typename T, std::size_t N, typename RNG = linear_congruential_generator<T, 48271, 0, 2147483647>>
 class mph {
 	static_assert(N > 0, "Must have at least one element");
 	static_assert(std::is_unsigned<T>::value, "Only supports unsigned integral types");
 
-public:
-	constexpr static int max_clashes = 2 * (1u << (log(N) / 2));
-
-	struct bucket_t {
-		T item;
-		std::size_t pos;
-
-		constexpr bucket_t() : item(0), pos{npos} { }
-	};
-
-private:
-
 	struct hashed_item_t {
-		std::size_t cnt;
-		T slot1;
-		T slot2;
-		T hash;
 		T item;
+		T slot;
+		std::size_t cnt;
 		std::size_t pos;
 
-		constexpr hashed_item_t() : cnt{0}, slot1{0}, slot2{0}, hash{0}, item{0}, pos{npos} { }
+		constexpr hashed_item_t() : item{0}, slot{0}, cnt{0}, pos{npos} { }
 
 		constexpr hashed_item_t(const hashed_item_t& other) :
-			cnt{other.cnt},
-			slot1{other.slot1},
-			slot2{other.slot2},
-			hash{other.hash},
 			item{other.item},
+			slot{other.slot},
+			cnt{other.cnt},
 			pos{other.pos} { }
 
 		constexpr hashed_item_t(hashed_item_t&& other) noexcept :
-			cnt{std::move(other.cnt)},
-			slot1{std::move(other.slot1)},
-			slot2{std::move(other.slot2)},
-			hash{std::move(other.hash)},
 			item{std::move(other.item)},
+			slot{std::move(other.slot)},
+			cnt{std::move(other.cnt)},
 			pos{std::move(other.pos)} { }
 
 		constexpr hashed_item_t& operator=(const hashed_item_t& other) {
-			cnt = other.cnt;
-			slot1 = other.slot1;
-			slot2 = other.slot2;
-			hash = other.hash;
 			item = other.item;
+			slot = other.slot;
+			cnt = other.cnt;
 			pos = other.pos;
 			return *this;
 		}
 
 		constexpr hashed_item_t& operator=(hashed_item_t&& other) noexcept {
-			cnt = std::move(other.cnt);
-			slot1 = std::move(other.slot1);
-			slot2 = std::move(other.slot2);
-			hash = std::move(other.hash);
 			item = std::move(other.item);
+			slot = std::move(other.slot);
+			cnt = std::move(other.cnt);
 			pos = std::move(other.pos);
 			return *this;
 		}
 
 		constexpr bool operator<(const hashed_item_t& other) const {
 			if (cnt == other.cnt) {
-				return slot1 < other.slot1;
+				return slot < other.slot;
 			}
 			return cnt > other.cnt;
 		}
 	};
 
-	constexpr static std::size_t hash(const T &value, std::size_t seed) {
-		std::size_t key = seed ^ value;
-		key = (~key) + (key << 21); // key = (key << 21) - key - 1;
-		key = key ^ (key >> 24);
-		key = (key + (key << 3)) + (key << 8); // key * 265
-		key = key ^ (key >> 14);
-		key = (key + (key << 2)) + (key << 4); // key * 21
-		key = key ^ (key >> 28);
-		key = key + (key << 31);
-		return key;
-	}
-
-	std::size_t _seed;
-	bucket_t _first[N];
-	bucket_t _second[N];
+	T _index[N];
+	T _items[N];
 
 public:
-	constexpr mph(const T (&items)[N]) : _seed(0) {
+	constexpr mph(const T (&items)[N]) : _index{}, _items{} {
 		RNG rng;
 		hashed_item_t hashed_items[N];
 
-		for (int retry = 1000; retry; --retry) {
-			_seed = rng();
-
-			for (std::size_t pos = 0; pos < N; ++pos) {
-				auto& item = items[pos];
-				auto& hashed_item = hashed_items[pos];
-				auto hashed = hash(item, _seed);
-				hashed_item.item = item;
-				hashed_item.hash = hashed;
-				hashed_item.slot1 = hashed % N;
-				hashed_item.pos = pos;
-				hashed_item.cnt = 0;
-			}
-
-			quicksort(&hashed_items[0], &hashed_items[N - 1]);
-
-			auto end = &hashed_items[N];
-
-			///
-
-			auto frm = &hashed_items[0];
-			auto to = frm;
-
-#ifdef MPH_SORT_CLASHES
-			do {
-				++to;
-				if (to == end || frm->slot1 != to->slot1) {
-					auto cnt = to - frm;
-					if (cnt > max_clashes) {
-						break;
-					}
-					for (; frm != to; ++frm) {
-						frm->cnt = cnt;
-					}
-				}
-			} while (to != end);
-			if (to != end) {
-				continue;
-			}
-
-			quicksort(&hashed_items[0], &hashed_items[N - 1]);
-
-			///
-			frm = &hashed_items[0];
-			to = frm;
-#endif
-
-			do {
-				++to;
-				if (to == end || frm->slot1 != to->slot1) {
-					auto& first_bucket = _first[frm->slot1];
-					auto cnt = to - frm;
-					if (cnt > 1) {
-						// slot clash
-						if (cnt > max_clashes) {
-							break;
-						}
-						for (int retry = 1000; retry; --retry) {
-							auto seed = rng();
-							first_bucket.item = seed;
-
-							auto frm_ = frm;
-							for (; frm_ != to; ++frm_) {
-								auto hashed = hash(frm_->item, seed);
-								frm_->slot2 = hashed % N;
-								auto& second_bucket = _second[frm_->slot2];
-								if (second_bucket.pos != npos) {
-									break;
-								}
-								second_bucket.item = frm_->item;
-								second_bucket.pos = frm_->pos;
-							}
-							if (frm_ == to) {
-								frm = frm_;
-								break;
-							}
-							// rollback, it failed to place all items in empty slots
-							for (auto frm__ = frm; frm__ != frm_; ++frm__) {
-								auto& second_bucket = _second[frm__->slot2];
-								second_bucket.pos = npos;
-							}
-						}
-						if (frm != to) {
-							break;
-						}
-					} else {
-						// no slot clash
-						first_bucket.item = frm->item;
-						first_bucket.pos = frm->pos;
-						++frm;
-					}
-				}
-			} while (to != end);
-			if (to != end) {
-				continue;
-			}
-			return;
+		for (std::size_t pos = 0; pos < N; ++pos) {
+			auto& item = items[pos];
+			auto& hashed_item = hashed_items[pos];
+			auto hashed = item;
+			hashed_item.item = item;
+			hashed_item.slot = hashed % N;
+			hashed_item.pos = pos;
 		}
 
-		throw std::invalid_argument("Cannot figure out a suitable MPH table");
+		quicksort(&hashed_items[0], &hashed_items[N - 1]);
+
+		auto end = &hashed_items[N];
+		auto frm = &hashed_items[0];
+		auto to = frm;
+
+#ifdef MPH_SORT_CLASHES
+		do {
+			++to;
+			if (to == end || (frm->item % N) != (to->item % N)) {
+				auto cnt = to - frm;
+				for (; frm != to; ++frm) {
+					frm->cnt = cnt;
+				}
+			}
+		} while (to != end);
+
+		quicksort(&hashed_items[0], &hashed_items[N - 1]);
+
+		frm = &hashed_items[0];
+		to = frm;
+#endif
+
+		do {
+			++to;
+			if (to == end || frm->slot != to->slot) {
+				auto& index = _index[frm->slot];
+				while (true) {
+					auto rnd = rng();
+					auto frm_ = frm;
+					std::size_t used_zero = npos;
+					for (; frm_ != to; ++frm_) {
+						auto slot = (frm_->item ^ rnd) % N;
+						if (_items[slot] || slot == used_zero) {
+							break;
+						}
+						if (frm_->item) {
+							_items[slot] = frm_->item;
+						} else {
+							used_zero = slot;
+						}
+						frm_->slot = slot;
+					}
+					if (frm_ == to) {
+						index = rnd;
+						frm = frm_;
+						break;
+					}
+					// it failed to place all items in empty slots, rollback
+					for (auto frm__ = frm; frm__ != frm_; ++frm__) {
+						_items[frm__->slot] = 0;
+					}
+				}
+			}
+		} while (to != end);
+	}
+
+	constexpr std::size_t find(const T& item) const {
+		auto slot = (item ^ _index[item % N]) % N;
+		if (_items[slot] == item) {
+			return slot;
+		}
+		return npos;
 	}
 
 	constexpr std::size_t operator[](const T& item) const {
@@ -373,27 +227,6 @@ public:
 			throw std::out_of_range("Item not found");
 		}
 		return pos;
-	}
-
-	constexpr std::size_t find(const T& item) const {
-		auto hashed = hash(item, _seed);
-		const auto& first_bucket = _first[hashed % N];
-		if (first_bucket.pos != npos) {
-			if (first_bucket.item != item) {
-				return npos;
-			}
-			return first_bucket.pos;
-		}
-		hashed = hash(item, first_bucket.item);
-		const auto& second_bucket = _second[hashed % N];
-		if (second_bucket.pos != npos) {
-			if (hashed)
-			if (second_bucket.item != item) {
-				return npos;
-			}
-			return second_bucket.pos;
-		}
-		return npos;
 	}
 
 	constexpr auto size() const {
