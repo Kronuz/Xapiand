@@ -45,7 +45,6 @@
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
-#include "hashes.hh"                       // for fnv1ah32
 #include "static_string.hh"                // for static_string
 
 #ifndef L_SCHEMA
@@ -1413,10 +1412,10 @@ bool has_dispatch_process_properties(uint32_t key);
 bool has_dispatch_process_concrete_properties(uint32_t key);
 
 
-const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language) {
+const std::unique_ptr<SimpleStopper<>>& getStopper(string_view language) {
 	static std::mutex mtx;
 	static std::string path_stopwords(getenv("XAPIAN_PATH_STOPWORDS") ? getenv("XAPIAN_PATH_STOPWORDS") : PATH_STOPWORDS);
-	static std::unordered_map<uint32_t, std::unique_ptr<Xapian::SimpleStopper>> stoppers;
+	static std::unordered_map<uint32_t, std::unique_ptr<SimpleStopper<>>> stoppers;
 	auto language_hash = fnv1ah32::hash(language);
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language_hash);
@@ -1425,7 +1424,7 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language) {
 		auto path = path_stopwords + "/" + std::string(language) + ".txt";
 		std::ifstream words(path);
 		if (words.is_open()) {
-			stopper = std::make_unique<Xapian::SimpleStopper>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
+			stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
 		} else {
 			L_WARNING("Cannot open stop words file: %s", path.c_str());
 		}
