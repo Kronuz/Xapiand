@@ -130,6 +130,11 @@ public:
 		return XXH64(str.data(), str.size(), seed);
 	}
 #endif
+
+	template <typename... Args>
+	auto operator()(Args&&... args) {
+		return hash(std::forward<Args>(args)...);
+	}
 };
 
 
@@ -153,6 +158,11 @@ public:
 		return XXH32(str.data(), str.size(), seed);
 	}
 #endif
+
+	template <typename... Args>
+	auto operator()(Args&&... args) {
+		return hash(std::forward<Args>(args)...);
+	}
 };
 
 constexpr std::uint64_t operator"" _xx(const char* s, size_t size) {
@@ -197,6 +207,11 @@ struct fnv1ah {
         return hash(str.data(), str.size(), seed);
 	}
 #endif
+
+	template <typename... Args>
+	auto operator()(Args&&... args) {
+		return hash(std::forward<Args>(args)...);
+	}
 };
 using fnv1ah16 = fnv1ah<std::uint16_t, 0x21dU, 51363UL>;  // shouldn't exist, figured out the prime and offset
 using fnv1ah32 = fnv1ah<std::uint32_t, 0x1000193UL, 2166136261UL>;
@@ -246,6 +261,11 @@ struct djb2h {
 		return hash(str.data(), str.size(), seed);
 	}
 #endif
+
+	template <typename... Args>
+	auto operator()(Args&&... args) {
+		return hash(std::forward<Args>(args)...);
+	}
 };
 
 // from https://stackoverflow.com/a/41849998/167522, used primeth with bits size
