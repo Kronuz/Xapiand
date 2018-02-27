@@ -459,19 +459,6 @@ inline M modulus(T val, M mod) {
 }
 
 
-template <typename S, typename T>
-inline std::string get_map_keys(const std::unordered_map<S, T>& map) {
-	std::string res("{ ");
-	char comma[3] = { '\0', ' ', '\0' };
-	for (const auto& p : map) {
-		res.append(comma).append(repr(p.first));
-		comma[0] = ',';
-	}
-	res.append(" }");
-	return res;
-}
-
-
 // converts the two hexadecimal characters to an int (a byte)
 inline int hexdec(const char** ptr) noexcept {
 	constexpr const int _[256] = {
