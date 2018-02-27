@@ -1421,10 +1421,9 @@ const std::unique_ptr<Xapian::SimpleStopper>& getStopper(string_view language) {
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language_hash);
 	if (it == stoppers.end()) {
-		auto path = path_stopwords + "/" + std::string(language) + ".txt";
-		std::ifstream words;
-		words.open(path);
 		auto& stopper = stoppers[language_hash];
+		auto path = path_stopwords + "/" + std::string(language) + ".txt";
+		std::ifstream words(path);
 		if (words.is_open()) {
 			stopper = std::make_unique<Xapian::SimpleStopper>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
 		} else {
