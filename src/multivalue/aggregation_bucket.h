@@ -43,6 +43,7 @@
 #include "multivalue/exception.h"           // for AggregationError, MSG_Agg...
 #include "serialise.h"                      // for _float
 #include "utils.h"                          // for format_string
+#include "hashes.hh"                        // for xxh64
 
 
 class Schema;
@@ -50,7 +51,7 @@ class Schema;
 
 class BucketAggregation : public HandledSubAggregation {
 protected:
-	std::unordered_map<string_view, Aggregation> _aggs;
+	std::unordered_map<uint64_t, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _conf;
 
@@ -67,11 +68,12 @@ public:
 	}
 
 	void aggregate(string_view bucket, const Xapian::Document& doc) {
-		auto it = _aggs.find(bucket);
+		auto bucket_hash = xxh64::hash(bucket);
+		auto it = _aggs.find(bucket_hash);
 		if (it != _aggs.end()) {
 			it->second(doc);
 		} else {
-			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(bucket), std::forward_as_tuple(_result[bucket], _conf, _schema));
+			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(bucket_hash), std::forward_as_tuple(_result[bucket], _conf, _schema));
 			p.first->second(doc);
 		}
 	}
