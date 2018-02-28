@@ -207,7 +207,7 @@ enum class FieldType : uint8_t {
 
 
 // Same implementation as Xapian::SimpleStopper, only this uses perfect hashes
-// which is much faster ~ 55.8959 ms -> 17.5152 ms
+// which is much faster ~ 5.24591s -> 0.861319s
 template <std::size_t max_size = 1000>
 class SimpleStopper : public Xapian::Stopper {
 	phf::phf<std::uint64_t, max_size> stop_words;
@@ -220,7 +220,7 @@ public:
 		std::vector<std::uint64_t> result;
 		result.reserve(max_size);
 		std::transform(begin, end, std::back_inserter(result), fnv1ah64{});
-		stop_words.reset(result.data(), std::min(max_size, result.size()));
+		stop_words.assign(result.data(), std::min(max_size, result.size()));
 	}
 
 	virtual bool operator()(const std::string& term) const {
