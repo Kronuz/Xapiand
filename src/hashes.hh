@@ -105,6 +105,8 @@ class xxh64 {
 	}
 
 public:
+	using key_type = std::uint64_t;
+
 	constexpr static std::uint64_t hash(const char *p, std::uint64_t len, std::uint64_t seed = 0) {
 		return finalize((len >= 32 ? h32bytes(p, len, seed) : seed + PRIME5) + len, p + (len & ~0x1F), len & 0x1F);
 	}
@@ -128,7 +130,7 @@ public:
 	}
 
 	template <typename... Args>
-	auto operator()(Args&&... args) {
+	constexpr auto operator()(Args&&... args) const {
 		return hash(std::forward<Args>(args)...);
 	}
 };
@@ -138,6 +140,8 @@ class xxh32 {
 	/* constexpr xxh32::hash() not implemented! */
 
 public:
+	using key_type = std::uint32_t;
+
 	template <std::size_t SN, typename ST>
 	constexpr static std::uint32_t hash(const static_string::static_string<SN, ST>& str, std::uint32_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
@@ -152,7 +156,7 @@ public:
 	}
 
 	template <typename... Args>
-	auto operator()(Args&&... args) {
+	constexpr auto operator()(Args&&... args) const {
 		return hash(std::forward<Args>(args)...);
 	}
 };
@@ -170,6 +174,8 @@ constexpr std::uint64_t operator"" _xx(const char* s, size_t size) {
  */
 template <typename T, T prime, T offset>
 struct fnv1ah {
+	using key_type = T;
+
 	constexpr static T hash(const char *p, std::size_t len, T seed = offset) {
 		T hash = seed;
 		for (std::size_t i = 0; i < len; ++i) {
@@ -197,7 +203,7 @@ struct fnv1ah {
 	}
 
 	template <typename... Args>
-	auto operator()(Args&&... args) {
+	constexpr auto operator()(Args&&... args) const {
 		return hash(std::forward<Args>(args)...);
 	}
 };
@@ -220,6 +226,8 @@ constexpr std::uint32_t operator"" _fnv1a(const char* s, size_t size) {
  */
 template <typename T, T mul, T offset>
 struct djb2h {
+	using key_type = T;
+
 	constexpr static T hash(const char *p, std::size_t len, T seed = offset) {
 		T hash = seed;
 		for (std::size_t i = 0; i < len; ++i) {
@@ -247,7 +255,7 @@ struct djb2h {
 	}
 
 	template <typename... Args>
-	auto operator()(Args&&... args) {
+	constexpr auto operator()(Args&&... args) const {
 		return hash(std::forward<Args>(args)...);
 	}
 };
