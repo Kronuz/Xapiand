@@ -33,6 +33,7 @@
 #include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
 #include <string.h>             // for memset
 #include <string>               // for string, allocator, operator==, operator+
+#include <string_view>          // for std::string_view
 #include <sys/socket.h>         // for AF_INET
 #include <sys/types.h>          // for int32_t, uint64_t
 #include <time.h>               // for time_t
@@ -40,7 +41,6 @@
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "utils.h"              // for lower_string
-#include "string_view.h"        // for string_view
 
 
 struct Node {
@@ -180,8 +180,8 @@ bool operator!=(const Endpoints& le, const Endpoints& re);
 
 
 class Endpoint {
-	string_view slice_after(string_view& subject, string_view delimiter) const;
-	string_view slice_before(string_view& subject, string_view delimiter) const;
+	std::string_view slice_after(std::string_view& subject, std::string_view delimiter) const;
+	std::string_view slice_before(std::string_view& subject, std::string_view delimiter) const;
 
 public:
 	static std::string cwd;
@@ -193,7 +193,7 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(string_view path_, const Node* node_=nullptr, long long mastery_level_=-1, string_view node_name="");
+	Endpoint(std::string_view path_, const Node* node_=nullptr, long long mastery_level_=-1, std::string_view node_name="");
 
 	bool is_local() const {
 		auto local_node_ = local_node.load();

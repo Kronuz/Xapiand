@@ -30,6 +30,7 @@
 #include <dlfcn.h>            // for dladdr
 #include <execinfo.h>         // for backtrace, backtrace_symbols
 
+#include "stringified.hh"     // for stringified
 
 #define BUFFER_SIZE 1024
 
@@ -260,7 +261,7 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, string_view format, int n, ...)
+BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, int n, ...)
 	: type(type),
 	  function(function_),
 	  filename(filename_),
@@ -270,7 +271,7 @@ BaseException::BaseException(const BaseException& exc, const char *function_, co
 	va_list argptr;
 	va_start(argptr, n);
 
-	stringified_view format_string(format);
+	stringified format_string(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;

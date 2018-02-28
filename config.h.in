@@ -221,11 +221,6 @@
 #cmakedefine HAVE__BOOL @HAVE__BOOL@
 
 
-/* Define to 1 if the system has std::string_view. */
-#cmakedefine HAVE_STRING_VIEW @HAVE_STRING_VIEW@
-#cmakedefine HAVE_EXPERIMENTAL_STRING_VIEW @HAVE_EXPERIMENTAL_STRING_VIEW@
-
-
 /* Define to 1 if Xapian has Database::get_revision() available. */
 #cmakedefine HAVE_XAPIAN_DATABASE_GET_REVISION @HAVE_XAPIAN_DATABASE_GET_REVISION@
 

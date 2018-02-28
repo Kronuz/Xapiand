@@ -46,7 +46,7 @@
 #include "utils.h"                                   // for random_int
 
 
-inline static long long save_mastery(string_view dir)
+inline static long long save_mastery(std::string_view dir)
 {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
@@ -61,7 +61,7 @@ inline static long long save_mastery(string_view dir)
 }
 
 
-std::string prefixed(string_view term, string_view field_prefix, char field_type)
+std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type)
 {
 	std::string result;
 	result.reserve(field_prefix.size() + term.size() + 1);
@@ -71,7 +71,7 @@ std::string prefixed(string_view term, string_view field_prefix, char field_type
 }
 
 
-Xapian::valueno get_slot(string_view field_prefix, char field_type)
+Xapian::valueno get_slot(std::string_view field_prefix, char field_type)
 {
 	auto slot = static_cast<Xapian::valueno>(xxh32::hash(std::string(field_prefix) + field_type));
 	if (slot < DB_SLOT_RESERVED) {
@@ -89,21 +89,21 @@ std::string get_prefix(unsigned long long field_number)
 }
 
 
-std::string get_prefix(string_view field_name)
+std::string get_prefix(std::string_view field_name)
 {
 	// Mask 0x1fffff for maximum length prefix of 4.
 	return serialise_length(xxh32::hash(field_name) & 0x1fffff);
 }
 
 
-std::string normalize_uuid(string_view uuid)
+std::string normalize_uuid(std::string_view uuid)
 {
 	return Unserialise::uuid(Serialise::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
 }
 
 
 std::string normalize_uuid(const std::string& uuid) {
-	return normalize_uuid(string_view(uuid));
+	return normalize_uuid(std::string_view(uuid));
 }
 
 
@@ -116,7 +116,7 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 }
 
 
-long long read_mastery(string_view dir, bool force)
+long long read_mastery(std::string_view dir, bool force)
 {
 	auto sdir = std::string(dir);
 	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir.c_str());
@@ -154,7 +154,7 @@ long long read_mastery(string_view dir, bool force)
 }
 
 
-void json_load(rapidjson::Document& doc, string_view str)
+void json_load(rapidjson::Document& doc, std::string_view str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data());
 	if (!parse_done) {
@@ -193,7 +193,7 @@ void json_load(rapidjson::Document& doc, string_view str)
 }
 
 
-rapidjson::Document to_json(string_view str)
+rapidjson::Document to_json(std::string_view str)
 {
 	rapidjson::Document doc;
 	json_load(doc, str);
@@ -325,7 +325,7 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 }
 
 
-std::string join_data(bool stored, string_view stored_locator, string_view obj, string_view blob)
+std::string join_data(bool stored, std::string_view stored_locator, std::string_view obj, std::string_view blob)
 {
 	/* Joined data is as follows:
 	 * For stored (in storage) blobs:
@@ -359,11 +359,11 @@ std::string join_data(bool stored, string_view stored_locator, string_view obj, 
 }
 
 
-std::pair<bool, string_view> split_data_store(string_view data)
+std::pair<bool, std::string_view> split_data_store(std::string_view data)
 {
 	L_CALL("::split_data_store(<data>)");
 
-	string_view stored_locator = "";
+	std::string_view stored_locator = "";
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
@@ -376,7 +376,7 @@ std::pair<bool, string_view> split_data_store(string_view data)
 		} catch (const Xapian::SerialisationError&) {
 			return std::make_pair(false, "");
 		}
-		stored_locator = string_view(p, length);
+		stored_locator = std::string_view(p, length);
 		p += length;
 	} else {
 		return std::make_pair(false, "");
@@ -396,7 +396,7 @@ std::pair<bool, string_view> split_data_store(string_view data)
 }
 
 
-string_view split_data_obj(string_view data)
+std::string_view split_data_obj(std::string_view data)
 {
 	L_CALL("::split_data_obj(<data>)");
 
@@ -424,14 +424,14 @@ string_view split_data_obj(string_view data)
 	}
 
 	if (*(p + length) == DATABASE_DATA_FOOTER_MAGIC) {
-		return string_view(p, length);
+		return std::string_view(p, length);
 	}
 
 	return "";
 }
 
 
-std::string get_data_content_type(string_view data)
+std::string get_data_content_type(std::string_view data)
 {
 	L_CALL("::get_data_content_type(<data>)");
 
@@ -476,7 +476,7 @@ std::string get_data_content_type(string_view data)
 }
 
 
-string_view split_data_blob(string_view data)
+std::string_view split_data_blob(std::string_view data)
 {
 	L_CALL("::split_data_blob(<data>)");
 
@@ -506,14 +506,14 @@ string_view split_data_blob(string_view data)
 
 	if (*p == DATABASE_DATA_FOOTER_MAGIC) {
 		++p;
-		return string_view(p, p_end - p);
+		return std::string_view(p, p_end - p);
 	}
 
 	return data;
 }
 
 
-void split_path_id(string_view path_id, string_view& path, string_view& id)
+void split_path_id(std::string_view path_id, std::string_view& path, std::string_view& id)
 {
 	std::size_t found = path_id.find_last_of('/');
 	if (found != std::string::npos) {
@@ -527,7 +527,7 @@ void split_path_id(string_view path_id, string_view& path, string_view& id)
 
 
 #ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(string_view store)
+std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(std::string_view store)
 {
 	ssize_t volume;
 	size_t offset, size;
@@ -566,7 +566,7 @@ std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(str
 }
 
 
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, string_view content_type)
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, std::string_view content_type)
 {
 	std::string ret;
 	ret.append(1, STORAGE_BIN_HEADER_MAGIC);

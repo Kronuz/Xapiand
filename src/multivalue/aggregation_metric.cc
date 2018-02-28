@@ -28,7 +28,7 @@
 #include "utils.h"                 // for repr, toUType
 
 
-static func_value_handle get_func_value_handle(FieldType type, string_view field_name) {
+static func_value_handle get_func_value_handle(FieldType type, std::string_view field_name) {
 	switch (type) {
 		case FieldType::FLOAT:
 			return &SubAggregation::_aggregate_float;

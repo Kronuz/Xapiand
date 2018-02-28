@@ -121,14 +121,14 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool collect, bool with_endl, string_view format, va_list argptr)
+vprintln(bool collect, bool with_endl, std::string_view format, va_list argptr)
 {
 	Logging::do_println(collect, with_endl, format, argptr);
 }
 
 
 void
-_println(bool collect, bool with_endl, string_view format, int n, ...)
+_println(bool collect, bool with_endl, std::string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
@@ -138,14 +138,14 @@ _println(bool collect, bool with_endl, string_view format, int n, ...)
 
 
 Log
-vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
 	return Logging::do_log(cleanup, info, stacked, wakeup, async, priority, exc, function, filename, line, suffix, prefix, format, argptr);
 }
 
 
 Log
-_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+_log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
@@ -185,14 +185,14 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::vunlog(int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Log::vunlog(int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
 	return log->vunlog(priority, function, filename, line, suffix, prefix, format, argptr);
 }
 
 
 bool
-Log::_unlog(int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+Log::_unlog(int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
@@ -225,7 +225,7 @@ Log::release()
 }
 
 void
-StreamLogger::log(int priority, string_view str, bool with_priority, bool with_endl)
+StreamLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
 	bool colorized = Logging::colors && !Logging::no_colors;
 	ofs << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
@@ -237,7 +237,7 @@ StreamLogger::log(int priority, string_view str, bool with_priority, bool with_e
 
 
 void
-StderrLogger::log(int priority, string_view str, bool with_priority, bool with_endl)
+StderrLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
 	static const bool is_tty = isatty(fileno(stderr));
 	bool colorized = (is_tty || Logging::colors) && !Logging::no_colors;
@@ -262,7 +262,7 @@ SysLog::~SysLog()
 
 
 void
-SysLog::log(int priority, string_view str, bool with_priority, bool)
+SysLog::log(int priority, std::string_view str, bool with_priority, bool)
 {
 	bool colorized = Logging::colors && !Logging::no_colors;
 	auto a = Logging::colorized(with_priority ? priorities[priority] : "", colorized);
@@ -271,7 +271,7 @@ SysLog::log(int priority, string_view str, bool with_priority, bool)
 }
 
 
-Logging::Logging(string_view str, const BaseException* exc, bool clean_, bool stacked_, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
+Logging::Logging(std::string_view str, const BaseException* exc, bool clean_, bool stacked_, bool async_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: ScheduledTask(created_at_),
 	  stack_level(0),
 	  stacked(stacked_),
@@ -302,7 +302,7 @@ Logging::~Logging()
 
 
 std::string
-Logging::colorized(string_view str, bool try_coloring)
+Logging::colorized(std::string_view str, bool try_coloring)
 {
 	static const auto coloring_group = detectColoring();
 	static const std::string empty_group;
@@ -391,7 +391,7 @@ Logging::run()
 
 
 std::string
-Logging::format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
 	auto msg = vformat_string(format, argptr);
 
@@ -425,7 +425,7 @@ Logging::format_string(bool info, bool stacked, int priority, const char* functi
 
 
 bool
-Logging::vunlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::vunlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
@@ -440,7 +440,7 @@ Logging::vunlog(int _priority, const char* function, const char* filename, int l
 
 
 bool
-Logging::_unlog(int _priority, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, int n, ...)
+Logging::_unlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...)
 {
 	va_list argptr;
 	va_start(argptr, n);
@@ -452,7 +452,7 @@ Logging::_unlog(int _priority, const char* function, const char* filename, int l
 
 
 void
-Logging::do_println(bool collect, bool with_endl, string_view format, va_list argptr)
+Logging::do_println(bool collect, bool with_endl, std::string_view format, va_list argptr)
 {
 	auto str = vformat_string(format, argptr);
 	if (collect) {
@@ -465,7 +465,7 @@ Logging::do_println(bool collect, bool with_endl, string_view format, va_list ar
 
 
 Log
-Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const BaseException* exc, const char* function, const char* filename, int line, string_view suffix, string_view prefix, string_view format, va_list argptr)
+Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int _priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
 	if (_priority <= log_level) {
 		_priority = validated_priority(_priority);
@@ -479,7 +479,7 @@ Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std
 
 
 Log
-Logging::add(string_view str, const BaseException* exc, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Logging::add(std::string_view str, const BaseException* exc, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	auto l_ptr = std::make_shared<Logging>(str, exc, clean, stacked, async, priority, created_at);
 

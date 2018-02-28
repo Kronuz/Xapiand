@@ -240,8 +240,6 @@ check_include_files("unistd.h" HAVE_UNISTD_H)
 
 check_include_file_cxx("sstream" HAVE_SSTREAM)
 check_include_file_cxx("strstream" HAVE_STRSTREAM)
-check_include_file_cxx("string_view" HAVE_STRING_VIEW)
-check_include_file_cxx("experimental/string_view" HAVE_EXPERIMENTAL_STRING_VIEW)
 
 check_function_exists("fallocate" HAVE_FALLOCATE)
 check_function_exists("fsync" HAVE_FSYNC)

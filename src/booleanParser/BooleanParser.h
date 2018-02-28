@@ -24,6 +24,7 @@
 
 #include <list>
 #include <memory>
+#include <string_view>      // for std::string_view
 #include <vector>
 
 #include <xapian.h>
@@ -31,12 +32,11 @@
 #include "ContentReader.h"
 #include "Lexer.h"
 #include "Node.h"
-#include "string_view.h"    // for string_view
 
 
 class BooleanTree {
 public:
-	explicit BooleanTree(string_view input);
+	explicit BooleanTree(std::string_view input);
 	~BooleanTree() = default;
 
 	std::unique_ptr<BaseNode> root;

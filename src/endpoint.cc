@@ -221,7 +221,7 @@ Endpoint::Endpoint()
 	  mastery_level(-1) { }
 
 
-Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_, string_view node_name_)
+Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_level_, std::string_view node_name_)
 	: node_name(node_name_),
 	  mastery_level(mastery_level_)
 {
@@ -283,11 +283,11 @@ Endpoint::Endpoint(string_view uri, const Node* node_, long long mastery_level_,
 }
 
 
-inline string_view
-Endpoint::slice_after(string_view& subject, string_view delimiter) const
+inline std::string_view
+Endpoint::slice_after(std::string_view& subject, std::string_view delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	string_view output;
+	std::string_view output;
 	if (delimiter_location != std::string_view::npos) {
 		size_t start = delimiter_location + delimiter.size();
 		output = subject.substr(start, subject.size() - start);
@@ -299,11 +299,11 @@ Endpoint::slice_after(string_view& subject, string_view delimiter) const
 }
 
 
-inline string_view
-Endpoint::slice_before(string_view& subject, string_view delimiter) const
+inline std::string_view
+Endpoint::slice_before(std::string_view& subject, std::string_view delimiter) const
 {
 	size_t delimiter_location = subject.find(delimiter);
-	string_view output;
+	std::string_view output;
 	if (delimiter_location != std::string::npos) {
 		size_t start = delimiter_location + delimiter.length();
 		output = subject.substr(0, delimiter_location);

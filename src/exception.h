@@ -26,10 +26,9 @@
 
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
+#include <string_view>  // for std::string_view
 #include <type_traits>  // for forward
 #include <xapian.h>     // for DocNotFoundError, InternalError, InvalidArgum...
-
-#include "string_view.h"
 
 
 #define TRACEBACK() traceback(__func__, __FILE__, __LINE__)
@@ -42,7 +41,7 @@ class BaseException {
 		return default_exc;
 	}
 
-	BaseException(const BaseException& exc, const char *function, const char *filename, int line, const char* type, string_view format, int n, ...);
+	BaseException(const BaseException& exc, const char *function, const char *filename, int line, const char* type, std::string_view format, int n, ...);
 
 protected:
 	std::string type;
@@ -65,21 +64,21 @@ public:
 	BaseException(const BaseException* exc);
 
 	template <typename... Args>
-	BaseException(const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
 		: BaseException(default_exc(), function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
 		: BaseException(*exc, function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
 	template <typename... Args>
-	BaseException(const void*, const char *function, const char *filename, int line, const char* type, string_view format, Args&&... args)
+	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
 		: BaseException(default_exc(), function, filename, line, type, format, 0, std::forward<Args>(args)...) { }
 
-	BaseException(const char *function, const char *filename, int line, const char* type, string_view msg = "")
+	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
 		: BaseException(default_exc(), function, filename, line, type, msg, 0) { }
 	template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, string_view msg = "")
+	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
 		: BaseException(*exc, function, filename, line, type, msg, 0) { }
-	BaseException(const void*, const char *function, const char *filename, int line, const char* type, string_view msg = "")
+	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
 		: BaseException(default_exc(), function, filename, line, type, msg, 0) { }
 
 	virtual ~BaseException() = default;

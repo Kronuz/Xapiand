@@ -150,11 +150,11 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	bool modified;
 	bool validate_uuid;
 
-	MsgPack repr_line(string_view line);
-	bool execute(string_view line);
+	MsgPack repr_line(std::string_view line);
+	bool execute(std::string_view line);
 	uint32_t highest_valid_slot();
 
-	inline bool open(string_view path, int flags, bool commit_eof=false) {
+	inline bool open(std::string_view path, int flags, bool commit_eof=false) {
 		return Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, reinterpret_cast<void*>(commit_eof));
 	}
 
@@ -175,7 +175,7 @@ public:
 
 	Database* database;
 
-	DatabaseWAL(string_view base_path_, Database* database_);
+	DatabaseWAL(std::string_view base_path_, Database* database_);
 	~DatabaseWAL();
 
 	bool create(uint32_t revision);
@@ -183,17 +183,17 @@ public:
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision);
 
 	bool init_database();
-	void write_line(Type type, string_view data, bool commit=false);
+	void write_line(Type type, std::string_view data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
-	void write_delete_document_term(string_view term);
+	void write_delete_document_term(std::string_view term);
 	void write_commit();
 	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
-	void write_replace_document_term(string_view term, const Xapian::Document& doc);
+	void write_replace_document_term(std::string_view term, const Xapian::Document& doc);
 	void write_delete_document(Xapian::docid did);
-	void write_set_metadata(string_view key, string_view val);
-	void write_add_spelling(string_view word, Xapian::termcount freqinc);
-	void write_remove_spelling(string_view word, Xapian::termcount freqdec);
+	void write_set_metadata(std::string_view key, std::string_view val);
+	void write_add_spelling(std::string_view word, Xapian::termcount freqinc);
+	void write_remove_spelling(std::string_view word, Xapian::termcount freqdec);
 };
 #endif /* XAPIAND_DATABASE_WAL */
 
@@ -261,7 +261,7 @@ class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
 	uint32_t volume;
 
-	DataStorage(string_view base_path_, void* param_);
+	DataStorage(std::string_view base_path_, void* param_);
 	~DataStorage();
 
 	uint32_t highest_volume();
@@ -271,7 +271,7 @@ public:
 
 class Database {
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get(const std::unique_ptr<DataStorage>& storage, string_view store) const;
+	std::string storage_get(const std::unique_ptr<DataStorage>& storage, std::string_view store) const;
 	void storage_pull_blob(Xapian::Document& doc) const;
 	void storage_push_blob(Xapian::Document& doc) const;
 	void storage_commit();

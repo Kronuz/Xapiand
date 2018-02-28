@@ -33,6 +33,7 @@
 #include <stdlib.h>         // for malloc, free
 #include <string.h>
 #include <string>           // for string
+#include <string_view>      // for std::string_view
 #include <sys/fcntl.h>      // for O_RDONLY
 #include <sys/stat.h>
 #include <sys/types.h>      // for off_t, uint16_t, ssize_t, uint32_t
@@ -42,7 +43,7 @@
 #include "io_utils.h"       // for close, open
 #include "lz4/lz4.h"        // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
 #include "lz4/xxhash.h"     // for XXH32_createState, XXH32_reset, XXH32_digest
-#include "string_view.h"    // for string_view
+#include "stringified.hh"   // for stringified
 
 
 constexpr size_t LZ4_BLOCK_SIZE        = 1024 * 2;
@@ -296,7 +297,7 @@ protected:
 
 	std::function<size_t()> get_read_size;
 
-	LZ4File(size_t block_size_, string_view filename)
+	LZ4File(size_t block_size_, std::string_view filename)
 		: block_size(block_size_)
 	{
 		open(filename);
@@ -315,8 +316,8 @@ protected:
 	}
 
 public:
-	inline void open(string_view filename) {
-		stringified_view filename_string(filename);
+	inline void open(std::string_view filename) {
+		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
 			THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());
@@ -343,7 +344,7 @@ public:
 		}
 	}
 
-	inline void add_file(string_view filename) {
+	inline void add_file(std::string_view filename) {
 		open(filename);
 	}
 };
@@ -361,7 +362,7 @@ class LZ4CompressFile : public LZ4File, public LZ4BlockStreaming<LZ4CompressFile
 	friend class LZ4BlockStreaming<LZ4CompressFile>;
 
 public:
-	LZ4CompressFile(string_view filename, int seed=0);
+	LZ4CompressFile(std::string_view filename, int seed=0);
 	LZ4CompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4CompressFile();
 
@@ -371,7 +372,7 @@ public:
 		LZ4_resetStream(lz4Stream);
 	}
 
-	inline void reset(string_view filename, int seed=0) {
+	inline void reset(std::string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 		LZ4_resetStream(lz4Stream);
@@ -395,7 +396,7 @@ class LZ4DecompressFile : public LZ4File, public LZ4BlockStreaming<LZ4Decompress
 	friend class LZ4BlockStreaming<LZ4DecompressFile>;
 
 public:
-	LZ4DecompressFile(string_view filename, int seed=0);
+	LZ4DecompressFile(std::string_view filename, int seed=0);
 	LZ4DecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4DecompressFile();
 
@@ -404,7 +405,7 @@ public:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(string_view filename, int seed=0) {
+	inline void reset(std::string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 	}

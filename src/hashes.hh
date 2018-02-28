@@ -24,10 +24,10 @@
 #ifndef HASHES_HH
 #define HASHES_HH
 
-#include <string>
 #include <cstdint>
+#include <string>
+#include <string_view>  // for std::string_view
 
-#include "string_view.h"
 #include "static_string.hh"
 
 #include "lz4/xxhash.h"
@@ -114,22 +114,18 @@ public:
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static std::uint64_t hash(const static_string::static_string<SN, ST>& str, std::uint64_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
 	}
-#endif
 
-#ifdef STRING_VIEW_H
-	static std::uint64_t hash(string_view str, std::uint64_t seed = 0) {
+	static std::uint64_t hash(std::string_view str, std::uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
-#else
+
 	static std::uint64_t hash(const std::string& str, std::uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
-#endif
 
 	template <typename... Args>
 	auto operator()(Args&&... args) {
@@ -142,22 +138,18 @@ class xxh32 {
 	/* constexpr xxh32::hash() not implemented! */
 
 public:
-#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static std::uint32_t hash(const static_string::static_string<SN, ST>& str, std::uint32_t seed = 0) {
 		return hash(str.data(), str.size(), seed);
 	}
-#endif
 
-#ifdef STRING_VIEW_H
-	static std::uint32_t hash(string_view str, std::uint32_t seed = 0) {
+	static std::uint32_t hash(std::string_view str, std::uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
-#else
+
 	static std::uint32_t hash(const std::string& str, std::uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
-#endif
 
 	template <typename... Args>
 	auto operator()(Args&&... args) {
@@ -191,22 +183,18 @@ struct fnv1ah {
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
-#endif
 
-#ifdef STRING_VIEW_H
-	constexpr static T hash(string_view str, T seed = offset) {
+	constexpr static T hash(std::string_view str, T seed = offset) {
         return hash(str.data(), str.size(), seed);
     }
-#else
+
 	static T hash(const std::string& str, T seed = offset) {
         return hash(str.data(), str.size(), seed);
 	}
-#endif
 
 	template <typename... Args>
 	auto operator()(Args&&... args) {
@@ -245,22 +233,18 @@ struct djb2h {
 		return hash(s, N - 1, seed);
 	}
 
-#ifdef STATIC_STRING_HH
 	template <std::size_t SN, typename ST>
 	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
-#endif
 
-#ifdef STRING_VIEW_H
-	constexpr static T hash(string_view str, T seed = offset) {
+	constexpr static T hash(std::string_view str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
-#else
+
 	static T hash(const std::string& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
-#endif
 
 	template <typename... Args>
 	auto operator()(Args&&... args) {

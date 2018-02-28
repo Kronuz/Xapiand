@@ -111,7 +111,7 @@ WalHeader::validate(void* param, void*)
 }
 
 
-DatabaseWAL::DatabaseWAL(string_view base_path_, Database* database_)
+DatabaseWAL::DatabaseWAL(std::string_view base_path_, Database* database_)
 	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
 	  modified(false),
 	  validate_uuid(true),
@@ -262,7 +262,7 @@ DatabaseWAL::create(uint32_t revision)
 
 
 MsgPack
-DatabaseWAL::repr_line(string_view line)
+DatabaseWAL::repr_line(std::string_view line)
 {
 	L_CALL("DatabaseWAL::repr_line(<line>)");
 
@@ -462,7 +462,7 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute(string_view line)
+DatabaseWAL::execute(std::string_view line)
 {
 	L_CALL("DatabaseWAL::execute(<line>)");
 
@@ -615,7 +615,7 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(Type type, string_view data, bool commit_)
+DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 {
 	L_CALL("DatabaseWAL::write_line(...)");
 
@@ -679,7 +679,7 @@ DatabaseWAL::write_cancel()
 
 
 void
-DatabaseWAL::write_delete_document_term(string_view term)
+DatabaseWAL::write_delete_document_term(std::string_view term)
 {
 	L_CALL("DatabaseWAL::write_delete_document_term(<term>)");
 
@@ -709,7 +709,7 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 
 
 void
-DatabaseWAL::write_replace_document_term(string_view term, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document_term(std::string_view term, const Xapian::Document& doc)
 {
 	L_CALL("DatabaseWAL::write_replace_document_term(...)");
 
@@ -730,7 +730,7 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 
 
 void
-DatabaseWAL::write_set_metadata(string_view key, string_view val)
+DatabaseWAL::write_set_metadata(std::string_view key, std::string_view val)
 {
 	L_CALL("DatabaseWAL::write_set_metadata(...)");
 
@@ -741,7 +741,7 @@ DatabaseWAL::write_set_metadata(string_view key, string_view val)
 
 
 void
-DatabaseWAL::write_add_spelling(string_view word, Xapian::termcount freqinc)
+DatabaseWAL::write_add_spelling(std::string_view word, Xapian::termcount freqinc)
 {
 	L_CALL("DatabaseWAL::write_add_spelling(...)");
 
@@ -752,7 +752,7 @@ DatabaseWAL::write_add_spelling(string_view word, Xapian::termcount freqinc)
 
 
 void
-DatabaseWAL::write_remove_spelling(string_view word, Xapian::termcount freqdec)
+DatabaseWAL::write_remove_spelling(std::string_view word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWAL::write_remove_spelling(...)");
 
@@ -799,7 +799,7 @@ DataHeader::validate(void* param, void*)
 }
 
 
-DataStorage::DataStorage(string_view base_path_, void* param_)
+DataStorage::DataStorage(std::string_view base_path_, void* param_)
 	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_)
 {
 	L_OBJ("CREATED DATABASE DATA STORAGE!");
@@ -1321,7 +1321,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get(const std::unique_ptr<DataStorage>& storage, string_view store) const
+Database::storage_get(const std::unique_ptr<DataStorage>& storage, std::string_view store) const
 {
 	L_CALL("Database::storage_get()");
 

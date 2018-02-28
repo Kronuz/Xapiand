@@ -75,7 +75,7 @@ Cast::cast(const MsgPack& obj)
 
 
 MsgPack
-Cast::cast(FieldType type, string_view field_value)
+Cast::cast(FieldType type, std::string_view field_value)
 {
 	switch (type) {
 		case FieldType::INTEGER: {
@@ -359,7 +359,7 @@ Cast::ewkt(const MsgPack& obj)
 
 
 FieldType
-Cast::getType(string_view cast_word)
+Cast::getType(std::string_view cast_word)
 {
 	switch ((Hash)fnv1ah32::hash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;

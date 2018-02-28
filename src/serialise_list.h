@@ -22,8 +22,9 @@
 
 #pragma once
 
+#include <string_view>     // for std::string_view
+
 #include "serialise.h"
-#include "string_view.h"   // for string_view
 
 
 constexpr char SERIALISED_LIST_MAGIC  = '\0';
@@ -122,7 +123,7 @@ class SerialiseList {
 			return &operator*();
 		}
 
-		int compare(string_view ref) const noexcept {
+		int compare(std::string_view ref) const noexcept {
 			return -ref.compare(0, ref.size(), pos, length);
 		}
 
@@ -199,7 +200,7 @@ protected:
 		_i_cend = const_iterator(_i_end.owner, _i_end.pos, _i_end.length);
 	}
 
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
 	SerialiseList(S&& serialised)
 		: _serialised(std::forward<S>(serialised))
 	{
@@ -309,7 +310,7 @@ class StringList : public SerialiseList<StringList, std::string> {
 	friend class SerialiseList<StringList, std::string>;
 
 public:
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
 	StringList(S&& serialised)
 		: SerialiseList<StringList, std::string>(std::forward<S>(serialised)) { }
 
@@ -347,7 +348,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(string_view serialised, OutputIt d_first) {
+	static void unserialise(std::string_view serialised, OutputIt d_first) {
 		auto ptr = serialised.data();
 		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);
@@ -367,7 +368,7 @@ class CartesianList : public SerialiseList<CartesianList, Cartesian> {
 	friend class SerialiseList<CartesianList, Cartesian>;
 
 public:
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
 	CartesianList(S&& serialised)
 		: SerialiseList<CartesianList, Cartesian>(std::forward<S>(serialised))
 	{
@@ -421,7 +422,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(string_view serialised, OutputIt d_first) {
+	static void unserialise(std::string_view serialised, OutputIt d_first) {
 		auto ptr = serialised.data();
 		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);
@@ -441,7 +442,7 @@ class RangeList : public SerialiseList<RangeList, range_t> {
 	friend class SerialiseList<RangeList, range_t>;
 
 public:
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<string_view, std::decay_t<S>>::value>>
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
 	RangeList(S&& serialised)
 		: SerialiseList<RangeList, range_t>(std::forward<S>(serialised))
 	{
@@ -495,7 +496,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(string_view serialised, OutputIt d_first) {
+	static void unserialise(std::string_view serialised, OutputIt d_first) {
 		auto ptr = serialised.data();
 		auto end = ptr + serialised.size();
 		unserialise(&ptr, end, d_first);

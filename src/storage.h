@@ -26,6 +26,7 @@
 
 #include <limits>
 #include <memory>
+#include <string_view>  // for std::string_view
 #include <unistd.h>
 
 #include "async_fsync.h"
@@ -33,7 +34,7 @@
 #include "logger.h"
 #include "lz4_compressor.h"
 #include "strict_stox.hh"
-#include "string_view.h"
+#include "stringified.hh"   // for stringified
 
 
 #ifndef L_CALL
@@ -295,7 +296,7 @@ protected:
 
 
 public:
-	Storage(string_view base_path_, void* param_)
+	Storage(std::string_view base_path_, void* param_)
 		: param(param_),
 		  flags(0),
 		  fd(0),
@@ -339,7 +340,7 @@ public:
 		seek(STORAGE_START_BLOCK_OFFSET);
 	}
 
-	bool open(string_view relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
+	bool open(std::string_view relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
 		L_CALL("Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
 
 		bool created = false;
@@ -532,7 +533,7 @@ public:
 		return curr_offset;
 	}
 
-	uint32_t write_file(string_view filename, void* args=nullptr) {
+	uint32_t write_file(std::string_view filename, void* args=nullptr) {
 		L_CALL("Storage::write_file()");
 
 		uint32_t curr_offset = header.head.offset;
@@ -560,7 +561,7 @@ public:
 			it_size = cmpFile_it.size();
 			data = cmpFile_it->data();
 		} else {
-			stringified_view filename_string(filename);
+			stringified filename_string(filename);
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
 				THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());
@@ -779,7 +780,7 @@ public:
 		growfile();
 	}
 
-	uint32_t write(string_view data, void* args=nullptr) {
+	uint32_t write(std::string_view data, void* args=nullptr) {
 		L_CALL("Storage::write() [2]");
 
 		return write(data.data(), data.size(), args);
@@ -799,11 +800,11 @@ public:
 		return ret;
 	}
 
-	uint32_t get_volume(string_view filename) {
+	uint32_t get_volume(std::string_view filename) {
 		L_CALL("Storage::get_volume()");
 
 		auto found = filename.find_last_of(".");
-		if (found == string_view::npos) {
+		if (found == std::string_view::npos) {
 			throw std::invalid_argument("Volume not found in " + std::string(filename));
 		}
 		return static_cast<uint32_t>(strict_stoul(filename.substr(found + 1)));

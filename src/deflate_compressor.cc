@@ -223,7 +223,7 @@ DeflateDecompressData::next()
 /*
  * Construct for file name
  */
-DeflateCompressFile::DeflateCompressFile(string_view filename, bool gzip_)
+DeflateCompressFile::DeflateCompressFile(std::string_view filename, bool gzip_)
 	: DeflateFile(filename),
 	  DeflateBlockStreaming(gzip_) { }
 
@@ -309,7 +309,7 @@ DeflateCompressFile::next()
 }
 
 
-DeflateDecompressFile::DeflateDecompressFile(string_view filename, bool gzip_)
+DeflateDecompressFile::DeflateDecompressFile(std::string_view filename, bool gzip_)
 	: DeflateFile(filename),
 	  DeflateBlockStreaming(gzip_) { }
 

@@ -23,11 +23,11 @@
 #pragma once
 
 #include <memory>              // for default_delete, unique_ptr
+#include <string_view>         // for std::string_view
 #include <unordered_map>       // for unordered_map
 
 #include "collection.h"
 
-#include "string_view.h"       // for string_view
 
 
 class GeoSpatial;
@@ -80,7 +80,7 @@ class EWKT {
 	static bool _isEWKT(Iterator first, Iterator last);
 
 public:
-	explicit EWKT(string_view str);
+	explicit EWKT(std::string_view str);
 
 	EWKT(const EWKT& ewkt) noexcept
 		: geometry(ewkt.geometry) { }
@@ -92,7 +92,7 @@ public:
 
 	~EWKT() = default;
 
-	static bool isEWKT(string_view str);
+	static bool isEWKT(std::string_view str);
 
 	std::shared_ptr<Geometry> getGeometry() const {
 		geometry->simplify();

@@ -25,14 +25,15 @@
 #include "xapiand.h"
 
 #include <string>                  // for string
+#include <string_view>             // for std::string_view
 #include <vector>                  // for vector
+
 #include <xapian.h>                // for valueno
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
 #include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
-#include "string_view.h"           // for string_view
 
 
 // Reserved field names.
@@ -169,7 +170,7 @@ struct ct_type_t {
 		: first(std::forward<S>(first_)),
 		  second(std::forward<S>(second_)) { }
 
-	explicit ct_type_t(string_view ct_type_str) {
+	explicit ct_type_t(std::string_view ct_type_str) {
 		const auto found = ct_type_str.rfind('/');
 		if (found != std::string::npos) {
 			first = ct_type_str.substr(0, found);
@@ -275,38 +276,38 @@ struct query_field_t {
 
 
 // All non-empty field names not starting with underscore are valid.
-inline bool is_valid(string_view field_name) {
+inline bool is_valid(std::string_view field_name) {
 	return !field_name.empty() && field_name.at(0) != '_';
 }
 
 
-inline std::string get_hashed(string_view name) {
+inline std::string get_hashed(std::string_view name) {
 	return sortable_serialise(xxh64::hash(name));
 }
 
 
-std::string prefixed(string_view term, string_view field_prefix, char field_type);
-Xapian::valueno get_slot(string_view field_prefix, char field_type);
+std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type);
+Xapian::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);
-std::string get_prefix(string_view field_name);
-std::string normalize_uuid(string_view uuid);
+std::string get_prefix(std::string_view field_name);
+std::string normalize_uuid(std::string_view uuid);
 std::string normalize_uuid(const std::string& uuid);
 MsgPack normalize_uuid(const MsgPack& uuid);
-long long read_mastery(string_view dir, bool force);
-void json_load(rapidjson::Document& doc, string_view str);
-rapidjson::Document to_json(string_view str);
+long long read_mastery(std::string_view dir, bool force);
+void json_load(rapidjson::Document& doc, std::string_view str);
+rapidjson::Document to_json(std::string_view str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
 
 
-std::string join_data(bool stored, string_view stored_locator, string_view obj, string_view blob);
-std::pair<bool, string_view> split_data_store(string_view data);
-string_view split_data_obj(string_view data);
-string_view split_data_blob(string_view data);
-std::string get_data_content_type(string_view data);
-void split_path_id(string_view path_id, string_view& path, string_view& id);
+std::string join_data(bool stored, std::string_view stored_locator, std::string_view obj, std::string_view blob);
+std::pair<bool, std::string_view> split_data_store(std::string_view data);
+std::string_view split_data_obj(std::string_view data);
+std::string_view split_data_blob(std::string_view data);
+std::string get_data_content_type(std::string_view data);
+void split_path_id(std::string_view path_id, std::string_view& path, std::string_view& id);
 #ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(string_view store);
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, string_view content_type);
+std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(std::string_view store);
+std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, std::string_view content_type);
 #endif /* XAPIAND_DATA_STORAGE */

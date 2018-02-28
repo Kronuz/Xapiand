@@ -26,15 +26,14 @@
 
 #include <cstdio>
 #include <string>
-
-#include "string_view.h"     // for string_view
+#include <string_view>       // for std::string_view
 
 
 #define COMMAND_PREFIX ":"
 
 
 std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=');
-inline std::string urldecode(string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
+inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
 	return urldecode(string.data(), string.size(), plus, amp, colon, eq);
 }
 template<typename T, std::size_t N>
@@ -54,10 +53,10 @@ public:
 
 	void clear() noexcept;
 	void rewind() noexcept;
-	int init(string_view q);
+	int init(std::string_view q);
 	int next(const char *name);
 
-	string_view get();
+	std::string_view get();
 };
 
 
@@ -99,16 +98,16 @@ public:
 
 	void clear() noexcept;
 	void rewind() noexcept;
-	State init(string_view p);
+	State init(std::string_view p);
 	State next();
 
 	void skip_id() noexcept;
 
-	string_view get_pth();
-	string_view get_hst();
-	string_view get_nsp();
-	string_view get_pmt();
-	string_view get_ppmt();
-	string_view get_cmd();
-	string_view get_id();
+	std::string_view get_pth();
+	std::string_view get_hst();
+	std::string_view get_nsp();
+	std::string_view get_pmt();
+	std::string_view get_ppmt();
+	std::string_view get_cmd();
+	std::string_view get_id();
 };

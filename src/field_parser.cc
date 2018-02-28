@@ -38,7 +38,7 @@
 #define TOKEN_SQUARE_BRACKET_RIGHT  ']'
 
 
-FieldParser::FieldParser(string_view p)
+FieldParser::FieldParser(std::string_view p)
 	: fstr(p),
 	  len_field(0), off_field(nullptr),
 	  len_field_colon(0), off_field_colon(nullptr),

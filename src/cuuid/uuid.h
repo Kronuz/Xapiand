@@ -26,12 +26,12 @@
 #include <array>           // for array
 #include <iostream>        // for ostream
 #include <string>          // for string
+#include <string_view>     // for std::string_view
 
 #ifdef UUID_ANDROID
 #include <jni.h>
 #endif
 
-#include "string_view.h"   // for string_view
 
 
 constexpr uint8_t UUID_LENGTH = 36;
@@ -54,7 +54,7 @@ public:
 	// create a UUID from string
 	explicit UUID(const char* str, size_t size);
 
-	explicit UUID(string_view string);
+	explicit UUID(std::string_view string);
 
 	// create empty UUID
 	UUID();
@@ -80,14 +80,14 @@ public:
 	}
 
 	static bool is_valid(const char** ptr, const char* end);
-	static bool is_valid(string_view bytes) {
+	static bool is_valid(std::string_view bytes) {
 		const char* pos = bytes.data();
 		const char* end = pos + bytes.size();
 		return is_valid(&pos, end);
 	}
 
 	static bool is_serialised(const char** ptr, const char* end);
-	static bool is_serialised(string_view bytes) {
+	static bool is_serialised(std::string_view bytes) {
 		const char* pos = bytes.data();
 		const char* end = pos + bytes.size();
 		return is_serialised(&pos, end);
@@ -96,7 +96,7 @@ public:
 	std::string to_string() const;
 	std::string serialise() const;
 
-	static UUID unserialise(string_view bytes);
+	static UUID unserialise(std::string_view bytes);
 	static UUID unserialise(const char** ptr, const char* end);
 
 	// unserialise a serialised uuid's list
@@ -108,7 +108,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(string_view serialised, OutputIt d_first) {
+	static void unserialise(std::string_view serialised, OutputIt d_first) {
 		const char* pos = serialised.data();
 		const char* end = pos + serialised.size();
 		unserialise(&pos, end, d_first);

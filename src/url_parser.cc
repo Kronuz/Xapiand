@@ -94,7 +94,7 @@ QueryParser::rewind() noexcept
 
 
 int
-QueryParser::init(string_view q)
+QueryParser::init(std::string_view q)
 {
 	clear();
 	query = urldecode(q, ' ', '\x01', '\x01', '\x02');
@@ -164,11 +164,11 @@ QueryParser::next(const char *name)
 }
 
 
-string_view
+std::string_view
 QueryParser::get()
 {
 	if (!off) return "";
-	return string_view(off, len);
+	return std::string_view(off, len);
 }
 
 
@@ -213,7 +213,7 @@ PathParser::rewind() noexcept
 
 
 PathParser::State
-PathParser::init(string_view p)
+PathParser::init(std::string_view p)
 {
 	clear();
 	path = urldecode(p);
@@ -525,59 +525,59 @@ PathParser::skip_id() noexcept
 }
 
 
-string_view
+std::string_view
 PathParser::get_pth()
 {
 	if (!off_pth) return "";
-	return string_view(off_pth, len_pth);
+	return std::string_view(off_pth, len_pth);
 }
 
 
-string_view
+std::string_view
 PathParser::get_hst()
 {
 	if (!off_hst) return "";
-	return string_view(off_hst, len_hst);
+	return std::string_view(off_hst, len_hst);
 }
 
 
-string_view
+std::string_view
 PathParser::get_nsp()
 {
 	if (!off_nsp) return "";
-	return string_view(off_nsp, len_nsp);
+	return std::string_view(off_nsp, len_nsp);
 }
 
 
-string_view
+std::string_view
 PathParser::get_pmt()
 {
 	if (!off_pmt) return "";
-	return string_view(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
+	return std::string_view(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
 }
 
 
-string_view
+std::string_view
 PathParser::get_ppmt()
 {
 	if (!off_ppmt) return "";
-	return string_view(off_ppmt, len_ppmt - 1);
+	return std::string_view(off_ppmt, len_ppmt - 1);
 }
 
 
-string_view
+std::string_view
 PathParser::get_cmd()
 {
 	if (!off_cmd) return "";
-	return string_view(off_cmd, len_cmd);
+	return std::string_view(off_cmd, len_cmd);
 }
 
 
-string_view
+std::string_view
 PathParser::get_id()
 {
 	if (!off_id) return "";
-	return string_view(off_id, len_id);
+	return std::string_view(off_id, len_id);
 }
 
 

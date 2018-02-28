@@ -26,6 +26,7 @@
 
 #include <cstdio>       // for size_t
 #include <string>       // for string, allocator, operator+, basic_string
+#include <string_view>  // for std::string_view
 #include <type_traits>  // for forward
 
 #include "exception.h"  // for ClientError
@@ -85,24 +86,24 @@ public:
 
 	Range range;
 
-	FieldParser(string_view p);
+	FieldParser(std::string_view p);
 
 	void parse(size_t lvl_max=2);
 
-	string_view get_field_name() const {
+	std::string_view get_field_name() const {
 		if (off_field) {
-			return string_view(off_field, len_field);
+			return std::string_view(off_field, len_field);
 		}
 		return "";
 	}
 
-	string_view get_values() const {
-		return string_view(off_values, fstr.size() - (off_values - fstr.data()));
+	std::string_view get_values() const {
+		return std::string_view(off_values, fstr.size() - (off_values - fstr.data()));
 	}
 
-	string_view get_value(size_t l=0) const {
+	std::string_view get_value(size_t l=0) const {
 		if (l <= lvl && offs[l]) {
-			return string_view(offs[l], lens[l]);
+			return std::string_view(offs[l], lens[l]);
 		}
 		return "";
 	}
@@ -115,16 +116,16 @@ public:
 		return l <= lvl && offs_double_quote[l] != 0;
 	}
 
-	string_view get_double_quoted_value(size_t l=0) const {
+	std::string_view get_double_quoted_value(size_t l=0) const {
 		if (l <= lvl && offs_double_quote[l]) {
-			return string_view(offs_double_quote[l], lens_double_quote[l]);
+			return std::string_view(offs_double_quote[l], lens_double_quote[l]);
 		}
 		return "";
 	}
 
-	string_view get_single_quoted_value(size_t l=0) const {
+	std::string_view get_single_quoted_value(size_t l=0) const {
 		if (l <= lvl && offs_single_quote[l]) {
-			return string_view(offs_single_quote[l], lens_single_quote[l]);
+			return std::string_view(offs_single_quote[l], lens_single_quote[l]);
 		}
 		return "";
 	}
@@ -133,14 +134,14 @@ public:
 		return range != Range::none;
 	}
 
-	string_view get_start() const {
+	std::string_view get_start() const {
 		if (is_range()) {
 			return get_value(0);
 		}
 		return "";
 	}
 
-	string_view get_end() const {
+	std::string_view get_end() const {
 		if (is_range()) {
 			return get_value(1);
 		}

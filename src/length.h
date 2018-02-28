@@ -26,9 +26,9 @@
 
 #include <stddef.h>       // for size_t, NULL
 #include <string>         // for string
+#include <string_view>    // for std::string_view
 
 #include "exception.h"    // for MSG_SerialisationError, SerialisationError
-#include "string_view.h"  // for string_view
 
 
 /** Serialise a length as a variable-length string.
@@ -53,7 +53,7 @@ std::string serialise_length(unsigned long long len);
  */
 unsigned long long unserialise_length(const char** p, const char* end, bool check_remaining=false);
 
-std::string serialise_string(string_view input);
+std::string serialise_string(std::string_view input);
 
 std::string unserialise_string(const char** p, const char* end);
 
@@ -61,11 +61,11 @@ void serialise_length(int fd, unsigned long long len);
 
 unsigned long long unserialise_length(int fd, std::string &buffer, std::size_t& off);
 
-void serialise_string(int fd, string_view input);
+void serialise_string(int fd, std::string_view input);
 
 std::string unserialise_string(int fd, std::string &buffer, std::size_t& off);
 
-std::string serialise_strings(const std::vector<string_view>& strings);
+std::string serialise_strings(const std::vector<std::string_view>& strings);
 
 std::string unserialise_string_at(size_t at, const char** p, const char* end);
 
@@ -161,28 +161,28 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 }
 
 
-inline unsigned long long unserialise_length(string_view data, bool check_remaining=false) {
+inline unsigned long long unserialise_length(std::string_view data, bool check_remaining=false) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_length(&p, p_end, check_remaining);
 }
 
 
-inline std::string unserialise_string(string_view data) {
+inline std::string unserialise_string(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_string(&p, p_end);
 }
 
 
-inline std::string unserialise_string_at(size_t at, string_view data) {
+inline std::string unserialise_string_at(size_t at, std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_string_at(at, &p, p_end);
 }
 
 
-inline double unserialise_double(string_view data) {
+inline double unserialise_double(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_double(&p, p_end);
@@ -190,7 +190,7 @@ inline double unserialise_double(string_view data) {
 
 
 template<class T>
-inline void unserialise_unsigned(string_view data, T* result)
+inline void unserialise_unsigned(std::string_view data, T* result)
 {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
@@ -199,7 +199,7 @@ inline void unserialise_unsigned(string_view data, T* result)
 
 
 template<class T>
-inline T unserialise_unsigned(string_view data)
+inline T unserialise_unsigned(std::string_view data)
 {
 	T result;
 	const char *p = data.data();

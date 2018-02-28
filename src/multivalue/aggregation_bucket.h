@@ -67,7 +67,7 @@ public:
 		}
 	}
 
-	void aggregate(string_view bucket, const Xapian::Document& doc) {
+	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
 		auto bucket_hash = xxh64::hash(bucket);
 		auto it = _aggs.find(bucket_hash);
 		if (it != _aggs.end()) {
@@ -120,7 +120,7 @@ public:
 		aggregate(bucket, doc);
 	}
 
-	void aggregate_string(string_view value, const Xapian::Document& doc) override {
+	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
 		aggregate(value, doc);
 	}
 
@@ -128,7 +128,7 @@ public:
 		aggregate(value.to_string(), doc);
 	}
 
-	void aggregate_uuid(string_view value, const Xapian::Document& doc) override {
+	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
 		aggregate(value, doc);
 	}
 };

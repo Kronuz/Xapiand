@@ -22,10 +22,11 @@
 
 #pragma once
 
+#include <string_view>           // for std::string_view
+
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "msgpack.h"             // for MsgPack
 #include "hashes.hh"             // for fnv1ah32
-#include "string_view.h"         // for string_view
 
 
 enum class FieldType : uint8_t;
@@ -66,7 +67,7 @@ namespace Cast {
 	 */
 
 	MsgPack cast(const MsgPack& obj);
-	MsgPack cast(FieldType type, string_view field_value);
+	MsgPack cast(FieldType type, std::string_view field_value);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
 	double _float(const MsgPack& obj);
@@ -78,5 +79,5 @@ namespace Cast {
 	MsgPack timedelta(const MsgPack& obj);
 	std::string ewkt(const MsgPack& obj);
 
-	FieldType getType(string_view cast_word);
+	FieldType getType(std::string_view cast_word);
 };

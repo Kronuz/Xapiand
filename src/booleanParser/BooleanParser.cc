@@ -36,7 +36,7 @@
 #include "XorNode.h"
 
 
-BooleanTree::BooleanTree(string_view input_)
+BooleanTree::BooleanTree(std::string_view input_)
 	: input(std::make_unique<char[]>(input_.size() + 1))
 {
 	std::strncpy(input.get(), input_.data(), input_.size());

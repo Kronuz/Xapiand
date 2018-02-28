@@ -33,11 +33,11 @@
 #include <cassert>
 #include <cstddef>
 #include <iostream>
-#include <string>
+#include <string>       // for std::string
+#include <string_view>  // for std::string_view
 #include <type_traits>
 #include <utility>
 
-#include "string_view.h"
 
 namespace static_string {
 
@@ -101,9 +101,7 @@ public:
 	}
 
 	constexpr operator const char* () const { return _data; }
-#ifdef STRING_VIEW_H
-	constexpr operator string_view() const { return string_view(_data, N); }
-#endif
+	constexpr operator std::string_view() const { return std::string_view(_data, N); }
 	operator std::string() const { return std::string(_data, N); }
 
 };
@@ -206,9 +204,7 @@ public:
 	}
 
 	constexpr operator const char* () const { return _data; }
-#ifdef STRING_VIEW_H
-	constexpr operator string_view() const { return string_view(_data, N); }
-#endif
+	constexpr operator std::string_view() const { return std::string_view(_data, N); }
 	operator std::string() const { return std::string(_data, N); }
 };
 

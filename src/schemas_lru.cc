@@ -28,12 +28,12 @@
 
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
-static const std::hash<string_view> hasher;
+static const std::hash<std::string_view> hasher;
 
 
 template <typename ErrorType>
 inline std::pair<const MsgPack*, const MsgPack*>
-SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, string_view& foreign, string_view& foreign_path, string_view& foreign_id)
+SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
 {
 	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()).c_str());
 
@@ -50,7 +50,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, string_vi
 
 
 MsgPack
-SchemasLRU::get_shared(const Endpoint& endpoint, string_view id, std::shared_ptr<std::unordered_set<size_t>> context)
+SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<size_t>> context)
 {
 	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), repr(id).c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
 
@@ -84,7 +84,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 {
 	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
 
-	string_view foreign, foreign_path, foreign_id;
+	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const MsgPack* schema_obj = nullptr;
@@ -254,7 +254,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
 
 	bool failure = false;
-	string_view foreign, foreign_path, foreign_id;
+	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
@@ -434,7 +434,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 {
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
-	string_view foreign, foreign_path, foreign_id;
+	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const auto local_schema_hash = db_handler->endpoints.hash();

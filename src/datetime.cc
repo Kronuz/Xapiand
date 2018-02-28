@@ -27,11 +27,11 @@
 #include <exception>        // for exception
 #include <stdexcept>        // for invalid_argument, out_of_range
 #include <stdio.h>          // for snprintf
+#include <string_view>      // for std::string_view
 
 #include "log.h"            // for L_ERR
 #include "msgpack.h"        // for MsgPack
 #include "utils.h"          // for stox
-#include "string_view.h"    // for string_view
 #include "hashes.hh"        // for fnv1ah32
 
 constexpr const char RESERVED_YEAR[]                = "_year";
@@ -98,7 +98,7 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 }
 
 
-static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
+static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 	auto size = str_time.size();
 	try {
 		switch (size) {
@@ -164,11 +164,11 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 													if ((it_e - aux) == 6) {
 														auto aux_end = aux + 3;
 														if (*aux_end == ':') {
-															string_view tz_h(aux + 1, aux_end - aux - 1);
-															string_view tz_m(aux_end + 1, it_e - aux_end - 1);
+															std::string_view tz_h(aux + 1, aux_end - aux - 1);
+															std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 															if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																computeTimeZone(tm, c, tz_h, tz_m);
-																tm.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, aux - it)));
+																tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, aux - it)));
 																return;
 															}
 															THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
@@ -178,7 +178,7 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
 												THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(str_time).c_str());
 											}
 										}
-										tm.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
+										tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
 										return;
 									}
 									default:
@@ -203,12 +203,12 @@ static void process_date_time(Datetime::tm_t& tm, string_view str_time) {
  * Returnd struct tm according to the date specified by date.
  */
 Datetime::tm_t
-Datetime::DateParser(string_view date)
+Datetime::DateParser(std::string_view date)
 {
 	tm_t tm;
 	// Check if date is ISO 8601.
 	auto pos = date.find("||");
-	if (pos == string_view::npos) {
+	if (pos == std::string_view::npos) {
 		auto format = Iso8601Parser(date, tm);
 		switch (format) {
 			case Format::VALID:
@@ -302,7 +302,7 @@ Datetime::DateParser(const MsgPack& value)
 			return Datetime::DateParser(value.str_view());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
-			string_view str_time;
+			std::string_view str_time;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
@@ -346,7 +346,7 @@ Datetime::DateParser(const MsgPack& value)
  * Full struct tm according to the date in ISO 8601 format.
  */
 Datetime::Format
-Datetime::Iso8601Parser(string_view date, tm_t& tm)
+Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 {
 	auto size = date.size();
 	try {
@@ -445,7 +445,7 @@ Datetime::Iso8601Parser(string_view date, tm_t& tm)
 													switch (c) {
 														case 'Z':
 															if ((aux + 1) == it_e) {
-																tm.fsec = normalize_fsec(strict_stod(string_view(it, aux - it)));
+																tm.fsec = normalize_fsec(strict_stod(std::string_view(it, aux - it)));
 																return Format::VALID;
 															}
 															return Format::ERROR;
@@ -454,10 +454,10 @@ Datetime::Iso8601Parser(string_view date, tm_t& tm)
 															if ((it_e - aux) == 6) {
 																auto aux_end = aux + 3;
 																if (*aux_end == ':') {
-																	string_view tz_h(aux + 1, aux_end - aux - 1);
-																	string_view tz_m(aux_end + 1, it_e - aux_end - 1);
+																	std::string_view tz_h(aux + 1, aux_end - aux - 1);
+																	std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-																		tm.fsec = normalize_fsec(strict_stod(string_view(it, aux - it)));
+																		tm.fsec = normalize_fsec(strict_stod(std::string_view(it, aux - it)));
 																																				computeTimeZone(tm, c, tz_h, tz_m);
 																		return Format::VALID;
 																	}
@@ -470,7 +470,7 @@ Datetime::Iso8601Parser(string_view date, tm_t& tm)
 													}
 												}
 											}
-											tm.fsec = normalize_fsec(strict_stod(string_view(it, it_e - it)));
+											tm.fsec = normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
 											return Format::VALID;
 										}
 										default:
@@ -493,7 +493,7 @@ Datetime::Iso8601Parser(string_view date, tm_t& tm)
 
 
 Datetime::Format
-Datetime::Iso8601Parser(string_view date)
+Datetime::Iso8601Parser(std::string_view date)
 {
 	auto size = date.size();
 	try {
@@ -592,8 +592,8 @@ Datetime::Iso8601Parser(string_view date)
 															if ((it_e - aux) == 6) {
 																auto aux_end = aux + 3;
 																if (*aux_end == ':') {
-																	string_view tz_h(aux + 1, aux_end - aux - 1);
-																	string_view tz_m(aux_end + 1, it_e - aux_end - 1);
+																	std::string_view tz_h(aux + 1, aux_end - aux - 1);
+																	std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
 																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
 																		return Format::VALID;
 																	}
@@ -628,7 +628,7 @@ Datetime::Iso8601Parser(string_view date)
 
 
 void
-Datetime::processDateMath(string_view date_math, tm_t& tm)
+Datetime::processDateMath(std::string_view date_math, tm_t& tm)
 {
 	size_t size_match = 0;
 
@@ -647,7 +647,7 @@ Datetime::processDateMath(string_view date_math, tm_t& tm)
 
 
 void
-Datetime::computeTimeZone(tm_t& tm, char op, string_view hour, string_view min)
+Datetime::computeTimeZone(tm_t& tm, char op, std::string_view hour, std::string_view min)
 {
 	std::string oph, opm;
 	oph.reserve(3);
@@ -674,7 +674,7 @@ Datetime::computeTimeZone(tm_t& tm, char op, string_view hour, string_view min)
  * unit can be y, M, w, d, h, m, s
  */
 void
-Datetime::computeDateMath(tm_t& tm, string_view op, char unit)
+Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 {
 	switch (op[0]) {
 		case '+': {
@@ -1116,7 +1116,7 @@ Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, 
 
 
 bool
-Datetime::isDate(string_view date)
+Datetime::isDate(std::string_view date)
 {
 	auto format = Iso8601Parser(date);
 	switch (format) {
@@ -1133,7 +1133,7 @@ Datetime::isDate(string_view date)
 
 
 Datetime::clk_t
-Datetime::TimeParser(string_view _time)
+Datetime::TimeParser(std::string_view _time)
 {
 	clk_t clk;
 	auto length = _time.length();
@@ -1182,9 +1182,9 @@ Datetime::TimeParser(string_view _time)
 											if ((it_e - aux) == 6) {
 												auto aux_end = aux + 3;
 												if (*aux_end == ':') {
-													clk.tz_h = strict_stoul(string_view(aux + 1, aux_end - aux - 1));
-													clk.tz_m = strict_stoul(string_view(aux_end + 1, it_e - aux_end - 1));
-													clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, aux - it)));
+													clk.tz_h = strict_stoul(std::string_view(aux + 1, aux_end - aux - 1));
+													clk.tz_m = strict_stoul(std::string_view(aux_end + 1, it_e - aux_end - 1));
+													clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, aux - it)));
 													return clk;
 												}
 											}
@@ -1195,7 +1195,7 @@ Datetime::TimeParser(string_view _time)
 									THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
 								}
 							}
-							clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
+							clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
 							return clk;
 						}
 						default:
@@ -1385,7 +1385,7 @@ Datetime::time_to_string(double t, bool trim)
 
 
 bool
-Datetime::isTime(string_view _time) {
+Datetime::isTime(std::string_view _time) {
 	auto length = _time.length();
 	switch (length) {
 		case 5: // 00:00
@@ -1422,7 +1422,7 @@ Datetime::isTime(string_view _time) {
 
 
 Datetime::clk_t
-Datetime::TimedeltaParser(string_view timedelta)
+Datetime::TimedeltaParser(std::string_view timedelta)
 {
 	clk_t clk;
 	auto size = timedelta.size();
@@ -1476,7 +1476,7 @@ Datetime::TimedeltaParser(string_view timedelta)
 									THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
 								}
 							}
-							clk.fsec = Datetime::normalize_fsec(strict_stod(string_view(it, it_e - it)));
+							clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
 							return clk;
 						}
 					default:
@@ -1609,7 +1609,7 @@ Datetime::timedelta_to_string(double t, bool trim)
 
 
 bool
-Datetime::isTimedelta(string_view timedelta)
+Datetime::isTimedelta(std::string_view timedelta)
 {
 	auto size = timedelta.size();
 	switch (size) {

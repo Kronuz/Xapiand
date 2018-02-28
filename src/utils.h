@@ -33,6 +33,7 @@
 #include <math.h>             // for log10, floor, pow
 #include <regex>              // for regex
 #include <string>             // for std::string
+#include <string_view>        // for std::string_view
 #include <sys/errno.h>        // for errno, EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
 #include <type_traits>        // for forward, underlying_type_t
@@ -43,8 +44,8 @@
 #include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "exception.h"        // for InvalidArgument, OutOfRange
 #include "split.h"            // for Split
-#include "string_view.h"      // for string_view
 #include "strict_stox.hh"     // for strict_stox
+#include "stringified.hh"     // for stringified
 
 
 template<class T, class... Args>
@@ -70,11 +71,11 @@ namespace std {
 		return str;
 	}
 
-	inline std::string to_string(string_view& str) {
+	inline std::string to_string(std::string_view& str) {
 		return std::string(str);
 	}
 
-	inline const std::string to_string(const string_view& str) {
+	inline const std::string to_string(const std::string_view& str) {
 		return std::string(str);
 	}
 }
@@ -102,7 +103,7 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
 
-void set_thread_name(string_view name);
+void set_thread_name(std::string_view name);
 std::string get_thread_name();
 
 
@@ -112,7 +113,7 @@ inline std::string repr(const void* p, const void* e, bool friendly = true, char
 	return repr(p, static_cast<const char*>(e) - static_cast<const char*>(p), friendly, quote, max_size);
 }
 
-inline std::string repr(string_view string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
+inline std::string repr(std::string_view string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
 	return repr(string.data(), string.size(), friendly, quote, max_size);
 }
 
@@ -124,7 +125,7 @@ inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', size
 
 std::string escape(const void* p, size_t size, char quote = '\'');
 
-inline std::string escape(string_view string, char quote = '\'') {
+inline std::string escape(std::string_view string, char quote = '\'') {
 	return escape(string.data(), string.size(), quote);
 }
 
@@ -169,8 +170,8 @@ std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 
-inline std::string vformat_string(string_view format, va_list argptr) {
-	stringified_view format_string(format);
+inline std::string vformat_string(std::string_view format, va_list argptr) {
+	stringified format_string(format);
 
 	// Figure out the length of the formatted message.
 	va_list argptr_copy;
@@ -187,7 +188,7 @@ inline std::string vformat_string(string_view format, va_list argptr) {
 }
 
 
-inline std::string _format_string(string_view format, int n, ...) {
+inline std::string _format_string(std::string_view format, int n, ...) {
 	va_list argptr;
 
 	va_start(argptr, n);
@@ -199,13 +200,13 @@ inline std::string _format_string(string_view format, int n, ...) {
 
 
 template<typename... Args>
-inline std::string format_string(string_view format, Args&&... args) {
+inline std::string format_string(std::string_view format, Args&&... args) {
 	return _format_string(format, 0, std::forward<Args>(args)...);
 }
 
 
 template<typename T>
-inline std::string join_string(const std::vector<T>& values, string_view delimiter, string_view last_delimiter)
+inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
 {
 	auto it = values.begin();
 	auto it_e = values.end();
@@ -234,13 +235,13 @@ inline std::string join_string(const std::vector<T>& values, string_view delimit
 
 
 template<typename T>
-inline std::string join_string(const std::vector<T>& values, string_view delimiter) {
+inline std::string join_string(const std::vector<T>& values, std::string_view delimiter) {
 	return join_string(values, delimiter, delimiter);
 }
 
 
 template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, string_view delimiter, string_view last_delimiter, UnaryPredicate pred) {
+inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
 	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
 	return join_string(filtered_values, delimiter, last_delimiter);
@@ -248,20 +249,20 @@ inline std::string join_string(const std::vector<T>& values, string_view delimit
 
 
 template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, string_view delimiter, UnaryPredicate pred) {
+inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
 	return join_string(values, delimiter, delimiter, pred);
 }
 
 
 template<typename T>
-inline std::vector<string_view> split_string(string_view value, const T& sep) {
-	std::vector<string_view> values;
+inline std::vector<std::string_view> split_string(std::string_view value, const T& sep) {
+	std::vector<std::string_view> values;
 	Split<T>::split(value, sep, std::back_inserter(values));
 	return values;
 }
 
 
-inline std::string indent_string(string_view str, char sep, int level, bool indent_first=true) {
+inline std::string indent_string(std::string_view str, char sep, int level, bool indent_first=true) {
 	std::string result;
 	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
 
@@ -286,7 +287,7 @@ inline std::string indent_string(string_view str, char sep, int level, bool inde
 }
 
 
-inline std::string center_string(string_view str, int width) {
+inline std::string center_string(std::string_view str, int width) {
 	std::string result;
 	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
 		result += " ";
@@ -295,7 +296,7 @@ inline std::string center_string(string_view str, int width) {
 	return result;
 }
 
-inline std::string right_string(string_view str, int width) {
+inline std::string right_string(std::string_view str, int width) {
 	std::string result;
 	for (auto idx = int(width - str.size()); idx > 0; --idx) {
 		result += " ";
@@ -305,13 +306,13 @@ inline std::string right_string(string_view str, int width) {
 }
 
 
-inline std::string upper_string(string_view str) {
+inline std::string upper_string(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), ::toupper);
 	return result;
 }
 
-inline std::string lower_string(string_view str) {
+inline std::string lower_string(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), ::tolower);
 	return result;
@@ -328,28 +329,28 @@ inline void to_lower(std::string& str) {
 
 
 char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
-char* normalize_path(string_view src, char* dst, bool slashed=false);
-std::string normalize_path(string_view src, bool slashed=false);
+char* normalize_path(std::string_view src, char* dst, bool slashed=false);
+std::string normalize_path(std::string_view src, bool slashed=false);
 int url_qs(const char *, const char *, size_t);
 
-bool strhasupper(string_view str);
+bool strhasupper(std::string_view str);
 
-bool isRange(string_view str);
+bool isRange(std::string_view str);
 
-bool startswith(string_view text, string_view token);
-bool startswith(string_view text, char ch);
-bool endswith(string_view text, string_view token);
-bool endswith(string_view text, char ch);
-void delete_files(string_view path);
-void move_files(string_view src, string_view dst);
-bool exists(string_view path);
-bool build_path(string_view path);
-bool build_path_index(string_view path_index);
+bool startswith(std::string_view text, std::string_view token);
+bool startswith(std::string_view text, char ch);
+bool endswith(std::string_view text, std::string_view token);
+bool endswith(std::string_view text, char ch);
+void delete_files(std::string_view path);
+void move_files(std::string_view src, std::string_view dst);
+bool exists(std::string_view path);
+bool build_path(std::string_view path);
+bool build_path_index(std::string_view path_index);
 
-DIR* opendir(string_view path, bool create);
-void find_file_dir(DIR* dir, File_ptr& fptr, string_view pattern, bool pre_suf_fix);
+DIR* opendir(std::string_view path, bool create);
+void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix);
 // Copy all directory if file_name and new_name are empty
-int copy_file(string_view src, string_view dst, bool create=true, string_view file_name="", string_view new_name="");
+int copy_file(std::string_view src, std::string_view dst, bool create=true, std::string_view file_name="", std::string_view new_name="");
 
 std::string bytes_string(size_t bytes, bool colored=false);
 std::string small_time_string(long double seconds, bool colored=false);

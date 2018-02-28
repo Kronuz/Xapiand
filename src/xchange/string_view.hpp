@@ -22,21 +22,22 @@
 
 #pragma once
 
+#include <string_view>
+
 #include "msgpack.hpp"           // for msgpack::object
 
-#include "string_view.h"
 
 namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
 
 	template <>
-	struct convert<string_view> {
-		msgpack::object const& operator()(msgpack::object const& o, string_view& v) const {
+	struct convert<std::string_view> {
+		msgpack::object const& operator()(msgpack::object const& o, std::string_view& v) const {
 			switch (o.type) {
 			case msgpack::type::BIN:
-				v = string_view(o.via.bin.ptr, o.via.bin.size);
+				v = std::string_view(o.via.bin.ptr, o.via.bin.size);
 				break;
 			case msgpack::type::STR:
-				v = string_view(o.via.str.ptr, o.via.str.size);
+				v = std::string_view(o.via.str.ptr, o.via.str.size);
 				break;
 			default:
 				THROW(msgpack::type_error);
@@ -47,9 +48,9 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 	};
 
 	template <>
-	struct pack<string_view> {
+	struct pack<std::string_view> {
 		template <typename Stream>
-		msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, const string_view& v) const {
+		msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, const std::string_view& v) const {
 			uint32_t size = checked_get_container_size(v.size());
 			o.pack_str(size);
 			o.pack_str_body(v.data(), size);
@@ -58,8 +59,8 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 	};
 
 	template <>
-	struct object<string_view> {
-		void operator()(msgpack::object& o, const string_view& v) const {
+	struct object<std::string_view> {
+		void operator()(msgpack::object& o, const std::string_view& v) const {
 			uint32_t size = checked_get_container_size(v.size());
 			o.type = msgpack::type::STR;
 			o.via.str.ptr = v.data();
@@ -68,8 +69,8 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 	};
 
 	template <>
-	struct object_with_zone<string_view> {
-		void operator()(msgpack::object::with_zone& o, const string_view& v) const {
+	struct object_with_zone<std::string_view> {
+		void operator()(msgpack::object::with_zone& o, const std::string_view& v) const {
 			uint32_t size = checked_get_container_size(v.size());
 			o.type = msgpack::type::STR;
 			char* ptr = static_cast<char*>(o.zone.allocate_align(size));

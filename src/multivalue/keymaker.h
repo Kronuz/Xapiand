@@ -57,7 +57,7 @@ const std::string MIN_STR_CMPVALUE("\x00");
 class Multi_MultiValueKeyMaker;
 
 
-using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const required_spc_t&, bool, string_view, const query_field_t&);
+using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(const required_spc_t&, bool, std::string_view, const query_field_t&);
 
 
 // Base class for creating keys.
@@ -99,7 +99,7 @@ class FloatKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	FloatKey(Xapian::valueno slot, bool reverse, string_view value)
+	FloatKey(Xapian::valueno slot, bool reverse, std::string_view value)
 		: BaseKey(slot, reverse),
 		  _ref_val(strict_stod(value)),
 		  _ser_ref_val(Serialise::_float(_ref_val)) { }
@@ -115,7 +115,7 @@ class IntegerKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	IntegerKey(Xapian::valueno slot, bool reverse, string_view value)
+	IntegerKey(Xapian::valueno slot, bool reverse, std::string_view value)
 		: BaseKey(slot, reverse),
 		  _ref_val(strict_stoll(value)),
 		  _ser_ref_val(Serialise::integer(_ref_val)) { }
@@ -131,7 +131,7 @@ class PositiveKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	PositiveKey(Xapian::valueno slot, bool reverse, string_view value)
+	PositiveKey(Xapian::valueno slot, bool reverse, std::string_view value)
 		: BaseKey(slot, reverse),
 		  _ref_val(strict_stoull(value)),
 		  _ser_ref_val(Serialise::positive(_ref_val)) { }
@@ -147,7 +147,7 @@ class DateKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	DateKey(Xapian::valueno slot, bool reverse, string_view value)
+	DateKey(Xapian::valueno slot, bool reverse, std::string_view value)
 		: BaseKey(slot, reverse),
 		  _ref_val(Datetime::timestamp(Datetime::DateParser(value))),
 		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
@@ -162,7 +162,7 @@ class BoolKey : public BaseKey {
 	std::string _ref_val;
 
 public:
-	BoolKey(Xapian::valueno slot, bool reverse, string_view value)
+	BoolKey(Xapian::valueno slot, bool reverse, std::string_view value)
 		: BaseKey(slot, reverse),
 		  _ref_val(Serialise::boolean(value)) { }
 
@@ -177,7 +177,7 @@ class StringKey : public BaseKey {
 	StringMetric _metric;
 
 public:
-	StringKey(Xapian::valueno slot, bool reverse, string_view value, bool icase)
+	StringKey(Xapian::valueno slot, bool reverse, std::string_view value, bool icase)
 		: BaseKey(slot, reverse),
 		  _metric(value, icase) { }
 
@@ -259,53 +259,53 @@ public:
 		: slots(begin, end) { }
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf);
+	void add_value(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf);
 
-	void levenshtein(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void levenshtein(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Levenshtein>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaro(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void jaro(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaro>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaro_winkler(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void jaro_winkler(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void sorensen_dice(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void sorensen_dice(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void jaccard(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void jaccard(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<Jaccard>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void lcs(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void lcs(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<LCSubstr>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void lcsq(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void lcsq(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_en(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void soundex_en(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_fr(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void soundex_fr(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_de(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void soundex_de(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex_es(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void soundex_es(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
 	}
 
-	void soundex(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf) {
+	void soundex(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
 		switch (fnv1ah32::hash(field_spc.language)) {
 			case fnv1ah32::hash("english"):
 			case fnv1ah32::hash("en"):

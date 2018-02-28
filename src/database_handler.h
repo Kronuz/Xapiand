@@ -27,6 +27,7 @@
 #include <memory>                            // for shared_ptr, make_shared
 #include <stddef.h>                          // for size_t
 #include <string>                            // for string
+#include <string_view>                       // for std::string_view
 #include <unordered_map>                     // for unordered_map
 #include <vector>                            // for vector
 #include <xapian.h>                          // for Document, docid, MSet
@@ -47,7 +48,7 @@ class Schema;
 class SchemasLRU;
 
 
-Xapian::docid to_docid(string_view document_id);
+Xapian::docid to_docid(std::string_view document_id);
 
 
 class MSet : public Xapian::MSet {
@@ -57,15 +58,15 @@ public:
 	MSet(const Xapian::MSet& o) : Xapian::MSet(o) { }
 
 	// The following either use enquire or db (db could have changed)
-	Xapian::doccount get_termfreq(string_view term) const = delete;
-	double get_termweight(string_view term) const = delete;
-	std::string snippet(string_view text,
+	Xapian::doccount get_termfreq(std::string_view term) const = delete;
+	double get_termweight(std::string_view term) const = delete;
+	std::string snippet(std::string_view text,
 			size_t length = 500,
 			const Xapian::Stem& stemmer = Xapian::Stem(),
 			unsigned flags = SNIPPET_BACKGROUND_MODEL | SNIPPET_EXHAUSTIVE,
-			string_view hi_start = "<b>",
-			string_view hi_end = "</b>",
-			string_view omit = "...") const = delete;
+			std::string_view hi_start = "<b>",
+			std::string_view hi_end = "</b>",
+			std::string_view omit = "...") const = delete;
 	void fetch(const Xapian::MSetIterator& begin, const Xapian::MSetIterator& end) const = delete;
 	void fetch(const Xapian::MSetIterator& item) const = delete;
 	void fetch() const = delete;
@@ -116,11 +117,11 @@ class DatabaseHandler {
 	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
 
 	template<typename ProcessorCompile>
-	MsgPack& call_script(MsgPack& data, string_view term_id, size_t script_hash, size_t body_hash, string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
-	MsgPack& run_script(MsgPack& data, string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
+	MsgPack& call_script(MsgPack& data, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	MsgPack& run_script(MsgPack& data, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(string_view document_id, bool stored, string_view stored_locator, MsgPack& obj, string_view blob, bool commit_, const ct_type_t& ct_type);
+	DataType index(std::string_view document_id, bool stored, std::string_view stored_locator, MsgPack& obj, std::string_view blob, bool commit_, const ct_type_t& ct_type);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -141,9 +142,9 @@ public:
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
 #endif
 
-	DataType index(string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
-	DataType patch(string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
-	DataType merge(string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType index(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType patch(std::string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
+	DataType merge(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();
@@ -156,23 +157,23 @@ public:
 	void dump_documents(int fd);
 	void restore(int fd);
 
-	std::string get_prefixed_term_id(string_view document_id);
+	std::string get_prefixed_term_id(std::string_view document_id);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
-	std::string get_metadata(string_view key);
+	std::string get_metadata(std::string_view key);
 	bool set_metadata(const std::string& key, const std::string& value, bool overwrite=true);
-	bool set_metadata(string_view key, string_view value, bool overwrite=true);
+	bool set_metadata(std::string_view key, std::string_view value, bool overwrite=true);
 
 	Document get_document(const Xapian::docid& did);
-	Document get_document(string_view document_id);
+	Document get_document(std::string_view document_id);
 	Document get_document_term(const std::string& term_id);
-	Document get_document_term(string_view term_id);
-	Xapian::docid get_docid(string_view document_id);
+	Document get_document_term(std::string_view term_id);
+	Xapian::docid get_docid(std::string_view document_id);
 
-	void delete_document(string_view document_id, bool commit_=false, bool wal_=true);
+	void delete_document(std::string_view document_id, bool commit_=false, bool wal_=true);
 
-	MsgPack get_document_info(string_view document_id);
+	MsgPack get_document_info(std::string_view document_id);
 	MsgPack get_database_info();
 
 	bool commit(bool _wal=true);
@@ -185,9 +186,9 @@ public:
 	static int get_master_count();
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	void dec_document_change_cnt(string_view term_id);
-	const std::shared_ptr<std::pair<size_t, const MsgPack>> get_document_change_seq(string_view term_id);
-	bool set_document_change_seq(string_view term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	void dec_document_change_cnt(std::string_view term_id);
+	const std::shared_ptr<std::pair<size_t, const MsgPack>> get_document_change_seq(std::string_view term_id);
+	bool set_document_change_seq(std::string_view term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
 #endif
 };
 
@@ -218,11 +219,11 @@ public:
 	MsgPack get_terms(size_t retries=DB_RETRIES);
 	MsgPack get_values(size_t retries=DB_RETRIES);
 
-	MsgPack get_value(string_view slot_name);
-	std::pair<bool, string_view> get_store();
+	MsgPack get_value(std::string_view slot_name);
+	std::pair<bool, std::string_view> get_store();
 	MsgPack get_obj();
-	MsgPack get_field(string_view slot_name);
-	static MsgPack get_field(string_view slot_name, const MsgPack& obj);
+	MsgPack get_field(std::string_view slot_name);
+	static MsgPack get_field(std::string_view slot_name, const MsgPack& obj);
 
 	uint64_t hash(size_t retries=DB_RETRIES);
 };

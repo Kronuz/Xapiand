@@ -30,10 +30,10 @@
 #include <iostream>
 #include <regex>           // for regex
 #include <string>          // for string
+#include <string_view>     // for std::string_view
 #include <type_traits>     // for forward
 
 #include "exception.h"     // for ClientError
-#include "string_view.h"   // for string_view
 
 constexpr int DATETIME_EPOCH            = 1970;
 constexpr int DATETIME_START_YEAR       = 1900;
@@ -108,16 +108,16 @@ namespace Datetime {
 	extern const std::regex date_re;
 	extern const std::regex date_math_re;
 
-	tm_t DateParser(string_view date);
+	tm_t DateParser(std::string_view date);
 	inline tm_t DateParser(const std::string& date) {
-		return DateParser(string_view(date));
+		return DateParser(std::string_view(date));
 	}
 	tm_t DateParser(const MsgPack& date);
-	Format Iso8601Parser(string_view date, tm_t& tm);
-	Format Iso8601Parser(string_view date);
-	void processDateMath(string_view date_math, tm_t& tm);
-	void computeTimeZone(tm_t& tm, char op, string_view hour, string_view min);
-	void computeDateMath(tm_t& tm, string_view op, char unit);
+	Format Iso8601Parser(std::string_view date, tm_t& tm);
+	Format Iso8601Parser(std::string_view date);
+	void processDateMath(std::string_view date_math, tm_t& tm);
+	void computeTimeZone(tm_t& tm, char op, std::string_view hour, std::string_view min);
+	void computeDateMath(tm_t& tm, std::string_view op, char unit);
 	bool isleapYear(int year);
 	bool isleapRef_year(int tm_year);
 	int getDays_month(int year, int month);
@@ -133,7 +133,7 @@ namespace Datetime {
 	std::string iso8601(const tm_t& timep, bool trim=true, char sep='T');
 	std::string iso8601(double epoch, bool trim=true, char sep='T');
 	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true, char sep='T');
-	bool isDate(string_view date);
+	bool isDate(std::string_view date);
 
 
 	/*
@@ -159,13 +159,13 @@ namespace Datetime {
 	 * Specialized functions for time.
 	 */
 
-	clk_t TimeParser(string_view _time);
+	clk_t TimeParser(std::string_view _time);
 	clk_t time_to_clk_t(double t);
 	double time_to_double(const MsgPack& _time);
 	double time_to_double(const clk_t& clk);
 	std::string time_to_string(const clk_t& clk, bool trim=true);
 	std::string time_to_string(double t, bool trim=true);
-	bool isTime(string_view date);
+	bool isTime(std::string_view date);
 
 	inline bool isvalidTime(double t) {
 		static const long long min = -362339LL;       // 00:00:00+99:99
@@ -179,13 +179,13 @@ namespace Datetime {
 	 * Specialized functions for timedelta.
 	 */
 
-	clk_t TimedeltaParser(string_view timedelta);
+	clk_t TimedeltaParser(std::string_view timedelta);
 	clk_t timedelta_to_clk_t(double t);
 	double timedelta_to_double(const MsgPack& timedelta);
 	double timedelta_to_double(const clk_t& clk);
 	std::string timedelta_to_string(const clk_t& clk, bool trim=true);
 	std::string timedelta_to_string(double t, bool trim=true);
-	bool isTimedelta(string_view date);
+	bool isTimedelta(std::string_view date);
 
 	inline bool isvalidTimedelta(double t) {
 		static const long long min = -362439999999LL; // -99:99:99.999...

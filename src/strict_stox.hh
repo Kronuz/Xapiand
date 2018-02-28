@@ -26,11 +26,11 @@
 #include <utility>            // for std::swap
 #include <cstdlib>            // for std::strto*
 #include <cstdio>             // for size_t
+#include <string_view>        // for std::string_view
 #include <sys/errno.h>        // for errno
 #include <type_traits>        // for std::true_type, std::false_type
 
 #include "exception.h"        // for InvalidArgument, OutOfRange
-#include "string_view.h"      // for string_view
 
 
 // Types conversion strict_stox and strict_nothrow_stox
@@ -40,7 +40,7 @@ class Stox {
 	F func;
 
 	template <typename T, typename... Args>
-	auto _stox(std::true_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
+	auto _stox(std::true_type, const std::string_view& str, std::size_t* idx, Args&&... args) noexcept {
 		auto b = str.data();
 		auto e = b + str.size();
 		if (!b) {
@@ -63,7 +63,7 @@ class Stox {
 	}
 
 	template <typename T, typename... Args>
-	auto _stox(std::false_type, const string_view& str, std::size_t* idx, Args&&... args) noexcept {
+	auto _stox(std::false_type, const std::string_view& str, std::size_t* idx, Args&&... args) noexcept {
 		auto r = _stox<void>(std::true_type{}, str, idx, std::forward<Args>(args)...);
 		if (errno) return static_cast<T>(0);
 		if (r < std::numeric_limits<T>::min() || std::numeric_limits<T>::max() < r) {
@@ -79,7 +79,7 @@ public:
 		  func(_func) { }
 
 	template <typename T, typename... Args>
-	auto stox_nothrow(int& errno_save, const string_view& str, std::size_t* idx, Args&&... args) {
+	auto stox_nothrow(int& errno_save, const std::string_view& str, std::size_t* idx, Args&&... args) {
 		errno_save = errno;
 		errno = 0;
 		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
@@ -88,7 +88,7 @@ public:
 	}
 
 	template <typename T, typename... Args>
-	auto stox_throw(const string_view& str, std::size_t* idx, Args&&... args) {
+	auto stox_throw(const std::string_view& str, std::size_t* idx, Args&&... args) {
 		auto errno_save = errno;
 		errno = 0;
 		auto r = _stox<T>(std::is_same<void, T>{}, str, idx, std::forward<Args>(args)...);
@@ -106,18 +106,18 @@ public:
 };
 #define STOXIFY_BASE(name, func, T) \
 static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr, int base = 10) noexcept { \
+inline auto strict_##name(int& errno_save, std::string_view str, std::size_t* idx = nullptr, int base = 10) noexcept { \
 	return _strict_##name.stox_nothrow<T>(errno_save, str, idx, base); \
 } \
-inline auto strict_##name(string_view str, std::size_t* idx = nullptr, int base = 10) { \
+inline auto strict_##name(std::string_view str, std::size_t* idx = nullptr, int base = 10) { \
 	return _strict_##name.stox_throw<T>(str, idx, base); \
 }
 #define STOXIFY(name, func, T) \
 static Stox<decltype(&func)> _strict_##name(#name, func); \
-inline auto strict_##name(int& errno_save, string_view str, std::size_t* idx = nullptr) noexcept { \
+inline auto strict_##name(int& errno_save, std::string_view str, std::size_t* idx = nullptr) noexcept { \
 	return _strict_##name.stox_nothrow<T>(errno_save, str, idx); \
 } \
-inline auto strict_##name(string_view str, std::size_t* idx = nullptr) { \
+inline auto strict_##name(std::string_view str, std::size_t* idx = nullptr) { \
 	return _strict_##name.stox_throw<T>(str, idx); \
 }
 STOXIFY_BASE(stoul, std::strtoul, void);

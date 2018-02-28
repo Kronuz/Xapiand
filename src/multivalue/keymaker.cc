@@ -419,7 +419,7 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 
 
 void
-Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, string_view value, const query_field_t& qf)
+Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf)
 {
 	if (value.empty()) {
 		if (field_spc.get_type() != FieldType::GEO) {

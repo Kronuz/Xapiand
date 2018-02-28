@@ -28,7 +28,7 @@
 
 
 inline Geometry::Type
-get_geometry_type(string_view str_geometry_type)
+get_geometry_type(std::string_view str_geometry_type)
 {
 	switch (fnv1ah32::hash(str_geometry_type)) {
 		case fnv1ah32::hash("POINT"):
@@ -61,7 +61,7 @@ get_geometry_type(string_view str_geometry_type)
 }
 
 
-EWKT::EWKT(string_view str)
+EWKT::EWKT(std::string_view str)
 {
 	if (str.compare(0, 5, "SRID=") == 0) {
 		const auto str_srid = str.substr(5, 4);
@@ -253,7 +253,7 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 	if (first == last) {
 		THROW(EWKTError, "Syntax error in '%s'", repr(_first, last).c_str());
 	} else {
-		const string_view geometry(_first, first - _first);
+		const std::string_view geometry(_first, first - _first);
 		Geometry::Type geometry_type;
 		try {
 			geometry_type = get_geometry_type(geometry);
@@ -271,7 +271,7 @@ EWKT::find_geometry(Iterator& first, Iterator& last)
 				return std::make_pair(geometry_type, false);
 			}
 			case ' ': {
-				if (string_view(first + 1, last - first - 1).compare("EMPTY") == 0) {
+				if (std::string_view(first + 1, last - first - 1).compare("EMPTY") == 0) {
 					return std::make_pair(geometry_type, true);
 				}
 				THROW(EWKTError, "Syntax error in '%s'", repr(first, last).c_str());
@@ -293,18 +293,18 @@ EWKT::_parse_cartesian(int SRID, Iterator first, Iterator last)
 	if (first == last) {
 		THROW(InvalidArgument, "Expected ' ' after of longitude [%s]");
 	}
-	double lon = strict_stod(string_view(_first, first - _first));
+	double lon = strict_stod(std::string_view(_first, first - _first));
 
 	_first = ++first;
 	while (first != last && *first != ' ') {
 		++first;
 	}
-	double lat = strict_stod(string_view(_first, first - _first));
+	double lat = strict_stod(std::string_view(_first, first - _first));
 
 	if (first == last) {
 		return Cartesian(lat, lon, 0, Cartesian::Units::DEGREES, SRID);
 	}
-	double height = strict_stod(string_view(first + 1, last - first - 1));
+	double height = strict_stod(std::string_view(first + 1, last - first - 1));
 	return Cartesian(lat, lon, height, Cartesian::Units::DEGREES, SRID);
 }
 
@@ -340,9 +340,9 @@ EWKT::_parse_circle(int SRID, Iterator first, Iterator last)
 	auto center = _parse_cartesian(SRID, _first, first);
 
 	if (++first != last && *first == ' ') {
-		return Circle(std::move(center), strict_stod(string_view(first + 1, last - first - 1)));
+		return Circle(std::move(center), strict_stod(std::string_view(first + 1, last - first - 1)));
 	} else {
-		return Circle(std::move(center), strict_stod(string_view(first, last - first)));
+		return Circle(std::move(center), strict_stod(std::string_view(first, last - first)));
 	}
 }
 
@@ -745,7 +745,7 @@ EWKT::_isEWKT(Iterator first, Iterator last)
 		return false;
 	} else {
 		try {
-			get_geometry_type(string_view(_first, first - _first));
+			get_geometry_type(std::string_view(_first, first - _first));
 		} catch (const std::out_of_range&) {
 			return false;
 		}
@@ -767,7 +767,7 @@ EWKT::_isEWKT(Iterator first, Iterator last)
 
 
 bool
-EWKT::isEWKT(string_view str)
+EWKT::isEWKT(std::string_view str)
 {
 	if (str.compare(0, 5, "SRID=") == 0) {
 		if (str.size() > 9 && str[9] == ';') {

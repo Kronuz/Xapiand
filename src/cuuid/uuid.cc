@@ -355,7 +355,7 @@ UUID::UUID(const char* str, size_t size)
 	: _bytes(uuid_to_bytes(str, size)) { }
 
 
-UUID::UUID(string_view string)
+UUID::UUID(std::string_view string)
 	: UUID(string.data(), string.size()) { }
 
 
@@ -712,7 +712,7 @@ UUID::is_serialised(const char** ptr, const char* end)
 
 
 UUID
-UUID::unserialise(string_view bytes)
+UUID::unserialise(std::string_view bytes)
 {
 	const char* pos = bytes.data();
 	const char* end = pos + bytes.size();

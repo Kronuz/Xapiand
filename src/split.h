@@ -22,10 +22,8 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include "string_view.h"
+#include <string>       // for std::string
+#include <string_view>  // for std::string_view
 
 
 template <typename T=char>
@@ -246,7 +244,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split(string_view str, string_view delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split(std::string_view str, std::string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -264,7 +262,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split(string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split(std::string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -282,7 +280,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(string_view str, string_view delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split_first_of(std::string_view str, std::string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
 		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
@@ -300,7 +298,7 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void split_first_of(string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
+	static void split_first_of(std::string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		return split(str, delimiter, d_first, skip_blank);
 	}
 };

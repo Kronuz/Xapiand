@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include <string_view>
+
 #include "../msgpack.h"
 #include "ewkt.h"
-
-#include "string_view.h"
 
 
 constexpr const char GEO_LATITUDE[]   = "_latitude";

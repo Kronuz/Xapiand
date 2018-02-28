@@ -27,6 +27,7 @@
 #include <memory>                   // for shared_ptr, make_shared
 #include <stddef.h>                 // for size_t
 #include <string>                   // for string
+#include <string_view>              // for std::string_view
 #include <type_traits>              // for decay_t, enable_if_t, forward
 #include <unordered_map>            // for unordered_map
 #include <vector>                   // for vector
@@ -34,7 +35,6 @@
 
 #include "aggregation_metric.h"     // for AGGREGATION_AGGS
 #include "msgpack.h"                // for MsgPack
-#include "string_view.h"            // for string_view
 
 
 class Schema;

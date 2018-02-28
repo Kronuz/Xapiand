@@ -24,12 +24,12 @@
 
 #include <cstring>          // for string and memcpy
 #include <stdlib.h>         // for malloc, free
+#include <string_view>      // for std::string_view
 #include <zlib.h>           // for z_stream
 
 #include "exception.h"      // for Error
 #include "io_utils.h"       // for close, open
-#include "string_view.h"    // for string_view
-
+#include "stringified.hh"   // for stringified
 
 #define DEFLATE_BLOCK_SIZE 16384
 
@@ -261,7 +261,7 @@ protected:
 	size_t bytes_readed;
 	size_t size_file;
 
-	explicit DeflateFile(string_view filename)
+	explicit DeflateFile(std::string_view filename)
 		: bytes_readed(0),
 		  size_file(0)
 	{
@@ -282,8 +282,8 @@ protected:
 	}
 
 public:
-	inline void open(string_view filename) {
-		stringified_view filename_string(filename);
+	inline void open(std::string_view filename) {
+		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
 			THROW(DeflateIOError, "Cannot open file: %s", filename_string.c_str());
@@ -300,7 +300,7 @@ public:
 		fd_internal = false;
 	}
 
-	inline void add_file(string_view filename) {
+	inline void add_file(std::string_view filename) {
 		open(filename);
 	}
 };
@@ -316,7 +316,7 @@ class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<Def
 	friend class DeflateBlockStreaming<DeflateCompressFile>;
 
 public:
-	DeflateCompressFile(string_view filename, bool gzip_=false);
+	DeflateCompressFile(std::string_view filename, bool gzip_=false);
 	DeflateCompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
 	~DeflateCompressFile();
 
@@ -326,7 +326,7 @@ public:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(string_view filename, bool gzip_=false) {
+	inline void reset(std::string_view filename, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		open(filename);
@@ -344,7 +344,7 @@ class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<D
 	friend class DeflateBlockStreaming<DeflateDecompressFile>;
 
 public:
-	DeflateDecompressFile(string_view filename, bool gzip_=false);
+	DeflateDecompressFile(std::string_view filename, bool gzip_=false);
 	DeflateDecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
 	~DeflateDecompressFile();
 
@@ -354,7 +354,7 @@ public:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	 }
 
-	inline void reset(string_view filename, bool gzip_=false) {
+	inline void reset(std::string_view filename, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		open(filename);

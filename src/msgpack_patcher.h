@@ -25,6 +25,7 @@
 #include <stddef.h>                         // for size_t
 #include <stdexcept>                        // for out_of_range, invalid_arg...
 #include <string>                           // for string, basic_string, stoul
+#include <string_view>                      // for std::string_view
 #include <vector>                           // for vector
 
 #include "exception.h"                      // for ClientError, MSG_ClientError
@@ -34,7 +35,6 @@
 #include "rapidjson/encodings.h"            // for UTF8
 #include "rapidjson/pointer.h"              // for GenericPointer, GenericPo...
 #include "utils.h"                          // for stox
-#include "string_view.h"                    // for string_view
 
 
 constexpr const char PATCH_PATH[]                   = "path";
@@ -68,7 +68,7 @@ const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op);
 double get_patch_double(const MsgPack& val, const char* patch_op);
 
 
-inline void _add(MsgPack& o, const MsgPack& val, string_view target) {
+inline void _add(MsgPack& o, const MsgPack& val, std::string_view target) {
 	switch (o.getType()) {
 		case MsgPack::Type::MAP:
 			o[target] = val;
@@ -91,7 +91,7 @@ inline void _add(MsgPack& o, const MsgPack& val, string_view target) {
 }
 
 
-inline void _erase(MsgPack& o, string_view target) {
+inline void _erase(MsgPack& o, std::string_view target) {
 	try {
 		switch (o.getType()) {
 			case MsgPack::Type::MAP:

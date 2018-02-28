@@ -35,7 +35,6 @@
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "serialise.h"                         // for MsgPack, get_range_type...
 #include "utils.h"                             // for repr, startswith
-#include "string_view.h"                       // for string_view
 #include "hashes.hh"                           // for fnv1ah32
 
 
@@ -89,7 +88,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 
 
 std::pair<FieldType, MsgPack>
-QueryDSL::parse_guess_range(const required_spc_t& field_spc, string_view range)
+QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view range)
 {
 	L_CALL("QueryDSL::parse_guess_range(<field_spc>, %s)", repr(range).c_str());
 
@@ -119,7 +118,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, string_view range)
 
 
 MsgPack
-QueryDSL::parse_range(const required_spc_t& field_spc, string_view range)
+QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 {
 	L_CALL("QueryDSL::parse_range(<field_spc>, %s)", repr(range).c_str());
 
@@ -144,7 +143,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, string_view range)
 
 
 inline Xapian::Query
-QueryDSL::process_in(string_view, Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool, bool is_wildcard)
+QueryDSL::process_in(std::string_view, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_in(...)");
 
@@ -153,7 +152,7 @@ QueryDSL::process_in(string_view, Xapian::Query::op op, string_view parent, cons
 
 
 inline Xapian::Query
-QueryDSL::process_range(string_view word, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_range(std::string_view word, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_range(...)");
 
@@ -162,7 +161,7 @@ QueryDSL::process_range(string_view word, Xapian::Query::op, string_view parent,
 
 
 inline Xapian::Query
-QueryDSL::process_raw(string_view, Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool, bool is_in, bool is_wildcard)
+QueryDSL::process_raw(std::string_view, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_raw(...)");
 
@@ -171,7 +170,7 @@ QueryDSL::process_raw(string_view, Xapian::Query::op op, string_view parent, con
 
 
 inline Xapian::Query
-QueryDSL::process_value(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value(...)");
 
@@ -180,7 +179,7 @@ QueryDSL::process_value(string_view, Xapian::Query::op, string_view parent, cons
 
 
 inline Xapian::Query
-QueryDSL::process_and(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and(...)");
 
@@ -189,7 +188,7 @@ QueryDSL::process_and(string_view, Xapian::Query::op, string_view parent, const 
 
 
 inline Xapian::Query
-QueryDSL::process_and_maybe(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and_maybe(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_maybe(...)");
 
@@ -198,7 +197,7 @@ QueryDSL::process_and_maybe(string_view, Xapian::Query::op, string_view parent, 
 
 
 inline Xapian::Query
-QueryDSL::process_and_not(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and_not(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_not(...)");
 
@@ -207,7 +206,7 @@ QueryDSL::process_and_not(string_view, Xapian::Query::op, string_view parent, co
 
 
 inline Xapian::Query
-QueryDSL::process_elite_set(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_elite_set(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_elite_set(...)");
 
@@ -216,7 +215,7 @@ QueryDSL::process_elite_set(string_view, Xapian::Query::op, string_view parent, 
 
 
 inline Xapian::Query
-QueryDSL::process_filter(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_filter(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_filter(...)");
 
@@ -225,7 +224,7 @@ QueryDSL::process_filter(string_view, Xapian::Query::op, string_view parent, con
 
 
 inline Xapian::Query
-QueryDSL::process_max(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_max(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_max(...)");
 
@@ -234,7 +233,7 @@ QueryDSL::process_max(string_view, Xapian::Query::op, string_view parent, const 
 
 
 inline Xapian::Query
-QueryDSL::process_near(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_near(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_near(...)");
 
@@ -243,7 +242,7 @@ QueryDSL::process_near(string_view, Xapian::Query::op, string_view parent, const
 
 
 inline Xapian::Query
-QueryDSL::process_or(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_or(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_or(...)");
 
@@ -252,7 +251,7 @@ QueryDSL::process_or(string_view, Xapian::Query::op, string_view parent, const M
 
 
 inline Xapian::Query
-QueryDSL::process_phrase(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_phrase(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_phrase(...)");
 
@@ -261,7 +260,7 @@ QueryDSL::process_phrase(string_view, Xapian::Query::op, string_view parent, con
 
 
 inline Xapian::Query
-QueryDSL::process_scale_weight(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_scale_weight(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_scale_weight(...)");
 
@@ -270,7 +269,7 @@ QueryDSL::process_scale_weight(string_view, Xapian::Query::op, string_view paren
 
 
 inline Xapian::Query
-QueryDSL::process_synonym(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_synonym(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_synonym(...)");
 
@@ -279,7 +278,7 @@ QueryDSL::process_synonym(string_view, Xapian::Query::op, string_view parent, co
 
 
 inline Xapian::Query
-QueryDSL::process_value_ge(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_ge(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_ge(...)");
 
@@ -288,7 +287,7 @@ QueryDSL::process_value_ge(string_view, Xapian::Query::op, string_view parent, c
 
 
 inline Xapian::Query
-QueryDSL::process_value_le(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_le(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_le(...)");
 
@@ -297,7 +296,7 @@ QueryDSL::process_value_le(string_view, Xapian::Query::op, string_view parent, c
 
 
 inline Xapian::Query
-QueryDSL::process_value_range(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_range(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_range(...)");
 
@@ -306,7 +305,7 @@ QueryDSL::process_value_range(string_view, Xapian::Query::op, string_view parent
 
 
 inline Xapian::Query
-QueryDSL::process_wildcard(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool)
+QueryDSL::process_wildcard(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool)
 {
 	L_CALL("QueryDSL::process_wildcard(...)");
 
@@ -315,7 +314,7 @@ QueryDSL::process_wildcard(string_view, Xapian::Query::op, string_view parent, c
 
 
 inline Xapian::Query
-QueryDSL::process_xor(string_view, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_xor(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_xor(...)");
 
@@ -324,7 +323,7 @@ QueryDSL::process_xor(string_view, Xapian::Query::op, string_view parent, const 
 
 
 inline Xapian::Query
-QueryDSL::process_cast(string_view word, Xapian::Query::op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_cast(std::string_view word, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_cast(%s, ...)", repr(word).c_str());
 
@@ -333,7 +332,7 @@ QueryDSL::process_cast(string_view word, Xapian::Query::op, string_view parent, 
 
 
 inline Xapian::Query
-QueryDSL::process(Xapian::Query::op op, string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s, %s)", (int)op, repr(parent).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
@@ -513,7 +512,7 @@ QueryDSL::process(Xapian::Query::op op, string_view parent, const MsgPack& obj, 
 
 
 inline Xapian::Query
-QueryDSL::get_value_query(string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>, %s, %s, %s)", repr(path).c_str(), repr(obj.to_string()).c_str(), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
 
@@ -545,7 +544,7 @@ QueryDSL::get_value_query(string_view path, const MsgPack& obj, Xapian::termcoun
 
 
 inline Xapian::Query
-QueryDSL::get_acc_date_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_date_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
@@ -599,7 +598,7 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, string_view field_
 
 
 inline Xapian::Query
-QueryDSL::get_acc_time_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_time_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
@@ -616,7 +615,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, string_view field_
 
 
 inline Xapian::Query
-QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_timedelta_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
@@ -633,7 +632,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, string_view f
 
 
 inline Xapian::Query
-QueryDSL::get_acc_num_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_num_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
@@ -648,7 +647,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, string_view field_a
 
 
 inline Xapian::Query
-QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
+QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
 	L_CALL("QueryDSL::get_acc_geo_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
@@ -668,7 +667,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, string_view field_a
 
 
 inline Xapian::Query
-QueryDSL::get_accuracy_query(const required_spc_t& field_spc, string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf, bool is_in)
+QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf, bool is_in)
 {
 	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, %s, %s, <wqf>, %s)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str(), is_in ? "true" : "false");
 
@@ -778,7 +777,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 
 inline Xapian::Query
-QueryDSL::get_term_query(const required_spc_t& field_spc, string_view serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard)
+QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard)
 {
 	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>, %s)", repr(serialised_term).c_str(), is_wildcard ? "true" : "false");
 
@@ -887,7 +886,7 @@ QueryDSL::make_dsl_query(const query_field_t& e)
 
 
 MsgPack
-QueryDSL::make_dsl_query(string_view query)
+QueryDSL::make_dsl_query(std::string_view query)
 {
 	L_CALL("Query::make_dsl_query(%s)", repr(query).c_str());
 
