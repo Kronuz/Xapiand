@@ -171,6 +171,7 @@ constexpr std::size_t next_prime(std::size_t x) {
 
 /***********************************************************************
  * Computes a constexpr perfect hash function
+ * Based on Dr. Daoud's http://iswsa.acm.org/mphf/index.html
  */
 
 constexpr static auto npos = std::numeric_limits<std::size_t>::max();
