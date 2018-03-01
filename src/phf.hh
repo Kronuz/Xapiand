@@ -78,7 +78,8 @@ struct fast_hasher {};
 template <>
 struct fast_hasher<std::uint32_t> {
 	constexpr fast_hasher() { }
-	constexpr std::uint32_t hash(std::uint32_t key, std::uint32_t seed) const {
+	template <typename S>
+	constexpr std::uint32_t hash(std::uint32_t key, S seed) const {
 		key = key ^ seed;
 		return key;
 	}
@@ -86,9 +87,10 @@ struct fast_hasher<std::uint32_t> {
 template <>
 struct fast_hasher<std::uint64_t> {
 	constexpr fast_hasher() { }
-	constexpr std::uint32_t hash(std::uint64_t key, std::uint32_t seed) const {
+	template <typename S>
+	constexpr std::uint64_t hash(std::uint64_t key, S seed) const {
 		key = key ^ seed;
-		return static_cast<std::uint32_t>(key);
+		return key;
 	}
 };
 
@@ -98,7 +100,8 @@ struct strong_hasher {};
 template <>
 struct strong_hasher<std::uint32_t> {
 	constexpr strong_hasher() { }
-	constexpr std::uint32_t hash(std::uint32_t key, std::uint32_t seed) const {
+	template <typename S>
+	constexpr std::uint32_t hash(std::uint32_t key, S seed) const {
 		key = key ^ seed;
 		key = ~key + (key << 15); // key = (key << 15) - key - 1;
 		key = key ^ (key >> 12);
@@ -112,15 +115,17 @@ struct strong_hasher<std::uint32_t> {
 template <>
 struct strong_hasher<std::uint64_t> {
 	constexpr strong_hasher() { }
-	constexpr std::uint32_t hash(std::uint64_t key, std::uint32_t seed) const {
+	template <typename S>
+	constexpr std::uint64_t hash(std::uint64_t key, S seed) const {
 		key = key ^ seed;
-		key = (~key) + (key << 18); // key = (key << 18) - key - 1;
-		key = key ^ (key >> 31);
-		key = key * 21; // key = (key + (key << 2)) + (key << 4);
-		key = key ^ (key >> 11);
-		key = key + (key << 6);
-		key = key ^ (key >> 22);
-		return static_cast<std::uint32_t>(key);
+		key = (~key) + (key << 21); // key = (key << 21) - key - 1;
+		key = key ^ (key >> 24);
+		key = (key + (key << 3)) + (key << 8); // key * 265
+		key = key ^ (key >> 14);
+		key = (key + (key << 2)) + (key << 4); // key * 21
+		key = key ^ (key >> 28);
+		key = key + (key << 31);
+		return key;
 	}
 };
 
@@ -332,18 +337,15 @@ public:
 
 	constexpr std::size_t find(const T& item) const noexcept {
 		const auto& elem = _index[static_cast<std::size_t>(_hasher.hash(item, _displacement[item % displacement_size]) % index_size)];
-		if (elem.item == item) {
-			return elem.pos;
-		}
-		return npos;
+		return (elem.item == item ? 0 : npos) | elem.pos;
 	}
 
 	constexpr std::size_t operator[](const T& item) const {
-		auto pos = find(item);
-		if (pos == npos) {
-			throw std::out_of_range("Item not found");
+		const auto& elem = _index[static_cast<std::size_t>(_hasher.hash(item, _displacement[item % displacement_size]) % index_size)];
+		if (elem.item == item) {
+			return elem.pos;
 		}
-		return pos;
+		throw std::out_of_range("Item not found");
 	}
 
 	constexpr bool empty() const noexcept {
