@@ -40,7 +40,7 @@
 
 #include "database_utils.h"
 #include "geospatial/htm.h"        // for GeoSpatial, range_t
-#include "hashes.hh"               // for fnv1ah64, fnv1ah32
+#include "hashes.hh"               // for fnv1ah32
 #include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
 #include "phf.hh"                  // for phf
@@ -210,21 +210,21 @@ enum class FieldType : uint8_t {
 // which is much faster ~ 5.24591s -> 0.861319s
 template <std::size_t max_size = 1000>
 class SimpleStopper : public Xapian::Stopper {
-	phf::phf<phf::fast_phf, std::uint64_t, max_size> stop_words;
+	phf::phf<phf::fast_phf, std::uint32_t, max_size> stop_words;
 
 public:
 	SimpleStopper() { }
 
 	template <class Iterator>
 	SimpleStopper(Iterator begin, Iterator end) {
-		std::vector<std::uint64_t> result;
+		std::vector<std::uint32_t> result;
 		result.reserve(max_size);
-		std::transform(begin, end, std::back_inserter(result), fnv1ah64{});
+		std::transform(begin, end, std::back_inserter(result), fnv1ah32{});
 		stop_words.assign(result.data(), std::min(max_size, result.size()));
 	}
 
 	virtual bool operator()(const std::string& term) const {
-		return stop_words.find(fnv1ah64::hash(term)) != phf::npos;
+		return stop_words.find(fnv1ah32::hash(term)) != phf::npos;
 	}
 };
 
