@@ -22,9 +22,6 @@
 
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-
 #include <algorithm>          // for move
 #include <atomic>             // for atomic_bool, atomic, atomic_int
 #include <chrono>             // for system_clock, time_point, duration, millise...
@@ -153,5 +150,3 @@ public:
 		return ScheduledTask::__repr__("Logging");
 	}
 };
-
-#pragma GCC diagnostic pop
