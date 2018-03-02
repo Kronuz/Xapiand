@@ -152,7 +152,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 {
 	if (o.size() == 1) {
 		auto str_key = o.begin()->str_view();
-		switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
+		switch (Cast::getHash(str_key)) {
 			case Cast::Hash::INTEGER:
 				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
 			case Cast::Hash::POSITIVE:
@@ -899,7 +899,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::MAP: {
 			if (field_value.size() == 1) {
 				const auto str_key = field_value.begin()->str_view();
-				switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
+				switch (Cast::getHash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return FieldType::INTEGER;
 					case Cast::Hash::POSITIVE:
@@ -1019,7 +1019,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			if (field_value.size() == 1) {
 				const auto it = field_value.begin();
 				const auto str_key = it->str_view();
-				switch ((Cast::Hash)fnv1ah32::hash(str_key)) {
+				switch (Cast::getHash(str_key)) {
 					case Cast::Hash::INTEGER:
 						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));
 					case Cast::Hash::POSITIVE:

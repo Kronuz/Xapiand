@@ -27,39 +27,44 @@
 #include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
 #include "msgpack.h"             // for MsgPack
 #include "hashes.hh"             // for fnv1ah32
+#include "phf.hh"                // for phf
 
 
 enum class FieldType : uint8_t;
 
-
 namespace Cast {
+	#define HASH_OPTIONS(name, ...) \
+		OPTION(INTEGER, __VA_ARGS__) \
+		OPTION(POSITIVE, __VA_ARGS__) \
+		OPTION(FLOAT, __VA_ARGS__) \
+		OPTION(BOOLEAN, __VA_ARGS__) \
+		OPTION(TERM, __VA_ARGS__) \
+		OPTION(TEXT, __VA_ARGS__) \
+		OPTION(STRING, __VA_ARGS__) \
+		OPTION(UUID, __VA_ARGS__) \
+		OPTION(DATE, __VA_ARGS__) \
+		OPTION(TIME, __VA_ARGS__) \
+		OPTION(TIMEDELTA, __VA_ARGS__) \
+		OPTION(EWKT, __VA_ARGS__) \
+		OPTION(POINT, __VA_ARGS__) \
+		OPTION(CIRCLE, __VA_ARGS__) \
+		OPTION(CONVEX, __VA_ARGS__) \
+		OPTION(POLYGON, __VA_ARGS__) \
+		OPTION(CHULL, __VA_ARGS__) \
+		OPTION(MULTIPOINT, __VA_ARGS__) \
+		OPTION(MULTICIRCLE, __VA_ARGS__) \
+		OPTION(MULTICONVEX, __VA_ARGS__) \
+		OPTION(MULTIPOLYGON, __VA_ARGS__) \
+		OPTION(MULTICHULL, __VA_ARGS__) \
+		OPTION(GEO_COLLECTION, __VA_ARGS__) \
+		OPTION(GEO_INTERSECTION, __VA_ARGS__) \
+		OPTION(CHAI, __VA_ARGS__) \
+		OPTION(ECMA, __VA_ARGS__)
+
 	enum class Hash : uint32_t {
-		INTEGER           = fnv1ah32::hash(RESERVED_INTEGER),
-		POSITIVE          = fnv1ah32::hash(RESERVED_POSITIVE),
-		FLOAT             = fnv1ah32::hash(RESERVED_FLOAT),
-		BOOLEAN           = fnv1ah32::hash(RESERVED_BOOLEAN),
-		TERM              = fnv1ah32::hash(RESERVED_TERM),
-		TEXT              = fnv1ah32::hash(RESERVED_TEXT),
-		STRING            = fnv1ah32::hash(RESERVED_STRING),
-		UUID              = fnv1ah32::hash(RESERVED_UUID),
-		DATE              = fnv1ah32::hash(RESERVED_DATE),
-		TIME              = fnv1ah32::hash(RESERVED_TIME),
-		TIMEDELTA         = fnv1ah32::hash(RESERVED_TIMEDELTA),
-		EWKT              = fnv1ah32::hash(RESERVED_EWKT),
-		POINT             = fnv1ah32::hash(RESERVED_POINT),
-		CIRCLE            = fnv1ah32::hash(RESERVED_CIRCLE),
-		CONVEX            = fnv1ah32::hash(RESERVED_CONVEX),
-		POLYGON           = fnv1ah32::hash(RESERVED_POLYGON),
-		CHULL             = fnv1ah32::hash(RESERVED_CHULL),
-		MULTIPOINT        = fnv1ah32::hash(RESERVED_MULTIPOINT),
-		MULTICIRCLE       = fnv1ah32::hash(RESERVED_MULTICIRCLE),
-		MULTICONVEX       = fnv1ah32::hash(RESERVED_MULTICONVEX),
-		MULTIPOLYGON      = fnv1ah32::hash(RESERVED_MULTIPOLYGON),
-		MULTICHULL        = fnv1ah32::hash(RESERVED_MULTICHULL),
-		GEO_COLLECTION    = fnv1ah32::hash(RESERVED_GEO_COLLECTION),
-		GEO_INTERSECTION  = fnv1ah32::hash(RESERVED_GEO_INTERSECTION),
-		CHAI              = fnv1ah32::hash(RESERVED_CHAI),
-		ECMA              = fnv1ah32::hash(RESERVED_ECMA),
+		#define OPTION(name, arg) name = fnv1ah32::hash(RESERVED_##name),
+		HASH_OPTIONS(Hash)
+		#undef OPTION
 	};
 
 	/*
@@ -79,5 +84,6 @@ namespace Cast {
 	MsgPack timedelta(const MsgPack& obj);
 	std::string ewkt(const MsgPack& obj);
 
+	Hash getHash(std::string_view cast_word);
 	FieldType getType(std::string_view cast_word);
 };

@@ -844,7 +844,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 				THROW(QueryDslError, "%s must be object [%s]", repr(field_name).c_str(), repr(value.to_string()).c_str());
 			}
 		} else {
-			switch ((Cast::Hash)fnv1ah32::hash(field_name)) {
+			switch (Cast::getHash(field_name)) {
 				case Cast::Hash::EWKT:
 				case Cast::Hash::POINT:
 				case Cast::Hash::CIRCLE:

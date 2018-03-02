@@ -30,7 +30,7 @@ Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
 		const auto str_key = obj.begin()->str();
-		switch ((Hash)fnv1ah32::hash(str_key)) {
+		switch (getHash(str_key)) {
 			case Hash::INTEGER:
 				return integer(obj.at(str_key));
 			case Hash::POSITIVE:
@@ -358,10 +358,23 @@ Cast::ewkt(const MsgPack& obj)
 }
 
 
+Cast::Hash
+Cast::getHash(std::string_view cast_word)
+{
+	constexpr static auto hash_phf = phf::make_phf({
+		#define OPTION(name, arg) fnv1ah32::hash(RESERVED_##name),
+		HASH_OPTIONS(cast_hash)
+		#undef OPTION
+	});
+
+	return static_cast<Hash>(hash_phf.find(fnv1ah32::hash(cast_word)));
+}
+
+
 FieldType
 Cast::getType(std::string_view cast_word)
 {
-	switch ((Hash)fnv1ah32::hash(cast_word)) {
+	switch (getHash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;
 		case Hash::POSITIVE:          return FieldType::POSITIVE;
 		case Hash::FLOAT:             return FieldType::FLOAT;
