@@ -263,7 +263,6 @@ public:
 
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
 #define THROW(exception, ...) throw exception(__func__, __FILE__, __LINE__, #exception, ##__VA_ARGS__)

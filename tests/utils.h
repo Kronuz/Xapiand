@@ -57,7 +57,6 @@ template <typename... Args>
 inline void log(std::string fmt, Args&&... args) {
 	fmt.push_back('\n');
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wformat-security"
 	fprintf(stderr, fmt.c_str(), std::forward<Args>(args)...);
 #pragma GCC diagnostic pop

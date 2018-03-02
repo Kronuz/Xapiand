@@ -730,7 +730,6 @@ namespace chaiscript
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
 #ifdef CHAISCRIPT_CLANG
