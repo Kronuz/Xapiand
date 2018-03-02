@@ -220,9 +220,9 @@ check_cxx_compiler_flag("-Wsuggest-final-types" COMPILER_SUPPORTS_WSUGGEST_FINAL
 if(COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wsuggest-final-types")
 endif()
-check_cxx_compiler_flag("-pedantic" COMPILER_SUPPORTS_PEDANTIC)
+check_cxx_compiler_flag("-Wpedantic" COMPILER_SUPPORTS_PEDANTIC)
 if(COMPILER_SUPPORTS_PEDANTIC)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pedantic")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wpedantic")
 endif()
 
 
