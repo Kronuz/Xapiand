@@ -26,11 +26,10 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>  // for std::string_view
-
-#include "static_string.hh"
+#include <string_view>        // for std::string_view
 
 #include "lz4/xxhash.h"
+#include "static_string.hh"
 
 
 /*               _               _
@@ -165,6 +164,9 @@ constexpr std::uint64_t operator"" _xx(const char* s, size_t size) {
 	return xxh64::hash(s, size);
 }
 
+constexpr static char noop(char c) {
+	return c;
+}
 
 /*   __            _         _               _
  *  / _|_ ____   _/ | __ _  | |__   __ _ ___| |__
@@ -172,34 +174,51 @@ constexpr std::uint64_t operator"" _xx(const char* s, size_t size) {
  * |  _| | | \ V /| | (_| | | | | | (_| \__ \ | | |
  * |_| |_| |_|\_/ |_|\__,_| |_| |_|\__,_|___/_| |_|
  */
-template <typename T, T prime, T offset>
+template <typename T, T prime, T offset, typename F>
 struct fnv1ah {
 	using key_type = T;
 
-	constexpr static T hash(const char *p, std::size_t len, T seed = offset) {
+	constexpr static T hash(const char *p, std::size_t len, T seed = offset, F op = noop) {
 		T hash = seed;
 		for (std::size_t i = 0; i < len; ++i) {
-			hash = (hash ^ static_cast<unsigned char>(p[i])) * prime;
+			hash = (hash ^ static_cast<unsigned char>(op(p[i]))) * prime;
 		}
-        return hash;
+		return hash;
+	}
+	constexpr static T hash(const char *p, std::size_t len, F op) {
+		return hash(p, len, offset, op);
 	}
 
 	template <size_t N>
-	constexpr static T hash(const char(&s)[N], T seed = offset) {
-		return hash(s, N - 1, seed);
+	constexpr static T hash(const char(&s)[N], T seed = offset, F op = noop) {
+		return hash(s, N - 1, seed, noop);
+	}
+	template <size_t N>
+	constexpr static T hash(const char(&s)[N], F op) {
+		return hash(s, N - 1, offset, noop);
 	}
 
 	template <std::size_t SN, typename ST>
-	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
-		return hash(str.data(), str.size(), seed);
+	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	template <std::size_t SN, typename ST>
+	constexpr static T hash(const static_string::static_string<SN, ST>& str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
 	}
 
-	constexpr static T hash(std::string_view str, T seed = offset) {
-        return hash(str.data(), str.size(), seed);
-    }
+	constexpr static T hash(std::string_view str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	constexpr static T hash(std::string_view str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
+	}
 
-	static T hash(const std::string& str, T seed = offset) {
-        return hash(str.data(), str.size(), seed);
+	static T hash(const std::string& str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	static T hash(const std::string& str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
 	}
 
 	template <typename... Args>
@@ -207,9 +226,9 @@ struct fnv1ah {
 		return hash(std::forward<Args>(args)...);
 	}
 };
-using fnv1ah16 = fnv1ah<std::uint16_t, 0x21dU, 51363UL>;  // shouldn't exist, figured out the prime and offset
-using fnv1ah32 = fnv1ah<std::uint32_t, 0x1000193UL, 2166136261UL>;
-using fnv1ah64 = fnv1ah<std::uint64_t, 0x100000001b3ULL, 14695981039346656037ULL>;
+using fnv1ah16 = fnv1ah<std::uint16_t, 0x21dU, 51363UL, decltype(noop)>;  // shouldn't exist, figured out the prime and offset
+using fnv1ah32 = fnv1ah<std::uint32_t, 0x1000193UL, 2166136261UL, decltype(noop)>;
+using fnv1ah64 = fnv1ah<std::uint64_t, 0x100000001b3ULL, 14695981039346656037ULL, decltype(noop)>;
 // using fnv1ah128 = fnv1ah<__uint128_t, 0x10000000000000000000159ULLL, 275519064689413815358837431229664493455ULLL>;  // too big for compiler
 
 constexpr std::uint32_t operator"" _fnv1a(const char* s, size_t size) {
@@ -224,34 +243,51 @@ constexpr std::uint32_t operator"" _fnv1a(const char* s, size_t size) {
  *  \__,_|/ |_.__/_____| |_| |_|\__,_|___/_| |_|
  *      |__/
  */
-template <typename T, T mul, T offset>
+template <typename T, T mul, T offset, typename F>
 struct djb2h {
 	using key_type = T;
 
-	constexpr static T hash(const char *p, std::size_t len, T seed = offset) {
+	constexpr static T hash(const char *p, std::size_t len, T seed = offset, F op = noop) {
 		T hash = seed;
 		for (std::size_t i = 0; i < len; ++i) {
-			hash = (hash * mul) + static_cast<unsigned char>(p[i]);
+			hash = (hash * mul) + static_cast<unsigned char>(op(p[i]));
 		}
-        return hash;
+		return hash;
+	}
+	constexpr static T hash(const char *p, std::size_t len, F op) {
+		return hash(p, len, offset, op);
 	}
 
 	template <size_t N>
-	constexpr static T hash(const char(&s)[N], T seed = offset) {
-		return hash(s, N - 1, seed);
+	constexpr static T hash(const char(&s)[N], T seed = offset, F op = noop) {
+		return hash(s, N - 1, seed, noop);
+	}
+	template <size_t N>
+	constexpr static T hash(const char(&s)[N], F op) {
+		return hash(s, N - 1, offset, noop);
 	}
 
 	template <std::size_t SN, typename ST>
-	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset) {
-		return hash(str.data(), str.size(), seed);
+	constexpr static T hash(const static_string::static_string<SN, ST>& str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	template <std::size_t SN, typename ST>
+	constexpr static T hash(const static_string::static_string<SN, ST>& str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
 	}
 
-	constexpr static T hash(std::string_view str, T seed = offset) {
-		return hash(str.data(), str.size(), seed);
+	constexpr static T hash(std::string_view str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	constexpr static T hash(std::string_view str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
 	}
 
-	static T hash(const std::string& str, T seed = offset) {
-		return hash(str.data(), str.size(), seed);
+	static T hash(const std::string& str, T seed = offset, F op = noop) {
+		return hash(str.data(), str.size(), seed, noop);
+	}
+	static T hash(const std::string& str, F op) {
+		return hash(str.data(), str.size(), offset, noop);
 	}
 
 	template <typename... Args>
@@ -261,9 +297,9 @@ struct djb2h {
 };
 
 // from https://stackoverflow.com/a/41849998/167522, used primeth with bits size
-using djb2h8 = djb2h<std::uint8_t, 7, 5>;  // (h << 3) - h <-- mul should? be prime 7 or 11
-using djb2h16 = djb2h<std::uint16_t, 13, 31>;  // (h << 2) + (h << 3) + h <-- mul should? be prime 13 or 17
-using djb2h32 = djb2h<std::uint32_t, 33, 5381>;  // the one implemented everywhere: (h << 5) + h <-- mul should? be prime 31 or 37
-using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul should? be prime 61 or 67
+using djb2h8 = djb2h<std::uint8_t, 7, 5, decltype(noop)>;  // (h << 3) - h <-- mul should? be prime 7 or 11
+using djb2h16 = djb2h<std::uint16_t, 13, 31, decltype(noop)>;  // (h << 2) + (h << 3) + h <-- mul should? be prime 13 or 17
+using djb2h32 = djb2h<std::uint32_t, 33, 5381, decltype(noop)>;  // the one implemented everywhere: (h << 5) + h <-- mul should? be prime 31 or 37
+using djb2h64 = djb2h<std::uint64_t, 63, 174440041L, decltype(noop)>;  // (h << 6) - h <-- mul should? be prime 61 or 67
 
 #endif // HASHES_HH
