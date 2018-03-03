@@ -1077,16 +1077,16 @@ XapiandManager::server_status(MsgPack& stats)
 	auto& stats_memory = stats["memory"];
 
 	auto& stats_memory_used = stats_memory["used"];
-	stats_memory_used["resident"] = bytes_string(get_current_memory_by_process());
-	stats_memory_used["virtual"] = bytes_string(get_current_memory_by_process(false));
+	stats_memory_used["resident"] = string::from_bytes(get_current_memory_by_process());
+	stats_memory_used["virtual"] = string::from_bytes(get_current_memory_by_process(false));
 
 	// auto& stats_memory_total_used = stats_memory["total_used"];
-	// stats_memory_total_used["resident"] =  bytes_string(get_current_ram().first);
-	// stats_memory_total_used["virtual"] = bytes_string(get_total_virtual_used());
+	// stats_memory_total_used["resident"] =  string::from_bytes(get_current_ram().first);
+	// stats_memory_total_used["virtual"] = string::from_bytes(get_total_virtual_used());
 
 	auto& stats_memory_total = stats_memory["total"];
-	stats_memory_total["resident"] =  bytes_string(get_total_ram());
-	stats_memory_total["virtual"] = bytes_string(get_total_virtual_memory());
+	stats_memory_total["resident"] =  string::from_bytes(get_total_ram());
+	stats_memory_total["virtual"] = string::from_bytes(get_total_virtual_memory());
 
 	// databases:
 	auto wdb = database_pool.total_writable_databases();
@@ -1199,9 +1199,9 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			if (counter.second.cnt) {
 				auto& counter_stats = stat[counter.first];
 				counter_stats["cnt"] = counter.second.cnt;
-				counter_stats["avg"] = delta_string(counter.second.total / counter.second.cnt);
-				counter_stats["min"] = delta_string(counter.second.min);
-				counter_stats["max"] = delta_string(counter.second.max);
+				counter_stats["avg"] = string::from_delta(counter.second.total / counter.second.cnt);
+				counter_stats["min"] = string::from_delta(counter.second.min);
+				counter_stats["max"] = string::from_delta(counter.second.max);
 			}
 		}
 		stats.push_back(std::move(stat));

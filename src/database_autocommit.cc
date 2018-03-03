@@ -27,7 +27,7 @@
 #include "endpoint.h"          // for Endpoints
 #include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "manager.h"           // for XapiandManager
-#include "utils.h"             // for delta_string
+#include "string.hh"           // for string::from_delta
 
 
 std::mutex DatabaseAutocommit::statuses_mtx;
@@ -113,9 +113,9 @@ DatabaseAutocommit::run()
 		auto end = std::chrono::system_clock::now();
 
 		if (successful) {
-			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
+			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", string::from_delta(start, end).c_str());
 		} else {
-			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", delta_string(start, end).c_str());
+			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", string::from_delta(start, end).c_str());
 		}
 	}
 }

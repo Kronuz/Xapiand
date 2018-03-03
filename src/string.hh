@@ -340,11 +340,11 @@ inline void to_lower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), string::tolower);
 }
 
+
+std::string from_bytes(size_t bytes, bool colored=false);
+std::string from_small_time(long double seconds, bool colored=false);
+std::string from_time(long double seconds, bool colored=false);
+std::string from_delta(long double nanoseconds, bool colored=false);
+std::string from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
+
 } // namespace string
-
-
-std::string bytes_string(size_t bytes, bool colored=false);
-std::string small_time_string(long double seconds, bool colored=false);
-std::string time_string(long double seconds, bool colored=false);
-std::string delta_string(long double nanoseconds, bool colored=false);
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);

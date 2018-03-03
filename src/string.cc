@@ -48,7 +48,7 @@ static inline int find_val(long double val, const long double* input, int i=0) {
 }
 
 
-inline std::string _bytes_string(size_t bytes, bool colored) {
+static inline std::string _from_bytes(size_t bytes, bool colored) {
 	static const long double base = 1024;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 8), std::pow(base, 7), std::pow(base, 6), std::pow(base, 5), std::pow(base, 4), std::pow(base, 3), std::pow(base, 2), std::pow(base, 1), 1 };
@@ -60,12 +60,12 @@ inline std::string _bytes_string(size_t bytes, bool colored) {
 	return humanize(bytes, colored, i, n, div, units, scaling, colors, 10.0L);
 }
 
-std::string bytes_string(size_t bytes, bool colored) {
-	return _bytes_string(bytes, colored);
+std::string string::from_bytes(size_t bytes, bool colored) {
+	return _from_bytes(bytes, colored);
 }
 
 
-inline std::string _small_time_string(long double seconds, bool colored) {
+static inline std::string _from_small_time(long double seconds, bool colored) {
 	static const long double base = 1000;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { 1, std::pow(base, -1), std::pow(base, -2), std::pow(base, -3), std::pow(base, -4) };
@@ -77,12 +77,12 @@ inline std::string _small_time_string(long double seconds, bool colored) {
 	return humanize(seconds, colored, i, n, div, units, scaling, colors, 1000.0L);
 }
 
-std::string small_time_string(long double seconds, bool colored) {
-	return _small_time_string(seconds, colored);
+std::string string::from_small_time(long double seconds, bool colored) {
+	return _from_small_time(seconds, colored);
 }
 
 
-inline std::string _time_string(long double seconds, bool colored) {
+static inline std::string _from_time(long double seconds, bool colored) {
 	static const long double base = 60;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 2), std::pow(base, 1), 1 };
@@ -94,21 +94,21 @@ inline std::string _time_string(long double seconds, bool colored) {
 	return humanize(seconds, colored, i, n, div, units, scaling, colors, 100.0L);
 }
 
-std::string time_string(long double seconds, bool colored) {
-	return _time_string(seconds, colored);
+std::string string::from_time(long double seconds, bool colored) {
+	return _from_time(seconds, colored);
 }
 
 
-inline std::string _delta_string(long double nanoseconds, bool colored) {
+static inline std::string _from_delta(long double nanoseconds, bool colored) {
 	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
-	return (seconds < 1) ? _small_time_string(seconds, colored) : _time_string(seconds, colored);
+	return (seconds < 1) ? _from_small_time(seconds, colored) : _from_time(seconds, colored);
 }
 
-std::string delta_string(long double nanoseconds, bool colored) {
-	return _delta_string(nanoseconds, colored);
+std::string string::from_delta(long double nanoseconds, bool colored) {
+	return _from_delta(nanoseconds, colored);
 }
 
 
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
-	return _delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
+std::string string::from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
+	return _from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
 }

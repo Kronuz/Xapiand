@@ -63,7 +63,7 @@
 #include "servers/server_http.h"            // for HttpServer
 #include "stats.h"                          // for Stats
 #include "threadpool.h"                     // for ThreadPool
-#include "utils.h"                          // for delta_string
+#include "string.hh"                        // for string::from_delta
 #include "package.h"                        // for Package
 #include "hashes.hh"                        // for fnv1ah32
 
@@ -142,9 +142,9 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 		}
 
 		response_ends = std::chrono::system_clock::now();
-		headers += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
+		headers += "Response-Time: " + string::from_delta(request_begins, response_ends) + eol;
 		if (operation_ends >= operation_begins) {
-			headers += "Operation-Time: " + delta_string(operation_begins, operation_ends) + eol;
+			headers += "Operation-Time: " + string::from_delta(operation_begins, operation_ends) + eol;
 		}
 
 		if (mode & HTTP_OPTIONS_RESPONSE) {
@@ -631,7 +631,7 @@ HttpClient::run()
 				if (ct_type == json_type || ct_type == msgpack_type) {
 					request_body = msgpack.to_string(4);
 				} else if (!body.empty()) {
-					request_body = "<blob " + bytes_string(body.size()) + ">";
+					request_body = "<blob " + string::from_bytes(body.size()) + ">";
 				}
 			}
 			log_request();
@@ -1076,7 +1076,7 @@ HttpClient::delete_document_view(enum http_method method, Command)
 	};
 
 	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME("Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Deletion took %s", string::from_delta(operation_begins, operation_ends).c_str());
 
 	write_http_response(status_code, response);
 }
@@ -1127,7 +1127,7 @@ HttpClient::index_document_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME("Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Indexing took %s", string::from_delta(operation_begins, operation_ends).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	response[RESPONSE_COMMIT] = query_field->commit;
@@ -1187,7 +1187,7 @@ HttpClient::update_document_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME("Updating took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Updating took %s", string::from_delta(operation_begins, operation_ends).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	if (response.find(ID_FIELD_NAME) == response.end()) {
@@ -1667,7 +1667,7 @@ HttpClient::search_view(enum http_method method, Command)
 							response_body += b64_response_body.c_str();
 							response_body += '\a';
 						} else if (!blob_data.empty()) {
-							response_body = "<blob " + bytes_string(blob_data.size()) + ">";
+							response_body = "<blob " + string::from_bytes(blob_data.size()) + ">";
 						}
 					}
 					if (type_encoding != Encoding::none) {
@@ -1832,7 +1832,7 @@ HttpClient::search_view(enum http_method method, Command)
 	operation_ends = std::chrono::system_clock::now();
 
 	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count());
-	L_TIME("Searching took %s", delta_string(operation_begins, operation_ends).c_str());
+	L_TIME("Searching took %s", string::from_delta(operation_begins, operation_ends).c_str());
 
 	L_SEARCH("FINISH SEARCH");
 }
@@ -2418,7 +2418,7 @@ HttpClient::clean_http_request()
 			if (Logging::log_level > LOG_DEBUG) {
 				log_response();
 			}
-			L(priority, color, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, bytes_string(response_size).c_str(), delta_string(request_begins, response_ends).c_str());
+			L(priority, color, "\"%s\" %d %s %s", request_head.c_str(), (int)response_status, string::from_bytes(response_size).c_str(), string::from_delta(request_begins, response_ends).c_str());
 		}
 	}
 
@@ -2448,7 +2448,7 @@ HttpClient::clean_http_request()
 	accept_set.clear();
 
 	request_begining = true;
-	L_TIME("Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
+	L_TIME("Full request took %s, response took %s", string::from_delta(request_begins, response_ends).c_str(), string::from_delta(response_begins, response_ends).c_str());
 
 	set_idle();
 

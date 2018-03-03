@@ -46,6 +46,7 @@
 #include "msgpack/unpack.hpp"     // for unpack_error
 #include "schema.h"               // for FieldType, FieldType::TERM
 #include "serialise.h"            // for uuid
+#include "string.hh"              // for string::from_delta
 #include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
 
@@ -908,7 +909,7 @@ Database::reopen()
 		// Try to reopen
 		try {
 			bool ret = db->reopen();
-			L_DATABASE_WRAP("Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
+			L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(access_time, std::chrono::system_clock::now()).c_str());
 			return ret;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			L_EXC("ERROR: %s", exc.get_description().c_str());
@@ -1108,7 +1109,7 @@ Database::reopen()
 		}
 	}
 
-	L_DATABASE_WRAP("Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(access_time, std::chrono::system_clock::now()).c_str());
 
 	return true;
 }
@@ -1189,7 +1190,7 @@ Database::commit(bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Commit made (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	return true;
 }
@@ -1229,7 +1230,7 @@ Database::cancel(bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Cancel made (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Cancel made (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 }
 
 
@@ -1269,7 +1270,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document deleted (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1311,7 +1312,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document deleted (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1477,7 +1478,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document added (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1522,7 +1523,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document replaced (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1569,7 +1570,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document replaced (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1608,7 +1609,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Spelling added (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Spelling added (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1645,7 +1646,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Spelling removed (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Spelling removed (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1684,7 +1685,7 @@ Database::find_document(const std::string& term_id)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Document found (took %s) [1]", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Document found (took %s) [1]", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	return did;
 }
@@ -1733,7 +1734,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Got document (took %s) [1]", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Got document (took %s) [1]", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	return doc;
 }
@@ -1764,7 +1765,7 @@ Database::get_metadata(const std::string& key)
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Got metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Got metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	return value;
 }
@@ -1800,7 +1801,7 @@ Database::get_metadata_keys()
 		values.clear();
 	}
 
-	L_DATABASE_WRAP("Got metadata keys (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Got metadata keys (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	return values;
 }
@@ -1835,7 +1836,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		reopen();
 	}
 
-	L_DATABASE_WRAP("Set metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Set metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 
 	if (commit_) {
 		commit(wal_);
@@ -1884,7 +1885,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 		initial = key;
 	}
 
-	L_DATABASE_WRAP("Dump metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Dump metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 }
 
 
@@ -1947,7 +1948,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 		initial = did;
 	}
 
-	L_DATABASE_WRAP("Dump documents (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+	L_DATABASE_WRAP("Dump documents (took %s)", string::from_delta(start, std::chrono::system_clock::now()).c_str());
 }
 
 

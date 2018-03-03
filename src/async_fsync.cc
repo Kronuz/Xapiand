@@ -24,7 +24,7 @@
 
 #include "io_utils.h"   // for fsync, full_fsync
 #include "log.h"        // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "utils.h"      // for delta_string
+#include "string.hh"    // for string::from_delta
 
 
 std::mutex AsyncFsync::statuses_mtx;
@@ -109,8 +109,8 @@ AsyncFsync::run()
 	auto end = std::chrono::system_clock::now();
 
 	if (successful) {
-		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
+		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end).c_str());
 	} else {
-		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", delta_string(start, end).c_str());
+		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end).c_str());
 	}
 }
