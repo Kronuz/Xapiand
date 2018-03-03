@@ -393,7 +393,7 @@ Logging::run()
 std::string
 Logging::format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr)
 {
-	auto msg = vformat_string(format, argptr);
+	auto msg = string::vformat(format, argptr);
 
 	std::string result;
 	if (info && priority <= LOG_DEBUG) {
@@ -454,7 +454,7 @@ Logging::_unlog(int _priority, const char* function, const char* filename, int l
 void
 Logging::do_println(bool collect, bool with_endl, std::string_view format, va_list argptr)
 {
-	auto str = vformat_string(format, argptr);
+	auto str = string::vformat(format, argptr);
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
 		collected.push_back(std::make_pair(std::move(str), with_endl));

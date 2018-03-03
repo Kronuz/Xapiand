@@ -44,7 +44,7 @@
 #include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
 #include "phf.hh"                  // for phf
-#include "utils.h"                 // for repr, toUType, lower_string
+#include "utils.h"                 // for repr, toUType, string::lower
 
 
 enum class TypeIndex : uint8_t {

@@ -108,7 +108,7 @@ public:
 
 	virtual bool operator() (const std::string& term) const override {
 		for (const auto& prefix : prefixes) {
-			if (startswith(term, prefix)) {
+			if (string::startswith(term, prefix)) {
 				return true;
 			}
 		}
@@ -1039,7 +1039,7 @@ DatabaseHandler::restore(int fd)
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
-	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(join_string(e.query, " & ")).c_str(), qdsl ? repr(qdsl->to_string()).c_str() : "null");
+	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(e.query, " & ")).c_str(), qdsl ? repr(qdsl->to_string()).c_str() : "null");
 
 	MSet mset;
 

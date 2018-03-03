@@ -252,16 +252,16 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_le
 		user = _user;
 	}
 
-	if (!startswith(_path, '/')) {
+	if (!string::startswith(_path, '/')) {
 		_path = path = Endpoint::cwd + std::string(_path);
 	}
 	path = normalize_path(_path);
 	_path = path;
-	if (startswith(_path, Endpoint::cwd)) {
+	if (string::startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());
 	}
 
-	if (_path.size() != 1 && endswith(_path, '/')) {
+	if (_path.size() != 1 && string::endswith(_path, '/')) {
 		_path.remove_suffix(1);
 	}
 

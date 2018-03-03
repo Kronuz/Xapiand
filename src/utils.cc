@@ -564,9 +564,9 @@ DIR* opendir(std::string_view path, bool create) {
 void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix) {
 	bool(*match_pattern)(std::string_view, std::string_view);
 	if (pre_suf_fix) {
-		match_pattern = startswith;
+		match_pattern = string::startswith;
 	} else {
-		match_pattern = endswith;
+		match_pattern = string::endswith;
 	}
 
 	if (fptr.ent) {

@@ -151,19 +151,9 @@ constexpr static char toupper(char c) noexcept {
 	return _[static_cast<unsigned char>(c)];
 }
 
-} // namespace string
-
-
-template <class T, class... Args>
-struct is_callable {
-	template <class U> static auto test(U*p) -> decltype((*p)(std::declval<Args>()...), void(), std::true_type());
-	template <class U> static auto test(...) -> decltype(std::false_type());
-	static constexpr auto value = decltype(test<T>(nullptr))::value;
-};
-
 
 template <typename T>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
 {
 	auto it = values.begin();
 	auto it_e = values.end();
@@ -192,33 +182,42 @@ inline std::string join_string(const std::vector<T>& values, std::string_view de
 
 
 template <typename T>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter) {
-	return join_string(values, delimiter, delimiter);
+inline std::string join(const std::vector<T>& values, std::string_view delimiter) {
+	return join(values, delimiter, delimiter);
 }
 
-template <typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
+
+template <class T, class... Args>
+struct _is_callable {
+	template <class U> static auto test(U*p) -> decltype((*p)(std::declval<Args>()...), void(), std::true_type());
+	template <class U> static auto test(...) -> decltype(std::false_type());
+	static constexpr auto value = decltype(test<T>(nullptr))::value;
+};
+
+
+template <typename T, typename UnaryPredicate, typename = std::enable_if_t<_is_callable<UnaryPredicate, T>::value>>
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
 	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
-	return join_string(filtered_values, delimiter, last_delimiter);
+	return join(filtered_values, delimiter, last_delimiter);
 }
 
 
-template <typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
-	return join_string(values, delimiter, delimiter, pred);
+template <typename T, typename UnaryPredicate, typename = std::enable_if_t<_is_callable<UnaryPredicate, T>::value>>
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
+	return join(values, delimiter, delimiter, pred);
 }
 
 
 template <typename T>
-inline std::vector<std::string_view> split_string(std::string_view value, const T& sep) {
+inline std::vector<std::string_view> split(std::string_view value, const T& sep) {
 	std::vector<std::string_view> values;
 	Split<T>::split(value, sep, std::back_inserter(values));
 	return values;
 }
 
 
-inline std::string vformat_string(std::string_view format, va_list argptr) {
+inline std::string vformat(std::string_view format, va_list argptr) {
 	stringified format_string(format);
 
 	// Figure out the length of the formatted message.
@@ -236,11 +235,11 @@ inline std::string vformat_string(std::string_view format, va_list argptr) {
 }
 
 
-inline std::string _format_string(std::string_view format, int n, ...) {
+inline std::string _format(std::string_view format, int n, ...) {
 	va_list argptr;
 
 	va_start(argptr, n);
-	auto str = vformat_string(format, argptr);
+	auto str = vformat(format, argptr);
 	va_end(argptr);
 
 	return str;
@@ -248,12 +247,12 @@ inline std::string _format_string(std::string_view format, int n, ...) {
 
 
 template <typename... Args>
-inline std::string format_string(std::string_view format, Args&&... args) {
-	return _format_string(format, 0, std::forward<Args>(args)...);
+inline std::string format(std::string_view format, Args&&... args) {
+	return _format(format, 0, std::forward<Args>(args)...);
 }
 
 
-inline std::string indent_string(std::string_view str, char sep, int level, bool indent_first=true) {
+inline std::string indent(std::string_view str, char sep, int level, bool indent_first=true) {
 	std::string result;
 	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
 
@@ -278,7 +277,7 @@ inline std::string indent_string(std::string_view str, char sep, int level, bool
 }
 
 
-inline std::string center_string(std::string_view str, int width) {
+inline std::string center(std::string_view str, int width) {
 	std::string result;
 	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
 		result += " ";
@@ -288,7 +287,7 @@ inline std::string center_string(std::string_view str, int width) {
 }
 
 
-inline std::string right_string(std::string_view str, int width) {
+inline std::string right(std::string_view str, int width) {
 	std::string result;
 	for (auto idx = int(width - str.size()); idx > 0; --idx) {
 		result += " ";
@@ -298,14 +297,14 @@ inline std::string right_string(std::string_view str, int width) {
 }
 
 
-inline std::string upper_string(std::string_view str) {
+inline std::string upper(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), string::toupper);
 	return result;
 }
 
 
-inline std::string lower_string(std::string_view str) {
+inline std::string lower(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), string::tolower);
 	return result;
@@ -340,6 +339,8 @@ inline void to_upper(std::string& str) {
 inline void to_lower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), string::tolower);
 }
+
+} // namespace string
 
 
 std::string bytes_string(size_t bytes, bool colored=false);

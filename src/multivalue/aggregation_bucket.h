@@ -42,7 +42,7 @@
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_INTERVAL, AGG...
 #include "multivalue/exception.h"           // for AggregationError, MSG_Agg...
 #include "serialise.h"                      // for _float
-#include "utils.h"                          // for format_string
+#include "string.hh"                        // for string::format
 #include "hashes.hh"                        // for xxh64
 
 
@@ -241,15 +241,15 @@ class RangeAggregation : public BucketAggregation {
 			if (start == std::numeric_limits<T>::min()) {
 				return "..";
 			}
-			return format_string("%s..", std::to_string(start).c_str());
+			return string::format("%s..", std::to_string(start).c_str());
 		}
 		if (start == std::numeric_limits<T>::min()) {
 			if (end == std::numeric_limits<T>::max()) {
 				return "..";
 			}
-			return format_string("..%s", std::to_string(end).c_str());
+			return string::format("..%s", std::to_string(end).c_str());
 		}
-		return format_string("%s..%s", std::to_string(start).c_str(), std::to_string(end).c_str());
+		return string::format("%s..%s", std::to_string(start).c_str(), std::to_string(end).c_str());
 	}
 
 public:

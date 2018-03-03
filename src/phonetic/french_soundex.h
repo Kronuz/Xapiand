@@ -77,7 +77,7 @@ class SoundexFrench : public Soundex<SoundexFrench> {
 		replace(str, 0, french_accents);
 
 		// 2. Pass to upper case.
-		to_upper(str);
+		string::to_upper(str);
 
 		// 3. Keep only alphabet characters.
 		for (auto it = str.begin(); it != str.end(); ) {

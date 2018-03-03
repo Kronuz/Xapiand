@@ -2193,7 +2193,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_REPLICATION) == DB_REPLICATION) values.push_back("DB_REPLICATION");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
-		return join_string(values, " | ");
+		return string::join(values, " | ");
 	}().c_str());
 
 	bool writable = flags & DB_WRITABLE;

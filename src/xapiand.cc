@@ -64,7 +64,7 @@
 #include "manager.h"                 // for XapiandManager, XapiandM...
 #include "opts.h"                    // for opts_t
 #include "schema.h"                  // for default_spc
-#include "utils.h"                   // for format_string, center_string
+#include "string.hh"                 // for string::format, string::center
 #include "worker.h"                  // for Worker
 #include "hashes.hh"                 // for fnv1ah32
 
@@ -111,7 +111,7 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSEGV:
 			case SIGSYS:
 				// create core image
-				res.push_back(format_string(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
+				res.push_back(string::format(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGHUP:
 			case SIGINT:
@@ -129,14 +129,14 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGSTKFLT:
 #endif
 				// terminate process
-				res.push_back(format_string(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
+				res.push_back(string::format(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGSTOP:
 			case SIGTSTP:
 			case SIGTTIN:
 			case SIGTTOU:
 				// stop process
-				res.push_back(format_string(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
+				res.push_back(string::format(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			case SIGURG:
 			case SIGCONT:
@@ -147,10 +147,10 @@ static const std::vector<std::string> vec_signame = []() {
 			case SIGINFO:
 #endif
 				// discard signal
-				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
+				res.push_back(string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 			default:
-				res.push_back(format_string(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
+				res.push_back(string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
 				break;
 		}
 	}
@@ -220,7 +220,7 @@ void setup_signal_handlers(void) {
 
 
 unsigned int ev_backend(const std::string& name) {
-	auto ev_use = lower_string(name);
+	auto ev_use = string::lower(name);
 	if (ev_use.empty() || ev_use.compare("auto") == 0) {
 		return ev::AUTO;
 	}
@@ -907,12 +907,12 @@ void banner() {
 	set_thread_name("-=-");
 
 	std::vector<std::string> values({
-			format_string("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+			string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
 #if defined(XAPIAND_V8)
-			format_string("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
+			string::format("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
-			format_string("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+			string::format("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
 #endif
 	});
 
@@ -930,10 +930,10 @@ void banner() {
 			"%s" + "\n" +
 			rgb(0, 96, 0) +
 			"%s" + "\n\n",
-			center_string(Package::HASH, 8).c_str(),
-			center_string(Package::FULLVERSION, 25).c_str(),
-			center_string("[" + Package::BUGREPORT + "]", 54).c_str(),
-			center_string("Using " + join_string(values, ", ", " and "), 54).c_str());
+			string::center(Package::HASH, 8).c_str(),
+			string::center(Package::FULLVERSION, 25).c_str(),
+			string::center("[" + Package::BUGREPORT + "]", 54).c_str(),
+			string::center("Using " + string::join(values, ", ", " and "), 54).c_str());
 	} else {
 		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING.c_str());
 	}
@@ -972,12 +972,12 @@ int server() {
 			modes.push_back("optimal");
 		}
 		if (!modes.empty()) {
-			L_INFO("Activated " + join_string(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
+			L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
 		}
 
 		adjustOpenFilesLimit();
 
-		L_INFO("With a maximum of " + join_string(std::vector<std::string>{
+		L_INFO("With a maximum of " + string::join(std::vector<std::string>{
 			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
 			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
 			std::to_string(opts.max_databases) + ((opts.max_databases == 1) ? " database" : " databases"),

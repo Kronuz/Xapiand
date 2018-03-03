@@ -41,7 +41,7 @@ public:
 	template <typename T>
 	StringMetric(T&& str, bool icase)
 		: _icase(icase),
-		  _str(_icase ? upper_string(std::forward<T>(str)) : std::forward<T>(str)) { }
+		  _str(_icase ? string::upper(std::forward<T>(str)) : std::forward<T>(str)) { }
 
 	template <typename T>
 	double distance(T&& str1, T&& str2) const {
@@ -55,8 +55,8 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_distance(
-			_icase ? upper_string(std::forward<T>(str1)) : std::forward<T>(str1),
-			_icase ? upper_string(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? string::upper(std::forward<T>(str1)) : std::forward<T>(str1),
+			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -72,7 +72,7 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_distance(
-			_icase ? upper_string(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -88,8 +88,8 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
-			_icase ? upper_string(std::forward<T>(str1)) : std::forward<T>(str1),
-			_icase ? upper_string(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? string::upper(std::forward<T>(str1)) : std::forward<T>(str1),
+			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -105,7 +105,7 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
-			_icase ? upper_string(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 

@@ -40,7 +40,7 @@
 #include <utility>              // for pair
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "utils.h"              // for lower_string
+#include "utils.h"              // for string::lower
 
 
 struct Node {
@@ -132,7 +132,7 @@ struct Node {
 
 	bool operator==(const Node& other) const {
 		return
-			lower_string(name) == lower_string(other.name) &&
+			string::lower(name) == string::lower(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
 			http_port == other.http_port &&
 			binary_port == other.binary_port;

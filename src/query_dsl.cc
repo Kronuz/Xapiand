@@ -34,7 +34,8 @@
 #include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "serialise.h"                         // for MsgPack, get_range_type...
-#include "utils.h"                             // for repr, startswith
+#include "utils.h"                             // for repr
+#include "string.hh"                           // for string::startswith
 #include "hashes.hh"                           // for fnv1ah32
 
 
@@ -651,7 +652,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 {
 	L_CALL("QueryDSL::get_acc_geo_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy).c_str(), repr(obj.to_string()).c_str());
 
-	if (startswith(field_accuracy, "_geo")) {
+	if (string::startswith(field_accuracy, "_geo")) {
 		int errno_save;
 		auto nivel = strict_stoull(errno_save, field_accuracy.substr(4));
 		if (errno_save) {
@@ -809,10 +810,10 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		case FieldType::TERM: {
 			std::string lower;
 			if (!field_spc.flags.bool_term) {
-				lower = lower_string(serialised_term);
+				lower = string::lower(serialised_term);
 				serialised_term = lower;
 			}
-			if (endswith(serialised_term, '*')) {
+			if (string::endswith(serialised_term, '*')) {
 				serialised_term.remove_suffix(1);
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			} else if (is_wildcard) {

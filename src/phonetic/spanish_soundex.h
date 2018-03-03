@@ -67,7 +67,7 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 		replace(str, 0, spanish_accents);
 
 		// 2. Pass to upper case.
-		to_upper(str);
+		string::to_upper(str);
 
 		// 3. Remove all non alphabetic characters and 'H's at the begin.
 		auto it = str.begin();

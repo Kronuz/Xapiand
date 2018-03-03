@@ -216,7 +216,7 @@ Worker::_ancestor(int levels)
 std::string
 Worker::__repr__(const std::string& name) const
 {
-	return format_string("<%s at %p, %s of %s %p%s>",
+	return string::format("<%s at %p, %s of %s %p%s>",
 		name.c_str(),
 		this,
 		_runner ? "runner" : "worker",

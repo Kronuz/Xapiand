@@ -232,7 +232,7 @@ inline std::string readable_revents(int revents) {
 	if ((revents & EV_EMBED) == EV_EMBED) values.push_back("EV_EMBED");
 	if ((revents & EV_ERROR) == EV_ERROR) values.push_back("EV_ERROR");
 	if ((revents & EV_UNDEF) == EV_UNDEF) values.push_back("EV_UNDEF");
-	return join_string(values, " | ");
+	return string::join(values, " | ");
 }
 
 

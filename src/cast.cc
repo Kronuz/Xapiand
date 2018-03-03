@@ -263,7 +263,7 @@ Cast::boolean(const MsgPack& obj)
 				// 	switch (value[0]) {
 				// 		case 't':
 				// 		case 'T': {
-				// 			auto lower_value = lower_string(value);
+				// 			auto lower_value = string::lower(value);
 				// 			if (lower_value == "true") {
 				// 				return true;
 				// 			}
@@ -274,7 +274,7 @@ Cast::boolean(const MsgPack& obj)
 					switch (value[0]) {
 						case 'f':
 						case 'F': {
-							auto lower_value = lower_string(value);
+							auto lower_value = string::lower(value);
 							if (lower_value == "false") {
 								return false;
 							}

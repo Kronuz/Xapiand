@@ -320,7 +320,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			std::string message(http_errno_description(err));
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, split_string(message, '\n') }
+				{ RESPONSE_MESSAGE, string::split(message, '\n') }
 			};
 			write_http_response(error_code, err_response);
 			L_WARNING(HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message.c_str() : "incomplete request");
@@ -401,7 +401,7 @@ HttpClient::on_info(http_parser* p)
 			}
 			break;
 		case 50:  // headers done
-			self->request_head = format_string("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
+			self->request_head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
 				self->write(self->http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE | HTTP_EXPECTED_CONTINUE_RESPONSE, p->http_major, p->http_minor));
@@ -439,7 +439,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			self->request_headers += self->header_name + ": " + self->header_value + eol;
 		}
 		if (state == 50) {
-			std::string name = lower_string(self->header_name);
+			std::string name = string::lower(self->header_name);
 
 			switch (fnv1ah32::hash(name)) {
 				case fnv1ah32::hash("host"):
@@ -457,14 +457,14 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 
 				case fnv1ah32::hash("content-type"):
-					self->content_type = lower_string(self->header_value);
+					self->content_type = string::lower(self->header_value);
 					break;
 				case fnv1ah32::hash("content-length"):
 					self->content_length = self->header_value;
 					break;
 				case fnv1ah32::hash("accept"): {
 					static AcceptLRU accept_sets;
-					auto value = lower_string(self->header_value);
+					auto value = string::lower(self->header_value);
 					try {
 						self->accept_set = accept_sets.at(value);
 					} catch (const std::out_of_range&) {
@@ -499,7 +499,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 
 				case fnv1ah32::hash("accept-encoding"): {
 					static AcceptEncodingLRU accept_encoding_sets;
-					auto value = lower_string(self->header_value);
+					auto value = string::lower(self->header_value);
 					try {
 						self->accept_encoding_set = accept_encoding_sets.at(value);
 					} catch (const std::out_of_range&) {
@@ -529,7 +529,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 				}
 
 				case fnv1ah32::hash("x-http-method-override"):
-					switch (fnv1ah32::hash(upper_string(self->header_value))) {
+					switch (fnv1ah32::hash(string::upper(self->header_value))) {
 						case fnv1ah32::hash("PUT"):
 							p->method = HTTP_PUT;
 							break;
@@ -619,7 +619,7 @@ HttpClient::run()
 				// From [https://www.iterm2.com/documentation-images.html]
 				std::string b64_name = cppcodec::base64_rfc4648::encode("");
 				std::string b64_request_body = cppcodec::base64_rfc4648::encode(body);
-				request_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				request_body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 					b64_name.c_str(),
 					b64_request_body.size());
 				request_body += b64_request_body.c_str();
@@ -714,7 +714,7 @@ HttpClient::run()
 		} else {
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, split_string(error, '\n') }
+				{ RESPONSE_MESSAGE, string::split(error, '\n') }
 			};
 
 			write_http_response(error_code, err_response);
@@ -1017,13 +1017,13 @@ HttpClient::home_view(enum http_method method, Command)
 	obj[RESPONSE_SERVER] = Package::STRING;
 	obj[RESPONSE_URL] = Package::BUGREPORT;
 	obj[RESPONSE_VERSIONS] = {
-		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : format_string("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
-		{ "Xapian", format_string("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
+		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
+		{ "Xapian", string::format("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
-		{ "V8", format_string("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
+		{ "V8", string::format("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
-		{ "ChaiScript", format_string("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+		{ "ChaiScript", string::format("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};
 
@@ -1661,7 +1661,7 @@ HttpClient::search_view(enum http_method method, Command)
 							// From [https://www.iterm2.com/documentation-images.html]
 							std::string b64_name = cppcodec::base64_rfc4648::encode("");
 							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
-							response_body = format_string("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+							response_body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 								b64_name.c_str(),
 								b64_response_body.size());
 							response_body += b64_response_body.c_str();
@@ -1715,7 +1715,7 @@ HttpClient::search_view(enum http_method method, Command)
 						response_body += l_first_chunk;
 					}
 					if (!l_buffer.empty()) {
-						response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+						response_body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 					}
 					l_buffer = obj.to_string(4);
 				}
@@ -1750,7 +1750,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (!buffer.empty()) {
-					auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
+					auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
 						if (!encoded.empty()) {
@@ -1775,7 +1775,7 @@ HttpClient::search_view(enum http_method method, Command)
 				}
 
 				if (!l_buffer.empty()) {
-					response_body += indent_string(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+					response_body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 				}
 
 				response_body += l_last_chunk;
@@ -1799,7 +1799,7 @@ HttpClient::search_view(enum http_method method, Command)
 			}
 
 			if (!buffer.empty()) {
-				auto indented_buffer = (indent_chunk ? indent_string(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
+				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * indent) : buffer) + sep_chunk + eol_chunk;
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
 					if (!encoded.empty()) {
@@ -1845,7 +1845,7 @@ HttpClient::write_status_response(enum http_status status, const std::string& me
 
 	write_http_response(status, {
 		{ RESPONSE_STATUS, (int)status },
-		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : split_string(message, '\n') }
+		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
 }
 
@@ -1914,7 +1914,7 @@ HttpClient::url_resolve()
 		} else {
 			auto cmd = path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return static_cast<Command>(fnv1ah32::hash(lower_string(cmd.substr(0, needle))));
+			return static_cast<Command>(fnv1ah32::hash(string::lower(cmd.substr(0, needle))));
 		}
 
 	} else {
@@ -1946,7 +1946,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 	if (path_parser.off_nsp) {
 		ns = path_parser.get_nsp();
 		ns.push_back('/');
-		if (startswith(ns, "/")) { /* ns without slash */
+		if (string::startswith(ns, "/")) { /* ns without slash */
 			ns = ns.substr(1);
 		}
 	}
@@ -1954,7 +1954,7 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 	std::string _path;
 	if (path_parser.off_pth) {
 		_path = path_parser.get_pth();
-		if (startswith(_path, "/")) { /* path without slash */
+		if (string::startswith(_path, "/")) { /* path without slash */
 			_path.erase(0, 1);
 		}
 	}
@@ -2324,7 +2324,7 @@ HttpClient::log_request()
 	};
 
 	auto request = request_head_color + request_head + "\n" + request_headers_color + request_headers + request_body_color + request_body;
-	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", request_prefix.c_str(), indent_string(request, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", request_prefix.c_str(), string::indent(request, ' ', 4, false).c_str());
 }
 
 
@@ -2380,7 +2380,7 @@ HttpClient::log_response()
 	}
 
 	auto response = response_head_color + response_head + "\n" + response_headers_color + response_headers + response_body_color + response_body;
-	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", response_prefix.c_str(), indent_string(response, ' ', 4, false).c_str());
+	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", response_prefix.c_str(), string::indent(response, ' ', 4, false).c_str());
 }
 
 

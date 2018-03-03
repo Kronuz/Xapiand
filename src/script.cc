@@ -32,7 +32,7 @@
 #include "hashes.hh"        // for fnv1ah32
 
 
-static const auto str_set_dispatch_script(join_string<std::string>({
+static const auto str_set_dispatch_script(string::join<std::string>({
 	RESERVED_TYPE,
 	RESERVED_VALUE,
 	RESERVED_CHAI,
@@ -42,7 +42,7 @@ static const auto str_set_dispatch_script(join_string<std::string>({
 }, ",", " or "));
 
 
-static const auto str_set_dispatch_value(join_string<std::string>({
+static const auto str_set_dispatch_value(string::join<std::string>({
 	RESERVED_BODY,
 	RESERVED_NAME,
 }, ",", " or "));

@@ -315,7 +315,7 @@ _get_str_index(TypeIndex index) noexcept
 }
 
 
-static const std::string str_set_acc_date(join_string<std::string>({
+static const std::string str_set_acc_date(string::join<std::string>({
 	"second",
 	"minute",
 	"hour",
@@ -374,7 +374,7 @@ get_accuracy_date(std::string_view str_accuracy_date)
 }
 
 
-static const std::string str_set_acc_time(join_string<std::string>({
+static const std::string str_set_acc_time(string::join<std::string>({
 	"second",
 	"minute",
 	"hour",
@@ -409,7 +409,7 @@ get_accuracy_time(std::string_view str_accuracy_time)
 }
 
 
-static const std::string str_set_stop_strategy(join_string<std::string>({
+static const std::string str_set_stop_strategy(string::join<std::string>({
 	"stop_none",
 	"none",
 	"stop_all",
@@ -449,7 +449,7 @@ _get_stop_strategy(std::string_view str_stop_strategy)
 }
 
 
-static const std::string str_set_stem_strategy(join_string<std::string>({
+static const std::string str_set_stem_strategy(string::join<std::string>({
 	"stem_none",
 	"none",
 	"stem_some",
@@ -497,7 +497,7 @@ _get_stem_strategy(std::string_view str_stem_strategy)
 }
 
 
-static const std::string str_set_index_uuid_field(join_string<std::string>({
+static const std::string str_set_index_uuid_field(string::join<std::string>({
 	"uuid",
 	"uuid_field",
 	"both",
@@ -526,7 +526,7 @@ _get_index_uuid_field(std::string_view str_index_uuid_field)
 
 
 
-static const std::string str_set_index(join_string<std::string>({
+static const std::string str_set_index(string::join<std::string>({
 	"none",
 	"field_terms",
 	"field_values",
@@ -1841,7 +1841,7 @@ required_spc_t::get_types(std::string_view str_type)
 	L_CALL("required_spc_t::get_types(%s)", repr(str_type).c_str());
 
 	try {
-		return _get_type(lower_string(str_type));
+		return _get_type(string::lower(str_type));
 	} catch (const std::out_of_range&) {
 		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'string', 'term', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type).c_str(), RESERVED_TYPE);
 	}
@@ -4536,7 +4536,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
 							try {
-								accuracy = toUType(_get_accuracy_date(lower_string(_accuracy.str_view())));
+								accuracy = toUType(_get_accuracy_date(string::lower(_accuracy.str_view())));
 							} catch (const std::out_of_range&) {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(_accuracy.str_view()).c_str());
 							}
@@ -4564,7 +4564,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				try {
 					for (const auto& _accuracy : *specification.doc_acc) {
 						try {
-							set_acc.insert(toUType(_get_accuracy_time(lower_string(_accuracy.str_view()))));
+							set_acc.insert(toUType(_get_accuracy_time(string::lower(_accuracy.str_view()))));
 						} catch (const std::out_of_range&) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(_accuracy.str_view()).c_str());
 						}
@@ -5193,7 +5193,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 		case FieldType::TERM:
 			if (!field_spc.flags.bool_term) {
-				to_lower(serialise_val);
+				string::to_lower(serialise_val);
 			}
 
 		default: {
@@ -7567,7 +7567,7 @@ Schema::process_language(std::string_view prop_name, const MsgPack& doc_language
 	try {
 		const auto str_language = doc_language.str_view();
 		try {
-			const auto& stem = _get_stem_language(lower_string(str_language));
+			const auto& stem = _get_stem_language(string::lower(str_language));
 			if (stem.first) {
 				specification.language = stem.second;
 				specification.aux_language = stem.second;
@@ -7624,7 +7624,7 @@ Schema::process_stop_strategy(std::string_view prop_name, const MsgPack& doc_sto
 	try {
 		auto str_stop_strategy = doc_stop_strategy.str_view();
 		try {
-			specification.stop_strategy = _get_stop_strategy(lower_string(str_stop_strategy));
+			specification.stop_strategy = _get_stop_strategy(string::lower(str_stop_strategy));
 		} catch (const std::out_of_range&) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stop_strategy.c_str(), repr(str_stop_strategy).c_str());
 		}
@@ -7643,7 +7643,7 @@ Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& doc_ste
 	try {
 		auto str_stem_strategy = doc_stem_strategy.str_view();
 		try {
-			specification.stem_strategy = _get_stem_strategy(lower_string(str_stem_strategy));
+			specification.stem_strategy = _get_stem_strategy(string::lower(str_stem_strategy));
 		} catch (const std::out_of_range&) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stem_strategy.c_str(), repr(str_stem_strategy).c_str());
 		}
@@ -7662,7 +7662,7 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_ste
 	try {
 		auto str_stem_language = doc_stem_language.str_view();
 		try {
-			const auto& stem = _get_stem_language(lower_string(str_stem_language));
+			const auto& stem = _get_stem_language(string::lower(str_stem_language));
 			specification.stem_language = str_stem_language;
 			specification.aux_stem_language = stem.second;
 		} catch (const std::out_of_range&) {
@@ -7880,7 +7880,7 @@ Schema::process_index(std::string_view prop_name, const MsgPack& doc_index)
 	try {
 		auto str_index = doc_index.str_view();
 		try {
-			specification.index = _get_index(lower_string(str_index));
+			specification.index = _get_index(string::lower(str_index));
 			specification.flags.has_index = true;
 		} catch (const std::out_of_range&) {
 			THROW(ClientError, "%s not supported, %s must be one of %s", repr(str_index).c_str(), repr(prop_name).c_str(), str_set_index.c_str());
@@ -7957,7 +7957,7 @@ Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& doc_
 
 	auto str_index_uuid_field = doc_index_uuid_field.str_view();
 	try {
-		specification.index_uuid_field = _get_index_uuid_field(lower_string(str_index_uuid_field));
+		specification.index_uuid_field = _get_index_uuid_field(string::lower(str_index_uuid_field));
 	} catch (const std::out_of_range&) {
 		THROW(ClientError, "%s not supported, %s must be one of %s (%s not supported)", repr(str_index_uuid_field).c_str(), repr(prop_name).c_str(), str_set_index_uuid_field.c_str());
 	} catch (const msgpack::type_error&) {
@@ -8071,7 +8071,7 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stop_strategy = lower_string(doc_stop_strategy.str_view());
+			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
 			const auto stop_strategy = _get_str_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
@@ -8093,7 +8093,7 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stem_strategy = lower_string(doc_stem_strategy.str_view());
+			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
 			const auto stem_strategy = _get_str_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
@@ -8115,7 +8115,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& doc
 
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
-			const auto _stem_language = lower_string(doc_stem_language.str_view());
+			const auto _stem_language = string::lower(doc_stem_language.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
 			}
@@ -8135,7 +8135,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 	L_CALL("Schema::consistency_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		const auto _str_type = lower_string(doc_type.str_view());
+		const auto _str_type = string::lower(doc_type.str_view());
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
@@ -8193,7 +8193,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
 							try {
-								accuracy = toUType(_get_accuracy_date(lower_string(_accuracy.str_view())));
+								accuracy = toUType(_get_accuracy_date(string::lower(_accuracy.str_view())));
 							} catch (const std::out_of_range&) {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(_accuracy.str_view()).c_str());
 							}
@@ -8226,7 +8226,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						try {
-							set_acc.insert(toUType(_get_accuracy_time(lower_string(_accuracy.str_view()))));
+							set_acc.insert(toUType(_get_accuracy_time(string::lower(_accuracy.str_view()))));
 						} catch (const std::out_of_range&) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(_accuracy.str_view()).c_str());
 						}
