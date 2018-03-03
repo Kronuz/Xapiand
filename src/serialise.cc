@@ -1404,7 +1404,7 @@ Unserialise::type(std::string_view str_type)
 			return FieldType::FOREIGN;
 		case _.fhhl("timedelta"):
 			return FieldType::TIMEDELTA;
+		default:
+			THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
 	}
-
-	THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
 }
