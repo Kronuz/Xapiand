@@ -45,6 +45,7 @@
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "split.h"                                    // for Split
 #include "utils.h"                                    // for toUType, stox, repr
+#include "phf.hh"                                     // for phf
 
 
 constexpr char UUID_SEPARATOR_LIST = ';';
@@ -1322,212 +1323,87 @@ Unserialise::range(std::string_view serialised_range)
 FieldType
 Unserialise::type(std::string_view str_type)
 {
-	switch (str_type.size()) {
-		case 1:
-			switch (str_type[0]) {
-				case ' ':
-				case 'e':
-				case 'E':
-					return FieldType::EMPTY;
-				case 'a':
-				case 'A':
-					return FieldType::ARRAY;
-				case 'b':
-				case 'B':
-					return FieldType::BOOLEAN;
-				case 'd':
-				case 'D':
-					return FieldType::DATE;
-				case 'f':
-				case 'F':
-					return FieldType::FLOAT;
-				case 'g':
-				case 'G':
-					return FieldType::GEO;
-				case 'i':
-				case 'I':
-					return FieldType::INTEGER;
-				case 'o':
-				case 'O':
-					return FieldType::OBJECT;
-				case 'p':
-				case 'P':
-					return FieldType::POSITIVE;
-				case 's':
-				case 'S':
-					return FieldType::STRING;
-				case 't':
-				case 'T':
-					return FieldType::TERM;
-				case 'u':
-				case 'U':
-					return FieldType::UUID;
-				case 'x':
-				case 'X':
-					return FieldType::SCRIPT;
-			}
-			break;
+	constexpr static auto _ = phf::make_phf({
+		fnv1ah32::hash(" ", lower_char),
+		fnv1ah32::hash("e", lower_char),
+		fnv1ah32::hash("a", lower_char),
+		fnv1ah32::hash("b", lower_char),
+		fnv1ah32::hash("d", lower_char),
+		fnv1ah32::hash("f", lower_char),
+		fnv1ah32::hash("g", lower_char),
+		fnv1ah32::hash("i", lower_char),
+		fnv1ah32::hash("o", lower_char),
+		fnv1ah32::hash("p", lower_char),
+		fnv1ah32::hash("s", lower_char),
+		fnv1ah32::hash("t", lower_char),
+		fnv1ah32::hash("u", lower_char),
+		fnv1ah32::hash("x", lower_char),
+		fnv1ah32::hash("date", lower_char),
+		fnv1ah32::hash("term", lower_char),
+		fnv1ah32::hash("text", lower_char),
+		fnv1ah32::hash("time", lower_char),
+		fnv1ah32::hash("array", lower_char),
+		fnv1ah32::hash("empty", lower_char),
+		fnv1ah32::hash("float", lower_char),
+		fnv1ah32::hash("object", lower_char),
+		fnv1ah32::hash("script", lower_char),
+		fnv1ah32::hash("string", lower_char),
+		fnv1ah32::hash("boolean", lower_char),
+		fnv1ah32::hash("foreign", lower_char),
+		fnv1ah32::hash("integer", lower_char),
+		fnv1ah32::hash("positive", lower_char),
+		fnv1ah32::hash("timedelta", lower_char),
+		fnv1ah32::hash("geospatial", lower_char),
+	});
 
-		case 4:
-			switch (str_type[0]) {
-				case 'd':
-				case 'D': {
-					static_assert(fnv1ah32::hash(DATE_STR) == fnv1ah32::hash("date"), "DATE_STR is not 'date', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == DATE_STR) {
-						return FieldType::DATE;
-					}
-					break;
-				}
-				case 't':
-				case 'T': {
-					static_assert(fnv1ah32::hash(TERM_STR) == fnv1ah32::hash("term"), "TERM_STR is not 'term', reorder switch.");
-					static_assert(fnv1ah32::hash(TEXT_STR) == fnv1ah32::hash("text"), "TEXT_STR is not 'text', reorder switch.");
-					static_assert(fnv1ah32::hash(TIME_STR) == fnv1ah32::hash("time"), "TIME_STR is not 'time', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == TERM_STR) {
-						return FieldType::TERM;
-					} else if (lower_str_type == TEXT_STR) {
-						return FieldType::TEXT;
-					} else if (lower_str_type == TIME_STR) {
-						return FieldType::TIME;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 5:
-			switch (str_type[0]) {
-				case 'a':
-				case 'A': {
-					static_assert(fnv1ah32::hash(ARRAY_STR) == fnv1ah32::hash("array"), "ARRAY_STR is not 'array', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == ARRAY_STR) {
-						return FieldType::ARRAY;
-					}
-					break;
-				}
-				case 'e':
-				case 'E': {
-					static_assert(fnv1ah32::hash(EMPTY_STR) == fnv1ah32::hash("empty"), "EMPTY_STR is not 'empty', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == EMPTY_STR) {
-						return FieldType::EMPTY;
-					}
-					break;
-				}
-				case 'f':
-				case 'F': {
-					static_assert(fnv1ah32::hash(FLOAT_STR) == fnv1ah32::hash("float"), "FLOAT_STR is not 'float', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == FLOAT_STR) {
-						return FieldType::FLOAT;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 6:
-			switch (str_type[0]) {
-				case 'o':
-				case 'O': {
-					static_assert(fnv1ah32::hash(OBJECT_STR) == fnv1ah32::hash("object"), "OBJECT_STR is not 'object', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == OBJECT_STR) {
-						return FieldType::OBJECT;
-					}
-					break;
-				}
-				case 's':
-				case 'S': {
-					static_assert(fnv1ah32::hash(SCRIPT_STR) == fnv1ah32::hash("script"), "SCRIPT_STR is not 'script', reorder switch.");
-					static_assert(fnv1ah32::hash(STRING_STR) == fnv1ah32::hash("string"), "STRING_STR is not 'string', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == SCRIPT_STR) {
-						return FieldType::SCRIPT;
-					} else if (lower_str_type == STRING_STR) {
-						return FieldType::STRING;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 7:
-			switch (str_type[0]) {
-				case 'b':
-				case 'B': {
-					static_assert(fnv1ah32::hash(BOOLEAN_STR) == fnv1ah32::hash("boolean"), "BOOLEAN_STR is not 'boolean', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == BOOLEAN_STR) {
-						return FieldType::BOOLEAN;
-					}
-					break;
-				}
-				case 'f':
-				case 'F': {
-					static_assert(fnv1ah32::hash(FOREIGN_STR) == fnv1ah32::hash("foreign"), "FOREIGN_STR is not 'foreign', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == FOREIGN_STR) {
-						return FieldType::FOREIGN;
-					}
-					break;
-				}
-				case 'i':
-				case 'I': {
-					static_assert(fnv1ah32::hash(INTEGER_STR) == fnv1ah32::hash("integer"), "INTEGER_STR is not 'integer', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == INTEGER_STR) {
-						return FieldType::INTEGER;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 8:
-			switch (str_type[0]) {
-				case 'p':
-				case 'P': {
-					static_assert(fnv1ah32::hash(POSITIVE_STR) == fnv1ah32::hash("positive"), "POSITIVE_STR is not 'positive', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == POSITIVE_STR) {
-						return FieldType::POSITIVE;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 9:
-			switch (str_type[0]) {
-				case 't':
-				case 'T': {
-					static_assert(fnv1ah32::hash(TIMEDELTA_STR) == fnv1ah32::hash("timedelta"), "TIMEDELTA_STR is not 'timedelta', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == TIMEDELTA_STR) {
-						return FieldType::TIMEDELTA;
-					}
-					break;
-				}
-			}
-			break;
-
-		case 10:
-			switch (str_type[0]) {
-				case 'g':
-				case 'G': {
-					static_assert(fnv1ah32::hash(GEO_STR) == fnv1ah32::hash("geospatial"), "GEO_STR is not 'geospatial', reorder switch.");
-					auto lower_str_type = lower_string(str_type);
-					if (lower_str_type == GEO_STR) {
-						return FieldType::GEO;
-					}
-					break;
-				}
-			}
-			break;
+	switch (_.find(fnv1ah32::hash(str_type, lower_char))) {
+		case _.find(fnv1ah32::hash(" ", lower_char)):
+		case _.find(fnv1ah32::hash("e", lower_char)):
+		case _.find(fnv1ah32::hash("empty", lower_char)):
+			return FieldType::EMPTY;
+		case _.find(fnv1ah32::hash("a", lower_char)):
+		case _.find(fnv1ah32::hash("array", lower_char)):
+			return FieldType::ARRAY;
+		case _.find(fnv1ah32::hash("b", lower_char)):
+			return FieldType::BOOLEAN;
+		case _.find(fnv1ah32::hash("boolean", lower_char)):
+		case _.find(fnv1ah32::hash("d", lower_char)):
+		case _.find(fnv1ah32::hash("date", lower_char)):
+			return FieldType::DATE;
+		case _.find(fnv1ah32::hash("f", lower_char)):
+		case _.find(fnv1ah32::hash("float", lower_char)):
+			return FieldType::FLOAT;
+		case _.find(fnv1ah32::hash("g", lower_char)):
+		case _.find(fnv1ah32::hash("geospatial", lower_char)):
+			return FieldType::GEO;
+		case _.find(fnv1ah32::hash("i", lower_char)):
+		case _.find(fnv1ah32::hash("integer", lower_char)):
+			return FieldType::INTEGER;
+		case _.find(fnv1ah32::hash("o", lower_char)):
+		case _.find(fnv1ah32::hash("object", lower_char)):
+			return FieldType::OBJECT;
+		case _.find(fnv1ah32::hash("p", lower_char)):
+		case _.find(fnv1ah32::hash("positive", lower_char)):
+			return FieldType::POSITIVE;
+		case _.find(fnv1ah32::hash("s", lower_char)):
+		case _.find(fnv1ah32::hash("string", lower_char)):
+			return FieldType::STRING;
+		case _.find(fnv1ah32::hash("t", lower_char)):
+		case _.find(fnv1ah32::hash("term", lower_char)):
+			return FieldType::TERM;
+		case _.find(fnv1ah32::hash("u", lower_char)):
+			return FieldType::UUID;
+		case _.find(fnv1ah32::hash("x", lower_char)):
+		case _.find(fnv1ah32::hash("script", lower_char)):
+			return FieldType::SCRIPT;
+		case _.find(fnv1ah32::hash("text", lower_char)):
+			return FieldType::TEXT;
+		case _.find(fnv1ah32::hash("time", lower_char)):
+			return FieldType::TIME;
+		case _.find(fnv1ah32::hash("foreign", lower_char)):
+			return FieldType::FOREIGN;
+		case _.find(fnv1ah32::hash("timedelta", lower_char)):
+			return FieldType::TIMEDELTA;
 	}
 
 	THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type).c_str());
