@@ -224,7 +224,7 @@ public:
 	}
 
 	virtual bool operator()(const std::string& term) const {
-		return stop_words.find(fnv1ah32::hash(term)) != phf::npos;
+		return stop_words.count(fnv1ah32::hash(term));
 	}
 };
 
