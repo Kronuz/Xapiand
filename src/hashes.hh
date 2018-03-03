@@ -29,7 +29,8 @@
 #include <string_view>        // for std::string_view
 
 #include "lz4/xxhash.h"
-#include "static_string.hh"
+#include "static_string.hh"  // for static_string::
+#include "string.hh"         // for string::
 
 
 /*               _               _
@@ -173,7 +174,7 @@ struct case_sensitive {
 
 struct case_insensitive {
 	constexpr static char op(char c) {
-		return lower_char(c);
+		return string::tolower(c);
 	}
 };
 

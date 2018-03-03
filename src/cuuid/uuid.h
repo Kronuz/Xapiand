@@ -174,9 +174,3 @@ private:
 	jmethodID _leastSignificantBitsMethod;
 #endif
 };
-
-namespace std {
-	inline auto to_string(const UUID& uuid) {
-		return uuid.to_string();
-	}
-}

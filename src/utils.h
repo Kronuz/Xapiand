@@ -24,61 +24,20 @@
 
 #include "xapiand.h"
 
-#include <algorithm>          // for std::count
-#include <cctype>             // for tolower, toupper
-#include <chrono>             // for system_clock, time_point, duration_cast, seconds
-#include <cstdarg>            // for va_list, va_end, va_start
-#include <cstdio>             // for size_t, vsnprintf
+#include <cerrno>             // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
+#include <chrono>             // for std::chrono
+#include <cmath>              // for std::log10, std::floor, std::pow
+#include <cstddef>            // for std::size_t
+#include <cstdint>            // for std::uint64_t, std::int32_t
 #include <dirent.h>           // for DIR
-#include <math.h>             // for log10, floor, pow
-#include <regex>              // for regex
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
-#include <sys/errno.h>        // for errno, EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
-#include <sys/types.h>        // for uint64_t, uint16_t, uint8_t, int32_t, uint32_t
-#include <type_traits>        // for forward, underlying_type_t
+#include <type_traits>        // for std::underlying_type_t
 #include <unistd.h>           // for usleep
-#include <unordered_map>      // for unordered_map
-#include <vector>             // for vector
+#include <vector>             // for std::vector
 
 #include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
-#include "exception.h"        // for InvalidArgument, OutOfRange
-#include "split.h"            // for Split
-#include "strict_stox.hh"     // for strict_stox
-#include "stringified.hh"     // for stringified
-
-
-template<class T, class... Args>
-struct is_callable {
-	template<class U> static auto test(U*p) -> decltype((*p)(std::declval<Args>()...), void(), std::true_type());
-	template<class U> static auto test(...) -> decltype(std::false_type());
-	static constexpr auto value = decltype(test<T>(nullptr))::value;
-};
-
-
-namespace std {
-	template<typename T, int N>
-	inline std::string to_string(const T (&s)[N])
-	{
-		return std::string(s, N - 1);
-	}
-
-	inline auto& to_string(std::string& str) {
-		return str;
-	}
-
-	inline const auto& to_string(const std::string& str) {
-		return str;
-	}
-
-	inline std::string to_string(std::string_view& str) {
-		return std::string(str);
-	}
-
-	inline const std::string to_string(const std::string_view& str) {
-		return std::string(str);
-	}
-}
+#include "string.hh"
 
 
 struct File_ptr {
@@ -101,29 +60,29 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 }
 
 double random_real(double initial, double last);
-uint64_t random_int(uint64_t initial, uint64_t last);
+std::uint64_t random_int(std::uint64_t initial, std::uint64_t last);
 
 void set_thread_name(std::string_view name);
 std::string get_thread_name();
 
 
-std::string repr(const void* p, size_t size, bool friendly = true, char quote = '\'', size_t max_size = 0);
+std::string repr(const void* p, std::size_t size, bool friendly = true, char quote = '\'', std::size_t max_size = 0);
 
-inline std::string repr(const void* p, const void* e, bool friendly = true, char quote = '\'', size_t max_size = 0) {
+inline std::string repr(const void* p, const void* e, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
 	return repr(p, static_cast<const char*>(e) - static_cast<const char*>(p), friendly, quote, max_size);
 }
 
-inline std::string repr(std::string_view string, bool friendly = true, char quote = '\'', size_t max_size = 0) {
+inline std::string repr(std::string_view string, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
 	return repr(string.data(), string.size(), friendly, quote, max_size);
 }
 
 template<typename T, std::size_t N>
-inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', size_t max_size = 0) {
+inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
 	return repr(s, N - 1, friendly, quote, max_size);
 }
 
 
-std::string escape(const void* p, size_t size, char quote = '\'');
+std::string escape(const void* p, std::size_t size, char quote = '\'');
 
 inline std::string escape(std::string_view string, char quote = '\'') {
 	return escape(string.data(), string.size(), quote);
@@ -167,260 +126,17 @@ inline bool ignored_errorno(int e, bool tcp, bool udp) {
 
 
 std::string name_generator();
-int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
-
-
-inline std::string vformat_string(std::string_view format, va_list argptr) {
-	stringified format_string(format);
-
-	// Figure out the length of the formatted message.
-	va_list argptr_copy;
-	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format_string.c_str(), argptr_copy);
-	va_end(argptr_copy);
-
-	// Make a string to hold the formatted message.
-	std::string str;
-	str.resize(len + 1);
-	str.resize(vsnprintf(&str[0], len + 1, format_string.c_str(), argptr));
-
-	return str;
-}
-
-
-inline std::string _format_string(std::string_view format, int n, ...) {
-	va_list argptr;
-
-	va_start(argptr, n);
-	auto str = vformat_string(format, argptr);
-	va_end(argptr);
-
-	return str;
-}
-
-
-template<typename... Args>
-inline std::string format_string(std::string_view format, Args&&... args) {
-	return _format_string(format, 0, std::forward<Args>(args)...);
-}
-
-
-template<typename T>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
-{
-	auto it = values.begin();
-	auto it_e = values.end();
-
-	auto rit = values.rbegin();
-	auto rit_e = values.rend();
-	if (rit != rit_e) ++rit;
-	auto it_l = rit != rit_e ? rit.base() : it_e;
-
-	std::string result;
-
-	if (it != it_e) {
-		result.append(std::to_string(*it++));
-	}
-	for (; it != it_l; ++it) {
-		result.append(delimiter.data(), delimiter.size());
-		result.append(std::to_string(*it));
-	}
-	if (it != it_e) {
-		result.append(last_delimiter.data(), last_delimiter.size());
-		result.append(std::to_string(*it));
-	}
-
-	return result;
-}
-
-
-template<typename T>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter) {
-	return join_string(values, delimiter, delimiter);
-}
-
-
-template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
-	std::vector<T> filtered_values(values.size());
-	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
-	return join_string(filtered_values, delimiter, last_delimiter);
-}
-
-
-template<typename T, typename UnaryPredicate, typename = std::enable_if_t<is_callable<UnaryPredicate, T>::value>>
-inline std::string join_string(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
-	return join_string(values, delimiter, delimiter, pred);
-}
-
-
-template<typename T>
-inline std::vector<std::string_view> split_string(std::string_view value, const T& sep) {
-	std::vector<std::string_view> values;
-	Split<T>::split(value, sep, std::back_inserter(values));
-	return values;
-}
-
-
-inline std::string indent_string(std::string_view str, char sep, int level, bool indent_first=true) {
-	std::string result;
-	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
-
-	if (indent_first) {
-		result.append(level, sep);
-	}
-
-	Split<char> lines(str, '\n');
-	auto it = lines.begin();
-	assert(it != lines.end());
-	for (; !it.last(); ++it) {
-		const auto& line = *it;
-		result.append(line);
-		result.push_back('\n');
-		result.append(level, sep);
-	}
-	const auto& line = *it;
-	result.append(line);
-	result.push_back('\n');
-
-	return result;
-}
-
-
-inline std::string center_string(std::string_view str, int width) {
-	std::string result;
-	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
-		result += " ";
-	}
-	result.append(str.data(), str.size());
-	return result;
-}
-
-inline std::string right_string(std::string_view str, int width) {
-	std::string result;
-	for (auto idx = int(width - str.size()); idx > 0; --idx) {
-		result += " ";
-	}
-	result.append(str.data(), str.size());
-	return result;
-}
-
-
-// converts a character to lowercase
-constexpr static char lower_char(char c) noexcept {
-	constexpr char _[]{
-		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
-		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
-		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
-		'\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d', '\x1e', '\x1f',
-		   ' ',    '!',    '"',    '#',    '$',    '%',    '&',    '"',
-		   '(',    ')',    '*',    '+',    ',',    '-',    '.',    '/',
-		   '0',    '1',    '2',    '3',    '4',    '5',    '6',    '7',
-		   '8',    '9',    ':',    ';',    '<',    '=',    '>',    '?',
-		   '@',    'a',    'b',    'c',    'd',    'e',    'f',    'g',
-		   'h',    'i',    'j',    'k',    'l',    'm',    'n',    'o',
-		   'p',    'q',    'r',    's',    't',    'u',    'v',    'w',
-		   'x',    'y',    'z',    '[',    '\\',   ']',    '^',    '_',
-		   '`',    'a',    'b',    'c',    'd',    'e',    'f',    'g',
-		   'h',    'i',    'j',    'k',    'l',    'm',    'n',    'o',
-		   'p',    'q',    'r',    's',    't',    'u',    'v',    'w',
-		   'x',    'y',    'z',    '{',    '|',    '}',    '~', '\x7f',
-		'\x80', '\x81', '\x82', '\x83', '\x84', '\x85', '\x86', '\x87',
-		'\x88', '\x89', '\x8a', '\x8b', '\x8c', '\x8d', '\x8e', '\x8f',
-		'\x90', '\x91', '\x92', '\x93', '\x94', '\x95', '\x96', '\x97',
-		'\x98', '\x99', '\x9a', '\x9b', '\x9c', '\x9d', '\x9e', '\x9f',
-		'\xa0', '\xa1', '\xa2', '\xa3', '\xa4', '\xa5', '\xa6', '\xa7',
-		'\xa8', '\xa9', '\xaa', '\xab', '\xac', '\xad', '\xae', '\xaf',
-		'\xb0', '\xb1', '\xb2', '\xb3', '\xb4', '\xb5', '\xb6', '\xb7',
-		'\xb8', '\xb9', '\xba', '\xbb', '\xbc', '\xbd', '\xbe', '\xbf',
-		'\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xc5', '\xc6', '\xc7',
-		'\xc8', '\xc9', '\xca', '\xcb', '\xcc', '\xcd', '\xce', '\xcf',
-		'\xd0', '\xd1', '\xd2', '\xd3', '\xd4', '\xd5', '\xd6', '\xd7',
-		'\xd8', '\xd9', '\xda', '\xdb', '\xdc', '\xdd', '\xde', '\xdf',
-		'\xe0', '\xe1', '\xe2', '\xe3', '\xe4', '\xe5', '\xe6', '\xe7',
-		'\xe8', '\xe9', '\xea', '\xeb', '\xec', '\xed', '\xee', '\xef',
-		'\xf0', '\xf1', '\xf2', '\xf3', '\xf4', '\xf5', '\xf6', '\xf7',
-		'\xf8', '\xf9', '\xfa', '\xfb', '\xfc', '\xfd', '\xfe', '\xff',
-	};
-	return _[static_cast<unsigned char>(c)];
-}
-
-
-// converts a character to uppercase
-constexpr static char upper_char(char c) noexcept {
-	constexpr char _[]{
-		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
-		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
-		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
-		'\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d', '\x1e', '\x1f',
-		   ' ',    '!',    '"',    '#',    '$',    '%',    '&',    '"',
-		   '(',    ')',    '*',    '+',    ',',    '-',    '.',    '/',
-		   '0',    '1',    '2',    '3',    '4',    '5',    '6',    '7',
-		   '8',    '9',    ':',    ';',    '<',    '=',    '>',    '?',
-		   '@',    'A',    'B',    'C',    'D',    'E',    'F',    'G',
-		   'H',    'I',    'J',    'K',    'L',    'M',    'N',    'O',
-		   'P',    'Q',    'R',    'S',    'T',    'U',    'V',    'W',
-		   'X',    'Y',    'Z',    '[',    '\\',   ']',    '^',    '_',
-		   '`',    'A',    'B',    'C',    'D',    'E',    'F',    'G',
-		   'H',    'I',    'J',    'K',    'L',    'M',    'N',    'O',
-		   'P',    'Q',    'R',    'S',    'T',    'U',    'V',    'W',
-		   'X',    'Y',    'Z',    '{',    '|',    '}',    '~', '\x7f',
-		'\x80', '\x81', '\x82', '\x83', '\x84', '\x85', '\x86', '\x87',
-		'\x88', '\x89', '\x8a', '\x8b', '\x8c', '\x8d', '\x8e', '\x8f',
-		'\x90', '\x91', '\x92', '\x93', '\x94', '\x95', '\x96', '\x97',
-		'\x98', '\x99', '\x9a', '\x9b', '\x9c', '\x9d', '\x9e', '\x9f',
-		'\xa0', '\xa1', '\xa2', '\xa3', '\xa4', '\xa5', '\xa6', '\xa7',
-		'\xa8', '\xa9', '\xaa', '\xab', '\xac', '\xad', '\xae', '\xaf',
-		'\xb0', '\xb1', '\xb2', '\xb3', '\xb4', '\xb5', '\xb6', '\xb7',
-		'\xb8', '\xb9', '\xba', '\xbb', '\xbc', '\xbd', '\xbe', '\xbf',
-		'\xc0', '\xc1', '\xc2', '\xc3', '\xc4', '\xc5', '\xc6', '\xc7',
-		'\xc8', '\xc9', '\xca', '\xcb', '\xcc', '\xcd', '\xce', '\xcf',
-		'\xd0', '\xd1', '\xd2', '\xd3', '\xd4', '\xd5', '\xd6', '\xd7',
-		'\xd8', '\xd9', '\xda', '\xdb', '\xdc', '\xdd', '\xde', '\xdf',
-		'\xe0', '\xe1', '\xe2', '\xe3', '\xe4', '\xe5', '\xe6', '\xe7',
-		'\xe8', '\xe9', '\xea', '\xeb', '\xec', '\xed', '\xee', '\xef',
-		'\xf0', '\xf1', '\xf2', '\xf3', '\xf4', '\xf5', '\xf6', '\xf7',
-		'\xf8', '\xf9', '\xfa', '\xfb', '\xfc', '\xfd', '\xfe', '\xff',
-	};
-	return _[static_cast<unsigned char>(c)];
-}
-
-
-inline std::string upper_string(std::string_view str) {
-	std::string result;
-	std::transform(str.begin(), str.end(), std::back_inserter(result), upper_char);
-	return result;
-}
-
-inline std::string lower_string(std::string_view str) {
-	std::string result;
-	std::transform(str.begin(), str.end(), std::back_inserter(result), lower_char);
-	return result;
-}
-
-
-inline void to_upper(std::string& str) {
-	std::transform(str.begin(), str.end(), str.begin(), upper_char);
-}
-
-inline void to_lower(std::string& str) {
-	std::transform(str.begin(), str.end(), str.begin(), lower_char);
-}
-
+std::int32_t jump_consistent_hash(std::uint64_t key, std::int32_t num_buckets);
 
 char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
 char* normalize_path(std::string_view src, char* dst, bool slashed=false);
 std::string normalize_path(std::string_view src, bool slashed=false);
-int url_qs(const char *, const char *, size_t);
+int url_qs(const char *, const char *, std::size_t);
 
 bool strhasupper(std::string_view str);
 
 bool isRange(std::string_view str);
 
-bool startswith(std::string_view text, std::string_view token);
-bool startswith(std::string_view text, char ch);
-bool endswith(std::string_view text, std::string_view token);
-bool endswith(std::string_view text, char ch);
 void delete_files(std::string_view path);
 void move_files(std::string_view src, std::string_view dst);
 bool exists(std::string_view path);
@@ -431,12 +147,6 @@ DIR* opendir(std::string_view path, bool create);
 void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix);
 // Copy all directory if file_name and new_name are empty
 int copy_file(std::string_view src, std::string_view dst, bool create=true, std::string_view file_name="", std::string_view new_name="");
-
-std::string bytes_string(size_t bytes, bool colored=false);
-std::string small_time_string(long double seconds, bool colored=false);
-std::string time_string(long double seconds, bool colored=false);
-std::string delta_string(long double nanoseconds, bool colored=false);
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
 void _tcp_nopush(int sock, int optval);
 
@@ -466,7 +176,7 @@ struct Clk {
 		usleep(5000);
 		auto b = std::chrono::system_clock::now();
 		auto delta = *reinterpret_cast<unsigned long long*>(&b) - *reinterpret_cast<unsigned long long*>(&a);
-		mul = 1000000 / static_cast<unsigned long long>(pow(10, floor(log10(delta))));
+		mul = 1000000 / static_cast<unsigned long long>(std::pow(10, std::floor(std::log10(delta))));
 	}
 
 	template <typename T>

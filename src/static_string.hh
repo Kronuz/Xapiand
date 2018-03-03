@@ -30,11 +30,11 @@
 #ifndef STATIC_STRING_HH
 #define STATIC_STRING_HH
 
-#include <cassert>
-#include <cstddef>
+#include <cassert>            // for assert
+#include <cstddef>            // for std::size_t
 #include <iostream>
-#include <string>       // for std::string
-#include <string_view>  // for std::string_view
+#include <string>             // for std::string
+#include <string_view>        // for std::string_view
 #include <type_traits>
 #include <utility>
 
