@@ -313,28 +313,22 @@ inline std::string lower_string(std::string_view str) {
 
 
 inline bool startswith(std::string_view text, std::string_view token) {
-	auto text_len = text.size();
-	auto token_len = token.size();
-	return text_len >= token_len && text.compare(0, token_len, token) == 0;
+	return text.size() >= token.size() && text.compare(0, token.size(), token) == 0;
 }
 
 
 inline bool startswith(std::string_view text, char ch) {
-	auto text_len = text.size();
-	return text_len >= 1 && text.at(0) == ch;
+	return text.size() >= 1 && text.at(0) == ch;
 }
 
 
 inline bool endswith(std::string_view text, std::string_view token) {
-	auto text_len = text.size();
-	auto token_len = token.size();
-	return text_len >= token_len && std::equal(text.begin() + text_len - token_len, text.end(), token.begin());
+	return text.size() >= token.size() && std::equal(text.begin() + text.size() - token.size(), text.end(), token.begin());
 }
 
 
 inline bool endswith(std::string_view text, char ch) {
-	auto text_len = text.size();
-	return text_len >= 1 && text.at(text_len - 1) == ch;
+	return text.size() >= 1 && text.at(text.size() - 1) == ch;
 }
 
 
