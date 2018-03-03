@@ -35,15 +35,13 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
-#define _ L_NOTHING
-
 #ifdef NDEBUG
-#define L_OBJ_BEGIN _
-#define L_OBJ_END _
-#define L_DATABASE_BEGIN _
-#define L_DATABASE_END _
-#define L_EV_BEGIN _
-#define L_EV_END _
+#define L_OBJ_BEGIN L_NOTHING
+#define L_OBJ_END L_NOTHING
+#define L_DATABASE_BEGIN L_NOTHING
+#define L_DATABASE_END L_NOTHING
+#define L_EV_BEGIN L_NOTHING
+#define L_EV_END L_NOTHING
 #else
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_END L_DELAYED_N_UNLOG
@@ -64,30 +62,30 @@
 // Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
 // ex. L_STACKED_DIM_GREY, L_CYAN, L_STACKED_LOG or L_PURPLE
 
-#define L_ERRNO _
-#define L_CALL _
-#define L_TIME _
-#define L_CONN _
-#define L_RAFT _
-#define L_RAFT_PROTO _
-#define L_DISCOVERY _
-#define L_DISCOVERY_PROTO _
-#define L_REPLICATION _
-#define L_OBJ _
-#define L_THREADPOOL _
-#define L_DATABASE _
-#define L_DATABASE_WAL _
-#define L_HTTP _
-#define L_BINARY _
-#define L_HTTP_PROTO_PARSER _
-#define L_EV _
-#define L_HTTP_WIRE _
-#define L_BINARY_WIRE _
-#define L_TCP_WIRE _
-#define L_UDP_WIRE _
-#define L_HTTP_PROTO _
-#define L_BINARY_PROTO _
-#define L_DATABASE_WRAP_INIT _
-#define L_DATABASE_WRAP _
-#define L_INDEX _
-#define L_SEARCH _
+#define L_ERRNO L_NOTHING
+#define L_CALL L_NOTHING
+#define L_TIME L_NOTHING
+#define L_CONN L_NOTHING
+#define L_RAFT L_NOTHING
+#define L_RAFT_PROTO L_NOTHING
+#define L_DISCOVERY L_NOTHING
+#define L_DISCOVERY_PROTO L_NOTHING
+#define L_REPLICATION L_NOTHING
+#define L_OBJ L_NOTHING
+#define L_THREADPOOL L_NOTHING
+#define L_DATABASE L_NOTHING
+#define L_DATABASE_WAL L_NOTHING
+#define L_HTTP L_NOTHING
+#define L_BINARY L_NOTHING
+#define L_HTTP_PROTO_PARSER L_NOTHING
+#define L_EV L_NOTHING
+#define L_HTTP_WIRE L_NOTHING
+#define L_BINARY_WIRE L_NOTHING
+#define L_TCP_WIRE L_NOTHING
+#define L_UDP_WIRE L_NOTHING
+#define L_HTTP_PROTO L_NOTHING
+#define L_BINARY_PROTO L_NOTHING
+#define L_DATABASE_WRAP_INIT L_NOTHING
+#define L_DATABASE_WRAP L_NOTHING
+#define L_INDEX L_NOTHING
+#define L_SEARCH L_NOTHING
