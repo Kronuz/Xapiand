@@ -361,13 +361,13 @@ Cast::ewkt(const MsgPack& obj)
 Cast::Hash
 Cast::getHash(std::string_view cast_word)
 {
-	constexpr static auto hash_phf = phf::make_phf({
-		#define OPTION(name, arg) fnv1ah32::hash(RESERVED_##name),
+	constexpr static auto _ = phf::make_phf({
+		#define OPTION(name, arg) hh(RESERVED_##name),
 		HASH_OPTIONS(cast_hash)
 		#undef OPTION
 	});
 
-	return static_cast<Hash>(hash_phf.find(fnv1ah32::hash(cast_word)));
+	return static_cast<Hash>(_.fhh(cast_word));
 }
 
 

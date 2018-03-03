@@ -1324,85 +1324,85 @@ FieldType
 Unserialise::type(std::string_view str_type)
 {
 	constexpr static auto _ = phf::make_phf({
-		fnv1ah32::hash(" ", lower_char),
-		fnv1ah32::hash("e", lower_char),
-		fnv1ah32::hash("a", lower_char),
-		fnv1ah32::hash("b", lower_char),
-		fnv1ah32::hash("d", lower_char),
-		fnv1ah32::hash("f", lower_char),
-		fnv1ah32::hash("g", lower_char),
-		fnv1ah32::hash("i", lower_char),
-		fnv1ah32::hash("o", lower_char),
-		fnv1ah32::hash("p", lower_char),
-		fnv1ah32::hash("s", lower_char),
-		fnv1ah32::hash("t", lower_char),
-		fnv1ah32::hash("u", lower_char),
-		fnv1ah32::hash("x", lower_char),
-		fnv1ah32::hash("date", lower_char),
-		fnv1ah32::hash("term", lower_char),
-		fnv1ah32::hash("text", lower_char),
-		fnv1ah32::hash("time", lower_char),
-		fnv1ah32::hash("array", lower_char),
-		fnv1ah32::hash("empty", lower_char),
-		fnv1ah32::hash("float", lower_char),
-		fnv1ah32::hash("object", lower_char),
-		fnv1ah32::hash("script", lower_char),
-		fnv1ah32::hash("string", lower_char),
-		fnv1ah32::hash("boolean", lower_char),
-		fnv1ah32::hash("foreign", lower_char),
-		fnv1ah32::hash("integer", lower_char),
-		fnv1ah32::hash("positive", lower_char),
-		fnv1ah32::hash("timedelta", lower_char),
-		fnv1ah32::hash("geospatial", lower_char),
+		hhl(" "),
+		hhl("e"),
+		hhl("a"),
+		hhl("b"),
+		hhl("d"),
+		hhl("f"),
+		hhl("g"),
+		hhl("i"),
+		hhl("o"),
+		hhl("p"),
+		hhl("s"),
+		hhl("t"),
+		hhl("u"),
+		hhl("x"),
+		hhl("date"),
+		hhl("term"),
+		hhl("text"),
+		hhl("time"),
+		hhl("array"),
+		hhl("empty"),
+		hhl("float"),
+		hhl("object"),
+		hhl("script"),
+		hhl("string"),
+		hhl("boolean"),
+		hhl("foreign"),
+		hhl("integer"),
+		hhl("positive"),
+		hhl("timedelta"),
+		hhl("geospatial"),
 	});
 
-	switch (_.find(fnv1ah32::hash(str_type, lower_char))) {
-		case _.find(fnv1ah32::hash(" ", lower_char)):
-		case _.find(fnv1ah32::hash("e", lower_char)):
-		case _.find(fnv1ah32::hash("empty", lower_char)):
+	switch (_.fhhl(str_type)) {
+		case _.fhhl(" "):
+		case _.fhhl("e"):
+		case _.fhhl("empty"):
 			return FieldType::EMPTY;
-		case _.find(fnv1ah32::hash("a", lower_char)):
-		case _.find(fnv1ah32::hash("array", lower_char)):
+		case _.fhhl("a"):
+		case _.fhhl("array"):
 			return FieldType::ARRAY;
-		case _.find(fnv1ah32::hash("b", lower_char)):
+		case _.fhhl("b"):
 			return FieldType::BOOLEAN;
-		case _.find(fnv1ah32::hash("boolean", lower_char)):
-		case _.find(fnv1ah32::hash("d", lower_char)):
-		case _.find(fnv1ah32::hash("date", lower_char)):
+		case _.fhhl("boolean"):
+		case _.fhhl("d"):
+		case _.fhhl("date"):
 			return FieldType::DATE;
-		case _.find(fnv1ah32::hash("f", lower_char)):
-		case _.find(fnv1ah32::hash("float", lower_char)):
+		case _.fhhl("f"):
+		case _.fhhl("float"):
 			return FieldType::FLOAT;
-		case _.find(fnv1ah32::hash("g", lower_char)):
-		case _.find(fnv1ah32::hash("geospatial", lower_char)):
+		case _.fhhl("g"):
+		case _.fhhl("geospatial"):
 			return FieldType::GEO;
-		case _.find(fnv1ah32::hash("i", lower_char)):
-		case _.find(fnv1ah32::hash("integer", lower_char)):
+		case _.fhhl("i"):
+		case _.fhhl("integer"):
 			return FieldType::INTEGER;
-		case _.find(fnv1ah32::hash("o", lower_char)):
-		case _.find(fnv1ah32::hash("object", lower_char)):
+		case _.fhhl("o"):
+		case _.fhhl("object"):
 			return FieldType::OBJECT;
-		case _.find(fnv1ah32::hash("p", lower_char)):
-		case _.find(fnv1ah32::hash("positive", lower_char)):
+		case _.fhhl("p"):
+		case _.fhhl("positive"):
 			return FieldType::POSITIVE;
-		case _.find(fnv1ah32::hash("s", lower_char)):
-		case _.find(fnv1ah32::hash("string", lower_char)):
+		case _.fhhl("s"):
+		case _.fhhl("string"):
 			return FieldType::STRING;
-		case _.find(fnv1ah32::hash("t", lower_char)):
-		case _.find(fnv1ah32::hash("term", lower_char)):
+		case _.fhhl("t"):
+		case _.fhhl("term"):
 			return FieldType::TERM;
-		case _.find(fnv1ah32::hash("u", lower_char)):
+		case _.fhhl("u"):
 			return FieldType::UUID;
-		case _.find(fnv1ah32::hash("x", lower_char)):
-		case _.find(fnv1ah32::hash("script", lower_char)):
+		case _.fhhl("x"):
+		case _.fhhl("script"):
 			return FieldType::SCRIPT;
-		case _.find(fnv1ah32::hash("text", lower_char)):
+		case _.fhhl("text"):
 			return FieldType::TEXT;
-		case _.find(fnv1ah32::hash("time", lower_char)):
+		case _.fhhl("time"):
 			return FieldType::TIME;
-		case _.find(fnv1ah32::hash("foreign", lower_char)):
+		case _.fhhl("foreign"):
 			return FieldType::FOREIGN;
-		case _.find(fnv1ah32::hash("timedelta", lower_char)):
+		case _.fhhl("timedelta"):
 			return FieldType::TIMEDELTA;
 	}
 

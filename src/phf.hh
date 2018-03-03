@@ -414,19 +414,4 @@ make_phf(const T (&items)[M]) {
 
 } // namespace phf
 
-
-#define PHF_HASH(arg) fnv1ah32::hash(arg)
-#define PHF_VAR(name) phf_##name
-#define PHF_FIND(arg, name) PHF_VAR(name).find(PHF_HASH(arg))
-
-#define PHF_INIT_BEGIN(name) static constexpr auto PHF_VAR(name) = phf::make_phf({
-#define PHF_OPTION_INIT(option, arg) PHF_HASH(#option),
-#define PHF_INIT_END(name) });
-
-#define PHF_SWITCH_BEGIN(arg, name) switch (PHF_FIND(arg, name)) {
-#define PHF_OPTION_CASE(option, name) case PHF_FIND(#option, name)
-#define PHF_OPTION_CASE_RETURN_STRING(option, name) PHF_OPTION_CASE(option, name): { static const std::string _(#option); return _; }
-#define PHF_OPTION_CASE_DISPATCH(option, name, ...) PHF_OPTION_CASE(option, name): return _##name##_dispatcher_ ##option(__VA_ARGS__);
-#define PHF_SWITCH_END(arg) }
-
 #endif // PHF_HH

@@ -530,94 +530,139 @@ static const std::string str_set_index(join_string<std::string>({
 static inline TypeIndex
 _get_index(std::string_view str_index)
 {
-	switch(fnv1ah32::hash(str_index)) {
-		case fnv1ah32::hash("none"):
+	constexpr static auto _ = phf::make_phf({
+		hh("none"),
+		hh("field_terms"),
+		hh("field_values"),
+		hh("field_terms,field_values"),
+		hh("field_values,field_terms"),
+		hh("field"),
+		hh("field_all"),
+		hh("global_terms"),
+		hh("field_terms,global_terms"),
+		hh("global_terms,field_terms"),
+		hh("terms"),
+		hh("global_terms,field_values"),
+		hh("field_values,global_terms"),
+		hh("global_terms,field"),
+		hh("global_terms,field_all"),
+		hh("field,global_terms"),
+		hh("field_all,global_terms"),
+		hh("global_values"),
+		hh("global_values,field_terms"),
+		hh("field_terms,global_values"),
+		hh("field_values,global_values"),
+		hh("global_values,field_values"),
+		hh("values"),
+		hh("global_values,field"),
+		hh("global_values,field_all"),
+		hh("field,global_values"),
+		hh("field_all,global_values"),
+		hh("global"),
+		hh("global_all"),
+		hh("global_values,global_terms"),
+		hh("global_terms,global_values"),
+		hh("global,field_terms"),
+		hh("global_all,field_terms"),
+		hh("field_terms,global"),
+		hh("field_terms,global_all"),
+		hh("global_all,field_values"),
+		hh("global,field_values"),
+		hh("field_values,global"),
+		hh("field_values,global_all"),
+		hh("field_all,global_all"),
+		hh("global_all,field_all"),
+		hh("all"),
+	});
+
+	switch(_.fhh(str_index)) {
+		case _.fhh("none"):
 			return TypeIndex::NONE;
-		case fnv1ah32::hash("field_terms"):
+		case _.fhh("field_terms"):
 			return TypeIndex::FIELD_TERMS;
-		case fnv1ah32::hash("field_values"):
+		case _.fhh("field_values"):
 			return TypeIndex::FIELD_VALUES;
-		case fnv1ah32::hash("field_terms,field_values"):
+		case _.fhh("field_terms,field_values"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1ah32::hash("field_values,field_terms"):
+		case _.fhh("field_values,field_terms"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1ah32::hash("field"):
+		case _.fhh("field"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1ah32::hash("field_all"):
+		case _.fhh("field_all"):
 			return TypeIndex::FIELD_ALL;
-		case fnv1ah32::hash("global_terms"):
+		case _.fhh("global_terms"):
 			return TypeIndex::GLOBAL_TERMS;
-		case fnv1ah32::hash("field_terms,global_terms"):
+		case _.fhh("field_terms,global_terms"):
 			return TypeIndex::TERMS;
-		case fnv1ah32::hash("global_terms,field_terms"):
+		case _.fhh("global_terms,field_terms"):
 			return TypeIndex::TERMS;
-		case fnv1ah32::hash("terms"):
+		case _.fhh("terms"):
 			return TypeIndex::TERMS;
-		case fnv1ah32::hash("global_terms,field_values"):
+		case _.fhh("global_terms,field_values"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case fnv1ah32::hash("field_values,global_terms"):
+		case _.fhh("field_values,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case fnv1ah32::hash("global_terms,field"):
+		case _.fhh("global_terms,field"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1ah32::hash("global_terms,field_all"):
+		case _.fhh("global_terms,field_all"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1ah32::hash("field,global_terms"):
+		case _.fhh("field,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1ah32::hash("field_all,global_terms"):
+		case _.fhh("field_all,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case fnv1ah32::hash("global_values"):
+		case _.fhh("global_values"):
 			return TypeIndex::GLOBAL_VALUES;
-		case fnv1ah32::hash("global_values,field_terms"):
+		case _.fhh("global_values,field_terms"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case fnv1ah32::hash("field_terms,global_values"):
+		case _.fhh("field_terms,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case fnv1ah32::hash("field_values,global_values"):
+		case _.fhh("field_values,global_values"):
 			return TypeIndex::VALUES;
-		case fnv1ah32::hash("global_values,field_values"):
+		case _.fhh("global_values,field_values"):
 			return TypeIndex::VALUES;
-		case fnv1ah32::hash("values"):
+		case _.fhh("values"):
 			return TypeIndex::VALUES;
-		case fnv1ah32::hash("global_values,field"):
+		case _.fhh("global_values,field"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1ah32::hash("global_values,field_all"):
+		case _.fhh("global_values,field_all"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1ah32::hash("field,global_values"):
+		case _.fhh("field,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1ah32::hash("field_all,global_values"):
+		case _.fhh("field_all,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case fnv1ah32::hash("global"):
+		case _.fhh("global"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1ah32::hash("global_all"):
+		case _.fhh("global_all"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1ah32::hash("global_values,global_terms"):
+		case _.fhh("global_values,global_terms"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1ah32::hash("global_terms,global_values"):
+		case _.fhh("global_terms,global_values"):
 			return TypeIndex::GLOBAL_ALL;
-		case fnv1ah32::hash("global,field_terms"):
+		case _.fhh("global,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1ah32::hash("global_all,field_terms"):
+		case _.fhh("global_all,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1ah32::hash("field_terms,global"):
+		case _.fhh("field_terms,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1ah32::hash("field_terms,global_all"):
+		case _.fhh("field_terms,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case fnv1ah32::hash("global_all,field_values"):
+		case _.fhh("global_all,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1ah32::hash("global,field_values"):
+		case _.fhh("global,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1ah32::hash("field_values,global"):
+		case _.fhh("field_values,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1ah32::hash("field_values,global_all"):
+		case _.fhh("field_values,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case fnv1ah32::hash("field_all,global_all"):
+		case _.fhh("field_all,global_all"):
 			return TypeIndex::ALL;
-		case fnv1ah32::hash("global_all,field_all"):
+		case _.fhh("global_all,field_all"):
 			return TypeIndex::ALL;
-		case fnv1ah32::hash("all"):
+		case _.fhh("all"):
 			return TypeIndex::ALL;
-		default:
-			throw std::out_of_range("Invalid index");
 	}
+
+	throw std::out_of_range("Invalid index");
 }
 
 

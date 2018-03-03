@@ -302,4 +302,12 @@ using djb2h16 = djb2h<std::uint16_t, 13, 31, decltype(noop)>;  // (h << 2) + (h 
 using djb2h32 = djb2h<std::uint32_t, 33, 5381, decltype(noop)>;  // the one implemented everywhere: (h << 5) + h <-- mul should? be prime 31 or 37
 using djb2h64 = djb2h<std::uint64_t, 63, 174440041L, decltype(noop)>;  // (h << 6) - h <-- mul should? be prime 61 or 67
 
+
+//
+
+#define hh(s) fnv1ah32::hash(s)
+#define hhl(s) fnv1ah32::hash(s, lower_char)
+#define fhh(s) find(fnv1ah32::hash(s))
+#define fhhl(s) find(fnv1ah32::hash(s, lower_char))
+
 #endif // HASHES_HH
