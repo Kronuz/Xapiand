@@ -36,9 +36,9 @@ std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&
 inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
 	return urldecode(string.data(), string.size(), plus, amp, colon, eq);
 }
-template<typename T, std::size_t N>
-inline std::string urldecode(T (&s)[N], char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
-	return urldecode(s, N - 1, plus, amp, colon, eq);
+template<typename T, std::size_t N_PLUS_1>
+inline std::string urldecode(T (&s)[N_PLUS_1], char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
+	return urldecode(s, N_PLUS_1 - 1, plus, amp, colon, eq);
 }
 
 
@@ -54,7 +54,12 @@ public:
 	void clear() noexcept;
 	void rewind() noexcept;
 	int init(std::string_view q);
-	int next(const char *name);
+
+	template<typename T, std::size_t N_PLUS_1>
+	int next(T (&s)[N_PLUS_1]) {
+		return next(s, N_PLUS_1 - 1);
+	}
+	int next(const char *name, size_t size);
 
 	std::string_view get();
 };

@@ -22,7 +22,7 @@
 
 #include "url_parser.h"
 
-#include <cstring>           // for strlen, strncmp
+#include <cstring>           // for strncmp
 
 #include "utils.h"           // for hexdec
 #include "log.h"
@@ -103,14 +103,12 @@ QueryParser::init(std::string_view q)
 
 
 int
-QueryParser::next(const char *name)
+QueryParser::next(const char *name, size_t name_len)
 {
 	const char *ni = query.data();
 	const char *nf = ni + query.size();
 	const char *n0, *n1 = nullptr;
 	const char *v0 = nullptr;
-
-	auto name_len = strlen(name);
 
 	if (off == nullptr) {
 		n0 = n1 = ni;
