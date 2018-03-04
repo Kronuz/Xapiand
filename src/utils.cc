@@ -369,7 +369,7 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 
 
 std::string name_generator() {
-	static NameGen::Generator generator("!<K|E><k|e|l><|||s>");
+	static NameGen::Generator generator("!<s<v|V>(tia|nia|lia|cia|sia)|s<v|V>(os)|B<v|V>c(ios)|B<v|V><c|C>v(ios|os)>");
 	return generator.toString();
 }
 
