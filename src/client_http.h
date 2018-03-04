@@ -143,27 +143,27 @@ constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
 constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
+#define COMMAND_OPTIONS(name, ...) \
+	OPTION(COMMIT, __VA_ARGS__) \
+	OPTION(INFO, __VA_ARGS__) \
+	OPTION(METADATA, __VA_ARGS__) \
+	OPTION(NODES, __VA_ARGS__) \
+	OPTION(QUIT, __VA_ARGS__) \
+	OPTION(SCHEMA, __VA_ARGS__) \
+	OPTION(SEARCH, __VA_ARGS__) \
+	OPTION(STATS, __VA_ARGS__) \
+	OPTION(TOUCH, __VA_ARGS__) \
+	OPTION(WAL, __VA_ARGS__)
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint32_t {
+		#define OPTION(name, arg) CMD_##name = hhl(COMMAND_##name),
+		COMMAND_OPTIONS(Hash)
+		#undef OPTION
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
-		CMD_COMMIT    = fnv1ah32::hash(COMMAND_COMMIT),
-		CMD_INFO      = fnv1ah32::hash(COMMAND_INFO),
-		CMD_METADATA  = fnv1ah32::hash(COMMAND_METADATA),
-		CMD_NODES     = fnv1ah32::hash(COMMAND_NODES),
-#ifndef NDEBUG
-		CMD_QUIT      = fnv1ah32::hash(COMMAND_QUIT),
-#endif
-		CMD_SCHEMA    = fnv1ah32::hash(COMMAND_SCHEMA),
-		CMD_SEARCH    = fnv1ah32::hash(COMMAND_SEARCH),
-		CMD_STATS     = fnv1ah32::hash(COMMAND_STATS),
-		CMD_TOUCH     = fnv1ah32::hash(COMMAND_TOUCH),
-#if XAPIAND_DATABASE_WAL
-		CMD_WAL       = fnv1ah32::hash(COMMAND_WAL),
-#endif
 	};
 
 	struct http_parser parser;

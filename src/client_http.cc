@@ -1940,9 +1940,15 @@ HttpClient::url_resolve()
 				return Command::NO_CMD_NO_ID;
 			}
 		} else {
+			constexpr static auto _ = phf::make_phf({
+				#define OPTION(name, arg) hhl(COMMAND_##name),
+				COMMAND_OPTIONS(command_hash)
+				#undef OPTION
+			});
+
 			auto cmd = path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return static_cast<Command>(fnv1ah32ci::hash(cmd.substr(0, needle)));
+			return static_cast<Command>(_.fhhl(cmd.substr(0, needle)));
 		}
 
 	} else {
