@@ -97,7 +97,7 @@ int
 QueryParser::init(std::string_view q)
 {
 	clear();
-	query = urldecode(q, ' ', '\x01', '\x01', '\x02');
+	query = urldecode(q, ' ', '\0', '\0', '\1');
 	return 0;
 }
 
@@ -117,26 +117,18 @@ QueryParser::next(const char *name, size_t name_len)
 	}
 
 	while (true) {
-		char cn = *n1;
-		if (n1 == nf) {
-			cn = '\0';
-		}
+		char cn = (n1 == nf) ? '\0' : *n1;
 		switch (cn) {
-			case '\x02' :  // '='
+			case '\1':  // '='
 				v0 = n1;
-			case '\0':
-			case '\x01' :  // '&'
+			case '\0':  // '\0' and '&'
 				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
 					if (v0) {
 						const char *v1 = v0 + 1;
 						while (1) {
-							char cv = *v1;
-							if (v1 == nf) {
-								cv = '\0';
-							}
+							char cv = (v1 == nf) ? '\0' : *v1;
 							switch(cv) {
-								case '\0':
-								case '\x01' :  // '&'
+								case '\0':  // '\0' and '&'
 									off = v0 + 1;
 									len = v1 - v0 - 1;
 								return 0;
@@ -150,7 +142,7 @@ QueryParser::next(const char *name, size_t name_len)
 					}
 				} else if (!cn) {
 					return -1;
-				} else if (cn != '\x02') {  // '='
+				} else if (cn != '\1') {  // '='
 					n0 = n1 + 1;
 					v0 = nullptr;
 				}
