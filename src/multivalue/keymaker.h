@@ -306,22 +306,33 @@ public:
 	}
 
 	void soundex(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		switch (fnv1ah32::hash(field_spc.language)) {
-			case fnv1ah32::hash("english"):
-			case fnv1ah32::hash("en"):
+		constexpr static auto _ = phf::make_phf({
+			hh("english"),
+			hh("en"),
+			hh("french"),
+			hh("fr"),
+			hh("german"),
+			hh("de"),
+			hh("spanish"),
+			hh("es"),
+		});
+
+		switch (_.fhh(field_spc.language)) {
+			case _.fhh("english"):
+			case _.fhh("en"):
 			default:
 				soundex_en(field_spc, reverse, value, qf);
 				break;
-			case fnv1ah32::hash("french"):
-			case fnv1ah32::hash("fr"):
+			case _.fhh("french"):
+			case _.fhh("fr"):
 				soundex_fr(field_spc, reverse, value, qf);
 				break;
-			case fnv1ah32::hash("german"):
-			case fnv1ah32::hash("de"):
+			case _.fhh("german"):
+			case _.fhh("de"):
 				soundex_de(field_spc, reverse, value, qf);
 				break;
-			case fnv1ah32::hash("spanish"):
-			case fnv1ah32::hash("es"):
+			case _.fhh("spanish"):
+			case _.fhh("es"):
 				soundex_es(field_spc, reverse, value, qf);
 				break;
 		}

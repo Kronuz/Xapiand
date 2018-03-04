@@ -352,131 +352,174 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(field_name).c_str(), o.to_string().c_str());
 
 				Xapian::Query query;
-				switch (fnv1ah32::hash(field_name)) {
+				constexpr static auto _ = phf::make_phf({
+					hh(QUERYDSL_IN),
+					hh(QUERYDSL_RANGE),
+					hh(QUERYDSL_RAW),
+					hh(RESERVED_VALUE),
+					hh("_and"),
+					hh("_and_maybe"),
+					hh("_and_not"),
+					hh("_elite_set"),
+					hh("_filter"),
+					hh("_max"),
+					hh("_near"),
+					hh("_not"),
+					hh("_or"),
+					hh("_phrase"),
+					hh("_scale_weight"),
+					hh("_synonym"),
+					hh("_value_ge"),
+					hh("_value_le"),
+					hh("_value_range"),
+					hh("_wildcard"),
+					hh("_xor"),
+					hh(RESERVED_FLOAT),
+					hh(RESERVED_POSITIVE),
+					hh(RESERVED_INTEGER),
+					hh(RESERVED_BOOLEAN),
+					hh(RESERVED_TERM),
+					hh(RESERVED_TEXT),
+					hh(RESERVED_DATE),
+					hh(RESERVED_UUID),
+					hh(RESERVED_EWKT),
+					hh(RESERVED_POINT),
+					hh(RESERVED_POLYGON),
+					hh(RESERVED_CIRCLE),
+					hh(RESERVED_CHULL),
+					hh(RESERVED_MULTIPOINT),
+					hh(RESERVED_MULTIPOLYGON),
+					hh(RESERVED_MULTICIRCLE),
+					hh(RESERVED_MULTICONVEX),
+					hh(RESERVED_MULTICHULL),
+					hh(RESERVED_GEO_COLLECTION),
+					hh(RESERVED_GEO_INTERSECTION),
+				});
+				switch (_.fhh(field_name)) {
 					// Leaf query clauses.
-					case fnv1ah32::hash(QUERYDSL_IN):
+					case _.fhh(QUERYDSL_IN):
 						query = process_in(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(QUERYDSL_RANGE):
+					case _.fhh(QUERYDSL_RANGE):
 						query = process_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(QUERYDSL_RAW):
+					case _.fhh(QUERYDSL_RAW):
 						query = process_raw(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_VALUE):
+					case _.fhh(RESERVED_VALUE):
 						query = process_value(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					// Compound query clauses
-					case fnv1ah32::hash("_and"):
+					case _.fhh("_and"):
 						query = process_and(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_and_maybe"):
+					case _.fhh("_and_maybe"):
 						query = process_and_maybe(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_and_not"):
+					case _.fhh("_and_not"):
 						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_elite_set"):
+					case _.fhh("_elite_set"):
 						query = process_elite_set(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_filter"):
+					case _.fhh("_filter"):
 						query = process_filter(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_max"):
+					case _.fhh("_max"):
 						query = process_max(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_near"):
+					case _.fhh("_near"):
 						query = process_near(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_not"):
+					case _.fhh("_not"):
 						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_or"):
+					case _.fhh("_or"):
 						query = process_or(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_phrase"):
+					case _.fhh("_phrase"):
 						query = process_phrase(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_scale_weight"):
+					case _.fhh("_scale_weight"):
 						query = process_scale_weight(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_synonym"):
+					case _.fhh("_synonym"):
 						query = process_synonym(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_value_ge"):
+					case _.fhh("_value_ge"):
 						query = process_value_ge(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_value_le"):
+					case _.fhh("_value_le"):
 						query = process_value_le(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_value_range"):
+					case _.fhh("_value_range"):
 						query = process_value_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_wildcard"):
+					case _.fhh("_wildcard"):
 						query = process_wildcard(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash("_xor"):
+					case _.fhh("_xor"):
 						query = process_xor(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					// Reserved cast words
-					case fnv1ah32::hash(RESERVED_FLOAT):
+					case _.fhh(RESERVED_FLOAT):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_POSITIVE):
+					case _.fhh(RESERVED_POSITIVE):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_INTEGER):
+					case _.fhh(RESERVED_INTEGER):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_BOOLEAN):
+					case _.fhh(RESERVED_BOOLEAN):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_TERM):
+					case _.fhh(RESERVED_TERM):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_TEXT):
+					case _.fhh(RESERVED_TEXT):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_DATE):
+					case _.fhh(RESERVED_DATE):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_UUID):
+					case _.fhh(RESERVED_UUID):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_EWKT):
+					case _.fhh(RESERVED_EWKT):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_POINT):
+					case _.fhh(RESERVED_POINT):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_POLYGON):
+					case _.fhh(RESERVED_POLYGON):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_CIRCLE):
+					case _.fhh(RESERVED_CIRCLE):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_CHULL):
+					case _.fhh(RESERVED_CHULL):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_MULTIPOINT):
+					case _.fhh(RESERVED_MULTIPOINT):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_MULTIPOLYGON):
+					case _.fhh(RESERVED_MULTIPOLYGON):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_MULTICIRCLE):
+					case _.fhh(RESERVED_MULTICIRCLE):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_MULTICONVEX):
+					case _.fhh(RESERVED_MULTICONVEX):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_MULTICHULL):
+					case _.fhh(RESERVED_MULTICHULL):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_GEO_COLLECTION):
+					case _.fhh(RESERVED_GEO_COLLECTION):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case fnv1ah32::hash(RESERVED_GEO_INTERSECTION):
+					case _.fhh(RESERVED_GEO_INTERSECTION):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					default:

@@ -441,12 +441,23 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 		if (state == 50) {
 			std::string name = string::lower(self->header_name);
 
-			switch (fnv1ah32::hash(name)) {
-				case fnv1ah32::hash("host"):
+			constexpr static auto _ = phf::make_phf({
+				hh("host"),
+				hh("expect"),
+				hh("100-continue"),
+				hh("content-type"),
+				hh("content-length"),
+				hh("accept"),
+				hh("accept-encoding"),
+				hh("x-http-method-override"),
+			});
+
+			switch (_.fhhl(name)) {
+				case _.fhhl("host"):
 					self->host = self->header_value;
 					break;
-				case fnv1ah32::hash("expect"):
-				case fnv1ah32::hash("100-continue"):
+				case _.fhhl("expect"):
+				case _.fhhl("100-continue"):
 					if (p->content_length > MAX_BODY_SIZE) {
 						self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
 						self->close();
@@ -456,13 +467,13 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					self->expect_100 = true;
 					break;
 
-				case fnv1ah32::hash("content-type"):
+				case _.fhhl("content-type"):
 					self->content_type = string::lower(self->header_value);
 					break;
-				case fnv1ah32::hash("content-length"):
+				case _.fhhl("content-length"):
 					self->content_length = self->header_value;
 					break;
-				case fnv1ah32::hash("accept"): {
+				case _.fhhl("accept"): {
 					static AcceptLRU accept_sets;
 					auto value = string::lower(self->header_value);
 					try {
@@ -497,7 +508,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 				}
 
-				case fnv1ah32::hash("accept-encoding"): {
+				case _.fhhl("accept-encoding"): {
 					static AcceptEncodingLRU accept_encoding_sets;
 					auto value = string::lower(self->header_value);
 					try {
@@ -528,24 +539,33 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 				}
 
-				case fnv1ah32::hash("x-http-method-override"):
-					switch (fnv1ah32::hash(string::upper(self->header_value))) {
-						case fnv1ah32::hash("PUT"):
+				case _.fhhl("x-http-method-override"): {
+					constexpr static auto __ = phf::make_phf({
+						hhl("PUT"),
+						hhl("PATCH"),
+						hhl("MERGE"),
+						hhl("DELETE"),
+						hhl("GET"),
+						hhl("POST"),
+					});
+
+					switch (__.fhhl(self->header_value)) {
+						case __.fhhl("PUT"):
 							p->method = HTTP_PUT;
 							break;
-						case fnv1ah32::hash("PATCH"):
+						case __.fhhl("PATCH"):
 							p->method = HTTP_PATCH;
 							break;
-						case fnv1ah32::hash("MERGE"):
+						case __.fhhl("MERGE"):
 							p->method = HTTP_MERGE;
 							break;
-						case fnv1ah32::hash("DELETE"):
+						case __.fhhl("DELETE"):
 							p->method = HTTP_DELETE;
 							break;
-						case fnv1ah32::hash("GET"):
+						case __.fhhl("GET"):
 							p->method = HTTP_GET;
 							break;
-						case fnv1ah32::hash("POST"):
+						case __.fhhl("POST"):
 							p->method = HTTP_POST;
 							break;
 						default:
@@ -553,6 +573,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 							break;
 					}
 					break;
+				}
 			}
 
 			self->header_name.clear();
@@ -953,9 +974,16 @@ HttpClient::get_decoded_body()
 		MsgPack msgpack;
 		if (!body.empty()) {
 			rapidjson::Document rdoc;
-			switch (fnv1ah32::hash(ct_type_str)) {
-				case fnv1ah32::hash(FORM_URLENCODED_CONTENT_TYPE):
-				case fnv1ah32::hash(X_FORM_URLENCODED_CONTENT_TYPE):
+			constexpr static auto _ = phf::make_phf({
+				hhl(FORM_URLENCODED_CONTENT_TYPE),
+				hhl(X_FORM_URLENCODED_CONTENT_TYPE),
+				hhl(JSON_CONTENT_TYPE),
+				hhl(MSGPACK_CONTENT_TYPE),
+				hhl(X_MSGPACK_CONTENT_TYPE),
+			});
+			switch (_.fhhl(ct_type_str)) {
+				case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
+				case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
 					try {
 						json_load(rdoc, body);
 						msgpack = MsgPack(rdoc);
@@ -965,13 +993,13 @@ HttpClient::get_decoded_body()
 						ct_type = msgpack_type;
 					}
 					break;
-				case fnv1ah32::hash(JSON_CONTENT_TYPE):
+				case _.fhhl(JSON_CONTENT_TYPE):
 					json_load(rdoc, body);
 					msgpack = MsgPack(rdoc);
 					ct_type = json_type;
 					break;
-				case fnv1ah32::hash(MSGPACK_CONTENT_TYPE):
-				case fnv1ah32::hash(X_MSGPACK_CONTENT_TYPE):
+				case _.fhhl(MSGPACK_CONTENT_TYPE):
+				case _.fhhl(X_MSGPACK_CONTENT_TYPE):
 					msgpack = MsgPack::unserialise(body);
 					ct_type = msgpack_type;
 					break;
@@ -1914,7 +1942,7 @@ HttpClient::url_resolve()
 		} else {
 			auto cmd = path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return static_cast<Command>(fnv1ah32::hash(string::lower(cmd.substr(0, needle))));
+			return static_cast<Command>(fnv1ah32ci::hash(cmd.substr(0, needle)));
 		}
 
 	} else {
@@ -2689,15 +2717,22 @@ HttpClient::resolve_encoding()
 	if (accept_encoding_set.empty()) {
 		return Encoding::none;
 	} else {
+		constexpr static auto _ = phf::make_phf({
+			hhl("gzip"),
+			hhl("deflate"),
+			hhl("identity"),
+			hhl("*"),
+		});
+
 		for (const auto& encoding : accept_encoding_set) {
-			switch(fnv1ah32::hash(std::get<2>(encoding))) {
-				case fnv1ah32::hash("gzip"):
+			switch(_.fhhl(std::get<2>(encoding))) {
+				case _.fhhl("gzip"):
 					return Encoding::gzip;
-				case fnv1ah32::hash("deflate"):
+				case _.fhhl("deflate"):
 					return Encoding::deflate;
-				case fnv1ah32::hash("identity"):
+				case _.fhhl("identity"):
 					return Encoding::identity;
-				case fnv1ah32::hash("*"):
+				case _.fhhl("*"):
 					return Encoding::identity;
 				default:
 					continue;

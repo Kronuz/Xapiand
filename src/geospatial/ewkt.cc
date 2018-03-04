@@ -25,36 +25,52 @@
 #include "../split.h"           // for Split
 #include "../utils.h"           // for toUType, repr
 #include "../hashes.hh"         // for fnv1ah32
-#include "../strict_stox.hh"    // for fnv1ah32
+#include "../strict_stox.hh"    // for strict_sto*
+#include "../phf.hh"            // for phf
 
 
 inline Geometry::Type
 get_geometry_type(std::string_view str_geometry_type)
 {
-	switch (fnv1ah32::hash(str_geometry_type)) {
-		case fnv1ah32::hash("POINT"):
+	constexpr static auto _ = phf::make_phf({
+		hh("POINT"),
+		hh("CIRCLE"),
+		hh("CONVEX"),
+		hh("POLYGON"),
+		hh("CHULL"),
+		hh("MULTIPOINT"),
+		hh("MULTICIRCLE"),
+		hh("MULTICONVEX"),
+		hh("MULTIPOLYGON"),
+		hh("MULTICHULL"),
+		hh("GEOMETRYCOLLECTION"),
+		hh("GEOMETRYINTERSECTION"),
+	});
+
+	switch (_.fhh(str_geometry_type)) {
+		case _.fhh("POINT"):
 			return Geometry::Type::POINT;
-		case fnv1ah32::hash("CIRCLE"):
+		case _.fhh("CIRCLE"):
 			return Geometry::Type::CIRCLE;
-		case fnv1ah32::hash("CONVEX"):
+		case _.fhh("CONVEX"):
 			return Geometry::Type::CONVEX;
-		case fnv1ah32::hash("POLYGON"):
+		case _.fhh("POLYGON"):
 			return Geometry::Type::POLYGON;
-		case fnv1ah32::hash("CHULL"):
+		case _.fhh("CHULL"):
 			return Geometry::Type::CHULL;
-		case fnv1ah32::hash("MULTIPOINT"):
+		case _.fhh("MULTIPOINT"):
 			return Geometry::Type::MULTIPOINT;
-		case fnv1ah32::hash("MULTICIRCLE"):
+		case _.fhh("MULTICIRCLE"):
 			return Geometry::Type::MULTICIRCLE;
-		case fnv1ah32::hash("MULTICONVEX"):
+		case _.fhh("MULTICONVEX"):
 			return Geometry::Type::MULTICONVEX;
-		case fnv1ah32::hash("MULTIPOLYGON"):
+		case _.fhh("MULTIPOLYGON"):
 			return Geometry::Type::MULTIPOLYGON;
-		case fnv1ah32::hash("MULTICHULL"):
+		case _.fhh("MULTICHULL"):
 			return Geometry::Type::MULTICHULL;
-		case fnv1ah32::hash("GEOMETRYCOLLECTION"):
+		case _.fhh("GEOMETRYCOLLECTION"):
 			return Geometry::Type::COLLECTION;
-		case fnv1ah32::hash("GEOMETRYINTERSECTION"):
+		case _.fhh("GEOMETRYINTERSECTION"):
 			return Geometry::Type::INTERSECTION;
 		default:
 			throw std::out_of_range("Invalid geometry");

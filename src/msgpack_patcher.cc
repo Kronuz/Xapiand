@@ -27,37 +27,48 @@
 #include "exception.h"  // for ClientError, MSG_ClientError, Error, MSG_Error
 #include "utils.h"      // for repr, stox
 #include "hashes.hh"    // for fnv1ah32
+#include "phf.hh"       // for phf
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
 	if (patch.is_array()) {
+		constexpr static auto _ = phf::make_phf({
+			hhl(PATCH_ADD),
+			hhl(PATCH_REM),
+			hhl(PATCH_REP),
+			hhl(PATCH_MOV),
+			hhl(PATCH_COP),
+			hhl(PATCH_TES),
+			hhl(PATCH_INC),
+			hhl(PATCH_DEC),
+		});
 		for (const auto& elem : patch) {
 			try {
 				const auto& op = elem.at(PATCH_OP);
 				auto op_str = op.str_view();
-				switch (fnv1ah32::hash(op_str)) {
-					case fnv1ah32::hash(PATCH_ADD):
+				switch (_.fhhl(op_str)) {
+					case _.fhhl(PATCH_ADD):
 						patch_add(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_REM):
+					case _.fhhl(PATCH_REM):
 						patch_remove(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_REP):
+					case _.fhhl(PATCH_REP):
 						patch_replace(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_MOV):
+					case _.fhhl(PATCH_MOV):
 						patch_move(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_COP):
+					case _.fhhl(PATCH_COP):
 						patch_copy(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_TES):
+					case _.fhhl(PATCH_TES):
 						patch_test(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_INC):
+					case _.fhhl(PATCH_INC):
 						patch_incr(elem, object);
 						break;
-					case fnv1ah32::hash(PATCH_DEC):
+					case _.fhhl(PATCH_DEC):
 						patch_decr(elem, object);
 						break;
 					default:

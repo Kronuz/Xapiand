@@ -153,8 +153,16 @@ DB_Test::get_body(const std::string& body, const std::string& ct_type)
 {
 	MsgPack msgpack;
 	rapidjson::Document rdoc;
-	switch (fnv1ah32::hash(ct_type)) {
-		case fnv1ah32::hash(FORM_URLENCODED_CONTENT_TYPE):
+
+	constexpr static auto _ = phf::make_phf({
+		hhl(FORM_URLENCODED_CONTENT_TYPE),
+		hhl(JSON_CONTENT_TYPE),
+		hhl(MSGPACK_CONTENT_TYPE),
+		hhl(X_MSGPACK_CONTENT_TYPE),
+	});
+
+	switch (_.fhhl(ct_type)) {
+		case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
 			try {
 				json_load(rdoc, body);
 				msgpack = MsgPack(rdoc);
@@ -162,12 +170,12 @@ DB_Test::get_body(const std::string& body, const std::string& ct_type)
 				msgpack = MsgPack(body);
 			}
 			break;
-		case fnv1ah32::hash(JSON_CONTENT_TYPE):
+		case _.fhhl(JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
 			msgpack = MsgPack(rdoc);
 			break;
-		case fnv1ah32::hash(MSGPACK_CONTENT_TYPE):
-		case fnv1ah32::hash(X_MSGPACK_CONTENT_TYPE):
+		case _.fhhl(MSGPACK_CONTENT_TYPE):
+		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
 			msgpack = MsgPack::unserialise(body);
 			break;
 		default:

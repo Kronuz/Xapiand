@@ -62,7 +62,7 @@ namespace Cast {
 		OPTION(ECMA, __VA_ARGS__)
 
 	enum class Hash : uint32_t {
-		#define OPTION(name, arg) name = fnv1ah32::hash(RESERVED_##name),
+		#define OPTION(name, arg) name = hh(RESERVED_##name),
 		HASH_OPTIONS(Hash)
 		#undef OPTION
 	};

@@ -64,23 +64,31 @@ Script::Script(const MsgPack& _obj)
 			for (auto it = _obj.begin(); it != it_e; ++it) {
 				const auto str_key = it->str_view();
 				auto& value = it.value();
-				switch (fnv1ah32::hash(str_key)) {
-					case fnv1ah32::hash(RESERVED_TYPE):
+				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_TYPE),
+					hh(RESERVED_VALUE),
+					hh(RESERVED_CHAI),
+					hh(RESERVED_ECMA),
+					hh(RESERVED_BODY),
+					hh(RESERVED_NAME),
+				});
+				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_TYPE):
 						process_type(value);
 						break;
-					case fnv1ah32::hash(RESERVED_VALUE):
+					case _.fhh(RESERVED_VALUE):
 						process_value(value);
 						break;
-					case fnv1ah32::hash(RESERVED_CHAI):
+					case _.fhh(RESERVED_CHAI):
 						process_chai(value);
 						break;
-					case fnv1ah32::hash(RESERVED_ECMA):
+					case _.fhh(RESERVED_ECMA):
 						process_ecma(value);
 						break;
-					case fnv1ah32::hash(RESERVED_BODY):
+					case _.fhh(RESERVED_BODY):
 						process_body(value);
 						break;
-					case fnv1ah32::hash(RESERVED_NAME):
+					case _.fhh(RESERVED_NAME):
 						process_name(value);
 						break;
 					default:
@@ -165,11 +173,15 @@ Script::process_value(const MsgPack& _value)
 			for (auto it = _value.begin(); it != it_e; ++it) {
 				const auto str_key = it->str_view();
 				auto& value = it.value();
-				switch (fnv1ah32::hash(str_key)) {
-					case fnv1ah32::hash(RESERVED_BODY):
+				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_BODY),
+					hh(RESERVED_NAME),
+				});
+				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_BODY):
 						process_body(value);
 						break;
-					case fnv1ah32::hash(RESERVED_NAME):
+					case _.fhh(RESERVED_NAME):
 						process_name(value);
 						break;
 					default:

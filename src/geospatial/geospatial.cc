@@ -149,29 +149,38 @@ GeoSpatial::process_srid(data_t& data, const MsgPack& srid) {
 GeoSpatial::data_t
 GeoSpatial::get_data(const MsgPack& o, bool hradius)
 {
+	constexpr static auto _ = phf::make_phf({
+		hh(GEO_LATITUDE),
+		hh(GEO_LONGITUDE),
+		hh(GEO_HEIGHT),
+		hh(GEO_RADIUS),
+		hh(GEO_UNITS),
+		hh(GEO_SRID),
+	});
+
 	data_t data(hradius);
 
 	const auto it_e = o.end();
 	for (auto it = o.begin(); it != it_e; ++it) {
 		auto& value = it.value();
 		const auto str_key = it->str_view();
-		switch (fnv1ah32::hash(str_key)) {
-			case fnv1ah32::hash(GEO_LATITUDE):
+		switch (_.fhh(str_key)) {
+			case _.fhh(GEO_LATITUDE):
 				process_latitude(data, value);
 				break;
-			case fnv1ah32::hash(GEO_LONGITUDE):
+			case _.fhh(GEO_LONGITUDE):
 				process_longitude(data, value);
 				break;
-			case fnv1ah32::hash(GEO_HEIGHT):
+			case _.fhh(GEO_HEIGHT):
 				process_height(data, value);
 				break;
-			case fnv1ah32::hash(GEO_RADIUS):
+			case _.fhh(GEO_RADIUS):
 				process_radius(data, value);
 				break;
-			case fnv1ah32::hash(GEO_UNITS):
+			case _.fhh(GEO_UNITS):
 				process_units(data, value);
 				break;
-			case fnv1ah32::hash(GEO_SRID):
+			case _.fhh(GEO_SRID):
 				process_srid(data, value);
 				break;
 			default:

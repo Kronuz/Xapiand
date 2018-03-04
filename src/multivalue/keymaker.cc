@@ -445,42 +445,60 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 			case FieldType::UUID:
 			case FieldType::TERM:
 			case FieldType::TEXT:
-			case FieldType::STRING:
-				switch (fnv1ah32::hash(qf.metric)) {
-					case fnv1ah32::hash("levenshtein"):
-					case fnv1ah32::hash("leven"):
+			case FieldType::STRING: {
+				constexpr static auto _ = phf::make_phf({
+					hh("levenshtein"),
+					hh("leven"),
+					hh("jarowinkler"),
+					hh("jarow"),
+					hh("sorensendice"),
+					hh("sorensen"),
+					hh("dice"),
+					hh("jaccard"),
+					hh("lcsubstr"),
+					hh("lcs"),
+					hh("lcsubsequence"),
+					hh("lcsq"),
+					hh("soundex"),
+					hh("sound"),
+					hh("jaro"),
+				});
+				switch (_.fhh(qf.metric)) {
+					case _.fhh("levenshtein"):
+					case _.fhh("leven"):
 						levenshtein(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("jarowinkler"):
-					case fnv1ah32::hash("jarow"):
+					case _.fhh("jarowinkler"):
+					case _.fhh("jarow"):
 						jaro_winkler(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("sorensendice"):
-					case fnv1ah32::hash("sorensen"):
-					case fnv1ah32::hash("dice"):
+					case _.fhh("sorensendice"):
+					case _.fhh("sorensen"):
+					case _.fhh("dice"):
 						sorensen_dice(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("jaccard"):
+					case _.fhh("jaccard"):
 						jaccard(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("lcsubstr"):
-					case fnv1ah32::hash("lcs"):
+					case _.fhh("lcsubstr"):
+					case _.fhh("lcs"):
 						lcs(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("lcsubsequence"):
-					case fnv1ah32::hash("lcsq"):
+					case _.fhh("lcsubsequence"):
+					case _.fhh("lcsq"):
 						lcsq(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("soundex"):
-					case fnv1ah32::hash("sound"):
+					case _.fhh("soundex"):
+					case _.fhh("sound"):
 						soundex(field_spc, reverse, value, qf);
 						break;
-					case fnv1ah32::hash("jaro"):
+					case _.fhh("jaro"):
 					default:
 						jaro(field_spc, reverse, value, qf);
 						break;
 				}
 				break;
+			}
 			case FieldType::GEO: {
 				EWKT ewkt(value);
 				auto centroids = ewkt.getGeometry()->getCentroids();
