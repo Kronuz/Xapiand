@@ -362,8 +362,8 @@ Cast::Hash
 Cast::getHash(std::string_view cast_word)
 {
 	constexpr static auto _ = phf::make_phf({
-		#define OPTION(name, arg) hh(RESERVED_##name),
-		HASH_OPTIONS(cast_hash)
+		#define OPTION(name) hh(RESERVED_##name),
+		HASH_OPTIONS()
 		#undef OPTION
 	});
 

@@ -1941,8 +1941,8 @@ HttpClient::url_resolve()
 			}
 		} else {
 			constexpr static auto _ = phf::make_phf({
-				#define OPTION(name, arg) hhl(COMMAND_##name),
-				COMMAND_OPTIONS(command_hash)
+				#define OPTION(name) hhl(COMMAND_##name),
+				COMMAND_OPTIONS()
 				#undef OPTION
 			});
 

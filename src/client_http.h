@@ -143,23 +143,23 @@ constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
 constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
-#define COMMAND_OPTIONS(name, ...) \
-	OPTION(COMMIT, __VA_ARGS__) \
-	OPTION(INFO, __VA_ARGS__) \
-	OPTION(METADATA, __VA_ARGS__) \
-	OPTION(NODES, __VA_ARGS__) \
-	OPTION(QUIT, __VA_ARGS__) \
-	OPTION(SCHEMA, __VA_ARGS__) \
-	OPTION(SEARCH, __VA_ARGS__) \
-	OPTION(STATS, __VA_ARGS__) \
-	OPTION(TOUCH, __VA_ARGS__) \
-	OPTION(WAL, __VA_ARGS__)
+#define COMMAND_OPTIONS() \
+	OPTION(COMMIT) \
+	OPTION(INFO) \
+	OPTION(METADATA) \
+	OPTION(NODES) \
+	OPTION(QUIT) \
+	OPTION(SCHEMA) \
+	OPTION(SEARCH) \
+	OPTION(STATS) \
+	OPTION(TOUCH) \
+	OPTION(WAL)
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint32_t {
-		#define OPTION(name, arg) CMD_##name = hhl(COMMAND_##name),
-		COMMAND_OPTIONS(Hash)
+		#define OPTION(name) CMD_##name = hhl(COMMAND_##name),
+		COMMAND_OPTIONS()
 		#undef OPTION
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
