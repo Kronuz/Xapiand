@@ -327,7 +327,10 @@ public:
 
 	constexpr std::size_t find(const T& item) const noexcept {
 		const auto& elem = _lookup(item);
-		return (elem.item == item ? 0 : npos) | elem.pos;
+		if (elem.item == item) {
+			return elem.pos;
+		}
+		return npos;
 	}
 
 	constexpr std::size_t count(const T& item) const noexcept {
