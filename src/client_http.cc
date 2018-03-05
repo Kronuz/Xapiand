@@ -2252,6 +2252,7 @@ HttpClient::log_request()
 	auto request_headers_color = no_col.c_str();
 	auto request_head_color = no_col.c_str();
 	auto request_body_color = no_col.c_str();
+	int priority = -LOG_DEBUG;
 
 	switch (HTTP_PARSER_METHOD(&parser)) {
 		case HTTP_OPTIONS: {
@@ -2339,7 +2340,7 @@ HttpClient::log_request()
 	};
 
 	auto request = request_head_color + request_head + "\n" + request_headers_color + request_headers + request_body_color + request_body;
-	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", request_prefix.c_str(), string::indent(request, ' ', 4, false).c_str());
+	L(priority, NO_COLOR, "%s%s", request_prefix.c_str(), string::indent(request, ' ', 4, false).c_str());
 }
 
 
@@ -2352,6 +2353,7 @@ HttpClient::log_response()
 	auto response_headers_color = no_col.c_str();
 	auto response_head_color = no_col.c_str();
 	auto response_body_color = no_col.c_str();
+	int priority = -LOG_DEBUG;
 
 	if ((int)response_status >= 200 && (int)response_status <= 299) {
 		constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
@@ -2376,6 +2378,7 @@ HttpClient::log_response()
 		response_head_color = _response_head_color.c_str();
 		constexpr auto _response_body_color = rgb(116, 100, 77);
 		response_body_color = _response_body_color.c_str();
+		priority = -LOG_INFO;
 	} else if ((int)response_status >= 400 && (int)response_status <= 499) {
 		response_prefix = " 💥  ";
 		constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
@@ -2392,10 +2395,11 @@ HttpClient::log_response()
 		response_head_color = _response_head_color.c_str();
 		constexpr auto _response_body_color = rgb(190, 30, 10);
 		response_body_color = _response_body_color.c_str();
+		priority = -LOG_ERR;
 	}
 
 	auto response = response_head_color + response_head + "\n" + response_headers_color + response_headers + response_body_color + response_body;
-	L(LOG_DEBUG + 1, NO_COLOR, "%s%s", response_prefix.c_str(), string::indent(response, ' ', 4, false).c_str());
+	L(priority, NO_COLOR, "%s%s", response_prefix.c_str(), string::indent(response, ' ', 4, false).c_str());
 }
 
 
