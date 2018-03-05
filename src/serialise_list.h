@@ -24,6 +24,7 @@
 
 #include <string_view>     // for std::string_view
 
+#include "length.h"
 #include "serialise.h"
 
 

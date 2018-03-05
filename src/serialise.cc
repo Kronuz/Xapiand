@@ -22,15 +22,8 @@
 
 #include "serialise.h"
 
-#include <algorithm>                                  // for move
-#include <ctype.h>                                    // for toupper
-#include <functional>                                 // for cref
-#include <math.h>                                     // for round
-#include <stdexcept>                                  // for out_of_range, invalid_argument
-#include <stdio.h>                                    // for sprintf
+#include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view
-#include <strings.h>                                  // for strcasecmp
-#include <time.h>                                     // for tm, gmtime, time_t
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
@@ -38,7 +31,7 @@
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
-#include "cuuid/uuid.h"                               // for Uuid
+#include "cuuid/uuid.h"                               // for UUID
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...

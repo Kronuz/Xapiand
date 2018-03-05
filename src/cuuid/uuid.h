@@ -23,15 +23,14 @@
 
 #pragma once
 
-#include <array>           // for array
-#include <iostream>        // for ostream
-#include <string>          // for string
+#include <array>           // for std::array
+#include <iostream>        // for std::ostream
+#include <string>          // for std::string
 #include <string_view>     // for std::string_view
 
 #ifdef UUID_ANDROID
 #include <jni.h>
 #endif
-
 
 
 constexpr uint8_t UUID_LENGTH = 36;

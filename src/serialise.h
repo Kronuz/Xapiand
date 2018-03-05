@@ -24,24 +24,19 @@
 
 #include "xapiand.h"
 
-#include <cctype>                   // for isxdigit
-#include <stddef.h>                 // for size_t
-#include <string>                   // for string
+#include <string>                   // for std::string
 #include <string_view>              // for std::string_view
-#include <sys/types.h>              // for uint64_t, int64_t, uint32_t, uint8_t
-#include <tuple>                    // for tuple
-#include <unordered_map>            // for unordered_map
-#include <utility>                  // for pair
-#include <vector>                   // for vector
+#include <cstdint>                  // for std::uint64_t, std::int64_t, std::uint32_t, std::uint8_t
+#include <utility>                  // for std::pair
+#include <vector>                   // for std::vector
 
-#include "datetime.h"               // for tm_t (ptr only), timestamp
+#include "datetime.h"               // for Datetime::tm_t (ptr only), Datetime::timestamp
 #include "geospatial/cartesian.h"   // for Cartesian
 #include "geospatial/htm.h"         // for range_t
-#include "hash/endian.h"            // for __BYTE_ORDER, __BIG_ENDIAN, __LITTLE...
-#include "length.h"                 // for serialise_length, unserialise_length
 #include "msgpack.h"                // for MsgPack
-#include "sortable_serialise.h"     // for sortable_serialise, sortable_unseria...
+#include "sortable_serialise.h"     // for sortable_serialise, sortable_unserialise
 #include "hashes.hh"                // for fnv1ah32
+
 
 constexpr const char FLOAT_STR[]     = "float";
 constexpr const char INTEGER_STR[]   = "integer";
@@ -66,14 +61,14 @@ constexpr char SERIALISED_FALSE      = 'f';
 constexpr char SERIALISED_TRUE       = 't';
 
 
-constexpr uint8_t SERIALISED_LENGTH_CARTESIAN = 12;
-constexpr uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
+constexpr std::uint8_t SERIALISED_LENGTH_CARTESIAN = 12;
+constexpr std::uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
 
 
-constexpr uint32_t DOUBLE2INT = 1000000000;
-constexpr uint32_t MAXDOU2INT = 2000000000;
+constexpr std::uint32_t DOUBLE2INT = 1000000000;
+constexpr std::uint32_t MAXDOU2INT = 2000000000;
 
-enum class UUIDRepr : uint32_t {
+enum class UUIDRepr : std::uint32_t {
 	simple = fnv1ah32::hash("simple"),
 #ifdef XAPIAND_UUID_GUID
 	guid = fnv1ah32::hash("guid"),
@@ -88,7 +83,7 @@ enum class UUIDRepr : uint32_t {
 
 class CartesianList;
 class RangeList;
-enum class FieldType : uint8_t;
+enum class FieldType : std::uint8_t;
 struct required_spc_t;
 
 
@@ -130,8 +125,8 @@ namespace Serialise {
 	 */
 
 	std::string _float(FieldType field_type, double field_value);
-	std::string integer(FieldType field_type, int64_t field_value);
-	std::string positive(FieldType field_type, uint64_t field_value);
+	std::string integer(FieldType field_type, std::int64_t field_value);
+	std::string positive(FieldType field_type, std::uint64_t field_value);
 	std::string boolean(FieldType field_type, bool field_value);
 	std::string geospatial(FieldType field_type, const class MsgPack& field_value);
 
@@ -181,14 +176,14 @@ namespace Serialise {
 	// Serialise field_value like integer.
 	std::string integer(std::string_view field_value);
 
-	inline std::string integer(int64_t field_value) {
+	inline std::string integer(std::int64_t field_value) {
 		return sortable_serialise(field_value);
 	}
 
 	// Serialise field_value like positive integer.
 	std::string positive(std::string_view field_value);
 
-	inline std::string positive(uint64_t field_value) {
+	inline std::string positive(std::uint64_t field_value) {
 		return sortable_serialise(field_value);
 	}
 
@@ -219,7 +214,7 @@ namespace Serialise {
 	std::string cartesian(const Cartesian& norm_cartesian);
 
 	// Serialise a HTM trixel's id.
-	std::string trixel_id(uint64_t id);
+	std::string trixel_id(std::uint64_t id);
 
 	// Serialise a range_t.
 	std::string range(const range_t& range);
@@ -243,11 +238,11 @@ namespace Serialise {
 		return std::string(val);
 	}
 
-	inline std::string serialise(int64_t val) {
+	inline std::string serialise(std::int64_t val) {
 		return integer(val);
 	}
 
-	inline std::string serialise(uint64_t val) {
+	inline std::string serialise(std::uint64_t val) {
 		return positive(val);
 	}
 
@@ -299,12 +294,12 @@ namespace Unserialise {
 	}
 
 	// Unserialise a serialised integer.
-	inline int64_t integer(std::string_view serialised_integer) {
+	inline std::int64_t integer(std::string_view serialised_integer) {
 		return sortable_unserialise(serialised_integer);
 	}
 
 	// Unserialise a serialised positive.
-	inline uint64_t positive(std::string_view serialised_positive) {
+	inline std::uint64_t positive(std::string_view serialised_positive) {
 		return sortable_unserialise(serialised_positive);
 	}
 
@@ -329,7 +324,7 @@ namespace Unserialise {
 	Cartesian cartesian(std::string_view serialised_cartesian);
 
 	// Unserialise a serialised HTM trixel's id.
-	uint64_t trixel_id(std::string_view serialised_id);
+	std::uint64_t trixel_id(std::string_view serialised_id);
 
 	// Unserialise a serialised range_t
 	range_t range(std::string_view serialised_range);
