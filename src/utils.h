@@ -250,8 +250,7 @@ inline M modulus(T val, M mod) {
 }
 
 
-// converts the two hexadecimal characters to an int (a byte)
-constexpr inline int hexdec(const char** ptr) noexcept {
+constexpr inline int hexdigit(char c) noexcept {
 	constexpr int _[256]{
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -273,9 +272,14 @@ constexpr inline int hexdec(const char** ptr) noexcept {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	};
+	return _[static_cast<unsigned char>(c)];
+}
+
+// converts the two hexadecimal characters to an int (a byte)
+constexpr inline int hexdec(const char** ptr) noexcept {
 	auto pos = *ptr;
-	auto a = _[static_cast<unsigned char>(*pos++)];
-	auto b = _[static_cast<unsigned char>(*pos++)];
+	auto a = hexdigit(*pos++);
+	auto b = hexdigit(*pos++);
 	if (a == -1 || b == -1) {
 		return -1;
 	}
