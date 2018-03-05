@@ -380,25 +380,6 @@ HttpClient::on_info(http_parser* p)
 		case 18:  // message_complete
 			break;
 		case 19:  // message_begin
-			if (Logging::log_level > LOG_DEBUG) {
-				self->request_head.clear();
-				self->request_headers.clear();
-				self->request_body.clear();
-				self->response_head.clear();
-				self->response_headers.clear();
-				self->response_body.clear();
-			}
-			self->path.clear();
-			self->body.clear();
-			self->decoded_body.first.clear();
-			self->body_size = 0;
-			self->header_name.clear();
-			self->header_value.clear();
-			if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
-				L_ERR("ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
-			} else {
-				self->body_descriptor = 0;
-			}
 			break;
 		case 50:  // headers done
 			self->request_head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), self->path.c_str(), p->http_major, p->http_minor);
@@ -2469,6 +2450,13 @@ HttpClient::clean_http_request()
 	decoded_body.first.clear();
 	header_name.clear();
 	header_value.clear();
+
+	if (body_descriptor && io::close(body_descriptor) < 0) {
+		L_ERR("ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
+	}
+	body_descriptor = 0;
+	body_size = 0;
+
 	content_type.clear();
 	content_length.clear();
 	host.clear();
