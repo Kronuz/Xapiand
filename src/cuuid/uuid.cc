@@ -31,7 +31,7 @@
 
 #include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
-#include "utils.h"        // for hexdec
+#include "utils.h"        // for hexdigit, hexdec
 #include "log.h"          // for L_*
 
 
@@ -627,42 +627,42 @@ UUID::is_valid(const char** ptr, const char* end)
 	auto size = end - pos;
 	if (
 		size == UUID_LENGTH &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
 		*pos++ == '-' &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
 		*pos++ == '-' &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
 		*pos++ == '-' &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
 		*pos++ == '-' &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++) &&
-		std::isxdigit(*pos++)
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0) &&
+		(hexdigit(*pos++) >= 0)
 	) {
 		*ptr = pos;
 		return true;
