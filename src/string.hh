@@ -74,7 +74,7 @@ namespace string {
 
 // converts a character to lowercase
 constexpr static char tolower(char c) noexcept {
-	constexpr char _[]{
+	constexpr char _[256]{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
@@ -114,7 +114,7 @@ constexpr static char tolower(char c) noexcept {
 
 // converts a character to uppercase
 constexpr static char toupper(char c) noexcept {
-	constexpr char _[]{
+	constexpr char _[256]{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
 		'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
