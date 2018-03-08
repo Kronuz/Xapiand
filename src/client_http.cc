@@ -1872,6 +1872,15 @@ HttpClient::stats_view(enum http_method, Command)
 
 
 HttpClient::Command
+HttpClient::getCommand(std::string_view command_name)
+{
+	static const auto _ = http_commands;
+
+	return static_cast<Command>(_.fhhl(command_name));
+}
+
+
+HttpClient::Command
 HttpClient::url_resolve()
 {
 	L_CALL("HttpClient::url_resolve()");
@@ -1921,15 +1930,9 @@ HttpClient::url_resolve()
 				return Command::NO_CMD_NO_ID;
 			}
 		} else {
-			constexpr static auto _ = phf::make_phf({
-				#define OPTION(name) hhl(COMMAND_##name),
-				COMMAND_OPTIONS()
-				#undef OPTION
-			});
-
 			auto cmd = path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return static_cast<Command>(_.fhhl(cmd.substr(0, needle)));
+			return getCommand(cmd.substr(0, needle));
 		}
 
 	} else {

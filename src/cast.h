@@ -61,8 +61,14 @@ namespace Cast {
 		OPTION(CHAI) \
 		OPTION(ECMA)
 
+	constexpr static auto cast_hash = phf::make_phf({
+		#define OPTION(name) hh(RESERVED_##name),
+		HASH_OPTIONS()
+		#undef OPTION
+	});
+
 	enum class Hash : uint32_t {
-		#define OPTION(name) name = hh(RESERVED_##name),
+		#define OPTION(name) name = cast_hash.fhh(RESERVED_##name),
 		HASH_OPTIONS()
 		#undef OPTION
 	};

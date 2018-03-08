@@ -155,16 +155,24 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 	OPTION(TOUCH) \
 	OPTION(WAL)
 
+constexpr static auto http_commands = phf::make_phf({
+	#define OPTION(name) hhl(COMMAND_##name),
+	COMMAND_OPTIONS()
+	#undef OPTION
+});
+
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint32_t {
-		#define OPTION(name) CMD_##name = hhl(COMMAND_##name),
+		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
 		#undef OPTION
 		NO_CMD_NO_ID,
 		NO_CMD_ID,
 		BAD_QUERY,
 	};
+
+	Command getCommand(std::string_view command_name);
 
 	struct http_parser parser;
 	DatabaseHandler db_handler;
