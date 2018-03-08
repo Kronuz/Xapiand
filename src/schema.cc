@@ -3270,7 +3270,7 @@ Schema::update(const MsgPack& object)
 			auto str_key = it->str();
 			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
+					mut_schema = std::make_unique<MsgPack>(schema->clone());
 				}
 				(*mut_schema)[str_key] = it.value();
 			}
@@ -3712,7 +3712,7 @@ Schema::write(const MsgPack& object, bool replace)
 			auto str_key = it->str();
 			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
+					mut_schema = std::make_unique<MsgPack>(schema->clone());
 				}
 				(*mut_schema)[str_key] = it.value();
 			}
