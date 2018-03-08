@@ -20,7 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef IO_UTILS_H
+#define IO_UTILS_H
 
 #include "xapiand.h"
 
@@ -93,3 +94,5 @@ inline int fadvise(int, off_t, off_t, int) {
 #endif
 
 } /* namespace io */
+
+#endif // IO_UTILS_H

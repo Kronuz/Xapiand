@@ -31,7 +31,6 @@
 
 #include "atomic_shared_ptr.h"
 #include "exception.h"
-#include "io_utils.h"
 #include "msgpack.hpp"
 #include "strict_stox.hh"
 #include "xchange/string_view.hpp"
@@ -2506,13 +2505,6 @@ inline std::string MsgPack::serialise() const {
 }
 
 
-inline void MsgPack::serialise(int fd) const {
-	std::string serialised = serialise();
-	ssize_t w = io::write(fd, serialised.data(), serialised.size());
-	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
-}
-
-
 inline MsgPack MsgPack::unserialise(const char* data, std::size_t len, std::size_t& off) {
 	return MsgPack(msgpack::unpack(data, len, off).get());
 }
@@ -2535,6 +2527,15 @@ inline MsgPack MsgPack::unserialise(std::string_view s) {
 }
 
 
+#ifdef IO_UTILS_H
+
+inline void MsgPack::serialise(int fd) const {
+	std::string serialised = serialise();
+	ssize_t w = io::write(fd, serialised.data(), serialised.size());
+	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+}
+
+
 inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& off) {
 	do {
 		ssize_t r;
@@ -2554,6 +2555,8 @@ inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& of
 		buffer.append(buf, r);
 	} while (true);
 }
+
+#endif
 
 
 inline void MsgPack::set_data(const std::shared_ptr<const MsgPack::Data>& new_data) const {
