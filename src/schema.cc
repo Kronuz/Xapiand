@@ -8040,8 +8040,9 @@ Schema::process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_
 	if (specification.value || specification.value_rec) {
 		THROW(ClientError, "Object already has a value");
 	} else {
-		specification.value_rec = std::make_unique<MsgPack>();
-		(*specification.value_rec)[prop_name] = doc_cast_object;
+		specification.value_rec = std::make_unique<const MsgPack>(MsgPack({
+			{ prop_name, doc_cast_object },
+		}));
 	}
 }
 

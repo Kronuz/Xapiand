@@ -452,7 +452,7 @@ struct specification_t : required_spc_t {
 	UUIDFieldIndex index_uuid_field;  // Used to save how to index uuid fields.
 
 	// Value recovered from the item.
-	std::unique_ptr<MsgPack> value_rec;
+	std::unique_ptr<const MsgPack> value_rec;
 	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<const MsgPack> doc_acc;
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
