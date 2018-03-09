@@ -196,8 +196,8 @@ endif()
 
 
 # Setup CMAKE_CXX_FLAGS Debug flags.
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DDEBUG")
-
+set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
 # Check for warnings flags.
 check_cxx_compiler_flag("-Wall" COMPILER_SUPPORTS_WALL)
