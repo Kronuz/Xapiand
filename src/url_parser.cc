@@ -140,7 +140,7 @@ QueryParser::next(const char *name, size_t name_len)
 						len = 0;
 						return 0;
 					}
-				} else if (!cn) {
+				} else if (n1 == nf) {
 					return -1;
 				} else if (cn != '\1') {  // '='
 					n0 = n1 + 1;
