@@ -4,12 +4,13 @@
 require 'formula'
 
 class Xapiand < Formula
-  head 'git://github.com/Kronuz/Xapiand.git', :using => :git
-  homepage 'https://github.com/Kronuz/Xapiand'
+  desc "Xapiand: A RESTful Search Engine"
+  homepage "https://github.com/Kronuz/Xapiand"
+  head "git://github.com/Kronuz/Xapiand.git", :using => :git
 
-  depends_on 'cmake' => :build
-  depends_on 'pkg-config' => :build
-  depends_on 'xapian'
+  depends_on "cmake" => :build
+  depends_on "pkg-config" => :build
+  depends_on "xapian"
 
   def install
     mkdir "build" do
