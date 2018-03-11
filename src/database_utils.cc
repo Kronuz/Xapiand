@@ -520,8 +520,8 @@ void split_path_id(std::string_view path_id, std::string_view& path, std::string
 		path = path_id.substr(0, found);
 		id = path_id.substr(found + 1);
 	} else {
-		path.clear();
-		id.clear();
+		path = "";
+		id = "";
 	}
 }
 

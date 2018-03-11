@@ -1889,7 +1889,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 							input = nullptr;
 						}
 					}
-					name.clear();
+					name = "";
 				}
 				break;
 			case '{':
@@ -1912,7 +1912,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 							output = nullptr;
 						}
 					}
-					name.clear();
+					name = "";
 				}
 				break;
 			case '}':
@@ -1927,7 +1927,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 							(*output)[name] = *it;
 						}
 					}
-					name.clear();
+					name = "";
 				}
 				if (!output_stack.size()) {
 					THROW(invalid_argument, "Unbalanced braces.");
@@ -1959,7 +1959,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 							(*output)[name] = *it;
 						}
 					}
-					name.clear();
+					name = "";
 				}
 				if (!name_off) {
 					name_off = off;
@@ -1983,7 +1983,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 				*output = *it;
 			}
 		}
-		name.clear();
+		name = "";
 	}
 
 	return ret;
