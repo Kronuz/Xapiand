@@ -77,102 +77,132 @@
 
 opts_t opts;
 
+
+static const bool is_tty = isatty(STDERR_FILENO);
+
+
 template<typename T, std::size_t N>
-ssize_t write(int fildes, T (&buf)[N]) {
+static ssize_t write(int fildes, T (&buf)[N]) {
 	return write(fildes, buf, N - 1);
 }
 
-ssize_t write(int fildes, const std::string& buf) {
-	auto buf2 = Logging::colorized(buf, (isatty(fildes) || Logging::colors) && !Logging::no_colors);
-	return write(fildes, buf2.data(), buf2.size());
+static ssize_t write(int fildes, std::string_view str) {
+	return write(fildes, str.data(), str.size());
 }
 
 
-static const std::vector<std::string> vec_signame = []() {
-	std::vector<std::string> res;
-	auto len = arraySize(sys_siglist); /* same size of sys_signame but sys_signame is not portable */
-	res.reserve(len);
-	for (size_t sig = 0; sig < len; ++sig) {
+template <size_t N>
+class signals_t {
+	static constexpr int signals = N;
+
+	std::array<std::string, signals> tty_messages;
+	std::array<std::string, signals> messages;
+
+public:
+	signals_t() {
+		for (size_t sig = 0; sig < signals; ++sig) {
 #if defined(__linux__)
-		const char* sig_str = strsignal(sig);
+				const char* sig_str = strsignal(sig);
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-		const char* sig_str = sys_signame[sig];
+				const char* sig_str = sys_signame[sig];
 #endif
-		switch (sig) {
-			case SIGQUIT:
-			case SIGILL:
-			case SIGTRAP:
-			case SIGABRT:
+			switch (sig) {
+				case SIGQUIT:
+				case SIGILL:
+				case SIGTRAP:
+				case SIGABRT:
 #if defined(__APPLE__) || defined(__FreeBSD__)
-			case SIGEMT:
+				case SIGEMT:
 #endif
-			case SIGFPE:
-			case SIGBUS:
-			case SIGSEGV:
-			case SIGSYS:
-				// create core image
-				res.push_back(string::format(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
-				break;
-			case SIGHUP:
-			case SIGINT:
-			case SIGKILL:
-			case SIGPIPE:
-			case SIGALRM:
-			case SIGTERM:
-			case SIGXCPU:
-			case SIGXFSZ:
-			case SIGVTALRM:
-			case SIGPROF:
-			case SIGUSR1:
-			case SIGUSR2:
+				case SIGFPE:
+				case SIGBUS:
+				case SIGSEGV:
+				case SIGSYS:
+					// create core image
+					tty_messages[sig] = string::format(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					break;
+				case SIGHUP:
+				case SIGINT:
+				case SIGKILL:
+				case SIGPIPE:
+				case SIGALRM:
+				case SIGTERM:
+				case SIGXCPU:
+				case SIGXFSZ:
+				case SIGVTALRM:
+				case SIGPROF:
+				case SIGUSR1:
+				case SIGUSR2:
 #if defined(__linux__)
-			case SIGSTKFLT:
+				case SIGSTKFLT:
 #endif
-				// terminate process
-				res.push_back(string::format(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
-				break;
-			case SIGSTOP:
-			case SIGTSTP:
-			case SIGTTIN:
-			case SIGTTOU:
-				// stop process
-				res.push_back(string::format(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
-				break;
-			case SIGURG:
-			case SIGCONT:
-			case SIGCHLD:
-			case SIGIO:
-			case SIGWINCH:
+					// terminate process
+					tty_messages[sig] = string::format(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					break;
+				case SIGSTOP:
+				case SIGTSTP:
+				case SIGTTIN:
+				case SIGTTOU:
+					// stop process
+					tty_messages[sig] = string::format(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					break;
+				case SIGURG:
+				case SIGCONT:
+				case SIGCHLD:
+				case SIGIO:
+				case SIGWINCH:
 #if defined(__APPLE__) || defined(__FreeBSD__)
-			case SIGINFO:
+				case SIGINFO:
 #endif
-				// discard signal
-				res.push_back(string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
-				break;
-			default:
-				res.push_back(string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str));
-				break;
+					// discard signal
+
+					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					break;
+				default:
+					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					break;
+			}
 		}
 	}
-	res.push_back(STEEL_BLUE + "Signal received: unknown" + CLEAR_COLOR + "\n");
-	return res;
-}();
+
+	void write(int fildes, int sig) {
+		if (is_tty) {
+			::write(fildes, tty_messages[(sig >= 0 && sig < signals) ? sig : signals - 1]);
+		} else {
+			::write(fildes, messages[(sig >= 0 && sig < signals) ? sig : signals - 1]);
+		}
+	}
+};
+
+static signals_t<arraySize(sys_siglist)> signals;
 
 
 void sig_info(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
-		write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + CLEAR_COLOR + "\n");
+		if (is_tty) {
+			::write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + CLEAR_COLOR + "\n");
+		} else {
+			::write(STDERR_FILENO, "Info hooks disabled!\n");
+		}
 	} else {
 		logger_info_hook = -1ULL;
-		write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + CLEAR_COLOR + "\n");
+		if (is_tty) {
+			::write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + CLEAR_COLOR + "\n");
+		} else {
+			::write(STDERR_FILENO, "Info hooks enabled!\n");
+		}
 	}
 }
 
 
 void sig_handler(int sig) {
-	const auto& msg = (sig >= 0 && sig < static_cast<int>(vec_signame.size() - 1)) ? vec_signame[sig] : vec_signame.back();
-	write(STDERR_FILENO, msg);
+	signals.write(STDERR_FILENO, sig);
 
 	if (sig == SIGTERM || sig == SIGINT) {
 		close(STDIN_FILENO);
