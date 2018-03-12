@@ -12,13 +12,13 @@
 
 INCLUDE(CheckCXXSourceCompiles)
 
-MACRO(CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
-   SET(_INCLUDE_FILES)
-   FOREACH(it ${_HEADER})
-      SET(_INCLUDE_FILES "${_INCLUDE_FILES}#include <${it}>\n")
-   ENDFOREACH(it)
+macro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
+   set (_INCLUDE_FILES)
+   foreach (it ${_HEADER})
+      set (_INCLUDE_FILES "${_INCLUDE_FILES}#include <${it}>\n")
+   endforeach (it)
 
-   SET(_CHECK_PROTO_EXISTS_SOURCE_CODE "
+   set (_CHECK_PROTO_EXISTS_SOURCE_CODE "
 ${_INCLUDE_FILES}
 void cmakeRequireSymbol(int dummy,...){(void)dummy;}
 int main()
@@ -34,4 +34,4 @@ int main()
 }
 ")
    CHECK_CXX_SOURCE_COMPILES("${_CHECK_PROTO_EXISTS_SOURCE_CODE}" ${_RESULT})
-ENDMACRO(CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
+endmacro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)

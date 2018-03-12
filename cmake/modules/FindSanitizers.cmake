@@ -34,59 +34,59 @@ option(MSAN "Enable MemorySanitizer (aka MSAN)" OFF)
 option(UBSAN "Enable UndefinedBehaviorSanitizer (aka UBSAN)" OFF)
 
 
-function(check_sanitizer_flags SAN_DESCRIPTION SAN_FLAGS)
+function (check_sanitizer_flags SAN_DESCRIPTION SAN_FLAGS)
 	include(CheckCXXCompilerFlag)
-	set(READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+	set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
-	set(CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
-	set(CMAKE_REQUIRED_FLAGS "${SAN_FLAGS}")
+	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
+	set (CMAKE_REQUIRED_FLAGS "${SAN_FLAGS}")
 	CHECK_CXX_COMPILER_FLAG("${SAN_FLAGS}" COMPILER_SUPPORTS_FLAGS)
-	set(CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
+	set (CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
 
-	if(COMPILER_SUPPORTS_FLAGS)
+	if (COMPILER_SUPPORTS_FLAGS)
 		message(STATUS "${READABLE_CXX_COMPILER} supports ${SAN_DESCRIPTION}")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SAN_FLAGS}" PARENT_SCOPE)
-	else()
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SAN_FLAGS}" PARENT_SCOPE)
+	else ()
 		message(WARNING "${READABLE_CXX_COMPILER} doesn't support ${SAN_DESCRIPTION}")
-	endif()
-endfunction()
+	endif ()
+endfunction ()
 
 
 # Check for Address Sanitizer.
-if(ASAN)
-	if(TSAN OR MSAN)
+if (ASAN)
+	if (TSAN OR MSAN)
 		message(FATAL_ERROR "ASAN is not compatible with TSAN or MSAN")
-	endif()
+	endif ()
 
-	set(ASAN_DESCRIPTION "AddressSanitizer")
-	set(ASAN_FLAGS  "-fsanitize=address -fno-omit-frame-pointer")
+	set (ASAN_DESCRIPTION "AddressSanitizer")
+	set (ASAN_FLAGS  "-fsanitize=address -fno-omit-frame-pointer")
 	check_sanitizer_flags(${ASAN_DESCRIPTION} ${ASAN_FLAGS})
-endif()
+endif ()
 
 
 # Check for Thread Sanitizer.
-if(TSAN)
-	if(MSAN)
+if (TSAN)
+	if (MSAN)
 		message(FATAL_ERROR "TSAN is not compatible with MSAN")
-	endif()
+	endif ()
 
-	set(TSAN_DESCRIPTION "ThreadSanitizer")
-	set(TSAN_FLAGS  "-fsanitize=thread")
+	set (TSAN_DESCRIPTION "ThreadSanitizer")
+	set (TSAN_FLAGS  "-fsanitize=thread")
 	check_sanitizer_flags(${TSAN_DESCRIPTION} ${TSAN_FLAGS})
-endif()
+endif ()
 
 
 # Check for Memory Sanitizer.
-if(MSAN)
-	set(MSAN_DESCRIPTION "MemorySanitizer")
-	set(MSAN_FLAGS  "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer")
+if (MSAN)
+	set (MSAN_DESCRIPTION "MemorySanitizer")
+	set (MSAN_FLAGS  "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer")
 	check_sanitizer_flags(${MSAN_DESCRIPTION} ${MSAN_FLAGS})
-endif()
+endif ()
 
 
 # Check for Undefined Behavior Sanitizer.
-if(UBSAN)
-	set(UBSAN_DESCRIPTION "UndefinedBehaviorSanitizer")
-	set(UBSAN_FLAGS  "-fsanitize=undefined -fno-omit-frame-pointer")
+if (UBSAN)
+	set (UBSAN_DESCRIPTION "UndefinedBehaviorSanitizer")
+	set (UBSAN_FLAGS  "-fsanitize=undefined -fno-omit-frame-pointer")
 	check_sanitizer_flags(${UBSAN_DESCRIPTION} ${UBSAN_FLAGS})
-endif()
+endif ()

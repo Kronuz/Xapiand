@@ -57,4 +57,4 @@ find_package_handle_standard_args(CHAISCRIPT "System ChaiScript library not foun
 mark_as_advanced(CHAISCRIPT_INCLUDE_DIR)
 
 
-set(CHAISCRIPT_INCLUDE_DIRS ${CHAISCRIPT_INCLUDE_DIR})
+set (CHAISCRIPT_INCLUDE_DIRS ${CHAISCRIPT_INCLUDE_DIR})

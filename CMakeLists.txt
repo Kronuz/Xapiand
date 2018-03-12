@@ -26,12 +26,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 project(xapiand C CXX)
 
-set(PACKAGE_NAME "Xapiand")
-set(PACKAGE_VERSION "1.0.0")
-set(PACKAGE_URL "https://github.com/Kronuz/Xapiand")
-set(PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
-set(PACKAGE_TARNAME "${PROJECT_NAME}")
-set(PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
+set (PACKAGE_NAME "Xapiand")
+set (PACKAGE_VERSION "1.0.0")
+set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
+set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
+set (PACKAGE_TARNAME "${PROJECT_NAME}")
+set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
 
 ########################################################################
@@ -53,14 +53,14 @@ option(UUID_ENCODED  "Allow encoded (base59) as UUID encoding"       ON)
 option(UUID_GUID     "Allow GUID as UUID encoding"                  OFF)
 option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 
-foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN)
-	if(${opt})
-		set("XAPIAND_${opt}" 1)
+foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN)
+	if (${opt})
+		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
-	else()
-		set("XAPIAND_${opt}" 0)
-	endif()
-endforeach()
+	else ()
+		set ("XAPIAND_${opt}" 0)
+	endif ()
+endforeach ()
 
 
 ########################################################################
@@ -98,9 +98,9 @@ include(GNUInstallDirs)
 # Targets
 ########################################################################
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set(PATH_STOPWORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
+set (PATH_STOPWORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 
 file(GLOB XAPIAND_SRC_LIST
@@ -172,71 +172,71 @@ include_directories(
 
 # Check for compiler support for C++14
 check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
-if(COMPILER_SUPPORTS_CXX14)
-	set(HAVE_CXX14 1)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-else()
+if (COMPILER_SUPPORTS_CXX14)
+	set (HAVE_CXX14 1)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+else ()
 	message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} has no C++14 support. Please use a different C++ compiler.")
-endif()
+endif ()
 
 
 # Check for fdiagnostics-color flag.
 check_cxx_compiler_flag("-fdiagnostics-color=always" COMPILER_SUPPORTS_DIAG_COLOR)
-if(COMPILER_SUPPORTS_DIAG_COLOR)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
+if (COMPILER_SUPPORTS_DIAG_COLOR)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+else ()
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif ()
 
 
 # Default value for CMAKE_BUILD_TYPE.
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE Release)
-endif()
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
 
 
 # Setup CMAKE_CXX_FLAGS Debug flags.
-set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
+set (CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
 # Check for warnings flags.
 check_cxx_compiler_flag("-Wall" COMPILER_SUPPORTS_WALL)
-if(COMPILER_SUPPORTS_WALL)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
-endif()
+if (COMPILER_SUPPORTS_WALL)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+endif ()
 check_cxx_compiler_flag("-Wextra" COMPILER_SUPPORTS_WEXTRA)
-if(COMPILER_SUPPORTS_WEXTRA)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
-endif()
+if (COMPILER_SUPPORTS_WEXTRA)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
+endif ()
 check_cxx_compiler_flag("-Wshadow" COMPILER_SUPPORTS_WSHADOW)
-if(COMPILER_SUPPORTS_WSHADOW)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wshadow")
-endif()
+if (COMPILER_SUPPORTS_WSHADOW)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wshadow")
+endif ()
 check_cxx_compiler_flag("-Wnon-virtual-dtor" COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
-if(COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wnon-virtual-dtor")
-endif()
+if (COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wnon-virtual-dtor")
+endif ()
 check_cxx_compiler_flag("-Wsuggest-final-types" COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
-if(COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wsuggest-final-types")
-endif()
+if (COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wsuggest-final-types")
+endif ()
 check_cxx_compiler_flag("-Wpedantic" COMPILER_SUPPORTS_WPEDANTIC)
-if(COMPILER_SUPPORTS_WPEDANTIC)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wpedantic")
-endif()
+if (COMPILER_SUPPORTS_WPEDANTIC)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wpedantic")
+endif ()
 # Disable certain warnings:
 check_cxx_compiler_flag("-Wno-unknown-pragmas" COMPILER_SUPPORTS_WNO_UNKNOWN_PRAGMAS)
-if(COMPILER_SUPPORTS_WNO_UNKNOWN_PRAGMAS)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-unknown-pragmas")
-endif()
+if (COMPILER_SUPPORTS_WNO_UNKNOWN_PRAGMAS)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-unknown-pragmas")
+endif ()
 check_cxx_compiler_flag("-Wno-variadic-macros" COMPILER_SUPPORTS_WNO_VARIADIC_MACROS)
-if(COMPILER_SUPPORTS_WNO_VARIADIC_MACROS)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-variadic-macros")
-endif()
+if (COMPILER_SUPPORTS_WNO_VARIADIC_MACROS)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-variadic-macros")
+endif ()
 check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments" COMPILER_SUPPORTS_WNO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
-if(COMPILER_SUPPORTS_WNO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-zero-variadic-macro-arguments")
-endif()
+if (COMPILER_SUPPORTS_WNO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-zero-variadic-macro-arguments")
+endif ()
 
 
 ########################################################################
@@ -275,18 +275,18 @@ check_library_exists(pthread "pthread_set_name_np" "" HAVE_PTHREAD_SET_NAME_NP_2
 
 check_cxx_source_compiles("
 	int main() {
-		if(__builtin_expect(1<2, 1)) {}
+		if (__builtin_expect(1<2, 1)) {}
 	}" HAVE___BUILTIN_EXPECT)
 
 
-if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
 	# FIXME: See if we have fdatasync, and what libraries are needed for it.
 	# We need to actually check for a declaration as OS X has a dummy
 	# implementation in the library which is not prototyped in any header.
-	set(HAVE_FDATASYNC 0)
-else()
+	set (HAVE_FDATASYNC 0)
+else ()
 	check_function_exists("fdatasync" HAVE_FDATASYNC)
-endif()
+endif ()
 
 
 ########################################################################
@@ -314,7 +314,7 @@ check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
 check_function_exists("nanosleep" HAVE_NANOSLEEP)
 
 # Tweaks
-set(HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
+set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 
 
 ########################################################################
@@ -322,25 +322,25 @@ set(HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 ########################################################################
 
  # check if type long long is supported
-foreach(opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
+foreach (opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
 	string(REPLACE " " "_" OPT "${opt}")
 	string(TOUPPER "${OPT}" OPT)
 	check_type_size("${opt}" "${OPT}")
-	if(${OPT})
-		set(HAVE_${OPT} 1)
-	else()
-		set(HAVE_${OPT} 0)
-	endif()
-endforeach()
+	if (${OPT})
+		set (HAVE_${OPT} 1)
+	else ()
+		set (HAVE_${OPT} 0)
+	endif ()
+endforeach ()
 
 
 ########################################################################
 # Add Check for sanitizers.
 ########################################################################
 
-if(NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
+if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
 	find_package(Sanitizers QUIET)
-endif()
+endif ()
 
 
 ########################################################################
@@ -352,17 +352,17 @@ endif()
 
 find_program(CCACHE_FOUND "ccache")
 
-if(CCACHE_FOUND)
+if (CCACHE_FOUND)
 	message(STATUS "Looking for ccache - found")
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
-	if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-		set(ENV{CCACHE_CPP2} "yes")
+	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		set (ENV{CCACHE_CPP2} "yes")
 		add_compile_options(-Qunused-arguments)
-	endif()
-else()
+	endif ()
+else ()
 	message(STATUS "Looking for ccache - not found")
-endif()
+endif ()
 
 
 ########################################################################
@@ -370,31 +370,31 @@ endif()
 ########################################################################
 
 find_package(ZLIB)
-if(ZLIB_FOUND)
-	set(HAVE_ZLIB 1)
+if (ZLIB_FOUND)
+	set (HAVE_ZLIB 1)
 	include_directories(BEFORE "${ZLIB_INCLUDE_DIRS}")
 	target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
-else()
-	set(HAVE_ZLIB 0)
-endif()
+else ()
+	set (HAVE_ZLIB 0)
+endif ()
 
 
 ########################################################################
 # V8 Engine Library
 ########################################################################
-if(V8)
+if (V8)
 	find_package(V8 REQUIRED)
 	include_directories(BEFORE "${V8_INCLUDE_DIRS}")
 	target_link_libraries(${PROJECT_NAME} ${V8_LIBRARIES})
 ########################################################################
 # ChaiScript Engine Library
 ########################################################################
-elseif(CHAISCRIPT)
+elseif (CHAISCRIPT)
 	find_package(CHAISCRIPT)
-	if(CHAISCRIPT_FOUND)
+	if (CHAISCRIPT_FOUND)
 		include_directories(BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
-	endif()
-endif()
+	endif ()
+endif ()
 
 
 ########################################################################
@@ -402,12 +402,12 @@ endif()
 ########################################################################
 
 find_library(EXECINFO_LIBRARIES execinfo)
-if(EXECINFO_LIBRARIES)
-	set(HAVE_EXECINFO 1)
+if (EXECINFO_LIBRARIES)
+	set (HAVE_EXECINFO 1)
 	target_link_libraries(${PROJECT_NAME} ${EXECINFO_LIBRARIES})
-else()
-	set(HAVE_EXECINFO 0)
-endif()
+else ()
+	set (HAVE_EXECINFO 0)
+endif ()
 
 
 ########################################################################
@@ -415,12 +415,12 @@ endif()
 ########################################################################
 
 find_library(RT_LIBRARIES rt)
-if(RT_LIBRARIES)
-	set(HAVE_RT 1)
+if (RT_LIBRARIES)
+	set (HAVE_RT 1)
 	target_link_libraries(${PROJECT_NAME} ${RT_LIBRARIES})
-else()
-	set(HAVE_RT 0)
-endif()
+else ()
+	set (HAVE_RT 0)
+endif ()
 
 
 ########################################################################
@@ -428,28 +428,28 @@ endif()
 ########################################################################
 
 find_library(M_LIBRARIES m)
-if(M_LIBRARIES)
-	set(HAVE_M 1)
+if (M_LIBRARIES)
+	set (HAVE_M 1)
 	target_link_libraries(${PROJECT_NAME} ${M_LIBRARIES})
-else()
-	set(HAVE_M 0)
-	set(M_LIBRARIES "")
-endif()
+else ()
+	set (HAVE_M 0)
+	set (M_LIBRARIES "")
+endif ()
 
 
 ########################################################################
 # Threads Library
 ########################################################################
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
-if(CMAKE_USE_PTHREADS_INIT)
-	set(HAVE_PTHREADS 1)
-else()
-	set(HAVE_PTHREADS 0)
-endif()
+if (CMAKE_USE_PTHREADS_INIT)
+	set (HAVE_PTHREADS 1)
+else ()
+	set (HAVE_PTHREADS 0)
+endif ()
 
 
 ########################################################################
@@ -470,8 +470,8 @@ include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}")
 target_link_libraries(${PROJECT_NAME} ${XAPIAN_LIBRARIES})
 
 cmake_push_check_state()
-set(CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
-set(CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
+set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
+set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
 check_cxx_source_compiles("
 	#include <xapian.h>
 	int main() {
@@ -492,11 +492,11 @@ check_cxx_source_compiles("
 	}" HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS)
 cmake_pop_check_state()
 
-if(CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
-	set("XAPIAND_CLUSTERING" 1)
-else()
-	set("XAPIAND_CLUSTERING" 0)
-endif()
+if (CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
+	set ("XAPIAND_CLUSTERING" 1)
+else ()
+	set ("XAPIAND_CLUSTERING" 0)
+endif ()
 
 
 ########################################################################
@@ -562,49 +562,49 @@ list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 string(TOLOWER ${CMAKE_BUILD_TYPE} _build_type)
-if(_build_type STREQUAL debug)
-	set(CMAKE_BUILD_TYPE "Debug")
+if (_build_type STREQUAL debug)
+	set (CMAKE_BUILD_TYPE "Debug")
 	separate_arguments(CMAKE_CXX_FLAGS_DEBUG)
 	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_DEBUG)
 	string(REPLACE ";" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 	message(STATUS "Debug build")
 	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
 
-elseif(_build_type STREQUAL relwithdebinfo)
-	set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+elseif (_build_type STREQUAL relwithdebinfo)
+	set (CMAKE_BUILD_TYPE "RelWithDebInfo")
 	separate_arguments(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
 	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELWITHDEBINFO)
 	string(REPLACE ";" " " CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 	message(STATUS "Release With Debug Info build")
 	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
-elseif(_build_type STREQUAL minsizerel)
-	set(CMAKE_BUILD_TYPE "MinSizeRel")
+elseif (_build_type STREQUAL minsizerel)
+	set (CMAKE_BUILD_TYPE "MinSizeRel")
 	separate_arguments(CMAKE_CXX_FLAGS_MINSIZEREL)
 	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_MINSIZEREL)
 	string(REPLACE ";" " " CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
 	message(STATUS "Minimum Size Release build")
 	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-else()
-	set(CMAKE_BUILD_TYPE "Release")
+else ()
+	set (CMAKE_BUILD_TYPE "Release")
 	separate_arguments(CMAKE_CXX_FLAGS_RELEASE)
 	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELEASE)
 	string(REPLACE ";" " " CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 	message(STATUS "Release build")
 	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
-endif()
+endif ()
 
 
 ########################################################################
 # Enable Google's Include What You Use
 ########################################################################
 
-if(IWYU)
+if (IWYU)
 	find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-	if(IWYU_PATH)
+	if (IWYU_PATH)
 		message(STATUS "Looking for include-what-you-use - found")
-		set(IWYU_OPTS
+		set (IWYU_OPTS
 			${IWYU_PATH}
 			-Xiwyu
 			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
@@ -620,10 +620,10 @@ if(IWYU)
 		set_property(TARGET UUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
 		set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-	else()
+	else ()
 		message(STATUS "Looking for include-what-you-use - not found")
-	endif()
-endif(IWYU)
+	endif ()
+endif (IWYU)
 
 
 ########################################################################
@@ -636,7 +636,7 @@ endif(IWYU)
 # -DBUILD_TESTS=ON flag when running cmake.
 ########################################################################
 
-if(BUILD_TESTS)
+if (BUILD_TESTS)
 	enable_testing()
 
 	add_subdirectory(${PROJECT_SOURCE_DIR}/ext/gtest)
@@ -645,10 +645,10 @@ if(BUILD_TESTS)
 
 	link_directories(${GTEST_LIBS})
 
-	foreach(VAR_TEST boolparser compressor endpoint fieldparser generate_terms
+	foreach (VAR_TEST boolparser compressor endpoint fieldparser generate_terms
 		geospatial geospatial_query uuid hash lru msgpack patcher phonetic query queue
 		serialise serialise_list sort storage string_metric threadpool url_parser wal)
-		set(PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 		add_executable(${PROJECT_TEST}
 			${PATH_TESTS}/test_${VAR_TEST}.cc
 			${PATH_TESTS}/set_${VAR_TEST}_test.cc
@@ -674,7 +674,7 @@ if(BUILD_TESTS)
 			gtest_main
 		)
 		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
-	endforeach()
-endif()
+	endforeach ()
+endif ()
 
 ########################################################################

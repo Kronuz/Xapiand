@@ -32,30 +32,30 @@
 ########################################################################
 
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-	set(UUID_FREEBSD 1)
-	set(UUID_LIB_PATH uuid.h)
-	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	set(UUID_LIBUUID 1)
-	set(UUID_LIB_PATH uuid/uuid.h)
-	# set(UUID_CFUUID 1)
-	# set(UUID_NAME_LIB CoreFoundation)
-	# set(UUID_LIB_PATH CoreFoundation/CFUUID.h)
-	# set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found")
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(UUID_LIBUUID 1)
-	set(UUID_NAME_LIB uuid)
-	set(UUID_LIB_PATH uuid/uuid.h)
-	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the uuid-dev or libuuid-devel package")
-else()
+if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+	set (UUID_FREEBSD 1)
+	set (UUID_LIB_PATH uuid.h)
+	set (UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+	set (UUID_LIBUUID 1)
+	set (UUID_LIB_PATH uuid/uuid.h)
+	# set (UUID_CFUUID 1)
+	# set (UUID_NAME_LIB CoreFoundation)
+	# set (UUID_LIB_PATH CoreFoundation/CFUUID.h)
+	# set (UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set (UUID_LIBUUID 1)
+	set (UUID_NAME_LIB uuid)
+	set (UUID_LIB_PATH uuid/uuid.h)
+	set (UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the uuid-dev or libuuid-devel package")
+else ()
 	message(FATAL_ERROR "This module does not have support for ${CMAKE_SYSTEM_NAME}")
-endif()
+endif ()
 
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PC_UUID QUIET ${UUID_NAME_LIB})
-set(UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
+set (UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
 
 
 find_path(UUID_INCLUDE_DIR ${UUID_LIB_PATH}
@@ -73,7 +73,7 @@ find_path(UUID_INCLUDE_DIR ${UUID_LIB_PATH}
 	/Library/Frameworks
 )
 
-if(UUID_NAME_LIB)
+if (UUID_NAME_LIB)
 	find_library(UUID_LIBRARY ${UUID_NAME_LIB}
 		$ENV{UUID_DIR}
 		$ENV{UUID_DIR}/lib
@@ -93,11 +93,11 @@ if(UUID_NAME_LIB)
 	include(FindPackageHandleStandardArgs)
 	find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
 		UUID_LIBRARY UUID_INCLUDE_DIR)
-else()
-	set(UUID_LIBRARY "")
-endif()
+else ()
+	set (UUID_LIBRARY "")
+endif ()
 
 mark_as_advanced(UUID_LIBRARY UUID_INCLUDE_DIR)
 
-set(UUID_LIBRARIES ${UUID_LIBRARY})
-set(UUID_INCLUDE_DIRS ${UUID_INCLUDE_DIR})
+set (UUID_LIBRARIES ${UUID_LIBRARY})
+set (UUID_INCLUDE_DIRS ${UUID_INCLUDE_DIR})
