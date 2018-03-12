@@ -53,11 +53,6 @@ else ()
 endif ()
 
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PC_UUID QUIET ${UUID_NAME_LIB})
-set (UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
-
-
 find_path(UUID_INCLUDE_DIR ${UUID_LIB_PATH}
 	$ENV{UUID_DIR}/include
 	$ENV{UUID_DIR}
@@ -93,6 +88,10 @@ if (UUID_NAME_LIB)
 	include(FindPackageHandleStandardArgs)
 	find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
 		UUID_LIBRARY UUID_INCLUDE_DIR)
+
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(PC_UUID QUIET ${UUID_NAME_LIB})
+	set (UUID_DEFINITIONS ${PC_UUID_CFLAGS_OTHER})
 else ()
 	set (UUID_LIBRARY "")
 endif ()
