@@ -40,6 +40,7 @@ set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
 option(IWYU          "Enable include-what-you-use"                  OFF)
 option(BUILD_TESTS   "Build all tests"                              OFF)
+option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(BINARY_PROXY  "Define a proxy port for binary protocol"      OFF)
 option(CLUSTERING    "Enable remote clustering"                     OFF)
@@ -335,11 +336,27 @@ endforeach ()
 
 
 ########################################################################
-# Add Check for sanitizers.
+# Check for sanitizers
 ########################################################################
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
 	find_package(Sanitizers QUIET)
+endif ()
+
+
+########################################################################
+# Add Check for sanitizers.
+########################################################################
+
+if (DEBUGINFO_EXTERNALIZE AND APPLE)
+	if (NOT DEBUGINFO_EXTERNALIZE_SKIP_STRIP)
+		set (strip_command COMMAND strip -Sl $<TARGET_FILE:${PROJECT_NAME}>)
+	endif ()
+	add_custom_command(
+		TARGET ${PROJECT_NAME}
+		POST_BUILD
+		COMMAND dsymutil $<TARGET_FILE:${PROJECT_NAME}>
+		${strip_command})
 endif ()
 
 
