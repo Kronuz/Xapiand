@@ -26,8 +26,8 @@ cd xapian/xapian-core
 # Autoconf, configure and make:
 ./preautoreconf
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
-./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX"
-make CPPFLAGS="-DFLINTLOCK_USE_FLOCK"
+./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK $CXXFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX"
+make
 make check
 make install
 cd ../..
