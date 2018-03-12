@@ -34,12 +34,10 @@
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
 	set(UUID_FREEBSD 1)
-	set(UUID_NAME_LIB c++)
 	set(UUID_LIB_PATH uuid.h)
 	set(UUID_ERR_MSG "UUID library(${UUID_LIB_PATH}) not found, You may need to install the e2fsprogs-devel package")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 	set(UUID_LIBUUID 1)
-	set(UUID_NAME_LIB c++)
 	set(UUID_LIB_PATH uuid/uuid.h)
 	# set(UUID_CFUUID 1)
 	# set(UUID_NAME_LIB CoreFoundation)
@@ -75,31 +73,31 @@ find_path(UUID_INCLUDE_DIR ${UUID_LIB_PATH}
 	/Library/Frameworks
 )
 
+if(UUID_NAME_LIB)
+	find_library(UUID_LIBRARY ${UUID_NAME_LIB}
+		$ENV{UUID_DIR}
+		$ENV{UUID_DIR}/lib
+		/usr/local/lib
+		/usr/lib
+		/sw/lib
+		/opt/local/lib
+		/opt/csw/lib
+		/opt/lib
+		/usr/freeware/lib64
+		~/Library/Frameworks
+		/Library/Frameworks
+	)
 
-find_library(UUID_LIBRARY ${UUID_NAME_LIB}
-	$ENV{UUID_DIR}
-	$ENV{UUID_DIR}/lib
-	/usr/local/lib
-	/usr/lib
-	/sw/lib
-	/opt/local/lib
-	/opt/csw/lib
-	/opt/lib
-	/usr/freeware/lib64
-	~/Library/Frameworks
-	/Library/Frameworks
-)
-
-include(FindPackageHandleStandardArgs)
-
-# handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE
-# if all listed variables are TRUE
-find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
-	UUID_LIBRARY UUID_INCLUDE_DIR)
-
+	# handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE
+	# if all listed variables are TRUE
+	include(FindPackageHandleStandardArgs)
+	find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
+		UUID_LIBRARY UUID_INCLUDE_DIR)
+else()
+	set(UUID_LIBRARY "")
+endif()
 
 mark_as_advanced(UUID_LIBRARY UUID_INCLUDE_DIR)
-
 
 set(UUID_LIBRARIES ${UUID_LIBRARY})
 set(UUID_INCLUDE_DIRS ${UUID_INCLUDE_DIR})
