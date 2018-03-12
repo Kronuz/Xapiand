@@ -31,3 +31,18 @@ make
 make check
 make install
 cd ../..
+
+
+# Building sanitized libraries
+######################################
+# ./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK $CXXFLAGS" LDFLAGS=" $LDFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="/usr/local/Cellar/xapian/HEAD" && make clean && make install
+# ./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK -fsanitize=address -fno-omit-frame-pointer $CXXFLAGS" LDFLAGS="-fsanitize=address -fno-omit-frame-pointer $LDFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="/usr/local/Cellar/xapian/ASAN" && make clean && make install
+# ./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK -fsanitize=thread $CXXFLAGS" LDFLAGS="-fsanitize=thread $LDFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="/usr/local/Cellar/xapian/TSAN" && make clean && make install
+# ./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK -fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer $CXXFLAGS" LDFLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer $LDFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="/usr/local/Cellar/xapian/MSAN" && make clean && make install
+# ./configure CXXFLAGS="-DFLINTLOCK_USE_FLOCK -fsanitize=undefined -fno-omit-frame-pointer $CXXFLAGS" LDFLAGS="-fsanitize=undefined -fno-omit-frame-pointer $LDFLAGS" --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="/usr/local/Cellar/xapian/UBSAN" && make clean && make install
+
+# Then use (for ASAN, for example):
+######################################
+# mkdir asan-build && cd asan-build
+# brew switch xapian ASAN
+# cmake -GNinja -DCMAKE_FIND_FRAMEWORK=LAST -DCMAKE_BUILD_TYPE=Debug -DASAN=ON .. && ninja -j3
