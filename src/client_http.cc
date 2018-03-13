@@ -68,9 +68,6 @@
 #include "hashes.hh"                        // for fnv1ah32
 
 
-#define MAX_BODY_SIZE (250 * 1024 * 1024)
-#define MAX_BODY_MEM (5 * 1024 * 1024)
-
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_ID     (1 << 2)
@@ -205,7 +202,6 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	  response_size(0),
 	  response_logged(false),
 	  body_size(0),
-	  body_descriptor(0),
 	  request_begining(true)
 {
 	parser.data = this;
@@ -242,16 +238,6 @@ HttpClient::~HttpClient()
 	if (XapiandManager::manager->shutdown_asap.load()) {
 		if (http_clients <= 0) {
 			XapiandManager::manager->shutdown_sig(0);
-		}
-	}
-
-	if (body_descriptor) {
-		if (io::close(body_descriptor) < 0) {
-			L_ERR("ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
-		}
-
-		if (io::unlink(body_path) < 0) {
-			L_ERR("ERROR: Cannot delete temporary file '%s': %s", body_path, strerror(errno));
 		}
 	}
 
@@ -437,11 +423,6 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					break;
 				case _.fhhl("expect"):
 				case _.fhhl("100-continue"):
-					if (p->content_length > MAX_BODY_SIZE) {
-						self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
-						self->close();
-						return 0;
-					}
 					// Respond with HTTP/1.1 100 Continue
 					self->expect_100 = true;
 					break;
@@ -560,38 +541,7 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 		}
 	} else if (state >= 59 && state <= 62) { // s_chunk_data_done, s_body_identity  ->  s_message_done
 		self->body_size += length;
-		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
-			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
-			self->close();
-			return 0;
-		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
-
-			// The next two lines are switching off the write body in to a file option when the body is too large
-			// (for avoid have it in memory) but this feature is not available yet
-			self->write(self->http_response(HTTP_STATUS_PAYLOAD_TOO_LARGE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor)); // <-- remove leater!
-			self->close(); // <-- remove leater!
-
-			if (!self->body_descriptor) {
-				strcpy(self->body_path, "/tmp/xapiand_upload.XXXXXX");
-				self->body_descriptor = mkstemp(self->body_path);
-				if (self->body_descriptor < 0) {
-					L_ERR("Cannot write to %s (1)", self->body_path);
-					return 0;
-				}
-				io::write(self->body_descriptor, self->body.data(), self->body.size());
-				self->body.clear();
-			}
-			io::write(self->body_descriptor, at, length);
-			if (state == 62) {
-				if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
-					L_ERR("ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
-				} else {
-					self->body_descriptor = 0;
-				}
-			}
-		} else {
-			self->body.append(at, length);
-		}
+		self->body.append(at, length);
 	}
 
 	return 0;
@@ -2456,10 +2406,6 @@ HttpClient::clean_http_request()
 	header_name.clear();
 	header_value.clear();
 
-	if (body_descriptor && io::close(body_descriptor) < 0) {
-		L_ERR("ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
-	}
-	body_descriptor = 0;
 	body_size = 0;
 
 	content_type.clear();
