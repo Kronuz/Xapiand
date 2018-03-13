@@ -166,7 +166,6 @@ struct Response {
 	std::string headers;
 	std::string body;
 
-	int indented;
 	enum http_status status;
 	size_t size;
 
@@ -195,6 +194,7 @@ struct Request {
 	ct_type_t ct_type;
 	MsgPack decoded_body;
 
+	int indented;
 	std::string content_type;
 	std::string content_length;
 	bool expect_100;
@@ -240,70 +240,68 @@ class HttpClient : public BaseClient {
 	Request new_request;
 	std::mutex requests_mutex;
 	std::deque<Request> requests;
-	Request* request;
-	Response* response;
 
 	static int _on_info(http_parser* p);
 	int on_info(http_parser* p);
 	static int _on_data(http_parser* p, const char* at, size_t length);
 	int on_data(http_parser* p, const char* at, size_t length);
 
-	std::pair<ct_type_t, MsgPack> get_decoded_body();
+	std::pair<ct_type_t, MsgPack> get_decoded_body(Request& request);
 
-	void home_view(enum http_method method, Command cmd);
-	void info_view(enum http_method method, Command cmd);
-	void metadata_view(enum http_method method, Command cmd);
-	void write_metadata_view(enum http_method method, Command cmd);
-	void update_metadata_view(enum http_method method, Command cmd);
-	void delete_metadata_view(enum http_method method, Command cmd);
-	void delete_document_view(enum http_method method, Command cmd);
-	void delete_schema_view(enum http_method method, Command cmd);
-	void index_document_view(enum http_method method, Command cmd);
-	void write_schema_view(enum http_method method, Command cmd);
-	void document_info_view(enum http_method method, Command cmd);
-	void update_document_view(enum http_method method, Command cmd);
-	void search_view(enum http_method method, Command cmd);
-	void touch_view(enum http_method method, Command cmd);
-	void commit_view(enum http_method method, Command cmd);
-	void schema_view(enum http_method method, Command cmd);
+	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void info_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void write_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void update_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void delete_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void delete_document_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void delete_schema_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void index_document_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void write_schema_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void document_info_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void update_document_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void search_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void touch_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void commit_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void schema_view(Request& request, Response& response, enum http_method method, Command cmd);
 #if XAPIAND_DATABASE_WAL
-	void wal_view(enum http_method method, Command cmd);
+	void wal_view(Request& request, Response& response, enum http_method method, Command cmd);
 #endif
-	void nodes_view(enum http_method method, Command cmd);
-	void stats_view(enum http_method method, Command cmd);
+	void nodes_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void stats_view(Request& request, Response& response, enum http_method method, Command cmd);
 
-	void _options(enum http_method method);
-	void _head(enum http_method method);
-	void _get(enum http_method method);
-	void _merge(enum http_method method);
-	void _put(enum http_method method);
-	void _post(enum http_method method);
-	void _patch(enum http_method method);
-	void _delete(enum http_method method);
+	void _options(Request& request, Response& response, enum http_method method);
+	void _head(Request& request, Response& response, enum http_method method);
+	void _get(Request& request, Response& response, enum http_method method);
+	void _merge(Request& request, Response& response, enum http_method method);
+	void _put(Request& request, Response& response, enum http_method method);
+	void _post(Request& request, Response& response, enum http_method method);
+	void _patch(Request& request, Response& response, enum http_method method);
+	void _delete(Request& request, Response& response, enum http_method method);
 
-	Command url_resolve();
-	void _endpoint_maker(std::chrono::duration<double, std::milli> timeout);
-	void endpoints_maker(std::chrono::duration<double, std::milli> timeout);
-	query_field_t query_field_maker(int flags);
+	Command url_resolve(Request& request);
+	void _endpoint_maker(Request& request, std::chrono::duration<double, std::milli> timeout);
+	void endpoints_maker(Request& request, std::chrono::duration<double, std::milli> timeout);
+	query_field_t query_field_maker(Request& request, int flags);
 
-	void log_request();
-	void log_response();
+	void log_request(Request& request);
+	void log_response(Response& response);
 
-	std::string http_response(enum http_status status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
-	void clean_http_request();
+	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
+	void clean_http_request(Request& request, Response& response);
 	void set_idle();
 	ct_type_t serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
-	ct_type_t resolve_ct_type(std::string ct_type_str);
+	ct_type_t resolve_ct_type(Request& request, std::string ct_type_str);
 	template <typename T>
-	const ct_type_t& get_acceptable_type(const T& ct_types);
+	const ct_type_t& get_acceptable_type(Request& request, const T& ct_types);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types);
-	void write_status_response(enum http_status status, const std::string& message="");
-	void write_http_response(enum http_status status, const MsgPack& response=MsgPack());
-	Encoding resolve_encoding();
+	void write_status_response(Request& request, Response& response, enum http_status status, const std::string& message="");
+	void write_http_response(Request& request, Response& response, enum http_status status, const MsgPack& obj=MsgPack());
+	Encoding resolve_encoding(Request& request);
 	std::string readable_encoding(Encoding e);
-	std::string encoding_http_response(Encoding e, const std::string& response, bool chunk, bool start, bool end);
+	std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
 
 	friend Worker;
 
@@ -316,6 +314,6 @@ public:
 
 	~HttpClient();
 
-	void run_one();
+	void run_one(Request& request, Response& response);
 	void run() override;
 };

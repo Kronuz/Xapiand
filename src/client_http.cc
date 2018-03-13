@@ -109,7 +109,7 @@ static const std::string eol("\r\n");
 
 
 std::string
-HttpClient::http_response(enum http_status status, int mode, unsigned short http_major, unsigned short http_minor, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
+HttpClient::http_response(Request& request, Response& response, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
 	L_CALL("HttpClient::http_response()");
 
 	char buffer[20];
@@ -120,9 +120,9 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	std::string response_text;
 
 	if (mode & HTTP_STATUS_RESPONSE) {
-		response->status = status;
+		response.status = status;
 
-		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
+		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", request.parser.http_major, request.parser.http_minor, status);
 		head += buffer;
 		head += http_status_str(status);
 		head_sep += eol;
@@ -138,10 +138,10 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 			headers += "Database: " + endpoints.to_string() + eol;
 		}
 
-		request->ends = std::chrono::system_clock::now();
-		headers += "Response-Time: " + string::from_delta(request->begins, request->ends) + eol;
-		if (request->ready >= request->processing) {
-			headers += "Operation-Time: " + string::from_delta(request->processing, request->ready) + eol;
+		request.ends = std::chrono::system_clock::now();
+		headers += "Response-Time: " + string::from_delta(request.begins, request.ends) + eol;
+		if (request.ready >= request.processing) {
+			headers += "Operation-Time: " + string::from_delta(request.processing, request.ready) + eol;
 		}
 
 		if (mode & HTTP_OPTIONS_RESPONSE) {
@@ -185,11 +185,11 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 	}
 
 	auto this_response_size = response_text.size();
-	response->size += this_response_size;
+	response.size += this_response_size;
 
 	if (Logging::log_level > LOG_DEBUG) {
-		response->head += head;
-		response->headers += headers;
+		response.head += head;
+		response.headers += headers;
 	}
 
 	return head + head_sep + headers + headers_sep + response_text;
@@ -198,9 +198,7 @@ HttpClient::http_response(enum http_status status, int mode, unsigned short http
 
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
-	  new_request(this),
-	  request(nullptr),
-	  response(nullptr)
+	  new_request(this)
 {
 	int http_clients = ++XapiandServer::http_clients;
 	if (http_clients > XapiandServer::max_http_clients) {
@@ -281,14 +279,16 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request.parser);
 		if (err == HPE_INVALID_METHOD) {
-			write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+			Response response;
+			write_http_response(new_request, response, HTTP_STATUS_NOT_IMPLEMENTED);
 		} else {
 			std::string message(http_errno_description(err));
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, string::split(message, '\n') }
 			};
-			write_http_response(error_code, err_response);
+			Response response;
+			write_http_response(new_request, response, error_code, err_response);
 			L_WARNING(HTTP_PARSER_ERRNO(&new_request.parser) != HPE_OK ? message.c_str() : "incomplete request");
 		}
 		destroy();  // Handle error. Just close the connection.
@@ -331,25 +331,25 @@ const http_parser_settings HttpClient::settings = {
 
 
 int
-HttpClient::_on_info(http_parser* p)
+HttpClient::_on_info(http_parser* parser)
 {
-	return static_cast<HttpClient *>(p->data)->on_info(p);
+	return static_cast<HttpClient *>(parser->data)->on_info(parser);
 }
 
 
 int
-HttpClient::_on_data(http_parser* p, const char* at, size_t length)
+HttpClient::_on_data(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(p->data)->on_data(p, at, length);
+	return static_cast<HttpClient *>(parser->data)->on_data(parser, at, length);
 }
 
 
 int
-HttpClient::on_info(http_parser* p)
+HttpClient::on_info(http_parser* parser)
 {
 	L_CALL("HttpClient::on_info(...)");
 
-	int state = p->state;
+	int state = parser->state;
 
 	L_HTTP_PROTO_PARSER("%4d - (INFO)", state);
 
@@ -363,10 +363,11 @@ HttpClient::on_info(http_parser* p)
 			new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
 			break;
 		case 50:  // headers done
-			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(p)), new_request.path.c_str(), p->http_major, p->http_minor);
+			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path.c_str());
 			if (new_request.expect_100) {
 				// Return 100 if client is expecting it
-				write(http_response(HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE, p->http_major, p->http_minor));
+				Response response;
+				write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 			}
 			break;
 		case 57: //s_chunk_data begin chunk
@@ -378,11 +379,11 @@ HttpClient::on_info(http_parser* p)
 
 
 int
-HttpClient::on_data(http_parser* p, const char* at, size_t length)
+HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_data(...)");
 
-	int state = p->state;
+	int state = parser->state;
 
 	L_HTTP_PROTO_PARSER("%4d - %s", state, repr(at, length).c_str());
 
@@ -504,25 +505,25 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 
 					switch (__.fhhl(new_request._header_value)) {
 						case __.fhhl("PUT"):
-							p->method = HTTP_PUT;
+							parser->method = HTTP_PUT;
 							break;
 						case __.fhhl("PATCH"):
-							p->method = HTTP_PATCH;
+							parser->method = HTTP_PATCH;
 							break;
 						case __.fhhl("MERGE"):
-							p->method = HTTP_MERGE;
+							parser->method = HTTP_MERGE;
 							break;
 						case __.fhhl("DELETE"):
-							p->method = HTTP_DELETE;
+							parser->method = HTTP_DELETE;
 							break;
 						case __.fhhl("GET"):
-							p->method = HTTP_GET;
+							parser->method = HTTP_GET;
 							break;
 						case __.fhhl("POST"):
-							p->method = HTTP_POST;
+							parser->method = HTTP_POST;
 							break;
 						default:
-							p->http_errno = HPE_INVALID_METHOD;
+							parser->http_errno = HPE_INVALID_METHOD;
 							break;
 					}
 					break;
@@ -542,70 +543,70 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 
 
 void
-HttpClient::run_one()
+HttpClient::run_one(Request& request, Response& response)
 {
 	written = 0;
 	L_OBJ_BEGIN("HttpClient::run:BEGIN");
 
-	request->log->clear();
-	request->log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release();
-	request->received = std::chrono::system_clock::now();
+	request.log->clear();
+	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release();
+	request.received = std::chrono::system_clock::now();
 
 	std::string error;
 	enum http_status error_code = HTTP_STATUS_OK;
 
 	try {
 		if (Logging::log_level > LOG_DEBUG) {
-			if (Logging::log_level > LOG_DEBUG + 1 && request->content_type.find("image/") != std::string::npos) {
+			if (Logging::log_level > LOG_DEBUG + 1 && request.content_type.find("image/") != std::string::npos) {
 				// From [https://www.iterm2.com/documentation-images.html]
 				std::string b64_name = cppcodec::base64_rfc4648::encode("");
-				std::string b64_request_body = cppcodec::base64_rfc4648::encode(request->raw);
-				request->body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				std::string b64_request_body = cppcodec::base64_rfc4648::encode(request.raw);
+				request.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 					b64_name.c_str(),
 					b64_request_body.size());
-				request->body += b64_request_body.c_str();
-				request->body += '\a';
+				request.body += b64_request_body.c_str();
+				request.body += '\a';
 			} else {
-				auto body = get_decoded_body();
+				auto body = get_decoded_body(request);
 				auto ct_type = body.first;
 				if (ct_type == json_type || ct_type == msgpack_type) {
-					request->body = body.second.to_string(4);
-				} else if (!request->raw.empty()) {
-					request->body = "<blob " + string::from_bytes(request->raw.size()) + ">";
+					request.body = body.second.to_string(4);
+				} else if (!request.raw.empty()) {
+					request.body = "<blob " + string::from_bytes(request.raw.size()) + ">";
 				}
 			}
-			log_request();
+			log_request(request);
 		}
 
-		auto method = HTTP_PARSER_METHOD(&request->parser);
+		auto method = HTTP_PARSER_METHOD(&request.parser);
 		switch (method) {
 			case HTTP_DELETE:
-				_delete(method);
+				_delete(request, response, method);
 				break;
 			case HTTP_GET:
-				_get(method);
+				_get(request, response, method);
 				break;
 			case HTTP_POST:
-				_post(method);
+				_post(request, response, method);
 				break;
 			case HTTP_HEAD:
-				_head(method);
+				_head(request, response, method);
 				break;
 			case HTTP_MERGE:
-				_merge(method);
+				_merge(request, response, method);
 				break;
 			case HTTP_PUT:
-				_put(method);
+				_put(request, response, method);
 				break;
 			case HTTP_OPTIONS:
-				_options(method);
+				_options(request, response, method);
 				break;
 			case HTTP_PATCH:
-				_patch(method);
+				_patch(request, response, method);
 				break;
 			default:
 				error_code = HTTP_STATUS_NOT_IMPLEMENTED;
-				request->parser.http_errno = HPE_INVALID_METHOD;
+				request.parser.http_errno = HPE_INVALID_METHOD;
 				break;
 		}
 	} catch (const DocNotFoundError& exc) {
@@ -657,11 +658,11 @@ HttpClient::run_one()
 				{ RESPONSE_MESSAGE, string::split(error, '\n') }
 			};
 
-			write_http_response(error_code, err_response);
+			write_http_response(request, response, error_code, err_response);
 		}
 	}
 
-	clean_http_request();
+	clean_http_request(request, response);
 
 	L_OBJ_END("HttpClient::run:END");
 }
@@ -679,16 +680,13 @@ HttpClient::run()
 	{
 		std::unique_lock<std::mutex> lk(requests_mutex);
 		while (!requests.empty() && !closed) {
-			request = &requests.front();
-			Response response_instance;
-			response = &response_instance;
+			auto& request = requests.front();
+			Response response;
 			lk.unlock();
 
-			run_one();
+			run_one(request, response);
 
 			lk.lock();
-			request = nullptr;
-			response = nullptr;
 			requests.pop_front();
 		}
 	}
@@ -704,157 +702,157 @@ HttpClient::run()
 
 
 void
-HttpClient::_options(enum http_method)
+HttpClient::_options(Request& request, Response& response, enum http_method)
 {
 	L_CALL("HttpClient::_options()");
 
-	write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE, request->parser.http_major, request->parser.http_minor));
+	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE, request.parser.http_major, request.parser.http_minor));
 }
 
 
 void
-HttpClient::_head(enum http_method method)
+HttpClient::_head(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_head()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_NO_ID:
-			write_http_response(HTTP_STATUS_OK);
+			write_http_response(request, response, HTTP_STATUS_OK);
 			break;
 		case Command::NO_CMD_ID:
-			document_info_view(method, cmd);
+			document_info_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_get(enum http_method method)
+HttpClient::_get(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_get()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_NO_ID:
-			home_view(method, cmd);
+			home_view(request, response, method, cmd);
 			break;
 		case Command::NO_CMD_ID:
-			search_view(method, cmd);
+			search_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SEARCH:
-			request->path_parser.skip_id();  // Command has no ID
-			search_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			search_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			request->path_parser.skip_id();  // Command has no ID
-			schema_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			schema_view(request, response, method, cmd);
 			break;
 #if XAPIAND_DATABASE_WAL
 		case Command::CMD_WAL:
-			request->path_parser.skip_id();  // Command has no ID
-			wal_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			wal_view(request, response, method, cmd);
 			break;
 #endif
 		case Command::CMD_INFO:
-			request->path_parser.skip_id();  // Command has no ID
-			info_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			info_view(request, response, method, cmd);
 			break;
 		case Command::CMD_STATS:
-			request->path_parser.skip_id();  // Command has no ID
-			stats_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			stats_view(request, response, method, cmd);
 			break;
 		case Command::CMD_NODES:
-			request->path_parser.skip_id();  // Command has no ID
-			nodes_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			nodes_view(request, response, method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			request->path_parser.skip_id();  // Command has no ID
-			metadata_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			metadata_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_merge(enum http_method method)
+HttpClient::_merge(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_merge()");
 
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			update_document_view(method, cmd);
+			update_document_view(request, response, method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			request->path_parser.skip_id();  // Command has no ID
-			update_metadata_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			update_metadata_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_put(enum http_method method)
+HttpClient::_put(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_put()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			index_document_view(method, cmd);
+			index_document_view(request, response, method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			request->path_parser.skip_id();  // Command has no ID
-			write_metadata_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			write_metadata_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			request->path_parser.skip_id();  // Command has no ID
-			write_schema_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			write_schema_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_post(enum http_method method)
+HttpClient::_post(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_post()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			request->path_parser.skip_id();  // Command has no ID
-			index_document_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			index_document_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			request->path_parser.skip_id();  // Command has no ID
-			write_schema_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			write_schema_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SEARCH:
-			request->path_parser.skip_id();  // Command has no ID
-			search_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			search_view(request, response, method, cmd);
 			break;
 		case Command::CMD_TOUCH:
-			request->path_parser.skip_id();  // Command has no ID
-			touch_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			touch_view(request, response, method, cmd);
 			break;
 		case Command::CMD_COMMIT:
-			request->path_parser.skip_id();  // Command has no ID
-			commit_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			commit_view(request, response, method, cmd);
 			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
@@ -863,70 +861,70 @@ HttpClient::_post(enum http_method method)
 			break;
 #endif
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_patch(enum http_method method)
+HttpClient::_patch(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_patch()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			update_document_view(method, cmd);
+			update_document_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 void
-HttpClient::_delete(enum http_method method)
+HttpClient::_delete(Request& request, Response& response, enum http_method method)
 {
 	L_CALL("HttpClient::_delete()");
 
-	auto cmd = url_resolve();
+	auto cmd = url_resolve(request);
 	switch (cmd) {
 		case Command::NO_CMD_ID:
-			delete_document_view(method, cmd);
+			delete_document_view(request, response, method, cmd);
 			break;
 		case Command::CMD_METADATA:
-			request->path_parser.skip_id();  // Command has no ID
-			delete_metadata_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			delete_metadata_view(request, response, method, cmd);
 			break;
 		case Command::CMD_SCHEMA:
-			request->path_parser.skip_id();  // Command has no ID
-			delete_schema_view(method, cmd);
+			request.path_parser.skip_id();  // Command has no ID
+			delete_schema_view(request, response, method, cmd);
 			break;
 		default:
-			write_status_response(HTTP_STATUS_METHOD_NOT_ALLOWED);
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;
 	}
 }
 
 
 std::pair<ct_type_t, MsgPack>
-HttpClient::get_decoded_body()
+HttpClient::get_decoded_body(Request& request)
 {
 	L_CALL("HttpClient::get_decoded_body()");
 
-	if (request->ct_type.empty()) {
+	if (request.ct_type.empty()) {
 
 		// Create MsgPack object for the body
-		std::string_view ct_type_str = request->content_type;
+		std::string_view ct_type_str = request.content_type;
 		if (ct_type_str.empty()) {
 			ct_type_str = JSON_CONTENT_TYPE;
 		}
 
 		ct_type_t ct_type;
 		MsgPack decoded_body;
-		if (!request->raw.empty()) {
+		if (!request.raw.empty()) {
 			rapidjson::Document rdoc;
 			constexpr static auto _ = phf::make_phf({
 				hhl(FORM_URLENCODED_CONTENT_TYPE),
@@ -939,60 +937,60 @@ HttpClient::get_decoded_body()
 				case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
 				case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
 					try {
-						json_load(rdoc, request->raw);
+						json_load(rdoc, request.raw);
 						decoded_body = MsgPack(rdoc);
 						ct_type = json_type;
 					} catch (const std::exception&) {
-						decoded_body = MsgPack(request->raw);
+						decoded_body = MsgPack(request.raw);
 						ct_type = msgpack_type;
 					}
 					break;
 				case _.fhhl(JSON_CONTENT_TYPE):
-					json_load(rdoc, request->raw);
+					json_load(rdoc, request.raw);
 					decoded_body = MsgPack(rdoc);
 					ct_type = json_type;
 					break;
 				case _.fhhl(MSGPACK_CONTENT_TYPE):
 				case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-					decoded_body = MsgPack::unserialise(request->raw);
+					decoded_body = MsgPack::unserialise(request.raw);
 					ct_type = msgpack_type;
 					break;
 				default:
-					decoded_body = MsgPack(request->raw);
+					decoded_body = MsgPack(request.raw);
 					ct_type = ct_type_t(ct_type_str);
 					break;
 			}
 		}
 
-		request->ct_type = ct_type;
-		request->decoded_body = decoded_body;
+		request.ct_type = ct_type;
+		request.decoded_body = decoded_body;
 	}
 
-	return std::make_pair(request->ct_type, request->decoded_body);
+	return std::make_pair(request.ct_type, request.decoded_body);
 }
 
 
 void
-HttpClient::home_view(enum http_method method, Command)
+HttpClient::home_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::home_view()");
 
 	endpoints.clear();
 	endpoints.add(Endpoint("."));
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
-	auto document = request->db_handler.get_document(serialise_node_id(local_node_->id));
+	auto document = request.db_handler.get_document(serialise_node_id(local_node_->id));
 
 	auto obj = document.get_obj();
 	if (obj.find(ID_FIELD_NAME) == obj.end()) {
 		obj[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
 	}
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
 	obj[RESPONSE_CLUSTER_NAME] = opts.cluster_name;
@@ -1010,48 +1008,48 @@ HttpClient::home_view(enum http_method method, Command)
 #endif
 	};
 
-	write_http_response(HTTP_STATUS_OK, obj);
+	write_http_response(request, response, HTTP_STATUS_OK, obj);
 }
 
 
 void
-HttpClient::document_info_view(enum http_method method, Command)
+HttpClient::document_info_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::document_info_view()");
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_SPAWN, method);
 
 	MsgPack response_obj;
-	response_obj[RESPONSE_DOCID] = request->db_handler.get_docid(request->path_parser.get_id());
+	response_obj[RESPONSE_DOCID] = request.db_handler.get_docid(request.path_parser.get_id());
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_OK, response_obj);
+	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
 
 
 void
-HttpClient::delete_document_view(enum http_method method, Command)
+HttpClient::delete_document_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::delete_document_view()");
 
-	endpoints_maker(2s);
-	auto query_field = query_field_maker(QUERY_FIELD_COMMIT);
+	endpoints_maker(request, 2s);
+	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
 
-	std::string doc_id(request->path_parser.get_id());
+	std::string doc_id(request.path_parser.get_id());
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
 	enum http_status status_code;
 	MsgPack response_obj;
-	request->db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
-	request->db_handler.delete_document(doc_id, query_field.commit);
-	request->ready = std::chrono::system_clock::now();
+	request.db_handler.delete_document(doc_id, query_field.commit);
+	request.ready = std::chrono::system_clock::now();
 	status_code = HTTP_STATUS_OK;
 
 	response_obj[RESPONSE_DELETE] = {
@@ -1059,33 +1057,33 @@ HttpClient::delete_document_view(enum http_method method, Command)
 		{ RESPONSE_COMMIT,  query_field.commit }
 	};
 
-	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(request->ready - request->processing).count());
-	L_TIME("Deletion took %s", string::from_delta(request->processing, request->ready).c_str());
+	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
+	L_TIME("Deletion took %s", string::from_delta(request.processing, request.ready).c_str());
 
-	write_http_response(status_code, response_obj);
+	write_http_response(request, response, status_code, response_obj);
 }
 
 
 void
-HttpClient::delete_schema_view(enum http_method method, Command)
+HttpClient::delete_schema_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
-	endpoints_maker(2s);
+	endpoints_maker(request, 2s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	request->db_handler.delete_schema();
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	request.db_handler.delete_schema();
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_NO_CONTENT);
+	write_http_response(request, response, HTTP_STATUS_NO_CONTENT);
 }
 
 
 void
-HttpClient::index_document_view(enum http_method method, Command)
+HttpClient::index_document_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::index_document_view()");
 
@@ -1093,83 +1091,83 @@ HttpClient::index_document_view(enum http_method method, Command)
 
 	std::string doc_id;
 	if (method != HTTP_POST) {
-		doc_id = request->path_parser.get_id();
+		doc_id = request.path_parser.get_id();
 	}
 
-	endpoints_maker(2s);
-	auto query_field = query_field_maker(QUERY_FIELD_COMMIT);
+	endpoints_maker(request, 2s);
+	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	request->db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	bool stored = true;
-	auto body = get_decoded_body();
-	response_obj = request->db_handler.index(doc_id, stored, body.second, query_field.commit, body.first).second;
+	auto body = get_decoded_body(request);
+	response_obj = request.db_handler.index(doc_id, stored, body.second, query_field.commit, body.first).second;
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(request->ready - request->processing).count());
-	L_TIME("Indexing took %s", string::from_delta(request->processing, request->ready).c_str());
+	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
+	L_TIME("Indexing took %s", string::from_delta(request.processing, request.ready).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
-	write_http_response(status_code, response_obj);
+	write_http_response(request, response, status_code, response_obj);
 }
 
 
 void
-HttpClient::write_schema_view(enum http_method method, Command)
+HttpClient::write_schema_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::write_schema_view()");
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	endpoints_maker(2s);
+	endpoints_maker(request, 2s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	request->db_handler.write_schema(get_decoded_body().second, method == HTTP_PUT);
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	request.db_handler.write_schema(get_decoded_body(request).second, method == HTTP_PUT);
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	status_code = HTTP_STATUS_OK;
-	response_obj = request->db_handler.get_schema()->get_full(true);
+	response_obj = request.db_handler.get_schema()->get_full(true);
 
-	write_http_response(status_code, response_obj);
+	write_http_response(request, response, status_code, response_obj);
 }
 
 
 void
-HttpClient::update_document_view(enum http_method method, Command)
+HttpClient::update_document_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::update_document_view()");
 
-	endpoints_maker(2s);
-	auto query_field = query_field_maker(QUERY_FIELD_COMMIT);
+	endpoints_maker(request, 2s);
+	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
 
-	std::string doc_id(request->path_parser.get_id());
+	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	request->db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	auto body = get_decoded_body();
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	auto body = get_decoded_body(request);
 	if (method == HTTP_PATCH) {
-		response_obj = request->db_handler.patch(doc_id, body.second, query_field.commit, body.first).second;
+		response_obj = request.db_handler.patch(doc_id, body.second, query_field.commit, body.first).second;
 	} else {
 		bool stored = true;
-		response_obj = request->db_handler.merge(doc_id, stored, body.second, query_field.commit, body.first).second;
+		response_obj = request.db_handler.merge(doc_id, stored, body.second, query_field.commit, body.first).second;
 	}
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(request->ready - request->processing).count());
-	L_TIME("Updating took %s", string::from_delta(request->processing, request->ready).c_str());
+	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
+	L_TIME("Updating took %s", string::from_delta(request.processing, request.ready).c_str());
 
 	status_code = HTTP_STATUS_OK;
 	if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
@@ -1177,26 +1175,26 @@ HttpClient::update_document_view(enum http_method method, Command)
 	}
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
-	write_http_response(status_code, response_obj);
+	write_http_response(request, response, status_code, response_obj);
 }
 
 
 void
-HttpClient::metadata_view(enum http_method method, Command)
+HttpClient::metadata_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::metadata_view()");
 
 	enum http_status status_code = HTTP_STATUS_OK;
 
-	endpoints_maker(2s);
+	endpoints_maker(request, 2s);
 
 	MsgPack response_obj;
-	request->db_handler.reset(endpoints, DB_OPEN, method);
+	request.db_handler.reset(endpoints, DB_OPEN, method);
 
 	std::string selector;
-	auto key = request->path_parser.get_pmt();
+	auto key = request.path_parser.get_pmt();
 	if (key.empty()) {
-		auto cmd = request->path_parser.get_cmd();
+		auto cmd = request.path_parser.get_cmd();
 		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
@@ -1211,14 +1209,14 @@ HttpClient::metadata_view(enum http_method method, Command)
 
 	if (key.empty()) {
 		response_obj = MsgPack(MsgPack::Type::MAP);
-		for (auto& _key : request->db_handler.get_metadata_keys()) {
-			auto metadata = request->db_handler.get_metadata(_key);
+		for (auto& _key : request.db_handler.get_metadata_keys()) {
+			auto metadata = request.db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
 				response_obj[_key] = MsgPack::unserialise(metadata);
 			}
 		}
 	} else {
-		auto metadata = request->db_handler.get_metadata(key);
+		auto metadata = request.db_handler.get_metadata(key);
 		if (metadata.empty()) {
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
@@ -1230,81 +1228,81 @@ HttpClient::metadata_view(enum http_method method, Command)
 		response_obj = response_obj.select(selector);
 	}
 
-	write_http_response(status_code, response_obj);
+	write_http_response(request, response, status_code, response_obj);
 }
 
 
 void
-HttpClient::write_metadata_view(enum http_method, Command)
+HttpClient::write_metadata_view(Request& request, Response& response, enum http_method, Command)
 {
 	L_CALL("HttpClient::write_metadata_view()");
 
-	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::update_metadata_view(enum http_method, Command)
+HttpClient::update_metadata_view(Request& request, Response& response, enum http_method, Command)
 {
 	L_CALL("HttpClient::update_metadata_view()");
 
-	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::delete_metadata_view(enum http_method, Command)
+HttpClient::delete_metadata_view(Request& request, Response& response, enum http_method, Command)
 {
 	L_CALL("HttpClient::delete_metadata_view()");
 
-	write_http_response(HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::info_view(enum http_method method, Command)
+HttpClient::info_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::info_view()");
 
 	MsgPack response_obj;
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_OPEN, method);
+	request.db_handler.reset(endpoints, DB_OPEN, method);
 
 	// There's no path, we're at root so we get the server's info
-	if (!request->path_parser.off_pth) {
+	if (!request.path_parser.off_pth) {
 		XapiandManager::manager->server_status(response_obj[RESPONSE_SERVER_INFO]);
 	}
 
-	response_obj[RESPONSE_DATABASE_INFO] = request->db_handler.get_database_info();
+	response_obj[RESPONSE_DATABASE_INFO] = request.db_handler.get_database_info();
 
 	// Info about a specific document was requested
-	if (request->path_parser.off_pmt) {
-		response_obj[RESPONSE_DOCUMENT_INFO] = request->db_handler.get_document_info(request->path_parser.get_pmt());
+	if (request.path_parser.off_pmt) {
+		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(request.path_parser.get_pmt());
 	}
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_OK, response_obj);
+	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
 
 
 void
-HttpClient::nodes_view(enum http_method, Command)
+HttpClient::nodes_view(Request& request, Response& response, enum http_method, Command)
 {
 	L_CALL("HttpClient::nodes_view()");
 
-	request->path_parser.next();
-	if (request->path_parser.next() != PathParser::State::END) {
-		write_status_response(HTTP_STATUS_NOT_FOUND);
+	request.path_parser.next();
+	if (request.path_parser.next() != PathParser::State::END) {
+		write_status_response(request, response, HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
-	if (request->path_parser.len_pth || request->path_parser.len_pmt || request->path_parser.len_ppmt) {
-		write_status_response(HTTP_STATUS_NOT_FOUND);
+	if (request.path_parser.len_pth || request.path_parser.len_pmt || request.path_parser.len_ppmt) {
+		write_status_response(request, response, HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
@@ -1316,7 +1314,7 @@ HttpClient::nodes_view(enum http_method, Command)
 		{ RESPONSE_NAME, local_node_->name },
 	};
 
-	write_http_response(HTTP_STATUS_OK, {
+	write_http_response(request, response, HTTP_STATUS_OK, {
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
 		{ RESPONSE_NODES, nodes },
 	});
@@ -1324,108 +1322,108 @@ HttpClient::nodes_view(enum http_method, Command)
 
 
 void
-HttpClient::touch_view(enum http_method method, Command)
+HttpClient::touch_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::touch_view()");
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
 
-	request->db_handler.reopen();  // Ensure touch.
+	request.db_handler.reopen();  // Ensure touch.
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
-	write_http_response(HTTP_STATUS_CREATED, response_obj);
+	write_http_response(request, response, HTTP_STATUS_CREATED, response_obj);
 }
 
 
 void
-HttpClient::commit_view(enum http_method method, Command)
+HttpClient::commit_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::commit_view()");
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
 
-	request->db_handler.commit();  // Ensure touch.
+	request.db_handler.commit();  // Ensure touch.
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
-	write_http_response(HTTP_STATUS_OK, response_obj);
+	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
 
 
 void
-HttpClient::schema_view(enum http_method method, Command)
+HttpClient::schema_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::schema_view()");
 
 	std::string selector;
-	auto cmd = request->path_parser.get_cmd();
+	auto cmd = request.path_parser.get_cmd();
 	auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 	if (needle != std::string::npos) {
 		selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
 	}
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_OPEN, method);
+	request.db_handler.reset(endpoints, DB_OPEN, method);
 
-	auto schema = request->db_handler.get_schema()->get_full(true);
+	auto schema = request.db_handler.get_schema()->get_full(true);
 	if (!selector.empty()) {
 		schema = schema.select(selector);
 	}
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_OK, schema);
+	write_http_response(request, response, HTTP_STATUS_OK, schema);
 }
 
 
 #if XAPIAND_DATABASE_WAL
 void
-HttpClient::wal_view(enum http_method method, Command)
+HttpClient::wal_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(1s);
+	endpoints_maker(request, 1s);
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
-	request->db_handler.reset(endpoints, DB_OPEN, method);
+	request.db_handler.reset(endpoints, DB_OPEN, method);
 
-	auto repr = request->db_handler.repr_wal(0, -1);
+	auto repr = request.db_handler.repr_wal(0, -1);
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(HTTP_STATUS_OK, repr);
+	write_http_response(request, response, HTTP_STATUS_OK, repr);
 }
 #endif
 
 
 void
-HttpClient::search_view(enum http_method method, Command)
+HttpClient::search_view(Request& request, Response& response, enum http_method method, Command)
 {
 	L_CALL("HttpClient::search_view()");
 
 	std::string selector;
-	auto id = request->path_parser.get_id();
+	auto id = request.path_parser.get_id();
 	if (id.empty()) {
-		auto cmd = request->path_parser.get_cmd();
+		auto cmd = request.path_parser.get_cmd();
 		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
 			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
@@ -1438,8 +1436,8 @@ HttpClient::search_view(enum http_method method, Command)
 		}
 	}
 
-	endpoints_maker(1s);
-	auto query_field = query_field_maker(id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
+	endpoints_maker(request, 1s);
+	auto query_field = query_field_maker(request, id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
 
 	bool single = !id.empty() && !isRange(id);
 	Xapian::docid did = 0;
@@ -1449,11 +1447,11 @@ HttpClient::search_view(enum http_method method, Command)
 
 	int db_flags = DB_OPEN;
 
-	request->processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::system_clock::now();
 
 	MsgPack aggregations;
 	try {
-		request->db_handler.reset(endpoints, db_flags, method);
+		request.db_handler.reset(endpoints, db_flags, method);
 
 		if (query_field.volatile_) {
 			if (endpoints.size() != 1) {
@@ -1462,7 +1460,7 @@ HttpClient::search_view(enum http_method method, Command)
 					{ RESPONSE_STATUS, (int)error_code },
 					{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
 				};
-				write_http_response(error_code, err_response);
+				write_http_response(request, response, error_code, err_response);
 				return;
 			}
 			try {
@@ -1472,19 +1470,19 @@ HttpClient::search_view(enum http_method method, Command)
 			} catch (const CheckoutErrorCommited&) { }
 		}
 
-		request->db_handler.reopen();  // Ensure the database is current.
+		request.db_handler.reopen();  // Ensure the database is current.
 
 		if (single) {
 			try {
-				did = request->db_handler.get_docid(id);
+				did = request.db_handler.get_docid(id);
 			} catch (const DocNotFoundError&) { }
 		} else {
-			if (request->raw.empty()) {
-				mset = request->db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
+			if (request.raw.empty()) {
+				mset = request.db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
 			} else {
-				auto body = get_decoded_body();
-				AggregationMatchSpy aggs(body.second, request->db_handler.get_schema());
-				mset = request->db_handler.get_mset(query_field, &body.second, &aggs, suggestions);
+				auto body = get_decoded_body(request);
+				AggregationMatchSpy aggs(body.second, request.db_handler.get_schema());
+				mset = request.db_handler.get_mset(query_field, &body.second, &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 			}
 		}
@@ -1513,16 +1511,16 @@ HttpClient::search_view(enum http_method method, Command)
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, http_status_str(error_code) }
 		};
-		write_http_response(error_code, err_response);
+		write_http_response(request, response, error_code, err_response);
 	} else {
-		auto type_encoding = resolve_encoding();
+		auto type_encoding = resolve_encoding(request);
 		if (type_encoding == Encoding::unknown) {
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 			};
-			write_http_response(error_code, err_response);
+			write_http_response(request, response, error_code, err_response);
 			L_SEARCH("ABORTED SEARCH");
 			return;
 		}
@@ -1539,7 +1537,7 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string l_sep_chunk;
 
 		// Get default content type to return.
-		auto ct_type = resolve_ct_type(MSGPACK_CONTENT_TYPE);
+		auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 
 		if (!single) {
 			MsgPack basic_query({
@@ -1577,10 +1575,10 @@ HttpClient::search_view(enum http_method method, Command)
 					first_chunk.append(buf, 5);
 				}
 			} else if (is_acceptable_type(json_type, ct_type)) {
-				first_chunk = basic_response.to_string(response->indented);
-				if (response->indented != -1) {
-					first_chunk = first_chunk.substr(0, first_chunk.size() - (response->indented * 2) - 1) + "\n";
-					last_chunk = std::string(response->indented * 2, ' ') + "]\n" + std::string(response->indented, ' ') + "}\n}";
+				first_chunk = basic_response.to_string(request.indented);
+				if (request.indented != -1) {
+					first_chunk = first_chunk.substr(0, first_chunk.size() - (request.indented * 2) - 1) + "\n";
+					last_chunk = std::string(request.indented * 2, ' ') + "]\n" + std::string(request.indented, ' ') + "}\n}";
 					eol_chunk = "\n";
 					sep_chunk = ",";
 					indent_chunk = true;
@@ -1595,7 +1593,7 @@ HttpClient::search_view(enum http_method method, Command)
 					{ RESPONSE_STATUS, (int)error_code },
 					{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
 				};
-				write_http_response(error_code, err_response);
+				write_http_response(request, response, error_code, err_response);
 				L_SEARCH("ABORTED SEARCH");
 				return;
 			}
@@ -1605,7 +1603,7 @@ HttpClient::search_view(enum http_method method, Command)
 		std::string l_buffer;
 		const auto m_e = mset.end();
 		for (auto m = mset.begin(); did || m != m_e; ++rc, ++m) {
-			auto document = request->db_handler.get_document(did ? did : *m);
+			auto document = request.db_handler.get_document(did ? did : *m);
 
 			const auto data = document.get_data();
 			if (data.empty()) {
@@ -1619,7 +1617,7 @@ HttpClient::search_view(enum http_method method, Command)
 
 				// If there's a ContentType in the blob store or in the ContentType's field
 				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
-				auto blob_ct_type = resolve_ct_type(ct_type_str);
+				auto blob_ct_type = resolve_ct_type(request, ct_type_str);
 				if (blob_ct_type.empty()) {
 					if (ct_type.empty()) {
 						// No content type could be resolved, return NOT ACCEPTABLE.
@@ -1628,7 +1626,7 @@ HttpClient::search_view(enum http_method method, Command)
 							{ RESPONSE_STATUS, (int)error_code },
 							{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
 						};
-						write_http_response(error_code, err_response);
+						write_http_response(request, response, error_code, err_response);
 						L_SEARCH("ABORTED SEARCH");
 						return;
 					}
@@ -1643,24 +1641,24 @@ HttpClient::search_view(enum http_method method, Command)
 							// From [https://www.iterm2.com/documentation-images.html]
 							std::string b64_name = cppcodec::base64_rfc4648::encode("");
 							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
-							response->body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+							response.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
 								b64_name.c_str(),
 								b64_response_body.size());
-							response->body += b64_response_body.c_str();
-							response->body += '\a';
+							response.body += b64_response_body.c_str();
+							response.body += '\a';
 						} else if (!blob_data.empty()) {
-							response->body = "<blob " + string::from_bytes(blob_data.size()) + ">";
+							response.body = "<blob " + string::from_bytes(blob_data.size()) + ">";
 						}
 					}
 					if (type_encoding != Encoding::none) {
-						auto encoded = encoding_http_response(type_encoding, blob_data, false, true, true);
+						auto encoded = encoding_http_response(response, type_encoding, blob_data, false, true, true);
 						if (!encoded.empty() && encoded.size() <= blob_data.size()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, encoded, ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						} else {
-							write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second, readable_encoding(Encoding::identity)));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, blob_data, ct_type.first + "/" + ct_type.second, readable_encoding(Encoding::identity)));
 						}
 					} else {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
 					}
 					return;
 				}
@@ -1691,56 +1689,56 @@ HttpClient::search_view(enum http_method method, Command)
 
 			if (Logging::log_level > LOG_DEBUG) {
 				if (single) {
-					response->body += obj.to_string(4);
+					response.body += obj.to_string(4);
 				} else {
 					if (rc == 0) {
-						response->body += l_first_chunk;
+						response.body += l_first_chunk;
 					}
 					if (!l_buffer.empty()) {
-						response->body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+						response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 					}
 					l_buffer = obj.to_string(4);
 				}
 			}
 
-			auto result = serialize_response(obj, ct_type, response->indented);
+			auto result = serialize_response(obj, ct_type, request.indented);
 			if (single) {
 				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
+					auto encoded = encoding_http_response(response, type_encoding, result.first, false, true, true);
 					if (!encoded.empty() && encoded.size() <= result.first.size()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 					} else {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
 					}
 				} else {
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, result.first, result.second));
+					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
 				}
 			} else {
 				if (rc == 0) {
 					if (type_encoding != Encoding::none) {
-						auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, request->parser.http_major, request->parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
+						auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						if (!encoded.empty()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 						}
 					} else {
-						write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, request->parser.http_major, request->parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
 						if (!first_chunk.empty()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
 						}
 					}
 				}
 
 				if (!buffer.empty()) {
-					auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * response->indented) : buffer) + sep_chunk + eol_chunk;
+					auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + sep_chunk + eol_chunk;
 					if (type_encoding != Encoding::none) {
-						auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
+						auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 						if (!encoded.empty()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 						}
 					} else {
 						if (!indented_buffer.empty()) {
-							write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
 						}
 					}
 				}
@@ -1753,79 +1751,79 @@ HttpClient::search_view(enum http_method method, Command)
 		if (Logging::log_level > LOG_DEBUG) {
 			if (!single) {
 				if (rc == 0) {
-					response->body += l_first_chunk;
+					response.body += l_first_chunk;
 				}
 
 				if (!l_buffer.empty()) {
-					response->body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+					response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 				}
 
-				response->body += l_last_chunk;
+				response.body += l_last_chunk;
 			}
 		}
 
 		if (!single) {
 			if (rc == 0) {
 				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(type_encoding, first_chunk, true, true, false);
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, request->parser.http_major, request->parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
+					auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
+					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 					if (!encoded.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 					}
 				} else {
-					write(http_response(HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, request->parser.http_major, request->parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
+					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
 					if (!first_chunk.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
 					}
 				}
 			}
 
 			if (!buffer.empty()) {
-				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * response->indented) : buffer) + sep_chunk + eol_chunk;
+				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + sep_chunk + eol_chunk;
 				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(type_encoding, indented_buffer, true, false, false);
+					auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 					if (!encoded.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 					}
 				} else {
 					if (!indented_buffer.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
 					}
 				}
 			}
 
 			if (!last_chunk.empty()) {
 				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(type_encoding, last_chunk, true, false, true);
+					auto encoded = encoding_http_response(response, type_encoding, last_chunk, true, false, true);
 					if (!encoded.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
 					}
 				} else {
 					if (!last_chunk.empty()) {
-						write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, last_chunk));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, last_chunk));
 					}
 				}
 			}
 
-			write(http_response(HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 		}
 	}
 
-	request->ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::system_clock::now();
 
-	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(request->ready - request->processing).count());
-	L_TIME("Searching took %s", string::from_delta(request->processing, request->ready).c_str());
+	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
+	L_TIME("Searching took %s", string::from_delta(request.processing, request.ready).c_str());
 
 	L_SEARCH("FINISH SEARCH");
 }
 
 
 void
-HttpClient::write_status_response(enum http_status status, const std::string& message)
+HttpClient::write_status_response(Request& request, Response& response, enum http_status status, const std::string& message)
 {
 	L_CALL("HttpClient::write_status_response()");
 
-	write_http_response(status, {
+	write_http_response(request, response, status, {
 		{ RESPONSE_STATUS, (int)status },
 		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
@@ -1833,14 +1831,14 @@ HttpClient::write_status_response(enum http_status status, const std::string& me
 
 
 void
-HttpClient::stats_view(enum http_method, Command)
+HttpClient::stats_view(Request& request, Response& response, enum http_method, Command)
 {
 	L_CALL("HttpClient::stats_view()");
 
 	MsgPack response_obj(MsgPack::Type::ARRAY);
-	auto query_field = query_field_maker(QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
+	auto query_field = query_field_maker(request, QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
 	XapiandManager::manager->get_stats_time(response_obj, query_field.time, query_field.period);
-	write_http_response(HTTP_STATUS_OK, response_obj);
+	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
 
 
@@ -1854,56 +1852,56 @@ HttpClient::getCommand(std::string_view command_name)
 
 
 HttpClient::Command
-HttpClient::url_resolve()
+HttpClient::url_resolve(Request& request)
 {
-	L_CALL("HttpClient::url_resolve()");
+	L_CALL("HttpClient::url_resolve(request)");
 
 	struct http_parser_url u;
-	std::string b = repr(request->path, true, false);
+	std::string b = repr(request.path, true, false);
 
 	L_HTTP("URL: %s", b.c_str());
 
-	if (http_parser_parse_url(request->path.data(), request->path.size(), 0, &u) == 0) {
+	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER("HTTP parsing done!");
 
 		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
 			std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
 			auto path_buf_str = path_buf_ptr.get();
-			const char* path_str = request->path.data() + u.field_data[3].off;
+			const char* path_str = request.path.data() + u.field_data[3].off;
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
-				if (request->path_parser.init(path_buf_str) >= PathParser::State::END) {
+				if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
 					return Command::BAD_QUERY;
 				}
 			}
 		}
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
-			if (request->query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
+			if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
 				return Command::BAD_QUERY;
 			}
 		}
 
-		if (request->query_parser.next("pretty") != -1) {
-			if (request->query_parser.len) {
+		if (request.query_parser.next("pretty") != -1) {
+			if (request.query_parser.len) {
 				try {
-					response->indented = Serialise::boolean(request->query_parser.get()) == "t" ? 4 : -1;
+					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? 4 : -1;
 				} catch (const Exception&) { }
-			} else if (response->indented == -1) {
-				response->indented = 4;
+			} else if (request.indented == -1) {
+				request.indented = 4;
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (!request->path_parser.off_cmd) {
-			if (request->path_parser.off_id) {
+		if (!request.path_parser.off_cmd) {
+			if (request.path_parser.off_id) {
 				return Command::NO_CMD_ID;
 			} else {
 				return Command::NO_CMD_NO_ID;
 			}
 		} else {
-			auto cmd = request->path_parser.get_cmd();
+			auto cmd = request.path_parser.get_cmd();
 			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
 			return getCommand(cmd.substr(0, needle));
 		}
@@ -1917,25 +1915,25 @@ HttpClient::url_resolve()
 
 
 void
-HttpClient::endpoints_maker(std::chrono::duration<double, std::milli> timeout)
+HttpClient::endpoints_maker(Request& request, std::chrono::duration<double, std::milli> timeout)
 {
 	endpoints.clear();
 
 	PathParser::State state;
-	while ((state = request->path_parser.next()) < PathParser::State::END) {
-		_endpoint_maker(timeout);
+	while ((state = request.path_parser.next()) < PathParser::State::END) {
+		_endpoint_maker(request, timeout);
 	}
 }
 
 
 void
-HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
+HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std::milli> timeout)
 {
 	bool has_node_name = false;
 
 	std::string ns;
-	if (request->path_parser.off_nsp) {
-		ns = request->path_parser.get_nsp();
+	if (request.path_parser.off_nsp) {
+		ns = request.path_parser.get_nsp();
 		ns.push_back('/');
 		if (string::startswith(ns, "/")) { /* ns without slash */
 			ns = ns.substr(1);
@@ -1943,8 +1941,8 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 	}
 
 	std::string _path;
-	if (request->path_parser.off_pth) {
-		_path = request->path_parser.get_pth();
+	if (request.path_parser.off_pth) {
+		_path = request.path_parser.get_pth();
 		if (string::startswith(_path, "/")) { /* path without slash */
 			_path.erase(0, 1);
 		}
@@ -1963,8 +1961,8 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 
 	std::string node_name;
 	std::vector<Endpoint> asked_nodes;
-	if (request->path_parser.off_hst) {
-		node_name = request->path_parser.get_hst();
+	if (request.path_parser.off_hst) {
+		node_name = request.path_parser.get_hst();
 		has_node_name = true;
 	} else {
 		auto local_node_ = local_node.load();
@@ -2011,209 +2009,209 @@ HttpClient::_endpoint_maker(std::chrono::duration<double, std::milli> timeout)
 
 
 query_field_t
-HttpClient::query_field_maker(int flags)
+HttpClient::query_field_maker(Request& request, int flags)
 {
 	query_field_t query_field;
 
 	if (flags & QUERY_FIELD_COMMIT) {
-		if (request->query_parser.next("commit") != -1) {
+		if (request.query_parser.next("commit") != -1) {
 			query_field.commit = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.commit = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.commit = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 	}
 
 	if (flags & QUERY_FIELD_ID || flags & QUERY_FIELD_SEARCH) {
-		if (request->query_parser.next("volatile") != -1) {
+		if (request.query_parser.next("volatile") != -1) {
 			query_field.volatile_ = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.volatile_ = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.volatile_ = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("offset") != -1) {
+		if (request.query_parser.next("offset") != -1) {
 			int errno_save;
-			query_field.offset = strict_stou(errno_save, request->query_parser.get());
+			query_field.offset = strict_stou(errno_save, request.query_parser.get());
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("check_at_least") != -1) {
+		if (request.query_parser.next("check_at_least") != -1) {
 			int errno_save;
-			query_field.check_at_least = strict_stou(errno_save, request->query_parser.get());
+			query_field.check_at_least = strict_stou(errno_save, request.query_parser.get());
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("limit") != -1) {
+		if (request.query_parser.next("limit") != -1) {
 			int errno_save;
-			query_field.limit = strict_stou(errno_save, request->query_parser.get());
+			query_field.limit = strict_stou(errno_save, request.query_parser.get());
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 	}
 
 	if (flags & QUERY_FIELD_SEARCH) {
-		if (request->query_parser.next("spelling") != -1) {
+		if (request.query_parser.next("spelling") != -1) {
 			query_field.spelling = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.spelling = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.spelling = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("synonyms") != -1) {
+		if (request.query_parser.next("synonyms") != -1) {
 			query_field.synonyms = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.synonyms = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.synonyms = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		while (request->query_parser.next("query") != -1) {
-			L_SEARCH("query=%s", request->query_parser.get().c_str());
-			query_field.query.push_back(std::string(request->query_parser.get()));
+		while (request.query_parser.next("query") != -1) {
+			L_SEARCH("query=%s", request.query_parser.get().c_str());
+			query_field.query.push_back(std::string(request.query_parser.get()));
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		while (request->query_parser.next("q") != -1) {
-			L_SEARCH("query=%s", request->query_parser.get().c_str());
-			query_field.query.push_back(std::string(request->query_parser.get()));
+		while (request.query_parser.next("q") != -1) {
+			L_SEARCH("query=%s", request.query_parser.get().c_str());
+			query_field.query.push_back(std::string(request.query_parser.get()));
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		while (request->query_parser.next("sort") != -1) {
-			query_field.sort.push_back(std::string(request->query_parser.get()));
+		while (request.query_parser.next("sort") != -1) {
+			query_field.sort.push_back(std::string(request.query_parser.get()));
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("metric") != -1) {
-			query_field.metric = request->query_parser.get();
+		if (request.query_parser.next("metric") != -1) {
+			query_field.metric = request.query_parser.get();
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("icase") != -1) {
-			query_field.icase = Serialise::boolean(request->query_parser.get()) == "t";
+		if (request.query_parser.next("icase") != -1) {
+			query_field.icase = Serialise::boolean(request.query_parser.get()) == "t";
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("collapse_max") != -1) {
+		if (request.query_parser.next("collapse_max") != -1) {
 			int errno_save;
-			query_field.collapse_max = strict_stou(errno_save, request->query_parser.get());
+			query_field.collapse_max = strict_stou(errno_save, request.query_parser.get());
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("collapse") != -1) {
-			query_field.collapse = request->query_parser.get();
+		if (request.query_parser.next("collapse") != -1) {
+			query_field.collapse = request.query_parser.get();
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
-		if (request->query_parser.next("fuzzy") != -1) {
+		if (request.query_parser.next("fuzzy") != -1) {
 			query_field.is_fuzzy = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.is_fuzzy = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.is_fuzzy = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
 		if (query_field.is_fuzzy) {
-			if (request->query_parser.next("fuzzy.n_rset") != -1) {
+			if (request.query_parser.next("fuzzy.n_rset") != -1) {
 				int errno_save;
-				query_field.fuzzy.n_rset = strict_stou(errno_save, request->query_parser.get());
+				query_field.fuzzy.n_rset = strict_stou(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			if (request->query_parser.next("fuzzy.n_eset") != -1) {
+			if (request.query_parser.next("fuzzy.n_eset") != -1) {
 				int errno_save;
-				query_field.fuzzy.n_eset = strict_stou(errno_save, request->query_parser.get());
+				query_field.fuzzy.n_eset = strict_stou(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			if (request->query_parser.next("fuzzy.n_term") != -1) {
+			if (request.query_parser.next("fuzzy.n_term") != -1) {
 				int errno_save;
-				query_field.fuzzy.n_term = strict_stou(errno_save, request->query_parser.get());
+				query_field.fuzzy.n_term = strict_stou(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			while (request->query_parser.next("fuzzy.field") != -1) {
-				query_field.fuzzy.field.push_back(std::string(request->query_parser.get()));
+			while (request.query_parser.next("fuzzy.field") != -1) {
+				query_field.fuzzy.field.push_back(std::string(request.query_parser.get()));
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			while (request->query_parser.next("fuzzy.type") != -1) {
-				query_field.fuzzy.type.push_back(std::string(request->query_parser.get()));
+			while (request.query_parser.next("fuzzy.type") != -1) {
+				query_field.fuzzy.type.push_back(std::string(request.query_parser.get()));
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 		}
 
-		if (request->query_parser.next("nearest") != -1) {
+		if (request.query_parser.next("nearest") != -1) {
 			query_field.is_nearest = true;
-			if (request->query_parser.len) {
+			if (request.query_parser.len) {
 				try {
-					query_field.is_nearest = Serialise::boolean(request->query_parser.get()) == "t";
+					query_field.is_nearest = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 
 		if (query_field.is_nearest) {
 			query_field.nearest.n_rset = 5;
-			if (request->query_parser.next("nearest.n_rset") != -1) {
+			if (request.query_parser.next("nearest.n_rset") != -1) {
 				int errno_save;
-				query_field.nearest.n_rset = strict_stoul(errno_save, request->query_parser.get());
+				query_field.nearest.n_rset = strict_stoul(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			if (request->query_parser.next("nearest.n_eset") != -1) {
+			if (request.query_parser.next("nearest.n_eset") != -1) {
 				int errno_save;
-				query_field.nearest.n_eset = strict_stoul(errno_save, request->query_parser.get());
+				query_field.nearest.n_eset = strict_stoul(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			if (request->query_parser.next("nearest.n_term") != -1) {
+			if (request.query_parser.next("nearest.n_term") != -1) {
 				int errno_save;
-				query_field.nearest.n_term = strict_stoul(errno_save, request->query_parser.get());
+				query_field.nearest.n_term = strict_stoul(errno_save, request.query_parser.get());
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			while (request->query_parser.next("nearest.field") != -1) {
-				query_field.nearest.field.push_back(std::string(request->query_parser.get()));
+			while (request.query_parser.next("nearest.field") != -1) {
+				query_field.nearest.field.push_back(std::string(request.query_parser.get()));
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 
-			while (request->query_parser.next("nearest.type") != -1) {
-				query_field.nearest.type.push_back(std::string(request->query_parser.get()));
+			while (request.query_parser.next("nearest.type") != -1) {
+				query_field.nearest.type.push_back(std::string(request.query_parser.get()));
 			}
-			request->query_parser.rewind();
+			request.query_parser.rewind();
 		}
 	}
 
 	if (flags & QUERY_FIELD_TIME) {
-		if (request->query_parser.next("time") != -1) {
-			query_field.time = request->query_parser.get();
+		if (request.query_parser.next("time") != -1) {
+			query_field.time = request.query_parser.get();
 		} else {
 			query_field.time = "1h";
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 	}
 
 	if (flags & QUERY_FIELD_PERIOD) {
-		if (request->query_parser.next("period") != -1) {
-			query_field.period = request->query_parser.get();
+		if (request.query_parser.next("period") != -1) {
+			query_field.period = request.query_parser.get();
 		} else {
 			query_field.period = "1m";
 		}
-		request->query_parser.rewind();
+		request.query_parser.rewind();
 	}
 
 	return query_field;
@@ -2221,7 +2219,7 @@ HttpClient::query_field_maker(int flags)
 
 
 void
-HttpClient::log_request()
+HttpClient::log_request(Request& request)
 {
 	std::string request_prefix = " 🌎  ";
 
@@ -2231,7 +2229,7 @@ HttpClient::log_request()
 	auto request_body_color = no_col.c_str();
 	int priority = -LOG_DEBUG;
 
-	switch (HTTP_PARSER_METHOD(&request->parser)) {
+	switch (HTTP_PARSER_METHOD(&request.parser)) {
 		case HTTP_OPTIONS: {
 			// rgb(13, 90, 167)
 			constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
@@ -2316,13 +2314,13 @@ HttpClient::log_request()
 			break;
 	};
 
-	auto request_text = request_head_color + request->head + "\n" + request_headers_color + request->headers + request_body_color + request->body;
+	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color + request.body;
 	L(priority, NO_COLOR, "%s%s", request_prefix.c_str(), string::indent(request_text, ' ', 4, false).c_str());
 }
 
 
 void
-HttpClient::log_response()
+HttpClient::log_response(Response& response)
 {
 	std::string response_prefix = " 💊  ";
 
@@ -2332,14 +2330,14 @@ HttpClient::log_response()
 	auto response_body_color = no_col.c_str();
 	int priority = -LOG_DEBUG;
 
-	if ((int)response->status >= 200 && (int)response->status <= 299) {
+	if ((int)response.status >= 200 && (int)response.status <= 299) {
 		constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		constexpr auto _response_head_color = brgb(68, 136, 68);
 		response_head_color = _response_head_color.c_str();
 		constexpr auto _response_body_color = rgb(68, 136, 68);
 		response_body_color = _response_body_color.c_str();
-	} else if ((int)response->status >= 300 && (int)response->status <= 399) {
+	} else if ((int)response.status >= 300 && (int)response.status <= 399) {
 		response_prefix = " 💫  ";
 		constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
 		response_headers_color = _response_headers_color.c_str();
@@ -2347,7 +2345,7 @@ HttpClient::log_response()
 		response_head_color = _response_head_color.c_str();
 		constexpr auto _response_body_color = rgb(68, 136, 120);
 		response_body_color = _response_body_color.c_str();
-	} else if ((int)response->status == 404) {
+	} else if ((int)response.status == 404) {
 		response_prefix = " 🕸  ";
 		constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
 		response_headers_color = _response_headers_color.c_str();
@@ -2356,7 +2354,7 @@ HttpClient::log_response()
 		constexpr auto _response_body_color = rgb(116, 100, 77);
 		response_body_color = _response_body_color.c_str();
 		priority = -LOG_INFO;
-	} else if ((int)response->status >= 400 && (int)response->status <= 499) {
+	} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 		response_prefix = " 💥  ";
 		constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
 		response_headers_color = _response_headers_color.c_str();
@@ -2364,7 +2362,7 @@ HttpClient::log_response()
 		response_head_color = _response_head_color.c_str();
 		constexpr auto _response_body_color = rgb(183, 70, 17);
 		response_body_color = _response_body_color.c_str();
-	} else if ((int)response->status >= 500 && (int)response->status <= 599) {
+	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 		response_prefix = " 🔥  ";
 		constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
 		response_headers_color = _response_headers_color.c_str();
@@ -2375,62 +2373,62 @@ HttpClient::log_response()
 		priority = -LOG_ERR;
 	}
 
-	auto response_text = response_head_color + response->head + "\n" + response_headers_color + response->headers + response_body_color + response->body;
+	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color + response.body;
 	L(priority, NO_COLOR, "%s%s", response_prefix.c_str(), string::indent(response_text, ' ', 4, false).c_str());
 }
 
 
 void
-HttpClient::clean_http_request()
+HttpClient::clean_http_request(Request& request, Response& response)
 {
 	L_CALL("HttpClient::clean_http_request()");
 
-	request->ends = std::chrono::system_clock::now();
+	request.ends = std::chrono::system_clock::now();
 
-	request->log->clear();
-	if (request->parser.http_errno) {
-		L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&request->parser)), http_errno_description(HTTP_PARSER_ERRNO(&request->parser)));
+	request.log->clear();
+	if (request.parser.http_errno) {
+		L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
 	} else {
 		constexpr auto red = RED;
 		auto color = red.c_str();
 		int priority = LOG_DEBUG;
 
-		if ((int)response->status >= 200 && (int)response->status <= 299) {
+		if ((int)response.status >= 200 && (int)response.status <= 299) {
 			constexpr auto white = WHITE;
 			color = white.c_str();
-		} else if ((int)response->status >= 300 && (int)response->status <= 399) {
+		} else if ((int)response.status >= 300 && (int)response.status <= 399) {
 			constexpr auto steel_blue = STEEL_BLUE;
 			color = steel_blue.c_str();
-		} else if ((int)response->status >= 400 && (int)response->status <= 499) {
+		} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 			constexpr auto saddle_brown = SADDLE_BROWN;
 			color = saddle_brown.c_str();
 			priority = LOG_INFO;
-		} else if ((int)response->status >= 500 && (int)response->status <= 599) {
+		} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 			constexpr auto light_purple = LIGHT_PURPLE;
 			color = light_purple.c_str();
 			priority = LOG_ERR;
 		}
 		if (Logging::log_level > LOG_DEBUG) {
-			log_response();
+			log_response(response);
 		}
-		L(priority, color, "\"%s\" %d %s %s", request->head.c_str(), (int)response->status, string::from_bytes(response->size).c_str(), string::from_delta(request->begins, request->ends).c_str());
+		L(priority, color, "\"%s\" %d %s %s", request.head.c_str(), (int)response.status, string::from_bytes(response.size).c_str(), string::from_delta(request.begins, request.ends).c_str());
 	}
 
-	L_TIME("Full request took %s, response took %s", string::from_delta(request->begins, request->ends).c_str(), string::from_delta(request->received, request->ends).c_str());
+	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends).c_str(), string::from_delta(request.received, request.ends).c_str());
 }
 
 
 ct_type_t
-HttpClient::resolve_ct_type(std::string ct_type_str)
+HttpClient::resolve_ct_type(Request& request, std::string ct_type_str)
 {
 	L_CALL("HttpClient::resolve_ct_type(%s)", repr(ct_type_str).c_str());
 
 	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE || ct_type_str == X_MSGPACK_CONTENT_TYPE) {
-		if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+		if (is_acceptable_type(get_acceptable_type(request, json_type), json_type)) {
 			ct_type_str = JSON_CONTENT_TYPE;
-		} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+		} else if (is_acceptable_type(get_acceptable_type(request, msgpack_type), msgpack_type)) {
 			ct_type_str = MSGPACK_CONTENT_TYPE;
-		} else if (is_acceptable_type(get_acceptable_type(x_msgpack_type), x_msgpack_type)) {
+		} else if (is_acceptable_type(get_acceptable_type(request, x_msgpack_type), x_msgpack_type)) {
 			ct_type_str = X_MSGPACK_CONTENT_TYPE;
 		}
 	}
@@ -2443,7 +2441,7 @@ HttpClient::resolve_ct_type(std::string ct_type_str)
 		ct_types.push_back(ct_type);
 	}
 
-	const auto& accepted_type = get_acceptable_type(ct_types);
+	const auto& accepted_type = get_acceptable_type(request, ct_types);
 	const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
 	if (!accepted_ct_type) {
 		return no_type;
@@ -2492,27 +2490,27 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vect
 
 template <typename T>
 const ct_type_t&
-HttpClient::get_acceptable_type(const T& ct)
+HttpClient::get_acceptable_type(Request& request, const T& ct)
 {
 	L_CALL("HttpClient::get_acceptable_type()");
 
-	if (request->accept_set.empty()) {
-		if (!request->content_type.empty()) request->accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, request->content_type, 0));
-		request->accept_set.insert(std::make_tuple(1, 1, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0));
+	if (request.accept_set.empty()) {
+		if (!request.content_type.empty()) request.accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, request.content_type, 0));
+		request.accept_set.insert(std::make_tuple(1, 1, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0));
 	}
-	for (const auto& accept : request->accept_set) {
+	for (const auto& accept : request.accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct)) {
 			auto indent = std::get<3>(accept);
 			if (indent != -1) {
-				response->indented = indent;
+				request.indented = indent;
 			}
 			return std::get<2>(accept);
 		}
 	}
-	const auto& accept = *request->accept_set.begin();
+	const auto& accept = *request.accept_set.begin();
 	auto indent = std::get<3>(accept);
 	if (indent != -1) {
-		response->indented = indent;
+		request.indented = indent;
 	}
 	return std::get<2>(accept);
 }
@@ -2549,61 +2547,61 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 
 
 void
-HttpClient::write_http_response(enum http_status status, const MsgPack& obj)
+HttpClient::write_http_response(Request& request, Response& response, enum http_status status, const MsgPack& obj)
 {
 	L_CALL("HttpClient::write_http_response()");
 
-	auto type_encoding = resolve_encoding();
+	auto type_encoding = resolve_encoding(request);
 	if (type_encoding == Encoding::unknown && status != HTTP_STATUS_NOT_ACCEPTABLE) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 		};
-		write_http_response(error_code, err_response);
+		write_http_response(request, response, error_code, err_response);
 		return;
 	}
 
 	if (obj.is_undefined()) {
-		write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, request->parser.http_major, request->parser.http_minor));
+		write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, request.parser.http_major, request.parser.http_minor));
 		return;
 	}
 
-	ct_type_t ct_type(request->content_type);
+	ct_type_t ct_type(request.content_type);
 	std::vector<ct_type_t> ct_types;
-	if (ct_type == json_type || ct_type == msgpack_type || request->content_type.empty()) {
+	if (ct_type == json_type || ct_type == msgpack_type || request.content_type.empty()) {
 		ct_types = msgpack_serializers;
 	} else {
 		ct_types.push_back(ct_type);
 	}
-	const auto& accepted_type = get_acceptable_type(ct_types);
+	const auto& accepted_type = get_acceptable_type(request, ct_types);
 
 	try {
-		auto result = serialize_response(obj, accepted_type, response->indented, (int)status >= 400);
+		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
 		if (Logging::log_level > LOG_DEBUG) {
 			if (is_acceptable_type(accepted_type, json_type)) {
-				response->body.append(obj.to_string(4));
+				response.body.append(obj.to_string(4));
 			} else if (is_acceptable_type(accepted_type, msgpack_type)) {
-				response->body.append(obj.to_string(4));
+				response.body.append(obj.to_string(4));
 			} else if (is_acceptable_type(accepted_type, x_msgpack_type)) {
-				response->body.append(obj.to_string(4));
+				response.body.append(obj.to_string(4));
 			} else if (is_acceptable_type(accepted_type, html_type)) {
-				response->body.append(obj.to_string(4));
+				response.body.append(obj.to_string(4));
 			} else if (is_acceptable_type(accepted_type, text_type)) {
-				response->body.append(obj.to_string(4));
+				response.body.append(obj.to_string(4));
 			} else if (!obj.empty()) {
-				response->body.append("...");
+				response.body.append("...");
 			}
 		}
 		if (type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(type_encoding, result.first, false, true, true);
+			auto encoded = encoding_http_response(response, type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
+				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
 			} else {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, result.first, result.second));
+			write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
 		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
@@ -2613,14 +2611,14 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& obj)
 		};
 		auto response_str = response_err.to_string();
 		if (type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(type_encoding, response_str, false, true, true);
+			auto encoded = encoding_http_response(response, type_encoding, response_str, false, true, true);
 			if (!encoded.empty() && encoded.size() <= response_str.size()) {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, readable_encoding(type_encoding)));
+				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, accepted_type.first + "/" + accepted_type.second, readable_encoding(type_encoding)));
 			} else {
-				write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second, readable_encoding(Encoding::identity)));
+				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, request->parser.http_major, request->parser.http_minor, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
+			write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, response_str, accepted_type.first + "/" + accepted_type.second));
 		}
 		return;
 	}
@@ -2628,11 +2626,11 @@ HttpClient::write_http_response(enum http_status status, const MsgPack& obj)
 
 
 Encoding
-HttpClient::resolve_encoding()
+HttpClient::resolve_encoding(Request& request)
 {
 	L_CALL("HttpClient::resolve_encoding()");
 
-	if (request->accept_encoding_set.empty()) {
+	if (request.accept_encoding_set.empty()) {
 		return Encoding::none;
 	} else {
 		constexpr static auto _ = phf::make_phf({
@@ -2642,7 +2640,7 @@ HttpClient::resolve_encoding()
 			hhl("*"),
 		});
 
-		for (const auto& encoding : request->accept_encoding_set) {
+		for (const auto& encoding : request.accept_encoding_set) {
 			switch(_.fhhl(std::get<2>(encoding))) {
 				case _.fhhl("gzip"):
 					return Encoding::gzip;
@@ -2680,7 +2678,7 @@ HttpClient::readable_encoding(Encoding e)
 
 
 std::string
-HttpClient::encoding_http_response(Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
+HttpClient::encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
 {
 	L_CALL("HttpClient::encoding_http_response(%s)", repr(response_obj).c_str());
 
@@ -2691,23 +2689,23 @@ HttpClient::encoding_http_response(Encoding e, const std::string& response_obj, 
 		case Encoding::deflate:
 			if (chunk) {
 				if (start) {
-					response->encoding_compressor.reset(nullptr, 0, gzip);
-					response->encoding_compressor.begin();
+					response.encoding_compressor.reset(nullptr, 0, gzip);
+					response.encoding_compressor.begin();
 				}
 				if (end) {
-					auto ret = response->encoding_compressor.next(response_obj.data(), response_obj.size(), DeflateCompressData::FINISH_COMPRESS);
+					auto ret = response.encoding_compressor.next(response_obj.data(), response_obj.size(), DeflateCompressData::FINISH_COMPRESS);
 					return ret;
 				} else {
-					auto ret = response->encoding_compressor.next(response_obj.data(), response_obj.size());
+					auto ret = response.encoding_compressor.next(response_obj.data(), response_obj.size());
 					return ret;
 				}
 			} else {
-				response->encoding_compressor.reset(response_obj.data(), response_obj.size(), gzip);
-				response->it_compressor = response->encoding_compressor.begin();
+				response.encoding_compressor.reset(response_obj.data(), response_obj.size(), gzip);
+				response.it_compressor = response.encoding_compressor.begin();
 				std::string encoding_respose;
-				while (response->it_compressor) {
-					encoding_respose.append(*response->it_compressor);
-					++response->it_compressor;
+				while (response.it_compressor) {
+					encoding_respose.append(*response.it_compressor);
+					++response.it_compressor;
 				}
 				return encoding_respose;
 			}
@@ -2722,7 +2720,8 @@ HttpClient::encoding_http_response(Encoding e, const std::string& response_obj, 
 
 
 Request::Request(HttpClient* client)
-	: expect_100{false},
+	: indented{-1},
+	  expect_100{false},
 	  log{L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release()}
 {
 	parser.data = client;
@@ -2737,8 +2736,7 @@ Request::~Request()
 
 
 Response::Response()
-	: indented{-1},
-	  status{HTTP_STATUS_OK},
+	: status{HTTP_STATUS_OK},
 	  size{0}
 {
 }
