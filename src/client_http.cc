@@ -567,10 +567,8 @@ HttpClient::run_one(Request& request, Response& response)
 				request.body += b64_request_body.c_str();
 				request.body += '\a';
 			} else {
-				auto body = get_decoded_body(request);
-				auto ct_type = body.first;
-				if (ct_type == json_type || ct_type == msgpack_type) {
-					request.body = body.second.to_string(4);
+				if (request.ct_type() == json_type || request.ct_type() == msgpack_type) {
+					request.body = request.decoded_body().to_string(4);
 				} else if (!request.raw.empty()) {
 					request.body = "<blob " + string::from_bytes(request.raw.size()) + ">";
 				}
@@ -909,67 +907,6 @@ HttpClient::_delete(Request& request, Response& response, enum http_method metho
 }
 
 
-std::pair<ct_type_t, MsgPack>
-HttpClient::get_decoded_body(Request& request)
-{
-	L_CALL("HttpClient::get_decoded_body()");
-
-	if (request.ct_type.empty()) {
-
-		// Create MsgPack object for the body
-		std::string_view ct_type_str = request.content_type;
-		if (ct_type_str.empty()) {
-			ct_type_str = JSON_CONTENT_TYPE;
-		}
-
-		ct_type_t ct_type;
-		MsgPack decoded_body;
-		if (!request.raw.empty()) {
-			rapidjson::Document rdoc;
-			constexpr static auto _ = phf::make_phf({
-				hhl(FORM_URLENCODED_CONTENT_TYPE),
-				hhl(X_FORM_URLENCODED_CONTENT_TYPE),
-				hhl(JSON_CONTENT_TYPE),
-				hhl(MSGPACK_CONTENT_TYPE),
-				hhl(X_MSGPACK_CONTENT_TYPE),
-			});
-			switch (_.fhhl(ct_type_str)) {
-				case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
-				case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
-					try {
-						json_load(rdoc, request.raw);
-						decoded_body = MsgPack(rdoc);
-						ct_type = json_type;
-					} catch (const std::exception&) {
-						decoded_body = MsgPack(request.raw);
-						ct_type = msgpack_type;
-					}
-					break;
-				case _.fhhl(JSON_CONTENT_TYPE):
-					json_load(rdoc, request.raw);
-					decoded_body = MsgPack(rdoc);
-					ct_type = json_type;
-					break;
-				case _.fhhl(MSGPACK_CONTENT_TYPE):
-				case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-					decoded_body = MsgPack::unserialise(request.raw);
-					ct_type = msgpack_type;
-					break;
-				default:
-					decoded_body = MsgPack(request.raw);
-					ct_type = ct_type_t(ct_type_str);
-					break;
-			}
-		}
-
-		request.ct_type = ct_type;
-		request.decoded_body = decoded_body;
-	}
-
-	return std::make_pair(request.ct_type, request.decoded_body);
-}
-
-
 void
 HttpClient::home_view(Request& request, Response& response, enum http_method method, Command)
 {
@@ -1102,8 +1039,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	MsgPack response_obj;
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	bool stored = true;
-	auto body = get_decoded_body(request);
-	response_obj = request.db_handler.index(doc_id, stored, body.second, query_field.commit, body.first).second;
+	response_obj = request.db_handler.index(doc_id, stored, request.decoded_body(), query_field.commit, request.ct_type()).second;
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1129,7 +1065,7 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 	request.processing = std::chrono::system_clock::now();
 
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	request.db_handler.write_schema(get_decoded_body(request).second, method == HTTP_PUT);
+	request.db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1156,12 +1092,11 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 	MsgPack response_obj;
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	auto body = get_decoded_body(request);
 	if (method == HTTP_PATCH) {
-		response_obj = request.db_handler.patch(doc_id, body.second, query_field.commit, body.first).second;
+		response_obj = request.db_handler.patch(doc_id, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	} else {
 		bool stored = true;
-		response_obj = request.db_handler.merge(doc_id, stored, body.second, query_field.commit, body.first).second;
+		response_obj = request.db_handler.merge(doc_id, stored, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1480,9 +1415,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			if (request.raw.empty()) {
 				mset = request.db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
 			} else {
-				auto body = get_decoded_body(request);
-				AggregationMatchSpy aggs(body.second, request.db_handler.get_schema());
-				mset = request.db_handler.get_mset(query_field, &body.second, &aggs, suggestions);
+				AggregationMatchSpy aggs(request.decoded_body(), request.db_handler.get_schema());
+				mset = request.db_handler.get_mset(query_field, &request.decoded_body(), &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 			}
 		}
@@ -2732,6 +2666,59 @@ Request::Request(HttpClient* client)
 Request::~Request()
 {
 	log->clear();
+}
+
+
+void
+Request::_decode()
+{
+	L_CALL("Request::decode()");
+
+	if (_ct_type.empty()) {
+		// Create MsgPack object for the body
+		std::string_view ct_type_str = content_type;
+		if (ct_type_str.empty()) {
+			ct_type_str = JSON_CONTENT_TYPE;
+		}
+
+		if (!raw.empty()) {
+			rapidjson::Document rdoc;
+			constexpr static auto _ = phf::make_phf({
+				hhl(FORM_URLENCODED_CONTENT_TYPE),
+				hhl(X_FORM_URLENCODED_CONTENT_TYPE),
+				hhl(JSON_CONTENT_TYPE),
+				hhl(MSGPACK_CONTENT_TYPE),
+				hhl(X_MSGPACK_CONTENT_TYPE),
+			});
+			switch (_.fhhl(ct_type_str)) {
+				case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
+				case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
+					try {
+						json_load(rdoc, raw);
+						_decoded_body = MsgPack(rdoc);
+						_ct_type = json_type;
+					} catch (const std::exception&) {
+						_decoded_body = MsgPack(raw);
+						_ct_type = msgpack_type;
+					}
+					break;
+				case _.fhhl(JSON_CONTENT_TYPE):
+					json_load(rdoc, raw);
+					_decoded_body = MsgPack(rdoc);
+					_ct_type = json_type;
+					break;
+				case _.fhhl(MSGPACK_CONTENT_TYPE):
+				case _.fhhl(X_MSGPACK_CONTENT_TYPE):
+					_decoded_body = MsgPack::unserialise(raw);
+					_ct_type = msgpack_type;
+					break;
+				default:
+					_decoded_body = MsgPack(raw);
+					_ct_type = ct_type_t(ct_type_str);
+					break;
+			}
+		}
+	}
 }
 
 

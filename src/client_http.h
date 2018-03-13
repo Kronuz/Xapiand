@@ -161,7 +161,8 @@ constexpr static auto http_commands = phf::make_phf({
 });
 
 
-struct Response {
+class Response {
+public:
 	std::string head;
 	std::string headers;
 	std::string body;
@@ -176,7 +177,13 @@ struct Response {
 };
 
 
-struct Request {
+class Request {
+	ct_type_t _ct_type;
+	MsgPack _decoded_body;
+
+	void _decode();
+
+public:
 	std::string _header_name;
 	std::string _header_value;
 
@@ -191,12 +198,11 @@ struct Request {
 	std::string body;
 
 	std::string raw;
-	ct_type_t ct_type;
-	MsgPack decoded_body;
 
-	int indented;
 	std::string content_type;
 	std::string content_length;
+
+	int indented;
 	bool expect_100;
 
 	std::string host;
@@ -215,6 +221,16 @@ struct Request {
 
 	~Request();
 	Request(class HttpClient* client);
+
+	const ct_type_t& ct_type() {
+		_decode();
+		return _ct_type;
+	}
+
+	const MsgPack& decoded_body() {
+		_decode();
+		return _decoded_body;
+	}
 };
 
 
@@ -245,8 +261,6 @@ class HttpClient : public BaseClient {
 	int on_info(http_parser* p);
 	static int _on_data(http_parser* p, const char* at, size_t length);
 	int on_data(http_parser* p, const char* at, size_t length);
-
-	std::pair<ct_type_t, MsgPack> get_decoded_body(Request& request);
 
 	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void info_view(Request& request, Response& response, enum http_method method, Command cmd);
