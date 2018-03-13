@@ -273,12 +273,10 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	unsigned init_state = parser.state;
 
 	if (received <= 0) {
-		response_log.load()->clear();
 		if (received < 0 || init_state != 18 || !write_queue.empty()) {
 			L_WARNING("Client unexpectedly closed the other end! [%d]", init_state);
-			destroy();  // Handle error. Just close the connection.
-			detach();
 		}
+		response_log.load()->clear();
 		clean_http_request();
 		return;
 	}

@@ -270,7 +270,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	: Worker(std::move(server_), ev_loop_, ev_flags_),
 	  io_read(*ev_loop),
 	  io_write(*ev_loop),
-	  update_async(*ev_loop),
+	  write_start_async(*ev_loop),
 	  read_start_async(*ev_loop),
 	  idle(false),
 	  shutting_down(false),
@@ -281,19 +281,19 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
-	update_async.set<BaseClient, &BaseClient::update_async_cb>(this);
-	update_async.start();
+	write_start_async.set<BaseClient, &BaseClient::write_start_async_cb>(this);
+	write_start_async.start();
 	L_EV("Start async update event");
 
 	read_start_async.set<BaseClient, &BaseClient::read_start_async_cb>(this);
 	read_start_async.start();
 	L_EV("Start async read start event");
 
-	io_read.set<BaseClient, &BaseClient::io_cb>(this);
+	io_read.set<BaseClient, &BaseClient::io_cb_read>(this);
 	io_read.start(sock, ev::READ);
 	L_EV("Start read event");
 
-	io_write.set<BaseClient, &BaseClient::io_cb>(this);
+	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
 	L_EV("Setup write event");
 
@@ -362,7 +362,7 @@ BaseClient::stop()
 	read_start_async.stop();
 	L_EV("Stop async read start event");
 
-	update_async.stop();
+	write_start_async.stop();
 	L_EV("Stop async update event");
 
 	write_queue.finish();
@@ -385,62 +385,6 @@ BaseClient::close()
 	}
 
 	L_OBJ("CLOSED BASE CLIENT!");
-}
-
-
-void
-BaseClient::io_cb_update()
-{
-	L_CALL("BaseClient::io_cb_update()");
-
-	if (sock != -1) {
-		if (write_queue.empty()) {
-			if (closed) {
-				destroy();
-				detach();
-			} else {
-				io_write.stop();
-				L_EV("Disable write event");
-			}
-		} else {
-			io_write.start();
-			L_EV("Enable write event");
-
-			if (sock == -1) stop();
-		}
-	}
-}
-
-
-void
-BaseClient::io_cb(ev::io &watcher, int revents)
-{
-	int fd = watcher.fd;
-
-	L_CALL("BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_DEBUG_HOOK("BaseClient::io_cb", "BaseClient::io_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-
-	if (revents & EV_ERROR) {
-		L_ERR("ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));
-		destroy();
-		detach();
-	}
-
-	assert(sock == fd || sock == -1);
-
-	L_EV_BEGIN("BaseClient::io_cb:BEGIN");
-
-	if (revents & EV_WRITE) {
-		io_cb_write(fd);
-	}
-
-	if (revents & EV_READ) {
-		io_cb_read(fd);
-	}
-
-	io_cb_update();
-
-	L_EV_END("BaseClient::io_cb:END");
 }
 
 
@@ -546,7 +490,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 	switch (_write(fd)) {
 		case WR::RETRY:
 		case WR::PENDING:
-			update_async.send();
+			write_start_async.send();
 		case WR::OK:
 			return true;
 		default:
@@ -557,159 +501,225 @@ BaseClient::write(const char *buf, size_t buf_size)
 
 
 void
-BaseClient::io_cb_write(int fd)
+BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
-	L_CALL("BaseClient::io_cb_write(%d)", fd);
+	int fd = watcher.fd;
+	assert(sock == fd || sock == -1);
+
+	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+
+	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
+
+	if (revents & EV_ERROR) {
+		L_ERR("ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));
+		destroy();
+		detach();
+		L_EV_END("BaseClient::io_cb_write:END");
+		return;
+	}
 
 	_write(fd);
+
+	write_queue.empty([&](bool empty) {
+		if (empty) {
+			io_write.stop();
+			L_EV("Disable write event");
+		}
+	});
+
+	if (closed) {
+		destroy();
+		detach();
+	}
+
+	L_EV_END("BaseClient::io_cb_write:END");
 }
 
 
 void
-BaseClient::io_cb_read(int fd)
+BaseClient::io_cb_read(ev::io &watcher, int revents)
 {
-	L_CALL("BaseClient::io_cb_read(%d)", fd);
+	int fd = watcher.fd;
+	assert(sock == fd || sock == -1);
 
-	if (!closed) {
-		ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
-		const char *buf_end = read_buffer + received;
-		const char *buf_data = read_buffer;
+	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
 
-		if (received < 0) {
-			if (ignored_errorno(errno, true, false)) {
-				L_CONN("Ignored error: {fd:%d} - %d: %s", fd, errno, strerror(errno));
-				return;
-			} else {
-				if (errno != ECONNRESET) {
-					L_ERR("ERROR: read error {fd:%d} - %d: %s", fd, errno, strerror(errno));
-					destroy();
-					detach();
-					return;
-				}
-			}
-		}
+	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 
-		if (received <= 0) {
-			// The peer has closed its half side of the connection.
-			L_CONN("Received %s {fd:%d}!", (received == 0) ? "EOF" : "ECONNRESET", fd);
-			on_read(nullptr, received);
-			destroy();
-			detach();
+	if (revents & EV_ERROR) {
+		L_ERR("ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));
+		destroy();
+		detach();
+		L_EV_END("BaseClient::io_cb_read:END");
+		return;
+	}
+
+	ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
+
+	if (received < 0) {
+		if (ignored_errorno(errno, true, false)) {
+			L_CONN("Ignored error: {fd:%d} - %d: %s", fd, errno, strerror(errno));
+			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
 
-		L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500).c_str(), received);
-
-		if (mode == MODE::READ_FILE_TYPE) {
-			switch (*buf_data++) {
-				case *NO_COMPRESSOR:
-					L_CONN("Receiving uncompressed file {fd:%d}...", fd);
-					decompressor = std::make_unique<ClientNoDecompressor>(this);
-					break;
-				case *LZ4_COMPRESSOR:
-					L_CONN("Receiving LZ4 compressed file {fd:%d}...", fd);
-					decompressor = std::make_unique<ClientLZ4Decompressor>(this);
-					break;
-				default:
-					L_CONN("Received wrong file mode {fd:%d}!", fd);
-					destroy();
-					detach();
-					return;
-			}
-			--received;
-			length_buffer.clear();
-			mode = MODE::READ_FILE;
+		if (errno == ECONNRESET) {
+			L_CONN("Received ECONNRESET {fd:%d}!", fd);
+			on_read(nullptr, received);
+			destroy();
+			detach();
+			L_EV_END("BaseClient::io_cb_read:END");
+			return;
 		}
 
-		if (received && mode == MODE::READ_FILE) {
-			do {
-				if (file_size == -1) {
-					if (buf_data) {
-						length_buffer.append(buf_data, received);
-					}
-					buf_data = length_buffer.data();
+		L_ERR("ERROR: read error {fd:%d} - %d: %s", fd, errno, strerror(errno));
+		on_read(nullptr, received);
+		destroy();
+		detach();
+		L_EV_END("BaseClient::io_cb_read:END");
+		return;
+	}
 
-					buf_end = buf_data + length_buffer.size();
-					try {
-						file_size = unserialise_length(&buf_data, buf_end, false);
-					} catch (Xapian::SerialisationError) {
+	if (received == 0) {
+		// The peer has closed its half side of the connection.
+		L_CONN("Received EOF {fd:%d}!", fd);
+		on_read(nullptr, received);
+		destroy();
+		detach();
+		L_EV_END("BaseClient::io_cb_read:END");
+		return;
+	}
+
+	const char *buf_data = read_buffer;
+	const char *buf_end = read_buffer + received;
+	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500).c_str(), received);
+
+	if (mode == MODE::READ_FILE_TYPE) {
+		switch (*buf_data++) {
+			case *NO_COMPRESSOR:
+				L_CONN("Receiving uncompressed file {fd:%d}...", fd);
+				decompressor = std::make_unique<ClientNoDecompressor>(this);
+				break;
+			case *LZ4_COMPRESSOR:
+				L_CONN("Receiving LZ4 compressed file {fd:%d}...", fd);
+				decompressor = std::make_unique<ClientLZ4Decompressor>(this);
+				break;
+			default:
+				L_CONN("Received wrong file mode {fd:%d}!", fd);
+				destroy();
+				detach();
+				L_EV_END("BaseClient::io_cb_read:END");
+				return;
+		}
+		--received;
+		length_buffer.clear();
+		mode = MODE::READ_FILE;
+	}
+
+	if (received && mode == MODE::READ_FILE) {
+		do {
+			if (file_size == -1) {
+				if (buf_data) {
+					length_buffer.append(buf_data, received);
+				}
+				buf_data = length_buffer.data();
+
+				buf_end = buf_data + length_buffer.size();
+				try {
+					file_size = unserialise_length(&buf_data, buf_end, false);
+				} catch (Xapian::SerialisationError) {
+					L_EV_END("BaseClient::io_cb_read:END");
+					return;
+				}
+
+				if (receive_checksum) {
+					receive_checksum = false;
+					if (decompressor->verify(static_cast<uint32_t>(file_size))) {
+						on_read_file_done();
+						mode = MODE::READ_BUF;
+						decompressor.reset();
+						break;
+					} else {
+						L_ERR("Data is corrupt!");
+						L_EV_END("BaseClient::io_cb_read:END");
 						return;
 					}
-
-					if (receive_checksum) {
-						receive_checksum = false;
-						if (decompressor->verify(static_cast<uint32_t>(file_size))) {
-							on_read_file_done();
-							mode = MODE::READ_BUF;
-							decompressor.reset();
-							break;
-						} else {
-							L_ERR("Data is corrupt!");
-							return;
-						}
-					}
-
-					block_size = file_size;
-					decompressor->clear();
 				}
 
-				const char *file_buf_to_write;
-				size_t block_size_to_write;
-				size_t buf_left_size = buf_end - buf_data;
-				if (block_size < buf_left_size) {
-					file_buf_to_write = buf_data;
-					block_size_to_write = block_size;
-					buf_data += block_size;
-					received = buf_left_size - block_size;
-				} else {
-					file_buf_to_write = buf_data;
-					block_size_to_write = buf_left_size;
+				block_size = file_size;
+				decompressor->clear();
+			}
+
+			const char *file_buf_to_write;
+			size_t block_size_to_write;
+			size_t buf_left_size = buf_end - buf_data;
+			if (block_size < buf_left_size) {
+				file_buf_to_write = buf_data;
+				block_size_to_write = block_size;
+				buf_data += block_size;
+				received = buf_left_size - block_size;
+			} else {
+				file_buf_to_write = buf_data;
+				block_size_to_write = buf_left_size;
+				buf_data = nullptr;
+				received = 0;
+			}
+
+			if (block_size_to_write) {
+				decompressor->append(file_buf_to_write, block_size_to_write);
+				block_size -= block_size_to_write;
+			}
+
+			if (file_size == 0) {
+				decompressor->clear();
+				decompressor->decompress();
+				receive_checksum = true;
+			} else if (block_size == 0) {
+				decompressor->decompress();
+				if (buf_data) {
+					length_buffer = std::string(buf_data, received);
 					buf_data = nullptr;
 					received = 0;
+				} else {
+					length_buffer.clear();
 				}
-
-				if (block_size_to_write) {
-					decompressor->append(file_buf_to_write, block_size_to_write);
-					block_size -= block_size_to_write;
-				}
-
-				if (file_size == 0) {
-					decompressor->clear();
-					decompressor->decompress();
-					receive_checksum = true;
-				} else if (block_size == 0) {
-					decompressor->decompress();
-					if (buf_data) {
-						length_buffer = std::string(buf_data, received);
-						buf_data = nullptr;
-						received = 0;
-					} else {
-						length_buffer.clear();
-					}
-				}
-				file_size = -1;
-			} while (file_size == -1);
-		}
-
-		if (received && mode == MODE::READ_BUF) {
-			on_read(buf_data, received);
-		}
+			}
+			file_size = -1;
+		} while (file_size == -1);
 	}
+
+	if (received && mode == MODE::READ_BUF) {
+		on_read(buf_data, received);
+	}
+
+	if (closed) {
+		destroy();
+		detach();
+	}
+
+	L_EV_END("BaseClient::io_cb_read:END");
 }
 
 
 void
-BaseClient::update_async_cb(ev::async&, int revents)
+BaseClient::write_start_async_cb(ev::async&, int revents)
 {
-	L_CALL("BaseClient::update_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("BaseClient::update_async_cb:BEGIN");
+	L_EV_BEGIN("BaseClient::write_start_async_cb:BEGIN");
 
-	io_cb_update();
+	if (sock != -1) {
+		if (!closed) {
+			io_write.start();
+			L_EV("Enable write event [%d]", io_write.is_active());
+		}
+	}
 
-	L_EV_END("BaseClient::update_async_cb:END");
+	L_EV_END("BaseClient::write_start_async_cb:END");
 }
 
 
@@ -726,8 +736,6 @@ BaseClient::read_start_async_cb(ev::async&, int revents)
 		if (!closed) {
 			io_read.start();
 			L_EV("Enable read event [%d]", io_read.is_active());
-
-			if (sock == -1) stop();
 		}
 	}
 

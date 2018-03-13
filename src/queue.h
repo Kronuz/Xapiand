@@ -308,6 +308,14 @@ namespace queue {
 			}
 		}
 
+		template <typename F>
+		bool empty(F f) {
+			std::lock_guard<std::mutex> lk(_state->_mutex);
+			auto empty = _items_queue.empty();
+			f(empty);
+			return empty;
+		}
+
 		bool empty() {
 			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.empty();

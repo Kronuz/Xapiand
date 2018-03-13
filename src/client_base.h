@@ -124,7 +124,7 @@ public:
 protected:
 	ev::io io_read;
 	ev::io io_write;
-	ev::async update_async;
+	ev::async write_start_async;
 	ev::async read_start_async;
 
 	std::atomic_bool idle;
@@ -146,19 +146,14 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
-	void update_async_cb(ev::async &watcher, int revents);
+	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);
 
-	void io_cb_update();
-
-	// Generic callback
-	void io_cb(ev::io &watcher, int revents);
-
 	// Receive message from client socket
-	void io_cb_read(int fd);
+	void io_cb_read(ev::io &watcher, int revents);
 
 	// Socket is writable
-	void io_cb_write(int fd);
+	void io_cb_write(ev::io &watcher, int revents);
 
 	WR write_directly(int fd);
 
