@@ -66,7 +66,6 @@ class Worker;
 #define HTTP_OPTIONS_RESPONSE           (1 << 7)
 #define HTTP_TOTAL_COUNT_RESPONSE       (1 << 8)
 #define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 9)
-#define HTTP_EXPECTED_CONTINUE_RESPONSE (1 << 10)
 
 
 template <typename T>
@@ -161,6 +160,64 @@ constexpr static auto http_commands = phf::make_phf({
 	#undef OPTION
 });
 
+
+struct Response {
+	std::string head;
+	std::string headers;
+	std::string body;
+
+	int indented;
+	enum http_status status;
+	size_t size;
+
+	DeflateCompressData encoding_compressor;
+	DeflateCompressData::iterator it_compressor;
+
+	Response();
+};
+
+
+struct Request {
+	std::string _header_name;
+	std::string _header_value;
+
+	accept_set_t accept_set;
+	accept_encoding_t accept_encoding_set;
+
+	std::string path;
+	struct http_parser parser;
+
+	std::string head;
+	std::string headers;
+	std::string body;
+
+	std::string raw;
+	ct_type_t ct_type;
+	MsgPack decoded_body;
+
+	std::string content_type;
+	std::string content_length;
+	bool expect_100;
+
+	std::string host;
+
+	PathParser path_parser;
+	QueryParser query_parser;
+	DatabaseHandler db_handler;
+
+	std::shared_ptr<Logging> log;
+
+	std::chrono::time_point<std::chrono::system_clock> begins;
+	std::chrono::time_point<std::chrono::system_clock> received;
+	std::chrono::time_point<std::chrono::system_clock> processing;
+	std::chrono::time_point<std::chrono::system_clock> ready;
+	std::chrono::time_point<std::chrono::system_clock> ends;
+
+	~Request();
+	Request(class HttpClient* client);
+};
+
+
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	enum class Command : uint32_t {
@@ -174,65 +231,24 @@ class HttpClient : public BaseClient {
 
 	Command getCommand(std::string_view command_name);
 
-	struct http_parser parser;
-	DatabaseHandler db_handler;
-
 	void on_read(const char* buf, ssize_t received) override;
 	void on_read_file(const char* buf, ssize_t received) override;
 	void on_read_file_done() override;
 
 	static const http_parser_settings settings;
 
-	accept_set_t accept_set;
-	accept_encoding_t accept_encoding_set;
+	Request new_request;
+	std::mutex requests_mutex;
+	std::deque<Request> requests;
+	Request* request;
+	Response* response;
 
-	PathParser path_parser;
-	QueryParser query_parser;
+	static int _on_info(http_parser* p);
+	int on_info(http_parser* p);
+	static int _on_data(http_parser* p, const char* at, size_t length);
+	int on_data(http_parser* p, const char* at, size_t length);
 
-	int indent;
-	std::unique_ptr<query_field_t> query_field;
-
-	enum http_status response_status;
-	size_t response_size;
-	atomic_shared_ptr<Logging> response_log;
-	std::atomic_bool response_logged;
-
-	std::string path;
-	std::string body;
-	std::string header_name;
-	std::string header_value;
-
-	std::string request_head;
-	std::string request_headers;
-	std::string request_body;
-	std::string response_head;
-	std::string response_headers;
-	std::string response_body;
-
-	size_t body_size;
-	std::vector<std::string> index_paths;
-
-	std::string content_type;
-	std::string content_length;
-	bool expect_100 = false;
-
-	DeflateCompressData encoding_compressor;
-	DeflateCompressData::iterator it_compressor;
-
-	std::string host;
-
-	bool request_begining;
-	std::chrono::time_point<std::chrono::system_clock> request_begins;
-	std::chrono::time_point<std::chrono::system_clock> response_begins;
-	std::chrono::time_point<std::chrono::system_clock> operation_begins;
-	std::chrono::time_point<std::chrono::system_clock> operation_ends;
-	std::chrono::time_point<std::chrono::system_clock> response_ends;
-
-	static int on_info(http_parser* p);
-	static int on_data(http_parser* p, const char* at, size_t length);
-
-	std::pair<ct_type_t, MsgPack> decoded_body;
-	std::pair<ct_type_t, MsgPack>& get_decoded_body();
+	std::pair<ct_type_t, MsgPack> get_decoded_body();
 
 	void home_view(enum http_method method, Command cmd);
 	void info_view(enum http_method method, Command cmd);
@@ -268,7 +284,7 @@ class HttpClient : public BaseClient {
 	Command url_resolve();
 	void _endpoint_maker(std::chrono::duration<double, std::milli> timeout);
 	void endpoints_maker(std::chrono::duration<double, std::milli> timeout);
-	void query_field_maker(int flags);
+	query_field_t query_field_maker(int flags);
 
 	void log_request();
 	void log_response();
@@ -300,5 +316,6 @@ public:
 
 	~HttpClient();
 
+	void run_one();
 	void run() override;
 };

@@ -178,7 +178,6 @@ struct ct_type_t {
 		}
 	}
 
-
 	bool operator==(const ct_type_t& other) const noexcept {
 		return first == other.first && second == other.second;
 	}
