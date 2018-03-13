@@ -81,10 +81,10 @@ protected:
 
 	const int cmpBuf_size;
 
-	char* const cmpBuf;
-	char* const buffer;
+	const std::unique_ptr<char[]> cmpBuf;
+	const std::unique_ptr<char[]> buffer;
 
-	XXH32_state_t* xxh_state;
+	XXH32_state_t xxh_state;
 
 	inline std::string _init() {
 		return static_cast<Impl*>(this)->init();
@@ -97,7 +97,7 @@ protected:
 	inline void _reset(int seed) {
 		_size = 0;
 		_offset = 0;
-		XXH32_reset(xxh_state, seed);
+		XXH32_reset(&xxh_state, seed);
 	}
 
 public:
@@ -105,22 +105,15 @@ public:
 		: _size(0),
 		  _offset(0),
 		  cmpBuf_size(LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)),
-		  cmpBuf((char*)malloc(cmpBuf_size)),
-		  buffer((char*)malloc(LZ4_RING_BUFFER_BYTES)),
-		  xxh_state(XXH32_createState())
+		  cmpBuf(std::make_unique<char[]>(cmpBuf_size)),
+		  buffer(std::make_unique<char[]>(LZ4_RING_BUFFER_BYTES))
 	{
-		XXH32_reset(xxh_state, seed);
+		XXH32_reset(&xxh_state, seed);
 	}
 
 	// This class is not CopyConstructible or CopyAssignable.
 	LZ4BlockStreaming(const LZ4BlockStreaming&) = delete;
 	LZ4BlockStreaming& operator=(const LZ4BlockStreaming&) = delete;
-
-	~LZ4BlockStreaming() {
-		free(cmpBuf);
-		free(buffer);
-		XXH32_freeState(xxh_state);
-	}
 
 	class iterator : public std::iterator<std::input_iterator_tag, LZ4BlockStreaming> {
 		LZ4BlockStreaming* obj;
@@ -215,7 +208,7 @@ public:
 	}
 
 	inline uint32_t get_digest() {
-		return XXH32_digest(xxh_state);
+		return XXH32_digest(&xxh_state);
 	}
 };
 
@@ -254,6 +247,7 @@ class LZ4CompressData : public LZ4Data, public LZ4BlockStreaming<LZ4CompressData
 
 public:
 	LZ4CompressData(const char* data_=nullptr, size_t data_size_=0, int seed_=0);
+
 	~LZ4CompressData();
 
 	inline void reset(const char* data_, size_t data_size_, int seed=0) {
@@ -277,6 +271,7 @@ class LZ4DecompressData : public LZ4Data, public LZ4BlockStreaming<LZ4Decompress
 
 public:
 	LZ4DecompressData(const char* data_=nullptr, size_t data_size_=0, int seed=0);
+
 	~LZ4DecompressData();
 
 	inline void reset(const char* data_, size_t data_size_, int seed=0) {
@@ -363,7 +358,9 @@ class LZ4CompressFile : public LZ4File, public LZ4BlockStreaming<LZ4CompressFile
 
 public:
 	LZ4CompressFile(std::string_view filename, int seed=0);
+
 	LZ4CompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
+
 	~LZ4CompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
@@ -397,7 +394,9 @@ class LZ4DecompressFile : public LZ4File, public LZ4BlockStreaming<LZ4Decompress
 
 public:
 	LZ4DecompressFile(std::string_view filename, int seed=0);
+
 	LZ4DecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
+
 	~LZ4DecompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {

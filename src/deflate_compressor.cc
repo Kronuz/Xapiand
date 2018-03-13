@@ -134,10 +134,10 @@ DeflateCompressData::next()
 	std::string result;
 	do {
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
-		strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
+		strm.next_out = reinterpret_cast<Bytef*>(&cmpBuf[0]);
 		stream = deflate(&strm, flush);    // no bad return value
 		int compress_size = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(cmpBuf, compress_size);
+		result.append(&cmpBuf[0], compress_size);
 	} while (strm.avail_out == 0);
 
 	data_offset += DEFLATE_BLOCK_SIZE;
@@ -206,13 +206,13 @@ DeflateDecompressData::next()
 	std::string result;
 	do {
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
-		strm.next_out = reinterpret_cast<Bytef*>(buffer);
+		strm.next_out = reinterpret_cast<Bytef*>(&buffer[0]);
 		stream = inflate(&strm, Z_NO_FLUSH);
 		if (stream < 0 && stream != Z_BUF_ERROR) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(buffer, bytes_decompressed);
+		result.append(&buffer[0], bytes_decompressed);
 	} while (strm.avail_out == 0);
 
 	data_offset += DEFLATE_BLOCK_SIZE;
@@ -276,7 +276,7 @@ DeflateCompressFile::init()
 std::string
 DeflateCompressFile::next()
 {
-	int inpBytes = static_cast<int>(io::read(fd, buffer, DEFLATE_BLOCK_SIZE));
+	int inpBytes = static_cast<int>(io::read(fd, &buffer[0], DEFLATE_BLOCK_SIZE));
 	if (inpBytes <= 0) {
 		if (stream == Z_STREAM_END) {
 			state = DeflateState::END;
@@ -296,13 +296,13 @@ DeflateCompressFile::next()
 	}
 
 	std::string result;
-	strm.next_in = reinterpret_cast<Bytef*>(buffer);
+	strm.next_in = reinterpret_cast<Bytef*>(&buffer[0]);
 	do {
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
-		strm.next_out = reinterpret_cast<Bytef*>(cmpBuf);
+		strm.next_out = reinterpret_cast<Bytef*>(&cmpBuf[0]);
 		stream = deflate(&strm, flush);    /* no bad return value */
 		auto bytes_compressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(cmpBuf, bytes_compressed);
+		result.append(&cmpBuf[0], bytes_compressed);
 	} while (strm.avail_out == 0);
 
 	return result;
@@ -357,7 +357,7 @@ DeflateDecompressFile::init()
 std::string
 DeflateDecompressFile::next()
 {
-	int inpBytes = io::read(fd, cmpBuf, DEFLATE_BLOCK_SIZE);
+	int inpBytes = io::read(fd, &cmpBuf[0], DEFLATE_BLOCK_SIZE);
 	if (inpBytes <= 0) {
 		if (stream == Z_STREAM_END) {
 			state = DeflateState::END;
@@ -367,18 +367,18 @@ DeflateDecompressFile::next()
 		}
 	}
 	strm.avail_in = inpBytes;
-	strm.next_in = reinterpret_cast<Bytef*>(cmpBuf);
+	strm.next_in = reinterpret_cast<Bytef*>(&cmpBuf[0]);
 
 	std::string result;
 	do {
 		strm.avail_out = DEFLATE_BLOCK_SIZE;
-		strm.next_out = reinterpret_cast<Bytef*>(buffer);
+		strm.next_out = reinterpret_cast<Bytef*>(&buffer[0]);
 		stream = inflate(&strm, Z_NO_FLUSH);
 		if (stream < 0 && stream != Z_BUF_ERROR) {
 			THROW(DeflateException, zerr(stream));
 		}
 		auto bytes_decompressed = DEFLATE_BLOCK_SIZE - strm.avail_out;
-		result.append(buffer, bytes_decompressed);
+		result.append(&buffer[0], bytes_decompressed);
 	} while (strm.avail_out == 0);
 
 	return result;

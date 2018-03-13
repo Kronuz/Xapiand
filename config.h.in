@@ -270,4 +270,7 @@
 #cmakedefine XAPIAND_UUID_GUID @XAPIAND_UUID_GUID@
 #cmakedefine XAPIAND_UUID_URN @XAPIAND_UUID_URN@
 
+/* Enable xxh static linking structures */
+#define XXH_STATIC_LINKING_ONLY 1
+
 #endif /*  _CONFIG_H_ */

@@ -61,10 +61,12 @@ protected:
 	z_stream strm;
 	int stream;
 
-	DeflateState state;
 	const int cmpBuf_size;
-	char* const cmpBuf;
-	char* const buffer;
+
+	const std::unique_ptr<char[]> cmpBuf;
+	const std::unique_ptr<char[]> buffer;
+
+	DeflateState state;
 
 	inline std::string _init() {
 		return static_cast<Impl*>(this)->init();
@@ -78,19 +80,14 @@ public:
 	explicit DeflateBlockStreaming(bool gzip_)
 		: gzip(gzip_),
 		  stream(0),
-		  state(DeflateState::NONE),
 		  cmpBuf_size(DEFLATE_BLOCK_SIZE),
-		  cmpBuf((char*)malloc(cmpBuf_size)),
-		  buffer((char*)malloc(DEFLATE_BLOCK_SIZE)) { }
+		  cmpBuf(std::make_unique<char[]>(cmpBuf_size)),
+		  buffer(std::make_unique<char[]>(DEFLATE_BLOCK_SIZE)),
+		  state(DeflateState::NONE) { }
 
-	// This class is not CopyConstructible or CopyAssignable.
-	DeflateBlockStreaming(const DeflateBlockStreaming&) = delete;
-	DeflateBlockStreaming& operator=(const DeflateBlockStreaming&) = delete;
-
-	~DeflateBlockStreaming() {
-		free(cmpBuf);
-		free(buffer);
-	}
+	// // This class is not CopyConstructible or CopyAssignable.
+	// DeflateBlockStreaming(const DeflateBlockStreaming&) = delete;
+	// DeflateBlockStreaming& operator=(const DeflateBlockStreaming&) = delete;
 
 	class iterator : public std::iterator<std::input_iterator_tag, DeflateBlockStreaming> {
 		DeflateBlockStreaming* obj;
@@ -213,6 +210,7 @@ class DeflateCompressData : public DeflateData, public DeflateBlockStreaming<Def
 
 public:
 	DeflateCompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip_=false);
+
 	~DeflateCompressData();
 
 	std::string init();
@@ -240,6 +238,7 @@ class DeflateDecompressData : public DeflateData, public DeflateBlockStreaming<D
 
 public:
 	DeflateDecompressData(const char* data_=nullptr, size_t data_size_=0, bool gzip_=false);
+
 	~DeflateDecompressData();
 
 	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
@@ -317,7 +316,9 @@ class DeflateCompressFile : public DeflateFile, public DeflateBlockStreaming<Def
 
 public:
 	DeflateCompressFile(std::string_view filename, bool gzip_=false);
+
 	DeflateCompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
+
 	~DeflateCompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
@@ -345,7 +346,9 @@ class DeflateDecompressFile : public DeflateFile, public DeflateBlockStreaming<D
 
 public:
 	DeflateDecompressFile(std::string_view filename, bool gzip_=false);
+
 	DeflateDecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, bool gzip_=false);
+
 	~DeflateDecompressFile();
 
 	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {

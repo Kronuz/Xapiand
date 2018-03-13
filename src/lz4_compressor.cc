@@ -86,7 +86,7 @@ LZ4CompressData::next()
 	memcpy(inpPtr, data + data_offset, inpBytes);
 	data_offset += inpBytes;
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
@@ -97,7 +97,7 @@ LZ4CompressData::next()
 		_offset = 0;
 	}
 
-	XXH32_update(xxh_state, inpPtr, inpBytes);
+	XXH32_update(&xxh_state, inpPtr, inpBytes);
 	size_t totalBytes = sizeof(uint16_t) + cmpBytes;
 	_size += totalBytes;
 
@@ -105,7 +105,7 @@ LZ4CompressData::next()
 	std::string result;
 	result.reserve(totalBytes);
 	result.append(reinterpret_cast<const char*>(&num_bytes), sizeof(uint16_t));
-	result.append(cmpBuf, cmpBytes);
+	result.append(&cmpBuf[0], cmpBytes);
 
 	return result;
 }
@@ -150,11 +150,11 @@ LZ4DecompressData::next()
 		THROW(LZ4CorruptVolume, "Data is corrupt");
 	}
 
-	read_bin(data + data_offset, cmpBuf, cmpBytes);
+	read_bin(data + data_offset, &cmpBuf[0], cmpBytes);
 	data_offset += cmpBytes;
 
 	char* const decPtr = &buffer[_offset];
-	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, LZ4_BLOCK_SIZE);
+	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, &cmpBuf[0], decPtr, cmpBytes, LZ4_BLOCK_SIZE);
 	if (decBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_decompress_safe_continue failed!");
 	}
@@ -165,7 +165,7 @@ LZ4DecompressData::next()
 		_offset = 0;
 	}
 
-	XXH32_update(xxh_state, decPtr, decBytes);
+	XXH32_update(&xxh_state, decPtr, decBytes);
 	_size += decBytes;
 
 	std::string result;
@@ -215,7 +215,7 @@ LZ4CompressFile::next()
 		return std::string();
 	}
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
@@ -226,7 +226,7 @@ LZ4CompressFile::next()
 		_offset = 0;
 	}
 
-	XXH32_update(xxh_state, inpPtr, inpBytes);
+	XXH32_update(&xxh_state, inpPtr, inpBytes);
 	size_t totalBytes = sizeof(uint16_t) + cmpBytes;
 	_size += totalBytes;
 
@@ -234,7 +234,7 @@ LZ4CompressFile::next()
 	std::string result;
 	result.reserve(totalBytes);
 	result.append(reinterpret_cast<const char*>(&num_bytes), sizeof(uint16_t));
-	result.append(cmpBuf, cmpBytes);
+	result.append(&cmpBuf[0], cmpBytes);
 
 	return result;
 }
@@ -310,19 +310,19 @@ LZ4DecompressFile::next()
 
 	res_size = data_size - data_offset;
 	if (cmpBytes > res_size) {
-		read_partial_bin(data + data_offset, cmpBuf, res_size);
+		read_partial_bin(data + data_offset, &cmpBuf[0], res_size);
 		data_offset = cmpBytes - res_size;
 		if ((data_size = io::read(fd, data, get_read_size())) < static_cast<ssize_t>(data_offset)) {
 			THROW(LZ4CorruptVolume, "File is corrupt");
 		}
-		read_partial_bin(data, cmpBuf, data_offset, res_size);
+		read_partial_bin(data, &cmpBuf[0], data_offset, res_size);
 	} else {
-		read_bin(data + data_offset, cmpBuf, cmpBytes);
+		read_bin(data + data_offset, &cmpBuf[0], cmpBytes);
 		data_offset += cmpBytes;
 	}
 
 	char* const decPtr = &buffer[_offset];
-	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, LZ4_BLOCK_SIZE);
+	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, &cmpBuf[0], decPtr, cmpBytes, LZ4_BLOCK_SIZE);
 	if (decBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_decompress_safe_continue failed!");
 	}
@@ -333,7 +333,7 @@ LZ4DecompressFile::next()
 		_offset = 0;
 	}
 
-	XXH32_update(xxh_state, decPtr, decBytes);
+	XXH32_update(&xxh_state, decPtr, decBytes);
 	_size += decBytes;
 
 	std::string result;
