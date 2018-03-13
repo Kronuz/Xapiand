@@ -132,13 +132,12 @@ protected:
 	std::atomic_bool closed;
 	std::atomic_int sock;
 	int written;
-	std::string length_buffer;
 
 	std::unique_ptr<ClientDecompressor> decompressor;
-	char *read_buffer;
 
 	MODE mode;
 	ssize_t file_size;
+	std::string file_buffer;
 	size_t block_size;
 	bool receive_checksum;
 

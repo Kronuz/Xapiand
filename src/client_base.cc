@@ -277,7 +277,6 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 	  closed(false),
 	  sock(sock_),
 	  written(0),
-	  read_buffer(new char[BUF_SIZE]),
 	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
@@ -309,8 +308,6 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref*
 BaseClient::~BaseClient()
 {
 	destroyer();
-
-	delete []read_buffer;
 
 	int total_clients = --XapiandServer::total_clients;
 	if (total_clients < 0) {
@@ -556,6 +553,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		return;
 	}
 
+	char read_buffer[BUF_SIZE];
 	ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
 
 	if (received < 0) {
@@ -614,7 +612,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 				return;
 		}
 		--received;
-		length_buffer.clear();
+		file_buffer.clear();
 		mode = MODE::READ_FILE;
 	}
 
@@ -622,11 +620,11 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		do {
 			if (file_size == -1) {
 				if (buf_data) {
-					length_buffer.append(buf_data, received);
+					file_buffer.append(buf_data, received);
 				}
-				buf_data = length_buffer.data();
+				buf_data = file_buffer.data();
+				buf_end = buf_data + file_buffer.size();
 
-				buf_end = buf_data + length_buffer.size();
 				try {
 					file_size = unserialise_length(&buf_data, buf_end, false);
 				} catch (Xapian::SerialisationError) {
@@ -679,11 +677,11 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 			} else if (block_size == 0) {
 				decompressor->decompress();
 				if (buf_data) {
-					length_buffer = std::string(buf_data, received);
+					file_buffer.assign(buf_data, received);
 					buf_data = nullptr;
 					received = 0;
 				} else {
-					length_buffer.clear();
+					file_buffer.clear();
 				}
 			}
 			file_size = -1;
