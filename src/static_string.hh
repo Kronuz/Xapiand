@@ -213,8 +213,8 @@ public:
 
 template <std::size_t N_PLUS_1>
 constexpr static auto
-string(const char (&data)[N_PLUS_1]) {
-	return string_literal_ref<N_PLUS_1 - 1>(data);
+string(const char (&s)[N_PLUS_1]) {
+	return string_literal_ref<N_PLUS_1 - 1>(s);
 }
 
 constexpr static auto
@@ -224,8 +224,13 @@ string(const char ch) {
 
 // template <std::size_t N>
 // constexpr static auto
-// string(const char* p, std::size_t size) {
-// 	return string_char_array<N>(p, size);
+// string(const char* s, std::size_t size) {
+// 	return string_char_array<N>(s, size);
+// }
+
+// constexpr static auto
+// operator"" _ss(const char* s, std::size_t size) {
+// 	return string(s, size);
 // }
 
 
