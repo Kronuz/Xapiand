@@ -182,7 +182,7 @@ public:
 static signals_t<arraySize(sys_siglist)> signals;
 
 
-void sig_info(int) {
+void toggle_hooks(int) {
 	if (logger_info_hook) {
 		logger_info_hook = 0;
 		if (is_tty) {
@@ -208,11 +208,11 @@ void sig_handler(int sig) {
 		close(STDIN_FILENO);
 	}
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
-	if (sig == SIGINFO) {
-		sig_info(sig);
-	}
-#endif
+// #if defined(__APPLE__) || defined(__FreeBSD__)
+// 	if (sig == SIGINFO) {
+// 		toggle_hooks(sig);
+// 	}
+// #endif
 
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
