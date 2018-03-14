@@ -572,6 +572,7 @@ RemoteProtocol::msg_keepalive(const std::string &)
 
 	// Ensure *our* database stays alive, as it may contain remote databases!
 	db->keep_alive();
+
 	client->checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
@@ -670,6 +671,7 @@ RemoteProtocol::msg_doclength(const std::string &message)
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
+
 	client->checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
@@ -686,6 +688,7 @@ RemoteProtocol::msg_uniqueterms(const std::string &message)
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
+
 	client->checkin_database();
 
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(db->get_unique_terms(did)));
