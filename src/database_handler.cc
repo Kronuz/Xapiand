@@ -1046,8 +1046,6 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 {
 	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(e.query, " & ")).c_str(), qdsl ? repr(qdsl->to_string()).c_str() : "null");
 
-	MSet mset;
-
 	schema = get_schema();
 
 	Xapian::Query query;
@@ -1125,6 +1123,8 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 		fuzzy_edecider = get_edecider(e.fuzzy);
 		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 	}
+
+	MSet mset;
 
 	lock_database lk_db(this);
 	for (int t = DB_RETRIES; t >= 0; --t) {

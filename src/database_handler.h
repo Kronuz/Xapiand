@@ -51,25 +51,85 @@ class SchemasLRU;
 Xapian::docid to_docid(std::string_view document_id);
 
 
-class MSet : public Xapian::MSet {
+// MSet is a thin wrapper, as Xapian::MSet keeps enquire->db references; this
+// only keeps a set of Xapian::docid internally (mostly) so it's thread safe
+// across database checkouts.
+class MSet {
+	struct MSetItem {
+		Xapian::docid did;
+		Xapian::doccount rank;
+		double weight;
+		int percent;
+
+		MSetItem(const Xapian::MSetIterator& it) {
+			did = *it;
+			rank = it.get_rank();
+			weight = it.get_weight();
+			percent = it.get_percent();
+		}
+	};
+
+	using items_t = std::vector<MSetItem>;
+
+	class MSetIterator {
+		items_t::const_iterator it;
+
+	public:
+		MSetIterator(items_t::const_iterator&& it) : it{std::move(it)} { }
+
+		auto operator*() const {
+			return it->did;
+		}
+
+		auto operator++() {
+			return ++it;
+		}
+
+		auto operator!=(const MSetIterator& mit) {
+			return it != mit.it;
+		}
+
+		auto get_rank() const {
+			return it->rank;
+		}
+
+		auto get_weight() const {
+			return it->weight;
+		}
+
+		auto get_percent() const {
+			return it->percent;
+		}
+	};
+
+	items_t items;
+	Xapian::doccount matches_estimated;
+
 public:
 	MSet() = default;
-	MSet(const MSet& o) : Xapian::MSet(o) { }
-	MSet(const Xapian::MSet& o) : Xapian::MSet(o) { }
+	MSet(const Xapian::MSet& mset) {
+		auto it_end = mset.end();
+		for (auto it = mset.begin(); it != it_end; ++it) {
+			items.push_back(it);
+		}
+		matches_estimated = mset.get_matches_estimated();
+	}
 
-	// The following either use enquire or db (db could have changed)
-	Xapian::doccount get_termfreq(std::string_view term) const = delete;
-	double get_termweight(std::string_view term) const = delete;
-	std::string snippet(std::string_view text,
-			size_t length = 500,
-			const Xapian::Stem& stemmer = Xapian::Stem(),
-			unsigned flags = SNIPPET_BACKGROUND_MODEL | SNIPPET_EXHAUSTIVE,
-			std::string_view hi_start = "<b>",
-			std::string_view hi_end = "</b>",
-			std::string_view omit = "...") const = delete;
-	void fetch(const Xapian::MSetIterator& begin, const Xapian::MSetIterator& end) const = delete;
-	void fetch(const Xapian::MSetIterator& item) const = delete;
-	void fetch() const = delete;
+	std::size_t size() const {
+		return items.size();
+	}
+
+	Xapian::doccount get_matches_estimated() const {
+		return matches_estimated;
+	}
+
+	auto begin() const {
+		return MSetIterator(items.begin());
+	}
+
+	auto end() const {
+		return MSetIterator(items.end());
+	}
 };
 
 
