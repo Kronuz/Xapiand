@@ -22,6 +22,8 @@
 
 #include "worker.h"
 
+#include <thread>
+
 #include "ignore_unused.h"
 #include "log.h"
 #include "utils.h"
@@ -166,7 +168,7 @@ Worker::_gather_children()
 #define L_WORKER L_NOTHING
 #endif
 
-bool
+void
 Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 {
 	L_CALL("Worker::_detach_impl(<weak_child>) [%s]", __repr__().c_str());
@@ -178,29 +180,32 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 	long child_use_count;
 #endif
 
-	if (auto child = weak_child.lock()) {
-		if (child->_runner && child->ev_loop->depth()) {
-			L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-			return false;
+	for (int i = 10; i >= 0; --i) {
+		if (auto child = weak_child.lock()) {
+			if (child->_runner && child->ev_loop->depth()) {
+				if (!i) L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+				std::this_thread::yield();
+				continue;
+			}
+			__detach(child);
+	#ifdef LOG_WORKER
+			child_repr = child->__repr__();
+			child_use_count = child.use_count();
+	#endif
+		} else {
+			break;  // It was already detached
 		}
-		__detach(child);
-#ifdef LOG_WORKER
-		child_repr = child->__repr__();
-		child_use_count = child.use_count();
-#endif
-	} else {
-		// It was already detached
-		return true;
-	}
 
-	if (auto child = weak_child.lock()) {
-		__attach(child);
-		L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-		return false;
-	}
+		if (auto child = weak_child.lock()) {
+			__attach(child);
+			if (!i) L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+			std::this_thread::yield();
+			continue;
+		}
 
-	L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-	return true;
+		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+		break;
+	}
 }
 
 
