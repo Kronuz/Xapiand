@@ -191,7 +191,7 @@ void sig_info(int) {
 			::write(STDERR_FILENO, "Info hooks disabled!\n");
 		}
 	} else {
-		logger_info_hook = -1ULL;
+		logger_info_hook = fnv1ah32::hash("");
 		if (is_tty) {
 			::write(STDERR_FILENO, STEEL_BLUE + "Info hooks enabled!" + CLEAR_COLOR + "\n");
 		} else {
