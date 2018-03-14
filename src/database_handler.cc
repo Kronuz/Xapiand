@@ -734,6 +734,11 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 {
 	L_CALL("DatabaseHandler::get_rset(...)");
 
+	lock_database lk_db(this);
+
+	// Xapian::RSet only keeps a set of Xapian::docid internally,
+	// so it's thread safe across database checkouts.
+
 	Xapian::RSet rset;
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -741,8 +746,8 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 			Xapian::Enquire enquire(*database->db);
 			enquire.set_query(query);
 			auto mset = enquire.get_mset(0, maxitems);
-			for (const auto& doc : mset) {
-				rset.add_document(doc);
+			for (const auto& did : mset) {
+				rset.add_document(did);
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -1111,7 +1116,6 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	Xapian::RSet nearest_rset;
 	if (e.is_nearest) {
 		nearest_edecider = get_edecider(e.nearest);
-		lock_database lk_db(this);
 		nearest_rset = get_rset(query, e.nearest.n_rset);
 	}
 
@@ -1119,7 +1123,6 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (e.is_fuzzy) {
 		fuzzy_edecider = get_edecider(e.fuzzy);
-		lock_database lk_db(this);
 		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 	}
 
