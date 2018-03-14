@@ -194,13 +194,11 @@ public:
 
 
 class Document {
-	Xapian::Document doc;
-	mutable uint64_t _hash;
+	Xapian::docid did;
 
 	DatabaseHandler* db_handler;
-	std::shared_ptr<Database> database;
 
-	void update();
+	Xapian::Document get_document();
 
 public:
 	Document();

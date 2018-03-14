@@ -1695,58 +1695,50 @@ DatabaseHandler::dec_document_change_cnt(std::string_view term_id)
  */
 
 Document::Document()
-	: _hash(0),
-	  db_handler(nullptr) { }
+	: db_handler(nullptr) { }
 
 
 Document::Document(const Xapian::Document& doc_, uint64_t hash_)
-	: doc(doc_),
-	  _hash(hash_),
+	: did(doc_.get_docid()),
 	  db_handler(nullptr) { }
 
 
 Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_, uint64_t hash_)
-	: doc(doc_),
-	  _hash(hash_),
-	  db_handler(db_handler_),
-	  database(db_handler->database) { }
+	: did(doc_.get_docid()),
+	  db_handler(db_handler_) { }
 
 
 Document::Document(const Document& doc_)
-	: doc(doc_.doc),
-	  _hash(doc_._hash),
-	  db_handler(doc_.db_handler),
-	  database(doc_.database) { }
+	: did(doc_.did),
+	  db_handler(doc_.db_handler) { }
 
 
 Document&
 Document::operator=(const Document& doc_)
 {
-	doc = doc_.doc;
-	_hash = doc_._hash;
+	did = doc_.did;
 	db_handler = doc_.db_handler;
-	database = doc_.database;
 	return *this;
 }
 
 
-void
-Document::update()
+Xapian::Document
+Document::get_document()
 {
-	L_CALL("Document::update()");
+	L_CALL("Document::get_document()");
 
-	if (db_handler && db_handler->database && database != db_handler->database) {
-		doc = db_handler->database->get_document(doc.get_docid());
-		_hash = 0;
-		database = db_handler->database;
+	Xapian::Document doc;
+	if (db_handler && db_handler->database) {
+		doc = db_handler->database->get_document(did, true);
 	}
+	return doc;
 }
 
 
 Xapian::docid
 Document::get_docid()
 {
-	return doc.get_docid();
+	return did;
 }
 
 
@@ -1757,7 +1749,7 @@ Document::serialise(size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 		return doc.serialise();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
@@ -1776,7 +1768,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 		return doc.get_value(slot);
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
@@ -1795,7 +1787,7 @@ Document::get_data(size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 		return doc.get_data();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
@@ -1814,7 +1806,7 @@ Document::get_blob(size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 #ifdef XAPIAND_DATA_STORAGE
 		if (db_handler) {
 			return db_handler->database->storage_get_blob(doc);
@@ -1841,7 +1833,7 @@ Document::get_terms(size_t retries)
 		MsgPack terms;
 
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 
 		// doc.termlist_count() disassociates the database in doc.
 
@@ -1882,7 +1874,7 @@ Document::get_values(size_t retries)
 		MsgPack values;
 
 		lock_database lk_db(db_handler);
-		update();
+		auto doc = get_document();
 
 		values.reserve(doc.values_count());
 		const auto iv_e = doc.values_end();
@@ -1967,29 +1959,31 @@ Document::hash(size_t retries)
 {
 	try {
 		lock_database lk_db(db_handler);
-		update();
 
-		if (_hash == 0) {
-			// Add hash of values
-			const auto iv_e = doc.values_end();
-			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-				_hash ^= xxh64::hash(*iv) * iv.get_valueno();
-			}
+		auto doc = get_document();
 
-			// Add hash of terms
-			const auto it_e = doc.termlist_end();
-			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-				_hash ^= xxh64::hash(*it) * it.get_wdf();
-				const auto pit_e = it.positionlist_end();
-				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-					_hash ^= *pit;
-				}
-			}
+		uint64_t hash = 0;
 
-			// Add hash of data
-			_hash ^= xxh64::hash(doc.get_data());
+		// Add hash of values
+		const auto iv_e = doc.values_end();
+		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+			hash ^= xxh64::hash(*iv) * iv.get_valueno();
 		}
-		return _hash;
+
+		// Add hash of terms
+		const auto it_e = doc.termlist_end();
+		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+			hash ^= xxh64::hash(*it) * it.get_wdf();
+			const auto pit_e = it.positionlist_end();
+			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+				hash ^= *pit;
+			}
+		}
+
+		// Add hash of data
+		hash ^= xxh64::hash(doc.get_data());
+
+		return hash;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries) {
 			return hash(--retries);
