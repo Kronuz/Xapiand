@@ -104,3 +104,28 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 }'
 curl -XGET "http://localhost:8880/test/A/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
 curl -XGET "http://localhost:8880/test/A/::1" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+
+
+
+//
+
+curl -XPUT "http://localhost:8880/test/feed_cache/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"~notmet": {
+		"roles": [
+			"myself",
+			"any"
+		]
+	}
+}'
+curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"~3pZyPcFqGq": {
+		"roles": [
+			"myself",
+			"any"
+		]
+	}
+}'
+curl -XGET "http://localhost:8880/test/feed_cache/:info/A?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+curl -XGET "http://localhost:8880/test/feed_cache/:info/B?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
