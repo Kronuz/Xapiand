@@ -249,8 +249,12 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	unsigned init_state = new_request.parser.state;
 
 	if (received <= 0) {
-		if (received < 0 || init_state != 18 || !write_queue.empty()) {
-			L_WARNING("Client unexpectedly closed the other end! [%d]", init_state);
+		if (received < 0) {
+			L_WARNING("Connection unexpectedly closed after %s: %d - %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()).c_str(), errno, strerror(errno));
+		} else if (init_state != 18) {
+			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()).c_str(), init_state);
+		} else if (!write_queue.empty()) {
+			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()).c_str());
 		}
 		return;
 	}
@@ -2659,7 +2663,8 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 Request::Request(HttpClient* client)
 	: indented{-1},
 	  expect_100{false},
-	  log{L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release()}
+	  log{L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release()},
+	  begins{std::chrono::system_clock::now()}
 {
 	parser.data = client;
 	http_parser_init(&parser, HTTP_REQUEST);

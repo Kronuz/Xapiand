@@ -472,6 +472,8 @@ BaseClient::write(const char *buf, size_t buf_size)
 {
 	L_CALL("BaseClient::write(<buf>, %lu)", buf_size);
 
+	assert(buf_size);
+
 	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
