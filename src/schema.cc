@@ -2481,8 +2481,10 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 	const auto data = std::dynamic_pointer_cast<const FedSpecification>(properties->get_data());
 	if (data) {
 		auto local_prefix_uuid = specification.local_prefix.uuid;
+		auto prefix = specification.prefix;
 		specification = data->specification;
-		specification.local_prefix.uuid.assign(local_prefix_uuid);
+		specification.prefix = prefix;
+		specification.local_prefix.uuid = local_prefix_uuid;
 		return true;
 	}
 
