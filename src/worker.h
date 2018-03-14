@@ -56,6 +56,7 @@ private:
 	std::recursive_mutex _mtx;
 	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
+	std::atomic_int _detaching_retries;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -76,6 +77,7 @@ protected:
 		  _detach_children_async(*ev_loop),
 		  _runner(false),
 		  _detaching(false),
+		  _detaching_retries(0),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
@@ -111,7 +113,7 @@ private:
 	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
-	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
+	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
 	auto _ancestor(int levels=-1);
 	void _detach_children();
 
@@ -138,8 +140,8 @@ public:
 	void break_loop();
 
 	void destroy();
-	void detach();
-	void redetach();
+	void detach(int retries = 3);
+	void redetach(int retries = 3);
 
 	void run_loop();
 
