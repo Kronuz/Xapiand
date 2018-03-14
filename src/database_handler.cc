@@ -1695,7 +1695,8 @@ DatabaseHandler::dec_document_change_cnt(std::string_view term_id)
  */
 
 Document::Document()
-	: db_handler(nullptr) { }
+	: did(0),
+	  db_handler(nullptr) { }
 
 
 Document::Document(const Xapian::Document& doc_)
