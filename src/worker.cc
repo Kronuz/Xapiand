@@ -160,41 +160,47 @@ Worker::_gather_children()
 }
 
 
-void
+#ifdef L_WORKER
+#define LOG_WORKER
+#else
+#define L_WORKER L_NOTHING
+#endif
+
+bool
 Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 {
 	L_CALL("Worker::_detach_impl(<weak_child>) [%s]", __repr__().c_str());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
-#ifdef L_WORKER
+#ifdef LOG_WORKER
 	std::string child_repr;
 	long child_use_count;
 #endif
 
 	if (auto child = weak_child.lock()) {
 		if (child->_runner && child->ev_loop->depth()) {
-#ifdef L_WORKER
 			L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-#endif
-			return;
+			return false;
 		}
 		__detach(child);
-#ifdef L_WORKER
+#ifdef LOG_WORKER
 		child_repr = child->__repr__();
 		child_use_count = child.use_count();
 #endif
 	} else {
-		return;
+		// It was already detached
+		return true;
 	}
+
 	if (auto child = weak_child.lock()) {
 		__attach(child);
-#ifdef L_WORKER
 		L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-	} else {
-		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
-#endif
+		return false;
 	}
+
+	L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+	return true;
 }
 
 

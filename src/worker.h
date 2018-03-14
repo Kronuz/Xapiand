@@ -111,7 +111,7 @@ private:
 	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
-	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
+	bool _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	auto _ancestor(int levels=-1);
 	void _detach_children();
 
