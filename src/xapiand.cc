@@ -202,6 +202,8 @@ void toggle_hooks(int) {
 
 
 void sig_handler(int sig) {
+	int old_errno = errno; // save errno because write will clobber it
+
 	signals.write(STDERR_FILENO, sig);
 
 	if (sig == SIGTERM || sig == SIGINT) {
@@ -217,6 +219,8 @@ void sig_handler(int sig) {
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
 	}
+
+	errno = old_errno;
 }
 
 
