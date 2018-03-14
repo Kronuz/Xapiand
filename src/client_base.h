@@ -48,35 +48,27 @@ class LZ4CompressFile;
 //
 
 class Buffer {
-	size_t len;
-	char *data;
+	std::string data;
 
 public:
 	size_t pos;
 	char type;
 
 	Buffer(char type_, const char *bytes, size_t nbytes)
-		: len(nbytes),
-		  data(new char [len]),
+		: data(bytes, nbytes),
 		  pos(0),
 		  type(type_)
-	{
-		memcpy(data, bytes, len);
-	}
+	{ }
 
 	Buffer(const Buffer&) = delete;
 	Buffer& operator=(const Buffer&) = delete;
 
-	virtual ~Buffer() {
-		delete [] data;
-	}
-
 	const char *dpos() {
-		return data + pos;
+		return data.data() + pos;
 	}
 
 	size_t nbytes() {
-		return len - pos;
+		return data.size() - pos;
 	}
 };
 
