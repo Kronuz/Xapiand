@@ -1375,7 +1375,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	auto query_field = query_field_maker(request, id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
 
 	bool single = !id.empty() && !isRange(id);
-	Xapian::docid did = 0;
 
 	MSet mset;
 	std::vector<std::string> suggestions;
@@ -1409,7 +1408,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 		if (single) {
 			try {
-				did = request.db_handler.get_docid(id);
+				mset = request.db_handler.get_docid(id);
 			} catch (const DocNotFoundError&) { }
 		} else {
 			if (request.raw.empty()) {
@@ -1437,7 +1436,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}().to_string().c_str());
 
 	int rc = 0;
-	auto total_count = did ? 1 : mset.size();
+	auto total_count = mset.size();
 
 	if (single && !total_count) {
 		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
@@ -1536,8 +1535,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		std::string buffer;
 		std::string l_buffer;
 		const auto m_e = mset.end();
-		for (auto m = mset.begin(); did || m != m_e; ++rc, ++m) {
-			auto document = request.db_handler.get_document(did ? did : *m);
+		for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
+			auto document = request.db_handler.get_document(*m);
 
 			const auto data = document.get_data();
 			if (data.empty()) {
