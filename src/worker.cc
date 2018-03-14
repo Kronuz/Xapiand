@@ -175,7 +175,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 	if (auto child = weak_child.lock()) {
 		if (child->_runner && child->ev_loop->depth()) {
 #ifdef L_WORKER
-			L_WORKER(LIGHT_RED "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+			L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 #endif
 			return;
 		}
@@ -190,9 +190,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 	if (auto child = weak_child.lock()) {
 		__attach(child);
 #ifdef L_WORKER
-		L_WORKER(BROWN "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+		L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 	} else {
-		L_WORKER(FOREST_GREEN "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
 #endif
 	}
 }

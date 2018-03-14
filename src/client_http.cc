@@ -671,7 +671,7 @@ HttpClient::run()
 {
 	L_CALL("HttpClient::run()");
 
-	L_CONN("Start running in worker.");
+	L_CONN("Start running in worker...");
 
 	idle = false;
 
@@ -696,6 +696,8 @@ HttpClient::run()
 	}
 
 	idle = true;
+
+	L_CONN("Running in worker ended.");
 }
 
 
