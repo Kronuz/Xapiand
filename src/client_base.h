@@ -37,6 +37,7 @@
 #include "threadpool.h"  // for Task
 #include "worker.h"      // for Worker
 
+// #define L_CONN L_DEBUG
 
 class BaseServer;
 class LZ4CompressFile;

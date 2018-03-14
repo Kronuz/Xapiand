@@ -49,6 +49,7 @@
 #include "url_parser.h"         // for PathParser, QueryParser
 #include "hashes.hh"            // for fnv1ah32
 
+// #define L_CONN L_DEBUG
 
 class UUIDGenerator;
 class HttpServer;
