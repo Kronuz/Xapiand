@@ -363,7 +363,7 @@ HttpClient::on_info(http_parser* parser)
 			new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
 			break;
 		case 50:  // headers done
-			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path.c_str());
+			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path.c_str(), parser->http_major, parser->http_minor);
 			if (new_request.expect_100) {
 				// Return 100 if client is expecting it
 				Response response;
