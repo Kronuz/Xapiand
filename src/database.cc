@@ -2048,7 +2048,7 @@ DatabasesLRU::DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState
 
 
 std::shared_ptr<DatabaseQueue>&
-DatabasesLRU::get(size_t hash, bool volatile_)
+DatabasesLRU::get(size_t hash, bool db_volatile)
 {
 	const auto now = std::chrono::system_clock::now();
 
@@ -2081,7 +2081,7 @@ DatabasesLRU::get(size_t hash, bool volatile_)
 		return lru::DropAction::stop;
 	};
 
-	if (volatile_) {
+	if (db_volatile) {
 		// Volatile, insert default on the back
 		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(_queue_state)).first->second;
 	} else {
@@ -2197,18 +2197,18 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		return string::join(values, " | ");
 	}().c_str());
 
-	bool writable = flags & DB_WRITABLE;
-	bool writable_for_commit = (flags & DB_COMMIT) == DB_COMMIT;
-	bool persistent = flags & DB_PERSISTENT;
-	bool initref = flags & DB_INIT_REF;
-	bool replication = flags & DB_REPLICATION;
-	bool _volatile = flags & DB_VOLATILE;
+	bool db_writable = flags & DB_WRITABLE;
+	bool db_commit = (flags & DB_COMMIT) == DB_COMMIT;
+	bool db_persistent = flags & DB_PERSISTENT;
+	bool db_init_ref = flags & DB_INIT_REF;
+	bool db_replication = flags & DB_REPLICATION;
+	bool db_volatile = flags & DB_VOLATILE;
 
-	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
+	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 
 	assert(!database);
 
-	if (writable && endpoints.size() != 1) {
+	if (db_writable && endpoints.size() != 1) {
 		L_ERR("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()).c_str());
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()).c_str());
 	}
@@ -2220,21 +2220,21 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		std::unique_lock<std::mutex> lk(qmtx);
 
-		if (writable) {
-			queue = writable_databases.get(hash, _volatile);
+		if (db_writable) {
+			queue = writable_databases.get(hash, db_volatile);
 			databases.cleanup();
-			if (writable_for_commit && !queue->modified) {
-				L_DATABASE_END("!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
+			if (db_commit && !queue->modified) {
+				L_DATABASE_END("!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
-			queue = databases.get(hash, _volatile);
+			queue = databases.get(hash, db_volatile);
 			writable_databases.cleanup();
 		}
 
 		auto old_state = queue->state;
 
-		if (replication) {
+		if (db_replication) {
 			switch (queue->state) {
 				case DatabaseQueue::replica_state::REPLICA_FREE:
 					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
@@ -2242,7 +2242,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION("A replication task is already waiting");
-					L_DATABASE_END("!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
+					L_DATABASE_END("!! ABORTED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()).c_str());
 					THROW(CheckoutErrorReplicating, "Cannot checkout database: %s (aborted)", repr(endpoints.to_string()).c_str());
 			}
 		} else {
@@ -2252,11 +2252,11 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 
 		bool old_persistent = queue->persistent;
-		queue->persistent = persistent;
+		queue->persistent = db_persistent;
 
 		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
-			if (queue->inc_count(writable ? 1 : -1)) {
+			if (queue->inc_count(db_writable ? 1 : -1)) {
 #ifdef XAPIAND_DATABASE_WAL
 				size_t count = queue->count;
 #endif
@@ -2264,12 +2264,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
 
-					if (writable && initref) {
+					if (db_writable && db_init_ref) {
 						DatabaseHandler::init_ref(endpoints[0]);
 					}
 
 #ifdef XAPIAND_DATABASE_WAL
-					if (!writable && count == 1 && !(flags & DB_NOWAL)) {
+					if (!db_writable && count == 1 && !(flags & DB_NOWAL)) {
 						bool reopen = false;
 						for (const auto& endpoint : database->endpoints) {
 							if (endpoint.is_local()) {
@@ -2309,7 +2309,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue->persistent = old_persistent;
 			if (queue->count == 0) {
 				//L_DEBUG("There is a error, the queue ended up being empty, remove it");
-				if (writable) {
+				if (db_writable) {
 					writable_databases.erase(hash);
 				} else {
 					databases.erase(hash);
@@ -2320,24 +2320,24 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}
 
 	if (!database) {
-		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
 		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoints.to_string()).c_str());
 	}
 
-	if (!writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
+	if (!db_writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		try {
 			database->reopen();
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
 			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
 			database.reset();
-			L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s (reopen)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
+			L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s (reopen)", db_writable ? "WR" : "WR", repr(endpoints.to_string()).c_str());
 			THROW(CheckoutError, "Cannot checkout database: %s (reopen)", repr(endpoints.to_string()).c_str());
 		}
 		L_DATABASE("== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()).c_str());
 	}
 
-	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), database->checkout_revision);
+	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", db_writable ? "WR" : "WR", repr(endpoints.to_string()).c_str(), database->checkout_revision);
 }
 
 

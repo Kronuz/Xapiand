@@ -405,7 +405,7 @@ class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 public:
 	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
-	std::shared_ptr<DatabaseQueue>& get(size_t hash, bool volatile_);
+	std::shared_ptr<DatabaseQueue>& get(size_t hash, bool db_volatile);
 
 	void cleanup();
 
