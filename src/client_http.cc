@@ -708,7 +708,7 @@ HttpClient::_options(Request& request, Response& response, enum http_method)
 {
 	L_CALL("HttpClient::_options()");
 
-	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE, request.parser.http_major, request.parser.http_minor));
+	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
 }
 
 
@@ -1656,12 +1656,12 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 						auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
 						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						if (!encoded.empty()) {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 						}
 					} else {
 						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
 						if (!first_chunk.empty()) {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, first_chunk));
 						}
 					}
 				}
@@ -1671,11 +1671,11 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 						if (!encoded.empty()) {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 						}
 					} else {
 						if (!indented_buffer.empty()) {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, indented_buffer));
 						}
 					}
 				}
@@ -1705,12 +1705,12 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 					auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
 					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 					if (!encoded.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 					}
 				} else {
 					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.first + "/" + ct_type.second));
 					if (!first_chunk.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, first_chunk));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, first_chunk));
 					}
 				}
 			}
@@ -1720,11 +1720,11 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 					if (!encoded.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 					}
 				} else {
 					if (!indented_buffer.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, indented_buffer));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, indented_buffer));
 					}
 				}
 			}
@@ -1733,11 +1733,11 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(response, type_encoding, last_chunk, true, false, true);
 					if (!encoded.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, encoded));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 					}
 				} else {
 					if (!last_chunk.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, 0, 0, last_chunk));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, last_chunk));
 					}
 				}
 			}
@@ -2500,7 +2500,7 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 	}
 
 	if (obj.is_undefined()) {
-		write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, request.parser.http_major, request.parser.http_minor));
+		write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE));
 		return;
 	}
 
