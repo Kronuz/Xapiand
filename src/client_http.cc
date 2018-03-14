@@ -1391,7 +1391,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	try {
 		request.db_handler.reset(endpoints, db_flags, method);
 
-		if (query_field.volatile_) {
+		if (query_field.as_volatile) {
 			if (endpoints.size() != 1) {
 				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 				MsgPack err_response = {
@@ -1964,10 +1964,10 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 	if (flags & QUERY_FIELD_ID || flags & QUERY_FIELD_SEARCH) {
 		if (request.query_parser.next("volatile") != -1) {
-			query_field.volatile_ = true;
+			query_field.as_volatile = true;
 			if (request.query_parser.len) {
 				try {
-					query_field.volatile_ = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.as_volatile = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
