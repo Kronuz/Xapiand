@@ -202,8 +202,8 @@ class Document {
 
 public:
 	Document();
-	Document(const Xapian::Document& doc_, uint64_t hash_=0);
-	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_, uint64_t hash_=0);
+	Document(const Xapian::Document& doc_);
+	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
 
 	Document(const Document& doc_);
 	Document& operator=(const Document& doc_);

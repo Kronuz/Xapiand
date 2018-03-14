@@ -1698,12 +1698,12 @@ Document::Document()
 	: db_handler(nullptr) { }
 
 
-Document::Document(const Xapian::Document& doc_, uint64_t hash_)
+Document::Document(const Xapian::Document& doc_)
 	: did(doc_.get_docid()),
 	  db_handler(nullptr) { }
 
 
-Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_, uint64_t hash_)
+Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
 	: did(doc_.get_docid()),
 	  db_handler(db_handler_) { }
 
