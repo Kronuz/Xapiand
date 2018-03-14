@@ -698,6 +698,8 @@ HttpClient::run()
 	idle = true;
 
 	L_CONN("Running in worker ended.");
+
+	redetach();  // try re-detaching if already detaching
 }
 
 

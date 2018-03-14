@@ -354,6 +354,19 @@ Worker::detach()
 
 
 void
+Worker::redetach()
+{
+	L_CALL("Worker::redetach() [%s]", __repr__().c_str());
+
+	// Needs to be run at the end of Workers's run(), to try re-detaching
+
+	if (_detaching) {
+		_ancestor(1)->_detach_children();
+	}
+}
+
+
+void
 Worker::run_loop()
 {
 	L_CALL("Worker::run_loop() [%s]", __repr__().c_str());
