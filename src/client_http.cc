@@ -68,11 +68,12 @@
 #include "hashes.hh"                        // for fnv1ah32
 
 
-#define QUERY_FIELD_COMMIT (1 << 0)
-#define QUERY_FIELD_SEARCH (1 << 1)
-#define QUERY_FIELD_ID     (1 << 2)
-#define QUERY_FIELD_TIME   (1 << 3)
-#define QUERY_FIELD_PERIOD (1 << 4)
+#define QUERY_FIELD_COMMIT     (1 << 0)
+#define QUERY_FIELD_SEARCH     (1 << 1)
+#define QUERY_FIELD_ID         (1 << 2)
+#define QUERY_FIELD_TIME       (1 << 3)
+#define QUERY_FIELD_PERIOD     (1 << 4)
+#define QUERY_FIELD_VOLATILE   (1 << 5)
 
 
 // Reserved words only used in the responses to the user.
@@ -1128,7 +1129,23 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 	endpoints_maker(request, 2s);
 
 	MsgPack response_obj;
-	request.db_handler.reset(endpoints, DB_OPEN, method);
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (query_field.as_volatile) {
+		if (endpoints.size() != 1) {
+			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
+			};
+			write_http_response(request, response, error_code, err_response);
+			return;
+		}
+		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+	} else {
+		request.db_handler.reset(endpoints, DB_OPEN, method);
+		request.db_handler.reopen();  // Ensure the database is current.
+	}
 
 	std::string selector;
 	auto key = request.path_parser.get_pmt();
@@ -1209,7 +1226,22 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_OPEN, method);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (query_field.as_volatile) {
+		if (endpoints.size() != 1) {
+			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
+			};
+			write_http_response(request, response, error_code, err_response);
+			return;
+		}
+		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+	} else {
+		request.db_handler.reset(endpoints, DB_OPEN, method);
+		request.db_handler.reopen();  // Ensure the database is current.
+	}
 
 	// There's no path, we're at root so we get the server's info
 	if (!request.path_parser.off_pth) {
@@ -1269,7 +1301,7 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	request.db_handler.reopen();  // Ensure touch.
 
@@ -1291,7 +1323,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE|DB_SPAWN, method);
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	request.db_handler.commit();  // Ensure touch.
 
@@ -1320,7 +1352,22 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_OPEN, method);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (query_field.as_volatile) {
+		if (endpoints.size() != 1) {
+			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
+			};
+			write_http_response(request, response, error_code, err_response);
+			return;
+		}
+		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+	} else {
+		request.db_handler.reset(endpoints, DB_OPEN, method);
+		request.db_handler.reopen();  // Ensure the database is current.
+	}
 
 	auto schema = request.db_handler.get_schema()->get_full(true);
 	if (!selector.empty()) {
@@ -1343,7 +1390,22 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method meth
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_OPEN, method);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (query_field.as_volatile) {
+		if (endpoints.size() != 1) {
+			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
+			};
+			write_http_response(request, response, error_code, err_response);
+			return;
+		}
+		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+	} else {
+		request.db_handler.reset(endpoints, DB_OPEN, method);
+		request.db_handler.reopen();  // Ensure the database is current.
+	}
 
 	auto repr = request.db_handler.repr_wal(0, -1);
 
@@ -1376,21 +1438,17 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	endpoints_maker(request, 1s);
-	auto query_field = query_field_maker(request, id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 
 	bool single = !id.empty() && !isRange(id);
 
 	MSet mset;
 	std::vector<std::string> suggestions;
 
-	int db_flags = DB_OPEN;
-
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack aggregations;
 	try {
-		request.db_handler.reset(endpoints, db_flags, method);
-
 		if (query_field.as_volatile) {
 			if (endpoints.size() != 1) {
 				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
@@ -1401,14 +1459,11 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				write_http_response(request, response, error_code, err_response);
 				return;
 			}
-			try {
-				// Try the commit may have been done by some other thread and volatile should always get the latest.
-				DatabaseHandler commit_handler(endpoints, db_flags | DB_COMMIT, method);
-				commit_handler.commit();
-			} catch (const CheckoutErrorCommited&) { }
+			request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		} else {
+			request.db_handler.reset(endpoints, DB_OPEN, method);
+			request.db_handler.reopen();  // Ensure the database is current.
 		}
-
-		request.db_handler.reopen();  // Ensure the database is current.
 
 		if (single) {
 			try {
@@ -1962,7 +2017,7 @@ HttpClient::query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 	}
 
-	if (flags & QUERY_FIELD_ID || flags & QUERY_FIELD_SEARCH) {
+	if (flags & QUERY_FIELD_VOLATILE) {
 		if (request.query_parser.next("volatile") != -1) {
 			query_field.as_volatile = true;
 			if (request.query_parser.len) {
@@ -1972,7 +2027,9 @@ HttpClient::query_field_maker(Request& request, int flags)
 			}
 		}
 		request.query_parser.rewind();
+	}
 
+	if (flags & QUERY_FIELD_ID || flags & QUERY_FIELD_SEARCH) {
 		if (request.query_parser.next("offset") != -1) {
 			int errno_save;
 			query_field.offset = strict_stou(errno_save, request.query_parser.get());
