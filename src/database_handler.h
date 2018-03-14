@@ -61,12 +61,17 @@ class MSet {
 		double weight;
 		int percent;
 
-		MSetItem(const Xapian::MSetIterator& it) {
-			did = *it;
-			rank = it.get_rank();
-			weight = it.get_weight();
-			percent = it.get_percent();
-		}
+		MSetItem(const Xapian::MSetIterator& it) :
+			did{*it},
+			rank{it.get_rank()},
+			weight{it.get_weight()},
+			percent{it.get_percent()} { }
+
+		MSetItem(const Xapian::docid& did) :
+			did{did},
+			rank{0},
+			weight{0},
+			percent{0} { }
 	};
 
 	using items_t = std::vector<MSetItem>;
@@ -107,12 +112,20 @@ class MSet {
 
 public:
 	MSet() = default;
-	MSet(const Xapian::MSet& mset) {
+
+	MSet(const Xapian::MSet& mset) :
+		matches_estimated{mset.get_matches_estimated()}
+	{
 		auto it_end = mset.end();
 		for (auto it = mset.begin(); it != it_end; ++it) {
 			items.push_back(it);
 		}
-		matches_estimated = mset.get_matches_estimated();
+	}
+
+	MSet(const Xapian::docid& did) :
+		matches_estimated{1}
+	{
+		items.push_back(did);
 	}
 
 	std::size_t size() const {
