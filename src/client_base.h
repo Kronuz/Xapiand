@@ -114,12 +114,8 @@ public:
 
 	bool write(const char *buf, size_t buf_size);
 
-	inline bool write(const char *buf) {
-		return write(buf, strlen(buf));
-	}
-
-	inline bool write(const std::string &buf) {
-		return write(buf.c_str(), buf.size());
+	inline bool write(std::string_view buf) {
+		return write(buf.data(), buf.size());
 	}
 
 protected:
