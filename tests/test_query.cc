@@ -184,7 +184,7 @@ static int make_search(const std::vector<test_query_t> _tests) {
 				++cont;
 				L_ERR("ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
 			} else {
-				Xapian::MSetIterator m = mset.begin();
+				auto m = mset.begin();
 				for (auto it = test.expect_datas.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_query.db_handler.get_document(*m);
 					auto obj_data = document.get_obj();

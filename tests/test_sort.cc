@@ -702,9 +702,10 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 				++cont;
 				L_ERR("ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), test.expect_result.size());
 			} else {
-				Xapian::MSetIterator m = mset.begin();
+				auto m = mset.begin();
 				for (auto it = test.expect_result.begin(); m != mset.end(); ++it, ++m) {
-					auto val = Unserialise::MsgPack(FieldType::INTEGER, m.get_document().get_value(0)).to_string();
+					auto document = db_sort.db_handler.get_document(*m);
+					auto val = Unserialise::MsgPack(FieldType::INTEGER, document.get_value(0)).to_string();
 					if (it->compare(val) != 0) {
 						++cont;
 						L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val.c_str(), ID_FIELD_NAME, it->c_str());
