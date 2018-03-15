@@ -30,7 +30,6 @@ set (PACKAGE_VERSION "1.0.0")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
-set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
 
 ########################################################################
@@ -644,29 +643,55 @@ if (IWYU)
 endif (IWYU)
 
 
-########################################################################
+#####################################################################
 # Testing.
 #
 # You can skip this section if you aren't interested in testing.
 #
-# The tests are not built by default.  To build them, set the
-# BUILD_TESTS option to ON.  You can do it by specifying the
+# The tests are not built by default To build them, set the
+# BUILD_TESTS option to ON. You can do it by specifying the
 # -DBUILD_TESTS=ON flag when running cmake.
-########################################################################
+#
 
 if (BUILD_TESTS)
 	enable_testing()
+	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
 
-	add_subdirectory(${PROJECT_SOURCE_DIR}/ext/gtest)
+	# Build googletest Tests
+	add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gtest)
 
-	include_directories(${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
+	include_directories(${GTEST_INCLUDE_DIR})
+	link_directories(${GTEST_LIBRARY_DIR})
 
-	link_directories(${GTEST_LIBS})
+	set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 
-	foreach (VAR_TEST boolparser compressor endpoint fieldparser generate_terms
-		geospatial geospatial_query uuid hash lru msgpack patcher phonetic query queue
-		serialise serialise_list sort storage string_metric threadpool url_parser wal)
+	foreach (VAR_TEST
+		string
+	)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+
+		add_executable(${PROJECT_TEST}
+			${PATH_TESTS}/test_${VAR_TEST}.cc
+		)
+
+		add_dependencies(${PROJECT_TEST} googletest)
+
+		target_link_libraries(${PROJECT_TEST}
+			gtest_main gtest
+		)
+
+		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
+	endforeach ()
+
+	### LEGACY:
+	foreach (VAR_TEST
+		boolparser compressor endpoint fieldparser generate_terms geospatial
+		geospatial_query uuid hash lru msgpack patcher phonetic query queue
+		serialise serialise_list sort storage string_metric threadpool
+		url_parser wal
+	)
+		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+
 		add_executable(${PROJECT_TEST}
 			${PATH_TESTS}/test_${VAR_TEST}.cc
 			${PATH_TESTS}/set_${VAR_TEST}_test.cc
@@ -680,7 +705,9 @@ if (BUILD_TESTS)
 		)
 
 		add_dependencies(${PROJECT_TEST} googletest)
+
 		target_link_libraries(${PROJECT_TEST}
+			gtest_main gtest
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
 			${UUID_LIBRARIES}
@@ -688,11 +715,46 @@ if (BUILD_TESTS)
 			${V8_LIBRARIES}
 			${M_LIBRARIES}
 			z
-			gtest
-			gtest_main
 		)
+
 		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
 	endforeach ()
+	###
 endif ()
 
-########################################################################
+
+#####################################################################
+# Benchmarking.
+#
+# You can skip this section if you aren't interested in benchmarking.
+#
+# The benchmarks are not built by default. To build them, set the
+# BUILD_BENCHMARKS option to ON. You can do it by specifying the
+# -DBUILD_BENCHMARKS=ON flag when running cmake.
+#
+
+if (BUILD_BENCHMARKS)
+  set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
+
+  # Build googlebenchmark Benchmarks
+  add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gbenchmark)
+
+  include_directories(${GBENCHMARK_INCLUDE_DIR})
+  link_directories(${GBENCHMARK_LIBRARY_DIR})
+
+  set (PATH_BENCHMARKS "${PROJECT_SOURCE_DIR}/benchmarks")
+
+  foreach (VAR_BENCHMARK string)
+    set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
+
+    add_executable(${PROJECT_BENCHMARK}
+    	${PATH_BENCHMARKS}/benchmark_${VAR_BENCHMARK}.cc
+    )
+
+    add_dependencies(${PROJECT_BENCHMARK} googlebenchmark)
+
+    target_link_libraries(${PROJECT_BENCHMARK}
+    	benchmark
+    )
+  endforeach ()
+endif ()
