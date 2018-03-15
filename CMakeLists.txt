@@ -68,12 +68,346 @@ if (APPLE)
 	set (CMAKE_FIND_FRAMEWORK "LAST")
 endif ()
 
+
+########################################################################
+# CMake Includes
+########################################################################
+
+include (AC_HEADER_STDC)
+include (AddCXXCompilerFlag)
+include (CheckCXXSourceCompiles)
+include (CheckFunctionExists)
+include (CheckIncludeFileCXX)
+include (CheckIncludeFiles)
+include (CheckLibraryExists)
+include (CheckTypeSize)
+include (CMakePushCheckState)
+include (GetGitVersion)
+include (GNUInstallDirs)
+include (RemoveDuplicateSubstrings)
+
+
+
+########################################################################
+#  _____                    _
+# |_   _|_ _ _ __ __ _  ___| |_ ___
+#   | |/ _` | '__/ _` |/ _ \ __/ __|
+#   | | (_| | | | (_| |  __/ |_\__ \
+#   |_|\__,_|_|  \__, |\___|\__|___/
+#                |___/
+########################################################################
+
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+
+set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
+set (STOPWORDS_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
+
+
+include_directories(
+	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_BINARY_DIR}/src")
+
+
+########################################################################
+# Boolean parser library target
+########################################################################
+
+
+file(GLOB BOOLEAN_PARSER_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h"
+)
+add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
+
+
+########################################################################
+# Libev library target
+########################################################################
+
+
+file(GLOB LIBEV_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h"
+)
+list(REMOVE_ITEM LIBEV_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_port.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_select.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
+)
+add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
+
+
+########################################################################
+# LZ4 library target
+########################################################################
+
+
+file(GLOB LZ4_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h"
+)
+add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
+
+
+########################################################################
+# Condensed UUID library target
+########################################################################
+
+
+file(GLOB UUID_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h"
+)
+add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
+
+
+########################################################################
+# Xapaind package configuration target
+########################################################################
+
+
+add_library(PACKAGE_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/package.cc")
+
+
+########################################################################
+# Xapiand main() target
+########################################################################
+
+
+add_library(MAIN_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
+
+
+########################################################################
+# Xapiand library target
+########################################################################
+
+
+file(GLOB XAPIAND_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h"
+	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h"
+	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h"
+	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h"
+	"${PROJECT_SOURCE_DIR}/src/servers/*.c*" "${PROJECT_SOURCE_DIR}/src/servers/*.h"
+	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h"
+)
+list(REMOVE_ITEM XAPIAND_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/package.cc"
+	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
+)
+add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
+
+
+########################################################################
+# Primary target
+########################################################################
+
+add_executable(${PROJECT_NAME}
+	"$<TARGET_OBJECTS:MAIN_OBJ>"
+	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
+	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
+	"$<TARGET_OBJECTS:LIBEV_OBJ>"
+	"$<TARGET_OBJECTS:LZ4_OBJ>"
+	"$<TARGET_OBJECTS:UUID_OBJ>"
+)
+
+
+########################################################################
+# Copy stopwords from source to build directory
+########################################################################
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
+
+
+########################################################################
+# Install target
+########################################################################
+
+# Copy stopwords during the installation
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${STOPWORDS_PATH})
+
+# Manual page generation
+install(FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
+
+# Install binary
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+
+########################################################################
+# Uninstall target
+########################################################################
+
+configure_file(
+	"${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+	"${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
+	@ONLY)
+
+add_custom_target(uninstall
+	COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
+
+
+
+########################################################################
+#  _     _ _                    _
+# | |   (_) |__  _ __ __ _ _ __(_) ___  ___
+# | |   | | '_ \| '__/ _` | '__| |/ _ \/ __|
+# | |___| | |_) | | | (_| | |  | |  __/\__ \
+# |_____|_|_.__/|_|  \__,_|_|  |_|\___||___/
+#
+########################################################################
+
+
+########################################################################
+# ZLIB Library
+########################################################################
+
+find_package(ZLIB)
+if (ZLIB_FOUND)
+	set (HAVE_ZLIB 1)
+	include_directories(BEFORE "${ZLIB_INCLUDE_DIRS}")
+	target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
+else ()
+	set (HAVE_ZLIB 0)
+endif ()
+
+
+########################################################################
+if (V8)
+	# V8 Engine Library
+	####################################################################
+	find_package(V8 REQUIRED)
+	include_directories(BEFORE "${V8_INCLUDE_DIRS}")
+	target_link_libraries(${PROJECT_NAME} ${V8_LIBRARIES})
+
+elseif (CHAISCRIPT)
+	# ChaiScript Engine Library
+	####################################################################
+	find_package(CHAISCRIPT)
+	if (CHAISCRIPT_FOUND)
+		include_directories(BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
+	endif ()
+endif ()
+
+
+########################################################################
+# Exec Info Library
+########################################################################
+
+find_library(EXECINFO_LIBRARIES execinfo)
+if (EXECINFO_LIBRARIES)
+	set (HAVE_EXECINFO 1)
+	target_link_libraries(${PROJECT_NAME} ${EXECINFO_LIBRARIES})
+else ()
+	set (HAVE_EXECINFO 0)
+endif ()
+
+
+########################################################################
+# Real Time Library
+########################################################################
+
+find_library(RT_LIBRARIES rt)
+if (RT_LIBRARIES)
+	set (HAVE_RT 1)
+	target_link_libraries(${PROJECT_NAME} ${RT_LIBRARIES})
+else ()
+	set (HAVE_RT 0)
+endif ()
+
+
+########################################################################
+# Math Library
+########################################################################
+
+find_library(M_LIBRARIES m)
+if (M_LIBRARIES)
+	set (HAVE_M 1)
+	target_link_libraries(${PROJECT_NAME} ${M_LIBRARIES})
+else ()
+	set (HAVE_M 0)
+	set (M_LIBRARIES "")
+endif ()
+
+
+########################################################################
+# Threads Library
+########################################################################
+
+set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+
+if (CMAKE_USE_PTHREADS_INIT)
+	set (HAVE_PTHREADS 1)
+else ()
+	set (HAVE_PTHREADS 0)
+endif ()
+
+
+########################################################################
+# UUID Library
+########################################################################
+
+find_package(UUID REQUIRED)
+include_directories(BEFORE "${UUID_INCLUDE_DIRS}")
+target_link_libraries(${PROJECT_NAME} ${UUID_LIBRARIES})
+
+
+########################################################################
+# Xapian Library
+########################################################################
+
+find_package(Xapian REQUIRED)
+include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}")
+target_link_libraries(${PROJECT_NAME} ${XAPIAN_LIBRARIES})
+
+cmake_push_check_state()
+set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
+set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
+check_cxx_source_compiles("
+	#include <xapian.h>
+	int main() {
+		Xapian::MSet mset;
+		mset.serialise();
+	}" HAVE_XAPIAN_REMOTE_PROTOCOL)
+check_cxx_source_compiles("
+	#include <xapian.h>
+	int main() {
+		Xapian::Database db;
+		db.get_revision();
+	}" HAVE_XAPIAN_DATABASE_GET_REVISION)
+check_cxx_source_compiles("
+	#include <xapian.h>
+	int main() {
+		Xapian::Database db;
+		db.get_document(0, Xapian::DOC_ASSUME_VALID);
+	}" HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS)
+cmake_pop_check_state()
+
+if (CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
+	set ("XAPIAND_CLUSTERING" 1)
+else ()
+	set ("XAPIAND_CLUSTERING" 0)
+endif ()
+
+
+
+########################################################################
+#  _____ _
+# |  ___| | __ _  __ _ ___
+# | |_  | |/ _` |/ _` / __|
+# |  _| | | (_| | (_| \__ \
+# |_|   |_|\__,_|\__, |___/
+#                |___/
+########################################################################
+
+
 ########################################################################
 # Version
 ########################################################################
 
 # Read the git tags to determine the project version
-include (GetGitVersion)
 get_git_revision(GIT_REVISION)
 if (GIT_REVISION)
 	set (PACKAGE_REVISION "${GIT_REVISION}")
@@ -93,106 +427,6 @@ get_git_version(GIT_VERSION)
 if (GIT_VERSION)
 	set (PACKAGE_VERSION "${GIT_VERSION}")
 endif ()
-
-configure_file(
-	"${PROJECT_SOURCE_DIR}/package_config.h.in"
-	"${PROJECT_BINARY_DIR}/src/package_config.h"
-	@ONLY)
-
-
-########################################################################
-# CMake Includes
-########################################################################
-
-include (AC_HEADER_STDC)
-include (AddCXXCompilerFlag)
-include (CheckCXXSourceCompiles)
-include (CheckFunctionExists)
-include (CheckIncludeFileCXX)
-include (CheckIncludeFiles)
-include (CheckLibraryExists)
-include (CheckTypeSize)
-include (CMakePushCheckState)
-include (GNUInstallDirs)
-include (RemoveDuplicateSubstrings)
-
-
-########################################################################
-# Targets
-########################################################################
-
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-
-set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
-set (STOPWORDS_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
-
-
-file(GLOB XAPIAND_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h"
-	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h"
-	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h"
-	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h"
-	"${PROJECT_SOURCE_DIR}/src/servers/*.c*" "${PROJECT_SOURCE_DIR}/src/servers/*.h"
-	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h"
-)
-list(REMOVE_ITEM XAPIAND_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
-	"${PROJECT_SOURCE_DIR}/src/package.cc"
-)
-add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
-
-
-file(GLOB BOOLEAN_PARSER_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h"
-)
-add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
-
-
-file(GLOB LIBEV_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h"
-)
-list(REMOVE_ITEM LIBEV_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_port.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_select.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
-)
-add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
-
-
-file(GLOB LZ4_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h"
-)
-add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
-
-
-file(GLOB UUID_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h"
-)
-add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
-
-
-add_library(PACKAGE_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/package.cc")
-
-
-add_library(MAIN_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
-
-
-add_executable(${PROJECT_NAME}
-	"$<TARGET_OBJECTS:MAIN_OBJ>"
-	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
-	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
-	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
-	"$<TARGET_OBJECTS:LIBEV_OBJ>"
-	"$<TARGET_OBJECTS:LZ4_OBJ>"
-	"$<TARGET_OBJECTS:UUID_OBJ>"
-)
-
-include_directories(
-	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_BINARY_DIR}/src")
 
 
 ########################################################################
@@ -323,6 +557,21 @@ endforeach ()
 
 
 ########################################################################
+# Configuration files
+########################################################################
+
+configure_file(
+	"${PROJECT_SOURCE_DIR}/package_config.h.in"
+	"${PROJECT_BINARY_DIR}/src/package_config.h"
+	@ONLY)
+
+configure_file(
+	"${PROJECT_SOURCE_DIR}/config.h.in"
+	"${PROJECT_BINARY_DIR}/src/config.h"
+	@ONLY)
+
+
+########################################################################
 # Check for sanitizers
 ########################################################################
 
@@ -332,7 +581,7 @@ endif ()
 
 
 ########################################################################
-# Add Check for sanitizers.
+# Externalize debug information
 ########################################################################
 
 if (DEBUGINFO_EXTERNALIZE AND APPLE)
@@ -355,7 +604,6 @@ endif ()
 ########################################################################
 
 find_program(CCACHE_FOUND "ccache")
-
 if (CCACHE_FOUND)
 	message(STATUS "Looking for ccache - found")
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
@@ -367,193 +615,6 @@ if (CCACHE_FOUND)
 else ()
 	message(STATUS "Looking for ccache - not found")
 endif ()
-
-
-########################################################################
-# ZLIB Library
-########################################################################
-
-find_package(ZLIB)
-if (ZLIB_FOUND)
-	set (HAVE_ZLIB 1)
-	include_directories(BEFORE "${ZLIB_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
-else ()
-	set (HAVE_ZLIB 0)
-endif ()
-
-
-########################################################################
-# V8 Engine Library
-########################################################################
-if (V8)
-	find_package(V8 REQUIRED)
-	include_directories(BEFORE "${V8_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} ${V8_LIBRARIES})
-########################################################################
-# ChaiScript Engine Library
-########################################################################
-elseif (CHAISCRIPT)
-	find_package(CHAISCRIPT)
-	if (CHAISCRIPT_FOUND)
-		include_directories(BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
-	endif ()
-endif ()
-
-
-########################################################################
-# Exec Info Library
-########################################################################
-
-find_library(EXECINFO_LIBRARIES execinfo)
-if (EXECINFO_LIBRARIES)
-	set (HAVE_EXECINFO 1)
-	target_link_libraries(${PROJECT_NAME} ${EXECINFO_LIBRARIES})
-else ()
-	set (HAVE_EXECINFO 0)
-endif ()
-
-
-########################################################################
-# Real Time Library
-########################################################################
-
-find_library(RT_LIBRARIES rt)
-if (RT_LIBRARIES)
-	set (HAVE_RT 1)
-	target_link_libraries(${PROJECT_NAME} ${RT_LIBRARIES})
-else ()
-	set (HAVE_RT 0)
-endif ()
-
-
-########################################################################
-# Math Library
-########################################################################
-
-find_library(M_LIBRARIES m)
-if (M_LIBRARIES)
-	set (HAVE_M 1)
-	target_link_libraries(${PROJECT_NAME} ${M_LIBRARIES})
-else ()
-	set (HAVE_M 0)
-	set (M_LIBRARIES "")
-endif ()
-
-
-########################################################################
-# Threads Library
-########################################################################
-
-set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-
-if (CMAKE_USE_PTHREADS_INIT)
-	set (HAVE_PTHREADS 1)
-else ()
-	set (HAVE_PTHREADS 0)
-endif ()
-
-
-########################################################################
-# UUID Library
-########################################################################
-
-find_package(UUID REQUIRED)
-include_directories(BEFORE "${UUID_INCLUDE_DIRS}")
-target_link_libraries(${PROJECT_NAME} ${UUID_LIBRARIES})
-
-
-########################################################################
-# Xapian Library
-########################################################################
-
-find_package(Xapian REQUIRED)
-include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}")
-target_link_libraries(${PROJECT_NAME} ${XAPIAN_LIBRARIES})
-
-cmake_push_check_state()
-set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
-set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::MSet mset;
-		mset.serialise();
-	}" HAVE_XAPIAN_REMOTE_PROTOCOL)
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::Database db;
-		db.get_revision();
-	}" HAVE_XAPIAN_DATABASE_GET_REVISION)
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::Database db;
-		db.get_document(0, Xapian::DOC_ASSUME_VALID);
-	}" HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS)
-cmake_pop_check_state()
-
-if (CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
-	set ("XAPIAND_CLUSTERING" 1)
-else ()
-	set ("XAPIAND_CLUSTERING" 0)
-endif ()
-
-
-########################################################################
-# Configuration
-########################################################################
-
-configure_file(
-	"${PROJECT_SOURCE_DIR}/config.h.in"
-	"${PROJECT_BINARY_DIR}/src/config.h"
-	@ONLY)
-
-
-########################################################################
-# Uninstall target
-########################################################################
-
-configure_file(
-	"${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-	"${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
-	@ONLY)
-
-add_custom_target(uninstall
-	COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
-
-
-########################################################################
-# Copy stopwords from source to build directory
-########################################################################
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
-
-
-########################################################################
-# Copy stopwords during the installation
-########################################################################
-
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${STOPWORDS_PATH})
-
-
-########################################################################
-# Manual page generation
-########################################################################
-
-install(FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
-
-
-########################################################################
-# Installation of the binary
-########################################################################
-
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 
 ########################################################################
@@ -573,41 +634,19 @@ remove_duplicate_substrings("${CMAKE_CXX_FLAGS_RELEASE}" CMAKE_CXX_FLAGS_RELEASE
 remove_duplicate_substrings("${CMAKE_CXX_FLAGS_RELWITHDEBINFO}" CMAKE_CXX_FLAGS_RELWITHDEBINFO)
 remove_duplicate_substrings("${CMAKE_CXX_FLAGS_MINSIZEREL}" CMAKE_CXX_FLAGS_MINSIZEREL)
 
-message(">> ${CMAKE_BUILD_TYPE} build")
-message(">> Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAKE_BUILD_TYPE}}")
+message(STATUS "${CMAKE_BUILD_TYPE} build")
+message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAKE_BUILD_TYPE}}")
+
 
 
 ########################################################################
-# Enable Google's Include What You Use
+#  _____         _
+# |_   _|__  ___| |_ ___
+#   | |/ _ \/ __| __/ __|
+#   | |  __/\__ \ |_\__ \
+#   |_|\___||___/\__|___/
+#
 ########################################################################
-
-if (IWYU)
-	find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-	if (IWYU_PATH)
-		message(STATUS "Looking for include-what-you-use - found")
-		set (IWYU_OPTS
-			${IWYU_PATH}
-			-Xiwyu
-			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
-		set_property(TARGET XAPIAND_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET XAPIAND_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LIBEV_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LIBEV_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LZ4_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LZ4_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET UUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET UUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-	else ()
-		message(STATUS "Looking for include-what-you-use - not found")
-	endif ()
-endif (IWYU)
-
-
-#####################################################################
 
 if (BUILD_TESTS OR BUILD_BENCHMARKS)
 	enable_testing()
@@ -615,15 +654,13 @@ if (BUILD_TESTS OR BUILD_BENCHMARKS)
 endif ()
 
 
-#####################################################################
-# Testing.
-#
+# Testing
+# -------
 # You can skip this section if you aren't interested in testing.
 #
 # The tests are not built by default To build them, set the
 # BUILD_TESTS option to ON. You can do it by specifying the
 # -DBUILD_TESTS=ON flag when running cmake.
-#
 
 if (BUILD_TESTS)
 	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
@@ -641,7 +678,7 @@ if (BUILD_TESTS)
 		)
 		add_dependencies(${PROJECT_TEST} googletest)
 		target_link_libraries(${PROJECT_TEST}
-			gtest_main gtest
+			gtest gtest_main
 		)
 		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 		add_dependencies(check "${PROJECT_TEST}")
@@ -686,15 +723,13 @@ if (BUILD_TESTS)
 endif ()
 
 
-#####################################################################
-# Benchmarking.
-#
+# Benchmarking
+# ------------
 # You can skip this section if you aren't interested in benchmarking.
 #
 # The benchmarks are not built by default. To build them, set the
 # BUILD_BENCHMARKS option to ON. You can do it by specifying the
 # -DBUILD_BENCHMARKS=ON flag when running cmake.
-#
 
 if (BUILD_BENCHMARKS)
 	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
@@ -718,3 +753,46 @@ if (BUILD_BENCHMARKS)
 		add_dependencies(check "${PROJECT_BENCHMARK}")
 	endforeach ()
 endif ()
+
+
+
+########################################################################
+#  _____           _
+# |_   _|__   ___ | |___
+#   | |/ _ \ / _ \| / __|
+#   | | (_) | (_) | \__ \
+#   |_|\___/ \___/|_|___/
+#
+########################################################################
+
+# Enable Google's Include What You Use
+# ------------------------------------
+
+if (IWYU)
+	find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+	if (IWYU_PATH)
+		message(STATUS "Looking for include-what-you-use - found")
+		set (IWYU_OPTS
+			${IWYU_PATH}
+			-Xiwyu
+			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
+		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET LIBEV_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET LIBEV_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET LZ4_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET LZ4_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET UUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET UUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET PACKAGE_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET PACKAGE_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET MAIN_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET MAIN_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET XAPIAND_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET XAPIAND_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+		set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
+	else ()
+		message(STATUS "Looking for include-what-you-use - not found")
+	endif ()
+endif (IWYU)
