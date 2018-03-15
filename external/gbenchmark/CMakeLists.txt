@@ -9,6 +9,9 @@ ExternalProject_Add(
 	GIT_REPOSITORY  "https://github.com/google/benchmark.git"
 	GIT_TAG         "master"
 
+	# Never update automatically from the remote repository
+	UPDATE_DISCONNECTED ON
+
 	# All necessary targets will be built on install stage
 	INSTALL_COMMAND ""
 
