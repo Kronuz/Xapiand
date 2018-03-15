@@ -72,16 +72,32 @@ endif ()
 # Version
 ########################################################################
 
-find_package(Git)
+# Read the git tags to determine the project version
+include (GetGitVersion)
+get_git_revision(GIT_REVISION)
+if (GIT_REVISION)
+	set (PACKAGE_REVISION "${GIT_REVISION}")
+else ()
+	get_date_revision(DATE_REVISION)
+	if (DATE_REVISION)
+		set (PACKAGE_REVISION "${DATE_REVISION}")
+	endif ()
+endif ()
+
+get_git_hash(GIT_HASH)
+if (GIT_HASH)
+	set (PACKAGE_HASH "${GIT_HASH}")
+endif ()
+
+get_git_version(GIT_VERSION)
+if (GIT_VERSION)
+	set (PACKAGE_VERSION "${GIT_VERSION}")
+endif ()
 
 configure_file(
-	"${PROJECT_SOURCE_DIR}/package_config.cmake.in"
-	"${PROJECT_BINARY_DIR}/package_config.cmake"
+	"${PROJECT_SOURCE_DIR}/package_config.h.in"
+	"${PROJECT_BINARY_DIR}/src/package_config.h"
 	@ONLY)
-
-add_custom_target(package_config
-	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/package_config.h"
-	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/package_config.cmake")
 
 
 ########################################################################
@@ -159,7 +175,6 @@ add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 
 add_library(PACKAGE_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/package.cc")
-add_dependencies(PACKAGE_OBJ package_config)
 
 
 add_executable(${PROJECT_NAME}
