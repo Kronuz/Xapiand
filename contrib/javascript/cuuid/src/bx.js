@@ -5,7 +5,7 @@
 // Ported to JavaScript by Stefan Thomas
 // Merged Buffer refactorings from base58-native by Stephen Pair
 // Copyright (c) 2013 BitPay Inc
-// Copyright (C) 2015-2018 dubalu.com LLC. All rights reserved.
+// Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
 
 function base (ALPHABET, TRANSLATE) {
   var ALPHABET_CHR = []

@@ -49,8 +49,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Xapiand'
-copyright = u'2015-2018 dubalu.com LLC. All rights reserved.'
-author = u'dubalu.com LLC'
+copyright = u'2015-2018 Dubalu LLC. All rights reserved.'
+author = u'Dubalu LLC'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -225,7 +225,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'Xapiand.tex', u'Xapiand Documentation',
-   u'dubalu.com LLC', 'manual'),
+   u'Dubalu LLC', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
