@@ -3,7 +3,7 @@
 # http://websvn.kde.org/trunk/KDE/kdelibs/cmake/modules/CheckPrototypeExists.cmake?rev=505849&view=markup
 #
 # - Check if the prototype for a function exists.
-# CHECK_PROTOTYPE_EXISTS (FUNCTION HEADER VARIABLE)
+# check_prototype_exists (FUNCTION HEADER VARIABLE)
 #
 #  FUNCTION - the name of the function you are looking for
 #  HEADER - the header(s) where the prototype should be declared
@@ -12,13 +12,13 @@
 
 include (CheckCXXSourceCompiles)
 
-macro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
-   set (_INCLUDE_FILES)
-   foreach (it ${_HEADER})
-      set (_INCLUDE_FILES "${_INCLUDE_FILES}#include <${it}>\n")
-   endforeach (it)
+macro (check_prototype_exists _SYMBOL _HEADER _RESULT)
+	set (_INCLUDE_FILES)
+	foreach (it ${_HEADER})
+		set (_INCLUDE_FILES "${_INCLUDE_FILES}#include <${it}>\n")
+	endforeach (it)
 
-   set (_CHECK_PROTO_EXISTS_SOURCE_CODE "
+	set (_CHECK_PROTO_EXISTS_SOURCE_CODE "
 ${_INCLUDE_FILES}
 void cmakeRequireSymbol(int dummy,...){(void)dummy;}
 int main()
@@ -33,5 +33,5 @@ int main()
   return 0;
 }
 ")
-   check_cxx_source_compiles("${_CHECK_PROTO_EXISTS_SOURCE_CODE}" ${_RESULT})
-endmacro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
+	check_cxx_source_compiles("${_CHECK_PROTO_EXISTS_SOURCE_CODE}" ${_RESULT})
+endmacro (check_prototype_exists _SYMBOL _HEADER _RESULT)

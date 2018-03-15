@@ -105,59 +105,59 @@ set (PATH_STOPWORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 
 file(GLOB XAPIAND_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
-	${PROJECT_SOURCE_DIR}/src/geospatial/*.c* ${PROJECT_SOURCE_DIR}/src/geo/*.h
-	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
-	${PROJECT_SOURCE_DIR}/src/multivalue/*.c* ${PROJECT_SOURCE_DIR}/src/multivalue/*.h
-	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
-	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h
+	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h"
+	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h"
+	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h"
+	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h"
+	"${PROJECT_SOURCE_DIR}/src/servers/*.c*" "${PROJECT_SOURCE_DIR}/src/servers/*.h"
+	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/xapiand.cc
-	${PROJECT_SOURCE_DIR}/src/package.cc
+	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
+	"${PROJECT_SOURCE_DIR}/src/package.cc"
 )
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 
 file(GLOB BOOLEAN_PARSER_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/booleanParser/*.c* ${PROJECT_SOURCE_DIR}/src/booleanParser/*.h
+	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h"
 )
 add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
 file(GLOB LIBEV_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
+	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h"
 )
 list(REMOVE_ITEM LIBEV_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c
-	${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c
-	${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c
-	${PROJECT_SOURCE_DIR}/src/ev/ev_port.c
-	${PROJECT_SOURCE_DIR}/src/ev/ev_select.c
-	${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_port.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_select.c"
+	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
 )
 add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
 
 file(GLOB LZ4_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
+	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h"
 )
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
 file(GLOB UUID_SRC_LIST
-	${PROJECT_SOURCE_DIR}/src/cuuid/*.c* ${PROJECT_SOURCE_DIR}/src/cuuid/*.h
+	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h"
 )
 add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 add_executable(${PROJECT_NAME}
-	${PROJECT_SOURCE_DIR}/src/xapiand.cc
-	${PROJECT_SOURCE_DIR}/src/package.cc
-	$<TARGET_OBJECTS:XAPIAND_OBJ>
-	$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
-	$<TARGET_OBJECTS:LIBEV_OBJ>
-	$<TARGET_OBJECTS:LZ4_OBJ>
-	$<TARGET_OBJECTS:UUID_OBJ>
+	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
+	"${PROJECT_SOURCE_DIR}/src/package.cc"
+	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
+	"$<TARGET_OBJECTS:LIBEV_OBJ>"
+	"$<TARGET_OBJECTS:LZ4_OBJ>"
+	"$<TARGET_OBJECTS:UUID_OBJ>"
 )
 
 add_dependencies(${PROJECT_NAME} package_config)
@@ -663,27 +663,20 @@ if (BUILD_TESTS)
 	include_directories(${GTEST_INCLUDE_DIR})
 	link_directories(${GTEST_LIBRARY_DIR})
 
-	set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
-
-	foreach (VAR_TEST
-		string
-	)
+	foreach (VAR_TEST string)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
-
 		add_executable(${PROJECT_TEST}
-			${PATH_TESTS}/test_${VAR_TEST}.cc
+			"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 		)
-
 		add_dependencies(${PROJECT_TEST} googletest)
-
 		target_link_libraries(${PROJECT_TEST}
 			gtest_main gtest
 		)
-
 		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
 	endforeach ()
 
-	### LEGACY:
+
+	### OLD:
 	foreach (VAR_TEST
 		boolparser compressor endpoint fieldparser generate_terms geospatial
 		geospatial_query uuid hash lru msgpack patcher phonetic query queue
@@ -691,21 +684,18 @@ if (BUILD_TESTS)
 		url_parser wal
 	)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
-
 		add_executable(${PROJECT_TEST}
-			${PATH_TESTS}/test_${VAR_TEST}.cc
-			${PATH_TESTS}/set_${VAR_TEST}_test.cc
-			${PATH_TESTS}/utils.cc
-			${PROJECT_SOURCE_DIR}/src/package.cc
-			$<TARGET_OBJECTS:XAPIAND_OBJ>
-			$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>
-			$<TARGET_OBJECTS:LIBEV_OBJ>
-			$<TARGET_OBJECTS:LZ4_OBJ>
-			$<TARGET_OBJECTS:UUID_OBJ>
+			"${PROJECT_SOURCE_DIR}/oldtests/test_${VAR_TEST}.cc"
+			"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
+			"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
+			"${PROJECT_SOURCE_DIR}/src/package.cc"
+			"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+			"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
+			"$<TARGET_OBJECTS:LIBEV_OBJ>"
+			"$<TARGET_OBJECTS:LZ4_OBJ>"
+			"$<TARGET_OBJECTS:UUID_OBJ>"
 		)
-
 		add_dependencies(${PROJECT_TEST} googletest)
-
 		target_link_libraries(${PROJECT_TEST}
 			gtest_main gtest
 			${XAPIAN_LIBRARIES}
@@ -714,12 +704,12 @@ if (BUILD_TESTS)
 			${CHAISCRIPT_LIBRARIES}
 			${V8_LIBRARIES}
 			${M_LIBRARIES}
-			z
+			${ZLIB_LIBRARIES}
 		)
-
 		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
 	endforeach ()
 	###
+
 endif ()
 
 
@@ -734,27 +724,24 @@ endif ()
 #
 
 if (BUILD_BENCHMARKS)
-  set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
+	enable_testing()
+	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
 
-  # Build googlebenchmark Benchmarks
-  add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gbenchmark)
+	# Build googlebenchmark Benchmarks
+	add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gbenchmark)
 
-  include_directories(${GBENCHMARK_INCLUDE_DIR})
-  link_directories(${GBENCHMARK_LIBRARY_DIR})
+	include_directories(${GBENCHMARK_INCLUDE_DIR})
+	link_directories(${GBENCHMARK_LIBRARY_DIR})
 
-  set (PATH_BENCHMARKS "${PROJECT_SOURCE_DIR}/benchmarks")
-
-  foreach (VAR_BENCHMARK string)
-    set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
-
-    add_executable(${PROJECT_BENCHMARK}
-    	${PATH_BENCHMARKS}/benchmark_${VAR_BENCHMARK}.cc
-    )
-
-    add_dependencies(${PROJECT_BENCHMARK} googlebenchmark)
-
-    target_link_libraries(${PROJECT_BENCHMARK}
-    	benchmark
-    )
-  endforeach ()
+	foreach (VAR_BENCHMARK string)
+		set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
+		add_executable(${PROJECT_BENCHMARK}
+			"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
+		)
+		add_dependencies(${PROJECT_BENCHMARK} googlebenchmark)
+		target_link_libraries(${PROJECT_BENCHMARK}
+			benchmark
+		)
+		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
+	endforeach ()
 endif ()
