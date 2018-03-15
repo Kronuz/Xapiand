@@ -52,6 +52,24 @@
 #define L_SCHEMA L_NOTHING
 #endif
 
+constexpr static auto EMPTY      = static_string::string(EMPTY_CHAR);
+constexpr static auto STRING     = static_string::string(STRING_CHAR);
+constexpr static auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
+constexpr static auto ARRAY      = static_string::string(ARRAY_CHAR);
+constexpr static auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
+constexpr static auto DATE       = static_string::string(DATE_CHAR);
+constexpr static auto FOREIGN    = static_string::string(FOREIGN_CHAR);
+constexpr static auto FLOAT      = static_string::string(FLOAT_CHAR);
+constexpr static auto GEO        = static_string::string(GEO_CHAR);
+constexpr static auto INTEGER    = static_string::string(INTEGER_CHAR);
+constexpr static auto OBJECT     = static_string::string(OBJECT_CHAR);
+constexpr static auto POSITIVE   = static_string::string(POSITIVE_CHAR);
+constexpr static auto TEXT       = static_string::string(TEXT_CHAR);
+constexpr static auto TERM       = static_string::string(TERM_CHAR);
+constexpr static auto UUID       = static_string::string(UUID_CHAR);
+constexpr static auto SCRIPT     = static_string::string(SCRIPT_CHAR);
+constexpr static auto TIME       = static_string::string(TIME_CHAR);
+
 
 const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
 
@@ -332,38 +350,38 @@ inline UnitTime
 _get_accuracy_date(std::string_view str_accuracy_date)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("second"),
-		hh("minute"),
-		hh("hour"),
-		hh("day"),
-		hh("month"),
-		hh("year"),
-		hh("decade"),
-		hh("century"),
-		hh("millennium"),
+		hhl("second"),
+		hhl("minute"),
+		hhl("hour"),
+		hhl("day"),
+		hhl("month"),
+		hhl("year"),
+		hhl("decade"),
+		hhl("century"),
+		hhl("millennium"),
 	});
 
-	switch (_.fhh(str_accuracy_date)) {
-		case _.fhh("second"):
+	switch (_.fhhl(str_accuracy_date)) {
+		case _.fhhl("second"):
 			return UnitTime::SECOND;
-		case _.fhh("minute"):
+		case _.fhhl("minute"):
 			return UnitTime::MINUTE;
-		case _.fhh("hour"):
+		case _.fhhl("hour"):
 			return UnitTime::HOUR;
-		case _.fhh("day"):
+		case _.fhhl("day"):
 			return UnitTime::DAY;
-		case _.fhh("month"):
+		case _.fhhl("month"):
 			return UnitTime::MONTH;
-		case _.fhh("year"):
+		case _.fhhl("year"):
 			return UnitTime::YEAR;
-		case _.fhh("decade"):
+		case _.fhhl("decade"):
 			return UnitTime::DECADE;
-		case _.fhh("century"):
+		case _.fhhl("century"):
 			return UnitTime::CENTURY;
-		case _.fhh("millennium"):
+		case _.fhhl("millennium"):
 			return UnitTime::MILLENNIUM;
 		default:
-			throw std::out_of_range("Invalid accuracy");
+			return UnitTime::INVALID;
 	}
 }
 
@@ -384,20 +402,20 @@ inline UnitTime
 _get_accuracy_time(std::string_view str_accuracy_time)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("second"),
-		hh("minute"),
-		hh("hour"),
+		hhl("second"),
+		hhl("minute"),
+		hhl("hour"),
 	});
 
-	switch (_.fhh(str_accuracy_time)) {
-		case _.fhh("second"):
+	switch (_.fhhl(str_accuracy_time)) {
+		case _.fhhl("second"):
 			return UnitTime::SECOND;
-		case _.fhh("minute"):
+		case _.fhhl("minute"):
 			return UnitTime::MINUTE;
-		case _.fhh("hour"):
+		case _.fhhl("hour"):
 			return UnitTime::HOUR;
 		default:
-			throw std::out_of_range("Invalid accuracy");
+			return UnitTime::INVALID;
 	}
 }
 
@@ -422,29 +440,29 @@ inline StopStrategy
 _get_stop_strategy(std::string_view str_stop_strategy)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("stop_none"),
-		hh("none"),
-		hh("stop_all"),
-		hh("all"),
-		hh("stop_stemmed"),
-		hh("stemmed"),
+		hhl("stop_none"),
+		hhl("none"),
+		hhl("stop_all"),
+		hhl("all"),
+		hhl("stop_stemmed"),
+		hhl("stemmed"),
 	});
 
-	switch (_.fhh(str_stop_strategy)) {
-		case _.fhh("stop_none"):
+	switch (_.fhhl(str_stop_strategy)) {
+		case _.fhhl("stop_none"):
 			return StopStrategy::STOP_NONE;
-		case _.fhh("none"):
+		case _.fhhl("none"):
 			return StopStrategy::STOP_NONE;
-		case _.fhh("stop_all"):
+		case _.fhhl("stop_all"):
 			return StopStrategy::STOP_ALL;
-		case _.fhh("all"):
+		case _.fhhl("all"):
 			return StopStrategy::STOP_ALL;
-		case _.fhh("stop_stemmed"):
+		case _.fhhl("stop_stemmed"):
 			return StopStrategy::STOP_STEMMED;
-		case _.fhh("stemmed"):
+		case _.fhhl("stemmed"):
 			return StopStrategy::STOP_STEMMED;
 		default:
-			throw std::out_of_range("Invalid stop strategy");
+			return StopStrategy::INVALID;
 	}
 }
 
@@ -464,35 +482,35 @@ static inline StemStrategy
 _get_stem_strategy(std::string_view str_stem_strategy)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("stem_none"),
-		hh("none"),
-		hh("stem_some"),
-		hh("some"),
-		hh("stem_all"),
-		hh("all"),
-		hh("stem_all_z"),
-		hh("all_z"),
+		hhl("stem_none"),
+		hhl("none"),
+		hhl("stem_some"),
+		hhl("some"),
+		hhl("stem_all"),
+		hhl("all"),
+		hhl("stem_all_z"),
+		hhl("all_z"),
 	});
 
-	switch (_.fhh(str_stem_strategy)) {
-		case _.fhh("stem_none"):
+	switch (_.fhhl(str_stem_strategy)) {
+		case _.fhhl("stem_none"):
 			return  StemStrategy::STEM_NONE;
-		case _.fhh("none"):
+		case _.fhhl("none"):
 			return  StemStrategy::STEM_NONE;
-		case _.fhh("stem_some"):
+		case _.fhhl("stem_some"):
 			return  StemStrategy::STEM_SOME;
-		case _.fhh("some"):
+		case _.fhhl("some"):
 			return  StemStrategy::STEM_SOME;
-		case _.fhh("stem_all"):
+		case _.fhhl("stem_all"):
 			return  StemStrategy::STEM_ALL;
-		case _.fhh("all"):
+		case _.fhhl("all"):
 			return  StemStrategy::STEM_ALL;
-		case _.fhh("stem_all_z"):
+		case _.fhhl("stem_all_z"):
 			return  StemStrategy::STEM_ALL_Z;
-		case _.fhh("all_z"):
+		case _.fhhl("all_z"):
 			return  StemStrategy::STEM_ALL_Z;
 		default:
-			throw std::out_of_range("Invalid stem strategy");
+			return StemStrategy::INVALID;
 	}
 }
 
@@ -507,20 +525,20 @@ static inline UUIDFieldIndex
 _get_index_uuid_field(std::string_view str_index_uuid_field)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("uuid"),
-		hh("uuid_field"),
-		hh("both"),
+		hhl("uuid"),
+		hhl("uuid_field"),
+		hhl("both"),
 	});
 
-	switch (_.fhh(str_index_uuid_field)) {
-		case _.fhh("uuid"):
+	switch (_.fhhl(str_index_uuid_field)) {
+		case _.fhhl("uuid"):
 			return UUIDFieldIndex::UUID;
-		case _.fhh("uuid_field"):
+		case _.fhhl("uuid_field"):
 			return UUIDFieldIndex::UUID_FIELD;
-		case _.fhh("both"):
+		case _.fhhl("both"):
 			return UUIDFieldIndex::BOTH;
 		default:
-			throw std::out_of_range("Invalid index uuid_field");
+			return UUIDFieldIndex::INVALID;
 	}
 }
 
@@ -575,137 +593,137 @@ static inline TypeIndex
 _get_index(std::string_view str_index)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("none"),
-		hh("field_terms"),
-		hh("field_values"),
-		hh("field_terms,field_values"),
-		hh("field_values,field_terms"),
-		hh("field"),
-		hh("field_all"),
-		hh("global_terms"),
-		hh("field_terms,global_terms"),
-		hh("global_terms,field_terms"),
-		hh("terms"),
-		hh("global_terms,field_values"),
-		hh("field_values,global_terms"),
-		hh("global_terms,field"),
-		hh("global_terms,field_all"),
-		hh("field,global_terms"),
-		hh("field_all,global_terms"),
-		hh("global_values"),
-		hh("global_values,field_terms"),
-		hh("field_terms,global_values"),
-		hh("field_values,global_values"),
-		hh("global_values,field_values"),
-		hh("values"),
-		hh("global_values,field"),
-		hh("global_values,field_all"),
-		hh("field,global_values"),
-		hh("field_all,global_values"),
-		hh("global"),
-		hh("global_all"),
-		hh("global_values,global_terms"),
-		hh("global_terms,global_values"),
-		hh("global,field_terms"),
-		hh("global_all,field_terms"),
-		hh("field_terms,global"),
-		hh("field_terms,global_all"),
-		hh("global_all,field_values"),
-		hh("global,field_values"),
-		hh("field_values,global"),
-		hh("field_values,global_all"),
-		hh("field_all,global_all"),
-		hh("global_all,field_all"),
-		hh("all"),
+		hhl("none"),
+		hhl("field_terms"),
+		hhl("field_values"),
+		hhl("field_terms,field_values"),
+		hhl("field_values,field_terms"),
+		hhl("field"),
+		hhl("field_all"),
+		hhl("global_terms"),
+		hhl("field_terms,global_terms"),
+		hhl("global_terms,field_terms"),
+		hhl("terms"),
+		hhl("global_terms,field_values"),
+		hhl("field_values,global_terms"),
+		hhl("global_terms,field"),
+		hhl("global_terms,field_all"),
+		hhl("field,global_terms"),
+		hhl("field_all,global_terms"),
+		hhl("global_values"),
+		hhl("global_values,field_terms"),
+		hhl("field_terms,global_values"),
+		hhl("field_values,global_values"),
+		hhl("global_values,field_values"),
+		hhl("values"),
+		hhl("global_values,field"),
+		hhl("global_values,field_all"),
+		hhl("field,global_values"),
+		hhl("field_all,global_values"),
+		hhl("global"),
+		hhl("global_all"),
+		hhl("global_values,global_terms"),
+		hhl("global_terms,global_values"),
+		hhl("global,field_terms"),
+		hhl("global_all,field_terms"),
+		hhl("field_terms,global"),
+		hhl("field_terms,global_all"),
+		hhl("global_all,field_values"),
+		hhl("global,field_values"),
+		hhl("field_values,global"),
+		hhl("field_values,global_all"),
+		hhl("field_all,global_all"),
+		hhl("global_all,field_all"),
+		hhl("all"),
 	});
 
-	switch(_.fhh(str_index)) {
-		case _.fhh("none"):
+	switch(_.fhhl(str_index)) {
+		case _.fhhl("none"):
 			return TypeIndex::NONE;
-		case _.fhh("field_terms"):
+		case _.fhhl("field_terms"):
 			return TypeIndex::FIELD_TERMS;
-		case _.fhh("field_values"):
+		case _.fhhl("field_values"):
 			return TypeIndex::FIELD_VALUES;
-		case _.fhh("field_terms,field_values"):
+		case _.fhhl("field_terms,field_values"):
 			return TypeIndex::FIELD_ALL;
-		case _.fhh("field_values,field_terms"):
+		case _.fhhl("field_values,field_terms"):
 			return TypeIndex::FIELD_ALL;
-		case _.fhh("field"):
+		case _.fhhl("field"):
 			return TypeIndex::FIELD_ALL;
-		case _.fhh("field_all"):
+		case _.fhhl("field_all"):
 			return TypeIndex::FIELD_ALL;
-		case _.fhh("global_terms"):
+		case _.fhhl("global_terms"):
 			return TypeIndex::GLOBAL_TERMS;
-		case _.fhh("field_terms,global_terms"):
+		case _.fhhl("field_terms,global_terms"):
 			return TypeIndex::TERMS;
-		case _.fhh("global_terms,field_terms"):
+		case _.fhhl("global_terms,field_terms"):
 			return TypeIndex::TERMS;
-		case _.fhh("terms"):
+		case _.fhhl("terms"):
 			return TypeIndex::TERMS;
-		case _.fhh("global_terms,field_values"):
+		case _.fhhl("global_terms,field_values"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case _.fhh("field_values,global_terms"):
+		case _.fhhl("field_values,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_VALUES;
-		case _.fhh("global_terms,field"):
+		case _.fhhl("global_terms,field"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case _.fhh("global_terms,field_all"):
+		case _.fhhl("global_terms,field_all"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case _.fhh("field,global_terms"):
+		case _.fhhl("field,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case _.fhh("field_all,global_terms"):
+		case _.fhhl("field_all,global_terms"):
 			return TypeIndex::GLOBAL_TERMS_FIELD_ALL;
-		case _.fhh("global_values"):
+		case _.fhhl("global_values"):
 			return TypeIndex::GLOBAL_VALUES;
-		case _.fhh("global_values,field_terms"):
+		case _.fhhl("global_values,field_terms"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case _.fhh("field_terms,global_values"):
+		case _.fhhl("field_terms,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_TERMS;
-		case _.fhh("field_values,global_values"):
+		case _.fhhl("field_values,global_values"):
 			return TypeIndex::VALUES;
-		case _.fhh("global_values,field_values"):
+		case _.fhhl("global_values,field_values"):
 			return TypeIndex::VALUES;
-		case _.fhh("values"):
+		case _.fhhl("values"):
 			return TypeIndex::VALUES;
-		case _.fhh("global_values,field"):
+		case _.fhhl("global_values,field"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case _.fhh("global_values,field_all"):
+		case _.fhhl("global_values,field_all"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case _.fhh("field,global_values"):
+		case _.fhhl("field,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case _.fhh("field_all,global_values"):
+		case _.fhhl("field_all,global_values"):
 			return TypeIndex::GLOBAL_VALUES_FIELD_ALL;
-		case _.fhh("global"):
+		case _.fhhl("global"):
 			return TypeIndex::GLOBAL_ALL;
-		case _.fhh("global_all"):
+		case _.fhhl("global_all"):
 			return TypeIndex::GLOBAL_ALL;
-		case _.fhh("global_values,global_terms"):
+		case _.fhhl("global_values,global_terms"):
 			return TypeIndex::GLOBAL_ALL;
-		case _.fhh("global_terms,global_values"):
+		case _.fhhl("global_terms,global_values"):
 			return TypeIndex::GLOBAL_ALL;
-		case _.fhh("global,field_terms"):
+		case _.fhhl("global,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case _.fhh("global_all,field_terms"):
+		case _.fhhl("global_all,field_terms"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case _.fhh("field_terms,global"):
+		case _.fhhl("field_terms,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case _.fhh("field_terms,global_all"):
+		case _.fhhl("field_terms,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_TERMS;
-		case _.fhh("global_all,field_values"):
+		case _.fhhl("global_all,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case _.fhh("global,field_values"):
+		case _.fhhl("global,field_values"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case _.fhh("field_values,global"):
+		case _.fhhl("field_values,global"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case _.fhh("field_values,global_all"):
+		case _.fhhl("field_values,global_all"):
 			return TypeIndex::GLOBAL_ALL_FIELD_VALUES;
-		case _.fhh("field_all,global_all"):
+		case _.fhhl("field_all,global_all"):
 			return TypeIndex::ALL;
-		case _.fhh("global_all,field_all"):
+		case _.fhhl("global_all,field_all"):
 			return TypeIndex::ALL;
-		case _.fhh("all"):
+		case _.fhhl("all"):
 			return TypeIndex::ALL;
 		default:
-			throw std::out_of_range("Invalid index");
+			return TypeIndex::INVALID;
 	}
 }
 
@@ -714,291 +732,290 @@ static inline const std::array<FieldType, SPC_TOTAL_TYPES>&
 _get_type(std::string_view str_type)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("undefined"),
-		hh("array"),
-		hh("array/boolean"),
-		hh("array/date"),
-		hh("array/float"),
-		hh("array/geospatial"),
-		hh("array/integer"),
-		hh("array/positive"),
-		hh("array/string"),
-		hh("array/term"),
-		hh("array/text"),
-		hh("array/time"),
-		hh("array/timedelta"),
-		hh("array/uuid"),
-		hh("boolean"),
-		hh("date"),
-		hh("float"),
-		hh("foreign"),
-		hh("foreign/object"),
-		hh("foreign/script"),
-		hh("geospatial"),
-		hh("integer"),
-		hh("object"),
-		hh("object/array"),
-		hh("object/array/boolean"),
-		hh("object/array/date"),
-		hh("object/array/float"),
-		hh("object/array/geospatial"),
-		hh("object/array/integer"),
-		hh("object/array/positive"),
-		hh("object/array/string"),
-		hh("object/array/term"),
-		hh("object/array/text"),
-		hh("object/array/time"),
-		hh("object/array/timedelta"),
-		hh("object/array/uuid"),
-		hh("object/boolean"),
-		hh("object/date"),
-		hh("object/float"),
-		hh("object/geospatial"),
-		hh("object/integer"),
-		hh("object/positive"),
-		hh("object/string"),
-		hh("object/term"),
-		hh("object/text"),
-		hh("object/time"),
-		hh("object/timedelta"),
-		hh("object/uuid"),
-		hh("positive"),
-		hh("script"),
-		hh("string"),
-		hh("term"),
-		hh("text"),
-		hh("time"),
-		hh("timedelta"),
-		hh("uuid"),
+		hhl("undefined"),
+		hhl("array"),
+		hhl("array/boolean"),
+		hhl("array/date"),
+		hhl("array/float"),
+		hhl("array/geospatial"),
+		hhl("array/integer"),
+		hhl("array/positive"),
+		hhl("array/string"),
+		hhl("array/term"),
+		hhl("array/text"),
+		hhl("array/time"),
+		hhl("array/timedelta"),
+		hhl("array/uuid"),
+		hhl("boolean"),
+		hhl("date"),
+		hhl("float"),
+		hhl("foreign"),
+		hhl("foreign/object"),
+		hhl("foreign/script"),
+		hhl("geospatial"),
+		hhl("integer"),
+		hhl("object"),
+		hhl("object/array"),
+		hhl("object/array/boolean"),
+		hhl("object/array/date"),
+		hhl("object/array/float"),
+		hhl("object/array/geospatial"),
+		hhl("object/array/integer"),
+		hhl("object/array/positive"),
+		hhl("object/array/string"),
+		hhl("object/array/term"),
+		hhl("object/array/text"),
+		hhl("object/array/time"),
+		hhl("object/array/timedelta"),
+		hhl("object/array/uuid"),
+		hhl("object/boolean"),
+		hhl("object/date"),
+		hhl("object/float"),
+		hhl("object/geospatial"),
+		hhl("object/integer"),
+		hhl("object/positive"),
+		hhl("object/string"),
+		hhl("object/term"),
+		hhl("object/text"),
+		hhl("object/time"),
+		hhl("object/timedelta"),
+		hhl("object/uuid"),
+		hhl("positive"),
+		hhl("script"),
+		hhl("string"),
+		hhl("term"),
+		hhl("text"),
+		hhl("time"),
+		hhl("timedelta"),
+		hhl("uuid"),
 	});
 
-	switch(_.fhh(str_type)) {
-		case _.fhh("undefined"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhh("array"): {
+	switch(_.fhhl(str_type)) {
+		case _.fhhl("array"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
 			return _;
 		}
-		case _.fhh("array/boolean"): {
+		case _.fhhl("array/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhh("array/date"): {
+		case _.fhhl("array/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
 			return _;
 		}
-		case _.fhh("array/float"): {
+		case _.fhhl("array/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
 			return _;
 		}
-		case _.fhh("array/geospatial"): {
+		case _.fhhl("array/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
 			return _;
 		}
-		case _.fhh("array/integer"): {
+		case _.fhhl("array/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
 			return _;
 		}
-		case _.fhh("array/positive"): {
+		case _.fhhl("array/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case _.fhh("array/string"): {
+		case _.fhhl("array/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhh("array/term"): {
+		case _.fhhl("array/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }};
 			return _;
 		}
-		case _.fhh("array/text"): {
+		case _.fhhl("array/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
 			return _;
 		}
-		case _.fhh("array/time"): {
+		case _.fhhl("array/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
 			return _;
 		}
-		case _.fhh("array/timedelta"): {
+		case _.fhhl("array/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case _.fhh("array/uuid"): {
+		case _.fhhl("array/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
 			return _;
 		}
-		case _.fhh("boolean"): {
+		case _.fhhl("boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhh("date"): {
+		case _.fhhl("date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
 			return _;
 		}
-		case _.fhh("float"): {
+		case _.fhhl("float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }};
 			return _;
 		}
-		case _.fhh("foreign"): {
+		case _.fhhl("foreign"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case _.fhh("foreign/object"): {
+		case _.fhhl("foreign/object"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case _.fhh("foreign/script"): {
+		case _.fhhl("foreign/script"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
-		case _.fhh("geospatial"): {
+		case _.fhhl("geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }};
 			return _;
 		}
-		case _.fhh("integer"): {
+		case _.fhhl("integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }};
 			return _;
 		}
-		case _.fhh("object"): {
+		case _.fhhl("object"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
 			return _;
 		}
-		case _.fhh("object/array"): {
+		case _.fhhl("object/array"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
 			return _;
 		}
-		case _.fhh("object/array/boolean"): {
+		case _.fhhl("object/array/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhh("object/array/date"): {
+		case _.fhhl("object/array/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
 			return _;
 		}
-		case _.fhh("object/array/float"): {
+		case _.fhhl("object/array/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
 			return _;
 		}
-		case _.fhh("object/array/geospatial"): {
+		case _.fhhl("object/array/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
 			return _;
 		}
-		case _.fhh("object/array/integer"): {
+		case _.fhhl("object/array/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
 			return _;
 		}
-		case _.fhh("object/array/positive"): {
+		case _.fhhl("object/array/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case _.fhh("object/array/string"): {
+		case _.fhhl("object/array/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhh("object/array/term"): {
+		case _.fhhl("object/array/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }};
 			return _;
 		}
-		case _.fhh("object/array/text"): {
+		case _.fhhl("object/array/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
 			return _;
 		}
-		case _.fhh("object/array/time"): {
+		case _.fhhl("object/array/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
 			return _;
 		}
-		case _.fhh("object/array/timedelta"): {
+		case _.fhhl("object/array/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case _.fhh("object/array/uuid"): {
+		case _.fhhl("object/array/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
 			return _;
 		}
-		case _.fhh("object/boolean"): {
+		case _.fhhl("object/boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhh("object/date"): {
+		case _.fhhl("object/date"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
 			return _;
 		}
-		case _.fhh("object/float"): {
+		case _.fhhl("object/float"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
 			return _;
 		}
-		case _.fhh("object/geospatial"): {
+		case _.fhhl("object/geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
 			return _;
 		}
-		case _.fhh("object/integer"): {
+		case _.fhhl("object/integer"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
 			return _;
 		}
-		case _.fhh("object/positive"): {
+		case _.fhhl("object/positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case _.fhh("object/string"): {
+		case _.fhhl("object/string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhh("object/term"): {
+		case _.fhhl("object/term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }};
 			return _;
 		}
-		case _.fhh("object/text"): {
+		case _.fhhl("object/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
 			return _;
 		}
-		case _.fhh("object/time"): {
+		case _.fhhl("object/time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
 			return _;
 		}
-		case _.fhh("object/timedelta"): {
+		case _.fhhl("object/timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case _.fhh("object/uuid"): {
+		case _.fhhl("object/uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
 			return _;
 		}
-		case _.fhh("positive"): {
+		case _.fhhl("positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }};
 			return _;
 		}
-		case _.fhh("script"): {
+		case _.fhhl("script"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
-		case _.fhh("string"): {
+		case _.fhhl("string"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhh("term"): {
+		case _.fhhl("term"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }};
 			return _;
 		}
-		case _.fhh("text"): {
+		case _.fhhl("text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }};
 			return _;
 		}
-		case _.fhh("time"): {
+		case _.fhhl("time"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }};
 			return _;
 		}
-		case _.fhh("timedelta"): {
+		case _.fhhl("timedelta"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }};
 			return _;
 		}
-		case _.fhh("uuid"): {
+		case _.fhhl("uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }};
 			return _;
 		}
 		default:
-			throw std::out_of_range("Invalid type");
+		case _.fhhl("undefined"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
 	}
 }
 
@@ -1030,24 +1047,6 @@ _get_str_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept
 static inline const std::string&
 _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
-	constexpr auto EMPTY      = static_string::string(EMPTY_CHAR);
-	constexpr auto STRING     = static_string::string(STRING_CHAR);
-	constexpr auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
-	constexpr auto ARRAY      = static_string::string(ARRAY_CHAR);
-	constexpr auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
-	constexpr auto DATE       = static_string::string(DATE_CHAR);
-	constexpr auto FOREIGN    = static_string::string(FOREIGN_CHAR);
-	constexpr auto FLOAT      = static_string::string(FLOAT_CHAR);
-	constexpr auto GEO        = static_string::string(GEO_CHAR);
-	constexpr auto INTEGER    = static_string::string(INTEGER_CHAR);
-	constexpr auto OBJECT     = static_string::string(OBJECT_CHAR);
-	constexpr auto POSITIVE   = static_string::string(POSITIVE_CHAR);
-	constexpr auto TEXT       = static_string::string(TEXT_CHAR);
-	constexpr auto TERM       = static_string::string(TERM_CHAR);
-	constexpr auto UUID       = static_string::string(UUID_CHAR);
-	constexpr auto SCRIPT     = static_string::string(SCRIPT_CHAR);
-	constexpr auto TIME       = static_string::string(TIME_CHAR);
-
 	constexpr static auto _ = phf::make_phf({
 		hh(EMPTY   + EMPTY   + EMPTY  + EMPTY),
 		hh(EMPTY   + EMPTY   + ARRAY  + EMPTY),
@@ -1362,9 +1361,10 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 static inline std::pair<std::string, FieldType>
 _get_acc_data(std::string_view field_acc)
 {
-	try {
-		return std::make_pair(get_prefix(toUType(_get_accuracy_date(field_acc.substr(1)))), FieldType::DATE);
-	} catch (const std::out_of_range&) {
+	auto accuracy_date = _get_accuracy_date(field_acc.substr(1));
+	if (accuracy_date != UnitTime::INVALID) {
+		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATE);
+	} else {
 		try {
 			switch (field_acc[1]) {
 				case 'g':
@@ -1424,241 +1424,243 @@ static inline const std::pair<bool, const std::string>&
 _get_stem_language(std::string_view str_stem_language)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("armenian"),
-		hh("hy"),
-		hh("basque"),
-		hh("eu"),
-		hh("catalan"),
-		hh("ca"),
-		hh("danish"),
-		hh("da"),
-		hh("dutch"),
-		hh("nl"),
-		hh("kraaij_pohlmann"),
-		hh("english"),
-		hh("en"),
-		hh("earlyenglish"),
-		hh("english_lovins"),
-		hh("lovins"),
-		hh("english_porter"),
-		hh("porter"),
-		hh("finnish"),
-		hh("fi"),
-		hh("french"),
-		hh("fr"),
-		hh("german"),
-		hh("de"),
-		hh("german2"),
-		hh("hungarian"),
-		hh("hu"),
-		hh("italian"),
-		hh("it"),
-		hh("norwegian"),
-		hh("nb"),
-		hh("nn"),
-		hh("no"),
-		hh("portuguese"),
-		hh("pt"),
-		hh("romanian"),
-		hh("ro"),
-		hh("russian"),
-		hh("ru"),
-		hh("spanish"),
-		hh("es"),
-		hh("swedish"),
-		hh("sv"),
-		hh("turkish"),
-		hh("tr"),
-		hh("none"),
+		hhl("armenian"),
+		hhl("hy"),
+		hhl("basque"),
+		hhl("eu"),
+		hhl("catalan"),
+		hhl("ca"),
+		hhl("danish"),
+		hhl("da"),
+		hhl("dutch"),
+		hhl("nl"),
+		hhl("kraaij_pohlmann"),
+		hhl("english"),
+		hhl("en"),
+		hhl("earlyenglish"),
+		hhl("english_lovins"),
+		hhl("lovins"),
+		hhl("english_porter"),
+		hhl("porter"),
+		hhl("finnish"),
+		hhl("fi"),
+		hhl("french"),
+		hhl("fr"),
+		hhl("german"),
+		hhl("de"),
+		hhl("german2"),
+		hhl("hungarian"),
+		hhl("hu"),
+		hhl("italian"),
+		hhl("it"),
+		hhl("norwegian"),
+		hhl("nb"),
+		hhl("nn"),
+		hhl("no"),
+		hhl("portuguese"),
+		hhl("pt"),
+		hhl("romanian"),
+		hhl("ro"),
+		hhl("russian"),
+		hhl("ru"),
+		hhl("spanish"),
+		hhl("es"),
+		hhl("swedish"),
+		hhl("sv"),
+		hhl("turkish"),
+		hhl("tr"),
+		hhl("none"),
 	});
 
-	switch(_.fhh(str_stem_language)) {
-		case _.fhh("armenian"): {
+	switch(_.fhhl(str_stem_language)) {
+		case _.fhhl("armenian"): {
 			static const std::pair<bool, const std::string> hy{ true,  "hy" };
 			return hy;
 		}
-		case _.fhh("hy"): {
+		case _.fhhl("hy"): {
 			static const std::pair<bool, const std::string> hy{ true,  "hy" };
 			return hy;
 		}
-		case _.fhh("basque"): {
+		case _.fhhl("basque"): {
 			static const std::pair<bool, const std::string> ue{ true,  "ue" };
 			return ue;
 		}
-		case _.fhh("eu"): {
+		case _.fhhl("eu"): {
 			static const std::pair<bool, const std::string> eu{ true,  "eu" };
 			return eu;
 		}
-		case _.fhh("catalan"): {
+		case _.fhhl("catalan"): {
 			static const std::pair<bool, const std::string> ca{ true,  "ca" };
 			return ca;
 		}
-		case _.fhh("ca"): {
+		case _.fhhl("ca"): {
 			static const std::pair<bool, const std::string> ca{ true,  "ca" };
 			return ca;
 		}
-		case _.fhh("danish"): {
+		case _.fhhl("danish"): {
 			static const std::pair<bool, const std::string> da{ true,  "da" };
 			return da;
 		}
-		case _.fhh("da"): {
+		case _.fhhl("da"): {
 			static const std::pair<bool, const std::string> da{ true,  "da" };
 			return da;
 		}
-		case _.fhh("dutch"): {
+		case _.fhhl("dutch"): {
 			static const std::pair<bool, const std::string> nl{ true,  "nl" };
 			return nl;
 		}
-		case _.fhh("nl"): {
+		case _.fhhl("nl"): {
 			static const std::pair<bool, const std::string> nl{ true,  "nl" };
 			return nl;
 		}
-		case _.fhh("kraaij_pohlmann"): {
+		case _.fhhl("kraaij_pohlmann"): {
 			static const std::pair<bool, const std::string> nl{ false, "nl" };
 			return nl;
 		}
-		case _.fhh("english"): {
+		case _.fhhl("english"): {
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case _.fhh("en"): {
+		case _.fhhl("en"): {
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case _.fhh("earlyenglish"): {
+		case _.fhhl("earlyenglish"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case _.fhh("english_lovins"): {
+		case _.fhhl("english_lovins"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case _.fhh("lovins"): {
+		case _.fhhl("lovins"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case _.fhh("english_porter"): {
+		case _.fhhl("english_porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case _.fhh("porter"): {
+		case _.fhhl("porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
-		case _.fhh("finnish"): {
+		case _.fhhl("finnish"): {
 			static const std::pair<bool, const std::string> fi{ true,  "fi" };
 			return fi;
 		}
-		case _.fhh("fi"): {
+		case _.fhhl("fi"): {
 			static const std::pair<bool, const std::string> fi{ true,  "fi" };
 			return fi;
 		}
-		case _.fhh("french"): {
+		case _.fhhl("french"): {
 			static const std::pair<bool, const std::string> fr{ true,  "fr" };
 			return fr;
 		}
-		case _.fhh("fr"): {
+		case _.fhhl("fr"): {
 			static const std::pair<bool, const std::string> fr{ true,  "fr" };
 			return fr;
 		}
-		case _.fhh("german"): {
+		case _.fhhl("german"): {
 			static const std::pair<bool, const std::string> de{ true,  "de" };
 			return de;
 		}
-		case _.fhh("de"): {
+		case _.fhhl("de"): {
 			static const std::pair<bool, const std::string> de{ true,  "de" };
 			return de;
 		}
-		case _.fhh("german2"): {
+		case _.fhhl("german2"): {
 			static const std::pair<bool, const std::string> de{ false, "de" };
 			return de;
 		}
-		case _.fhh("hungarian"): {
+		case _.fhhl("hungarian"): {
 			static const std::pair<bool, const std::string> hu{ true,  "hu" };
 			return hu;
 		}
-		case _.fhh("hu"): {
+		case _.fhhl("hu"): {
 			static const std::pair<bool, const std::string> hu{ true,  "hu" };
 			return hu;
 		}
-		case _.fhh("italian"): {
+		case _.fhhl("italian"): {
 			static const std::pair<bool, const std::string> it{ true,  "it" };
 			return it;
 		}
-		case _.fhh("it"): {
+		case _.fhhl("it"): {
 			static const std::pair<bool, const std::string> it{ true,  "it" };
 			return it;
 		}
-		case _.fhh("norwegian"): {
+		case _.fhhl("norwegian"): {
 			static const std::pair<bool, const std::string> no{ true,  "no" };
 			return no;
 		}
-		case _.fhh("nb"): {
+		case _.fhhl("nb"): {
 			static const std::pair<bool, const std::string> no{ false, "no" };
 			return no;
 		}
-		case _.fhh("nn"): {
+		case _.fhhl("nn"): {
 			static const std::pair<bool, const std::string> no{ false, "no" };
 			return no;
 		}
-		case _.fhh("no"): {
+		case _.fhhl("no"): {
 			static const std::pair<bool, const std::string> no{ true,  "no" };
 			return no;
 		}
-		case _.fhh("portuguese"): {
+		case _.fhhl("portuguese"): {
 			static const std::pair<bool, const std::string> pt{ true,  "pt" };
 			return pt;
 		}
-		case _.fhh("pt"): {
+		case _.fhhl("pt"): {
 			static const std::pair<bool, const std::string> pt{ true,  "pt" };
 			return pt;
 		}
-		case _.fhh("romanian"): {
+		case _.fhhl("romanian"): {
 			static const std::pair<bool, const std::string> ro{ true,  "ro" };
 			return ro;
 		}
-		case _.fhh("ro"): {
+		case _.fhhl("ro"): {
 			static const std::pair<bool, const std::string> ro{ true,  "ro" };
 			return ro;
 		}
-		case _.fhh("russian"): {
+		case _.fhhl("russian"): {
 			static const std::pair<bool, const std::string> ru{ true,  "ru" };
 			return ru;
 		}
-		case _.fhh("ru"): {
+		case _.fhhl("ru"): {
 			static const std::pair<bool, const std::string> ru{ true,  "ru" };
 			return ru;
 		}
-		case _.fhh("spanish"): {
+		case _.fhhl("spanish"): {
 			static const std::pair<bool, const std::string> es{ true,  "es" };
 			return es;
 		}
-		case _.fhh("es"): {
+		case _.fhhl("es"): {
 			static const std::pair<bool, const std::string> es{ true,  "es" };
 			return es;
 		}
-		case _.fhh("swedish"): {
+		case _.fhhl("swedish"): {
 			static const std::pair<bool, const std::string> sv{ true,  "sv" };
 			return sv;
 		}
-		case _.fhh("sv"): {
+		case _.fhhl("sv"): {
 			static const std::pair<bool, const std::string> sv{ true,  "sv" };
 			return sv;
 		}
-		case _.fhh("turkish"): {
+		case _.fhhl("turkish"): {
 			static const std::pair<bool, const std::string> tr{ true,  "tr" };
 			return tr;
 		}
-		case _.fhh("tr"): {
+		case _.fhhl("tr"): {
 			static const std::pair<bool, const std::string> tr{ true,  "tr" };
 			return tr;
 		}
-		case _.fhh("none"): {
+		case _.fhhl("none"): {
 			static const std::pair<bool, const std::string> _{ false, DEFAULT_LANGUAGE };
 			return _;
 		}
-		default:
-			throw std::out_of_range("Invalid language");
+		default: {
+			static const std::pair<bool, const std::string> _{ false, "" };
+			return _;
+		}
 	}
 }
 
@@ -1840,11 +1842,11 @@ required_spc_t::get_types(std::string_view str_type)
 {
 	L_CALL("required_spc_t::get_types(%s)", repr(str_type).c_str());
 
-	try {
-		return _get_type(string::lower(str_type));
-	} catch (const std::out_of_range&) {
+	const auto& type = _get_type(str_type);
+	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY + EMPTY)) {
 		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'string', 'term', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type).c_str(), RESERVED_TYPE);
 	}
+	return type;
 }
 
 
@@ -2490,13 +2492,11 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 
 	specification.flags.field_found = true;
 
-	try {
-		const auto& stem = _get_stem_language(meta_name);
-		if (stem.first) {
-			specification.language = stem.second;
-			specification.aux_language = stem.second;
-		}
-	} catch (const std::out_of_range&) { }
+	const auto& stem = _get_stem_language(meta_name);
+	if (stem.first && !stem.second.empty()) {
+		specification.language = stem.second;
+		specification.aux_language = stem.second;
+	}
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(meta_name);
@@ -4256,6 +4256,8 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					}
 					break;
 				}
+				case UUIDFieldIndex::INVALID:
+					break;
 			}
 		} else {
 			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
@@ -4380,6 +4382,8 @@ Schema::complete_specification(const MsgPack& item_value)
 				}
 				break;
 			}
+			case UUIDFieldIndex::INVALID:
+				break;
 		}
 	} else {
 		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
@@ -4537,9 +4541,10 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					for (const auto& _accuracy : *specification.doc_acc) {
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
-							try {
-								accuracy = toUType(_get_accuracy_date(string::lower(_accuracy.str_view())));
-							} catch (const std::out_of_range&) {
+							auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+							if (accuracy_date != UnitTime::INVALID) {
+								accuracy = toUType(accuracy_date);
+							} else {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(_accuracy.str_view()).c_str());
 							}
 						} else {
@@ -4566,7 +4571,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				try {
 					for (const auto& _accuracy : *specification.doc_acc) {
 						try {
-							set_acc.insert(toUType(_get_accuracy_time(string::lower(_accuracy.str_view()))));
+							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(_accuracy.str_view()).c_str());
 						}
@@ -4963,6 +4968,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 	L_CALL("Schema::_index_item(<doc>, <values>, %zu)", pos);
 
 	switch (specification.index) {
+		case TypeIndex::INVALID:
 		case TypeIndex::NONE:
 			return;
 
@@ -5686,6 +5692,8 @@ Schema::update_prefixes()
 					specification.prefix.uuid.append(specification.local_prefix.uuid);
 					break;
 				}
+				case UUIDFieldIndex::INVALID:
+					break;
 			}
 		} else {
 			specification.prefix.field.append(specification.local_prefix.field);
@@ -5763,9 +5771,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		auto str_key = it->str_view();
 		auto key = hh(str_key);
 		auto &value = it.value();
-		try {
-			_dispatch_process_concrete_properties(key, str_key, value);
-		} catch (const std::out_of_range&) {
+		if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 			fields.emplace_back(std::move(str_key), &value);
 		}
 	}
@@ -5786,12 +5792,8 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 		auto str_key = it->str_view();
 		auto key = hh(str_key);
 		auto& value = it.value();
-		try {
-			_dispatch_process_properties(key, str_key, value);
-		} catch (const std::out_of_range&) {
-			try {
-				_dispatch_process_concrete_properties(key, str_key, value);
-			} catch (const std::out_of_range&) {
+		if (!_dispatch_process_properties(key, str_key, value)) {
+			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 				fields.emplace_back(std::move(str_key), &value);
 			}
 		}
@@ -5824,12 +5826,8 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 		auto str_key = it->str_view();
 		auto key = hh(str_key);
 		auto& value = it.value();
-		try {
-			_dispatch_write_properties(key, mut_properties, str_key, value);
-		} catch (const std::out_of_range&) {
-			try {
-				_dispatch_process_concrete_properties(key, str_key, value);
-			} catch (const std::out_of_range&) {
+		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
+			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 				fields.emplace_back(std::move(str_key), &value);
 			}
 		}
@@ -5841,7 +5839,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 }
 
 
-inline void
+inline bool
 Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_write_properties(%s)", repr(mut_properties.to_string()).c_str());
@@ -5876,83 +5874,83 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 	switch (_.find(key)) {
 		case _.fhh(RESERVED_WEIGHT):
 			write_weight(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITION):
 			write_position(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SPELLING):
 			write_spelling(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITIONS):
 			write_positions(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX):
 			write_index(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STORE):
 			write_store(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_RECURSE):
 			write_recurse(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			write_dynamic(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRICT):
 			write_strict(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DATE_DETECTION):
 			write_date_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			write_time_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIMEDELTA_DETECTION):
 			write_timedelta_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NUMERIC_DETECTION):
 			write_numeric_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_GEO_DETECTION):
 			write_geo_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			write_bool_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRING_DETECTION):
 			write_string_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			write_text_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TERM_DETECTION):
 			write_term_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			write_uuid_detection(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_TERM):
 			write_bool_term(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NAMESPACE):
 			write_namespace(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIAL_PATHS):
 			write_partial_paths(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX_UUID_FIELD):
 			write_index_uuid_field(mut_properties, prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SCHEMA):
 			write_schema(mut_properties, prop_name, value);
-			break;
+			return true;
 		default:
-			throw std::out_of_range("Invalid write property");
+			return false;
 	}
 }
 
 
-inline void
+inline bool
 Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_feed_properties(%s)", repr(value.to_string()).c_str());
@@ -5999,114 +5997,114 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	switch (_.find(key)) {
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::feed_weight(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITION):
 			Schema::feed_position(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SPELLING):
 			Schema::feed_spelling(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITIONS):
 			Schema::feed_positions(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TYPE):
 			Schema::feed_type(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PREFIX):
 			Schema::feed_prefix(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SLOT):
 			Schema::feed_slot(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX):
 			Schema::feed_index(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STORE):
 			Schema::feed_store(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_RECURSE):
 			Schema::feed_recurse(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			Schema::feed_dynamic(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRICT):
 			Schema::feed_strict(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DATE_DETECTION):
 			Schema::feed_date_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			Schema::feed_time_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIMEDELTA_DETECTION):
 			Schema::feed_timedelta_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NUMERIC_DETECTION):
 			Schema::feed_numeric_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_GEO_DETECTION):
 			Schema::feed_geo_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			Schema::feed_bool_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRING_DETECTION):
 			Schema::feed_string_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::feed_text_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TERM_DETECTION):
 			Schema::feed_term_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			Schema::feed_uuid_detection(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_TERM):
 			Schema::feed_bool_term(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ACCURACY):
 			Schema::feed_accuracy(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ACC_PREFIX):
 			Schema::feed_acc_prefix(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::feed_language(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STOP_STRATEGY):
 			Schema::feed_stop_strategy(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_STRATEGY):
 			Schema::feed_stem_strategy(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_LANGUAGE):
 			Schema::feed_stem_language(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIALS):
 			Schema::feed_partials(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ERROR):
 			Schema::feed_error(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NAMESPACE):
 			Schema::feed_namespace(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIAL_PATHS):
 			Schema::feed_partial_paths(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX_UUID_FIELD):
 			Schema::feed_index_uuid_field(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SCRIPT):
 			Schema::feed_script(value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ENDPOINT):
 			Schema::feed_endpoint(value);
-			break;
+			return true;
 		default:
-			throw std::out_of_range("Invalid feed property");
+			return false;
 	}
 }
 
@@ -6132,7 +6130,7 @@ has_dispatch_process_properties(uint32_t key)
 	return _.count(key);
 }
 
-inline void
+inline bool
 Schema::_dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_process_properties(%s)", repr(prop_name).c_str());
@@ -6155,42 +6153,42 @@ Schema::_dispatch_process_properties(uint32_t key, std::string_view prop_name, c
 	switch (_.find(key)) {
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::process_language(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PREFIX):
 			Schema::process_prefix(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SLOT):
 			Schema::process_slot(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STOP_STRATEGY):
 			Schema::process_stop_strategy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_STRATEGY):
 			Schema::process_stem_strategy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_LANGUAGE):
 			Schema::process_stem_language(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TYPE):
 			Schema::process_type(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_TERM):
 			Schema::process_bool_term(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ACCURACY):
 			Schema::process_accuracy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ACC_PREFIX):
 			Schema::process_acc_prefix(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIALS):
 			Schema::process_partials(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ERROR):
 			Schema::process_error(prop_name, value);
-			break;
+			return true;
 		default:
-			throw std::out_of_range("Invalid process property");
+			return false;
 	}
 }
 
@@ -6262,7 +6260,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 	return _.count(key);
 }
 
-inline void
+inline bool
 Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_process_concrete_properties(%s)", repr(prop_name).c_str());
@@ -6333,184 +6331,184 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	switch (_.find(key)) {
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::process_weight(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITION):
 			Schema::process_position(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SPELLING):
 			Schema::process_spelling(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITIONS):
 			Schema::process_positions(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX):
 			Schema::process_index(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STORE):
 			Schema::process_store(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_RECURSE):
 			Schema::process_recurse(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIAL_PATHS):
 			Schema::process_partial_paths(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INDEX_UUID_FIELD):
 			Schema::process_index_uuid_field(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_VALUE):
 			Schema::process_value(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ENDPOINT):
 			Schema::process_endpoint(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SCRIPT):
 			Schema::process_script(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_FLOAT):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POSITIVE):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_INTEGER):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOLEAN):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TERM):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TEXT):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRING):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DATE):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_UUID):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_EWKT):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POINT):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_CIRCLE):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_CONVEX):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_POLYGON):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_CHULL):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_MULTIPOINT):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_MULTICIRCLE):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_MULTICONVEX):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_MULTIPOLYGON):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_MULTICHULL):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_GEO_COLLECTION):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_GEO_INTERSECTION):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_CHAI):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ECMA):
 			Schema::process_cast_object(prop_name, value);
-			break;
+			return true;
 		// Next functions only check the consistency of user provided data.
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::consistency_language(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STOP_STRATEGY):
 			Schema::consistency_stop_strategy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_STRATEGY):
 			Schema::consistency_stem_strategy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STEM_LANGUAGE):
 			Schema::consistency_stem_language(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TYPE):
 			Schema::consistency_type(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_TERM):
 			Schema::consistency_bool_term(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ACCURACY):
 			Schema::consistency_accuracy(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_PARTIALS):
 			Schema::consistency_partials(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_ERROR):
 			Schema::consistency_error(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			Schema::consistency_dynamic(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRICT):
 			Schema::consistency_strict(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_DATE_DETECTION):
 			Schema::consistency_date_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			Schema::consistency_time_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TIMEDELTA_DETECTION):
 			Schema::consistency_timedelta_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NUMERIC_DETECTION):
 			Schema::consistency_numeric_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_GEO_DETECTION):
 			Schema::consistency_geo_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			Schema::consistency_bool_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_STRING_DETECTION):
 			Schema::consistency_string_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::consistency_text_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_TERM_DETECTION):
 			Schema::consistency_term_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			Schema::consistency_uuid_detection(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_NAMESPACE):
 			Schema::consistency_namespace(prop_name, value);
-			break;
+			return true;
 		case _.fhh(RESERVED_SCHEMA):
 			Schema::consistency_schema(prop_name, value);
-			break;
+			return true;
 		default:
-			throw std::out_of_range("Invalid process concrete property");
+			return false;
 	}
 }
 
@@ -6525,15 +6523,9 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 		auto str_key = it->str_view();
 		auto key = hh(str_key);
 		auto& value = it.value();
-		try {
-			_dispatch_write_properties(key, mut_properties, str_key, value);
-		} catch (const std::out_of_range&) {
-			try {
-				_dispatch_process_properties(key, str_key, value);
-			} catch (const std::out_of_range&) {
-				try {
-					_dispatch_process_concrete_properties(key, str_key, value);
-				} catch (const std::out_of_range&) {
+		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
+			if (!_dispatch_process_properties(key, str_key, value)) {
+				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 					fields.emplace_back(std::move(str_key), &value);
 				}
 			}
@@ -6586,13 +6578,11 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
-	try {
-		const auto& stem = _get_stem_language(specification.meta_name);
-		if (stem.first) {
-			specification.language = stem.second;
-			specification.aux_language = stem.second;
-		}
-	} catch (const std::out_of_range&) { }
+	const auto& stem = _get_stem_language(specification.meta_name);
+	if (stem.first && !stem.second.empty()) {
+		specification.language = stem.second;
+		specification.aux_language = stem.second;
+	}
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
@@ -6620,13 +6610,11 @@ Schema::add_field(MsgPack*& mut_properties)
 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
-	try {
-		const auto& stem = _get_stem_language(specification.meta_name);
-		if (stem.first) {
-			specification.language = stem.second;
-			specification.aux_language = stem.second;
-		}
-	} catch (const std::out_of_range&) { }
+	const auto& stem = _get_stem_language(specification.meta_name);
+	if (stem.first && !stem.second.empty()) {
+		specification.language = stem.second;
+		specification.aux_language = stem.second;
+	}
 
 	if (specification.full_meta_name.empty()) {
 		specification.full_meta_name.assign(specification.meta_name);
@@ -6654,9 +6642,7 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 		auto str_key = it->str_view();
 		auto key = hh(str_key);
 		auto& value = it.value();
-		try {
-			_dispatch_feed_properties(key, value);
-		} catch (const std::out_of_range&) { }
+		_dispatch_feed_properties(key, value);
 	}
 }
 
@@ -6761,9 +6747,8 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 
 	try {
 		if (prop_stop_strategy.is_string()) {
-			try {
-				specification.stop_strategy = _get_stop_strategy(prop_stop_strategy.str_view());
-			} catch (const std::out_of_range&) {
+			specification.stop_strategy = _get_stop_strategy(prop_stop_strategy.str_view());
+			if (specification.stop_strategy == StopStrategy::INVALID) {
 				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stop_strategy).c_str());
 			}
 		} else {
@@ -6782,9 +6767,8 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 
 	try {
 		if (prop_stem_strategy.is_string()) {
-			try {
-				specification.stem_strategy = _get_stem_strategy(prop_stem_strategy.str_view());
-			} catch (const std::out_of_range&) {
+			specification.stem_strategy = _get_stem_strategy(prop_stem_strategy.str_view());
+			if (specification.stem_strategy == StemStrategy::INVALID) {
 				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name).c_str(), repr(str_set_stem_strategy).c_str());
 			}
 		} else {
@@ -6841,9 +6825,10 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 		for (const auto& _accuracy : prop_accuracy) {
 			uint64_t accuracy;
 			if (_accuracy.is_string()) {
-				try {
-					accuracy = toUType(_get_accuracy_date(_accuracy.str_view()));
-				} catch (const std::out_of_range&) {
+				auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+				if (accuracy_date != UnitTime::INVALID) {
+					accuracy = toUType(accuracy_date);
+				} else {
 					THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name).c_str());
 				}
 			} else {
@@ -6906,12 +6891,11 @@ Schema::feed_index(const MsgPack& prop_index)
 	L_CALL("Schema::feed_index(%s)", repr(prop_index.to_string()).c_str());
 
 	try {
-		try {
-			specification.index = _get_index(prop_index.str_view());
-			specification.flags.has_index = true;
-		} catch (const std::out_of_range&) {
+		specification.index = _get_index(prop_index.str_view());
+		if (specification.index == TypeIndex::INVALID) {
 			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX, repr(specification.full_meta_name).c_str(), repr(str_set_index).c_str());
 		}
+		specification.flags.has_index = true;
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX, repr(specification.full_meta_name).c_str());
 	}
@@ -7175,8 +7159,9 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 
 	try {
 		specification.index_uuid_field = _get_index_uuid_field(prop_index_uuid_field.str_view());
-	} catch (const std::out_of_range&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name).c_str(), repr(str_set_index_uuid_field).c_str());
+		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
+			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name).c_str(), repr(str_set_index_uuid_field).c_str());
+		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name).c_str());
 	}
@@ -7568,15 +7553,11 @@ Schema::process_language(std::string_view prop_name, const MsgPack& doc_language
 
 	try {
 		const auto str_language = doc_language.str_view();
-		try {
-			const auto& stem = _get_stem_language(string::lower(str_language));
-			if (stem.first) {
-				specification.language = stem.second;
-				specification.aux_language = stem.second;
-			} else {
-				THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(str_language).c_str());
-			}
-		} catch (const std::out_of_range&) {
+		const auto& stem = _get_stem_language(str_language);
+		if (stem.first && !stem.second.empty()) {
+			specification.language = stem.second;
+			specification.aux_language = stem.second;
+		} else {
 			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(str_language).c_str());
 		}
 	} catch (const msgpack::type_error&) {
@@ -7625,9 +7606,8 @@ Schema::process_stop_strategy(std::string_view prop_name, const MsgPack& doc_sto
 
 	try {
 		auto str_stop_strategy = doc_stop_strategy.str_view();
-		try {
-			specification.stop_strategy = _get_stop_strategy(string::lower(str_stop_strategy));
-		} catch (const std::out_of_range&) {
+		specification.stop_strategy = _get_stop_strategy(str_stop_strategy);
+		if (specification.stop_strategy == StopStrategy::INVALID) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stop_strategy.c_str(), repr(str_stop_strategy).c_str());
 		}
 	} catch (const msgpack::type_error&) {
@@ -7644,9 +7624,8 @@ Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& doc_ste
 
 	try {
 		auto str_stem_strategy = doc_stem_strategy.str_view();
-		try {
-			specification.stem_strategy = _get_stem_strategy(string::lower(str_stem_strategy));
-		} catch (const std::out_of_range&) {
+		specification.stem_strategy = _get_stem_strategy(str_stem_strategy);
+		if (specification.stem_strategy == StemStrategy::INVALID) {
 			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name).c_str(), str_set_stem_strategy.c_str(), repr(str_stem_strategy).c_str());
 		}
 	} catch (const msgpack::type_error&) {
@@ -7663,13 +7642,12 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_ste
 
 	try {
 		auto str_stem_language = doc_stem_language.str_view();
-		try {
-			const auto& stem = _get_stem_language(string::lower(str_stem_language));
-			specification.stem_language = str_stem_language;
-			specification.aux_stem_language = stem.second;
-		} catch (const std::out_of_range&) {
+		const auto& stem = _get_stem_language(str_stem_language);
+		if (stem.second.empty()) {
 			THROW(ClientError, "%s: %s is not supported", repr(prop_name).c_str(), repr(str_stem_language).c_str());
 		}
+		specification.stem_language = str_stem_language;
+		specification.aux_stem_language = stem.second;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
@@ -7881,12 +7859,11 @@ Schema::process_index(std::string_view prop_name, const MsgPack& doc_index)
 
 	try {
 		auto str_index = doc_index.str_view();
-		try {
-			specification.index = _get_index(string::lower(str_index));
-			specification.flags.has_index = true;
-		} catch (const std::out_of_range&) {
+		specification.index = _get_index(str_index);
+		if (specification.index == TypeIndex::INVALID) {
 			THROW(ClientError, "%s not supported, %s must be one of %s", repr(str_index).c_str(), repr(prop_name).c_str(), str_set_index.c_str());
 		}
+		specification.flags.has_index = true;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
@@ -7959,9 +7936,10 @@ Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& doc_
 
 	auto str_index_uuid_field = doc_index_uuid_field.str_view();
 	try {
-		specification.index_uuid_field = _get_index_uuid_field(string::lower(str_index_uuid_field));
-	} catch (const std::out_of_range&) {
-		THROW(ClientError, "%s not supported, %s must be one of %s (%s not supported)", repr(str_index_uuid_field).c_str(), repr(prop_name).c_str(), str_set_index_uuid_field.c_str());
+		specification.index_uuid_field = _get_index_uuid_field(str_index_uuid_field);
+		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
+			THROW(ClientError, "%s not supported, %s must be one of %s (%s not supported)", repr(str_index_uuid_field).c_str(), repr(prop_name).c_str(), str_set_index_uuid_field.c_str());
+		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
 	}
@@ -8058,7 +8036,7 @@ Schema::consistency_language(std::string_view prop_name, const MsgPack& doc_lang
 	try {
 		const auto str_language = doc_language.str_view();
 		if (specification.language != str_language) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.language.c_str(), repr(str_language).c_str(), specification.full_meta_name.c_str());
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.language.c_str(), repr(str_language).c_str(), repr(specification.full_meta_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -8077,7 +8055,7 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
 			const auto stop_strategy = _get_str_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stop_strategy.c_str(), _stop_strategy.c_str(), repr(specification.full_meta_name).c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
@@ -8099,7 +8077,7 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
 			const auto stem_strategy = _get_str_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), stem_strategy.c_str(), _stem_strategy.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(stem_strategy).c_str(), repr(_stem_strategy).c_str(), repr(specification.full_meta_name).c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
@@ -8120,7 +8098,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& doc
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_language = string::lower(doc_stem_language.str_view());
 			if (specification.stem_language != _stem_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.stem_language.c_str(), _stem_language.c_str(), specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(specification.stem_language).c_str(), repr(_stem_language).c_str(), repr(specification.full_meta_name).c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name).c_str());
@@ -8138,7 +8116,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 	L_CALL("Schema::consistency_type(%s)", repr(doc_type.to_string()).c_str());
 
 	try {
-		const auto _str_type = string::lower(doc_type.str_view());
+		const auto _str_type = doc_type.str_view();
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
@@ -8147,7 +8125,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 		}
 		const auto str_type = Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), str_type.c_str(), _str_type.substr(init_pos).c_str(), specification.full_meta_name.c_str());
+			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(str_type).c_str(), repr(_str_type.substr(init_pos)).c_str(), repr(specification.full_meta_name).c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name).c_str());
@@ -8186,7 +8164,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string((HTM_START_POS - acc) / 2)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [%s ->  %s] in %s", repr(prop_name).c_str(), repr(str_accuracy).c_str(), repr(_str_accuracy).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				return;
 			}
@@ -8195,9 +8173,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& _accuracy : doc_accuracy) {
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
-							try {
-								accuracy = toUType(_get_accuracy_date(string::lower(_accuracy.str_view())));
-							} catch (const std::out_of_range&) {
+							auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+							if (accuracy_date != UnitTime::INVALID) {
+								accuracy = toUType(accuracy_date);
+							} else {
 								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date).c_str(), repr(_accuracy.str_view()).c_str());
 							}
 						} else {
@@ -8220,7 +8199,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(_get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(str_accuracy).c_str(), repr(_str_accuracy).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				return;
 			}
@@ -8229,7 +8208,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						try {
-							set_acc.insert(toUType(_get_accuracy_time(string::lower(_accuracy.str_view()))));
+							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
 							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(str_set_acc_time).c_str(), repr(_accuracy.str_view()).c_str());
 						}
@@ -8245,7 +8224,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(_get_str_acc_date((UnitTime)acc))).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(str_accuracy).c_str(), repr(_str_accuracy).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				return;
 			}
@@ -8257,7 +8236,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8267,7 +8246,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(std::to_string(acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [{ %s}  ->  { %s}] in %s", repr(prop_name).c_str(), str_accuracy.c_str(), _str_accuracy.c_str(), specification.full_meta_name.c_str());
+					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), repr(str_accuracy).c_str(), repr(_str_accuracy).c_str(), repr(specification.full_meta_name).c_str());
 				}
 				return;
 			}
@@ -8290,7 +8269,7 @@ Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_boo
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TERM) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", specification.full_meta_name.c_str());
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name).c_str(), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", repr(specification.full_meta_name).c_str());
 			}
 		} else {
 			THROW(ClientError, "%s only is allowed in term type fields", repr(prop_name).c_str());

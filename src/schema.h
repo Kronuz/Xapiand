@@ -64,6 +64,7 @@ enum class TypeIndex : uint8_t {
 	GLOBAL_ALL_FIELD_TERMS    = GLOBAL_ALL    | FIELD_TERMS,    // 1101  Bits for  "global_all,field_terms" *
 	GLOBAL_ALL_FIELD_VALUES   = GLOBAL_ALL    | FIELD_VALUES,   // 1110  Bits for  "global_all,field_values" *
 	ALL                       = GLOBAL_ALL    | FIELD_ALL,      // 1111  Bits for  "all"
+	INVALID                   = static_cast<uint8_t>(-1),
 };
 
 
@@ -71,6 +72,7 @@ enum class UUIDFieldIndex : uint8_t {
 	UUID        = 0b0001,  // Indexin using the field name.
 	UUID_FIELD  = 0b0010,  // Indexing using the meta name.
 	BOTH        = 0b0011,  // Indexing using field_uuid and uuid.
+	INVALID     = static_cast<uint8_t>(-1),
 };
 
 
@@ -78,6 +80,7 @@ enum class StopStrategy : uint8_t {
 	STOP_NONE,
 	STOP_ALL,
 	STOP_STEMMED,
+	INVALID    = static_cast<uint8_t>(-1),
 };
 
 
@@ -86,6 +89,7 @@ enum class StemStrategy : uint8_t {
 	STEM_SOME,
 	STEM_ALL,
 	STEM_ALL_Z,
+	INVALID    = static_cast<uint8_t>(-1),
 };
 
 
@@ -99,6 +103,7 @@ enum class UnitTime : uint64_t {
 	DECADE     = YEAR * 10,
 	CENTURY    = YEAR * 100,
 	MILLENNIUM = YEAR * 1000,
+	INVALID    = static_cast<uint64_t>(-1),
 };
 
 
@@ -516,10 +521,10 @@ class Schema {
 
 	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
 
-	void _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
-	void _dispatch_feed_properties(uint32_t key, const MsgPack& value);
-	void _dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
-	void _dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_feed_properties(uint32_t key, const MsgPack& value);
+	bool _dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
+	bool _dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
 	static bool _dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties);
 
 	std::shared_ptr<const MsgPack> schema;
