@@ -611,6 +611,14 @@ endif (IWYU)
 
 
 #####################################################################
+
+if (BUILD_TESTS OR BUILD_BENCHMARKS)
+	enable_testing()
+	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+endif ()
+
+
+#####################################################################
 # Testing.
 #
 # You can skip this section if you aren't interested in testing.
@@ -621,7 +629,6 @@ endif (IWYU)
 #
 
 if (BUILD_TESTS)
-	enable_testing()
 	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
 
 	# Build googletest Tests
@@ -640,10 +647,12 @@ if (BUILD_TESTS)
 			gtest_main gtest
 		)
 		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
+		add_dependencies(check "${PROJECT_TEST}")
 	endforeach ()
 
 
 	### OLD:
+	set (PATH_TESTS "${PROJECT_SOURCE_DIR}/oldtests")
 	foreach (VAR_TEST
 		boolparser compressor endpoint fieldparser generate_terms geospatial
 		geospatial_query uuid hash lru msgpack patcher phonetic query queue
@@ -674,6 +683,7 @@ if (BUILD_TESTS)
 			${ZLIB_LIBRARIES}
 		)
 		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
+		add_dependencies(check "${PROJECT_TEST}")
 	endforeach ()
 	###
 
@@ -691,7 +701,6 @@ endif ()
 #
 
 if (BUILD_BENCHMARKS)
-	enable_testing()
 	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
 
 	# Build googlebenchmark Benchmarks
@@ -710,5 +719,6 @@ if (BUILD_BENCHMARKS)
 			benchmark
 		)
 		add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
+		add_dependencies(check "${PROJECT_BENCHMARK}")
 	endforeach ()
 endif ()
