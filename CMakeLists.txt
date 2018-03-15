@@ -23,7 +23,9 @@
 cmake_minimum_required(VERSION 3.2)
 project(xapiand C CXX)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/.modules")
+# Make sure we can import out CMake functions
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set (PACKAGE_NAME "Xapiand")
 set (PACKAGE_VERSION "1.0.0")
