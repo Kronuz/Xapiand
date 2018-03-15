@@ -85,7 +85,7 @@ if (UUID_NAME_LIB)
 
 	# handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE
 	# if all listed variables are TRUE
-	include(FindPackageHandleStandardArgs)
+	include (FindPackageHandleStandardArgs)
 	find_package_handle_standard_args(UUID ${UUID_ERR_MSG}
 		UUID_LIBRARY UUID_INCLUDE_DIR)
 

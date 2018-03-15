@@ -21,10 +21,9 @@
 #
 
 cmake_minimum_required(VERSION 3.2)
+project(xapiand C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
-
-project(xapiand C CXX)
 
 set (PACKAGE_NAME "Xapiand")
 set (PACKAGE_VERSION "1.0.0")
@@ -38,8 +37,9 @@ set (PATH_TESTS "${PROJECT_SOURCE_DIR}/tests")
 # Options
 ########################################################################
 
-option(IWYU          "Enable include-what-you-use"                  OFF)
-option(BUILD_TESTS   "Build all tests"                              OFF)
+option(IWYU "Enable include-what-you-use"                           OFF)
+option(BUILD_TESTS "Build all tests"                                OFF)
+option(BUILD_BENCHMARKS "Build all benchmarks"                      OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(BINARY_PROXY  "Define a proxy port for binary protocol"      OFF)
@@ -79,20 +79,21 @@ add_custom_target(package_config
 	BYPRODUCTS "${PROJECT_BINARY_DIR}/src/package_config.h"
 	COMMAND ${CMAKE_COMMAND} -P "${PROJECT_BINARY_DIR}/package_config.cmake")
 
+
 ########################################################################
 # CMake Includes
 ########################################################################
 
-include(AC_HEADER_STDC)
-include(CheckCXXCompilerFlag)
-include(CheckCXXSourceCompiles)
-include(CheckFunctionExists)
-include(CheckIncludeFileCXX)
-include(CheckIncludeFiles)
-include(CheckLibraryExists)
-include(CheckTypeSize)
-include(CMakePushCheckState)
-include(GNUInstallDirs)
+include (AC_HEADER_STDC)
+include (CheckCXXCompilerFlag)
+include (CheckCXXSourceCompiles)
+include (CheckFunctionExists)
+include (CheckIncludeFileCXX)
+include (CheckIncludeFiles)
+include (CheckLibraryExists)
+include (CheckTypeSize)
+include (CMakePushCheckState)
+include (GNUInstallDirs)
 
 
 ########################################################################

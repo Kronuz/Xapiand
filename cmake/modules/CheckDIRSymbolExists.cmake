@@ -41,11 +41,11 @@ macro (CHECK_DIRSYMBOL_EXISTS FILES VARIABLE)
     set (CMAKE_CONFIGURABLE_FILE_CONTENT
       "${CMAKE_CONFIGURABLE_FILE_CONTENT}\nint main()\n{if ((DIR *) 0) return 0;}\n")
 
-    CONFIGURE_FILE("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in"
+    configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in"
       "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckDIRSymbolExists.c" @ONLY)
 
-    MESSAGE(STATUS "Looking for DIR in ${FILES}")
-    TRY_COMPILE(${VARIABLE}
+    message(STATUS "Looking for DIR in ${FILES}")
+    try_compile(${VARIABLE}
       ${CMAKE_BINARY_DIR}
       ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckDIRSymbolExists.c
       COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
@@ -55,17 +55,17 @@ macro (CHECK_DIRSYMBOL_EXISTS FILES VARIABLE)
       "${CMAKE_DIRSYMBOL_EXISTS_INCLUDES}"
       OUTPUT_VARIABLE OUTPUT)
     if (${VARIABLE})
-      MESSAGE(STATUS "Looking for DIR in ${FILES} - found")
+      message(STATUS "Looking for DIR in ${FILES} - found")
       set (${VARIABLE} 1 CACHE INTERNAL "Have symbol DIR")
-      FILE(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeOutput.log
+      file(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeOutput.log
         "Determining if the DIR symbol is defined as in AC_HEADER_DIRENT "
         "passed with the following output:\n"
         "${OUTPUT}\nFile ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckDIRSymbolExists.c:\n"
         "${CMAKE_CONFIGURABLE_FILE_CONTENT}\n")
     else (${VARIABLE})
-      MESSAGE(STATUS "Looking for DIR in ${FILES} - not found.")
+      message(STATUS "Looking for DIR in ${FILES} - not found.")
       set (${VARIABLE} "" CACHE INTERNAL "Have symbol DIR")
-      FILE(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeError.log
+      file(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeError.log
         "Determining if the DIR symbol is defined as in AC_HEADER_DIRENT "
         "failed with the following output:\n"
         "${OUTPUT}\nFile ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckDIRSymbolExists.c:\n"

@@ -10,7 +10,7 @@
 #  VARIABLE - variable to store the result
 #
 
-INCLUDE(CheckCXXSourceCompiles)
+include (CheckCXXSourceCompiles)
 
 macro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)
    set (_INCLUDE_FILES)
@@ -33,5 +33,5 @@ int main()
   return 0;
 }
 ")
-   CHECK_CXX_SOURCE_COMPILES("${_CHECK_PROTO_EXISTS_SOURCE_CODE}" ${_RESULT})
+   check_cxx_source_compiles("${_CHECK_PROTO_EXISTS_SOURCE_CODE}" ${_RESULT})
 endmacro (CHECK_PROTOTYPE_EXISTS _SYMBOL _HEADER _RESULT)

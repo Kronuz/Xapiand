@@ -35,7 +35,7 @@ option(UBSAN "Enable UndefinedBehaviorSanitizer (aka UBSAN)" OFF)
 
 
 function (check_sanitizer_flags SAN_DESCRIPTION SAN_FLAGS)
-	include(CheckCXXCompilerFlag)
+	include (CheckCXXCompilerFlag)
 	set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
 	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})

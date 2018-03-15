@@ -20,7 +20,6 @@
 # IN THE SOFTWARE.
 #
 
-
 ########################################################################
 # CMake module to find the ChaiScript include directory
 # This module defines:
@@ -45,7 +44,7 @@ find_path(CHAISCRIPT_INCLUDE_DIR chaiscript/chaiscript.hpp
 )
 
 
-include(FindPackageHandleStandardArgs)
+include (FindPackageHandleStandardArgs)
 
 
 # handle the QUIETLY and REQUIRED arguments and set CHAISCRIPT_FOUND to TRUE
