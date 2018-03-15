@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-const std::string path_test_geospatial = std::string(PATH_TESTS) + "/examples/geospatial/";
+const std::string path_test_geospatial = std::string(FIXTURES_PATH) + "/examples/geospatial/";
 const std::string python_geospatial = "python_files/geospatial/";
 
 

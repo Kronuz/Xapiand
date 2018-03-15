@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-const std::string path_test_compressor = std::string(PATH_TESTS) + "/examples/compressor/";
+const std::string path_test_compressor = std::string(FIXTURES_PATH) + "/examples/compressor/";
 
 
 const std::string cmp_file = path_test_compressor + "compress.lz4";

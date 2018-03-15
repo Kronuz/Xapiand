@@ -28,7 +28,7 @@
 #include "utils.h"
 
 
-const std::string path_patcher_test = std::string(PATH_TESTS) + "/examples/json/";
+const std::string path_patcher_test = std::string(FIXTURES_PATH) + "/examples/json/";
 
 
 int test_patcher_mix() {

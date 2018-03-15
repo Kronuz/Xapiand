@@ -25,7 +25,7 @@
 #include "utils.h"
 
 
-const std::string path_test_query = std::string(PATH_TESTS) + "/examples/";
+const std::string path_test_query = std::string(FIXTURES_PATH) + "/examples/";
 
 
 // TEST query

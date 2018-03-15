@@ -1670,14 +1670,14 @@ bool has_dispatch_process_concrete_properties(uint32_t key);
 
 const std::unique_ptr<SimpleStopper<>>& getStopper(std::string_view language) {
 	static std::mutex mtx;
-	static std::string path_stopwords(getenv("XAPIAN_PATH_STOPWORDS") ? getenv("XAPIAN_PATH_STOPWORDS") : PATH_STOPWORDS);
+	static std::string stopwords_path(getenv("XAPIAN_STOPWORDS_PATH") ? getenv("XAPIAN_STOPWORDS_PATH") : STOPWORDS_PATH);
 	static std::unordered_map<uint32_t, std::unique_ptr<SimpleStopper<>>> stoppers;
 	auto language_hash = hh(language);
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language_hash);
 	if (it == stoppers.end()) {
 		auto& stopper = stoppers[language_hash];
-		auto path = path_stopwords + "/" + std::string(language) + ".txt";
+		auto path = stopwords_path + "/" + std::string(language) + ".txt";
 		std::ifstream words(path);
 		if (words.is_open()) {
 			stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());

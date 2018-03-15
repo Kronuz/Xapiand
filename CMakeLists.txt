@@ -104,7 +104,8 @@ include (GNUInstallDirs)
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set (PATH_STOPWORDS "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
+set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
+set (STOPWORDS_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 
 file(GLOB XAPIAND_SRC_LIST
@@ -517,7 +518,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Copy stopwords during the installation
 ########################################################################
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${PATH_STOPWORDS})
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${STOPWORDS_PATH})
 
 
 ########################################################################
@@ -655,7 +656,6 @@ if (BUILD_TESTS)
 
 
 	### OLD:
-	set (PATH_TESTS "${PROJECT_SOURCE_DIR}/oldtests")
 	foreach (VAR_TEST
 		boolparser compressor endpoint fieldparser generate_terms geospatial
 		geospatial_query uuid hash lru msgpack patcher phonetic query queue

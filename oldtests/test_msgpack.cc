@@ -27,7 +27,7 @@
 #include "utils.h"
 
 
-const std::string path_test_msgpack = std::string(PATH_TESTS) + "/examples/";
+const std::string path_test_msgpack = std::string(FIXTURES_PATH) + "/examples/";
 
 
 int test_msgpack_constructors() {

@@ -28,7 +28,7 @@
 #include "utils.h"
 
 
-const std::string path_test_sort = std::string(PATH_TESTS) + "/examples/sort/";
+const std::string path_test_sort = std::string(FIXTURES_PATH) + "/examples/sort/";
 
 
 const std::vector<sort_t> string_levens_tests({

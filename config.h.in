@@ -248,11 +248,11 @@
 /* Enable tracked memory allocator for memory usage. */
 #cmakedefine XAPIAND_TRACKED_MEM @XAPIAND_TRACKED_MEM@
 
-/* Path for test files */
-#cmakedefine PATH_TESTS "@PATH_TESTS@"
+/* Path for fixtures files */
+#cmakedefine FIXTURES_PATH "@FIXTURES_PATH@"
 
 /* Path for stopwords files */
-#cmakedefine PATH_STOPWORDS "@PATH_STOPWORDS@"
+#cmakedefine STOPWORDS_PATH "@STOPWORDS_PATH@"
 
 /* Defines for cross-platform UUID generation */
 #cmakedefine UUID_LIBUUID @UUID_LIBUUID@
