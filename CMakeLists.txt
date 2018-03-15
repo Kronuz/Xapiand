@@ -96,6 +96,7 @@ include (CheckLibraryExists)
 include (CheckTypeSize)
 include (CMakePushCheckState)
 include (GNUInstallDirs)
+include (RemoveDuplicateSubstrings)
 
 
 ########################################################################
@@ -543,45 +544,17 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Release)
 endif ()
+string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_CMAKE_BUILD_TYPE)
 
 # Remove duplicates compilation flags
-separate_arguments(CMAKE_CXX_FLAGS)
-list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
-string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+remove_duplicate_substrings("${CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
+remove_duplicate_substrings("${CMAKE_CXX_FLAGS_DEBUG}" CMAKE_CXX_FLAGS_DEBUG)
+remove_duplicate_substrings("${CMAKE_CXX_FLAGS_RELEASE}" CMAKE_CXX_FLAGS_RELEASE)
+remove_duplicate_substrings("${CMAKE_CXX_FLAGS_RELWITHDEBINFO}" CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+remove_duplicate_substrings("${CMAKE_CXX_FLAGS_MINSIZEREL}" CMAKE_CXX_FLAGS_MINSIZEREL)
 
-string(TOLOWER ${CMAKE_BUILD_TYPE} _build_type)
-if (_build_type STREQUAL debug)
-	set (CMAKE_BUILD_TYPE "Debug")
-	separate_arguments(CMAKE_CXX_FLAGS_DEBUG)
-	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_DEBUG)
-	string(REPLACE ";" " " CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-	message(STATUS "Debug build")
-	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
-
-elseif (_build_type STREQUAL relwithdebinfo)
-	set (CMAKE_BUILD_TYPE "RelWithDebInfo")
-	separate_arguments(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-	string(REPLACE ";" " " CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-	message(STATUS "Release With Debug Info build")
-	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-
-elseif (_build_type STREQUAL minsizerel)
-	set (CMAKE_BUILD_TYPE "MinSizeRel")
-	separate_arguments(CMAKE_CXX_FLAGS_MINSIZEREL)
-	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_MINSIZEREL)
-	string(REPLACE ";" " " CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
-	message(STATUS "Minimum Size Release build")
-	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_MINSIZEREL}")
-
-else ()
-	set (CMAKE_BUILD_TYPE "Release")
-	separate_arguments(CMAKE_CXX_FLAGS_RELEASE)
-	list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS_RELEASE)
-	string(REPLACE ";" " " CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-	message(STATUS "Release build")
-	message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
-endif ()
+message(">> ${CMAKE_BUILD_TYPE} build")
+message(">> Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAKE_BUILD_TYPE}}")
 
 
 ########################################################################
