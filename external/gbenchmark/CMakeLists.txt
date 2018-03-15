@@ -13,9 +13,9 @@ ExternalProject_Add(
 	INSTALL_COMMAND ""
 
 	# Wrap download, configure and build steps in a script to log output
-	LOG_DOWNLOAD ON
-	LOG_CONFIGURE ON
-	LOG_BUILD ON
+	# LOG_DOWNLOAD ON
+	# LOG_CONFIGURE ON
+	# LOG_BUILD ON
 
 	# Add flags for configure.
 	CMAKE_ARGS "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}" "-DBENCHMARK_ENABLE_TESTING:BOOL=OFF"
