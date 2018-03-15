@@ -153,17 +153,20 @@ file(GLOB UUID_SRC_LIST
 )
 add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
+
+add_library(PACKAGE_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/package.cc")
+add_dependencies(PACKAGE_OBJ package_config)
+
+
 add_executable(${PROJECT_NAME}
 	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
-	"${PROJECT_SOURCE_DIR}/src/package.cc"
+	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
 	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
 	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
 	"$<TARGET_OBJECTS:LIBEV_OBJ>"
 	"$<TARGET_OBJECTS:LZ4_OBJ>"
 	"$<TARGET_OBJECTS:UUID_OBJ>"
 )
-
-add_dependencies(${PROJECT_NAME} package_config)
 
 include_directories(
 	"${PROJECT_SOURCE_DIR}/src"
@@ -664,7 +667,7 @@ if (BUILD_TESTS)
 			"${PROJECT_SOURCE_DIR}/oldtests/test_${VAR_TEST}.cc"
 			"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 			"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
-			"${PROJECT_SOURCE_DIR}/src/package.cc"
+			"$<TARGET_OBJECTS:PACKAGE_OBJ>"
 			"$<TARGET_OBJECTS:XAPIAND_OBJ>"
 			"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
 			"$<TARGET_OBJECTS:LIBEV_OBJ>"
