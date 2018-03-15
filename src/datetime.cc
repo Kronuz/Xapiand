@@ -236,11 +236,15 @@ Datetime::DateParser(std::string_view date)
 		}
 	}
 
+	int errno_save;
 	std::cmatch m;
-	if (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
-		tm.year = strict_stoi(m.str(1));
-		tm.mon = strict_stoi(m.str(3));
-		tm.day = strict_stoi(m.str(4));
+	while (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
+		tm.year = strict_stoi(errno_save, m.str(1));
+		if (errno_save) break;
+		tm.mon = strict_stoi(errno_save, m.str(3));
+		if (errno_save) break;
+		tm.day = strict_stoi(errno_save, m.str(4));
+		if (errno_save) break;
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
 			THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
 		}
@@ -250,19 +254,24 @@ Datetime::DateParser(std::string_view date)
 			tm.hour = tm.min = tm.sec = 0;
 			tm.fsec = 0.0;
 		} else {
-			tm.hour = strict_stoi(m.str(6));
-			tm.min = strict_stoi(m.str(7));
+			tm.hour = strict_stoi(errno_save, m.str(6));
+			if (errno_save) break;
+			tm.min = strict_stoi(errno_save, m.str(7));
+			if (errno_save) break;
 			if (m.length(8) == 0) {
 				tm.sec = 0;
 				tm.fsec = 0.0;
 			} else {
-				tm.sec = strict_stoi(m.str(9));
+				tm.sec = strict_stoi(errno_save, m.str(9));
+				if (errno_save) break;
 				if (m.length(10) == 0) {
 					tm.fsec = 0.0;
 				} else {
 					auto fs = m.str(11);
 					fs.insert(0, 1, '.');
-					tm.fsec = normalize_fsec(strict_stod(fs));
+					auto fsec = strict_stod(errno_save, fs);
+					if (errno_save) break;
+					tm.fsec = normalize_fsec(fsec);
 				}
 			}
 			if (m.length(12) != 0) {
@@ -355,146 +364,180 @@ Datetime::DateParser(const MsgPack& value)
 Datetime::Format
 Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 {
+	int errno_save;
 	auto size = date.size();
-	try {
-		switch (size) {
-			case 10: // 0000-00-00
-				if (date[4] == '-' && date[7] == '-') {
-					tm.year  = strict_stoul(date.substr(0, 4));
-					tm.mon   = strict_stoul(date.substr(5, 2));
-					tm.day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = 0;
-						tm.min  = 0;
-						tm.sec  = 0;
-						tm.fsec = 0.0;
-						return Format::VALID;
-					}
-					return Format::OUT_OF_RANGE;
+	switch (size) {
+		case 10: // 0000-00-00
+			if (date[4] == '-' && date[7] == '-') {
+				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = 0;
+					tm.min  = 0;
+					tm.sec  = 0;
+					tm.fsec = 0.0;
+					return Format::VALID;
 				}
-				return Format::INVALID;
-			case 19: // 0000-00-00[T ]00:00:00
-				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-					tm.year  = strict_stoul(date.substr(0, 4));
-					tm.mon   = strict_stoul(date.substr(5, 2));
-					tm.day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = strict_stoul(date.substr(11, 2));
-						if (tm.hour < 24) {
-							tm.min = strict_stoul(date.substr(14, 2));
-							if (tm.min < 60) {
-								tm.sec = strict_stoul(date.substr(17, 2));
-								if (tm.sec < 60) {
-									tm.fsec = 0.0;
-									return Format::VALID;
-								}
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		case 19: // 0000-00-00[T ]00:00:00
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
+				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (tm.min < 60) {
+							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (tm.sec < 60) {
+								tm.fsec = 0.0;
+								return Format::VALID;
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-			case 20: // 0000-00-00[T ]00:00:00Z
-				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
-					date[16] == ':' && date[19] == 'Z') {
-					tm.year  = strict_stoul(date.substr(0, 4));
-					tm.mon   = strict_stoul(date.substr(5, 2));
-					tm.day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = strict_stoul(date.substr(11, 2));
-						if (tm.hour < 24) {
-							tm.min = strict_stoul(date.substr(14, 2));
-							if (tm.min < 60) {
-								tm.sec = strict_stoul(date.substr(17, 2));
-								if (tm.sec < 60) {
-									tm.fsec = 0.0;
-									return Format::VALID;
-								}
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		case 20: // 0000-00-00[T ]00:00:00Z
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == 'Z') {
+				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (tm.min < 60) {
+							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (tm.sec < 60) {
+								tm.fsec = 0.0;
+								return Format::VALID;
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
-				if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
-					date[13] == ':' && date[16] == ':') {
-					tm.year  = strict_stoul(date.substr(0, 4));
-					tm.mon   = strict_stoul(date.substr(5, 2));
-					tm.day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(tm.year, tm.mon, tm.day)) {
-						tm.hour = strict_stoul(date.substr(11, 2));
-						if (tm.hour < 24) {
-							tm.min = strict_stoul(date.substr(14, 2));
-							if (tm.min < 60) {
-								tm.sec = strict_stoul(date.substr(17, 2));
-								if (tm.sec < 60) {
-									switch (date[19]) {
-										case '+':
-										case '-':
-											if (size == 25 && date[22] == ':') {
-												tm.fsec = 0.0;
-												auto tz_h = date.substr(20, 2);
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
+			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
+				date[13] == ':' && date[16] == ':') {
+				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (tm.hour < 24) {
+						tm.min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (tm.min < 60) {
+							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (tm.sec < 60) {
+								switch (date[19]) {
+									case '+':
+									case '-':
+										if (size == 25 && date[22] == ':') {
+											tm.fsec = 0.0;
+											auto tz_h = date.substr(20, 2);
+											auto h = strict_stoul(errno_save, tz_h);
+											if (errno_save) return Format::ERROR;
+											if (h < 24) {
 												auto tz_m = date.substr(23, 2);
-												if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+												auto m = strict_stoul(errno_save, tz_m);
+												if (errno_save) return Format::ERROR;
+												if (m < 60) {
 													computeTimeZone(tm, date[19], tz_h, tz_m);
 													return Format::VALID;
 												}
-												return Format::OUT_OF_RANGE;
 											}
-											return Format::INVALID;
-										case '.': {
-											auto it = date.begin() + 19;
-											const auto it_e = date.end();
-											for (auto aux = it + 1; aux != it_e; ++aux) {
-												const auto& c = *aux;
-												if (c < '0' || c > '9') {
-													switch (c) {
-														case 'Z':
-															if ((aux + 1) == it_e) {
-																tm.fsec = normalize_fsec(strict_stod(std::string_view(it, aux - it)));
-																return Format::VALID;
-															}
-															return Format::ERROR;
-														case '+':
-														case '-':
-															if ((it_e - aux) == 6) {
-																auto aux_end = aux + 3;
-																if (*aux_end == ':') {
-																	std::string_view tz_h(aux + 1, aux_end - aux - 1);
-																	std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
-																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-																		tm.fsec = normalize_fsec(strict_stod(std::string_view(it, aux - it)));
-																																				computeTimeZone(tm, c, tz_h, tz_m);
+											return Format::OUT_OF_RANGE;
+										}
+										return Format::INVALID;
+									case '.': {
+										auto it = date.begin() + 19;
+										const auto it_e = date.end();
+										for (auto aux = it + 1; aux != it_e; ++aux) {
+											const auto& c = *aux;
+											if (c < '0' || c > '9') {
+												switch (c) {
+													case 'Z':
+														if ((aux + 1) == it_e) {
+															auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
+															if (errno_save) return Format::ERROR;
+															tm.fsec = normalize_fsec(fsec);
+															return Format::VALID;
+														}
+														return Format::ERROR;
+													case '+':
+													case '-':
+														if ((it_e - aux) == 6) {
+															auto aux_end = aux + 3;
+															if (*aux_end == ':') {
+																auto tz_h = std::string_view(aux + 1, aux_end - aux - 1);
+																auto h = strict_stoul(errno_save, tz_h);
+																if (errno_save) return Format::ERROR;
+																if (h < 24) {
+																	auto tz_m = std::string_view(aux_end + 1, it_e - aux_end - 1);
+																	auto m = strict_stoul(errno_save, tz_m);
+																	if (errno_save) return Format::ERROR;
+																	if (m < 60) {
+																		auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
+																		if (errno_save) return Format::ERROR;
+																		tm.fsec = normalize_fsec(fsec);
+																		computeTimeZone(tm, c, tz_h, tz_m);
 																		return Format::VALID;
 																	}
-																	return Format::OUT_OF_RANGE;
 																}
+																return Format::OUT_OF_RANGE;
 															}
-															return Format::INVALID;
-														default:
-															return Format::INVALID;
-													}
+														}
+														return Format::INVALID;
+													default:
+														return Format::INVALID;
 												}
 											}
-											tm.fsec = normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
-											return Format::VALID;
 										}
-										default:
-											return Format::INVALID;
+										auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
+										if (errno_save) return Format::ERROR;
+										tm.fsec = normalize_fsec(fsec);
+										return Format::VALID;
 									}
+									default:
+										return Format::INVALID;
 								}
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-		}
-	} catch (const OutOfRange&) {
-		return Format::ERROR;
-	} catch (const InvalidArgument&) {
-		return Format::ERROR;
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
 	}
 }
 
@@ -502,134 +545,162 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 Datetime::Format
 Datetime::Iso8601Parser(std::string_view date)
 {
+	int errno_save;
 	auto size = date.size();
-	try {
-		switch (size) {
-			case 10: // 0000-00-00
-				if (date[4] == '-' && date[7] == '-') {
-					auto year  = strict_stoul(date.substr(0, 4));
-					auto mon   = strict_stoul(date.substr(5, 2));
-					auto day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(year, mon, day)) {
-						return Format::VALID;
-					}
-					return Format::OUT_OF_RANGE;
+	switch (size) {
+		case 10: // 0000-00-00
+			if (date[4] == '-' && date[7] == '-') {
+				auto year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				auto day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(year, mon, day)) {
+					return Format::VALID;
 				}
-				return Format::INVALID;
-			case 19: // 0000-00-00[T ]00:00:00
-				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-					auto year  = strict_stoul(date.substr(0, 4));
-					auto mon   = strict_stoul(date.substr(5, 2));
-					auto day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(year, mon, day)) {
-						auto hour = strict_stoul(date.substr(11, 2));
-						if (hour < 24) {
-							auto min = strict_stoul(date.substr(14, 2));
-							if (min < 60) {
-								auto sec = strict_stoul(date.substr(17, 2));
-								if (sec < 60) {
-									return Format::VALID;
-								}
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		case 19: // 0000-00-00[T ]00:00:00
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
+				auto year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				auto day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(year, mon, day)) {
+					auto hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (hour < 24) {
+						auto min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (min < 60) {
+							auto sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (sec < 60) {
+								return Format::VALID;
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-			case 20: // 0000-00-00[T ]00:00:00Z
-				if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
-					date[16] == ':' && date[19] == 'Z') {
-					auto year  = strict_stoul(date.substr(0, 4));
-					auto mon   = strict_stoul(date.substr(5, 2));
-					auto day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(year, mon, day)) {
-						auto hour = strict_stoul(date.substr(11, 2));
-						if (hour < 24) {
-							auto min = strict_stoul(date.substr(14, 2));
-							if (min < 60) {
-								auto sec = strict_stoul(date.substr(17, 2));
-								if (sec < 60) {
-									return Format::VALID;
-								}
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		case 20: // 0000-00-00[T ]00:00:00Z
+			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
+				date[16] == ':' && date[19] == 'Z') {
+				auto year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				auto day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(year, mon, day)) {
+					auto hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (hour < 24) {
+						auto min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (min < 60) {
+							auto sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (sec < 60) {
+								return Format::VALID;
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-			default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
-				if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
-					date[13] == ':' && date[16] == ':') {
-					auto year  = strict_stoul(date.substr(0, 4));
-					auto mon   = strict_stoul(date.substr(5, 2));
-					auto day   = strict_stoul(date.substr(8, 2));
-					if (isvalidDate(year, mon, day)) {
-						auto hour = strict_stoul(date.substr(11, 2));
-						if (hour < 24) {
-							auto min = strict_stoul(date.substr(14, 2));
-							if (min < 60) {
-								auto sec = strict_stoul(date.substr(17, 2));
-								if (sec < 60) {
-									switch (date[19]) {
-										case '+':
-										case '-':
-											if (size == 25 && date[22] == ':') {
-												auto tz_h = date.substr(20, 2);
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
+		default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
+			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
+				date[13] == ':' && date[16] == ':') {
+				auto year  = strict_stoul(errno_save, date.substr(0, 4));
+				if (errno_save) return Format::ERROR;
+				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
+				if (errno_save) return Format::ERROR;
+				auto day   = strict_stoul(errno_save, date.substr(8, 2));
+				if (errno_save) return Format::ERROR;
+				if (isvalidDate(year, mon, day)) {
+					auto hour = strict_stoul(errno_save, date.substr(11, 2));
+					if (errno_save) return Format::ERROR;
+					if (hour < 24) {
+						auto min = strict_stoul(errno_save, date.substr(14, 2));
+						if (errno_save) return Format::ERROR;
+						if (min < 60) {
+							auto sec = strict_stoul(errno_save, date.substr(17, 2));
+							if (errno_save) return Format::ERROR;
+							if (sec < 60) {
+								switch (date[19]) {
+									case '+':
+									case '-':
+										if (size == 25 && date[22] == ':') {
+											auto tz_h = date.substr(20, 2);
+											auto h = strict_stoul(errno_save, tz_h);
+											if (errno_save) return Format::ERROR;
+											if (h < 24) {
 												auto tz_m = date.substr(23, 2);
-												if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+												auto m = strict_stoul(errno_save, tz_m);
+												if (errno_save) return Format::ERROR;
+												if (m < 60) {
 													return Format::VALID;
 												}
-												return Format::OUT_OF_RANGE;
 											}
-											return Format::INVALID;
-										case '.': {
-											auto it = date.begin() + 19;
-											const auto it_e = date.end();
-											for (auto aux = it + 1; aux != it_e; ++aux) {
-												const auto& c = *aux;
-												if (c < '0' || c > '9') {
-													switch (c) {
-														case 'Z':
-															if ((aux + 1) == it_e) {
-																return Format::VALID;
-															}
-															return Format::ERROR;
-														case '+':
-														case '-':
-															if ((it_e - aux) == 6) {
-																auto aux_end = aux + 3;
-																if (*aux_end == ':') {
-																	std::string_view tz_h(aux + 1, aux_end - aux - 1);
-																	std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
-																	if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+											return Format::OUT_OF_RANGE;
+										}
+										return Format::INVALID;
+									case '.': {
+										auto it = date.begin() + 19;
+										const auto it_e = date.end();
+										for (auto aux = it + 1; aux != it_e; ++aux) {
+											const auto& c = *aux;
+											if (c < '0' || c > '9') {
+												switch (c) {
+													case 'Z':
+														if ((aux + 1) == it_e) {
+															return Format::VALID;
+														}
+														return Format::ERROR;
+													case '+':
+													case '-':
+														if ((it_e - aux) == 6) {
+															auto aux_end = aux + 3;
+															if (*aux_end == ':') {
+																auto tz_h = std::string_view(aux + 1, aux_end - aux - 1);
+																auto h = strict_stoul(errno_save, tz_h);
+																if (errno_save) return Format::ERROR;
+																if (h < 24) {
+																	auto tz_m = std::string_view(aux_end + 1, it_e - aux_end - 1);
+																	auto m = strict_stoul(errno_save, tz_m);
+																	if (errno_save) return Format::ERROR;
+																	if (m < 60) {
 																		return Format::VALID;
 																	}
-																	return Format::OUT_OF_RANGE;
 																}
+																return Format::OUT_OF_RANGE;
 															}
-															return Format::INVALID;
-														default:
-															return Format::INVALID;
-													}
+														}
+														return Format::INVALID;
+													default:
+														return Format::INVALID;
 												}
 											}
-											return Format::VALID;
 										}
-										default:
-											return Format::INVALID;
+										return Format::VALID;
 									}
+									default:
+										return Format::INVALID;
 								}
 							}
 						}
 					}
-					return Format::OUT_OF_RANGE;
 				}
-				return Format::INVALID;
-		}
-	} catch (const OutOfRange&) {
-		return Format::ERROR;
-	} catch (const InvalidArgument&) {
-		return Format::ERROR;
+				return Format::OUT_OF_RANGE;
+			}
+			return Format::INVALID;
 	}
 }
 
