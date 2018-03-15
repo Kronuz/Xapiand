@@ -191,9 +191,9 @@ add_cxx_compiler_flag("-Werror" RELEASE)
 add_cxx_compiler_flag("-Werror" RELWITHDEBINFO)
 add_cxx_compiler_flag("-Werror" MINSIZEREL)
 add_cxx_compiler_flag("-Wsuggest-final-types")
-add_cxx_compiler_flag("-Wshorten-64-to-32") ##
-add_cxx_compiler_flag("-Wfloat-equal") ##
-add_cxx_compiler_flag("-Wfstrict-aliasing") ##
+add_cxx_compiler_flag("-Wfstrict-aliasing")
+# add_cxx_compiler_flag("-Wshorten-64-to-32") ##
+# add_cxx_compiler_flag("-Wfloat-equal") ##
 
 # Disable certain warnings.
 add_cxx_compiler_flag("-Wnon-virtual-dtor")
