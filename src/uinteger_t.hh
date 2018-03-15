@@ -1232,14 +1232,14 @@ public:
 		if (shift) {
 			digit shifted = 0;
 			for (; lhs_rit != lhs_rit_e; ++lhs_rit, ++rit) {
-				assert(rit != rit_e);
+				assert(rit != rit_e); (void)(rit_e);
 				auto v = (*lhs_rit >> shift) | shifted;
 				shifted = *lhs_rit << (_digit_bits - shift);
 				*rit = v;
 			}
 		} else {
 			for (; lhs_rit != lhs_rit_e; ++lhs_rit, ++rit) {
-				assert(rit != rit_e);
+				assert(rit != rit_e); (void)(rit_e);
 				*rit = *lhs_rit;
 			}
 		}
@@ -1524,7 +1524,7 @@ public:
 		auto lhs_sz = lhs.size();
 		auto rhs_sz = rhs.size();
 
-		assert(rhs_sz == 1);
+		assert(rhs_sz == 1); (void)(rhs_sz);
 		auto n = rhs.front();
 
 		uinteger_t tmp;
@@ -1750,7 +1750,7 @@ public:
 		auto lhs_sz = lhs.size();
 		auto rhs_sz = rhs.size();
 
-		assert(rhs_sz == 1);
+		assert(rhs_sz == 1); (void)(rhs_sz);
 		auto n = rhs.front();
 
 		auto rit_lhs = lhs.rbegin();

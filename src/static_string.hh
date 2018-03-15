@@ -159,7 +159,7 @@ class static_string<N, char_array> {
 
 	template <std::size_t... Il>
 	constexpr explicit static_string(private_ctor, const char* p, std::size_t size, std::integer_sequence<std::size_t, Il...>)
-	  : _data{p[Il]..., 0} { constexpr_assert(N == size); }
+	  : _data{p[Il]..., 0} { constexpr_assert(N == size); (void)(size); }
 
 public:
 	template <std::size_t M, typename TL, typename TR, typename std::enable_if<(M < N), bool>::type = true>
