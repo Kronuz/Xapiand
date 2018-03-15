@@ -688,7 +688,7 @@ Generator::SymbolMap()
 }
 
 
-#ifdef HAVE_CXX14
+#ifdef HAVE_CXX_FLAG_STD_CXX14
 using std::make_unique;
 #else
 // make_unique is not available in c++11, so we use this template function
