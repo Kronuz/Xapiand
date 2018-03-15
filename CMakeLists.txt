@@ -62,6 +62,9 @@ foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS TRACKE
 	endif ()
 endforeach ()
 
+if (APPLE)
+	set (CMAKE_FIND_FRAMEWORK "LAST")
+endif ()
 
 ########################################################################
 # Version
@@ -84,7 +87,7 @@ add_custom_target(package_config
 ########################################################################
 
 include (AC_HEADER_STDC)
-include (CheckCXXCompilerFlag)
+include (AddCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
 include (CheckFunctionExists)
 include (CheckIncludeFileCXX)
@@ -171,73 +174,32 @@ include_directories(
 # Compiler Flags
 ########################################################################
 
-# Check for compiler support for C++14
-check_cxx_compiler_flag("-std=c++14" COMPILER_SUPPORTS_CXX14)
-if (COMPILER_SUPPORTS_CXX14)
-	set (HAVE_CXX14 1)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-else ()
-	message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} has no C++14 support. Please use a different C++ compiler.")
-endif ()
-
-
-# Check for fdiagnostics-color flag.
-check_cxx_compiler_flag("-fdiagnostics-color=always" COMPILER_SUPPORTS_DIAG_COLOR)
-if (COMPILER_SUPPORTS_DIAG_COLOR)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-else ()
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif ()
-
-
-# Default value for CMAKE_BUILD_TYPE.
-if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
-endif ()
-
-
 # Setup CMAKE_CXX_FLAGS Debug flags.
-set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
-set (CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
-# Check for warnings flags.
-check_cxx_compiler_flag("-Wall" COMPILER_SUPPORTS_WALL)
-if (COMPILER_SUPPORTS_WALL)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
-endif ()
-check_cxx_compiler_flag("-Wextra" COMPILER_SUPPORTS_WEXTRA)
-if (COMPILER_SUPPORTS_WEXTRA)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wextra")
-endif ()
-check_cxx_compiler_flag("-Wshadow" COMPILER_SUPPORTS_WSHADOW)
-if (COMPILER_SUPPORTS_WSHADOW)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wshadow")
-endif ()
-check_cxx_compiler_flag("-Wnon-virtual-dtor" COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
-if (COMPILER_SUPPORTS_WNON_VIRTUAL_DTOR)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wnon-virtual-dtor")
-endif ()
-check_cxx_compiler_flag("-Wsuggest-final-types" COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
-if (COMPILER_SUPPORTS_WSUGGEST_FINAL_TYPES)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wsuggest-final-types")
-endif ()
-check_cxx_compiler_flag("-Wpedantic" COMPILER_SUPPORTS_WPEDANTIC)
-if (COMPILER_SUPPORTS_WPEDANTIC)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wpedantic")
-endif ()
-# Disable certain warnings:
-check_cxx_compiler_flag("-Wno-unknown-pragmas" COMPILER_SUPPORTS_WNO_UNKNOWN_PRAGMAS)
-if (COMPILER_SUPPORTS_WNO_UNKNOWN_PRAGMAS)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-unknown-pragmas")
-endif ()
-check_cxx_compiler_flag("-Wno-variadic-macros" COMPILER_SUPPORTS_WNO_VARIADIC_MACROS)
-if (COMPILER_SUPPORTS_WNO_VARIADIC_MACROS)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-variadic-macros")
-endif ()
-check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments" COMPILER_SUPPORTS_WNO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
-if (COMPILER_SUPPORTS_WNO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-zero-variadic-macro-arguments")
-endif ()
+# Add compiler flags.
+add_required_cxx_compiler_flag("-std=c++14")
+
+add_cxx_compiler_flag("-fdiagnostics-color=always")
+add_cxx_compiler_flag("-pedantic")
+add_cxx_compiler_flag("-pedantic-errors")
+
+add_cxx_compiler_flag("-Wall")
+add_cxx_compiler_flag("-Wextra")
+add_cxx_compiler_flag("-Wshadow")
+add_cxx_compiler_flag("-Werror" RELEASE)
+add_cxx_compiler_flag("-Werror" RELWITHDEBINFO)
+add_cxx_compiler_flag("-Werror" MINSIZEREL)
+add_cxx_compiler_flag("-Wsuggest-final-types")
+add_cxx_compiler_flag("-Wshorten-64-to-32") ##
+add_cxx_compiler_flag("-Wfloat-equal") ##
+add_cxx_compiler_flag("-Wfstrict-aliasing") ##
+
+# Disable certain warnings.
+add_cxx_compiler_flag("-Wnon-virtual-dtor")
+add_cxx_compiler_flag("-Wno-unknown-pragmas")
+add_cxx_compiler_flag("-Wno-variadic-macros")
+add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
 
 
 ########################################################################
@@ -573,6 +535,11 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 # Check CMAKE_BUILD_TYPE:  Debug Release RelWithDebInfo MinSizeRel
 ########################################################################
 
+# Default value for CMAKE_BUILD_TYPE.
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
+
 # Remove duplicates compilation flags
 separate_arguments(CMAKE_CXX_FLAGS)
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
@@ -672,7 +639,7 @@ if (BUILD_TESTS)
 		target_link_libraries(${PROJECT_TEST}
 			gtest_main gtest
 		)
-		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
+		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 	endforeach ()
 
 
@@ -706,7 +673,7 @@ if (BUILD_TESTS)
 			${M_LIBRARIES}
 			${ZLIB_LIBRARIES}
 		)
-		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
+		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 	endforeach ()
 	###
 
@@ -742,6 +709,6 @@ if (BUILD_BENCHMARKS)
 		target_link_libraries(${PROJECT_BENCHMARK}
 			benchmark
 		)
-		add_test(NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
+		add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
 	endforeach ()
 endif ()

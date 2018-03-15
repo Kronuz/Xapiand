@@ -9,8 +9,7 @@ ExternalProject_Add(
 	GIT_REPOSITORY  "https://github.com/google/googletest.git"
 	GIT_TAG         "master"
 
-	# this command is empty because all necessary targets will
-	# be built on install stage
+	# All necessary targets will be built on install stage
 	INSTALL_COMMAND ""
 
 	# Wrap download, configure and build steps in a script to log output
@@ -24,10 +23,8 @@ ExternalProject_Add(
 
 # Specify include dir
 ExternalProject_Get_Property(googletest source_dir)
-# message(STATUS "GTest source_dir=" ${source_dir})
 set (GTEST_INCLUDE_DIR ${source_dir}/include PARENT_SCOPE)
 
 # Specify MainTest's link libraries
 ExternalProject_Get_Property(googletest binary_dir)
-# message(STATUS "GTest binary_dir=" ${binary_dir})
 set (GTEST_LIBRARY_DIR ${binary_dir} PARENT_SCOPE)
