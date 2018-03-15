@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include <limits>             // for std::numeric_limits
-#include <utility>            // for std::swap
+#include <algorithm>          // for std::min
+#include <cstdio>             // for std::size_t
 #include <cstdlib>            // for std::strto*
-#include <cstdio>             // for size_t
+#include <cstring>            // for std::strncpy
+#include <limits>             // for std::numeric_limits
 #include <string_view>        // for std::string_view
 #include <sys/errno.h>        // for errno
 #include <type_traits>        // for std::true_type, std::false_type
+#include <utility>            // for std::swap
 
 #include "exception.h"        // for InvalidArgument, OutOfRange
 
@@ -41,11 +43,9 @@ class Stox {
 
 	template <typename T, typename... Args>
 	auto _stox(std::true_type, const std::string_view& str, std::size_t* idx, Args&&... args) noexcept {
-		auto b = str.data();
+		char b[64]{};
+		std::strncpy(b, str.data(), std::min(str.size(), sizeof(b) - 1));
 		auto e = b + str.size();
-		if (!b) {
-			e = b = "";
-		}
 		auto ptr = const_cast<char*>(e);
 		auto r = func(b, &ptr, std::forward<Args>(args)...);
 		if (errno) return static_cast<decltype(r)>(0);
