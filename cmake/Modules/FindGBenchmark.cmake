@@ -36,6 +36,7 @@ endmacro ()
 __gbenchmark_find()
 if (NOT GBENCHMARK_INCLUDE_DIR OR NOT GBENCHMARK_LIBRARY)
 	include (ExternalProjectInstall)
+	message(STATUS "Installing external project: GBenchmark")
 	ExternalProject_Install(
 		gbenchmark
 		PREFIX          "googlebenchmark"

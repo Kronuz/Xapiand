@@ -44,6 +44,7 @@ endmacro ()
 __gtest__find()
 if (NOT GTEST_INCLUDE_DIR OR NOT GTEST_LIBRARY OR NOT GTEST_MAIN_LIBRARY)
 	include (ExternalProjectInstall)
+	message(STATUS "Installing external project: GTest")
 	ExternalProject_Install(
 		gtest
 		PREFIX          "googletest"
