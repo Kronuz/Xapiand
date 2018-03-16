@@ -36,7 +36,7 @@
 #endif
 
 
-ScheduledTask::ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_)
+ScheduledTask::ScheduledTask(const std::chrono::time_point<std::chrono::system_clock>& created_at_)
 	: wakeup_time(0),
 	  created_at(time_point_to_ullong(created_at_)),
 	  cleared_at(0) { }
@@ -248,7 +248,7 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 
 
 void
-Scheduler::add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup)
+Scheduler::add(const TaskType& task, const std::chrono::time_point<std::chrono::system_clock>& wakeup)
 {
 	add(task, time_point_to_ullong(wakeup));
 }

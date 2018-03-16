@@ -50,7 +50,7 @@ protected:
 	std::atomic_ullong cleared_at;
 
 public:
-	explicit ScheduledTask(std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
+	explicit ScheduledTask(const std::chrono::time_point<std::chrono::system_clock>& created_at_ = std::chrono::system_clock::now());
 
 	~ScheduledTask() = default;
 
@@ -130,5 +130,5 @@ public:
 	void finish(int wait=10);
 	void join();
 	void add(const TaskType& task, unsigned long long wakeup_time);
-	void add(const TaskType& task, std::chrono::time_point<std::chrono::system_clock> wakeup);
+	void add(const TaskType& task, const std::chrono::time_point<std::chrono::system_clock>& wakeup);
 };
