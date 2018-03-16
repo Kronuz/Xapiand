@@ -20,24 +20,24 @@
 # IN THE SOFTWARE.
 #
 
-include (FindTools)
+include (FindPackageTools)
 include (FindPackageHandleStandardArgs)
 
 set (GTEST_ROOT "${CMAKE_CURRENT_BINARY_DIR}/googletest")
 
 
 macro (__gtest__find)
-	FindTools_find_include(GTEST_INCLUDE_DIR         GTEST_ROOT  "gtest/gtest.h")
-	FindTools_find_library(GTEST_LIBRARY             GTEST_ROOT  "gtest")
-	FindTools_find_library(GTEST_LIBRARY_DEBUG       GTEST_ROOT  "gtestd")
-	FindTools_find_library(GTEST_MAIN_LIBRARY        GTEST_ROOT  "gtest_main")
-	FindTools_find_library(GTEST_MAIN_LIBRARY_DEBUG  GTEST_ROOT  "gtest_maind")
+	find_package_tools_find_include(GTEST_INCLUDE_DIR         GTEST_ROOT  "gtest/gtest.h")
+	find_package_tools_find_library(GTEST_LIBRARY             GTEST_ROOT  "gtest")
+	find_package_tools_find_library(GTEST_LIBRARY_DEBUG       GTEST_ROOT  "gtestd")
+	find_package_tools_find_library(GTEST_MAIN_LIBRARY        GTEST_ROOT  "gtest_main")
+	find_package_tools_find_library(GTEST_MAIN_LIBRARY_DEBUG  GTEST_ROOT  "gtest_maind")
 
-	FindTools_find_include(GMOCK_INCLUDE_DIR         GTEST_ROOT  "gmock/gmock.h")
-	FindTools_find_library(GMOCK_LIBRARY             GTEST_ROOT  "gmock")
-	FindTools_find_library(GMOCK_LIBRARY_DEBUG       GTEST_ROOT  "gmockd")
-	FindTools_find_library(GMOCK_MAIN_LIBRARY        GTEST_ROOT  "gmock_main")
-	FindTools_find_library(GMOCK_MAIN_LIBRARY_DEBUG  GTEST_ROOT  "gmock_maind")
+	find_package_tools_find_include(GMOCK_INCLUDE_DIR         GTEST_ROOT  "gmock/gmock.h")
+	find_package_tools_find_library(GMOCK_LIBRARY             GTEST_ROOT  "gmock")
+	find_package_tools_find_library(GMOCK_LIBRARY_DEBUG       GTEST_ROOT  "gmockd")
+	find_package_tools_find_library(GMOCK_MAIN_LIBRARY        GTEST_ROOT  "gmock_main")
+	find_package_tools_find_library(GMOCK_MAIN_LIBRARY_DEBUG  GTEST_ROOT  "gmock_maind")
 endmacro ()
 
 
@@ -60,12 +60,12 @@ endif ()
 find_package_handle_standard_args(GTest DEFAULT_MSG GTEST_INCLUDE_DIR GTEST_LIBRARY GTEST_MAIN_LIBRARY)
 if (GTEST_FOUND)
 	set (GTEST_INCLUDE_DIRS ${GTEST_INCLUDE_DIR})
-	FindTools_append_debugs(GTEST_LIBRARIES      GTEST_LIBRARY)
-	FindTools_append_debugs(GTEST_MAIN_LIBRARIES GTEST_MAIN_LIBRARY)
+	find_package_tools_append_debugs(GTEST_LIBRARIES      GTEST_LIBRARY)
+	find_package_tools_append_debugs(GTEST_MAIN_LIBRARIES GTEST_MAIN_LIBRARY)
 	set (GTEST_BOTH_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES})
 
 	if (NOT TARGET GTest::GTest)
-    	FindTools_add_library(GTest::GTest GTEST)
+    	find_package_tools_add_library(GTest::GTest GTEST)
 		find_package(Threads QUIET)
 		if (TARGET Threads::Threads)
 			set_target_properties(GTest::GTest PROPERTIES
@@ -74,7 +74,7 @@ if (GTEST_FOUND)
 	endif ()
 
 	if (NOT TARGET GTest::Main)
-    	FindTools_add_library(GTest::Main GTEST_MAIN)
+    	find_package_tools_add_library(GTest::Main GTEST_MAIN)
 	endif ()
 endif ()
 
@@ -82,12 +82,12 @@ endif ()
 find_package_handle_standard_args(GMock DEFAULT_MSG GMOCK_INCLUDE_DIR GMOCK_LIBRARY GMOCK_MAIN_LIBRARY)
 if (GMOCK_FOUND)
 	set (GMOCK_INCLUDE_DIRS ${GMOCK_INCLUDE_DIR})
-	FindTools_append_debugs(GMOCK_LIBRARIES      GMOCK_LIBRARY)
-	FindTools_append_debugs(GMOCK_MAIN_LIBRARIES GMOCK_MAIN_LIBRARY)
+	find_package_tools_append_debugs(GMOCK_LIBRARIES      GMOCK_LIBRARY)
+	find_package_tools_append_debugs(GMOCK_MAIN_LIBRARIES GMOCK_MAIN_LIBRARY)
 	set (GMOCK_BOTH_LIBRARIES ${GMOCK_LIBRARIES} ${GMOCK_MAIN_LIBRARIES})
 
     if (NOT TARGET GMock::GMock)
-    	FindTools_add_library(GMock::GMock GMOCK)
+    	find_package_tools_add_library(GMock::GMock GMOCK)
     	find_package(Threads QUIET)
         if (TARGET Threads::Threads)
             set_target_properties(GMock::GMock PROPERTIES
@@ -96,6 +96,6 @@ if (GMOCK_FOUND)
     endif ()
 
     if (NOT TARGET GMock::Main)
-    	FindTools_add_library(GMock::Main GMOCK_MAIN)
+    	find_package_tools_add_library(GMock::Main GMOCK_MAIN)
     endif ()
 endif ()

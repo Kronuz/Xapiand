@@ -1,6 +1,6 @@
 # Based on official CMake's FindGTest.cmake
 
-function (FindTools_append_debugs _endvar _library)
+function (find_package_tools_append_debugs _endvar _library)
 	if (${_library} AND ${_library}_DEBUG)
 		set (_output optimized ${${_library}} debug ${${_library}_DEBUG})
 	else ()
@@ -10,7 +10,7 @@ function (FindTools_append_debugs _endvar _library)
 endfunction ()
 
 
-function (FindTools_find_include _name _root)
+function (find_package_tools_find_include _name _root)
 	find_path(${_name}
 		NAMES ${ARGN}
 		HINTS
@@ -22,7 +22,7 @@ function (FindTools_find_include _name _root)
 endfunction ()
 
 
-function (FindTools_find_library _name _root)
+function (find_package_tools_find_library _name _root)
 	find_library(${_name}
 		NAMES ${ARGN}
 		HINTS
@@ -34,7 +34,7 @@ function (FindTools_find_library _name _root)
 endfunction ()
 
 
-macro (FindTools_determine_windows_library_type _var)
+macro (find_package_tools_determine_windows_library_type _var)
 	if (EXISTS "${${_var}}")
 		file(TO_NATIVE_PATH "${${_var}}" _lib_path)
 		get_filename_component(_name "${${_var}}" NAME_WE)
@@ -48,19 +48,19 @@ macro (FindTools_determine_windows_library_type _var)
 endmacro ()
 
 
-function (FindTools_determine_library_type _var)
+function (find_package_tools_determine_library_type _var)
 	if (WIN32)
 		# For now, at least, only Windows really needs to know the library type
-		FindTools_determine_windows_library_type(${_var})
-		FindTools_determine_windows_library_type(${_var}_RELEASE)
-		FindTools_determine_windows_library_type(${_var}_DEBUG)
+		find_package_tools_determine_windows_library_type(${_var})
+		find_package_tools_determine_windows_library_type(${_var}_RELEASE)
+		find_package_tools_determine_windows_library_type(${_var}_DEBUG)
 	endif ()
 	# If we get here, no determination was made from the above checks
 	set (${_var}_TYPE UNKNOWN PARENT_SCOPE)
 endfunction ()
 
 
-function (FindTools_import_library _target _var _config)
+function (find_package_tools_import_library _target _var _config)
 	if (_config)
 		set (_config_suffix "_${_config}")
 	else ()
@@ -86,8 +86,8 @@ function (FindTools_import_library _target _var _config)
 endfunction ()
 
 
-function (FindTools_add_library _name _var)
-    FindTools_determine_library_type(${_var}_LIBRARY)
+function (find_package_tools_add_library _name _var)
+    find_package_tools_determine_library_type(${_var}_LIBRARY)
     add_library(${_name} ${${_var}_LIBRARY_TYPE} IMPORTED)
     if (${_var}_LIBRARY_TYPE STREQUAL "SHARED")
         set_target_properties(${_name} PROPERTIES
@@ -97,7 +97,7 @@ function (FindTools_add_library _name _var)
         set_target_properties(${_name} PROPERTIES
             INTERFACE_INCLUDE_DIRECTORIES "${${_var}_INCLUDE_DIRS}")
     endif ()
-    FindTools_import_library(${_name} ${_var} "")
-    FindTools_import_library(${_name} ${_var} "RELEASE")
-    FindTools_import_library(${_name} ${_var} "DEBUG")
+    find_package_tools_import_library(${_name} ${_var} "")
+    find_package_tools_import_library(${_name} ${_var} "RELEASE")
+    find_package_tools_import_library(${_name} ${_var} "DEBUG")
 endfunction ()

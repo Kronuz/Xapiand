@@ -20,16 +20,16 @@
 # IN THE SOFTWARE.
 #
 
-include (FindTools)
+include (FindPackageTools)
 include (FindPackageHandleStandardArgs)
 
 set (GBENCHMARK_ROOT "${CMAKE_CURRENT_BINARY_DIR}/googlebenchmark")
 
 
 macro (__gbenchmark_find)
-	FindTools_find_include(GBENCHMARK_INCLUDE_DIR     GBENCHMARK_ROOT  "benchmark/benchmark.h")
-	FindTools_find_library(GBENCHMARK_LIBRARY         GBENCHMARK_ROOT  "benchmark")
-	FindTools_find_library(GBENCHMARK_LIBRARY_DEBUG   GBENCHMARK_ROOT  "benchmarkd")
+	find_package_tools_find_include(GBENCHMARK_INCLUDE_DIR     GBENCHMARK_ROOT  "benchmark/benchmark.h")
+	find_package_tools_find_library(GBENCHMARK_LIBRARY         GBENCHMARK_ROOT  "benchmark")
+	find_package_tools_find_library(GBENCHMARK_LIBRARY_DEBUG   GBENCHMARK_ROOT  "benchmarkd")
 endmacro ()
 
 
@@ -54,9 +54,9 @@ endif ()
 find_package_handle_standard_args(GBenchmark DEFAULT_MSG GBENCHMARK_INCLUDE_DIR GBENCHMARK_LIBRARY)
 if (GBENCHMARK_FOUND)
 	set (GBENCHMARK_INCLUDE_DIRS ${GBENCHMARK_INCLUDE_DIR})
-	FindTools_append_debugs(GBENCHMARK_LIBRARIES GBENCHMARK_LIBRARY)
+	find_package_tools_append_debugs(GBENCHMARK_LIBRARIES GBENCHMARK_LIBRARY)
 
 	if (NOT TARGET GBenchmark::GBenchmark)
-    	FindTools_add_library(GBenchmark::GBenchmark GBENCHMARK)
+    	find_package_tools_add_library(GBenchmark::GBenchmark GBENCHMARK)
 	endif ()
 endif ()
