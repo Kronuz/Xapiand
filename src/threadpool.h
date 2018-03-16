@@ -220,9 +220,7 @@ class ThreadPool : public TaskQueue<Params...> {
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
 	void _worker(size_t idx, Params_&&... params) {
-		char name[100];
-		snprintf(name, sizeof(name), format.c_str(), idx);
-		set_thread_name(std::string(name));
+		set_thread_name(string::format(format, idx));
 		std::unique_ptr<function_mo<void(Params...)>> task;
 
 		L_THREADPOOL("Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
