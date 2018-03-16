@@ -136,9 +136,9 @@ public:
 };
 
 
-#define rgb(r, g, b)      ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::col()
-#define rgba(r, g, b, a)  ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col()
-#define brgb(r, g, b)     ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col()
-#define brgba(r, g, b, a) ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col()
-#define clear_color()     ansi_color<0, 0, 0>::clear_color()
-#define no_color()        ansi_color<0, 0, 0>::no_color()
+#define rgb(r, g, b)      (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::col())
+#define rgba(r, g, b, a)  (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col())
+#define brgb(r, g, b)     (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col())
+#define brgba(r, g, b, a) (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col())
+#define clear_color()     (ansi_color<0, 0, 0>::clear_color())
+#define no_color()        (ansi_color<0, 0, 0>::no_color())
