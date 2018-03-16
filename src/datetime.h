@@ -128,7 +128,7 @@ namespace Datetime {
 	tm_t to_tm_t(std::time_t timestamp);
 	tm_t to_tm_t(double timestamp);
 	double timestamp(const tm_t& tm);
-	double timestamp(const std::chrono::time_point<std::chrono::system_clock>& tp) {
+	inline double timestamp(const std::chrono::time_point<std::chrono::system_clock>& tp) {
 		return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS;
 	}
 	bool isvalidDate(int year, int month, int day);
