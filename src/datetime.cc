@@ -973,16 +973,24 @@ Datetime::isleapRef_year(int tm_year)
 }
 
 
+int
+_getDays_month(int year, int month)
+{
+	assert(month > 0 && month <= 12);
+	int leap = Datetime::isleapYear(year);
+	return days[leap][month - 1];
+}
+
 /*
  * Returns number of days in month, given the year.
  */
 int
 Datetime::getDays_month(int year, int month)
 {
-	if (month < 1 || month > 12) THROW(DatetimeError, "Month must be in 1..12");
-
-	int leap = isleapYear(year);
-	return days[leap][month - 1];
+	if (month < 1 || month > 12) {
+		THROW(DatetimeError, "Month must be in 1..12");
+	}
+	return _getDays_month(year, month);
 }
 
 
@@ -1122,17 +1130,14 @@ bool
 Datetime::isvalidDate(int year, int month, int day)
 {
 	if (year < 1) {
-		L_ERR("ERROR: Year is out of range.");
 		return false;
 	}
 
-	try {
-		if (day < 1 || day > getDays_month(year, month)) {
-			L_ERR("ERROR: Day is out of range for month.");
-			return false;
-		}
-	} catch (const std::exception& ex) {
-		L_ERR("ERROR: %s.", *ex.what() ? ex.what() : "Unkown exception!");
+	if (month < 1 || month > 12) {
+		return false;
+	}
+
+	if (day < 1 || day > _getDays_month(year, month)) {
 		return false;
 	}
 
