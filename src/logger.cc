@@ -438,7 +438,6 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
-			_priority = validated_priority(_priority);
 			add(_function, _filename, _line, _suffix, _prefix, string::vformat(format, argptr), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
@@ -476,12 +475,10 @@ Log
 Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr)
 {
 	if (priority <= log_level) {
-		priority = validated_priority(priority);
 		auto str = string::vformat(format, argptr);
 		return add(function, filename, line, suffix, prefix, str, exc, clean, wakeup, async, info, stacked, priority);
 	}
 
-	priority = validated_priority(priority);
 	return Log(std::make_shared<Logging>(function, filename, line, suffix, prefix, "", exc, clean, async, info, stacked, priority, std::chrono::system_clock::now()));
 }
 
@@ -512,6 +509,7 @@ Logging::log(int priority, std::string str, int indent, bool with_priority, bool
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
 	}
+	priority = validated_priority(priority);
 	for (auto& handler : handlers) {
 		handler->log(priority, str, with_priority, with_endl);
 	}
