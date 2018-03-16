@@ -117,7 +117,7 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, format, ...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
+#define L_DELAYED(cleanup, delay, priority, color, format, ...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, "", "", (color + format + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_UNLOG(priority, color, format, ...) unlog(priority, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
@@ -129,10 +129,9 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 
 #define L_NOTHING(...)
 
-// ::log <- (cleanup, delay, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, ##__VA_ARGS__)
-#define LOG(stacked, level, color, format, ...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
+#define LOG(stacked, level, color, format, ...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", (color + format + CLEAR_COLOR), ##__VA_ARGS__)
 
-#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__); }
+#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", (color + format + CLEAR_COLOR), ##__VA_ARGS__); }
 
 #define L_INFO(...) LOG(true, LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE(...) LOG(true, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
@@ -141,7 +140,7 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define L_CRIT(...) LOG(true, LOG_CRIT, CRIT_COL, __VA_ARGS__)
 #define L_ALERT(...) LOG(true, LOG_ALERT, ALERT_COL, __VA_ARGS__)
 #define L_EMERG(...) LOG(true, LOG_EMERG, EMERG_COL, __VA_ARGS__)
-#define L_EXC(format, ...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
+#define L_EXC(format, ...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, "", "", (ERR_COL + format + CLEAR_COLOR), ##__VA_ARGS__)
 
 #define L_INFO_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
