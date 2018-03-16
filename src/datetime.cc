@@ -230,6 +230,7 @@ error_out_of_range:
 Datetime::tm_t
 Datetime::DateParser(std::string_view date)
 {
+	std::cmatch m;
 	tm_t tm;
 	// Check if date is ISO 8601.
 	auto pos = date.find("||");
@@ -241,9 +242,9 @@ Datetime::DateParser(std::string_view date)
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
-				THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
+				goto error_out_of_range;
 			default:
-				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
+				goto error;
 		}
 	} else {
 		auto format = Iso8601Parser(date.substr(0, pos), tm);
@@ -254,14 +255,13 @@ Datetime::DateParser(std::string_view date)
 			case Format::INVALID:
 				break;
 			case Format::OUT_OF_RANGE:
-				THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
+				goto error_out_of_range;
 			default:
-				THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
+				goto error;
 		}
 	}
 
 	int errno_save;
-	std::cmatch m;
 	if (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
 		tm.year = strict_stoi(errno_save, m.str(1));
 		if (errno_save) goto error;
@@ -270,7 +270,7 @@ Datetime::DateParser(std::string_view date)
 		tm.day = strict_stoi(errno_save, m.str(4));
 		if (errno_save) goto error;
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
-			THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
+			goto error_out_of_range;
 		}
 
 		// Process time
@@ -313,6 +313,9 @@ Datetime::DateParser(std::string_view date)
 
 error:
 	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
+
+error_out_of_range:
+	THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
 }
 
 
@@ -1312,7 +1315,7 @@ Datetime::TimeParser(std::string_view _time)
 									default:
 										break;
 								}
-								THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
+								goto error;
 							}
 						}
 						auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
