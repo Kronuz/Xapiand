@@ -57,7 +57,8 @@ int Logging::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
 
-static const std::string priorities[] = {
+#define MAX_PRIORITY (LOG_DEBUG + 1)
+static const std::string priorities[MAX_PRIORITY + 1] = {
 	EMERG_COL   + "█" + CLEAR_COLOR, // LOG_EMERG    0 = System is unusable
 	ALERT_COL   + "▉" + CLEAR_COLOR, // LOG_ALERT    1 = Action must be taken immediately
 	CRIT_COL    + "▊" + CLEAR_COLOR, // LOG_CRIT     2 = Critical conditions
@@ -113,8 +114,8 @@ validated_priority(int priority)
 	if (priority < 0) {
 		priority = -priority;
 	}
-	if (priority > LOG_DEBUG + 1) {
-		priority = LOG_DEBUG + 1;
+	if (priority > MAX_PRIORITY) {
+		priority = MAX_PRIORITY;
 	}
 	return priority;
 }
