@@ -49,7 +49,7 @@ class Log {
 	Log(const Log&) = delete;
 	Log& operator=(const Log&) = delete;
 
-	bool _unlog(int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...);
+	bool _unlog(int priority, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...);
 
 public:
 	Log(Log&& o);
@@ -59,10 +59,10 @@ public:
 	~Log();
 
 	template <typename... Args>
-	bool unlog(int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, Args&&... args) {
+	bool unlog(int priority, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
 		return _unlog(priority, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 	}
-	bool vunlog(int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
+	bool vunlog(int priority, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr);
 
 	bool clear();
 	long double age();
@@ -86,18 +86,18 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
-Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...);
+Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr);
+Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
 	return _log(cleanup, info, stacked, wakeup, async, priority, exc, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, Args&&... args) {
+inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
 	return _log(cleanup, info, stacked, wakeup, async, priority, nullptr, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
