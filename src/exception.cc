@@ -22,15 +22,11 @@
 
 #include "exception.h"
 
-#include <cstdarg>            // for va_end, va_list, va_start
-#include <cstdio>             // for vsnprintf
 #include <cstdlib>            // for free
 #include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
 #include <dlfcn.h>            // for dladdr
 #include <execinfo.h>         // for backtrace, backtrace_symbols
-
-#include "stringified.hh"     // for stringified
 
 #define BUFFER_SIZE 1024
 
@@ -261,30 +257,14 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, int n, ...)
+BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::printf_args args)
 	: type(type),
 	  function(function_),
 	  filename(filename_),
 	  line(line_),
-	  frames(0)
+	  frames(0),
+	  message(fmt::vsprintf(format, args))
 {
-	va_list argptr;
-	va_start(argptr, n);
-
-	stringified format_string(format);
-
-	// Figure out the length of the formatted message.
-	va_list argptr_copy;
-	va_copy(argptr_copy, argptr);
-	auto len = vsnprintf(nullptr, 0, format_string.c_str(), argptr_copy);
-	va_end(argptr_copy);
-
-	// Make a string to hold the formatted message.
-	message.resize(len + 1);
-	message.resize(vsnprintf(&message[0], len + 1, format_string.c_str(), argptr));
-
-	va_end(argptr);
-
 	if (!exc.type.empty() && exc.frames) {
 		function = exc.function;
 		filename = exc.filename;
