@@ -2405,7 +2405,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(response);
 		}
-		L(priority, color, "\"%s\" %d %s %s", request.head.c_str(), (int)response.status, string::from_bytes(response.size).c_str(), string::from_delta(request.begins, request.ends).c_str());
+		L(priority, NO_COLOR, color + static_string::string("\"%s\" %d %s %s"), request.head.c_str(), (int)response.status, string::from_bytes(response.size).c_str(), string::from_delta(request.begins, request.ends).c_str());
 	}
 
 	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends).c_str(), string::from_delta(request.received, request.ends).c_str());
