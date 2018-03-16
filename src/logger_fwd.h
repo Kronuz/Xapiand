@@ -117,54 +117,54 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
-#define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, format, ...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
+#define L_DELAYED_UNLOG(priority, color, format, ...) unlog(priority, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
-#define L_DELAYED_200(args...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, args)
-#define L_DELAYED_600(args...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, args)
-#define L_DELAYED_1000(args...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, args)
-#define L_DELAYED_N_UNLOG(args...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, args)
+#define L_DELAYED_200(...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_600(...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_1000(...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_N_UNLOG(...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 
-#define L_NOTHING(args...)
+#define L_NOTHING(...)
 
-// ::log <- (cleanup, delay, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, args)
-#define LOG(stacked, level, color, args...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
+// ::log <- (cleanup, delay, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, ##__VA_ARGS__)
+#define LOG(stacked, level, color, format, ...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
 
-#define HOOK_LOG(hook, stacked, level, color, args...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args); }
+#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__); }
 
-#define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
-#define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
-#define L_WARNING(args...) LOG(true, LOG_WARNING, WARNING_COL, args)
-#define L_ERR(args...) LOG(true, LOG_ERR, ERR_COL, args)
-#define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
-#define L_ALERT(args...) LOG(true, LOG_ALERT, ALERT_COL, args)
-#define L_EMERG(args...) LOG(true, LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, CLEAR_COLOR, ERR_COL, args)
+#define L_INFO(...) LOG(true, LOG_INFO, INFO_COL, __VA_ARGS__)
+#define L_NOTICE(...) LOG(true, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
+#define L_WARNING(...) LOG(true, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR(...) LOG(true, LOG_ERR, ERR_COL, __VA_ARGS__)
+#define L_CRIT(...) LOG(true, LOG_CRIT, CRIT_COL, __VA_ARGS__)
+#define L_ALERT(...) LOG(true, LOG_ALERT, ALERT_COL, __VA_ARGS__)
+#define L_EMERG(...) LOG(true, LOG_EMERG, EMERG_COL, __VA_ARGS__)
+#define L_EXC(format, ...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, "", "", format, ##__VA_ARGS__)
 
-#define L_INFO_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, args)
-#define L_NOTICE_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, args)
-#define L_WARNING_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_WARNING, WARNING_COL, args)
-#define L_ERR_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_ERR, ERR_COL, args)
+#define L_INFO_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, __VA_ARGS__)
+#define L_NOTICE_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
+#define L_WARNING_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_ERR, ERR_COL, __VA_ARGS__)
 
-#define L_UNINDENTED(level, color, args...) LOG(false, level, color, args)
-#define L_UNINDENTED_LOG(args...) L_UNINDENTED(LOG_DEBUG, LOG_COL, args)
+#define L_UNINDENTED(level, color, ...) LOG(false, level, color, __VA_ARGS__)
+#define L_UNINDENTED_LOG(...) L_UNINDENTED(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L(level, color, args...) LOG(true, level, color, args)
-#define L_LOG(args...) L(LOG_DEBUG, LOG_COL, args)
+#define L(level, color, ...) LOG(true, level, color, __VA_ARGS__)
+#define L_LOG(...) L(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L_STACKED(args...) auto UNIQUE_NAME = L(args)
-#define L_STACKED_LOG(args...) L_STACKED(LOG_DEBUG, LOG_COL, args)
+#define L_STACKED(...) auto UNIQUE_NAME = L(args)
+#define L_STACKED_LOG(...) L_STACKED(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L_COLLECT(args...) ::collect(args)
+#define L_COLLECT(...) ::collect(args)
 
-#define L_PRINT(args...) ::print(args)
+#define L_PRINT(...) ::print(args)
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
 #define L_DEBUG_HOOK L_NOTHING
 #else
-#define L_DEBUG(args...) L(LOG_DEBUG, DEBUG_COL, args)
-#define L_DEBUG_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, args)
+#define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
+#define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
 #endif
