@@ -113,7 +113,7 @@ class Logging : public ScheduledTask {
 	bool _unlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...);
 
 	static std::string format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
-	static Log add(std::string_view str, const BaseException* exc, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
+	static Log add(const std::string& str, const BaseException* exc, bool cleanup, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 public:

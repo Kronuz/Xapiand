@@ -479,7 +479,7 @@ Logging::do_log(bool clean, bool info, bool stacked, std::chrono::time_point<std
 
 
 Log
-Logging::add(std::string_view str, const BaseException* exc, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
+Logging::add(const std::string& str, const BaseException* exc, bool clean, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	auto l_ptr = std::make_shared<Logging>(str, exc, clean, stacked, async, priority, created_at);
 
