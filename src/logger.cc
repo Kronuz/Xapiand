@@ -139,7 +139,6 @@ _println(bool collect, bool with_endl, std::string_view format, int n, ...)
 
 
 Log
-vlog(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr);
 vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr)
 {
 	return Logging::do_log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, argptr);
@@ -147,7 +146,6 @@ vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wak
 
 
 Log
-_log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...);
 _log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...)
 {
 	va_list argptr;
