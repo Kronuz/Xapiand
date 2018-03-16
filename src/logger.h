@@ -94,14 +94,19 @@ class Logging : public ScheduledTask {
 
 	static std::mutex stack_mtx;
 	static std::unordered_map<std::thread::id, unsigned> stack_levels;
+
 	std::thread::id thread_id;
+	const char* function;
+	const char* filename;
+	int line;
 	unsigned stack_level;
-	bool stacked;
 
 	bool clean;
 	std::string str_start;
 	BaseException exception;
 	bool async;
+	bool info;
+	bool stacked;
 	int priority;
 	std::atomic_bool cleaned;
 
@@ -112,8 +117,8 @@ class Logging : public ScheduledTask {
 
 	bool _unlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, int n, ...);
 
-	static std::string format_string(bool info, bool stacked, int priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
-	static Log add(const std::string& str, const BaseException* exc, bool cleanup, bool stacked, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
+	static std::string format_string(std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
+	static Log add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 public:
@@ -123,7 +128,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Logging(std::string_view str, const BaseException* exc, bool cleanup, bool stacked, bool async_, int priority_, const std::chrono::time_point<std::chrono::system_clock>& created_at_ = std::chrono::system_clock::now());
+	Logging(const char *function, const char *filename, int line, const std::string& str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
 	~Logging();
 
 	static std::string colorized(std::string_view s, bool try_coloring);
@@ -132,13 +137,13 @@ public:
 	static void dump_collected();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, va_list argptr);
-	static Log do_log(bool clean, bool info, bool stacked, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
+	static Log do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
 
 	template <typename... Args>
-	bool unlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, Args&&... args) {
-		return _unlog(_priority, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+	bool unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view suffix, std::string_view prefix, std::string_view format, Args&&... args) {
+		return _unlog(_priority, _function, _filename, _line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 	}
-	bool vunlog(int _priority, const char* function, const char* filename, int line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
+	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view suffix, std::string_view prefix, std::string_view format, va_list argptr);
 
 	void cleanup();
 
