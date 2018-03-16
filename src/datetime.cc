@@ -1189,7 +1189,7 @@ Datetime::iso8601(double timestamp, bool trim, char sep)
 std::string
 Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim, char sep)
 {
-	return iso8601(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS, trim, sep);
+	return iso8601(timestamp(tp), trim, sep);
 }
 
 
