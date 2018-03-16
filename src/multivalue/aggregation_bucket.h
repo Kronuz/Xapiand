@@ -73,7 +73,9 @@ public:
 		if (it != _aggs.end()) {
 			it->second(doc);
 		} else {
-			auto p = _aggs.emplace(std::piecewise_construct, std::forward_as_tuple(bucket_hash), std::forward_as_tuple(_result[bucket], _conf, _schema));
+			auto p = _aggs.emplace(std::piecewise_construct,
+				std::forward_as_tuple(bucket_hash),
+				std::forward_as_tuple(_result[bucket], _conf, _schema));
 			p.first->second(doc);
 		}
 	}
