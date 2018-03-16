@@ -32,6 +32,7 @@
 #include <dirent.h>           // for DIR
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
+#include <thread>             // for std::thread, std::this_thread
 #include <type_traits>        // for std::underlying_type_t
 #include <unistd.h>           // for usleep
 #include <vector>             // for std::vector
@@ -62,8 +63,9 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 double random_real(double initial, double last);
 std::uint64_t random_int(std::uint64_t initial, std::uint64_t last);
 
-void set_thread_name(std::string_view name);
-std::string get_thread_name();
+void set_thread_name(const std::string& name);
+const std::string& get_thread_name(std::thread::id thread_id);
+const std::string& get_thread_name();
 
 
 std::string repr(const void* p, std::size_t size, bool friendly = true, char quote = '\'', std::size_t max_size = 0);

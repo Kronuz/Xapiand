@@ -27,6 +27,7 @@
 #include <functional>            // for function, __base
 #include <math.h>                // for powl, logl, floorl, roundl
 #include <memory>                // for allocator
+#include <mutex>                 // for std::mutex
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <random>                // for mt19937_64, random_device, uniform_r...
@@ -39,8 +40,8 @@
 #include <sys/socket.h>          // for setsockopt
 #include <sys/stat.h>            // for mkdir, stat
 #include <sysexits.h>            // for EX_OSFILE
-#include <thread>                // for this_thread
 #include <unistd.h>              // for close, rmdir, write, ssize_t
+#include <unordered_map>         // for std::unordered_map
 
 #include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
 #include "exception.h"           // for Exit
@@ -82,88 +83,11 @@
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
-
-#if !defined(HAVE_PTHREAD_GETNAME_NP_3) && !defined(HAVE_PTHREAD_GET_NAME_NP_3) && !defined(HAVE_PTHREAD_GET_NAME_NP_1)
-#if defined (__FreeBSD__)
-#if defined (HAVE_PTHREADS) && defined (HAVE_PTHREAD_NP_H)
-#define HAVE_PTHREAD_GET_NAME_NP_2
-
-#include <mutex>
-#include <unordered_map>
-
-#include <errno.h>
-
-#include <stdlib.h>
-#include <sys/sysctl.h>
-#include <sys/user.h>
-
-int
-pthread_get_name_np(char* buffer, size_t size)
-{
-	int tid = pthread_getthreadid_np();
-
-	static std::unordered_map<int, std::string> names;
-	static std::mutex mtx;
-
-	std::unique_lock<std::mutex> lk(mtx);
-
-	auto it = names.find(tid);
-	if (it == names.end()) {
-		lk.unlock();
-		if (!buffer) {
-			return 1;
-		}
-		size_t kp_len = 0;
-		struct kinfo_proc *kp = nullptr;
-		while (true) {
-			int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD, static_cast<int>(::getpid())};
-			size_t mib_len = sizeof(mib) / sizeof(int);
-			int error = sysctl(mib, mib_len, kp, &kp_len, nullptr, 0);
-			if (kp == nullptr || (error < 0 && errno == ENOMEM)) {
-				struct kinfo_proc *nkp = (struct kinfo_proc *)realloc(kp, kp_len);
-				if (nkp == nullptr) {
-					free(kp);
-					return -1;
-				}
-				kp = nkp;
-				continue;
-			}
-			if (error < 0) {
-				kp_len = 0;
-			}
-			break;
-		}
-		auto items = kp_len / sizeof(*kp);
-		lk.lock();
-		if (std::abs(long(names.size() - items)) > 20) {
-			names.clear();
-		}
-		for (size_t i = 0; i < items; i++) {
-			auto k_tid = static_cast<int>(kp[i].ki_tid);
-			auto oit = names.insert(std::make_pair(k_tid, kp[i].ki_tdname)).first;
-			if (k_tid == tid) {
-				it = oit;
-			}
-		}
-		free(kp);
-	} else {
-		if (!buffer) {
-			names.erase(it);
-			return 1;
-		}
-	}
-	if (it != names.end()) {
-		strncpy(buffer, it->second.c_str(), size);
-		return 0;
-	}
-	return -1;
-}
-#endif
-#endif
-#endif
+static std::unordered_map<std::thread::id, std::string> thread_names;
+static std::mutex thread_names_mutex;
 
 
-void set_thread_name(std::string_view name) {
+void set_thread_name(const std::string& name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
 	pthread_setname_np(stringified(name).c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
@@ -173,27 +97,26 @@ void set_thread_name(std::string_view name) {
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
 	pthread_set_name_np(pthread_self(), stringified(name).c_str());
 #endif
-#if defined(HAVE_PTHREAD_GET_NAME_NP_2)
-	pthread_get_name_np(nullptr, 0);
-#endif
+	std::lock_guard<std::mutex> lk(thread_names_mutex);
+	thread_names.emplace(std::piecewise_construct,
+		std::forward_as_tuple(std::this_thread::get_id()),
+		std::forward_as_tuple(name));
 }
 
 
-std::string get_thread_name() {
-	char name[100] = {0};
-#if defined(HAVE_PTHREAD_GETNAME_NP_3)
-	pthread_getname_np(pthread_self(), name, sizeof(name));
-#elif defined(HAVE_PTHREAD_GET_NAME_NP_3)
-	pthread_get_name_np(pthread_self(), name, sizeof(name));
-#elif defined(HAVE_PTHREAD_GET_NAME_NP_1)
-	strncpy(name, pthread_get_name_np(pthread_self()), sizeof(name));
-#elif defined(HAVE_PTHREAD_GET_NAME_NP_2)
-	pthread_get_name_np(name, sizeof(name));
-#else
-	static std::hash<std::thread::id> thread_hasher;
-	snprintf(name, sizeof(name), "%zx", thread_hasher(std::this_thread::get_id()));
-#endif
-	return std::string(name);
+const std::string& get_thread_name(std::thread::id thread_id) {
+	std::lock_guard<std::mutex> lk(thread_names_mutex);
+	auto thread = thread_names.find(thread_id);
+	if (thread == thread_names.end()) {
+		static std::string _ = "???";
+		return _;
+	}
+	return thread->second;
+}
+
+
+const std::string& get_thread_name() {
+	return get_thread_name(std::this_thread::get_id());
 }
 
 
