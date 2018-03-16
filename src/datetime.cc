@@ -100,103 +100,99 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 
 
 static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
-	auto size = str_time.size();
-	try {
-		switch (size) {
-			case 5: // 00:00
-				if (str_time[2] == ':') {
-					tm.hour = strict_stoul(str_time.substr(0, 2));
-					if (tm.hour < 24) {
-						tm.min = strict_stoul(str_time.substr(3, 2));
-						if (tm.min < 60) {
-							tm.sec = 0;
+	int errno_save;
+	switch (str_time.size()) {
+		case 5: // 00:00
+			if (str_time[2] == ':') {
+				tm.hour = strict_stoul(str_time.substr(0, 2));
+				if (tm.hour < 24) {
+					tm.min = strict_stoul(str_time.substr(3, 2));
+					if (tm.min < 60) {
+						tm.sec = 0;
+						tm.fsec = 0.0;
+						return;
+					}
+				}
+				THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
+			}
+			break;
+		case 8: // 00:00:00
+			if (str_time[2] == ':' && str_time[5] == ':') {
+				tm.hour = strict_stoul(str_time.substr(0, 2));
+				if (tm.hour < 24) {
+					tm.min = strict_stoul(str_time.substr(3, 2));
+					if (tm.min < 60) {
+						tm.sec = strict_stoul(str_time.substr(6, 2));
+						if (tm.sec < 60) {
 							tm.fsec = 0.0;
 							return;
 						}
 					}
-					THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 				}
-				break;
-			case 8: // 00:00:00
-				if (str_time[2] == ':' && str_time[5] == ':') {
-					tm.hour = strict_stoul(str_time.substr(0, 2));
-					if (tm.hour < 24) {
-						tm.min = strict_stoul(str_time.substr(3, 2));
-						if (tm.min < 60) {
-							tm.sec = strict_stoul(str_time.substr(6, 2));
-							if (tm.sec < 60) {
-								tm.fsec = 0.0;
-								return;
-							}
-						}
-					}
-					THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
-				}
-				break;
-			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
-				if (size > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
-					tm.hour = strict_stoul(str_time.substr(0, 2));
-					if (tm.hour < 24) {
-						tm.min = strict_stoul(str_time.substr(3, 2));
-						if (tm.min < 60) {
-							tm.sec = strict_stoul(str_time.substr(6, 2));
-							if (tm.sec < 60) {
-								switch (str_time[8]) {
-									case '+':
-									case '-':
-										if (size == 14 && str_time[11] == ':') {
-											tm.fsec = 0.0;
-											auto tz_h = str_time.substr(9, 2);
-											auto tz_m = str_time.substr(12, 2);
-											if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-												computeTimeZone(tm, str_time[8], tz_h, tz_m);
-												return;
-											}
-											THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
+				THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
+			}
+			break;
+		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
+			if (size > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
+				tm.hour = strict_stoul(str_time.substr(0, 2));
+				if (tm.hour < 24) {
+					tm.min = strict_stoul(str_time.substr(3, 2));
+					if (tm.min < 60) {
+						tm.sec = strict_stoul(str_time.substr(6, 2));
+						if (tm.sec < 60) {
+							switch (str_time[8]) {
+								case '+':
+								case '-':
+									if (size == 14 && str_time[11] == ':') {
+										tm.fsec = 0.0;
+										auto tz_h = str_time.substr(9, 2);
+										auto tz_m = str_time.substr(12, 2);
+										if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+											computeTimeZone(tm, str_time[8], tz_h, tz_m);
+											return;
 										}
-										THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", std::string(str_time).c_str());
-									case '.': {
-										auto it = str_time.begin() + 8;
-										const auto it_e = str_time.end();
-										for (auto aux = it + 1; aux != it_e; ++aux) {
-											const auto& c = *aux;
-											if (c < '0' || c > '9') {
-												if (c == '+' || c == '-') {
-													if ((it_e - aux) == 6) {
-														auto aux_end = aux + 3;
-														if (*aux_end == ':') {
-															std::string_view tz_h(aux + 1, aux_end - aux - 1);
-															std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
-															if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
-																computeTimeZone(tm, c, tz_h, tz_m);
-																tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, aux - it)));
-																return;
-															}
-															THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
+										THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
+									}
+									THROW(DatetimeError, "Error format in: %s, the format must be '00:00:00[+-]00:00'", std::string(str_time).c_str());
+								case '.': {
+									auto it = str_time.begin() + 8;
+									const auto it_e = str_time.end();
+									for (auto aux = it + 1; aux != it_e; ++aux) {
+										const auto& c = *aux;
+										if (c < '0' || c > '9') {
+											if (c == '+' || c == '-') {
+												if ((it_e - aux) == 6) {
+													auto aux_end = aux + 3;
+													if (*aux_end == ':') {
+														std::string_view tz_h(aux + 1, aux_end - aux - 1);
+														std::string_view tz_m(aux_end + 1, it_e - aux_end - 1);
+														if (strict_stoul(tz_h) < 24 && strict_stoul(tz_m) < 60) {
+															computeTimeZone(tm, c, tz_h, tz_m);
+															tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, aux - it)));
+															return;
 														}
+														THROW(DatetimeError, "Time: %s is out of range", std::string(str_time).c_str());
 													}
 												}
-												THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(str_time).c_str());
 											}
+											THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(str_time).c_str());
 										}
-										tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
-										return;
 									}
-									default:
-										break;
+									tm.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
+									return;
 								}
+								default:
+									break;
 							}
 						}
 					}
 				}
-				break;
-		}
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", std::string(str_time).c_str());
-	} catch (const OutOfRange& er) {
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", std::string(str_time).c_str(), er.what());
-	} catch (const InvalidArgument& er) {
-		THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))' %s", std::string(str_time).c_str(), er.what());
+			}
+			break;
 	}
+
+error:
+	THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)[+-]00:00))'", std::string(str_time).c_str());
 }
 
 
@@ -238,13 +234,13 @@ Datetime::DateParser(std::string_view date)
 
 	int errno_save;
 	std::cmatch m;
-	while (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
+	if (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
 		tm.year = strict_stoi(errno_save, m.str(1));
-		if (errno_save) break;
+		if (errno_save) goto error;
 		tm.mon = strict_stoi(errno_save, m.str(3));
-		if (errno_save) break;
+		if (errno_save) goto error;
 		tm.day = strict_stoi(errno_save, m.str(4));
-		if (errno_save) break;
+		if (errno_save) goto error;
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
 			THROW(DatetimeError, "Date: %s is out of range", std::string(date).c_str());
 		}
@@ -255,22 +251,22 @@ Datetime::DateParser(std::string_view date)
 			tm.fsec = 0.0;
 		} else {
 			tm.hour = strict_stoi(errno_save, m.str(6));
-			if (errno_save) break;
+			if (errno_save) goto error;
 			tm.min = strict_stoi(errno_save, m.str(7));
-			if (errno_save) break;
+			if (errno_save) goto error;
 			if (m.length(8) == 0) {
 				tm.sec = 0;
 				tm.fsec = 0.0;
 			} else {
 				tm.sec = strict_stoi(errno_save, m.str(9));
-				if (errno_save) break;
+				if (errno_save) goto error;
 				if (m.length(10) == 0) {
 					tm.fsec = 0.0;
 				} else {
 					auto fs = m.str(11);
 					fs.insert(0, 1, '.');
 					auto fsec = strict_stod(errno_save, fs);
-					if (errno_save) break;
+					if (errno_save) goto error;
 					tm.fsec = normalize_fsec(fsec);
 				}
 			}
@@ -287,6 +283,7 @@ Datetime::DateParser(std::string_view date)
 		return tm;
 	}
 
+error:
 	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", std::string(date).c_str());
 }
 
@@ -754,9 +751,11 @@ Datetime::computeTimeZone(tm_t& tm, char op, std::string_view hour, std::string_
 void
 Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 {
+	int errno_save;
 	switch (op[0]) {
 		case '+': {
-			auto num = strict_stoi(op.substr(1));
+			auto num = strict_stoi(errno_save, op.substr(1));
+			if (errno_save) THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)).c_str());
 			switch (unit) {
 				case 'y':
 					tm.year += num; break;
@@ -783,7 +782,8 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 			break;
 		}
 		case '-': {
-			auto num = strict_stoi(op.substr(1));
+			auto num = strict_stoi(errno_save, op.substr(1));
+			if (errno_save) THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)).c_str());
 			switch (unit) {
 				case 'y':
 					tm.year -= num;
@@ -1215,79 +1215,90 @@ Datetime::TimeParser(std::string_view _time)
 {
 	clk_t clk;
 	auto length = _time.length();
-	try {
-		switch (length) {
-			case 5: // 00:00
-				if (_time[2] == ':') {
-					clk.hour = strict_stoul(_time.substr(0, 2));
-					clk.min = strict_stoul(_time.substr(3, 2));
-					return clk;
-				}
-				break;
-			case 8: // 00:00:00
-				if (_time[2] == ':' && _time[5] == ':') {
-					clk.hour = strict_stoul(_time.substr(0, 2));
-					clk.min = strict_stoul(_time.substr(3, 2));
-					clk.sec = strict_stoul(_time.substr(6, 2));
-					return clk;
-				}
-				break;
-			default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
-				if (length > 9 && (_time[2] == ':' && _time[5] == ':')) {
-					clk.hour = strict_stoul(_time.substr(0, 2));
-					clk.min = strict_stoul(_time.substr(3, 2));
-					clk.sec = strict_stoul(_time.substr(6, 2));
-					switch (_time[8]) {
-						case '-':
-							clk.tz_s = '-';
-						case '+':
-							if (length == 14 && _time[11] == ':') {
-								clk.tz_h = strict_stoul(_time.substr(9, 2));
-								clk.tz_m = strict_stoul(_time.substr(12, 2));
-								return clk;
-							}
-							break;
-						case '.': {
-							auto it = _time.begin() + 8;
-							const auto it_e = _time.end();
-							for (auto aux = it + 1; aux != it_e; ++aux) {
-								const auto& c = *aux;
-								if (c < '0' || c > '9') {
-									switch (c) {
-										case '-':
-											clk.tz_s = '-';
-										case '+':
-											if ((it_e - aux) == 6) {
-												auto aux_end = aux + 3;
-												if (*aux_end == ':') {
-													clk.tz_h = strict_stoul(std::string_view(aux + 1, aux_end - aux - 1));
-													clk.tz_m = strict_stoul(std::string_view(aux_end + 1, it_e - aux_end - 1));
-													clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, aux - it)));
-													return clk;
-												}
-											}
-											break;
-										default:
-											break;
-									}
-									THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
-								}
-							}
-							clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
+	switch (length) {
+		case 5: // 00:00
+			if (_time[2] == ':') {
+				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
+				if (errno_save) goto error;
+				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
+				if (errno_save) goto error;
+				return clk;
+			}
+			break;
+		case 8: // 00:00:00
+			if (_time[2] == ':' && _time[5] == ':') {
+				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
+				if (errno_save) goto error;
+				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
+				if (errno_save) goto error;
+				clk.sec = strict_stoul(errno_save, _time.substr(6, 2));
+				if (errno_save) goto error;
+				return clk;
+			}
+			break;
+		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
+			if (length > 9 && (_time[2] == ':' && _time[5] == ':')) {
+				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
+				if (errno_save) goto error;
+				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
+				if (errno_save) goto error;
+				clk.sec = strict_stoul(errno_save, _time.substr(6, 2));
+				if (errno_save) goto error;
+				switch (_time[8]) {
+					case '-':
+						clk.tz_s = '-';
+					case '+':
+						if (length == 14 && _time[11] == ':') {
+							clk.tz_h = strict_stoul(errno_save, _time.substr(9, 2));
+							if (errno_save) goto error;
+							clk.tz_m = strict_stoul(errno_save, _time.substr(12, 2));
+							if (errno_save) goto error;
 							return clk;
 						}
-						default:
-							break;
+						break;
+					case '.': {
+						auto it = _time.begin() + 8;
+						const auto it_e = _time.end();
+						for (auto aux = it + 1; aux != it_e; ++aux) {
+							const auto& c = *aux;
+							if (c < '0' || c > '9') {
+								switch (c) {
+									case '-':
+										clk.tz_s = '-';
+									case '+':
+										if ((it_e - aux) == 6) {
+											auto aux_end = aux + 3;
+											if (*aux_end == ':') {
+												clk.tz_h = strict_stoul(errno_save, std::string_view(aux + 1, aux_end - aux - 1));
+												if (errno_save) goto error;
+												clk.tz_m = strict_stoul(errno_save, std::string_view(aux_end + 1, it_e - aux_end - 1));
+												if (errno_save) goto error;
+												auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
+												if (errno_save) goto error;
+												clk.fsec = Datetime::normalize_fsec(fsec);
+												return clk;
+											}
+										}
+										break;
+									default:
+										break;
+								}
+								THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
+							}
+						}
+						auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it))
+						if (errno_save) goto error;
+						clk.fsec = Datetime::normalize_fsec(fsec);
+						return clk;
 					}
+					default:
+						break;
 				}
-				break;
-		}
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
-	} catch (const OutOfRange& er) {
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", std::string(_time).c_str(), er.what());
-	} catch (const InvalidArgument& er) {
-		THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))' [%s]", std::string(_time).c_str(), er.what());
+			}
+			break;
 	}
+error:
+	THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", std::string(_time).c_str());
 }
 
 
@@ -1502,72 +1513,78 @@ Datetime::isTime(std::string_view _time) {
 Datetime::clk_t
 Datetime::TimedeltaParser(std::string_view timedelta)
 {
+	int errno_save;
 	clk_t clk;
-	auto size = timedelta.size();
-	try {
-		switch (size) {
-			case 6: // [+-]00:00
-				switch (timedelta[0]) {
-					case '-':
-						clk.tz_s = '-';
-					case '+':
-						if (timedelta[3] == ':') {
-							clk.hour = strict_stoul(timedelta.substr(1, 2));
-							clk.min = strict_stoul(timedelta.substr(4, 2));
-							return clk;
-						}
-					default:
-						break;
-				}
-				break;
+	switch (timedelta.size()) {
+		case 6: // [+-]00:00
+			switch (timedelta[0]) {
+				case '-':
+					clk.tz_s = '-';
+				case '+':
+					if (timedelta[3] == ':') {
+						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
+						if (errno_save) goto error;
+						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
+						if (errno_save) goto error;
+						return clk;
+					}
+				default:
+					break;
+			}
+			break;
 
-			case 9: // [+-]00:00:00
-				switch (timedelta[0]) {
-					case '-':
-						clk.tz_s = '-';
-					case '+':
-						if (timedelta[3] == ':' && timedelta[6] == ':') {
-							clk.hour = strict_stoul(timedelta.substr(1, 2));
-							clk.min = strict_stoul(timedelta.substr(4, 2));
-							clk.sec = strict_stoul(timedelta.substr(7, 2));
-							return clk;
-						}
-					default:
-						break;
-				}
-				break;
+		case 9: // [+-]00:00:00
+			switch (timedelta[0]) {
+				case '-':
+					clk.tz_s = '-';
+				case '+':
+					if (timedelta[3] == ':' && timedelta[6] == ':') {
+						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
+						if (errno_save) goto error;
+						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
+						if (errno_save) goto error;
+						clk.sec = strict_stoul(errno_save, timedelta.substr(7, 2));
+						if (errno_save) goto error;
+						return clk;
+					}
+				default:
+					break;
+			}
+			break;
 
-			default: //  [+-]00:00:00.000...
-				switch (timedelta[0]) {
-					case '-':
-						clk.tz_s = '-';
-					case '+':
-						if (size > 10 && (timedelta[3] == ':' && timedelta[6] == ':' && timedelta[9] == '.')) {
-							clk.hour = strict_stoul(timedelta.substr(1, 2));
-							clk.min = strict_stoul(timedelta.substr(4, 2));
-							clk.sec = strict_stoul(timedelta.substr(7, 2));
-							auto it = timedelta.begin() + 9;
-							const auto it_e = timedelta.end();
-							for (auto aux = it + 1; aux != it_e; ++aux) {
-								const auto& c = *aux;
-								if (c < '0' || c > '9') {
-									THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
-								}
+		default: //  [+-]00:00:00.000...
+			switch (timedelta[0]) {
+				case '-':
+					clk.tz_s = '-';
+				case '+':
+					if (size > 10 && (timedelta[3] == ':' && timedelta[6] == ':' && timedelta[9] == '.')) {
+						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
+						if (errno_save) goto error;
+						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
+						if (errno_save) goto error;
+						clk.sec = strict_stoul(errno_save, timedelta.substr(7, 2));
+						if (errno_save) goto error;
+						auto it = timedelta.begin() + 9;
+						const auto it_e = timedelta.end();
+						for (auto aux = it + 1; aux != it_e; ++aux) {
+							const auto& c = *aux;
+							if (c < '0' || c > '9') {
+								goto error;
 							}
-							clk.fsec = Datetime::normalize_fsec(strict_stod(std::string_view(it, it_e - it)));
-							return clk;
 						}
-					default:
-						break;
-				}
-				break;
-		}
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
-	} catch (const OutOfRange& er) {
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", std::string(timedelta).c_str(), er.what());
-	} catch (const InvalidArgument& er) {
-		THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))' %s", std::string(timedelta).c_str(), er.what());
+						auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
+						if (errno_save) goto error;
+						clk.fsec = Datetime::normalize_fsec(fsec);
+						return clk;
+					}
+				default:
+					break;
+			}
+			break;
 	}
+
+error:
+	THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", std::string(timedelta).c_str());
 }
 
 

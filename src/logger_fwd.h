@@ -86,38 +86,38 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr);
-Log _log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...);
+Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, va_list argptr);
+Log _log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, int n, ...);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const T* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
-	return _log(cleanup, info, stacked, wakeup, async, priority, exc, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const T* exc, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
+	return _log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::time_point<std::chrono::system_clock> wakeup, bool async, int priority, const void*, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
-	return _log(cleanup, info, stacked, wakeup, async, priority, nullptr, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
+inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const void*, const char* function, const char* filename, int line, const char* suffix, const char* prefix, std::string_view format, Args&&... args) {
+	return _log(cleanup, wakeup, async, info, stacked, priority, nullptr, function, filename, line, suffix, prefix, format, 0, std::forward<Args>(args)...);
 }
 
 
 template <typename T, typename R, typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, std::chrono::duration<T, R> timeout, bool async, int priority, Args&&... args) {
-	return log(cleanup, info, stacked, std::chrono::system_clock::now() + timeout, async, priority, std::forward<Args>(args)...);
+inline Log log(bool cleanup, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, int priority, Args&&... args) {
+	return log(cleanup, std::chrono::system_clock::now() + timeout, async, info, stacked, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, int priority, Args&&... args) {
-	return log(cleanup, info, stacked, std::chrono::milliseconds(timeout), async, priority, std::forward<Args>(args)...);
+inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, int priority, Args&&... args) {
+	return log(cleanup, std::chrono::milliseconds(timeout), async, info, stacked, priority, std::forward<Args>(args)...);
 }
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, true, false, delay, true, priority, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
+#define L_DELAYED(cleanup, delay, priority, color, args...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
 #define L_DELAYED_UNLOG(priority, color, args...) unlog(priority, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
 #define L_DELAYED_CLEAR() clear()
 
@@ -129,10 +129,10 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 
 #define L_NOTHING(args...)
 
-// ::log <- (cleanup, info, stacked, delay, async, priority, exc, function, filename, line, suffix, prefix, format, args)
-#define LOG(stacked, level, color, args...) ::log(false, true, stacked, 0ms, level >= ASYNC_LOG_LEVEL, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
+// ::log <- (cleanup, delay, async, info, stacked, priority, exc, function, filename, line, suffix, prefix, format, args)
+#define LOG(stacked, level, color, args...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args)
 
-#define HOOK_LOG(hook, stacked, level, color, args...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, true, stacked, 0ms, true, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args); }
+#define HOOK_LOG(hook, stacked, level, color, args...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, CLEAR_COLOR, color, args); }
 
 #define L_INFO(args...) LOG(true, LOG_INFO, INFO_COL, args)
 #define L_NOTICE(args...) LOG(true, LOG_NOTICE, NOTICE_COL, args)
@@ -141,7 +141,7 @@ inline Log log(bool cleanup, bool info, bool stacked, int timeout, bool async, i
 #define L_CRIT(args...) LOG(true, LOG_CRIT, CRIT_COL, args)
 #define L_ALERT(args...) LOG(true, LOG_ALERT, ALERT_COL, args)
 #define L_EMERG(args...) LOG(true, LOG_EMERG, EMERG_COL, args)
-#define L_EXC(args...) ::log(false, true, true, 0ms, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, CLEAR_COLOR, ERR_COL, args)
+#define L_EXC(args...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, CLEAR_COLOR, ERR_COL, args)
 
 #define L_INFO_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, args)
 #define L_NOTICE_HOOK(hook, args...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, args)
