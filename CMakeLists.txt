@@ -663,63 +663,56 @@ endif ()
 # -DBUILD_TESTS=ON flag when running cmake.
 
 if (BUILD_TESTS)
-	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
+	find_package(GTest)
+	if (NOT GTEST_FOUND)
+		message(FATAL_ERROR "GTest not found!")
+	else ()
+		include_directories(${GTEST_INCLUDE_DIRS})
+		foreach (VAR_TEST string)
+			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+			add_executable(${PROJECT_TEST}
+				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
+			)
+			target_link_libraries(${PROJECT_TEST} ${GTEST_BOTH_LIBRARIES})
+			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
+			add_dependencies(check "${PROJECT_TEST}")
+		endforeach ()
 
-	# Build googletest Tests
-	add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gtest)
-
-	include_directories(${GTEST_INCLUDE_DIR})
-	link_directories(${GTEST_LIBRARY_DIR})
-
-	foreach (VAR_TEST string)
-		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
-		add_executable(${PROJECT_TEST}
-			"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
+		### OLD:
+		foreach (VAR_TEST
+			boolparser compressor endpoint fieldparser generate_terms geospatial
+			geospatial_query uuid hash lru msgpack patcher phonetic query queue
+			serialise serialise_list sort storage string_metric threadpool
+			url_parser wal
 		)
-		add_dependencies(${PROJECT_TEST} googletest)
-		target_link_libraries(${PROJECT_TEST}
-			gtest gtest_main
-		)
-		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
-		add_dependencies(check "${PROJECT_TEST}")
-	endforeach ()
+			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+			add_executable(${PROJECT_TEST}
+				"${PROJECT_SOURCE_DIR}/oldtests/test_${VAR_TEST}.cc"
+				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
+				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
+				"$<TARGET_OBJECTS:PACKAGE_OBJ>"
+				"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+				"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
+				"$<TARGET_OBJECTS:LIBEV_OBJ>"
+				"$<TARGET_OBJECTS:LZ4_OBJ>"
+				"$<TARGET_OBJECTS:UUID_OBJ>"
+			)
+			target_link_libraries(${PROJECT_TEST}
+				${GTEST_BOTH_LIBRARIES}
+				${XAPIAN_LIBRARIES}
+				${CMAKE_THREAD_LIBS_INIT}
+				${UUID_LIBRARIES}
+				${CHAISCRIPT_LIBRARIES}
+				${V8_LIBRARIES}
+				${M_LIBRARIES}
+				${ZLIB_LIBRARIES}
+			)
+			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
+			add_dependencies(check "${PROJECT_TEST}")
+		endforeach ()
+		###
 
-
-	### OLD:
-	foreach (VAR_TEST
-		boolparser compressor endpoint fieldparser generate_terms geospatial
-		geospatial_query uuid hash lru msgpack patcher phonetic query queue
-		serialise serialise_list sort storage string_metric threadpool
-		url_parser wal
-	)
-		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
-		add_executable(${PROJECT_TEST}
-			"${PROJECT_SOURCE_DIR}/oldtests/test_${VAR_TEST}.cc"
-			"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
-			"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
-			"$<TARGET_OBJECTS:PACKAGE_OBJ>"
-			"$<TARGET_OBJECTS:XAPIAND_OBJ>"
-			"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
-			"$<TARGET_OBJECTS:LIBEV_OBJ>"
-			"$<TARGET_OBJECTS:LZ4_OBJ>"
-			"$<TARGET_OBJECTS:UUID_OBJ>"
-		)
-		add_dependencies(${PROJECT_TEST} googletest)
-		target_link_libraries(${PROJECT_TEST}
-			gtest_main gtest
-			${XAPIAN_LIBRARIES}
-			${CMAKE_THREAD_LIBS_INIT}
-			${UUID_LIBRARIES}
-			${CHAISCRIPT_LIBRARIES}
-			${V8_LIBRARIES}
-			${M_LIBRARIES}
-			${ZLIB_LIBRARIES}
-		)
-		add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
-		add_dependencies(check "${PROJECT_TEST}")
-	endforeach ()
-	###
-
+	endif ()
 endif ()
 
 
@@ -732,26 +725,21 @@ endif ()
 # -DBUILD_BENCHMARKS=ON flag when running cmake.
 
 if (BUILD_BENCHMARKS)
-	set (EXTERNAL_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/external)
-
-	# Build googlebenchmark Benchmarks
-	add_subdirectory(${EXTERNAL_PROJECTS_DIR}/gbenchmark)
-
-	include_directories(${GBENCHMARK_INCLUDE_DIR})
-	link_directories(${GBENCHMARK_LIBRARY_DIR})
-
-	foreach (VAR_BENCHMARK string)
-		set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
-		add_executable(${PROJECT_BENCHMARK}
-			"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
-		)
-		add_dependencies(${PROJECT_BENCHMARK} googlebenchmark)
-		target_link_libraries(${PROJECT_BENCHMARK}
-			benchmark
-		)
-		add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
-		add_dependencies(check "${PROJECT_BENCHMARK}")
-	endforeach ()
+	find_package(GBenchmark)
+	if (NOT GBENCHMARK_FOUND)
+		message(WARNING "GBenchmark not found!")
+	else ()
+		include_directories(${GBENCHMARK_INCLUDE_DIRS})
+		foreach (VAR_BENCHMARK string)
+			set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
+			add_executable(${PROJECT_BENCHMARK}
+				"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
+			)
+			target_link_libraries(${PROJECT_BENCHMARK} ${GBENCHMARK_LIBRARIES})
+			add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
+			add_dependencies(check "${PROJECT_BENCHMARK}")
+		endforeach ()
+	endif ()
 endif ()
 
 
