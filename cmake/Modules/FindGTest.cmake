@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 #
 
+# Based on official CMake's FindGTest.cmake
+
 include (FindPackageTools)
 include (FindPackageHandleStandardArgs)
 
@@ -66,7 +68,7 @@ if (GTEST_FOUND)
 	set (GTEST_BOTH_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES})
 
 	if (NOT TARGET GTest::GTest)
-    	find_package_tools_add_library(GTest::GTest GTEST)
+		find_package_tools_add_library(GTest::GTest GTEST)
 		find_package(Threads QUIET)
 		if (TARGET Threads::Threads)
 			set_target_properties(GTest::GTest PROPERTIES
@@ -75,7 +77,7 @@ if (GTEST_FOUND)
 	endif ()
 
 	if (NOT TARGET GTest::Main)
-    	find_package_tools_add_library(GTest::Main GTEST_MAIN)
+		find_package_tools_add_library(GTest::Main GTEST_MAIN)
 	endif ()
 endif ()
 
@@ -87,16 +89,16 @@ if (GMOCK_FOUND)
 	find_package_tools_append_debugs(GMOCK_MAIN_LIBRARIES GMOCK_MAIN_LIBRARY)
 	set (GMOCK_BOTH_LIBRARIES ${GMOCK_LIBRARIES} ${GMOCK_MAIN_LIBRARIES})
 
-    if (NOT TARGET GMock::GMock)
-    	find_package_tools_add_library(GMock::GMock GMOCK)
-    	find_package(Threads QUIET)
-        if (TARGET Threads::Threads)
-            set_target_properties(GMock::GMock PROPERTIES
-                INTERFACE_LINK_LIBRARIES Threads::Threads)
-        endif ()
-    endif ()
+	if (NOT TARGET GMock::GMock)
+		find_package_tools_add_library(GMock::GMock GMOCK)
+		find_package(Threads QUIET)
+		if (TARGET Threads::Threads)
+			set_target_properties(GMock::GMock PROPERTIES
+				INTERFACE_LINK_LIBRARIES Threads::Threads)
+		endif ()
+	endif ()
 
-    if (NOT TARGET GMock::Main)
-    	find_package_tools_add_library(GMock::Main GMOCK_MAIN)
-    endif ()
+	if (NOT TARGET GMock::Main)
+		find_package_tools_add_library(GMock::Main GMOCK_MAIN)
+	endif ()
 endif ()

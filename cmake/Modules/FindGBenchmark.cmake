@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 #
 
+# Based on official CMake's FindGTest.cmake
+
 include (FindPackageTools)
 include (FindPackageHandleStandardArgs)
 
@@ -58,6 +60,6 @@ if (GBENCHMARK_FOUND)
 	find_package_tools_append_debugs(GBENCHMARK_LIBRARIES GBENCHMARK_LIBRARY)
 
 	if (NOT TARGET GBenchmark::GBenchmark)
-    	find_package_tools_add_library(GBenchmark::GBenchmark GBENCHMARK)
+		find_package_tools_add_library(GBenchmark::GBenchmark GBENCHMARK)
 	endif ()
 endif ()

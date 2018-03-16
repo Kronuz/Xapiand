@@ -1,4 +1,27 @@
+#
+# Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
 # Based on official CMake's FindGTest.cmake
+
 
 function (find_package_tools_append_debugs _endvar _library)
 	if (${_library} AND ${_library}_DEBUG)
@@ -87,17 +110,17 @@ endfunction ()
 
 
 function (find_package_tools_add_library _name _var)
-    find_package_tools_determine_library_type(${_var}_LIBRARY)
-    add_library(${_name} ${${_var}_LIBRARY_TYPE} IMPORTED)
-    if (${_var}_LIBRARY_TYPE STREQUAL "SHARED")
-        set_target_properties(${_name} PROPERTIES
-            INTERFACE_COMPILE_DEFINITIONS "${_var}_LINKED_AS_SHARED_LIBRARY=1")
-    endif ()
-    if (${_var}_INCLUDE_DIRS)
-        set_target_properties(${_name} PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${${_var}_INCLUDE_DIRS}")
-    endif ()
-    find_package_tools_import_library(${_name} ${_var} "")
-    find_package_tools_import_library(${_name} ${_var} "RELEASE")
-    find_package_tools_import_library(${_name} ${_var} "DEBUG")
+	find_package_tools_determine_library_type(${_var}_LIBRARY)
+	add_library(${_name} ${${_var}_LIBRARY_TYPE} IMPORTED)
+	if (${_var}_LIBRARY_TYPE STREQUAL "SHARED")
+		set_target_properties(${_name} PROPERTIES
+			INTERFACE_COMPILE_DEFINITIONS "${_var}_LINKED_AS_SHARED_LIBRARY=1")
+	endif ()
+	if (${_var}_INCLUDE_DIRS)
+		set_target_properties(${_name} PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES "${${_var}_INCLUDE_DIRS}")
+	endif ()
+	find_package_tools_import_library(${_name} ${_var} "")
+	find_package_tools_import_library(${_name} ${_var} "RELEASE")
+	find_package_tools_import_library(${_name} ${_var} "DEBUG")
 endfunction ()

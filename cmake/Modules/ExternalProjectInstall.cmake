@@ -40,7 +40,7 @@ function (ExternalProject_Install)
 	set (multiValueArgs CMAKE_ARGS)
 
 	if (NOT ARGV0)
-    	message(FATAL_ERROR "You must specify an external project name.")
+		message(FATAL_ERROR "You must specify an external project name.")
 	endif ()
 	set (_ARGS_NAME "${ARGV0}")
 	list(REMOVE_AT ARGN 0)
