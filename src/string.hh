@@ -60,7 +60,7 @@ namespace std {
 		return std::string(str.data(), str.size());
 	}
 
-	template <typename T, typename = enable_if_t<
+	template <typename T, typename = std::enable_if_t<
 		std::is_convertible<decltype(std::declval<T>().to_string()), std::string>::value
 	>>
 	inline auto to_string(const T& obj) {
