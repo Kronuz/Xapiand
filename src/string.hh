@@ -26,15 +26,14 @@
 
 #include <algorithm>          // for std::count
 #include <chrono>             // for std::chrono
-#include <cstdarg>            // for va_list, va_start, va_end, va_copy
 #include <cstdio>             // for std::vsnprintf
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
+#include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 #include "static_string.hh"   // for static_string
-#include "stringified.hh"     // for stringified
 #include "split.h"            // for Split
 
 
@@ -217,38 +216,9 @@ inline std::vector<std::string_view> split(std::string_view value, const T& sep)
 }
 
 
-inline std::string vformat(std::string_view format, va_list argptr) {
-	stringified format_string(format);
-
-	// Figure out the length of the formatted message.
-	va_list argptr_copy;
-	va_copy(argptr_copy, argptr);
-	auto len = std::vsnprintf(nullptr, 0, format_string.c_str(), argptr_copy);
-	va_end(argptr_copy);
-
-	// Make a string to hold the formatted message.
-	std::string str;
-	str.resize(len + 1);
-	str.resize(std::vsnprintf(&str[0], len + 1, format_string.c_str(), argptr));
-
-	return str;
-}
-
-
-inline std::string _format(std::string_view format, int n, ...) {
-	va_list argptr;
-
-	va_start(argptr, n);
-	auto str = vformat(format, argptr);
-	va_end(argptr);
-
-	return str;
-}
-
-
 template <typename... Args>
 inline std::string format(std::string_view format, Args&&... args) {
-	return _format(format, 0, std::forward<Args>(args)...);
+	return fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
