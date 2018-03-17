@@ -69,6 +69,15 @@ namespace std {
 }
 
 
+// overload << so that it's easy to convert to a string
+template <typename T, typename = std::enable_if_t<
+	std::is_convertible<decltype(std::declval<T>().to_string()), std::string>::value
+>>
+std::ostream& operator<<(std::ostream& os, const T& obj) {
+	os << obj.to_string();
+}
+
+
 namespace string {
 
 // converts a character to lowercase
