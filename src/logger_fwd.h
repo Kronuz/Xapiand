@@ -24,11 +24,11 @@
 
 #include <atomic>             // for std::atomic
 #include <chrono>             // for system_clock, time_point, duration, millise...
-#include <cstdarg>            // for va_list, va_end
 #include <string_view>        // for std::string_view
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
 #include "exception.h"        // for BaseException
+#include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 #include "hashes.hh"          // for fnv1ah32
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
@@ -49,8 +49,6 @@ class Log {
 	Log(const Log&) = delete;
 	Log& operator=(const Log&) = delete;
 
-	bool _unlog(int priority, const char* function, const char* filename, int line, std::string_view format, int n, ...);
-
 public:
 	Log(Log&& o);
 	Log& operator=(Log&& o);
@@ -60,9 +58,9 @@ public:
 
 	template <typename... Args>
 	bool unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-		return _unlog(priority, function, filename, line, format, 0, std::forward<Args>(args)...);
+		return vunlog(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 	}
-	bool vunlog(int priority, const char* function, const char* filename, int line, std::string_view format, va_list argptr);
+	bool vunlog(int priority, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 	bool clear();
 	long double age();
@@ -70,35 +68,33 @@ public:
 };
 
 
-void vprintln(bool collect, bool with_endl, std::string_view format, va_list argptr);
-void _println(bool collect, bool with_endl, std::string_view format, int n, ...);
+void vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
 
 
 template <typename... Args>
 static void print(std::string_view format, Args&&... args) {
-	return _println(false, true, format, 0, std::forward<Args>(args)...);
+	return vprintln(false, true, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename... Args>
 static void collect(std::string_view format, Args&&... args) {
-	return _println(true, true, format, 0, std::forward<Args>(args)...);
+	return vprintln(true, true, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
-Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, va_list argptr);
-Log _log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, int n, ...);
+Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
 inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return _log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, 0, std::forward<Args>(args)...);
+	return vlog(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename... Args>
 inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const void*, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return _log(cleanup, wakeup, async, info, stacked, priority, nullptr, function, filename, line, format, 0, std::forward<Args>(args)...);
+	return vlog(cleanup, wakeup, async, info, stacked, priority, nullptr, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 

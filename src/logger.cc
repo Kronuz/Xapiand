@@ -22,7 +22,6 @@
 
 #include "logger.h"
 
-#include <cstdarg>            // for va_list, va_end, va_start
 #include <cstdio>             // for fileno, vsnprintf, stderr
 #include <cstdlib>            // for getenv
 #include <ctime>              // for time_t
@@ -122,37 +121,16 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool collect, bool with_endl, std::string_view format, va_list argptr)
+vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
 {
-	Logging::do_println(collect, with_endl, format, argptr);
-}
-
-
-void
-_println(bool collect, bool with_endl, std::string_view format, int n, ...)
-{
-	va_list argptr;
-	va_start(argptr, n);
-	vprintln(collect, with_endl, format, argptr);
-	va_end(argptr);
+	Logging::do_println(collect, with_endl, format, args);
 }
 
 
 Log
-vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, va_list argptr)
+vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
-	return Logging::do_log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, argptr);
-}
-
-
-Log
-_log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, int n, ...)
-{
-	va_list argptr;
-	va_start(argptr, n);
-	auto ret = vlog(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, argptr);
-	va_end(argptr);
-	return ret;
+	return Logging::do_log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, args);
 }
 
 
@@ -186,20 +164,9 @@ Log::operator=(Log&& o)
 
 
 bool
-Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, va_list argptr)
+Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
 {
-	return log->vunlog(_priority, _function, _filename, _line, format, argptr);
-}
-
-
-bool
-Log::_unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, int n, ...)
-{
-	va_list argptr;
-	va_start(argptr, n);
-	auto ret = vunlog(_priority, _function, _filename, _line, format, argptr);
-	va_end(argptr);
-	return ret;
+	return log->vunlog(_priority, _function, _filename, _line, format, args);
 }
 
 
@@ -430,11 +397,11 @@ Logging::run()
 
 
 bool
-Logging::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, va_list argptr)
+Logging::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
-			add(_function, _filename, _line, string::vformat(format, argptr), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, _priority, time_point_from_ullong(created_at));
+			add(_function, _filename, _line, fmt::vsprintf(format, args), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
 	}
@@ -442,22 +409,10 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 }
 
 
-bool
-Logging::_unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, int n, ...)
-{
-	va_list argptr;
-	va_start(argptr, n);
-	auto ret = vunlog(_priority, _function, _filename, _line, format, argptr);
-	va_end(argptr);
-
-	return ret;
-}
-
-
 void
-Logging::do_println(bool collect, bool with_endl, std::string_view format, va_list argptr)
+Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
 {
-	auto str = string::vformat(format, argptr);
+	auto str = fmt::vsprintf(format, args);
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
 		collected.push_back(std::make_pair(std::move(str), with_endl));
@@ -468,10 +423,10 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, va_li
 
 
 Log
-Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, va_list argptr)
+Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
-		auto str = string::vformat(format, argptr);
+		auto str = fmt::vsprintf(format, args);
 		return add(function, filename, line, str, exc, clean, wakeup, async, info, stacked, priority);
 	}
 
