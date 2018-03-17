@@ -274,9 +274,9 @@ UUIDCondenser::unserialise(const char** ptr, const char* end)
 
 
 // overload << so that it's easy to convert to a string
-std::ostream& operator<<(std::ostream& s, const UUID& uuid) {
-	std::ios::fmtflags flags(s.flags());
-	s << std::hex << std::setfill('0')
+std::ostream& operator<<(std::ostream& os, const UUID& uuid) {
+	std::ios::fmtflags flags(os.flags());
+	os << std::hex << std::setfill('0')
 		<< std::setw(2) << (int)uuid._bytes[0]
 		<< std::setw(2) << (int)uuid._bytes[1]
 		<< std::setw(2) << (int)uuid._bytes[2]
@@ -297,8 +297,8 @@ std::ostream& operator<<(std::ostream& s, const UUID& uuid) {
 		<< std::setw(2) << (int)uuid._bytes[13]
 		<< std::setw(2) << (int)uuid._bytes[14]
 		<< std::setw(2) << (int)uuid._bytes[15];
-	s.flags(flags);
-	return s;
+	os.flags(flags);
+	return os;
 }
 
 
