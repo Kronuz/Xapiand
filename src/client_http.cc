@@ -2383,29 +2383,29 @@ HttpClient::clean_http_request(Request& request, Response& response)
 	if (request.parser.http_errno) {
 		L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
 	} else {
-		constexpr auto red = RED;
-		auto color = red.c_str();
+		constexpr auto fmt_defaut = RED + "\"%s\" %d %s %s";
+		auto fmt = fmt_defaut.c_str();
 		int priority = LOG_DEBUG;
 
 		if ((int)response.status >= 200 && (int)response.status <= 299) {
-			constexpr auto white = WHITE;
-			color = white.c_str();
+			constexpr auto fmt_2xx = WHITE + "\"%s\" %d %s %s";
+			fmt = fmt_2xx.c_str();
 		} else if ((int)response.status >= 300 && (int)response.status <= 399) {
-			constexpr auto steel_blue = STEEL_BLUE;
-			color = steel_blue.c_str();
+			constexpr auto fmt_3xx = STEEL_BLUE + "\"%s\" %d %s %s";
+			fmt = fmt_3xx.c_str();
 		} else if ((int)response.status >= 400 && (int)response.status <= 499) {
-			constexpr auto saddle_brown = SADDLE_BROWN;
-			color = saddle_brown.c_str();
+			constexpr auto fmt_4xx = SADDLE_BROWN + "\"%s\" %d %s %s";
+			fmt = fmt_4xx.c_str();
 			priority = LOG_INFO;
 		} else if ((int)response.status >= 500 && (int)response.status <= 599) {
-			constexpr auto light_purple = LIGHT_PURPLE;
-			color = light_purple.c_str();
+			constexpr auto fmt_5xx = LIGHT_PURPLE + "\"%s\" %d %s %s";
+			fmt = fmt_5xx.c_str();
 			priority = LOG_ERR;
 		}
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(response);
 		}
-		L(priority, NO_COLOR, color + static_string::string("\"%s\" %d %s %s"), request.head.c_str(), (int)response.status, string::from_bytes(response.size).c_str(), string::from_delta(request.begins, request.ends).c_str());
+		L(priority, NO_COLOR, fmt, request.head, (int)response.status, string::from_bytes(response.size).c_str(), string::from_delta(request.begins, request.ends).c_str());
 	}
 
 	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends).c_str(), string::from_delta(request.received, request.ends).c_str());
