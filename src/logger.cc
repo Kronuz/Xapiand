@@ -351,9 +351,11 @@ Logging::run()
 		msg.append(Datetime::iso8601(time_point_from_ullong(created_at), false, ' '));
 		msg.append("] ");
 
+#ifndef NDEBUG
 		msg.push_back('(');
 		msg.append(get_thread_name(thread_id));
 		msg.append(") ");
+#endif
 
 #ifdef LOG_LOCATION
 		msg.append(filename);
