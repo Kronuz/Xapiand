@@ -66,7 +66,6 @@
 #include "string.hh"                        // for string::from_delta
 #include "package.h"                        // for Package
 #include "hashes.hh"                        // for fnv1ah32
-#include "lazy.hh"                          // for LAZY
 
 
 #define QUERY_FIELD_COMMIT     (1 << 0)
@@ -248,11 +247,11 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 	if (received <= 0) {
 		if (received < 0) {
-			L_WARNING("Connection unexpectedly closed after %s: %d - %s", LAZY(string::from_delta(new_request.begins, std::chrono::system_clock::now())), errno, strerror(errno));
+			L_WARNING("Connection unexpectedly closed after %s: %d - %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), errno, strerror(errno));
 		} else if (init_state != 18) {
-			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", LAZY(string::from_delta(new_request.begins, std::chrono::system_clock::now())), init_state);
+			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
 		} else if (!write_queue.empty()) {
-			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", LAZY(string::from_delta(new_request.begins, std::chrono::system_clock::now())));
+			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		}
 		return;
 	}
@@ -1001,7 +1000,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	};
 
 	Stats::cnt().add("del", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
-	L_TIME("Deletion took %s", LAZY(string::from_delta(request.processing, request.ready)));
+	L_TIME("Deletion took %s", string::from_delta(request.processing, request.ready));
 
 	write_http_response(request, response, status_code, response_obj);
 }
@@ -1050,7 +1049,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.ready = std::chrono::system_clock::now();
 
 	Stats::cnt().add("index", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
-	L_TIME("Indexing took %s", LAZY(string::from_delta(request.processing, request.ready)));
+	L_TIME("Indexing took %s", string::from_delta(request.processing, request.ready));
 
 	status_code = HTTP_STATUS_OK;
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
@@ -1108,7 +1107,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.ready = std::chrono::system_clock::now();
 
 	Stats::cnt().add("patch", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
-	L_TIME("Updating took %s", LAZY(string::from_delta(request.processing, request.ready)));
+	L_TIME("Updating took %s", string::from_delta(request.processing, request.ready));
 
 	status_code = HTTP_STATUS_OK;
 	if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
@@ -1805,7 +1804,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	request.ready = std::chrono::system_clock::now();
 
 	Stats::cnt().add("search", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count());
-	L_TIME("Searching took %s", LAZY(string::from_delta(request.processing, request.ready)));
+	L_TIME("Searching took %s", string::from_delta(request.processing, request.ready));
 
 	L_SEARCH("FINISH SEARCH");
 }
@@ -2310,7 +2309,7 @@ HttpClient::log_request(Request& request)
 	};
 
 	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color + request.body;
-	L(priority, NO_COLOR, "%s%s", request_prefix, LAZY(string::indent(request_text, ' ', 4, false)));
+	L(priority, NO_COLOR, "%s%s", request_prefix, string::indent(request_text, ' ', 4, false));
 }
 
 
@@ -2369,7 +2368,7 @@ HttpClient::log_response(Response& response)
 	}
 
 	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color + response.body;
-	L(priority, NO_COLOR, "%s%s", response_prefix, LAZY(string::indent(response_text, ' ', 4, false)));
+	L(priority, NO_COLOR, "%s%s", response_prefix, string::indent(response_text, ' ', 4, false));
 }
 
 
@@ -2406,10 +2405,10 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(response);
 		}
-		L(priority, NO_COLOR, fmt, request.head, (int)response.status, LAZY(string::from_bytes(response.size)), LAZY(string::from_delta(request.begins, request.ends)));
+		L(priority, NO_COLOR, fmt, request.head, (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
 	}
 
-	L_TIME("Full request took %s, response took %s", LAZY(string::from_delta(request.begins, request.ends)), LAZY(string::from_delta(request.received, request.ends)));
+	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
 }
 
 
