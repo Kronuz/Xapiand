@@ -960,16 +960,14 @@ void banner() {
 			rgb(230, 0, 110) + "O" + rgb(130, 0, 100) + "-{" + rgb(10, 232, 103) + "(" + rgb(255, 255, 255) + "0" + rgb(10, 232, 103) + ")" + rgb(130, 0, 100) + "}-" + rgb(230, 0, 110) + "o" + rgb(160, 160, 160) + " /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
 			rgb(230, 0, 110) + "  O      " + rgb(128, 128, 128) + "/ /\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
 			rgb(96, 96, 96) + "        /_/" + rgb(144, 238, 144) + "%s" + rgb(96, 96, 96) + "|/" + rgb(144, 238, 144) + "%s" + "\n" +
-			rgb(0, 128, 0) +
-			"%s" + "\n" +
-			rgb(0, 96, 0) +
-			"%s" + "\n\n",
-			string::center(Package::HASH, 8).c_str(),
-			string::center(Package::FULLVERSION, 25).c_str(),
-			string::center("[" + Package::BUGREPORT + "]", 54).c_str(),
-			string::center("Using " + string::join(values, ", ", " and "), 54).c_str());
+			rgb(0, 128, 0) + "%s" + "\n" +
+			rgb(0, 96, 0) + "%s" + "\n\n",
+			string::center(Package::HASH, 8),
+			string::center(Package::FULLVERSION, 25),
+			string::center("[" + Package::BUGREPORT + "]", 54),
+			string::center("Using " + string::join(values, ", ", " and "), 54));
 	} else {
-		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING.c_str());
+		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING);
 	}
 }
 
