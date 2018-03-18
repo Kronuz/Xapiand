@@ -30,6 +30,7 @@
 #include "exception.h"        // for BaseException
 #include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 #include "hashes.hh"          // for fnv1ah32
+#include "lazy.hh"            // for LAZY
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 
@@ -109,12 +110,42 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 	return log(cleanup, std::chrono::milliseconds(timeout), async, info, stacked, priority, std::forward<Args>(args)...);
 }
 
+#define LOG_ARGS_APPLY0(t, format) format
+#define LOG_ARGS_APPLY1(t, format, a) format, t(a)
+#define LOG_ARGS_APPLY2(t, format, a, b) format, t(a), t(b)
+#define LOG_ARGS_APPLY3(t, format, a, b, c) format, t(a), t(b), t(c)
+#define LOG_ARGS_APPLY4(t, format, a, b, c, d) format, t(a), t(b), t(c), t(d)
+#define LOG_ARGS_APPLY5(t, format, a, b, c, d, e) format, t(a), t(b), t(c), t(d), t(e)
+#define LOG_ARGS_APPLY6(t, format, a, b, c, d, e, f) format, t(a), t(b), t(c), t(d), t(e), t(f)
+#define LOG_ARGS_APPLY7(t, format, a, b, c, d, e, f, g) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g)
+#define LOG_ARGS_APPLY8(t, format, a, b, c, d, e, f, g, h) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h)
+#define LOG_ARGS_APPLY9(t, format, a, b, c, d, e, f, g, h, i) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i)
+#define LOG_ARGS_APPLY10(t, format, a, b, c, d, e, f, g, h, i, j) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j)
+#define LOG_ARGS_APPLY11(t, format, a, b, c, d, e, f, g, h, i, j, k) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k)
+#define LOG_ARGS_APPLY12(t, format, a, b, c, d, e, f, g, h, i, j, k, l) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k), t(l)
+#define LOG_ARGS_APPLY13(t, format, a, b, c, d, e, f, g, h, i, j, k, l, m) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k), t(l), t(m)
+#define LOG_ARGS_APPLY14(t, format, a, b, c, d, e, f, g, h, i, j, k, l, m, n) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k), t(l), t(m), t(n)
+#define LOG_ARGS_APPLY15(t, format, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k), t(l), t(m), t(n), t(o)
+#define LOG_ARGS_APPLY16(t, format, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) format, t(a), t(b), t(c), t(d), t(e), t(f), t(g), t(h), t(i), t(j), t(k), t(l), t(m), t(n), t(o), t(p)
+
+#define LOG_ARGS_NUM_ARGS_H1(format, x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, ...) x0
+#define LOG_ARGS_NUM_ARGS(...) LOG_ARGS_NUM_ARGS_H1(format, ##__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0)
+#define LOG_ARGS_APPLY_ALL_H3(t, n, ...) LOG_ARGS_APPLY##n(t, __VA_ARGS__)
+#define LOG_ARGS_APPLY_ALL_H2(t, n, ...) LOG_ARGS_APPLY_ALL_H3(t, n, __VA_ARGS__)
+#define LOG_ARGS_APPLY_ALL(t, ...) LOG_ARGS_APPLY_ALL_H2(t, LOG_ARGS_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
+
+#define LAZY_LOG(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, ...) \
+	::log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+
+#define LAZY_UNLOG(priority, function, filename, line, ...) \
+	unlog(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, format, ...) ::log(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
-#define L_DELAYED_UNLOG(priority, color, format, ...) unlog(priority, __func__, __FILE__, __LINE__, format, ##__VA_ARGS__)
+#define L_DELAYED(cleanup, delay, priority, color, format, ...) LAZY_LOG(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
 #define L_DELAYED_200(...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
@@ -125,9 +156,9 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 
 #define L_NOTHING(...)
 
-#define LOG(stacked, level, color, format, ...) ::log(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define LOG(stacked, level, color, format, ...) LAZY_LOG(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 
-#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { ::log(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__); }
+#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { LAZY_LOG(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__); }
 
 #define L_INFO(...) LOG(true, LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE(...) LOG(true, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
@@ -136,7 +167,7 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define L_CRIT(...) LOG(true, LOG_CRIT, CRIT_COL, __VA_ARGS__)
 #define L_ALERT(...) LOG(true, LOG_ALERT, ALERT_COL, __VA_ARGS__)
 #define L_EMERG(...) LOG(true, LOG_EMERG, EMERG_COL, __VA_ARGS__)
-#define L_EXC(format, ...) ::log(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, (ERR_COL + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, (ERR_COL + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 
 #define L_INFO_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
