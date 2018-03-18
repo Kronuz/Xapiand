@@ -137,20 +137,18 @@ vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wak
 Log::Log(Log&& o)
 	: log(std::move(o.log))
 {
-	o.log.reset();
 }
 
 
-Log::Log(LogType log_)
-	: log(log_) { }
+Log::Log(LogType log)
+	: log(log)
+{
+}
 
 
 Log::~Log()
 {
-	if (log) {
-		log->cleanup();
-	}
-	log.reset();
+	if (log) log->cleanup();
 }
 
 
@@ -166,21 +164,21 @@ Log::operator=(Log&& o)
 bool
 Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
 {
-	return log->vunlog(_priority, _function, _filename, _line, format, args);
+	return log ? log->vunlog(_priority, _function, _filename, _line, format, args) : false;
 }
 
 
 bool
 Log::clear()
 {
-	return log->clear();
+	return log ? log->clear() : false;
 }
 
 
 long double
 Log::age()
 {
-	return log->age();
+	return log ? log->age() : 0;
 }
 
 
@@ -429,8 +427,7 @@ Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_cl
 		auto str = fmt::vsprintf(format, args);
 		return add(function, filename, line, str, exc, clean, wakeup, async, info, stacked, priority);
 	}
-
-	return Log(std::make_shared<Logging>(function, filename, line, "", exc, clean, async, info, stacked, priority, std::chrono::system_clock::now()));
+	return Log();
 }
 
 

@@ -51,6 +51,8 @@ class Log {
 	Log& operator=(const Log&) = delete;
 
 public:
+	Log() { }
+
 	Log(Log&& o);
 	Log& operator=(Log&& o);
 
