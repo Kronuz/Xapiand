@@ -151,11 +151,11 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		}
 
 		if (mode & HTTP_TOTAL_COUNT_RESPONSE) {
-			headers += "Total-Count: " + std::to_string(total_count) + eol;
+			headers += string::format("Total-Count: %lu", total_count) + eol;
 		}
 
 		if (mode & HTTP_MATCHES_ESTIMATED_RESPONSE) {
-			headers += "Matches-Estimated: " + std::to_string(matches_estimated) + eol;
+			headers += string::format("Matches-Estimated: %lu", matches_estimated) + eol;
 		}
 
 		if (mode & HTTP_CONTENT_TYPE_RESPONSE) {
@@ -169,8 +169,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		if (mode & HTTP_CHUNKED_RESPONSE) {
 			headers += "Transfer-Encoding: chunked" + eol;
 		} else {
-			headers += "Content-Length: ";
-			headers += string::format("%lu", _body.size()) + eol;
+			headers += string::format("Content-Length: %lu", _body.size()) + eol;
 		}
 		headers_sep += eol;
 	}
@@ -1989,7 +1988,7 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 			node_port = node->binary_port;
 		}
 		inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-		Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + "/" + index_path, nullptr, -1, node_name);
+		Endpoint endpoint(string::format("xapian://%s:%d/%s", node_ip, node_port, index_path), nullptr, -1, node_name);
 #else
 		Endpoint endpoint(index_path);
 #endif
