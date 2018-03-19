@@ -1175,6 +1175,7 @@ Database::commit(bool wal_)
 			wdb->commit();
 			if (queue) {
 				queue->modified = false;
+				queue->revision = wdb->get_revision();
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -2047,7 +2048,18 @@ DatabasesLRU::DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState
 	  _queue_state(queue_state) { }
 
 
-std::shared_ptr<DatabaseQueue>&
+std::shared_ptr<DatabaseQueue>
+DatabasesLRU::get(size_t hash)
+{
+	auto it = find(hash);
+	if (it != end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
+
+std::shared_ptr<DatabaseQueue>
 DatabasesLRU::get(size_t hash, bool db_volatile)
 {
 	const auto now = std::chrono::system_clock::now();
@@ -2213,13 +2225,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()));
 	}
 
+	size_t hash = endpoints.hash();
+
 	if (!finished) {
-		size_t hash = endpoints.hash();
-
-		std::shared_ptr<DatabaseQueue> queue;
-
 		std::unique_lock<std::mutex> lk(qmtx);
 
+		std::shared_ptr<DatabaseQueue> queue;
 		if (db_writable) {
 			queue = writable_databases.get(hash, db_volatile);
 			databases.cleanup();
@@ -2324,17 +2335,27 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoints.to_string()));
 	}
 
-	if (!db_writable && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
-		try {
-			database->reopen();
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
-			recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
-			database.reset();
-			L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s (reopen)", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-			THROW(CheckoutError, "Cannot checkout database: %s (reopen)", repr(endpoints.to_string()));
+	if (!db_writable) {
+		bool reopen = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->access_time).count() >= DATABASE_UPDATE_TIME;
+		if (!reopen) {
+			std::lock_guard<std::mutex> lk(qmtx);
+			auto queue = writable_databases.get(hash);
+			if (queue && queue->revision != database->checkout_revision) {
+				reopen = true;
+			}
 		}
-		L_DATABASE("== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()));
+		if (reopen) {
+			try {
+				database->reopen();
+			} catch (const Xapian::DatabaseOpeningError& exc) {
+				// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
+				recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
+				database.reset();
+				L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s (reopen)", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
+				THROW(CheckoutError, "Cannot checkout database: %s (reopen)", repr(endpoints.to_string()));
+			}
+			L_DATABASE("== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()));
+		}
 	}
 
 	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->checkout_revision);
