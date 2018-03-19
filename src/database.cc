@@ -52,7 +52,7 @@
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
-#define DATABASE_UPDATE_TIME 10
+#define DATABASE_UPDATE_TIME 3
 
 #define DATA_STORAGE_PATH "docdata."
 
