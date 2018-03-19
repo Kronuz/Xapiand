@@ -243,15 +243,15 @@ class RangeAggregation : public BucketAggregation {
 			if (start == std::numeric_limits<T>::min()) {
 				return "..";
 			}
-			return string::format("%s..", std::to_string(start).c_str());
+			return string::format("%s..", std::to_string(start));
 		}
 		if (start == std::numeric_limits<T>::min()) {
 			if (end == std::numeric_limits<T>::max()) {
 				return "..";
 			}
-			return string::format("..%s", std::to_string(end).c_str());
+			return string::format("..%s", std::to_string(end));
 		}
-		return string::format("%s..%s", std::to_string(start).c_str(), std::to_string(end).c_str());
+		return string::format("%s..%s", std::to_string(start), std::to_string(end));
 	}
 
 public:

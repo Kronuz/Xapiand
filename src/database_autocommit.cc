@@ -113,9 +113,9 @@ DatabaseAutocommit::run()
 		auto end = std::chrono::system_clock::now();
 
 		if (successful) {
-			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", string::from_delta(start, end).c_str());
+			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()), forced ? " (forced)" : "", string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()).c_str(), forced ? " (forced)" : "", string::from_delta(start, end).c_str());
+			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()), forced ? " (forced)" : "", string::from_delta(start, end));
 		}
 	}
 }

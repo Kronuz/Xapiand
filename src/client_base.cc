@@ -420,7 +420,7 @@ BaseClient::write_directly(int fd)
 			}
 		}
 
-		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500).c_str(), _written);
+		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500), _written);
 		buffer->pos += _written;
 		if (buffer->nbytes() == 0) {
 			if (write_queue.pop(buffer)) {
@@ -477,7 +477,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
-	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size).c_str());
+	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
 
 	int fd = sock.load();
 	if (fd == -1) {
@@ -505,8 +505,8 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	int fd = watcher.fd;
 	assert(sock == fd || sock == -1);
 
-	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 
@@ -542,8 +542,8 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	int fd = watcher.fd;
 	assert(sock == fd || sock == -1);
 
-	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 
@@ -594,7 +594,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 	const char *buf_data = read_buffer;
 	const char *buf_end = read_buffer + received;
-	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500).c_str(), received);
+	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500), received);
 
 	if (mode == MODE::READ_FILE_TYPE) {
 		switch (*buf_data++) {
@@ -706,7 +706,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 void
 BaseClient::write_start_async_cb(ev::async&, int revents)
 {
-	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -726,7 +726,7 @@ BaseClient::write_start_async_cb(ev::async&, int revents)
 void
 BaseClient::read_start_async_cb(ev::async&, int revents)
 {
-	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 

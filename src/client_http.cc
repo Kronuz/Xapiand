@@ -290,7 +290,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			};
 			Response response;
 			write_http_response(new_request, response, error_code, err_response);
-			L_WARNING(HTTP_PARSER_ERRNO(&new_request.parser) != HPE_OK ? message.c_str() : "incomplete request");
+			L_WARNING(HTTP_PARSER_ERRNO(&new_request.parser) != HPE_OK ? message : "incomplete request");
 		}
 		destroy();  // Handle error. Just close the connection.
 		detach();
@@ -364,7 +364,7 @@ HttpClient::on_info(http_parser* parser)
 			new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
 			break;
 		case 50:  // headers done
-			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path.c_str(), parser->http_major, parser->http_minor);
+			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path, parser->http_major, parser->http_minor);
 			if (new_request.expect_100) {
 				// Return 100 if client is expecting it
 				Response response;
@@ -386,7 +386,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 
 	int state = parser->state;
 
-	L_HTTP_PROTO_PARSER("%4d - %s", state, repr(at, length).c_str());
+	L_HTTP_PROTO_PARSER("%4d - %s", state, repr(at, length));
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
@@ -563,9 +563,9 @@ HttpClient::run_one(Request& request, Response& response)
 				std::string b64_name = cppcodec::base64_rfc4648::encode("");
 				std::string b64_request_body = cppcodec::base64_rfc4648::encode(request.raw);
 				request.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-					b64_name.c_str(),
+					b64_name,
 					b64_request_body.size());
-				request.body += b64_request_body.c_str();
+				request.body += b64_request_body;
 				request.body += '\a';
 			} else {
 				if (request.ct_type() == json_type || request.ct_type() == msgpack_type) {
@@ -611,40 +611,40 @@ HttpClient::run_one(Request& request, Response& response)
 	} catch (const DocNotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
-		// L_EXC("ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error);
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-		// L_EXC("ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error);
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
-		// L_EXC("ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error);
 	} catch (const CheckoutError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC("ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error);
 	} catch (const TimeOutError& exc) {
 		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC("ERROR: %s", error.c_str());
+		// L_EXC("ERROR: %s", error);
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() ? exc.get_message() : "Unkown BaseException!");
 		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(exc.get_description().c_str());
-		L_EXC("ERROR: %s", error.c_str());
+		error.assign(exc.get_description());
+		L_EXC("ERROR: %s", error);
 	} catch (const std::exception& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() ? exc.what() : "Unkown std::exception!");
-		L_EXC("ERROR: %s", error.c_str());
+		L_EXC("ERROR: %s", error);
 	} catch (...) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign("Unknown exception!");
 		std::exception exc;
-		L_EXC("ERROR: %s", error.c_str());
+		L_EXC("ERROR: %s", error);
 	}
 
 	if (error_code != HTTP_STATUS_OK) {
@@ -940,7 +940,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	obj[RESPONSE_SERVER] = Package::STRING;
 	obj[RESPONSE_URL] = Package::BUGREPORT;
 	obj[RESPONSE_VERSIONS] = {
-		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("%s_%s", Package::VERSION.c_str(), Package::REVISION.c_str()) },
+		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("%s_%s", Package::VERSION, Package::REVISION) },
 		{ "Xapian", string::format("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
 		{ "V8", string::format("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
@@ -1492,7 +1492,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			res.push_back(suggestion);
 		}
 		return res;
-	}().to_string().c_str());
+	}().to_string());
 
 	int rc = 0;
 	auto total_count = mset.size();
@@ -1634,9 +1634,9 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 							std::string b64_name = cppcodec::base64_rfc4648::encode("");
 							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
 							response.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-								b64_name.c_str(),
+								b64_name,
 								b64_response_body.size());
-							response.body += b64_response_body.c_str();
+							response.body += b64_response_body;
 							response.body += '\a';
 						} else if (!blob_data.empty()) {
 							response.body = "<blob " + string::from_bytes(blob_data.size()) + ">";
@@ -1851,7 +1851,7 @@ HttpClient::url_resolve(Request& request)
 	struct http_parser_url u;
 	std::string b = repr(request.path, true, false);
 
-	L_HTTP("URL: %s", b.c_str());
+	L_HTTP("URL: %s", b);
 
 	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER("HTTP parsing done!");
@@ -1980,7 +1980,7 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 		char node_ip[INET_ADDRSTRLEN];
 		auto node = XapiandManager::manager->touch_node(node_name, UNKNOWN_REGION);
 		if (!node) {
-			THROW(Error, "Node %s not found", node_name.c_str());
+			THROW(Error, "Node %s not found", node_name);
 		}
 		if (!node_port) {
 			node_port = node->binary_port;
@@ -1996,7 +1996,7 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 			endpoints.add(asked_node);
 		}
 	}
-	L_HTTP("Endpoint: -> %s", endpoints.to_string().c_str());
+	L_HTTP("Endpoint: -> %s", endpoints.to_string());
 }
 
 
@@ -2071,13 +2071,13 @@ HttpClient::query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 
 		while (request.query_parser.next("query") != -1) {
-			L_SEARCH("query=%s", request.query_parser.get().c_str());
+			L_SEARCH("query=%s", request.query_parser.get());
 			query_field.query.push_back(std::string(request.query_parser.get()));
 		}
 		request.query_parser.rewind();
 
 		while (request.query_parser.next("q") != -1) {
-			L_SEARCH("query=%s", request.query_parser.get().c_str());
+			L_SEARCH("query=%s", request.query_parser.get());
 			query_field.query.push_back(std::string(request.query_parser.get()));
 		}
 		request.query_parser.rewind();
@@ -2415,7 +2415,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 ct_type_t
 HttpClient::resolve_ct_type(Request& request, std::string ct_type_str)
 {
-	L_CALL("HttpClient::resolve_ct_type(%s)", repr(ct_type_str).c_str());
+	L_CALL("HttpClient::resolve_ct_type(%s)", repr(ct_type_str));
 
 	if (ct_type_str == JSON_CONTENT_TYPE || ct_type_str == MSGPACK_CONTENT_TYPE || ct_type_str == X_MSGPACK_CONTENT_TYPE) {
 		if (is_acceptable_type(get_acceptable_type(request, json_type), json_type)) {
@@ -2448,7 +2448,7 @@ HttpClient::resolve_ct_type(Request& request, std::string ct_type_str)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()).c_str(), repr(ct_type.to_string()).c_str());
+	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()), repr(ct_type.to_string()));
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -2471,7 +2471,7 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
-	L_CALL("HttpClient::is_acceptable_type((%s, <ct_types>)", repr(ct_type_pattern.to_string()).c_str());
+	L_CALL("HttpClient::is_acceptable_type((%s, <ct_types>)", repr(ct_type_pattern.to_string()));
 
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {
@@ -2513,7 +2513,7 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 ct_type_t
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
-	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()).c_str(), repr(ct_type.first + "/" + ct_type.second).c_str(), indent, serialize_error ? "true" : "false");
+	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()), repr(ct_type.first + "/" + ct_type.second), indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type)) {
 		return ct_type_t(obj.to_string(indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
@@ -2674,7 +2674,7 @@ HttpClient::readable_encoding(Encoding e)
 std::string
 HttpClient::encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
 {
-	L_CALL("HttpClient::encoding_http_response(%s)", repr(response_obj).c_str());
+	L_CALL("HttpClient::encoding_http_response(%s)", repr(response_obj));
 
 	bool gzip = false;
 	switch (e) {

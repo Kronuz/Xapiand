@@ -674,7 +674,7 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	for (const auto& val : list) {
 		std::tie(std::ignore, inserted) = _put(val.at(0), val.at(1), false);
 		if unlikely(!inserted) {
-			THROW(duplicate_key, "Duplicate key: %s", val.at(0).to_string().c_str());
+			THROW(duplicate_key, "Duplicate key: %s", val.at(0).to_string());
 		}
 	}
 }
@@ -714,7 +714,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Cannot rename to duplicate key: %s", std::string(str_key).c_str());
+						THROW(duplicate_key, "Cannot rename to duplicate key: %s", str_key);
 					}
 					ASSERT(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -856,7 +856,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key: %s", std::string(str_key).c_str());
+			THROW(duplicate_key, "Duplicate key: %s", str_key);
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -1811,14 +1811,14 @@ inline MsgPack& MsgPack::path(const std::vector<T>& path) {
 				int errno_save;
 				auto pos = strict_stoz(errno_save, s);
 				if (errno_save) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", std::string(s).c_str());
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", std::string(s).c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", s);
 		}
 	}
 
@@ -1839,14 +1839,14 @@ inline const MsgPack& MsgPack::path(const std::vector<T>& path) const {
 				int errno_save;
 				auto pos = strict_stoz(errno_save, s);
 				if (errno_save) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", std::string(s).c_str());
+					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", std::string(s).c_str());
+				THROW(invalid_argument, "The container must be a map or an array to access: %s", s);
 		}
 	}
 

@@ -72,7 +72,7 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 						patch_decr(elem, object);
 						break;
 					default:
-						THROW(ClientError, "In patch op: %s is not a valid value", repr(op_str).c_str());
+						THROW(ClientError, "In patch op: %s is not a valid value", repr(op_str));
 				}
 			} catch (const std::out_of_range&) {
 				THROW(ClientError, "Patch Object MUST have exactly one '%s' member", PATCH_OP);
@@ -227,7 +227,7 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		const auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_TES);
 		if (val != o) {
-			THROW(ClientError, "In patch test: Objects are not equals. Expected: %s Result: %s", repr(val.to_string()).c_str(), repr(o.to_string()).c_str());
+			THROW(ClientError, "In patch test: Objects are not equals. Expected: %s Result: %s", repr(val.to_string()), repr(o.to_string()));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch test: Inconsistent data");

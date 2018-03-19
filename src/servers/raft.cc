@@ -105,7 +105,7 @@ Raft::stop()
 void
 Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
 {
-	L_CALL("Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -116,7 +116,7 @@ Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
 void
 Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
 {
-	L_CALL("Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -127,7 +127,7 @@ Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
 void
 Raft::reset_async_cb(ev::async&, int revents)
 {
-	L_CALL("Raft::reset_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Raft::reset_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -152,7 +152,7 @@ Raft::_reset()
 void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
 {
-	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -165,7 +165,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	auto local_node_ = local_node.load();
 	L_RAFT_PROTO("Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node_->region, state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
+		local_node_->region, state, leader_election_timeout.repeat, term, number_servers, leader);
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -196,7 +196,7 @@ Raft::_reset_leader_election_timeout()
 void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -236,7 +236,7 @@ Raft::send_message(Message type, const std::string& message)
 	if (type != Raft::Message::HEARTBEAT_LEADER) {
 		L_RAFT("<< send_message(%s)", MessageNames[toUType(type)]);
 	}
-	L_RAFT_PROTO("message: %s", repr(message).c_str());
+	L_RAFT_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);
 }
 

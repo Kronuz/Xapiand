@@ -394,7 +394,7 @@ void delete_files(std::string_view path) {
 	closedir(dirp);
 	if (!contains_folder) {
 		if (::rmdir(path_string.c_str()) != 0) {
-			L_ERR("Directory %s could not be deleted", path_string.c_str());
+			L_ERR("Directory %s could not be deleted", path_string);
 		}
 	}
 }
@@ -417,14 +417,14 @@ void move_files(std::string_view src, std::string_view dst) {
 			new_name.push_back('/');
 			new_name.append(ent->d_name);
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
-				L_ERR("Couldn't rename %s to %s", old_name.c_str(), new_name.c_str());
+				L_ERR("Couldn't rename %s to %s", old_name, new_name);
 			}
 		}
 	}
 
 	closedir(dirp);
 	if (::rmdir(src_string.c_str()) != 0) {
-		L_ERR("Directory %s could not be deleted", src_string.c_str());
+		L_ERR("Directory %s could not be deleted", src_string);
 	}
 }
 
@@ -528,11 +528,11 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 	if (-1 == err) {
 		if (ENOENT == errno && create) {
 			if (::mkdir(dst_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s: %s", dst_string.c_str(), strerror(errno));
+				L_ERR("ERROR: couldn't create directory %s: %s", dst_string, strerror(errno));
 				return -1;
 			}
 		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s: %s", dst_string.c_str(), strerror(errno));
+			L_ERR("ERROR: couldn't obtain directory information %s: %s", dst_string, strerror(errno));
 			return -1;
 		}
 	}
@@ -565,20 +565,20 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 			int src_fd = io::open(src_path.c_str(), O_RDONLY);
 			if (-1 == src_fd) {
-				L_ERR("ERROR: opening file. %s\n", src_path.c_str());
+				L_ERR("ERROR: opening file. %s\n", src_path);
 				return -1;
 			}
 
 			int dst_fd = io::open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
 			if (-1 == src_fd) {
-				L_ERR("ERROR: opening file. %s\n", dst_path.c_str());
+				L_ERR("ERROR: opening file. %s\n", dst_path);
 				return -1;
 			}
 
 			while (1) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (-1 == bytes) {
-					L_ERR("ERROR: reading file. %s: %s\n", src_path.c_str(), strerror(errno));
+					L_ERR("ERROR: reading file. %s: %s\n", src_path, strerror(errno));
 					return -1;
 				}
 
@@ -586,7 +586,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 				bytes = write(dst_fd, buffer, bytes);
 				if (-1 == bytes) {
-					L_ERR("ERROR: writing file. %s: %s\n", dst_path.c_str(), strerror(errno));
+					L_ERR("ERROR: writing file. %s: %s\n", dst_path, strerror(errno));
 					return -1;
 				}
 			}

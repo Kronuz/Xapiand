@@ -315,7 +315,7 @@ public:
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd < 0) {
-			THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());
+			THROW(LZ4IOError, "Cannot open file: %s", filename_string);
 		}
 		fd_offset = 0;
 		fd_internal = true;

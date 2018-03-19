@@ -66,7 +66,7 @@ Cast::cast(const MsgPack& obj)
 			case Hash::GEO_INTERSECTION:
 				return obj;
 			default:
-				THROW(CastError, "Unknown cast type %s", str_key.c_str());
+				THROW(CastError, "Unknown cast type %s", str_key);
 		}
 	}
 
@@ -82,7 +82,7 @@ Cast::cast(FieldType type, std::string_view field_value)
 			int errno_save;
 			auto r = strict_stoll(errno_save, field_value);
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to integer", repr(field_value).c_str());
+				THROW(CastError, "Value %s cannot be cast to integer", repr(field_value));
 			}
 			return MsgPack(r);
 		}
@@ -90,7 +90,7 @@ Cast::cast(FieldType type, std::string_view field_value)
 			int errno_save;
 			auto r = strict_stoull(errno_save, field_value);
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to positive", repr(field_value).c_str());
+				THROW(CastError, "Value %s cannot be cast to positive", repr(field_value));
 			}
 			return MsgPack(r);
 		}
@@ -98,7 +98,7 @@ Cast::cast(FieldType type, std::string_view field_value)
 			int errno_save;
 			auto r = strict_stod(errno_save, field_value);
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to float", repr(field_value).c_str());
+				THROW(CastError, "Value %s cannot be cast to float", repr(field_value));
 			}
 			return MsgPack(r);
 		}
@@ -148,14 +148,14 @@ Cast::integer(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoll(errno_save, obj.str_view());
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to integer", obj.getStrType().c_str());
+				THROW(CastError, "Value %s cannot be cast to integer", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type %s cannot be cast to integer", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to integer", obj.getStrType());
 	}
 }
 
@@ -174,14 +174,14 @@ Cast::positive(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoull(errno_save, obj.str_view());
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to positive", obj.getStrType().c_str());
+				THROW(CastError, "Value %s cannot be cast to positive", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type %s cannot be cast to positive", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to positive", obj.getStrType());
 	}
 }
 
@@ -200,14 +200,14 @@ Cast::_float(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stod(errno_save, obj.str_view());
 			if (errno_save) {
-				THROW(CastError, "Value %s cannot be cast to float", obj.getStrType().c_str());
+				THROW(CastError, "Value %s cannot be cast to float", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type %s cannot be cast to float", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to float", obj.getStrType());
 	}
 }
 
@@ -287,7 +287,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type %s cannot be cast to boolean", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to boolean", obj.getStrType());
 	}
 }
 
@@ -298,7 +298,7 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type %s cannot be cast to uuid", obj.getStrType().c_str());
+	THROW(CastError, "Type %s cannot be cast to uuid", obj.getStrType());
 }
 
 
@@ -313,7 +313,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to date", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to date", obj.getStrType());
 	}
 }
 
@@ -328,7 +328,7 @@ Cast::time(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to time", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to time", obj.getStrType());
 	}
 }
 
@@ -343,7 +343,7 @@ Cast::timedelta(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to timedelta", obj.getStrType().c_str());
+			THROW(CastError, "Type %s cannot be cast to timedelta", obj.getStrType());
 	}
 }
 
@@ -354,7 +354,7 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type %s cannot be cast to ewkt", obj.getStrType().c_str());
+	THROW(CastError, "Type %s cannot be cast to ewkt", obj.getStrType());
 }
 
 
@@ -397,6 +397,6 @@ Cast::getType(std::string_view cast_word)
 		case Hash::CHAI:              return FieldType::SCRIPT;
 		case Hash::ECMA:              return FieldType::SCRIPT;
 		default:
-			THROW(CastError, "Unknown cast type %s", repr(cast_word).c_str());
+			THROW(CastError, "Unknown cast type %s", repr(cast_word));
 	}
 }

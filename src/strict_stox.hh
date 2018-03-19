@@ -95,9 +95,9 @@ public:
 		std::swap(errno, errno_save);
 		switch (errno_save) {
 			case EINVAL:
-				THROW(InvalidArgument, "%s: Cannot convert value: %s", name, std::string(str).c_str());
+				THROW(InvalidArgument, "%s: Cannot convert value: %s", name, str);
 			case ERANGE:
-				THROW(OutOfRange, "%s: Out of range value: %s", name, std::string(str).c_str());
+				THROW(OutOfRange, "%s: Out of range value: %s", name, str);
 			default:
 				break;
 		}

@@ -43,7 +43,7 @@ int test_pool() {
 	pool.join();
 
 	if (results != "<1<2<3<44>2>3>1>") {
-		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results);
 		RETURN(1);
 	}
 
@@ -65,7 +65,7 @@ int test_pool_limit() {
 	pool.end();
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
-		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results);
 		RETURN(1);
 	}
 

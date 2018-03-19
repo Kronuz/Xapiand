@@ -170,7 +170,7 @@ int testCartesianTransforms() {
 			Cartesian c(test.lat, test.lon, test.height, Cartesian::Units::DEGREES, test.SRID);
 			const auto deg_min_sec = c.toDegMinSec();
 			if (deg_min_sec != test.res) {
-				L_ERR("ERROR: Resul: %s  Expected: %s", deg_min_sec.c_str(), test.res.c_str());
+				L_ERR("ERROR: Resul: %s  Expected: %s", deg_min_sec, test.res);
 				++cont;
 			}
 		}
@@ -228,7 +228,7 @@ int testGrahamScanAlgorithm() {
 					std::getline(expected, coord_exp);
 					if (coord_exp != coord_get) {
 						++cont;
-						L_ERR("ERROR: Result(%s) Expect(%s).", coord_get.c_str(), coord_exp.c_str());
+						L_ERR("ERROR: Result(%s) Expect(%s).", coord_get, coord_exp);
 					}
 				} else {
 					++cont;
@@ -249,7 +249,7 @@ int testGrahamScanAlgorithm() {
 			HTM::writeGrahamScanMap(python_geospatial + "convex_hull/" + test + "GM.py", test + "GM.html", points, convex_points, path_test_geospatial);
 			HTM::writeGrahamScan3D(python_geospatial + "convex_hull/" + test + "3D.py", points, convex_points);
 		} else {
-			L_ERR("ERROR: File %s or %s not found.", source_file.c_str(), expected_file.c_str());
+			L_ERR("ERROR: File %s or %s not found.", source_file, expected_file);
 			++cont;
 		}
 	}
@@ -441,7 +441,7 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 	_trixels = _geometry->getTrixels(partials, error);
 	HTM::simplifyTrixels(_trixels);
 	if (_trixels != trixels) {
-		L_ERR("ERROR: Geometry::toEWKT is not working\nEWKT: %s\nRec. EWKT: %s", str_ewkt.c_str(), _geometry->toEWKT().c_str());
+		L_ERR("ERROR: Geometry::toEWKT is not working\nEWKT: %s\nRec. EWKT: %s", str_ewkt, _geometry->toEWKT());
 		++cont;
 	}
 

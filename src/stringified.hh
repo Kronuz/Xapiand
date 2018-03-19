@@ -135,6 +135,10 @@ public:
     operator std::string_view() const noexcept {
         return _str_view;
     }
+
+	friend std::ostream& operator<<(std::ostream& os, const stringified& obj) {
+		return os << obj._str_view;
+	}
 };
 
 #endif // STRINGIFIED_HH

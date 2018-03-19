@@ -53,7 +53,7 @@ static func_value_handle get_func_value_handle(FieldType type, std::string_view 
 		case FieldType::UUID:
 			return &SubAggregation::_aggregate_uuid;
 		case FieldType::EMPTY:
-			THROW(AggregationError, "Field: %s has not been indexed", repr(field_name).c_str());
+			THROW(AggregationError, "Field: %s has not been indexed", repr(field_name));
 		default:
 			THROW(AggregationError, "Type: '%c' is not supported", toUType(type));
 	}
@@ -84,8 +84,8 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& con
 			THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()).c_str());
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
 	} catch (const msgpack::type_error&) {
-		THROW(AggregationError, "%s must be object", repr(conf.to_string()).c_str());
+		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
 	}
 }

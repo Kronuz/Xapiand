@@ -341,7 +341,7 @@ public:
 	}
 
 	bool open(std::string_view relative_path, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
-		L_CALL("Storage::open(%s, %d, <args>)", repr(relative_path).c_str(), flags_);
+		L_CALL("Storage::open(%s, %d, <args>)", repr(relative_path), flags_);
 
 		bool created = false;
 		auto path_ = base_path;
@@ -387,7 +387,7 @@ public:
 			close();
 			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
 		} else if unlikely(r == 0) {
-			THROW(StorageEmptyFile, "Empty file %s", path.c_str());
+			THROW(StorageEmptyFile, "Empty file %s", path);
 		} else if unlikely(r != sizeof(header)) {
 			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
@@ -564,7 +564,7 @@ public:
 			stringified filename_string(filename);
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
-				THROW(LZ4IOError, "Cannot open file: %s", filename_string.c_str());
+				THROW(LZ4IOError, "Cannot open file: %s", filename_string);
 			}
 			_bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));

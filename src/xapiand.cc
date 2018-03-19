@@ -933,7 +933,7 @@ void usedir(const char* path, bool solo) {
 	char buffer[PATH_MAX];
 	getcwd(buffer, sizeof(buffer));
 	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
-	L_NOTICE("Changed current working directory to %s", Endpoint::cwd.c_str());
+	L_NOTICE("Changed current working directory to %s", Endpoint::cwd);
 }
 
 
@@ -1026,7 +1026,7 @@ int server() {
 		if (managers == 0) {
 			L_NOTICE("Xapiand is cleanly done with all work!");
 		} else {
-			L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
+			L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
 		}
 
 	} catch (const Exit& exc) {
@@ -1047,7 +1047,7 @@ int dump_metadata() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
-			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()).c_str());
+			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_metadata(fd);
 			L_INFO("Dump is ready!");
@@ -1062,7 +1062,7 @@ int dump_metadata() {
 		}
 	} else {
 		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename.c_str());
+		L_ERR("Cannot open file: %s", opts.filename);
 	}
 
 	return exit_code;
@@ -1079,7 +1079,7 @@ int dump_schema() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
-			L_INFO("Dumping schema database: %s", repr(endpoints.to_string()).c_str());
+			L_INFO("Dumping schema database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_schema(fd);
 			L_INFO("Dump is ready!");
@@ -1094,7 +1094,7 @@ int dump_schema() {
 		}
 	} else {
 		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename.c_str());
+		L_ERR("Cannot open file: %s", opts.filename);
 	}
 
 	return exit_code;
@@ -1111,7 +1111,7 @@ int dump_documents() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
-			L_INFO("Dumping database: %s", repr(endpoints.to_string()).c_str());
+			L_INFO("Dumping database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_documents(fd);
 			L_INFO("Dump is ready!");
@@ -1126,7 +1126,7 @@ int dump_documents() {
 		}
 	} else {
 		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename.c_str());
+		L_ERR("Cannot open file: %s", opts.filename);
 	}
 
 	return exit_code;
@@ -1143,7 +1143,7 @@ int restore() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
-			L_INFO("Restoring into: %s", repr(endpoints.to_string()).c_str());
+			L_INFO("Restoring into: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			db_handler.restore(fd);
 			L_INFO("Restore is done!");
@@ -1158,7 +1158,7 @@ int restore() {
 		}
 	} else {
 		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename.c_str());
+		L_ERR("Cannot open file: %s", opts.filename);
 	}
 
 	return exit_code;

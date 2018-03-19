@@ -48,7 +48,7 @@ inline int testing(const std::vector<std::string>& strs) {
 	auto it_r = res.begin();
 	for (const auto& elem : strs) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR("StringList is not working. Result: [%s, %s] Expected: %s", it_s->c_str(), it_r->c_str(), elem.c_str());
+			L_ERR("StringList is not working. Result: [%s, %s] Expected: %s", *it_s, *it_r, elem);
 			++cont;
 		}
 		++it_s;
@@ -81,7 +81,7 @@ inline int testing(const std::vector<Cartesian>& ptos) {
 	auto it_r = res.begin();
 	for (const auto& elem : ptos) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR("CartesianList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
+			L_ERR("CartesianList is not working. Result: [%s, %s] Expected: %s", it_s->to_string(), it_r->to_string(), elem.to_string());
 			++cont;
 		}
 		++it_s;
@@ -114,7 +114,7 @@ inline int testing(const std::vector<range_t>& ranges) {
 	auto it_r = res.begin();
 	for (const auto& elem : ranges) {
 		if (*it_s != elem || *it_r != elem) {
-			L_ERR("RangeList is not working. Result: [%s, %s] Expected: %s", it_s->to_string().c_str(), it_r->to_string().c_str(), elem.to_string().c_str());
+			L_ERR("RangeList is not working. Result: [%s, %s] Expected: %s", it_s->to_string(), it_r->to_string(), elem.to_string());
 			++cont;
 		}
 		++it_s;

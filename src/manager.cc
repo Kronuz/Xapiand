@@ -208,7 +208,7 @@ XapiandManager::load_node_name()
 void
 XapiandManager::save_node_name(const std::string& _node_name)
 {
-	L_CALL("XapiandManager::save_node_name(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::save_node_name(%s)", _node_name);
 
 	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
@@ -227,7 +227,7 @@ XapiandManager::save_node_name(const std::string& _node_name)
 std::string
 XapiandManager::set_node_name(const std::string& node_name_)
 {
-	L_CALL("XapiandManager::set_node_name(%s)", node_name_.c_str());
+	L_CALL("XapiandManager::set_node_name(%s)", node_name_);
 
 	node_name = load_node_name();
 
@@ -374,7 +374,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		local_node_copy->name = node_name;
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	}
-	L_INFO("Node %s accepted to the party!", node_name.c_str());
+	L_INFO("Node %s accepted to the party!", node_name);
 
 	{
 		// Get a node (any node)
@@ -385,11 +385,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
 			if (!opts.solo) {
-				L_INFO("Syncing cluster data from %s...", node->name.c_str());
+				L_INFO("Syncing cluster data from %s...", node->name);
 
 				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 				if (ret.get()) {
-					L_INFO("Cluster data being synchronized from %s...", node->name.c_str());
+					L_INFO("Cluster data being synchronized from %s...", node->name);
 					new_cluster = 2;
 					break;
 				}
@@ -415,22 +415,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Using solo cluster: %s.", opts.cluster_name.c_str());
+				L_NOTICE("Using solo cluster: %s.", opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Using new solo cluster: %s.", opts.cluster_name.c_str());
+				L_NOTICE("Using new solo cluster: %s.", opts.cluster_name);
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Joined cluster: %s. It is now online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined cluster: %s. It is now online!", opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Joined new cluster: %s. It is now online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined new cluster: %s. It is now online!", opts.cluster_name);
 				break;
 			case 2:
-				L_NOTICE("Joined cluster: %s. It was already online!", opts.cluster_name.c_str());
+				L_NOTICE("Joined cluster: %s. It was already online!", opts.cluster_name);
 				break;
 		}
 	}
@@ -473,7 +473,7 @@ XapiandManager::signal_sig(int sig)
 void
 XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 {
-	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -485,7 +485,7 @@ XapiandManager::signal_sig_async_cb(ev::async&, int revents)
 			break;
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
-			print(STEEL_BLUE + "Workers: %s", dump_tree().c_str());
+			print(STEEL_BLUE + "Workers: %s", dump_tree());
 			break;
 #endif
 	}
@@ -556,7 +556,7 @@ XapiandManager::destroyer() {
 
 #ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
-		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name.c_str());
+		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 		discovery->stop();
 	}
 #endif
@@ -609,7 +609,7 @@ XapiandManager::make_servers()
 #endif
 
 	msg += "at pid:" + std::to_string(getpid()) + " ...";
-	L_NOTICE(msg.c_str());
+	L_NOTICE(msg);
 
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
@@ -635,7 +635,7 @@ XapiandManager::make_servers()
 	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		L_INFO("Joining cluster %s...", opts.cluster_name.c_str());
+		L_INFO("Joining cluster %s...", opts.cluster_name);
 		discovery->start();
 
 		weak_binary = std::move(binary);
@@ -666,7 +666,7 @@ XapiandManager::run()
 	L_CALL("XapiandManager::run()");
 
 	if (node_name == "~") {
-		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name.c_str());
+		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name);
 		join();
 		throw Exit(EX_CONFIG);
 	}
@@ -737,7 +737,7 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	L_MANAGER("Workers:" STEEL_BLUE "%s", dump_tree().c_str());
+	L_MANAGER("Workers:" STEEL_BLUE "%s", dump_tree());
 
 	finish();
 
@@ -814,7 +814,7 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()).c_str());
+	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()));
 
 	auto local_node_ = local_node.load();
 	std::string lower_node_name(string::lower(node->name));
@@ -847,7 +847,7 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 std::shared_ptr<const Node>
 XapiandManager::get_node(const std::string& _node_name)
 {
-	L_CALL("XapiandManager::get_node(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::get_node(%s)", _node_name);
 
 	try {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
@@ -861,7 +861,7 @@ XapiandManager::get_node(const std::string& _node_name)
 std::shared_ptr<const Node>
 XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 {
-	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name.c_str(), region);
+	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name, region);
 
 	std::string lower_node_name(string::lower(_node_name));
 
@@ -897,7 +897,7 @@ XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 void
 XapiandManager::drop_node(const std::string& _node_name)
 {
-	L_CALL("XapiandManager::drop_node(%s)", _node_name.c_str());
+	L_CALL("XapiandManager::drop_node(%s)", _node_name);
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(string::lower(_node_name));
@@ -921,7 +921,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
-	L_CALL("XapiandManager::get_region(%s)", db_name.c_str());
+	L_CALL("XapiandManager::get_region(%s)", db_name);
 
 	bool re_load = false;
 	auto local_node_ = local_node.load();
@@ -978,7 +978,7 @@ XapiandManager::get_region()
 std::shared_future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
-	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
+	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	if (auto binary = weak_binary.lock()) {
 		return binary->trigger_replication(src_endpoint, dst_endpoint);
@@ -992,7 +992,7 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 bool
 XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, std::chrono::duration<double, std::milli> timeout)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path.c_str());
+	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -1127,7 +1127,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 				increment += 60 * (m.length(2) ? strict_stoul(m.str(2)) : 0);
 				increment += (m.length(3) ? strict_stoul(m.str(3)) : 0);
 			} else {
-				THROW(ClientError, "Incorrect input: %s", gran_req.c_str());
+				THROW(ClientError, "Incorrect input: %s", gran_req);
 			}
 		}
 
@@ -1137,7 +1137,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, cons
 
 		return _get_stats_time(stats, start, end, increment);
 	}
-	THROW(ClientError, "Incorrect input: %s", time_req.c_str());
+	THROW(ClientError, "Incorrect input: %s", time_req);
 }
 
 

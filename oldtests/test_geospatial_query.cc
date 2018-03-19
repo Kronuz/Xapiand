@@ -131,7 +131,7 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 					auto region = document.get_obj().at("region").str();
 					if (region != *it) {
 						++cont;
-						L_ERR("Different regions.\n\t  Result: %s\n\tExpected: %s", region.c_str(), it->c_str());
+						L_ERR("Different regions.\n\t  Result: %s\n\tExpected: %s", region, *it);
 					}
 				}
 			}
@@ -156,7 +156,7 @@ int geo_range_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());
@@ -176,7 +176,7 @@ int geo_terms_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());

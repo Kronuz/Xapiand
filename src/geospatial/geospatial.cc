@@ -79,7 +79,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 					geometry = std::make_unique<Intersection>(make_intersection(it.value()));
 					return;
 				default:
-					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
+					THROW(GeoSpatialError, "Unknown geometry %s", str_key);
 			}
 		}
 		default:
@@ -184,7 +184,7 @@ GeoSpatial::get_data(const MsgPack& o, bool hradius)
 				process_srid(data, value);
 				break;
 			default:
-				THROW(GeoSpatialError, "%s is a invalid word", repr(str_key).c_str());
+				THROW(GeoSpatialError, "%s is a invalid word", repr(str_key));
 		}
 	}
 	return data;
@@ -573,7 +573,7 @@ GeoSpatial::make_collection(const MsgPack& o)
 					collection.add_intersection(make_intersection(it.value()));
 					break;
 				default:
-					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
+					THROW(GeoSpatialError, "Unknown geometry %s", str_key);
 			}
 		}
 		return collection;
@@ -624,7 +624,7 @@ GeoSpatial::make_intersection(const MsgPack& o)
 					intersection.add(std::make_shared<Intersection>(make_intersection(it.value())));
 					break;
 				default:
-					THROW(GeoSpatialError, "Unknown geometry %s", str_key.c_str());
+					THROW(GeoSpatialError, "Unknown geometry %s", str_key);
 			}
 		}
 		return intersection;

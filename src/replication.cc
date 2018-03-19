@@ -110,7 +110,7 @@ Replication::msg_get_changesets(const std::string &)
 	// int fd = mkstemp(path);
 	// try {
 	// 	std::string to_revision = databases[db_]->checkout_revision;
-	// 	L_REPLICATION("Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+	// 	L_REPLICATION("Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string(), uuid, repr(from_revision, false), repr(to_revision, false), need_whole_db);
 
 	// 	if (fd < 0) {
 	// 		L_ERR("Cannot write to %s (1)", path);
@@ -203,15 +203,15 @@ Replication::reply_db_header(const std::string &)
 
 	// int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	// if (dir == 0) {
-	// 	L_DEBUG("Directory %s created", path_tmp.c_str());
+	// 	L_DEBUG("Directory %s created", path_tmp);
 	// } else if (errno == EEXIST) {
 	// 	delete_files(path_tmp.c_str());
 	// 	dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	// 	if (dir == 0) {
-	// 		L_DEBUG("Directory %s created", path_tmp.c_str());
+	// 		L_DEBUG("Directory %s created", path_tmp);
 	// 	}
 	// } else {
-	// 	L_ERR("Directory %s not created (%s)", path_tmp.c_str(), strerror(errno));
+	// 	L_ERR("Directory %s not created (%s)", path_tmp, strerror(errno));
 	// }
 }
 
@@ -242,9 +242,9 @@ Replication::reply_db_filedata(const std::string &)
 
 	// int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	// if (fd >= 0) {
-	// 	L_REPLICATION("path_filename %s", path_filename.c_str());
+	// 	L_REPLICATION("path_filename %s", path_filename);
 	// 	if (io::write(fd, p, p_end - p) != p_end - p) {
-	// 		L_ERR("Cannot write to %s", repl_db_filename.c_str());
+	// 		L_ERR("Cannot write to %s", repl_db_filename);
 	// 		return;
 	// 	}
 	// 	io::close(fd);
@@ -271,7 +271,7 @@ Replication::reply_db_footer(const std::string &)
 	// 	try {
 	// 		XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE);
 	// 	} catch (const CheckoutError&)
-	// 		L_ERR("Cannot checkout tmp %s", endpoint_tmp.path.c_str());
+	// 		L_ERR("Cannot checkout tmp %s", endpoint_tmp.path);
 	// 	}
 	// }
 
@@ -319,12 +319,12 @@ Replication::reply_changeset(const std::string &)
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
 	// } catch (const MSG_NetworkError& exc) {
-	// 	L_EXC("ERROR: %s", exc.get_description().c_str());
+	// 	L_EXC("ERROR: %s", exc.get_description());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;
 	// } catch (const Xapian::DatabaseError& exc) {
-	// 	L_EXC("ERROR: %s", exc.get_description().c_str());
+	// 	L_EXC("ERROR: %s", exc.get_description());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;

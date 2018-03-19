@@ -109,8 +109,8 @@ AsyncFsync::run()
 	auto end = std::chrono::system_clock::now();
 
 	if (successful) {
-		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end).c_str());
+		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end));
 	} else {
-		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end).c_str());
+		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end));
 	}
 }

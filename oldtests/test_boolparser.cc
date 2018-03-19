@@ -58,7 +58,7 @@ int test_boolparser() {
 			for (const auto& token : query.stack_expected) {
 				const auto& lexeme = booltree.front().get_lexeme();
 				if (token != lexeme) {
-					L_ERR("ERROR: Boolean parser: expected token %s, result is: %s", token.c_str(), lexeme.c_str());
+					L_ERR("ERROR: Boolean parser: expected token %s, result is: %s", token, lexeme);
 					++count;
 				}
 				booltree.pop_front();

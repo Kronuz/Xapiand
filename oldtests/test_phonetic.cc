@@ -74,7 +74,7 @@ int test_soundex_english() {
 			auto res = s_eng.encode(str);
 			if (res != expected[i]) {
 				++cont;
-				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str, res, expected[i]);
 			}
 		}
 	}
@@ -131,7 +131,7 @@ int test_soundex_french() {
 			auto res = s_fr.encode(str);
 			if (res != expected[i]) {
 				++cont;
-				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str, res, expected[i]);
 			}
 		}
 	}
@@ -178,7 +178,7 @@ int test_soundex_german() {
 			auto res = s_grm.encode(str);
 			if (res != expected[i]) {
 				++cont;
-				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str, res, expected[i]);
 			}
 		}
 	}
@@ -244,7 +244,7 @@ int test_soundex_spanish() {
 			auto res = spa_s.encode(str);
 			if (res != expected[i]) {
 				++cont;
-				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+				L_ERR("ERROR: [%s] Result: %s  Expected: %s\n", str, res, expected[i]);
 			}
 		}
 	}
@@ -275,7 +275,7 @@ void test_time() {
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	L_INFO("Time %s [%d]: %lld ms\n", soundex.description().c_str(), NUM_TESTS, duration);
+	L_INFO("Time %s [%d]: %lld ms\n", soundex.description(), NUM_TESTS, duration);
 }
 
 

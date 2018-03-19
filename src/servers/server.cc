@@ -77,7 +77,7 @@ XapiandServer::run()
 void
 XapiandServer::setup_node_async_cb(ev::async&, int revents)
 {
-	L_CALL("XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 

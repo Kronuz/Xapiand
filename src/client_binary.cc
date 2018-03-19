@@ -119,7 +119,7 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoint.to_string()).c_str(), repr(dst_endpoint.to_string()).c_str());
+	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
 	repl_endpoints.add(src_endpoint);
@@ -132,22 +132,22 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 			src_endpoint,
 			dst_endpoint
 		] () {
-			L_DEBUG("Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()).c_str());
+			L_DEBUG("Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()));
 			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 		});
 	} catch (const CheckoutError&) {
-		L_ERR("Cannot checkout %s", repr(endpoints.to_string()).c_str());
+		L_ERR("Cannot checkout %s", repr(endpoints.to_string()));
 		return false;
 	}
 
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
-		L_ERR("Cannot connect to %s", src_endpoint.host.c_str(), std::to_string(port).c_str());
+		L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
 		checkin_database();
 		return false;
 	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()).c_str(), sock.load());
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock.load());
 
 	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -172,7 +172,7 @@ BinaryClient::on_read_file_done()
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
@@ -232,7 +232,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				break;
 		}
 
-		messages_queue.push(std::make_unique<Buffer>(type, data.c_str(), data.size()));
+		messages_queue.push(std::make_unique<Buffer>(type, data, data.size()));
 	}
 
 	if (!messages_queue.empty()) {
@@ -356,7 +356,7 @@ BinaryClient::_run()
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
 					L_BINARY(">> get_message(%s)", RemoteMessageTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
+					L_BINARY_PROTO("message: '%s'", repr(message));
 					remote_protocol->remote_server(type, message);
 					break;
 				}
@@ -365,7 +365,7 @@ BinaryClient::_run()
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
 					L_BINARY(">> get_message(%s)", ReplicationMessageTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
+					L_BINARY_PROTO("message: '%s'", repr(message));
 					replication->replication_server(type, message);
 					break;
 				}
@@ -374,7 +374,7 @@ BinaryClient::_run()
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
 					L_BINARY(">> get_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
-					L_BINARY_PROTO("message: '%s'", repr(message).c_str());
+					L_BINARY_PROTO("message: '%s'", repr(message));
 					replication->replication_client(type, message);
 					break;
 				}
@@ -389,7 +389,7 @@ BinaryClient::_run()
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
-			L_EXC("ERROR: %s", exc.get_description().c_str());
+			L_EXC("ERROR: %s", exc.get_description());
 			checkin_database();
 			shutdown();
 		} catch (const BaseException& exc) {

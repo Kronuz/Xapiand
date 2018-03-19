@@ -121,14 +121,14 @@ DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& doc
 		try {
 			if (!read_file_contents(doc, &buffer)) {
 				destroy();
-				L_ERR("Can not read the file %s", doc.c_str());
+				L_ERR("Can not read the file %s", doc);
 			} else if (db_handler.index(std::to_string(i++), false, get_body(buffer, ct_type).second, true, ct_type_t(ct_type)).first == 0) {
 				destroy();
-				THROW(Error, "File %s can not index", doc.c_str());
+				THROW(Error, "File %s can not index", doc);
 			}
 		} catch (const std::exception& e) {
 			destroy();
-			THROW(Error, "File %s can not index [%s]", doc.c_str(), e.what());
+			THROW(Error, "File %s can not index [%s]", doc, e.what());
 		}
 	}
 }

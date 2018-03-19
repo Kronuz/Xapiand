@@ -119,11 +119,11 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 long long read_mastery(std::string_view dir, bool force)
 {
 	auto sdir = std::string(dir);
-	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir.c_str());
+	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir);
 
 	struct stat info;
 	if (::stat(sdir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
-		L_DATABASE("- NO MASTERY OF INDEX '%s'", sdir.c_str());
+		L_DATABASE("- NO MASTERY OF INDEX '%s'", sdir);
 		return -1;
 	}
 
@@ -148,7 +148,7 @@ long long read_mastery(std::string_view dir, bool force)
 		}
 	}
 
-	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", sdir.c_str(), mastery_level);
+	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", sdir, mastery_level);
 
 	return mastery_level;
 }
@@ -188,7 +188,7 @@ void json_load(rapidjson::Document& doc, std::string_view str)
 			snippet.replace(p, 1, tabs);
 			++p;
 		}
-		THROW(ClientError, "JSON parse error at line %zu, col: %zu : %s\n%s", line, col, GetParseError_En(parse_done.Code()), snippet.c_str());
+		THROW(ClientError, "JSON parse error at line %zu, col: %zu : %s\n%s", line, col, GetParseError_En(parse_done.Code()), snippet);
 	}
 }
 

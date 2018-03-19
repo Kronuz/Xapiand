@@ -47,7 +47,7 @@ int test_endpoint() {
 		Endpoint e(uri_test[i][1]);
 		if (e.path != uri_test[i][2]) {
 			++count;
-			L_ERR("ERROR: Endpoint (%zu) missmatch.\n\t  Result: %s\n\tExpected: %s\n", i, e.path.c_str(), uri_test[i][2].c_str());
+			L_ERR("ERROR: Endpoint (%zu) missmatch.\n\t  Result: %s\n\tExpected: %s\n", i, e.path, uri_test[i][2]);
 		}
 	}
 

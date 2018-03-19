@@ -66,21 +66,21 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 			int fd1 = open(dir1_file.c_str(), O_RDONLY);
 			if (-1 == fd1) {
-				L_ERR("ERROR: opening file. %s\n", dir1_file.c_str());
+				L_ERR("ERROR: opening file. %s\n", dir1_file);
 				same_file = false;
 				break;
 			}
 
 			int fd2 = open(dir2_file.c_str(), O_RDONLY);
 			if (-1 == fd2) {
-				L_ERR("ERROR: opening file. %s\n", dir2_file.c_str());
+				L_ERR("ERROR: opening file. %s\n", dir2_file);
 				same_file = false;
 				close(fd1);
 				break;
 			}
 
 			if (get_checksum(fd1) != get_checksum(fd2)) {
-				L_ERR("ERROR: file %s and file %s are not the same\n", std::string(dir1_file).c_str(), std::string(dir2_file).c_str());
+				L_ERR("ERROR: file %s and file %s are not the same\n", dir1_file, dir2_file);
 				same_file = false;
 				close(fd1);
 				close(fd2);
@@ -106,7 +106,7 @@ int create_db_wal(DB_Test& db_wal) {
 	db_wal.db_handler.index(std::to_string(1), false, re.second, true, json_type);
 
 	if (copy_file(test_db.c_str(), restored_db.c_str()) == -1) {
-		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", test_db.c_str(), restored_db.c_str());
+		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", test_db, restored_db);
 		return 1;
 	}
 
@@ -115,12 +115,12 @@ int create_db_wal(DB_Test& db_wal) {
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.0")) == -1) {
-		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", "wal.0", restored_db.c_str());
+		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", "wal.0", restored_db);
 		return 1;
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.1012")) == -1) {
-		L_ERR("ERROR: Could not copy the file %s to dir %s\n", "wal.1012", restored_db.c_str());
+		L_ERR("ERROR: Could not copy the file %s to dir %s\n", "wal.1012", restored_db);
 		return 1;
 	}
 
@@ -151,7 +151,7 @@ int restore_database() {
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const std::exception& exc) {

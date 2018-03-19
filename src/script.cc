@@ -92,7 +92,7 @@ Script::Script(const MsgPack& _obj)
 						process_name(value);
 						break;
 					default:
-						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_SCRIPT, str_set_dispatch_script.c_str());
+						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key), RESERVED_SCRIPT, str_set_dispatch_script);
 				}
 			}
 			if (body.empty()) {
@@ -109,7 +109,7 @@ Script::Script(const MsgPack& _obj)
 void
 Script::process_body(const MsgPack& _body)
 {
-	L_CALL("Script::process_body(%s)", repr(_body.to_string()).c_str());
+	L_CALL("Script::process_body(%s)", repr(_body.to_string()));
 
 	if (with_value) {
 		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
@@ -127,7 +127,7 @@ Script::process_body(const MsgPack& _body)
 void
 Script::process_name(const MsgPack& _name)
 {
-	L_CALL("Script::process_name(%s)", repr(_name.to_string()).c_str());
+	L_CALL("Script::process_name(%s)", repr(_name.to_string()));
 
 	if (with_value) {
 		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
@@ -145,7 +145,7 @@ Script::process_name(const MsgPack& _name)
 void
 Script::process_type(const MsgPack& _type)
 {
-	L_CALL("Script::process_type(%s)", repr(_type.to_string()).c_str());
+	L_CALL("Script::process_type(%s)", repr(_type.to_string()));
 
 	try {
 		sep_types = required_spc_t::get_types(_type.str());
@@ -158,7 +158,7 @@ Script::process_type(const MsgPack& _type)
 void
 Script::process_value(const MsgPack& _value)
 {
-	L_CALL("Script::process_value(%s)", repr(_value.to_string()).c_str());
+	L_CALL("Script::process_value(%s)", repr(_value.to_string()));
 
 	if (with_data || with_value) {
 		THROW(ClientError, "%s is ill-formed", RESERVED_SCRIPT);
@@ -185,7 +185,7 @@ Script::process_value(const MsgPack& _value)
 						process_name(value);
 						break;
 					default:
-						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key).c_str(), RESERVED_VALUE, str_set_dispatch_value.c_str());
+						THROW(ClientError, "%s in %s is not valid, only can use %s", repr(str_key), RESERVED_VALUE, str_set_dispatch_value);
 				}
 			}
 			if (body.empty()) {
@@ -203,7 +203,7 @@ Script::process_value(const MsgPack& _value)
 void
 Script::process_chai(const MsgPack& _chai)
 {
-	L_CALL("Script::process_chai(%s)", repr(_chai.to_string()).c_str());
+	L_CALL("Script::process_chai(%s)", repr(_chai.to_string()));
 
 	process_value(_chai);
 	type = Type::CHAI;
@@ -213,7 +213,7 @@ Script::process_chai(const MsgPack& _chai)
 void
 Script::process_ecma(const MsgPack& _ecma)
 {
-	L_CALL("Script::process_ecma(%s)", repr(_ecma.to_string()).c_str());
+	L_CALL("Script::process_ecma(%s)", repr(_ecma.to_string()));
 
 	process_value(_ecma);
 	type = Type::ECMA;
@@ -240,7 +240,7 @@ Script::process_chai(bool strict)
 						{ RESERVED_CHAI, body      },
 					});
 				} else {
-					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN).c_str(), RESERVED_VALUE);
+					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
 				}
 			} else if (name.empty()) {
 				auto body_hash = chaipp::hash(body);
@@ -255,7 +255,7 @@ Script::process_chai(bool strict)
 						}}
 					});
 				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
+					THROW(ScriptNotFoundError, "Script not found: %s", repr(body));
 				}
 			} else {
 				auto script_hash = chaipp::hash(name);
@@ -271,12 +271,12 @@ Script::process_chai(bool strict)
 						}}
 					});
 				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
+					THROW(ScriptNotFoundError, "Script not found: %s", repr(body));
 				}
 			}
 		}
 		default:
-			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT).c_str(), RESERVED_SCRIPT);
+			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
 	}
 #else
 	ignore_unused(strict);
@@ -305,7 +305,7 @@ Script::process_ecma(bool strict)
 						{ RESERVED_ECMA, body      },
 					});
 				} else {
-					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN).c_str(), RESERVED_VALUE);
+					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
 				}
 			} else if (name.empty()) {
 				uint64_t body_hash = v8pp::hash(body);
@@ -320,7 +320,7 @@ Script::process_ecma(bool strict)
 						}}
 					});
 				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
+					THROW(ScriptNotFoundError, "Script not found: %s", repr(body));
 				}
 			} else {
 				auto script_hash = v8pp::hash(name);
@@ -336,12 +336,12 @@ Script::process_ecma(bool strict)
 						}}
 					});
 				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: %s", repr(body).c_str());
+					THROW(ScriptNotFoundError, "Script not found: %s", repr(body));
 				}
 			}
 		}
 		default:
-			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT).c_str(), RESERVED_SCRIPT);
+			THROW(ClientError, "Only type %s is allowed in %s", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
 	}
 #else
 	ignore_unused(strict);
@@ -383,7 +383,7 @@ Script::process_script(bool strict)
 			}
 #endif
 		default:
-			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_CONCRETE_TYPE]).c_str(), RESERVED_SCRIPT);
+			THROW(ClientError, "Type %s is not allowed in %s", Serialise::type(sep_types[SPC_CONCRETE_TYPE]), RESERVED_SCRIPT);
 	}
 }
 

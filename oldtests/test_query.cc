@@ -193,7 +193,7 @@ static int make_search(const std::vector<test_query_t> _tests) {
 						auto str_data = data.str();
 						if (it->compare(str_data) != 0) {
 							++cont;
-							L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", test.field.c_str(), str_data.c_str(), test.field.c_str(), it->c_str());
+							L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", test.field, str_data, test.field, *it);
 						}
 					} catch (const msgpack::type_error& exc) {
 						++cont;
@@ -222,7 +222,7 @@ int test_query_search() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());
@@ -242,7 +242,7 @@ int test_partials_search() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description().c_str());
+		L_EXC("ERROR: %s", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", exc.what());

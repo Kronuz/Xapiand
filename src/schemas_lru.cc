@@ -35,14 +35,14 @@ template <typename ErrorType>
 inline std::pair<const MsgPack*, const MsgPack*>
 SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
 {
-	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()).c_str());
+	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()));
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
 		foreign = checked.first->str_view();
 		split_path_id(foreign, foreign_path, foreign_id);
 		if (foreign_path.empty() || foreign_id.empty()) {
-			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, repr(foreign).c_str());
+			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, repr(foreign));
 		}
 	}
 	return checked;
@@ -52,7 +52,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 MsgPack
 SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<size_t>> context)
 {
-	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()).c_str(), repr(id).c_str(), context ? std::to_string(context->size()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
 	auto hash = endpoint.hash();
 	if (!context) {
@@ -61,10 +61,10 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 
 	try {
 		if (context->size() > MAX_SCHEMA_RECURSION) {
-			THROW(Error, "Maximum recursion reached: %s", endpoint.to_string().c_str());
+			THROW(Error, "Maximum recursion reached: %s", endpoint.to_string());
 		}
 		if (!context->insert(hash).second) {
-			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string().c_str());
+			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NOWAL, HTTP_GET, context);
 		// FIXME: Process the subfields instead of ignoring.
@@ -82,7 +82,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
 SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 {
-	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()) : "nullptr");
 
 	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -129,7 +129,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			if (new_metadata && write) {
 				// New LOCAL schema:
 				if (opts.foreign) {
-					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()).c_str());
+					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()));
 				}
 				try {
 					// Try writing (only if there's no metadata there alrady)
@@ -204,7 +204,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 					schema_ptr->lock();
 				}
 				if (!schema_ptr->is_map()) {
-					THROW(Error, "Schema of %s must be map [%s]", repr(db_handler->endpoints.to_string()).c_str(), repr(schema_ptr->to_string()).c_str());
+					THROW(Error, "Schema of %s must be map [%s]", repr(db_handler->endpoints.to_string()), repr(schema_ptr->to_string()));
 				}
 			} catch (const ForeignSchemaError&) {
 				schema_ptr = Schema::get_initial_schema();
@@ -251,7 +251,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 bool
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
-	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()).c_str() : "nullptr");
+	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
 	bool failure = false;
 	std::string_view foreign, foreign_path, foreign_id;
@@ -293,7 +293,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
-							THROW(Error, "Cannot set metadata: %s", repr(reserved_schema).c_str());
+							THROW(Error, "Cannot set metadata: %s", repr(reserved_schema));
 						}
 						new_metadata = false;
 						local_schema_ptr = schema_ptr;

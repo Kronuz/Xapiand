@@ -81,7 +81,7 @@ Discovery::stop() {
 void
 Discovery::enter_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -106,7 +106,7 @@ Discovery::_enter()
 void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -134,7 +134,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			}
 
 			local_node_ = local_node.load();
-			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
+			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name, local_node_->id);
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
@@ -174,7 +174,7 @@ Discovery::send_message(Message type, const std::string& message)
 	if (type != Discovery::Message::HEARTBEAT) {
 		L_DISCOVERY("<< send_message(%s)", MessageNames[toUType(type)]);
 	}
-	L_DISCOVERY_PROTO("message: %s", repr(message).c_str());
+	L_DISCOVERY_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);
 }
 

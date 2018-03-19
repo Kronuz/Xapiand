@@ -221,8 +221,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return Xapian::Query::MatchNothing;
 		}
 	} catch (const Exception& exc) {
-		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start ? start->to_string().c_str() : "", end ? end->to_string().c_str() : "",
-			Serialise::type(field_spc.get_type()).c_str(), exc.what());
+		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start ? start->to_string() : "", end ? end->to_string() : "",
+			Serialise::type(field_spc.get_type()), exc.what());
 	}
 }
 

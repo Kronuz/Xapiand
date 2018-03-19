@@ -53,10 +53,7 @@ ScheduledTask::clear()
 std::string
 ScheduledTask::__repr__(const std::string& name) const
 {
-	return string::format("<%s at %p>",
-		name.c_str(),
-		this
-	);
+	return string::format("<%s at %p>", name, this);
 }
 
 
@@ -117,7 +114,7 @@ SchedulerQueue::add(const TaskType& task, unsigned long long key)
 	try {
 		queue.add(ctx, key, task);
 	} catch (const std::out_of_range&) {
-		fprintf(stderr, "%sStash overflow!%s\n", BROWN.c_str(), CLEAR_COLOR.c_str());
+		fprintf(stderr, "%s", (BROWN + "Stash overflow!" + CLEAR_COLOR + "\n").c_str());
 	}
 }
 
@@ -239,9 +236,9 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 				std::lock_guard<std::mutex> lk(mtx);
 			}
 			wakeup_signal.notify_one();
-			L_SCHEDULER("Scheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
+			L_SCHEDULER("Scheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__() : "");
 		} else {
-			L_SCHEDULER("Scheduler::" + FOREST_GREEN + "ADDED" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__().c_str() : "");
+			L_SCHEDULER("Scheduler::" + FOREST_GREEN + "ADDED" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu - %s", now, atom_next_wakeup_time.load(), wakeup_time, task ? task->__repr__() : "");
 		}
 	}
 }

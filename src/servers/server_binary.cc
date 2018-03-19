@@ -55,7 +55,7 @@ BinaryServer::~BinaryServer()
 void
 BinaryServer::signal_async_cb(ev::async&, int revents)
 {
-	L_CALL("BinaryServer::signal_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents).c_str());
+	L_CALL("BinaryServer::signal_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
@@ -72,8 +72,8 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	int fd = watcher.fd;
 
-	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
-	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents).c_str(), fd);
+	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	if (EV_ERROR & revents) {
 		L_EV("ERROR: got invalid binary event {fd:%d}: %s", fd, strerror(errno));
@@ -122,7 +122,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 		return false;
 	}
 
-	L_INFO("Database being synchronized from %s...", repr(src_endpoint.to_string()).c_str());
+	L_INFO("Database being synchronized from %s...", repr(src_endpoint.to_string()));
 
 	return true;
 }

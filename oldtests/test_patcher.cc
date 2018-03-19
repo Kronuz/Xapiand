@@ -36,21 +36,21 @@ int test_patcher_mix() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_mix.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string expected;
 	filename = path_patcher_test + "patch_result.txt";
 	if (!read_file_contents(filename, &expected)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -66,7 +66,7 @@ int test_patcher_mix() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -83,14 +83,14 @@ int test_patcher_add() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_add.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -107,7 +107,7 @@ int test_patcher_add() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -124,14 +124,14 @@ int test_patcher_remove() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_remove.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -148,7 +148,7 @@ int test_patcher_remove() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -165,14 +165,14 @@ int test_patcher_replace() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_replace.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -189,7 +189,7 @@ int test_patcher_replace() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -206,14 +206,14 @@ int test_patcher_move() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_move.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -230,7 +230,7 @@ int test_patcher_move() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -247,14 +247,14 @@ int test_patcher_copy() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_copy.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -271,7 +271,7 @@ int test_patcher_copy() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -288,14 +288,14 @@ int test_patcher_test() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_test.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
@@ -333,9 +333,9 @@ int test_patcher_incr() {
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
-		L_DEBUG("RESULT FOR TEST_INCR %s", result.c_str());
+		L_DEBUG("RESULT FOR TEST_INCR %s", result);
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -365,7 +365,7 @@ int test_patcher_decr() {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
-			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			L_ERR("ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result, expected);
 			RETURN(1);
 		} else {
 			RETURN(0);
@@ -382,14 +382,14 @@ int test_patcher_rfc6901() {
 	std::string obj_str;
 	std::string filename(path_patcher_test + "rfc6901.txt");
 	if (!read_file_contents(filename, &obj_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 
 	std::string patch_str;
 	filename = path_patcher_test + "patch_rfc6901.txt";
 	if (!read_file_contents(filename, &patch_str)) {
-		L_ERR("Can not read the file %s", filename.c_str());
+		L_ERR("Can not read the file %s", filename);
 		RETURN(1);
 	}
 

@@ -176,7 +176,7 @@ public:
 
 	inline void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0) {
 		L_BINARY("<< send_message(%s)", RemoteReplyTypeNames[static_cast<int>(type)]);
-		L_BINARY_PROTO("message: %s", repr(message).c_str());
+		L_BINARY_PROTO("message: %s", repr(message));
 		client->send_message(static_cast<char>(type), message, end_time);
 	}
 

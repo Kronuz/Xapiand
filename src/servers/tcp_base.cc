@@ -105,28 +105,28 @@ BaseTCP::bind(int tries)
 	int optval = 1;
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		L_CRIT("ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
+		L_CRIT("ERROR: %s socket: [%d] %s", description, errno, strerror(errno));
 		sig_exit(-EX_IOERR);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 #endif
 
 	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
 	// struct linger ling = {0, 0};
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	// }
 
 	if (flags & CONN_TCP_DEFER_ACCEPT) {
@@ -162,7 +162,7 @@ BaseTCP::bind(int tries)
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) break;
-				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 				continue;
 			}
 		}
@@ -176,7 +176,7 @@ BaseTCP::bind(int tries)
 		return;
 	}
 
-	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	io::close(sock);
 	sig_exit(-EX_CONFIG);
 }
@@ -271,14 +271,14 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 
 	struct addrinfo *result;
 	if (getaddrinfo(hostname.c_str(), servname.c_str(), &hints, &result) < 0) {
-		L_ERR("Couldn't resolve host %s:%s", hostname.c_str(), servname.c_str());
+		L_ERR("Couldn't resolve host %s:%s", hostname, servname);
 		io::close(sock_);
 		return -1;
 	}
 
 	if (::connect(sock_, result->ai_addr, result->ai_addrlen) < 0) {
 		if (!ignored_errorno(errno, true, true)) {
-			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname.c_str(), servname.c_str(), sock_, errno, strerror(errno));
+			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname, servname, sock_, errno, strerror(errno));
 			freeaddrinfo(result);
 			io::close(sock_);
 			return -1;

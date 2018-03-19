@@ -233,7 +233,7 @@ class ThreadPool : public TaskQueue<Params...> {
 				auto exc_context = exc.get_context();
 				L_EXC("Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
 			} catch (const Xapian::Error& exc) {
-				L_EXC("Task died with an unhandled exception: %s", exc.get_description().c_str());
+				L_EXC("Task died with an unhandled exception: %s", exc.get_description());
 			} catch (const std::exception& exc) {
 				auto exc_msg = exc.what();
 				L_EXC("Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");

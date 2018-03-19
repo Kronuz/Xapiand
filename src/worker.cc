@@ -92,7 +92,7 @@ Worker::destroyer()
 void
 Worker::_shutdown_async_cb()
 {
-	L_CALL("Worker::_shutdown_async_cb() [%s]", __repr__().c_str());
+	L_CALL("Worker::_shutdown_async_cb() [%s]", __repr__());
 
 	L_EV_BEGIN("Worker::_shutdown_async_cb:BEGIN");
 	shutdown_impl(_asap, _now);
@@ -103,7 +103,7 @@ Worker::_shutdown_async_cb()
 void
 Worker::_break_loop_async_cb(ev::async&, int revents)
 {
-	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -116,7 +116,7 @@ Worker::_break_loop_async_cb(ev::async&, int revents)
 void
 Worker::_destroy_async_cb(ev::async&, int revents)
 {
-	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -129,7 +129,7 @@ Worker::_destroy_async_cb(ev::async&, int revents)
 void
 Worker::_detach_children_async_cb(ev::async&, int revents)
 {
-	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents).c_str(), __repr__().c_str());
+	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -142,7 +142,7 @@ Worker::_detach_children_async_cb(ev::async&, int revents)
 std::vector<std::weak_ptr<Worker>>
 Worker::_gather_children()
 {
-	L_CALL("Worker::_gather_children() [%s]", __repr__().c_str());
+	L_CALL("Worker::_gather_children() [%s]", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -171,7 +171,7 @@ Worker::_gather_children()
 void
 Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 {
-	L_CALL("Worker::_detach_impl(<weak_child>, %d) [%s]", retries, __repr__().c_str());
+	L_CALL("Worker::_detach_impl(<weak_child>, %d) [%s]", retries, __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -185,7 +185,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 
 		if (auto child = weak_child.lock()) {
 			if (child->_runner && child->ev_loop->depth()) {
-				if (!i) L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__().c_str(), child.use_count() - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+				if (!i) L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
 				continue;
 			}
 			__detach(child);
@@ -199,11 +199,11 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 
 		if (auto child = weak_child.lock()) {
 			__attach(child);
-			if (!i) L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+			if (!i) L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
 			continue;
 		}
 
-		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr.c_str(), child_use_count - 1, __repr__().c_str(), shared_from_this().use_count() - 1);
+		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
 		break;
 	}
 }
@@ -212,7 +212,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 auto
 Worker::_ancestor(int levels)
 {
-	L_CALL("Worker::_ancestor(%d) [%s]", levels, __repr__().c_str());
+	L_CALL("Worker::_ancestor(%d) [%s]", levels, __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -228,7 +228,7 @@ std::string
 Worker::__repr__(const std::string& name) const
 {
 	return string::format("<%s at %p, %s of %s %p%s>",
-		name.c_str(),
+		name,
 		this,
 		_runner ? "runner" : "worker",
 		ev_loop->depth() ? "running loop" : "loop",
@@ -255,7 +255,7 @@ Worker::dump_tree(int level)
 void
 Worker::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL("Worker::shutdown_impl(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
+	L_CALL("Worker::shutdown_impl(%d, %d) [%s]", (int)asap, (int)now, __repr__());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
@@ -269,7 +269,7 @@ Worker::shutdown_impl(time_t asap, time_t now)
 void
 Worker::break_loop_impl()
 {
-	L_CALL("Worker::break_loop_impl() [%s]", __repr__().c_str());
+	L_CALL("Worker::break_loop_impl() [%s]", __repr__());
 
 	ev_loop->break_loop();
 }
@@ -278,7 +278,7 @@ Worker::break_loop_impl()
 void
 Worker::detach_children_impl()
 {
-	L_CALL("Worker::detach_children_impl() [%s]", __repr__().c_str());
+	L_CALL("Worker::detach_children_impl() [%s]", __repr__());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
@@ -296,7 +296,7 @@ Worker::detach_children_impl()
 void
 Worker::shutdown()
 {
-	L_CALL("Worker::shutdown() [%s]", __repr__().c_str());
+	L_CALL("Worker::shutdown() [%s]", __repr__());
 
 	auto now = epoch::now<>();
 	shutdown(now, now);
@@ -306,7 +306,7 @@ Worker::shutdown()
 void
 Worker::shutdown(time_t asap, time_t now)
 {
-	L_CALL("Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__().c_str());
+	L_CALL("Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__());
 
 	if (ev_loop->depth()) {
 		_asap = asap;
@@ -321,7 +321,7 @@ Worker::shutdown(time_t asap, time_t now)
 void
 Worker::break_loop()
 {
-	L_CALL("Worker::break_loop() [%s]", __repr__().c_str());
+	L_CALL("Worker::break_loop() [%s]", __repr__());
 
 	if (ev_loop->depth()) {
 		_break_loop_async.send();
@@ -334,7 +334,7 @@ Worker::break_loop()
 void
 Worker::destroy()
 {
-	L_CALL("Worker::destroy() [%s]", __repr__().c_str());
+	L_CALL("Worker::destroy() [%s]", __repr__());
 
 	if (ev_loop->depth()) {
 		_destroy_async.send();
@@ -358,7 +358,7 @@ Worker::_detach_children()
 void
 Worker::detach(int retries)
 {
-	L_CALL("Worker::detach() [%s]", __repr__().c_str());
+	L_CALL("Worker::detach() [%s]", __repr__());
 
 	_detaching = true;
 	_detaching_retries = retries;
@@ -370,7 +370,7 @@ Worker::detach(int retries)
 void
 Worker::redetach(int retries)
 {
-	L_CALL("Worker::redetach() [%s]", __repr__().c_str());
+	L_CALL("Worker::redetach() [%s]", __repr__());
 
 	// Needs to be run at the end of Workers's run(), to try re-detaching
 
@@ -384,7 +384,7 @@ Worker::redetach(int retries)
 void
 Worker::run_loop()
 {
-	L_CALL("Worker::run_loop() [%s]", __repr__().c_str());
+	L_CALL("Worker::run_loop() [%s]", __repr__());
 
 	assert(ev_loop->depth() == 0);
 
