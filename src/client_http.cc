@@ -1146,7 +1146,6 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
 		request.db_handler.reset(endpoints, DB_OPEN, method);
-		request.db_handler.reopen();  // Ensure the database is current.
 	}
 
 	std::string selector;
@@ -1242,7 +1241,6 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
 		request.db_handler.reset(endpoints, DB_OPEN, method);
-		request.db_handler.reopen();  // Ensure the database is current.
 	}
 
 	// There's no path, we're at root so we get the server's info
@@ -1368,7 +1366,6 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
 		request.db_handler.reset(endpoints, DB_OPEN, method);
-		request.db_handler.reopen();  // Ensure the database is current.
 	}
 
 	auto schema = request.db_handler.get_schema()->get_full(true);
@@ -1406,7 +1403,6 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method meth
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
 		request.db_handler.reset(endpoints, DB_OPEN, method);
-		request.db_handler.reopen();  // Ensure the database is current.
 	}
 
 	auto repr = request.db_handler.repr_wal(0, -1);
@@ -1464,7 +1460,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 		} else {
 			request.db_handler.reset(endpoints, DB_OPEN, method);
-			request.db_handler.reopen();  // Ensure the database is current.
 		}
 
 		if (single) {
