@@ -138,10 +138,13 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		}
 
 		request.ends = std::chrono::system_clock::now();
+
+#ifndef NDEBUG
 		headers += "Response-Time: " + string::from_delta(request.begins, request.ends) + eol;
 		if (request.ready >= request.processing) {
 			headers += "Operation-Time: " + string::from_delta(request.processing, request.ready) + eol;
 		}
+#endif
 
 		if (mode & HTTP_OPTIONS_RESPONSE) {
 			headers += "Allow: GET, POST, PUT, PATCH, MERGE, DELETE, HEAD, OPTIONS" + eol;
