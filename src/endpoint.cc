@@ -28,6 +28,7 @@
 #include "length.h"         // for serialise_length, unserialise_length, ser...
 #include "opts.h"           // for opts
 #include "serialise.h"      // for Serialise
+#include "string.hh"        // for string::Number
 
 
 atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
@@ -331,7 +332,7 @@ Endpoint::to_string() const
 	ret += host;
 	if (port > 0) {
 		ret += ":";
-		ret += std::to_string(port);
+		ret += string::Number(port);
 	}
 	if (!host.empty() || port > 0) {
 		ret += "/";

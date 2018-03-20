@@ -39,7 +39,7 @@ static inline std::string humanize(long double delta, bool colored, const int i,
 	const char* unit = units[order];
 	const char* reset = colored ? colors[n + 1] : "";
 
-	return string::format("%s%Lg%s%s", color, num, unit, reset);
+	return string::format("%s%s%s%s", color, string::Number(static_cast<double>(num)), unit, reset);
 }
 
 

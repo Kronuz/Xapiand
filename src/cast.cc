@@ -217,11 +217,11 @@ Cast::string(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::to_string(obj.u64());
+			return string::Number(obj.u64()).str();
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return std::to_string(obj.i64());
+			return string::Number(obj.i64()).str();
 		case MsgPack::Type::FLOAT:
-			return std::to_string(obj.f64());
+			return string::Number(obj.f64()).str();
 		case MsgPack::Type::STR:
 			return obj.str();
 		case MsgPack::Type::BOOLEAN:

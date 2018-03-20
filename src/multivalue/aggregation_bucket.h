@@ -38,14 +38,12 @@
 #include <xapian.h>                         // for Document, valueno
 
 #include "aggregation.h"                    // for Aggregation
-#include "fmt/format.h"                     // for fmt::FormatInt
 #include "msgpack.h"                        // for MsgPack, object::object, ...
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_INTERVAL, AGG...
 #include "multivalue/exception.h"           // for AggregationError, MSG_Agg...
 #include "serialise.h"                      // for _float
-#include "string.hh"                        // for string::format
+#include "string.hh"                        // for string::format, string::Number
 #include "hashes.hh"                        // for xxh64
-#include "milo.h"                           // for fmt::FormatDouble
 
 
 class Schema;
@@ -90,33 +88,27 @@ public:
 		: BucketAggregation(AGGREGATION_VALUE, result, conf, schema) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatDouble(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_integer(long value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatInt(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatInt(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatDouble(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatDouble(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		auto format_value = fmt::FormatDouble(value);
-		aggregate(std::string_view(format_value.data(), format_value.size()), doc);
+		aggregate(string::Number(value), doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
@@ -148,7 +140,7 @@ class HistogramAggregation : public BucketAggregation {
 		}
 		auto rem = value % interval_u64;
 		auto bucket_key = value - rem;
-		return fmt::FormatInt(bucket_key).str();
+		return string::Number(bucket_key).str();
 	}
 
 	std::string get_bucket(long value) {
@@ -160,7 +152,7 @@ class HistogramAggregation : public BucketAggregation {
 			rem += interval_i64;
 		}
 		auto bucket_key = value - rem;
-		return fmt::FormatInt(bucket_key).str();
+		return string::Number(bucket_key).str();
 	}
 
 	std::string get_bucket(double value) {
@@ -172,7 +164,7 @@ class HistogramAggregation : public BucketAggregation {
 			rem += interval_f64;
 		}
 		auto bucket_key = value - rem;
-		return fmt::FormatDouble(bucket_key).str();
+		return string::Number(bucket_key).str();
 	}
 
 public:
@@ -244,15 +236,15 @@ class RangeAggregation : public BucketAggregation {
 			if (start == std::numeric_limits<T>::min()) {
 				return "..";
 			}
-			return string::format("%s..", std::to_string(start));
+			return string::format("%s..", string::Number(start));
 		}
 		if (start == std::numeric_limits<T>::min()) {
 			if (end == std::numeric_limits<T>::max()) {
 				return "..";
 			}
-			return string::format("..%s", std::to_string(end));
+			return string::format("..%s", string::Number(end));
 		}
-		return string::format("%s..%s", std::to_string(start), std::to_string(end));
+		return string::format("%s..%s", string::Number(start), string::Number(end));
 	}
 
 public:

@@ -27,12 +27,14 @@
 #include <algorithm>          // for std::count
 #include <chrono>             // for std::chrono
 #include <cstdio>             // for std::vsnprintf
+#include <ostream>            // for std::ostream
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
-#include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
+#include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
+#include "milo.h"             // for internal::Grisu2
 #include "static_string.hh"   // for static_string
 #include "split.h"            // for Split
 
@@ -74,7 +76,7 @@ template <typename T, typename = std::enable_if_t<
 	std::is_convertible<decltype(std::declval<T>().to_string()), std::string>::value
 >>
 std::ostream& operator<<(std::ostream& os, const T& obj) {
-	os << obj.to_string();
+	return os << obj.to_string();
 }
 
 
@@ -325,5 +327,133 @@ std::string from_small_time(long double seconds, bool colored = false);
 std::string from_time(long double seconds, bool colored = false);
 std::string from_delta(long double nanoseconds, bool colored = false);
 std::string from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored = false);
+
+
+class Number {
+private:
+	enum {BUFFER_SIZE = std::max(25, std::numeric_limits<unsigned long long>::digits10 + 3)};
+	mutable char buffer_[BUFFER_SIZE];
+	char *str_;
+	std::size_t size_;
+
+	// Formats value using Grisu2 algorithm
+	char* format_double(double value, int maxDecimalPlaces) {
+		assert(maxDecimalPlaces >= 1);
+
+		if (isnan(value)) {
+			buffer_[0] = 'n';
+			buffer_[1] = 'a';
+			buffer_[2] = 'n';
+			size_ = 3;
+			return buffer_;
+		}
+
+		if (isinf(value)) {
+			buffer_[0] = 'i';
+			buffer_[1] = 'n';
+			buffer_[2] = 'f';
+			size_ = 3;
+			return buffer_;
+		}
+
+		if (value == 0) {
+			buffer_[0] = '0';
+			buffer_[1] = '.';
+			buffer_[2] = '0';
+			size_ = 3;
+			return buffer_;
+		}
+
+		char *ptr = buffer_;
+		if (value < 0) {
+			*ptr++ = '-';
+			value = -value;
+		}
+		int length, K;
+		fmt::internal::Grisu2(value, ptr, &length, &K);
+		ptr = fmt::internal::Prettify(ptr, length, K, maxDecimalPlaces);
+		size_ = ptr - buffer_;
+		return buffer_;
+	}
+
+	// Formats value in reverse and returns a pointer to the beginning.
+	char *format_decimal(unsigned long long value) {
+		char *ptr = buffer_ + BUFFER_SIZE - 1;
+		while (value >= 100) {
+			// Integer division is slow so do it for a group of two digits instead
+			// of for every digit. The idea comes from the talk by Alexandrescu
+			// "Three Optimization Tips for C++". See speed-test for a comparison.
+			unsigned index = static_cast<unsigned>((value % 100) * 2);
+			value /= 100;
+			*--ptr = fmt::internal::data::DIGITS[index + 1];
+			*--ptr = fmt::internal::data::DIGITS[index];
+		}
+		if (value < 10) {
+			*--ptr = static_cast<char>('0' + value);
+			return ptr;
+		}
+		unsigned index = static_cast<unsigned>(value * 2);
+		*--ptr = fmt::internal::data::DIGITS[index + 1];
+		*--ptr = fmt::internal::data::DIGITS[index];
+		size_ = fmt::internal::to_unsigned(buffer_ - ptr + BUFFER_SIZE - 1);
+		return ptr;
+	}
+
+	void format_signed(long long value) {
+		unsigned long long abs_value = static_cast<unsigned long long>(value);
+		bool negative = value < 0;
+		if (negative)
+			abs_value = 0 - abs_value;
+		str_ = format_decimal(abs_value);
+		if (negative) {
+			*--str_ = '-';
+			++size_;
+		}
+	}
+
+ public:
+	explicit Number(int value) { format_signed(value); }
+	explicit Number(long value) { format_signed(value); }
+	explicit Number(long long value) { format_signed(value); }
+	explicit Number(unsigned value) : str_(format_decimal(value)) {}
+	explicit Number(unsigned long value) : str_(format_decimal(value)) {}
+	explicit Number(unsigned long long value) : str_(format_decimal(value)) {}
+	explicit Number(double value, int maxDecimalPlaces = 324) : str_(format_double(value, maxDecimalPlaces)) {}
+
+	/** Returns the number of characters written to the output buffer. */
+	std::size_t size() const {
+		return size_;
+	}
+
+	/**
+		Returns a pointer to the output buffer content. No terminating null
+		character is appended.
+	 */
+	const char *data() const { return str_; }
+
+	/**
+		Returns a pointer to the output buffer content with terminating null
+		character appended.
+	 */
+	const char *c_str() const {
+		str_[size_] = '\0';
+		return str_;
+	}
+
+	/**
+		\rst
+		Returns the content of the output buffer as an ``std::string``.
+		\endrst
+	 */
+	std::string str() const { return std::string(str_, size_); }
+
+	std::string_view str_view() const { return std::string_view(str_, size_); }
+
+	operator std::string_view() const { return std::string_view(str_, size_); }
+
+	friend std::ostream& operator<<(std::ostream& os, const Number& obj) {
+		return os << obj.str_view();
+	}
+};
 
 } // namespace string

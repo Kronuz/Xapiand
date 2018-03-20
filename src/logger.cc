@@ -360,7 +360,7 @@ Logging::run()
 #ifdef LOG_LOCATION
 		msg.append(filename);
 		msg.push_back(':');
-		msg.append(std::to_string(line));
+		msg.append(string::Number(line));
 		msg.append(" at ");
 		msg.append(function);
 		msg.append(": ");
