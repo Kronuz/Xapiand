@@ -1010,9 +1010,9 @@ int server() {
 		adjustOpenFilesLimit();
 
 		L_INFO("With a maximum of " + string::join(std::vector<std::string>{
-			std::to_string(opts.max_files) + ((opts.max_files == 1) ? " file" : " files"),
-			std::to_string(opts.max_clients) + ((opts.max_clients == 1) ? " client" : " clients"),
-			std::to_string(opts.max_databases) + ((opts.max_databases == 1) ? " database" : " databases"),
+			string::format("%zu %s", opts.max_files, opts.max_files == 1 ? "file" : "files"),
+			string::format("%zu %s", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
+			string::format("%zu %s", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
 		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 		ev::default_loop default_loop(opts.ev_flags);

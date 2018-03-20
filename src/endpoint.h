@@ -140,7 +140,7 @@ struct Node {
 	}
 
 	std::string to_string() const {
-		return name + " (" + std::to_string(id) + ")";
+		return string::format("%s (%llu)", name, id);
 	}
 };
 
