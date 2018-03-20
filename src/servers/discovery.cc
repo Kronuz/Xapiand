@@ -120,12 +120,12 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 		case XapiandManager::State::RESET: {
 			auto local_node_ = local_node.load();
 			auto node_copy = std::make_unique<Node>(*local_node_);
-			std::string drop = node_copy->name;
+			std::string drop = node_copy->name();
 
 			if (XapiandManager::manager->node_name.empty()) {
-				node_copy->name = name_generator();
+				node_copy->name(name_generator());
 			} else {
-				node_copy->name = XapiandManager::manager->node_name;
+				node_copy->name(XapiandManager::manager->node_name);
 			}
 			local_node = std::shared_ptr<const Node>(node_copy.release());
 
@@ -134,7 +134,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			}
 
 			local_node_ = local_node.load();
-			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name, local_node_->id);
+			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name(), local_node_->id);
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;

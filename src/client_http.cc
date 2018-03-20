@@ -1282,7 +1282,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method, C
 	// FIXME: Get all nodes from cluster database:
 	auto local_node_ = local_node.load();
 	nodes[serialise_node_id(local_node_->id)] = {
-		{ RESPONSE_NAME, local_node_->name },
+		{ RESPONSE_NAME, local_node_->name() },
 	};
 
 	write_http_response(request, response, HTTP_STATUS_OK, {
@@ -1958,11 +1958,11 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 		size_t num_endps = 1;
 		if (XapiandManager::manager->is_single_node()) {
 			has_node_name = true;
-			node_name = local_node_->name;
+			node_name = local_node_->name();
 		} else {
 			if (!XapiandManager::manager->resolve_index_endpoint(index_path, asked_nodes, num_endps, timeout)) {
 				has_node_name = true;
-				node_name = local_node_->name;
+				node_name = local_node_->name();
 			}
 		}
 	}

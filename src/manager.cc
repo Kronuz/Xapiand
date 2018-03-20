@@ -162,10 +162,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 			node_name = name_generator();
 		}
 	}
-	node_copy->name = node_name;
+	node_copy->name(node_name);
 
 	// Set addr in local node
-	node_copy->addr = host_address();
+	node_copy->addr(host_address());
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 
@@ -350,7 +350,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			db_handler.index(serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
-				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name } } },
+				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name() } } },
 				{ "tagline",      { { RESERVED_TYPE,  TERM_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, msgpack_type);
 		} catch (const CheckoutError&) {
@@ -366,11 +366,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	const auto& node_name_ = local_node_->name;
+	const auto& node_name_ = local_node_->name();
 	node_name = set_node_name(node_name_);
 	if (string::lower(node_name) != string::lower(node_name_)) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->name = node_name;
+		local_node_copy->name(node_name);
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	}
 	L_INFO("Node %s accepted to the party!", node_name);
@@ -384,11 +384,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
 			if (!opts.solo) {
-				L_INFO("Syncing cluster data from %s...", node->name);
+				L_INFO("Syncing cluster data from %s...", node->name());
 
 				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 				if (ret.get()) {
-					L_INFO("Cluster data being synchronized from %s...", node->name);
+					L_INFO("Cluster data being synchronized from %s...", node->name());
 					new_cluster = 2;
 					break;
 				}
@@ -814,15 +814,14 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()));
 
 	auto local_node_ = local_node.load();
-	std::string lower_node_name(string::lower(node->name));
-	if (lower_node_name == string::lower(local_node_->name)) {
+	if (node->lower_name() == local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
-			auto& node_ref = nodes.at(lower_node_name);
+			auto& node_ref = nodes.at(node->lower_name());
 			if (*node == *node_ref) {
 				auto node_copy = std::make_unique<Node>(*node_ref);
 				node_copy->touched = epoch::now<>();
@@ -831,7 +830,7 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 		} catch (const std::out_of_range &err) {
 			auto node_copy = std::make_unique<Node>(*node);
 			node_copy->touched = epoch::now<>();
-			nodes[lower_node_name] = std::shared_ptr<const Node>(node_copy.release());
+			nodes[node->lower_name()] = std::shared_ptr<const Node>(node_copy.release());
 			return true;
 		} catch (...) {
 			throw;

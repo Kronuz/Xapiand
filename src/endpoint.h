@@ -42,10 +42,14 @@
 #include "utils.h"              // for string::lower
 
 
-struct Node {
+class Node {
+	std::string _host;
+	std::string _name;
+	std::string _lower_name;
+	struct sockaddr_in _addr;
+
+public:
 	uint64_t id;
-	std::string name;
-	struct sockaddr_in addr;
 	int http_port;
 	int binary_port;
 
@@ -54,14 +58,16 @@ struct Node {
 	time_t touched;
 
 	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
-		memset(&addr, 0, sizeof(addr));
+		memset(&_addr, 0, sizeof(_addr));
 	}
 
 	// Move constructor
 	Node(Node&& other)
-		: id(std::move(other.id)),
-		  name(std::move(other.name)),
-		  addr(std::move(other.addr)),
+		: _host(std::move(other._host)),
+		  _name(std::move(other._name)),
+		  _lower_name(std::move(other._lower_name)),
+		  _addr(std::move(other._addr)),
+		  id(std::move(other.id)),
 		  http_port(std::move(other.http_port)),
 		  binary_port(std::move(other.binary_port)),
 		  regions(std::move(other.regions)),
@@ -70,9 +76,11 @@ struct Node {
 
 	// Copy Constructor
 	Node(const Node& other)
-		: id(other.id),
-		  name(other.name),
-		  addr(other.addr),
+		: _host(other._host),
+		  _name(other._name),
+		  _lower_name(other._lower_name),
+		  _addr(other._addr),
+		  id(other.id),
 		  http_port(other.http_port),
 		  binary_port(other.binary_port),
 		  regions(other.regions),
@@ -81,9 +89,11 @@ struct Node {
 
 	// Move assignment
 	Node& operator=(Node&& other) {
+		_host = std::move(other._host);
+		_name = std::move(other._name);
+		_lower_name = std::move(other._lower_name);
+		_addr = std::move(other._addr);
 		id = std::move(other.id);
-		name = std::move(other.name);
-		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
 		regions = std::move(other.regions);
@@ -94,9 +104,11 @@ struct Node {
 
 	// Copy assignment
 	Node& operator=(const Node& other) {
+		_host = other._host;
+		_name = other._name;
+		_lower_name = other._lower_name;
+		_addr = other._addr;
 		id = other.id;
-		name = other.name;
-		addr = other.addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
 		regions = other.regions;
@@ -106,33 +118,57 @@ struct Node {
 	}
 
 	void clear() {
-		name.clear();
+		_host.clear();
+		_name.clear();
+		_lower_name.clear();
 		id = 0;
 		regions = 1;
 		region = 0;
-		memset(&addr, 0, sizeof(addr));
+		memset(&_addr, 0, sizeof(_addr));
 		http_port = 0;
 		binary_port = 0;
 		touched = 0;
 	}
 
 	bool empty() const noexcept {
-		return name.empty();
+		return _name.empty();
 	}
 
 	std::string serialise() const;
 	static Node unserialise(const char **p, const char *end);
 
-	std::string host() const {
-		return fast_inet_ntop4(addr.sin_addr);
+	void name(const std::string& name) {
+		_name = name;
+		_lower_name = string::lower(_name);
+	}
+
+	const std::string& name() const noexcept {
+		return _name;
+	}
+
+	const std::string& lower_name() const noexcept {
+		return _lower_name;
+	}
+
+	void addr(const struct sockaddr_in& addr) {
+		_addr = addr;
+		_host = fast_inet_ntop4(_addr.sin_addr);
+	}
+
+	const struct sockaddr_in& addr() const noexcept {
+		return _addr;
+	}
+
+	const std::string& host() const noexcept {
+		return _host;
 	}
 
 	bool operator==(const Node& other) const {
 		return
-			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
+			_addr.sin_addr.s_addr == other._addr.sin_addr.s_addr &&
 			http_port == other.http_port &&
 			binary_port == other.binary_port &&
-			string::lower(name) == string::lower(other.name);
+			_lower_name == other._lower_name;
 	}
 
 	bool operator!=(const Node& other) const {
@@ -140,7 +176,7 @@ struct Node {
 	}
 
 	std::string to_string() const {
-		return string::format("%s (%llu)", name, id);
+		return string::format("%s (%llu)", _name, id);
 	}
 };
 
