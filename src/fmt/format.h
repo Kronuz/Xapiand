@@ -1399,7 +1399,8 @@ class arg_formatter_base {
   }
 
   void write(const char_type *value) {
-    auto length = value != FMT_NULL ? std::char_traits<char_type>::length(value) : 0;
+    auto length = value != FMT_NULL ?
+      std::char_traits<char_type>::length(value) : 0;
     writer_.write_str(basic_string_view<char_type>(value, length), specs_);
   }
 
@@ -3536,7 +3537,8 @@ operator"" _a(const wchar_t *s, std::size_t) { return {s}; }
   **Example**::
 
     #include <fmt/format.h>
-    std::string s = fmt::format(fmt("{:d}"), "foo"); // fails to compile
+    // A compile-time error because 'd' is an invalid specifier for strings.
+    std::string s = fmt::format(fmt("{:d}"), "foo");
   \endrst
  */
 # define fmt(s) FMT_STRING(s)
