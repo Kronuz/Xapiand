@@ -31,6 +31,8 @@ set (DOWNLOAD_NAME_DIR "${CMAKE_CURRENT_LIST_DIR}")
 include (CMakeParseArguments)
 
 function (ExternalProject_Install)
+	set (CMAKE_BUILD_TYPE Release)  # FIXME: Should it use installer's CMAKE_BUILD_TYPE?
+
 	set (options QUIET)
 	set (oneValueArgs
 		PREFIX
