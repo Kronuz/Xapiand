@@ -859,10 +859,9 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 {
 	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name, region);
 
-	auto lower_node_name = string::lower(_node_name);
-
 	auto local_node_ = local_node.load();
-	if (lower_node_name == string::lower(local_node_->name)) {
+	auto lower_node_name = string::lower(_node_name);
+	if (lower_node_name == local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
