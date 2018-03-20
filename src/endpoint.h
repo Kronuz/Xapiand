@@ -129,10 +129,10 @@ struct Node {
 
 	bool operator==(const Node& other) const {
 		return
-			string::lower(name) == string::lower(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
 			http_port == other.http_port &&
-			binary_port == other.binary_port;
+			binary_port == other.binary_port &&
+			string::lower(name) == string::lower(other.name);
 	}
 
 	bool operator!=(const Node& other) const {
