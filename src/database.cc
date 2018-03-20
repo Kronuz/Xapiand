@@ -921,6 +921,8 @@ Database::reopen()
 		db.reset();
 	}
 
+	dbs.clear();
+
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
 	writable_storages.clear();
@@ -985,6 +987,7 @@ Database::reopen()
 		}
 
 		db->add_database(wdb);
+		dbs.push_back(wdb);
 
 		if (local) {
 			checkout_revision = get_revision();
@@ -1093,6 +1096,7 @@ Database::reopen()
 			}
 
 			db->add_database(rdb);
+			dbs.push_back(rdb);
 
 	#ifdef XAPIAND_DATA_STORAGE
 			if (local && endpoints_size == 1) {
@@ -2340,10 +2344,13 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->access_time).count() >= DATABASE_UPDATE_TIME) {
 			reopen = true;
 		} else {
-			std::lock_guard<std::mutex> lk(qmtx);
-			auto queue = writable_databases.get(hash);
-			if (queue && queue->revision != database->checkout_revision) {
-				reopen = true;
+			for (size_t i = 0; i < endpoints.size(); ++i) {
+				std::lock_guard<std::mutex> lk(qmtx);
+				auto queue = writable_databases.get(endpoints[i].hash());
+				if (queue && queue->revision != database->dbs[i].get_revision()) {
+					reopen = true;
+					break;
+				}
 			}
 		}
 		if (reopen) {

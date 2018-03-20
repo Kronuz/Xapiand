@@ -287,6 +287,7 @@ public:
 	uint32_t checkout_revision;
 
 	std::unique_ptr<Xapian::Database> db;
+	std::vector<Xapian::Database> dbs;
 
 #if XAPIAND_DATABASE_WAL
 	std::unique_ptr<DatabaseWAL> wal;
