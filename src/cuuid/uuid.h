@@ -24,7 +24,7 @@
 #pragma once
 
 #include <array>           // for std::array
-#include <iostream>        // for std::ostream
+#include <ostream>         // for std::ostream
 #include <string>          // for std::string
 #include <string_view>     // for std::string_view
 
