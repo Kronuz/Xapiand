@@ -367,7 +367,7 @@ class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack>
 	friend MsgPack;
 
 	T* _mobj;
-	off_t _off;
+	mutable off_t _off;
 
 	Iterator(T* o, off_t off)
 		: _mobj(o),
@@ -393,7 +393,18 @@ public:
 		return *this;
 	}
 
+	const Iterator& operator++() const {
+		++_off;
+		return *this;
+	}
+
 	Iterator operator++(int) {
+		Iterator tmp(*this);
+		++_off;
+		return tmp;
+	}
+
+	const Iterator operator++(int) const {
 		Iterator tmp(*this);
 		++_off;
 		return tmp;
@@ -404,7 +415,18 @@ public:
 		return *this;
 	}
 
-	Iterator operator+(int off) const {
+	const Iterator& operator+=(int off) const {
+		_off += off;
+		return *this;
+	}
+
+	Iterator operator+(int off) {
+		Iterator tmp(*this);
+		tmp._off += off;
+		return tmp;
+	}
+
+	const Iterator operator+(int off) const {
 		Iterator tmp(*this);
 		tmp._off += off;
 		return tmp;
