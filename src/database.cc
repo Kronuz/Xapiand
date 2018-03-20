@@ -2336,8 +2336,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}
 
 	if (!db_writable) {
-		bool reopen = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->access_time).count() >= DATABASE_UPDATE_TIME;
-		if (!reopen) {
+		bool reopen = false;
+		if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->access_time).count() >= DATABASE_UPDATE_TIME) {
+			reopen = true;
+		} else {
 			std::lock_guard<std::mutex> lk(qmtx);
 			auto queue = writable_databases.get(hash);
 			if (queue && queue->revision != database->checkout_revision) {
