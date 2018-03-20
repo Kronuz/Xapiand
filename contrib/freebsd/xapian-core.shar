@@ -8,6 +8,8 @@
 #	xapian-core
 #	xapian-core/Makefile
 #	xapian-core/distinfo
+#	xapian-core/pkg-descr
+#	xapian-core/pkg-plist
 #	xapian-core/files
 #	xapian-core/files/patch-api_omenquire.cc
 #	xapian-core/files/patch-api_omenquireinternal.h
@@ -24,8 +26,6 @@
 #	xapian-core/files/patch-net_remoteserver.h
 #	xapian-core/files/patch-net_remotetcpclient.h
 #	xapian-core/files/patch-net_resolver.h
-#	xapian-core/pkg-descr
-#	xapian-core/pkg-plist
 #
 echo c - xapian-core
 mkdir -p xapian-core > /dev/null 2>&1
@@ -35,7 +35,7 @@ X# Created by: J.F. Dockes
 X# $FreeBSD: head/databases/xapian-core/Makefile 412236 2016-03-31 15:38:43Z sunpoet $
 X
 XPORTNAME=	xapian-core
-XPORTVERSION=	1.4.4
+XPORTVERSION=	1.4.5
 XCATEGORIES=	databases
 XMASTER_SITES=	http://oligarchy.co.uk/xapian/${PORTVERSION}/ \
 X		LOCAL/sunpoet
@@ -71,1271 +71,9 @@ bb15b57be79ed098817542f273cd04f0
 echo x - xapian-core/distinfo
 sed 's/^X//' >xapian-core/distinfo << 'b49b3e3560b5e4bda659c2592ac05ff7'
 XTIMESTAMP = 1483610329
-XSHA256 (xapian-core-1.4.4.tar.xz) = a6a985a9841a452d75cf2169196b7ca6ebeef27da7c607078cd401ad041732d9
-XSIZE (xapian-core-1.4.4.tar.xz) = 2807952
+XSHA256 (xapian-core-1.4.5.tar.xz) = 85b5f952de9df925fd13e00f6e82484162fd506d38745613a50b0a2064c6b02b
+XSIZE (xapian-core-1.4.5.tar.xz) = 2810612
 b49b3e3560b5e4bda659c2592ac05ff7
-echo c - xapian-core/files
-mkdir -p xapian-core/files > /dev/null 2>&1
-echo x - xapian-core/files/patch-api_omenquire.cc
-sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << '73c1fcc39153e355766ceae99bdf1fc7'
-Xdiff --git api/omenquire.cc api/omenquire.cc
-Xindex 2d40978..25df563 100644
-X--- api/omenquire.cc
-X+++ api/omenquire.cc
-X@@ -43,6 +43,7 @@
-X #include "api/omenquireinternal.h"
-X #include "str.h"
-X #include "weight/weightinternal.h"
-X+#include "net/serialise.h"
-X 
-X #include <algorithm>
-X #include "autoptr.h"
-X@@ -133,6 +134,20 @@ RSet::Internal::get_description() const
-X     return description;
-X }
-X 
-X+std::string
-X+RSet::serialise() const
-X+{
-X+    LOGCALL(API, std::string, "RSet::serialise", NO_ARGS);
-X+    RETURN(serialise_rset(*this));
-X+}
-X+
-X+RSet
-X+RSet::unserialise(const std::string &s)
-X+{
-X+    LOGCALL_STATIC(API, RSet, "RSet::unserialise", s);
-X+    RETURN(unserialise_rset(s));
-X+}
-X+
-X namespace Internal {
-X 
-X // Methods for Xapian::MSetItem
-X@@ -313,6 +328,20 @@ MSet::get_description() const
-X     return "Xapian::MSet(" + internal->get_description() + ")";
-X }
-X 
-X+std::string
-X+MSet::serialise() const
-X+{
-X+    LOGCALL(API, std::string, "MSet::serialise", NO_ARGS);
-X+    RETURN(serialise_mset(*this));
-X+}
-X+
-X+MSet
-X+MSet::unserialise(const std::string &s)
-X+{
-X+    LOGCALL_STATIC(API, MSet, "MSet::unserialise", s);
-X+    RETURN(unserialise_mset(s.data(), s.data() + s.size()));
-X+}
-X+
-X int
-X MSet::Internal::convert_to_percent_internal(double wt) const
-X {
-X@@ -510,6 +539,40 @@ Enquire::Internal::get_query() const
-X     return query;
-X }
-X 
-X+void
-X+Enquire::Internal::unserialise_stats(const string& serialised)
-X+{
-X+    stats.reset(new Xapian::Weight::Internal);
-X+    ::unserialise_stats(serialised, *(stats.get()));
-X+    stats->set_bounds_from_db(db);
-X+}
-X+
-X+const string
-X+Enquire::Internal::serialise_stats() const
-X+{
-X+    return ::serialise_stats(*(stats.get()));
-X+}
-X+
-X+void
-X+Enquire::Internal::prepare_mset(const RSet *rset,
-X+				const MatchDecider *mdecider) const
-X+{
-X+    LOGCALL(MATCH, MSet, "Enquire::Internal::prepare_mset", rset | mdecider);
-X+
-X+    if (percent_cutoff && (sort_by == VAL || sort_by == VAL_REL)) {
-X+	throw Xapian::UnimplementedError("Use of a percentage cutoff while sorting primary by value isn't currently supported");
-X+    }
-X+
-X+    stats.reset(new Xapian::Weight::Internal);
-X+    match.reset(new ::MultiMatch(db, query, qlen, rset,
-X+				 collapse_max, collapse_key,
-X+				 percent_cutoff, weight_cutoff,
-X+				 order, sort_key, sort_by, sort_value_forward,
-X+				 time_limit, *(stats.get()), weight, spies,
-X+				 (sorter.get() != NULL),
-X+				 (mdecider != NULL)));
-X+}
-X+
-X MSet
-X Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 			    Xapian::doccount check_at_least, const RSet *rset,
-X@@ -534,35 +597,41 @@ Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 	check_at_least = max(check_at_least, maxitems);
-X     }
-X 
-X-    AutoPtr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
-X-    ::MultiMatch match(db, query, qlen, rset,
-X-		       collapse_max, collapse_key,
-X-		       percent_cutoff, weight_cutoff,
-X-		       order, sort_key, sort_by, sort_value_forward,
-X-		       time_limit, *(stats.get()), weight, spies,
-X-		       (sorter.get() != NULL),
-X-		       (mdecider != NULL));
-X-    // Run query and put results into supplied Xapian::MSet object.
-X-    MSet retval;
-X-    match.get_mset(first, maxitems, check_at_least, retval,
-X-		   *(stats.get()), mdecider, sorter.get());
-X-    if (first_orig != first && retval.internal.get()) {
-X-	retval.internal->firstitem = first_orig;
-X-    }
-X+    try {
-X+	if (!stats || !match) {
-X+	    prepare_mset(rset, mdecider);
-X+	}
-X 
-X-    Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
-X+	// Run query and put results into supplied Xapian::MSet object.
-X+	MSet retval;
-X+	match->get_mset(first, maxitems, check_at_least, retval,
-X+		    *(stats.get()), mdecider, sorter.get());
-X+	if (first_orig != first && retval.internal.get()) {
-X+	    retval.internal->firstitem = first_orig;
-X+	}
-X 
-X-    // The Xapian::MSet needs to have a pointer to ourselves, so that it can
-X-    // retrieve the documents.  This is set here explicitly to avoid having
-X-    // to pass it into the matcher, which gets messy particularly in the
-X-    // networked case.
-X-    retval.internal->enquire = this;
-X+	Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
-X 
-X-    if (!retval.internal->stats) {
-X-	retval.internal->stats = stats.release();
-X-    }
-X+	// The Xapian::MSet needs to have a pointer to ourselves, so that it can
-X+	// retrieve the documents.  This is set here explicitly to avoid having
-X+	// to pass it into the matcher, which gets messy particularly in the
-X+	// networked case.
-X+	retval.internal->enquire = this;
-X+
-X+	if (!retval.internal->stats) {
-X+	    retval.internal->stats = stats.release();
-X+	} else {
-X+	    stats.reset();
-X+	}
-X+
-X+	match.reset();
-X 
-X-    RETURN(retval);
-X+	RETURN(retval);
-X+    } catch(...) {
-X+	stats.reset();
-X+	match.reset();
-X+	throw;
-X+    }
-X }
-X 
-X ESet
-X@@ -897,6 +966,27 @@ Enquire::set_time_limit(double time_limit)
-X     internal->time_limit = time_limit;
-X }
-X 
-X+void
-X+Enquire::unserialise_stats(const string& serialised)
-X+{
-X+    internal->unserialise_stats(serialised);
-X+}
-X+
-X+const string
-X+Enquire::serialise_stats() const
-X+{
-X+    RETURN(internal->serialise_stats());
-X+}
-X+
-X+void
-X+Enquire::prepare_mset(const RSet *rset,
-X+		      const MatchDecider *mdecider) const
-X+{
-X+    LOGCALL(API, Xapian::MSet, "Xapian::Enquire::prepare_mset", maxitems | rset | mdecider);
-X+
-X+    internal->prepare_mset(rset, mdecider);
-X+}
-X+
-X MSet
-X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 		  Xapian::doccount check_at_least, const RSet *rset,
-73c1fcc39153e355766ceae99bdf1fc7
-echo x - xapian-core/files/patch-api_omenquireinternal.h
-sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << '42000b6ff3d0b59949c6d3241f1d5cf9'
-Xdiff --git api/omenquireinternal.h api/omenquireinternal.h
-Xindex 4f25b39..8b0104d 100644
-X--- api/omenquireinternal.h
-X+++ api/omenquireinternal.h
-X@@ -38,6 +38,7 @@
-X #include <set>
-X #include <unordered_map>
-X 
-X+#include "autoptr.h"
-X #include "weight/weightinternal.h"
-X 
-X using namespace std;
-X@@ -152,6 +153,9 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
-X 
-X 	Xapian::Internal::opt_intrusive_ptr<KeyMaker> sorter;
-X 
-X+	mutable AutoPtr<Xapian::Weight::Internal> stats;
-X+	mutable AutoPtr<::MultiMatch> match;
-X+
-X 	double time_limit;
-X 
-X 	/** The weight to use for this query.
-X@@ -184,6 +188,13 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
-X 
-X 	void set_query(const Query & query_, termcount qlen_);
-X 	const Query & get_query() const;
-X+
-X+	void unserialise_stats(const string& serialised);
-X+	const string serialise_stats() const;
-X+
-X+	void prepare_mset(const RSet *omrset,
-X+			  const MatchDecider *mdecider) const;
-X+
-X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 		      Xapian::doccount check_at_least,
-X 		      const RSet *omrset,
-42000b6ff3d0b59949c6d3241f1d5cf9
-echo x - xapian-core/files/patch-backends_dbfactory__remote.cc
-sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'ac69d80474e87d4780bc463a6adc8439'
-Xdiff --git backends/dbfactory_remote.cc backends/dbfactory_remote.cc
-Xindex 5eaab61..3aa4aa9 100644
-X--- backends/dbfactory_remote.cc
-X+++ backends/dbfactory_remote.cc
-X@@ -33,39 +33,68 @@ namespace Xapian {
-X 
-X Database
-X Remote::open(const string &host, unsigned int port, useconds_t timeout_,
-X-	     useconds_t connect_timeout)
-X+	     useconds_t connect_timeout, int flags, const string &dir)
-X {
-X-    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout);
-X+    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout | flags | dir);
-X     RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-X-					connect_timeout * 1e-3, false, 0)));
-X+					connect_timeout * 1e-3, false, flags, dir)));
-X+}
-X+
-X+Database
-X+Remote::open(const string &host, unsigned int port, useconds_t timeout_,
-X+	     useconds_t connect_timeout)
-X+{
-X+    return Remote::open(host, port, timeout_, connect_timeout, 0, std::string());
-X }
-X 
-X WritableDatabase
-X Remote::open_writable(const string &host, unsigned int port,
-X 		      useconds_t timeout_, useconds_t connect_timeout,
-X-		      int flags)
-X+		      int flags, const string &dir)
-X {
-X-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags);
-X+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags | dir);
-X     RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-X 						connect_timeout * 1e-3, true,
-X-						flags)));
-X+						flags, dir)));
-X+}
-X+
-X+WritableDatabase
-X+Remote::open_writable(const string &host, unsigned int port,
-X+		      useconds_t timeout_, useconds_t connect_timeout,
-X+		      int flags)
-X+{
-X+    return Remote::open_writable(host, port, timeout_, connect_timeout, flags, std::string());
-X }
-X 
-X Database
-X Remote::open(const string &program, const string &args,
-X-	     useconds_t timeout_)
-X+	     useconds_t timeout_, int flags, const string &dir)
-X {
-X-    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_);
-X-    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, 0)));
-X+    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_ | flags | dir);
-X+    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, flags, dir)));
-X+}
-X+
-X+Database
-X+Remote::open(const string &program, const string &args,
-X+	     useconds_t timeout_, int flags)
-X+{
-X+    return Remote::open(program, args, timeout_, flags, std::string());
-X }
-X 
-X WritableDatabase
-X Remote::open_writable(const string &program, const string &args,
-X-		      useconds_t timeout_, int flags)
-X+		      useconds_t timeout_, int flags, const string &dir)
-X {
-X-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags);
-X+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags | dir);
-X     RETURN(WritableDatabase(new ProgClient(program, args,
-X-					   timeout_ * 1e-3, true, flags)));
-X+					   timeout_ * 1e-3, true, flags, dir)));
-X+}
-X+
-X+WritableDatabase
-X+Remote::open_writable(const string &program, const string &args,
-X+		      useconds_t timeout_, int flags)
-X+{
-X+    return Remote::open_writable(program, args, timeout_, flags, std::string());
-X }
-X 
-X }
-ac69d80474e87d4780bc463a6adc8439
-echo x - xapian-core/files/patch-backends_remote_remote-database.cc
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << '0ea39a0ec8ec970f8d736e827925e001'
-Xdiff --git backends/remote/remote-database.cc backends/remote/remote-database.cc
-Xindex 7bed102..08211d8 100644
-X--- backends/remote/remote-database.cc
-X+++ backends/remote/remote-database.cc
-X@@ -68,9 +68,12 @@ throw_connection_closed_unexpectedly()
-X }
-X 
-X RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-X-			       const string & context_, bool writable,
-X-			       int flags)
-X-	: link(fd, fd, context_),
-X+			       const string & context_, bool writable_,
-X+			       int flags_, const string & dir)
-X+	: db_dir(dir),
-X+	  writable(writable_),
-X+	  flags(flags_),
-X+	  link(fd, fd, context_),
-X 	  context(context_),
-X 	  cached_stats_valid(),
-X 	  mru_valstats(),
-X@@ -95,15 +98,6 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-X     }
-X 
-X     update_stats(MSG_MAX);
-X-
-X-    if (writable) {
-X-	if (flags & Xapian::DB_RETRY_LOCK) {
-X-	    const string & body = encode_length(flags & Xapian::DB_RETRY_LOCK);
-X-	    update_stats(MSG_WRITEACCESS, body);
-X-	} else {
-X-	    update_stats(MSG_WRITEACCESS);
-X-	}
-X-    }
-X }
-X 
-X void
-X@@ -339,7 +333,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
-X 
-X     string message;
-X     reply_type type = get_message(message);
-X-    if (type != REPLY_UPDATE || message.size() < 3) {
-X+    if (type != REPLY_UPDATE || message.size() < 2) {
-X 	if (type == REPLY_DONE) {
-X 	    // The database was already open at the latest revision.
-X 	    return false;
-X@@ -373,6 +367,46 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
-X 	throw Xapian::NetworkError(errmsg, context);
-X     }
-X 
-X+    if (p == p_end) {
-X+	message = encode_length(flags);
-X+	message += encode_length(db_dir.size());
-X+	message += db_dir;
-X+
-X+	if (writable) {
-X+	    send_message(MSG_WRITEACCESS, message);
-X+	} else {
-X+	    send_message(MSG_READACCESS, message);
-X+	}
-X+
-X+	get_message(message, REPLY_UPDATE);
-X+	if (message.size() < 3) {
-X+	    throw Xapian::NetworkError("Database was not selected", context);
-X+	}
-X+
-X+	p = message.c_str();
-X+	p_end = p + message.size();
-X+
-X+	// The protocol versions where already checked.
-X+	p += 2;
-X+    } else if (msg_code == MSG_MAX && writable) {
-X+	if (flags) {
-X+	    send_message(MSG_WRITEACCESS, encode_length(flags));
-X+	} else {
-X+	    send_message(MSG_WRITEACCESS, string());
-X+	}
-X+
-X+	get_message(message, REPLY_UPDATE);
-X+	if (message.size() < 3) {
-X+	    throw Xapian::NetworkError("Database was not selected", context);
-X+	}
-X+
-X+	p = message.c_str();
-X+	p_end = p + message.size();
-X+
-X+	// The protocol versions where already checked.
-X+	p += 2;
-X+    }
-X+
-X     decode_length(&p, p_end, doccount);
-X     decode_length(&p, p_end, lastdocid);
-X     lastdocid += doccount;
-X@@ -589,16 +623,16 @@ RemoteDatabase::do_close()
-X     // In the constructor, we set transaction_state to
-X     // TRANSACTION_UNIMPLEMENTED if we aren't writable so that we can check
-X     // it here.
-X-    bool writable = (transaction_state != TRANSACTION_UNIMPLEMENTED);
-X+    bool writable_ = (transaction_state != TRANSACTION_UNIMPLEMENTED);
-X 
-X     // Only call dtor_called() if we're writable.
-X-    if (writable) dtor_called();
-X+    if (writable_) dtor_called();
-X 
-X     // If we're writable, wait for a confirmation of the close, so we know that
-X     // changes have been written and flushed, and the database write lock
-X     // released.  For the non-writable case, there's no need to wait, so don't
-X     // slow down searching by waiting here.
-X-    link.do_close(writable);
-X+    link.do_close(writable_);
-X }
-X 
-X void
-0ea39a0ec8ec970f8d736e827925e001
-echo x - xapian-core/files/patch-backends_remote_remote-database.h
-sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << '9fee399553c179cdff94485118d9bd8e'
-Xdiff --git backends/remote/remote-database.h backends/remote/remote-database.h
-Xindex a0835a6..7e0b19a 100644
-X--- backends/remote/remote-database.h
-X+++ backends/remote/remote-database.h
-X@@ -49,6 +49,15 @@ class RemoteDatabase : public Xapian::Database::Internal {
-X     /// Don't allow copying.
-X     RemoteDatabase(const RemoteDatabase &);
-X 
-X+    // Directory to store databases in.
-X+    const std::string db_dir;
-X+
-X+    // The database is writable.
-X+    const bool writable;
-X+
-X+    // Bitwise-or of Xapian::DB_* flags.
-X+    const int flags;
-X+
-X     /// The object which does the I/O.
-X     mutable RemoteConnection link;
-X 
-X@@ -103,10 +112,11 @@ class RemoteDatabase : public Xapian::Database::Internal {
-X      *			operations will never timeout.
-X      *  @param context_ The context to return with any error messages.
-X      *	@param writable	Is this a WritableDatabase?
-X-     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
-X+     *	@param flags	Xapian::DB_RETRY_LOCK or Bitwise-or of Xapian::DB_* constants.
-X+     *	@param dir	Database directory index to open.
-X      */
-X     RemoteDatabase(int fd, double timeout_, const string & context_,
-X-		   bool writable, int flags);
-X+		   bool writable, int flags, const string & dir);
-X 
-X     /// Receive a message from the server.
-X     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
-9fee399553c179cdff94485118d9bd8e
-echo x - xapian-core/files/patch-common_remoteprotocol.h
-sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'f14fb3cbf56cb06e2897cb4e67e23ccc'
-Xdiff --git common/remoteprotocol.h common/remoteprotocol.h
-Xindex fcaa1ec..03adba7 100644
-X--- common/remoteprotocol.h
-X+++ common/remoteprotocol.h
-X@@ -89,6 +89,7 @@ enum message_type {
-X     MSG_METADATAKEYLIST,	// Iterator for metadata keys
-X     MSG_FREQS,			// Get termfreq and collfreq
-X     MSG_UNIQUETERMS,		// Get number of unique terms in doc
-X+    MSG_READACCESS,		// Select currenty active read access database
-X     MSG_MAX
-X };
-X 
-f14fb3cbf56cb06e2897cb4e67e23ccc
-echo x - xapian-core/files/patch-include_xapian_dbfactory.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << '67bbc4702834efb44fdc7a7a5e85d1c0'
-Xdiff --git include/xapian/dbfactory.h include/xapian/dbfactory.h
-Xindex 3a75bf1..e6b148e 100644
-X--- include/xapian/dbfactory.h
-X+++ include/xapian/dbfactory.h
-X@@ -176,7 +176,13 @@ namespace Remote {
-X  *				Xapian::NetworkTimeoutError is thrown.  A
-X  *				timeout of 0 means don't timeout.  (Default is
-X  *				10000ms, which is 10 seconds).
-X- */
-X+ * @param flags		bitwise-or of Xapian::DB_* constants.
-X+ * @param dir		database directory index to open.
-X+*/
-X+XAPIAN_VISIBILITY_DEFAULT
-X+Database open(const std::string &host, unsigned int port, useconds_t timeout, useconds_t connect_timeout, int flags, const std::string &dir = std::string());
-X+
-X+// FIXME: legacy form of above (not breaking ABI when flags and dir are not passed)
-X XAPIAN_VISIBILITY_DEFAULT
-X Database open(const std::string &host, unsigned int port, useconds_t timeout = 10000, useconds_t connect_timeout = 10000);
-X 
-X@@ -197,9 +203,14 @@ Database open(const std::string &host, unsigned int port, useconds_t timeout = 1
-X  *				Xapian::NetworkTimeoutError is thrown.  A
-X  *				timeout of 0 means don't timeout.  (Default is
-X  *				10000ms, which is 10 seconds).
-X- * @param flags		Xapian::DB_RETRY_LOCK or 0.
-X+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
-X+ * @param dir		database directory index to open.
-X  */
-X XAPIAN_VISIBILITY_DEFAULT
-X+WritableDatabase open_writable(const std::string &host, unsigned int port, useconds_t timeout, useconds_t connect_timeout, int flags, const std::string &dir);
-X+
-X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
-X+XAPIAN_VISIBILITY_DEFAULT
-X WritableDatabase open_writable(const std::string &host, unsigned int port, useconds_t timeout = 0, useconds_t connect_timeout = 10000, int flags = 0);
-X 
-X /** Construct a Database object for read-only access to a remote database
-X@@ -215,9 +226,15 @@ WritableDatabase open_writable(const std::string &host, unsigned int port, useco
-X  *			then Xapian::NetworkTimeoutError is thrown.  A timeout
-X  *			of 0 means don't timeout.  (Default is 10000ms, which
-X  *			is 10 seconds).
-X+ * @param flags		bitwise-or of Xapian::DB_* constants.
-X+ * @param dir		database directory index to open.
-X  */
-X XAPIAN_VISIBILITY_DEFAULT
-X-Database open(const std::string &program, const std::string &args, useconds_t timeout = 10000);
-X+Database open(const std::string &program, const std::string &args, useconds_t timeout, int flags, const std::string &dir);
-X+
-X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
-X+XAPIAN_VISIBILITY_DEFAULT
-X+Database open(const std::string &program, const std::string &args, useconds_t timeout = 10000, int flags = 0);
-X 
-X /** Construct a WritableDatabase object for update access to a remote database
-X  *  accessed via a program.
-X@@ -231,9 +248,14 @@ Database open(const std::string &program, const std::string &args, useconds_t ti
-X  *			for any individual operation on the remote database
-X  *			then Xapian::NetworkTimeoutError is thrown.  (Default
-X  *			is 0, which means don't timeout).
-X- * @param flags		Xapian::DB_RETRY_LOCK or 0.
-X+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
-X+ * @param dir		database directory index to open.
-X  */
-X XAPIAN_VISIBILITY_DEFAULT
-X+WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout, int flags, const std::string &dir);
-X+
-X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
-X+XAPIAN_VISIBILITY_DEFAULT
-X WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout = 0, int flags = 0);
-X 
-X }
-67bbc4702834efb44fdc7a7a5e85d1c0
-echo x - xapian-core/files/patch-include_xapian_enquire.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'afc9ec4ca0a4c778214dbdacfb016ab2'
-Xdiff --git include/xapian/enquire.h include/xapian/enquire.h
-Xindex 4dadede..973a151 100644
-X--- include/xapian/enquire.h
-X+++ include/xapian/enquire.h
-X@@ -103,6 +103,20 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
-X 
-X 	/// Return a string describing this object.
-X 	std::string get_description() const;
-X+
-X+	/** Serialise RSet into a string.
-X+	 *
-X+	 *  The document representation may change between Xapian releases:
-X+	 *  even between minor versions.  However, it is guaranteed not to
-X+	 *  change if the remote database protocol has not changed between
-X+	 *  releases.
-X+	 */
-X+	std::string serialise() const;
-X+
-X+	/** Unserialise a document from a string produced by serialise().
-X+	 */
-X+	static RSet unserialise(const std::string &serialised);
-X+
-X };
-X 
-X /** Base class for matcher decision functor.
-X@@ -487,6 +501,9 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
-X 	 */
-X 	void set_time_limit(double time_limit);
-X 
-X+	void unserialise_stats(const std::string& serialised);
-X+	const std::string serialise_stats() const;
-X+
-X 	/** Get (a portion of) the match set for the current query.
-X 	 *
-X 	 *  @param first     the first item in the result set to return.
-X@@ -523,6 +540,8 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
-X 	 *
-X 	 *  @exception Xapian::InvalidArgumentError  See class documentation.
-X 	 */
-X+	void prepare_mset(const RSet * omrset = 0,
-X+			  const MatchDecider * mdecider = 0) const;
-X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
-X 		      Xapian::doccount checkatleast = 0,
-X 		      const RSet * omrset = 0,
-afc9ec4ca0a4c778214dbdacfb016ab2
-echo x - xapian-core/files/patch-include_xapian_mset.h
-sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'dcd82398ac91b4141e407b22618e7618'
-Xdiff --git include/xapian/mset.h include/xapian/mset.h
-Xindex 2401e54..39ff724 100644
-X--- include/xapian/mset.h
-X+++ include/xapian/mset.h
-X@@ -255,6 +255,19 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
-X     /// Return a string describing this object.
-X     std::string get_description() const;
-X 
-X+    /** Serialise MSet into a string.
-X+     *
-X+     *  The document representation may change between Xapian releases:
-X+     *  even between minor versions.  However, it is guaranteed not to
-X+     *  change if the remote database protocol has not changed between
-X+     *  releases.
-X+     */
-X+    std::string serialise() const;
-X+
-X+    /** Unserialise a document from a string produced by serialise().
-X+     */
-X+    static MSet unserialise(const std::string &serialised);
-X+
-X     /** @private @internal MSet is what the C++ STL calls a container.
-X      *
-X      *  The following typedefs allow the class to be used in templates in the
-dcd82398ac91b4141e407b22618e7618
-echo x - xapian-core/files/patch-net_progclient.cc
-sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << '0289b2a578b1454667ac8e80e4c86882'
-Xdiff --git net/progclient.cc net/progclient.cc
-Xindex 3ba0d9e..9357fde 100644
-X--- net/progclient.cc
-X+++ net/progclient.cc
-X@@ -64,16 +64,16 @@ split_words(const string &text, vector<string> &words, char ws = ' ')
-X #endif
-X 
-X ProgClient::ProgClient(const string &progname, const string &args,
-X-		       double timeout_, bool writable, int flags)
-X+		       double timeout_, bool writable_, int flags_, const string & dir)
-X 	: RemoteDatabase(run_program(progname, args
-X #ifndef __WIN32__
-X 						   , pid
-X #endif
-X 	),
-X-			 timeout_, get_progcontext(progname, args), writable,
-X-			 flags)
-X+			 timeout_, get_progcontext(progname, args), writable_,
-X+			 flags_, dir)
-X {
-X-    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags);
-X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable_ | flags_ | dir);
-X }
-X 
-X string
-0289b2a578b1454667ac8e80e4c86882
-echo x - xapian-core/files/patch-net_progclient.h
-sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'af1e8193bdacf07368b21c8e0218ba49'
-Xdiff --git net/progclient.h net/progclient.h
-Xindex 5567e55..9ebcde9 100644
-X--- net/progclient.h
-X+++ net/progclient.h
-X@@ -88,7 +88,8 @@ class ProgClient : public RemoteDatabase {
-X 	       const std::string &arg,
-X 	       double msecs_timeout,
-X 	       bool writable,
-X-	       int flags);
-X+	       int flags,
-X+	       const std::string & dir);
-X 
-X     /** Destructor. */
-X     ~ProgClient();
-af1e8193bdacf07368b21c8e0218ba49
-echo x - xapian-core/files/patch-net_remoteserver.cc
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'cd2359dfb11d830004d48d3043a75101'
-Xdiff --git net/remoteserver.cc net/remoteserver.cc
-Xindex 8185bc0..22a7804 100644
-X--- net/remoteserver.cc
-X+++ net/remoteserver.cc
-X@@ -36,7 +36,7 @@
-X 
-X #include "autoptr.h"
-X #include "length.h"
-X-#include "matcher/multimatch.h"
-X+#include "api/omenquireinternal.h"
-X #include "noreturn.h"
-X #include "omassert.h"
-X #include "realtime.h"
-X@@ -54,10 +54,17 @@ throw_read_only()
-X     throw Xapian::InvalidOperationError("Server is read-only");
-X }
-X 
-X+XAPIAN_NORETURN(static void throw_no_db());
-X+static void
-X+throw_no_db()
-X+{
-X+    throw Xapian::InvalidOperationError("Server has no open database");
-X+}
-X+
-X /// Class to throw when we receive the connection closing message.
-X struct ConnectionClosed { };
-X 
-X-RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
-X+RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths_,
-X 			   int fdin_, int fdout_,
-X 			   double active_timeout_, double idle_timeout_,
-X 			   bool writable_)
-X@@ -67,25 +74,11 @@ RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
-X {
-X     // Catch errors opening the database and propagate them to the client.
-X     try {
-X-	Assert(!dbpaths.empty());
-X-	// We always open the database read-only to start with.  If we're
-X-	// writable, the client can ask to be upgraded to write access once
-X-	// connected if it wants it.
-X-	db = new Xapian::Database(dbpaths[0]);
-X-	// Build a better description than Database::get_description() gives
-X-	// in the variable context.  FIXME: improve Database::get_description()
-X-	// and then just use that instead.
-X-	context = dbpaths[0];
-X-
-X-	if (!writable) {
-X-	    vector<std::string>::const_iterator i(dbpaths.begin());
-X-	    for (++i; i != dbpaths.end(); ++i) {
-X-		db->add_database(Xapian::Database(*i));
-X-		context += ' ';
-X-		context += *i;
-X-	    }
-X-	} else {
-X-	    AssertEq(dbpaths.size(), 1); // Expecting exactly one database.
-X+	if (!dbpaths_.empty()) {
-X+	    // We always open the database read-only to start with.  If we're
-X+	    // writable, the client can ask to be upgraded to write access once
-X+	    // connected if it wants it.
-X+	    select_db(dbpaths_, false, Xapian::DB_OPEN);
-X 	}
-X     } catch (const Xapian::Error &err) {
-X 	// Propagate the exception to the client.
-X@@ -192,6 +185,7 @@ RemoteServer::run()
-X 		&RemoteServer::msg_openmetadatakeylist,
-X 		&RemoteServer::msg_freqs,
-X 		&RemoteServer::msg_uniqueterms,
-X+		&RemoteServer::msg_readaccess,
-X 	    };
-X 
-X 	    string message;
-X@@ -239,6 +233,9 @@ RemoteServer::run()
-X void
-X RemoteServer::msg_allterms(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     string prev = message;
-X     string reply;
-X 
-X@@ -262,6 +259,9 @@ RemoteServer::msg_allterms(const string &message)
-X void
-X RemoteServer::msg_termlist(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     Xapian::docid did;
-X@@ -289,6 +289,9 @@ RemoteServer::msg_termlist(const string &message)
-X void
-X RemoteServer::msg_positionlist(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     Xapian::docid did;
-X@@ -310,6 +313,9 @@ RemoteServer::msg_positionlist(const string &message)
-X void
-X RemoteServer::msg_postlist(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const string & term = message;
-X 
-X     Xapian::doccount termfreq = db->get_termfreq(term);
-X@@ -333,32 +339,74 @@ RemoteServer::msg_postlist(const string &message)
-X }
-X 
-X void
-X-RemoteServer::msg_writeaccess(const string & msg)
-X+RemoteServer::msg_readaccess(const string &message)
-X+{
-X+    int flags = Xapian::DB_OPEN;
-X+    const char *p = message.c_str();
-X+    const char *p_end = p + message.size();
-X+    if (p != p_end) {
-X+	unsigned flag_bits;
-X+	decode_length(&p, p_end, flag_bits);
-X+	flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
-X+    }
-X+
-X+    if (p != p_end) {
-X+	std::vector<string> dbpaths_;
-X+	while (p != p_end) {
-X+	    size_t len;
-X+	    decode_length_and_check(&p, p_end, len);
-X+	    string dbpath(p, len);
-X+	    dbpaths_.push_back(dbpath);
-X+	    p += len;
-X+	}
-X+	select_db(dbpaths_, false, flags);
-X+    } else {
-X+	select_db(dbpaths, false, flags);
-X+    }
-X+
-X+    msg_update(message);
-X+}
-X+
-X+
-X+void
-X+RemoteServer::msg_writeaccess(const string & message)
-X {
-X     if (!writable)
-X 	throw_read_only();
-X 
-X     int flags = Xapian::DB_OPEN;
-X-    const char *p = msg.c_str();
-X-    const char *p_end = p + msg.size();
-X+    const char *p = message.c_str();
-X+    const char *p_end = p + message.size();
-X     if (p != p_end) {
-X 	unsigned flag_bits;
-X 	decode_length(&p, p_end, flag_bits);
-X 	flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
-X+    }
-X+
-X+    if (p != p_end) {
-X+	std::vector<string> dbpaths_;
-X+	size_t len;
-X+	decode_length_and_check(&p, p_end, len);
-X+	string dbpath(p, len);
-X+	dbpaths_.push_back(dbpath);
-X+	p += len;
-X 	if (p != p_end) {
-X-	    throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
-X+	    throw Xapian::NetworkError("only one database directory allowed on writable databases");
-X 	}
-X+	select_db(dbpaths_, true, flags);
-X+    } else {
-X+	select_db(dbpaths, true, flags);
-X     }
-X 
-X-    wdb = new Xapian::WritableDatabase(context, flags);
-X-    delete db;
-X-    db = wdb;
-X-    msg_update(msg);
-X+    msg_update(message);
-X }
-X 
-X void
-X RemoteServer::msg_reopen(const string & msg)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     if (!db->reopen()) {
-X 	send_message(REPLY_DONE, string());
-X 	return;
-X@@ -373,29 +421,39 @@ RemoteServer::msg_update(const string &)
-X 	char(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION),
-X 	char(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION)
-X     };
-X+
-X     string message(protocol, 2);
-X-    Xapian::doccount num_docs = db->get_doccount();
-X-    message += encode_length(num_docs);
-X-    message += encode_length(db->get_lastdocid() - num_docs);
-X-    Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
-X-    message += encode_length(doclen_lb);
-X-    message += encode_length(db->get_doclength_upper_bound() - doclen_lb);
-X-    message += (db->has_positions() ? '1' : '0');
-X-    // FIXME: clumsy to reverse calculate total_len like this:
-X-    totlen_t total_len = totlen_t(db->get_avlength() * db->get_doccount() + .5);
-X-    message += encode_length(total_len);
-X-    //message += encode_length(db->get_total_length());
-X-    string uuid = db->get_uuid();
-X-    message += uuid;
-X+
-X+    if (db) {
-X+	Xapian::doccount num_docs = db->get_doccount();
-X+	message += encode_length(num_docs);
-X+	message += encode_length(db->get_lastdocid() - num_docs);
-X+	Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
-X+	message += encode_length(doclen_lb);
-X+	message += encode_length(db->get_doclength_upper_bound() - doclen_lb);
-X+	message += (db->has_positions() ? '1' : '0');
-X+	// FIXME: clumsy to reverse calculate total_len like this:
-X+	totlen_t total_len = totlen_t(db->get_avlength() * db->get_doccount() + .5);
-X+	message += encode_length(total_len);
-X+	//message += encode_length(db->get_total_length());
-X+	string uuid = db->get_uuid();
-X+	message += uuid;
-X+    }
-X+
-X     send_message(REPLY_UPDATE, message);
-X }
-X 
-X void
-X RemoteServer::msg_query(const string &message_in)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message_in.c_str();
-X     const char *p_end = p + message_in.size();
-X 
-X+    Xapian::Enquire enquire(*db);
-X+
-X     // Unserialise the Query.
-X     size_t len;
-X     decode_length_and_check(&p, p_end, len);
-X@@ -406,6 +464,8 @@ RemoteServer::msg_query(const string &message_in)
-X     Xapian::termcount qlen;
-X     decode_length(&p, p_end, qlen);
-X 
-X+    enquire.set_query(query, qlen);
-X+
-X     Xapian::valueno collapse_max;
-X     decode_length(&p, p_end, collapse_max);
-X 
-X@@ -413,12 +473,16 @@ RemoteServer::msg_query(const string &message_in)
-X     if (collapse_max)
-X 	decode_length(&p, p_end, collapse_key);
-X 
-X+    enquire.set_collapse_key(collapse_key, collapse_max);
-X+
-X     if (p_end - p < 4 || *p < '0' || *p > '2') {
-X 	throw Xapian::NetworkError("bad message (docid_order)");
-X     }
-X     Xapian::Enquire::docid_order order;
-X     order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
-X 
-X+    enquire.set_docid_order(order);
-X+
-X     Xapian::valueno sort_key;
-X     decode_length(&p, p_end, sort_key);
-X 
-X@@ -433,8 +497,25 @@ RemoteServer::msg_query(const string &message_in)
-X     }
-X     bool sort_value_forward(*p++ != '0');
-X 
-X+    switch(sort_by) {
-X+	case Xapian::Enquire::Internal::REL:
-X+	    enquire.set_sort_by_relevance();
-X+	    break;
-X+	case Xapian::Enquire::Internal::VAL:
-X+	    enquire.set_sort_by_value(sort_key, sort_value_forward);
-X+	    break;
-X+	case Xapian::Enquire::Internal::VAL_REL:
-X+	    enquire.set_sort_by_value_then_relevance(sort_key, sort_value_forward);
-X+	    break;
-X+	case Xapian::Enquire::Internal::REL_VAL:
-X+	    enquire.set_sort_by_relevance_then_value(sort_key, sort_value_forward);
-X+	    break;
-X+    }
-X+
-X     double time_limit = unserialise_double(&p, p_end);
-X 
-X+    enquire.set_time_limit(time_limit);
-X+
-X     int percent_cutoff = *p++;
-X     if (percent_cutoff < 0 || percent_cutoff > 100) {
-X 	throw Xapian::NetworkError("bad message (percent_cutoff)");
-X@@ -445,6 +526,8 @@ RemoteServer::msg_query(const string &message_in)
-X 	throw Xapian::NetworkError("bad message (weight_cutoff)");
-X     }
-X 
-X+    enquire.set_cutoff(percent_cutoff, weight_cutoff);
-X+
-X     // Unserialise the Weight object.
-X     decode_length_and_check(&p, p_end, len);
-X     string wtname(p, len);
-X@@ -461,6 +544,7 @@ RemoteServer::msg_query(const string &message_in)
-X 
-X     decode_length_and_check(&p, p_end, len);
-X     AutoPtr<Xapian::Weight> wt(wttype->unserialise(string(p, len)));
-X+    enquire.set_weighting_scheme(*wt);
-X     p += len;
-X 
-X     // Unserialise the RSet object.
-X@@ -469,7 +553,7 @@ RemoteServer::msg_query(const string &message_in)
-X     p += len;
-X 
-X     // Unserialise any MatchSpy objects.
-X-    vector<Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy>> matchspies;
-X+    vector<Xapian::MatchSpy*> matchspies;
-X     while (p != p_end) {
-X 	decode_length_and_check(&p, p_end, len);
-X 	string spytype(p, len);
-X@@ -481,17 +565,15 @@ RemoteServer::msg_query(const string &message_in)
-X 	p += len;
-X 
-X 	decode_length_and_check(&p, p_end, len);
-X-	matchspies.push_back(spyclass->unserialise(string(p, len), reg)->release());
-X+	Xapian::MatchSpy *spy = spyclass->unserialise(string(p, len), reg);
-X+	matchspies.push_back(spy);
-X+	enquire.add_matchspy(spy->release());
-X 	p += len;
-X     }
-X 
-X-    Xapian::Weight::Internal local_stats;
-X-    MultiMatch match(*db, query, qlen, &rset, collapse_max, collapse_key,
-X-		     percent_cutoff, weight_cutoff, order,
-X-		     sort_key, sort_by, sort_value_forward, time_limit,
-X-		     local_stats, wt.get(), matchspies, false, false);
-X+    enquire.prepare_mset(&rset, nullptr);
-X 
-X-    send_message(REPLY_STATS, serialise_stats(local_stats));
-X+    send_message(REPLY_STATS, enquire.serialise_stats());
-X 
-X     string message;
-X     get_message(active_timeout, message, MSG_GETMSET);
-X@@ -506,14 +588,9 @@ RemoteServer::msg_query(const string &message_in)
-X     Xapian::termcount check_at_least;
-X     decode_length(&p, p_end, check_at_least);
-X 
-X-    message.erase(0, message.size() - (p_end - p));
-X-    AutoPtr<Xapian::Weight::Internal> total_stats(new Xapian::Weight::Internal);
-X-    unserialise_stats(message, *(total_stats.get()));
-X-    total_stats->set_bounds_from_db(*db);
-X+    enquire.unserialise_stats(std::string(p, p_end));
-X 
-X-    Xapian::MSet mset;
-X-    match.get_mset(first, maxitems, check_at_least, mset, *(total_stats.get()), 0, 0);
-X-    mset.internal->stats = total_stats.release();
-X+    Xapian::MSet mset = enquire.get_mset(first, maxitems, check_at_least);
-X 
-X     message.resize(0);
-X     for (auto i : matchspies) {
-X@@ -521,13 +598,16 @@ RemoteServer::msg_query(const string &message_in)
-X 	message += encode_length(spy_results.size());
-X 	message += spy_results;
-X     }
-X-    message += serialise_mset(mset);
-X+    message += mset.serialise();
-X     send_message(REPLY_RESULTS, message);
-X }
-X 
-X void
-X RemoteServer::msg_document(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     Xapian::docid did;
-X@@ -549,6 +629,9 @@ RemoteServer::msg_document(const string &message)
-X void
-X RemoteServer::msg_keepalive(const string &)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     // Ensure *our* database stays alive, as it may contain remote databases!
-X     db->keep_alive();
-X     send_message(REPLY_DONE, string());
-X@@ -557,24 +640,36 @@ RemoteServer::msg_keepalive(const string &)
-X void
-X RemoteServer::msg_termexists(const string &term)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     send_message((db->term_exists(term) ? REPLY_TERMEXISTS : REPLY_TERMDOESNTEXIST), string());
-X }
-X 
-X void
-X RemoteServer::msg_collfreq(const string &term)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     send_message(REPLY_COLLFREQ, encode_length(db->get_collection_freq(term)));
-X }
-X 
-X void
-X RemoteServer::msg_termfreq(const string &term)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     send_message(REPLY_TERMFREQ, encode_length(db->get_termfreq(term)));
-X }
-X 
-X void
-X RemoteServer::msg_freqs(const string &term)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     string msg = encode_length(db->get_termfreq(term));
-X     msg += encode_length(db->get_collection_freq(term));
-X     send_message(REPLY_FREQS, msg);
-X@@ -583,6 +678,9 @@ RemoteServer::msg_freqs(const string &term)
-X void
-X RemoteServer::msg_valuestats(const string & message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     while (p != p_end) {
-X@@ -604,6 +702,9 @@ RemoteServer::msg_valuestats(const string & message)
-X void
-X RemoteServer::msg_doclength(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     Xapian::docid did;
-X@@ -614,6 +715,9 @@ RemoteServer::msg_doclength(const string &message)
-X void
-X RemoteServer::msg_uniqueterms(const string &message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     const char *p = message.data();
-X     const char *p_end = p + message.size();
-X     Xapian::docid did;
-X@@ -715,12 +819,18 @@ RemoteServer::msg_replacedocumentterm(const string & message)
-X void
-X RemoteServer::msg_getmetadata(const string & message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     send_message(REPLY_METADATA, db->get_metadata(message));
-X }
-X 
-X void
-X RemoteServer::msg_openmetadatakeylist(const string & message)
-X {
-X+    if (!db)
-X+	throw_no_db();
-X+
-X     string prev = message;
-X     string reply;
-X 
-X@@ -778,3 +888,37 @@ RemoteServer::msg_removespelling(const string & message)
-X     decode_length(&p, p_end, freqdec);
-X     wdb->remove_spelling(string(p, p_end - p), freqdec);
-X }
-X+
-X+void
-X+RemoteServer::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags) {
-X+    if (writable_) {
-X+	AssertEq(dbpaths_.size(), 1); // Expecting exactly one database.
-X+	Xapian::WritableDatabase * wdb_ = new Xapian::WritableDatabase(dbpaths_[0], flags);
-X+	context = dbpaths_[0];
-X+	delete db;
-X+	db = wdb_;
-X+	wdb = wdb_;
-X+    } else {
-X+	Assert(!dbpaths_.empty());  // Expecting at least one database.
-X+	Xapian::Database * db_;
-X+	if (dbpaths_.size() == 1) {
-X+	    db_ = new Xapian::Database(dbpaths_[0], flags);
-X+	    context = dbpaths_[0];
-X+	} else {
-X+	    db_ = new Xapian::Database();
-X+	    // Build a better description than Database::get_description() gives
-X+	    // in the variable context.  FIXME: improve Database::get_description()
-X+	    // and then just use that instead.
-X+	    context = "";
-X+	    for (auto& path : dbpaths_) {
-X+		db->add_database(Xapian::Database(path, flags));
-X+		context += ' ';
-X+		context += path;
-X+	    }
-X+	}
-X+	delete db;
-X+	db = db_;
-X+	wdb = NULL;
-X+    }
-X+    dbpaths = dbpaths_;
-X+}
-cd2359dfb11d830004d48d3043a75101
-echo x - xapian-core/files/patch-net_remoteserver.h
-sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << '1811e7c1331cf56f9f2c5eb483581c69'
-Xdiff --git net/remoteserver.h net/remoteserver.h
-Xindex 857d791..37c0dab 100644
-X--- net/remoteserver.h
-X+++ net/remoteserver.h
-X@@ -69,6 +69,8 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
-X     /// The registry, which allows unserialisation of user subclasses.
-X     Xapian::Registry reg;
-X 
-X+    std::vector<std::string> dbpaths;
-X+
-X     /// Accept a message from the client.
-X     message_type get_message(double timeout, std::string & result,
-X 			     message_type required_type = MSG_MAX);
-X@@ -170,6 +172,11 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
-X     // get number of unique terms
-X     void msg_uniqueterms(const std::string & message);
-X 
-X+    // select an active database for read access
-X+    void msg_readaccess(const std::string & message);
-X+
-X+    void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags);
-X+
-X   public:
-X     /** Construct a RemoteServer.
-X      *
-1811e7c1331cf56f9f2c5eb483581c69
-echo x - xapian-core/files/patch-net_remotetcpclient.h
-sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << '8edbcb701c2f73405d7c18ffeac9b9b2'
-Xdiff --git net/remotetcpclient.h net/remotetcpclient.h
-Xindex 9da59a8..9382f27 100644
-X--- net/remotetcpclient.h
-X+++ net/remotetcpclient.h
-X@@ -74,11 +74,11 @@ class RemoteTcpClient : SOCKET_INITIALIZER_MIXIN public RemoteDatabase {
-X      *	@param flags		Xapian::DB_RETRY_LOCK or 0.
-X      */
-X     RemoteTcpClient(const std::string & hostname, int port,
-X-		    double timeout_, double timeout_connect, bool writable,
-X-		    int flags)
-X+		    double timeout_, double timeout_connect, bool writable_,
-X+		    int flags_, const std::string & dir)
-X 	: RemoteDatabase(open_socket(hostname, port, timeout_connect),
-X 			 timeout_, get_tcpcontext(hostname, port),
-X-			 writable, flags) { }
-X+			 writable_, flags_, dir) { }
-X 
-X     /** Destructor. */
-X     ~RemoteTcpClient();
-8edbcb701c2f73405d7c18ffeac9b9b2
-echo x - xapian-core/files/patch-net_resolver.h
-sed 's/^X//' >xapian-core/files/patch-net_resolver.h << '5ba018ecf61a069d7161ca26d182d963'
-X--- net/resolver.h.orig	2017-06-02 17:32:09 UTC
-X+++ net/resolver.h
-X@@ -22,6 +22,7 @@
-X #define XAPIAN_INCLUDED_RESOLVER_H
-X 
-X #include <cstring>
-X+#include <sys/socket.h>
-X #include "safenetdb.h"
-X #include "str.h"
-X #include "xapian/error.h"
-5ba018ecf61a069d7161ca26d182d963
 echo x - xapian-core/pkg-descr
 sed 's/^X//' >xapian-core/pkg-descr << '98a98df9fcab60de6efa63d29b31972f'
 XXapian is an Open Source Probabilistic Information Retrieval library, released
@@ -1416,7 +154,7 @@ Xlib/cmake/xapian/xapian-config-version.cmake
 Xlib/cmake/xapian/xapian-config.cmake
 Xlib/libxapian.so
 Xlib/libxapian.so.30
-Xlib/libxapian.so.30.3.1
+Xlib/libxapian.so.30.4.0
 Xlibdata/pkgconfig/xapian-core.pc
 Xman/man1/copydatabase.1.gz
 Xman/man1/quest.1.gz
@@ -1431,5 +169,1238 @@ Xman/man1/xapian-replicate-server.1.gz
 Xman/man1/xapian-tcpsrv.1.gz
 Xshare/aclocal/xapian.m4
 210f147e6696fa0219151394a79bdd74
+echo c - xapian-core/files
+mkdir -p xapian-core/files > /dev/null 2>&1
+echo x - xapian-core/files/patch-api_omenquire.cc
+sed 's/^X//' >xapian-core/files/patch-api_omenquire.cc << '73c1fcc39153e355766ceae99bdf1fc7'
+X--- api/omenquire.cc.orig	2017-10-16 02:32:24 UTC
+X+++ api/omenquire.cc
+X@@ -44,6 +44,7 @@
+X #include "api/omenquireinternal.h"
+X #include "str.h"
+X #include "weight/weightinternal.h"
+X+#include "net/serialise.h"
+X 
+X #include <algorithm>
+X #include "autoptr.h"
+X@@ -134,6 +135,20 @@ RSet::Internal::get_description() const
+X     return description;
+X }
+X 
+X+std::string
+X+RSet::serialise() const
+X+{
+X+    LOGCALL(API, std::string, "RSet::serialise", NO_ARGS);
+X+    RETURN(serialise_rset(*this));
+X+}
+X+
+X+RSet
+X+RSet::unserialise(const std::string &s)
+X+{
+X+    LOGCALL_STATIC(API, RSet, "RSet::unserialise", s);
+X+    RETURN(unserialise_rset(s));
+X+}
+X+
+X namespace Internal {
+X 
+X // Methods for Xapian::MSetItem
+X@@ -346,6 +361,20 @@ MSet::get_description() const
+X     return "Xapian::MSet(" + internal->get_description() + ")";
+X }
+X 
+X+std::string
+X+MSet::serialise() const
+X+{
+X+    LOGCALL(API, std::string, "MSet::serialise", NO_ARGS);
+X+    RETURN(serialise_mset(*this));
+X+}
+X+
+X+MSet
+X+MSet::unserialise(const std::string &s)
+X+{
+X+    LOGCALL_STATIC(API, MSet, "MSet::unserialise", s);
+X+    RETURN(unserialise_mset(s.data(), s.data() + s.size()));
+X+}
+X+
+X int
+X MSet::Internal::convert_to_percent_internal(double wt) const
+X {
+X@@ -543,6 +572,40 @@ Enquire::Internal::get_query() const
+X     return query;
+X }
+X 
+X+void
+X+Enquire::Internal::unserialise_stats(const string& serialised)
+X+{
+X+    stats.reset(new Xapian::Weight::Internal);
+X+    ::unserialise_stats(serialised, *(stats.get()));
+X+    stats->set_bounds_from_db(db);
+X+}
+X+
+X+const string
+X+Enquire::Internal::serialise_stats() const
+X+{
+X+    return ::serialise_stats(*(stats.get()));
+X+}
+X+
+X+void
+X+Enquire::Internal::prepare_mset(const RSet *rset,
+X+				const MatchDecider *mdecider) const
+X+{
+X+    LOGCALL(MATCH, MSet, "Enquire::Internal::prepare_mset", rset | mdecider);
+X+
+X+    if (percent_cutoff && (sort_by == VAL || sort_by == VAL_REL)) {
+X+	throw Xapian::UnimplementedError("Use of a percentage cutoff while sorting primary by value isn't currently supported");
+X+    }
+X+
+X+    stats.reset(new Xapian::Weight::Internal);
+X+    match.reset(new ::MultiMatch(db, query, qlen, rset,
+X+				 collapse_max, collapse_key,
+X+				 percent_cutoff, weight_cutoff,
+X+				 order, sort_key, sort_by, sort_value_forward,
+X+				 time_limit, *(stats.get()), weight, spies,
+X+				 (sorter.get() != NULL),
+X+				 (mdecider != NULL)));
+X+}
+X+
+X MSet
+X Enquire::Internal::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 			    Xapian::doccount check_at_least, const RSet *rset,
+X@@ -567,35 +630,43 @@ Enquire::Internal::get_mset(Xapian::docc
+X 	check_at_least = max(check_at_least, maxitems);
+X     }
+X 
+X-    AutoPtr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
+X-    ::MultiMatch match(db, query, qlen, rset,
+X-		       collapse_max, collapse_key,
+X-		       percent_cutoff, weight_cutoff,
+X-		       order, sort_key, sort_by, sort_value_forward,
+X-		       time_limit, *(stats.get()), weight, spies,
+X-		       (sorter.get() != NULL),
+X-		       (mdecider != NULL));
+X-    // Run query and put results into supplied Xapian::MSet object.
+X-    MSet retval;
+X-    match.get_mset(first, maxitems, check_at_least, retval,
+X-		   *(stats.get()), mdecider, sorter.get());
+X-    if (first_orig != first && retval.internal.get()) {
+X-	retval.internal->firstitem = first_orig;
+X-    }
+X+    try {
+X+	if (!stats || !match) {
+X+	    prepare_mset(rset, mdecider);
+X+	}
+X 
+X-    Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
+X 
+X-    // The Xapian::MSet needs to have a pointer to ourselves, so that it can
+X-    // retrieve the documents.  This is set here explicitly to avoid having
+X-    // to pass it into the matcher, which gets messy particularly in the
+X-    // networked case.
+X-    retval.internal->enquire = this;
+X+	// Run query and put results into supplied Xapian::MSet object.
+X+	MSet retval;
+X+	match->get_mset(first, maxitems, check_at_least, retval,
+X+		    *(stats.get()), mdecider, sorter.get());
+X+	if (first_orig != first && retval.internal.get()) {
+X+	    retval.internal->firstitem = first_orig;
+X+	}
+X 
+X-    if (!retval.internal->stats) {
+X-	retval.internal->stats = stats.release();
+X-    }
+X+	Assert(weight->name() != "bool" || retval.get_max_possible() == 0);
+X 
+X-    RETURN(retval);
+X+
+X+	// The Xapian::MSet needs to have a pointer to ourselves, so that it can
+X+	// retrieve the documents.  This is set here explicitly to avoid having
+X+	// to pass it into the matcher, which gets messy particularly in the
+X+	// networked case.
+X+	retval.internal->enquire = this;
+X+
+X+	if (!retval.internal->stats) {
+X+	    retval.internal->stats = stats.release();
+X+	} else {
+X+	    stats.reset();
+X+	}
+X+
+X+	match.reset();
+X+	
+X+	RETURN(retval);
+X+    } catch(...) {
+X+	stats.reset();
+X+	match.reset();
+X+	throw;
+X+    }
+X }
+X 
+X ESet
+X@@ -931,6 +1002,27 @@ Enquire::set_time_limit(double time_limi
+X     internal->time_limit = time_limit;
+X }
+X 
+X+void
+X+Enquire::unserialise_stats(const string& serialised)
+X+{
+X+    internal->unserialise_stats(serialised);
+X+}
+X+
+X+const string
+X+Enquire::serialise_stats() const
+X+{
+X+    RETURN(internal->serialise_stats());
+X+}
+X+
+X+void
+X+Enquire::prepare_mset(const RSet *rset,
+X+		      const MatchDecider *mdecider) const
+X+{
+X+    LOGCALL(API, Xapian::MSet, "Xapian::Enquire::prepare_mset", maxitems | rset | mdecider);
+X+
+X+    internal->prepare_mset(rset, mdecider);
+X+}
+X+
+X MSet
+X Enquire::get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 		  Xapian::doccount check_at_least, const RSet *rset,
+73c1fcc39153e355766ceae99bdf1fc7
+echo x - xapian-core/files/patch-api_omenquireinternal.h
+sed 's/^X//' >xapian-core/files/patch-api_omenquireinternal.h << '42000b6ff3d0b59949c6d3241f1d5cf9'
+X--- api/omenquireinternal.h.orig	2017-10-16 02:32:24 UTC
+X+++ api/omenquireinternal.h
+X@@ -38,6 +38,7 @@
+X #include <set>
+X #include <unordered_map>
+X 
+X+#include "autoptr.h"
+X #include "weight/weightinternal.h"
+X 
+X using namespace std;
+X@@ -152,6 +153,9 @@ class Enquire::Internal : public Xapian:
+X 
+X 	Xapian::Internal::opt_intrusive_ptr<KeyMaker> sorter;
+X 
+X+	mutable AutoPtr<Xapian::Weight::Internal> stats;
+X+	mutable AutoPtr<::MultiMatch> match;
+X+
+X 	double time_limit;
+X 
+X 	/** The weight to use for this query.
+X@@ -184,6 +188,13 @@ class Enquire::Internal : public Xapian:
+X 
+X 	void set_query(const Query & query_, termcount qlen_);
+X 	const Query & get_query() const;
+X+	
+X+	void unserialise_stats(const string& serialised);
+X+	const string serialise_stats() const;
+X+
+X+	void prepare_mset(const RSet *omrset,
+X+			  const MatchDecider *mdecider) const;
+X+	
+X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 		      Xapian::doccount check_at_least,
+X 		      const RSet *omrset,
+42000b6ff3d0b59949c6d3241f1d5cf9
+echo x - xapian-core/files/patch-backends_dbfactory__remote.cc
+sed 's/^X//' >xapian-core/files/patch-backends_dbfactory__remote.cc << 'ac69d80474e87d4780bc463a6adc8439'
+X--- backends/dbfactory_remote.cc.orig	2017-10-16 02:32:24 UTC
+X+++ backends/dbfactory_remote.cc
+X@@ -33,39 +33,69 @@ namespace Xapian {
+X 
+X Database
+X Remote::open(const string &host, unsigned int port, useconds_t timeout_,
+X-	     useconds_t connect_timeout)
+X+		useconds_t connect_timeout, int flags, const string &dir)
+X {
+X-    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout);
+X+    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout | flags | dir);
+X     RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+X-					connect_timeout * 1e-3, false, 0)));
+X+					connect_timeout * 1e-3, false, flags, dir)));
+X+}
+X+
+X+Database
+X+Remote::open(const string &host, unsigned int port, useconds_t timeout_,
+X+	     useconds_t connect_timeout)
+X+{
+X+    return Remote::open(host, port, timeout_, connect_timeout, 0, std::string());
+X }
+X 
+X+
+X WritableDatabase
+X Remote::open_writable(const string &host, unsigned int port,
+X 		      useconds_t timeout_, useconds_t connect_timeout,
+X-		      int flags)
+X+		      int flags, const string &dir)
+X {
+X-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags);
+X+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags | dir);
+X     RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+X 						connect_timeout * 1e-3, true,
+X-						flags)));
+X+						flags,  dir)));
+X+}
+X+
+X+WritableDatabase
+X+Remote::open_writable(const string &host, unsigned int port,
+X+		      useconds_t timeout_, useconds_t connect_timeout,
+X+		      int flags)
+X+{
+X+    return Remote::open_writable(host, port, timeout_, connect_timeout, flags, std::string());
+X }
+X 
+X Database
+X Remote::open(const string &program, const string &args,
+X-	     useconds_t timeout_)
+X+	     useconds_t timeout_, int flags, const string &dir)
+X {
+X-    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_);
+X-    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, 0)));
+X+    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_ | flags | dir);
+X+    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, flags, dir)));
+X+}
+X+
+X+Database
+X+Remote::open(const string &program, const string &args,
+X+	     useconds_t timeout_, int flags)
+X+{
+X+    return Remote::open(program, args, timeout_, flags, std::string());
+X }
+X 
+X WritableDatabase
+X Remote::open_writable(const string &program, const string &args,
+X-		      useconds_t timeout_, int flags)
+X+		      useconds_t timeout_, int flags, const string &dir)
+X {
+X-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags);
+X+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags | dir);
+X     RETURN(WritableDatabase(new ProgClient(program, args,
+X-					   timeout_ * 1e-3, true, flags)));
+X+					   timeout_ * 1e-3, true, flags, dir)));
+X+}
+X+
+X+WritableDatabase
+X+Remote::open_writable(const string &program, const string &args,
+X+		      useconds_t timeout_, int flags)
+X+{
+X+    return Remote::open_writable(program, args, timeout_, flags, std::string());
+X }
+X 
+X }
+ac69d80474e87d4780bc463a6adc8439
+echo x - xapian-core/files/patch-backends_remote_remote-database.cc
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.cc << '0ea39a0ec8ec970f8d736e827925e001'
+X--- backends/remote/remote-database.cc.orig	2017-10-16 02:32:24 UTC
+X+++ backends/remote/remote-database.cc
+X@@ -67,9 +67,12 @@ throw_connection_closed_unexpectedly()
+X }
+X 
+X RemoteDatabase::RemoteDatabase(int fd, double timeout_,
+X-			       const string & context_, bool writable,
+X-			       int flags)
+X-	: link(fd, fd, context_),
+X+		const string & context_, bool writable_,
+X+		int flags_, const string & dir)
+X+	: db_dir(dir),
+X+	  writable(writable_),
+X+	  flags(flags_),
+X+	  link(fd, fd, context_),
+X 	  context(context_),
+X 	  cached_stats_valid(),
+X 	  mru_valstats(),
+X@@ -95,14 +98,6 @@ RemoteDatabase::RemoteDatabase(int fd, d
+X 
+X     update_stats(MSG_MAX);
+X 
+X-    if (writable) {
+X-	if (flags & Xapian::DB_RETRY_LOCK) {
+X-	    const string & body = encode_length(flags & Xapian::DB_RETRY_LOCK);
+X-	    update_stats(MSG_WRITEACCESS, body);
+X-	} else {
+X-	    update_stats(MSG_WRITEACCESS);
+X-	}
+X-    }
+X }
+X 
+X void
+X@@ -338,7 +333,7 @@ RemoteDatabase::update_stats(message_typ
+X 
+X     string message;
+X     reply_type type = get_message(message);
+X-    if (type != REPLY_UPDATE || message.size() < 3) {
+X+    if (type != REPLY_UPDATE || message.size() < 2) {
+X 	if (type == REPLY_DONE) {
+X 	    // The database was already open at the latest revision.
+X 	    return false;
+X@@ -371,6 +366,47 @@ RemoteDatabase::update_stats(message_typ
+X 	    STRINGIZE(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
+X 	throw Xapian::NetworkError(errmsg, context);
+X     }
+X+    
+X+    if (p == p_end) {
+X+	message = encode_length(flags);
+X+	message += encode_length(db_dir.size());
+X+	message += db_dir;
+X+
+X+	if (writable) {
+X+	    send_message(MSG_WRITEACCESS, message);
+X+	} else {
+X+	    send_message(MSG_READACCESS, message);
+X+	}
+X+
+X+	get_message(message, REPLY_UPDATE);
+X+	if (message.size() < 3) {
+X+	    throw Xapian::NetworkError("Database was not selected", context);
+X+	}
+X+
+X+	p = message.c_str();
+X+	p_end = p + message.size();
+X+
+X+	// The protocol versions where already checked.
+X+	p += 2;
+X+    } else if (msg_code == MSG_MAX && writable) {
+X+	if (flags) {
+X+	    send_message(MSG_WRITEACCESS, encode_length(flags));
+X+	} else {
+X+	    send_message(MSG_WRITEACCESS, string());
+X+	}
+X+
+X+	get_message(message, REPLY_UPDATE);
+X+	if (message.size() < 3) {
+X+	    throw Xapian::NetworkError("Database was not selected", context);
+X+	}
+X+
+X+	p = message.c_str();
+X+	p_end = p + message.size();
+X+
+X+	// The protocol versions where already checked.
+X+	p += 2;
+X+    }
+X+
+X 
+X     decode_length(&p, p_end, doccount);
+X     decode_length(&p, p_end, lastdocid);
+X@@ -588,16 +624,16 @@ RemoteDatabase::do_close()
+X     // In the constructor, we set transaction_state to
+X     // TRANSACTION_UNIMPLEMENTED if we aren't writable so that we can check
+X     // it here.
+X-    bool writable = (transaction_state != TRANSACTION_UNIMPLEMENTED);
+X+    bool writable_ = (transaction_state != TRANSACTION_UNIMPLEMENTED);
+X 
+X     // Only call dtor_called() if we're writable.
+X-    if (writable) dtor_called();
+X+    if (writable_) dtor_called();
+X 
+X     // If we're writable, wait for a confirmation of the close, so we know that
+X     // changes have been written and flushed, and the database write lock
+X     // released.  For the non-writable case, there's no need to wait, so don't
+X     // slow down searching by waiting here.
+X-    link.do_close(writable);
+X+    link.do_close(writable_);
+X }
+X 
+X void
+0ea39a0ec8ec970f8d736e827925e001
+echo x - xapian-core/files/patch-backends_remote_remote-database.h
+sed 's/^X//' >xapian-core/files/patch-backends_remote_remote-database.h << '9fee399553c179cdff94485118d9bd8e'
+X--- backends/remote/remote-database.h.orig	2017-10-16 02:32:24 UTC
+X+++ backends/remote/remote-database.h
+X@@ -49,6 +49,15 @@ class RemoteDatabase : public Xapian::Da
+X     /// Don't allow copying.
+X     RemoteDatabase(const RemoteDatabase &);
+X 
+X+    // Directory to store databases in.
+X+    const std::string db_dir;
+X+
+X+    // The database is writable.
+X+    const bool writable;
+X+
+X+    // Bitwise-or of Xapian::DB_* flags.
+X+    const int flags;
+X+    
+X     /// The object which does the I/O.
+X     mutable RemoteConnection link;
+X 
+X@@ -103,10 +112,11 @@ class RemoteDatabase : public Xapian::Da
+X      *			operations will never timeout.
+X      *  @param context_ The context to return with any error messages.
+X      *	@param writable	Is this a WritableDatabase?
+X-     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
+X+     *	@param flags	Xapian::DB_RETRY_LOCK or Bitwise-or of Xapian::DB_* constants.
+X+     *	@param dir	Database directory index to open.
+X      */
+X     RemoteDatabase(int fd, double timeout_, const string & context_,
+X-		   bool writable, int flags);
+X+		   bool writable, int flags, const string & dir);
+X 
+X     /// Receive a message from the server.
+X     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
+9fee399553c179cdff94485118d9bd8e
+echo x - xapian-core/files/patch-common_remoteprotocol.h
+sed 's/^X//' >xapian-core/files/patch-common_remoteprotocol.h << 'f14fb3cbf56cb06e2897cb4e67e23ccc'
+X--- common/remoteprotocol.h.orig	2017-10-16 02:32:24 UTC
+X+++ common/remoteprotocol.h
+X@@ -89,6 +89,7 @@ enum message_type {
+X     MSG_METADATAKEYLIST,	// Iterator for metadata keys
+X     MSG_FREQS,			// Get termfreq and collfreq
+X     MSG_UNIQUETERMS,		// Get number of unique terms in doc
+X+    MSG_READACCESS,		// Select currenty active read access database
+X     MSG_MAX
+X };
+X 
+f14fb3cbf56cb06e2897cb4e67e23ccc
+echo x - xapian-core/files/patch-include_xapian_dbfactory.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_dbfactory.h << '67bbc4702834efb44fdc7a7a5e85d1c0'
+X--- include/xapian/dbfactory.h.orig	2017-10-16 02:32:24 UTC
+X+++ include/xapian/dbfactory.h
+X@@ -176,8 +176,14 @@ namespace Remote {
+X  *				Xapian::NetworkTimeoutError is thrown.  A
+X  *				timeout of 0 means don't timeout.  (Default is
+X  *				10000ms, which is 10 seconds).
+X+ * @param flags		bitwise-or of Xapian::DB_* constants.
+X+ * @param dir		database directory index to open.
+X  */
+X XAPIAN_VISIBILITY_DEFAULT
+X+Database open(const std::string &host, unsigned int port, useconds_t timeout, useconds_t connect_timeout, int flags, const std::string &dir = std::string());
+X+
+X+// FIXME: legacy form of above (not breaking ABI when flags and dir are not passed)
+X+XAPIAN_VISIBILITY_DEFAULT
+X Database open(const std::string &host, unsigned int port, useconds_t timeout = 10000, useconds_t connect_timeout = 10000);
+X 
+X /** Construct a WritableDatabase object for update access to a remote database
+X@@ -197,9 +203,14 @@ Database open(const std::string &host, u
+X  *				Xapian::NetworkTimeoutError is thrown.  A
+X  *				timeout of 0 means don't timeout.  (Default is
+X  *				10000ms, which is 10 seconds).
+X- * @param flags		Xapian::DB_RETRY_LOCK or 0.
+X+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
+X+ * @param dir		database directory index to open.
+X  */
+X XAPIAN_VISIBILITY_DEFAULT
+X+WritableDatabase open_writable(const std::string &host, unsigned int port, useconds_t timeout, useconds_t connect_timeout, int flags, const std::string &dir);
+X+
+X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
+X+XAPIAN_VISIBILITY_DEFAULT
+X WritableDatabase open_writable(const std::string &host, unsigned int port, useconds_t timeout = 0, useconds_t connect_timeout = 10000, int flags = 0);
+X 
+X /** Construct a Database object for read-only access to a remote database
+X@@ -215,9 +226,15 @@ WritableDatabase open_writable(const std
+X  *			then Xapian::NetworkTimeoutError is thrown.  A timeout
+X  *			of 0 means don't timeout.  (Default is 10000ms, which
+X  *			is 10 seconds).
+X+ * @param flags		bitwise-or of Xapian::DB_* constants.
+X+ * @param dir		database directory index to open.
+X  */
+X XAPIAN_VISIBILITY_DEFAULT
+X-Database open(const std::string &program, const std::string &args, useconds_t timeout = 10000);
+X+Database open(const std::string &program, const std::string &args, useconds_t timeout, int flags, const std::string &dir);
+X+
+X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
+X+XAPIAN_VISIBILITY_DEFAULT
+X+Database open(const std::string &program, const std::string &args, useconds_t timeout = 10000, int flags = 0);
+X 
+X /** Construct a WritableDatabase object for update access to a remote database
+X  *  accessed via a program.
+X@@ -231,9 +248,14 @@ Database open(const std::string &program
+X  *			for any individual operation on the remote database
+X  *			then Xapian::NetworkTimeoutError is thrown.  (Default
+X  *			is 0, which means don't timeout).
+X- * @param flags		Xapian::DB_RETRY_LOCK or 0.
+X+ * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
+X+ * @param dir		database directory index to open.
+X  */
+X XAPIAN_VISIBILITY_DEFAULT
+X+WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout, int flags, const std::string &dir);
+X+
+X+// FIXME: legacy form of above (not breaking ABI when dir is not passed)
+X+XAPIAN_VISIBILITY_DEFAULT
+X WritableDatabase open_writable(const std::string &program, const std::string &args, useconds_t timeout = 0, int flags = 0);
+X 
+X }
+67bbc4702834efb44fdc7a7a5e85d1c0
+echo x - xapian-core/files/patch-include_xapian_enquire.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_enquire.h << 'afc9ec4ca0a4c778214dbdacfb016ab2'
+X--- include/xapian/enquire.h.orig	2017-10-16 02:32:24 UTC
+X+++ include/xapian/enquire.h
+X@@ -103,6 +103,20 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
+X 
+X 	/// Return a string describing this object.
+X 	std::string get_description() const;
+X+	
+X+	/** Serialise RSet into a string.
+X+	 *
+X+	 *  The document representation may change between Xapian releases:
+X+	 *  even between minor versions.  However, it is guaranteed not to
+X+	 *  change if the remote database protocol has not changed between
+X+	 *  releases.
+X+	 */
+X+	std::string serialise() const;
+X+
+X+	/** Unserialise a document from a string produced by serialise().
+X+	 */
+X+	static RSet unserialise(const std::string &serialised);
+X+
+X };
+X 
+X /** Base class for matcher decision functor.
+X@@ -487,6 +501,9 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire 
+X 	 */
+X 	void set_time_limit(double time_limit);
+X 
+X+	void unserialise_stats(const std::string& serialised);
+X+	const std::string serialise_stats() const;
+X+
+X 	/** Get (a portion of) the match set for the current query.
+X 	 *
+X 	 *  @param first     the first item in the result set to return.
+X@@ -523,6 +540,8 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire 
+X 	 *
+X 	 *  @exception Xapian::InvalidArgumentError  See class documentation.
+X 	 */
+X+	void prepare_mset(const RSet * omrset = 0,
+X+			const MatchDecider * mdecider = 0) const;
+X 	MSet get_mset(Xapian::doccount first, Xapian::doccount maxitems,
+X 		      Xapian::doccount checkatleast = 0,
+X 		      const RSet * omrset = 0,
+afc9ec4ca0a4c778214dbdacfb016ab2
+echo x - xapian-core/files/patch-include_xapian_mset.h
+sed 's/^X//' >xapian-core/files/patch-include_xapian_mset.h << 'dcd82398ac91b4141e407b22618e7618'
+X--- include/xapian/mset.h.orig	2017-10-16 02:32:24 UTC
+X+++ include/xapian/mset.h
+X@@ -262,6 +262,19 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
+X     /// Return a string describing this object.
+X     std::string get_description() const;
+X 
+X+    /** Serialise MSet into a string.
+X+     *
+X+     *  The document representation may change between Xapian releases:
+X+     *  even between minor versions.  However, it is guaranteed not to
+X+     *  change if the remote database protocol has not changed between
+X+     *  releases.
+X+     */
+X+    std::string serialise() const;
+X+
+X+    /** Unserialise a document from a string produced by serialise().
+X+     */
+X+    static MSet unserialise(const std::string &serialised);
+X+
+X     /** @private @internal MSet is what the C++ STL calls a container.
+X      *
+X      *  The following typedefs allow the class to be used in templates in the
+dcd82398ac91b4141e407b22618e7618
+echo x - xapian-core/files/patch-net_progclient.cc
+sed 's/^X//' >xapian-core/files/patch-net_progclient.cc << '0289b2a578b1454667ac8e80e4c86882'
+X--- net/progclient.cc.orig	2017-10-16 02:32:24 UTC
+X+++ net/progclient.cc
+X@@ -64,16 +64,16 @@ split_words(const string &text, vector<s
+X #endif
+X 
+X ProgClient::ProgClient(const string &progname, const string &args,
+X-		       double timeout_, bool writable, int flags)
+X+		       double timeout_, bool writable_, int flags_, const string & dir)
+X 	: RemoteDatabase(run_program(progname, args
+X #ifndef __WIN32__
+X 						   , pid
+X #endif
+X 	),
+X-			 timeout_, get_progcontext(progname, args), writable,
+X-			 flags)
+X+			 timeout_, get_progcontext(progname, args), writable_,
+X+			 flags_, dir)
+X {
+X-    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable | flags);
+X+    LOGCALL_CTOR(DB, "ProgClient", progname | args | timeout_ | writable_ | flags_ | dir);
+X }
+X 
+X string
+0289b2a578b1454667ac8e80e4c86882
+echo x - xapian-core/files/patch-net_progclient.h
+sed 's/^X//' >xapian-core/files/patch-net_progclient.h << 'af1e8193bdacf07368b21c8e0218ba49'
+X--- net/progclient.h.orig	2017-10-16 02:32:24 UTC
+X+++ net/progclient.h
+X@@ -88,7 +88,8 @@ class ProgClient : public RemoteDatabase
+X 	       const std::string &arg,
+X 	       double msecs_timeout,
+X 	       bool writable,
+X-	       int flags);
+X+	       int flags,
+X+	       const std::string & dir);
+X 
+X     /** Destructor. */
+X     ~ProgClient();
+af1e8193bdacf07368b21c8e0218ba49
+echo x - xapian-core/files/patch-net_remoteserver.cc
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.cc << 'cd2359dfb11d830004d48d3043a75101'
+X--- net/remoteserver.cc.orig	2017-10-16 02:32:24 UTC
+X+++ net/remoteserver.cc
+X@@ -36,7 +36,7 @@
+X 
+X #include "autoptr.h"
+X #include "length.h"
+X-#include "matcher/multimatch.h"
+X+#include "api/omenquireinternal.h"
+X #include "noreturn.h"
+X #include "omassert.h"
+X #include "realtime.h"
+X@@ -54,10 +54,17 @@ throw_read_only()
+X     throw Xapian::InvalidOperationError("Server is read-only");
+X }
+X 
+X+XAPIAN_NORETURN(static void throw_no_db());
+X+static void
+X+throw_no_db()
+X+{
+X+    throw Xapian::InvalidOperationError("Server has no open database");
+X+}
+X+
+X /// Class to throw when we receive the connection closing message.
+X struct ConnectionClosed { };
+X 
+X-RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
+X+RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths_,
+X 			   int fdin_, int fdout_,
+X 			   double active_timeout_, double idle_timeout_,
+X 			   bool writable_)
+X@@ -67,26 +74,12 @@ RemoteServer::RemoteServer(const std::ve
+X {
+X     // Catch errors opening the database and propagate them to the client.
+X     try {
+X-	Assert(!dbpaths.empty());
+X-	// We always open the database read-only to start with.  If we're
+X-	// writable, the client can ask to be upgraded to write access once
+X-	// connected if it wants it.
+X-	db = new Xapian::Database(dbpaths[0]);
+X-	// Build a better description than Database::get_description() gives
+X-	// in the variable context.  FIXME: improve Database::get_description()
+X-	// and then just use that instead.
+X-	context = dbpaths[0];
+X-
+X-	if (!writable) {
+X-	    vector<std::string>::const_iterator i(dbpaths.begin());
+X-	    for (++i; i != dbpaths.end(); ++i) {
+X-		db->add_database(Xapian::Database(*i));
+X-		context += ' ';
+X-		context += *i;
+X-	    }
+X-	} else {
+X-	    AssertEq(dbpaths.size(), 1); // Expecting exactly one database.
+X-	}
+X+	if (!dbpaths_.empty()) {
+X+	    // We always open the database read-only to start with.  If we're
+X+	    // writable, the client can ask to be upgraded to write access once
+X+	    // connected if it wants it.
+X+	    select_db(dbpaths_, false, Xapian::DB_OPEN);	
+X+    	}
+X     } catch (const Xapian::Error &err) {
+X 	// Propagate the exception to the client.
+X 	send_message(REPLY_EXCEPTION, serialise_error(err));
+X@@ -192,6 +185,7 @@ RemoteServer::run()
+X 		&RemoteServer::msg_openmetadatakeylist,
+X 		&RemoteServer::msg_freqs,
+X 		&RemoteServer::msg_uniqueterms,
+X+	    	&RemoteServer::msg_readaccess,
+X 	    };
+X 
+X 	    string message;
+X@@ -239,6 +233,9 @@ RemoteServer::run()
+X void
+X RemoteServer::msg_allterms(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+    
+X     string prev = message;
+X     string reply;
+X 
+X@@ -262,6 +259,8 @@ RemoteServer::msg_allterms(const string 
+X void
+X RemoteServer::msg_termlist(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     Xapian::docid did;
+X@@ -289,6 +288,10 @@ RemoteServer::msg_termlist(const string 
+X void
+X RemoteServer::msg_positionlist(const string &message)
+X {
+X+
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     Xapian::docid did;
+X@@ -310,6 +313,9 @@ RemoteServer::msg_positionlist(const str
+X void
+X RemoteServer::msg_postlist(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+    
+X     const string & term = message;
+X 
+X     Xapian::doccount termfreq = db->get_termfreq(term);
+X@@ -333,32 +339,75 @@ RemoteServer::msg_postlist(const string 
+X }
+X 
+X void
+X-RemoteServer::msg_writeaccess(const string & msg)
+X+RemoteServer::msg_readaccess(const string &message)
+X+{
+X+    int flags = Xapian::DB_OPEN;
+X+    const char *p = message.c_str();
+X+    const char *p_end = p + message.size();
+X+    if (p != p_end) {
+X+	unsigned flag_bits;
+X+	decode_length(&p, p_end, flag_bits);
+X+	flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+X+    }
+X+
+X+    if (p != p_end) {
+X+	std::vector<string> dbpaths_;
+X+	while (p != p_end) {
+X+	    size_t len;
+X+	    decode_length_and_check(&p, p_end, len);
+X+	    string dbpath(p, len);
+X+	    dbpaths_.push_back(dbpath);
+X+	    p += len;
+X+	}
+X+	select_db(dbpaths_, false, flags);
+X+    } else {
+X+	select_db(dbpaths, false, flags);
+X+    }
+X+
+X+    msg_update(message);
+X+}
+X+		
+X+void
+X+RemoteServer::msg_writeaccess(const string & message)
+X {
+X     if (!writable)
+X 	throw_read_only();
+X 
+X     int flags = Xapian::DB_OPEN;
+X-    const char *p = msg.c_str();
+X-    const char *p_end = p + msg.size();
+X+    const char *p = message.c_str();
+X+    const char *p_end = p + message.size();
+X     if (p != p_end) {
+X 	unsigned flag_bits;
+X 	decode_length(&p, p_end, flag_bits);
+X 	flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+X-	if (p != p_end) {
+X-	    throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
+X+	
+X+    }
+X+    
+X+    if (p != p_end) {
+X+	std::vector<string> dbpaths_;
+X+	size_t len;
+X+	decode_length_and_check(&p, p_end, len);
+X+	string dbpath(p, len);
+X+	dbpaths_.push_back(dbpath);
+X+	p += len;
+X+
+X+    	if (p != p_end) {
+X+	    throw Xapian::NetworkError("only one database directory allowed on writable databases");
+X 	}
+X+    	select_db(dbpaths_, true, flags);
+X+    } else {
+X+	select_db(dbpaths, true, flags);
+X     }
+X 
+X-    wdb = new Xapian::WritableDatabase(context, flags);
+X-    delete db;
+X-    db = wdb;
+X-    msg_update(msg);
+X+    msg_update(message);
+X }
+X 
+X void
+X RemoteServer::msg_reopen(const string & msg)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     if (!db->reopen()) {
+X 	send_message(REPLY_DONE, string());
+X 	return;
+X@@ -374,25 +423,34 @@ RemoteServer::msg_update(const string &)
+X 	char(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION)
+X     };
+X     string message(protocol, 2);
+X-    Xapian::doccount num_docs = db->get_doccount();
+X-    message += encode_length(num_docs);
+X-    message += encode_length(db->get_lastdocid() - num_docs);
+X-    Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
+X-    message += encode_length(doclen_lb);
+X-    message += encode_length(db->get_doclength_upper_bound() - doclen_lb);
+X-    message += (db->has_positions() ? '1' : '0');
+X-    message += encode_length(db->get_total_length());
+X-    string uuid = db->get_uuid();
+X-    message += uuid;
+X+    
+X+    if (db) {
+X+	Xapian::doccount num_docs = db->get_doccount();
+X+	message += encode_length(num_docs);
+X+	message += encode_length(db->get_lastdocid() - num_docs);
+X+	Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
+X+	message += encode_length(doclen_lb);
+X+	message += encode_length(db->get_doclength_upper_bound() - doclen_lb);
+X+	message += (db->has_positions() ? '1' : '0');
+X+	message += encode_length(db->get_total_length());
+X+	string uuid = db->get_uuid();
+X+	message += uuid;
+X+    }
+X+    
+X     send_message(REPLY_UPDATE, message);
+X }
+X 
+X void
+X RemoteServer::msg_query(const string &message_in)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     const char *p = message_in.c_str();
+X     const char *p_end = p + message_in.size();
+X 
+X+    Xapian::Enquire enquire(*db);
+X+
+X     // Unserialise the Query.
+X     size_t len;
+X     decode_length_and_check(&p, p_end, len);
+X@@ -403,6 +461,8 @@ RemoteServer::msg_query(const string &me
+X     Xapian::termcount qlen;
+X     decode_length(&p, p_end, qlen);
+X 
+X+    enquire.set_query(query, qlen);
+X+
+X     Xapian::valueno collapse_max;
+X     decode_length(&p, p_end, collapse_max);
+X 
+X@@ -410,12 +470,16 @@ RemoteServer::msg_query(const string &me
+X     if (collapse_max)
+X 	decode_length(&p, p_end, collapse_key);
+X 
+X+    enquire.set_collapse_key(collapse_key, collapse_max);
+X+
+X     if (p_end - p < 4 || *p < '0' || *p > '2') {
+X 	throw Xapian::NetworkError("bad message (docid_order)");
+X     }
+X     Xapian::Enquire::docid_order order;
+X     order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
+X 
+X+    enquire.set_docid_order(order);
+X+
+X     Xapian::valueno sort_key;
+X     decode_length(&p, p_end, sort_key);
+X 
+X@@ -430,8 +494,25 @@ RemoteServer::msg_query(const string &me
+X     }
+X     bool sort_value_forward(*p++ != '0');
+X 
+X+    switch(sort_by) {
+X+	case Xapian::Enquire::Internal::REL:
+X+	    enquire.set_sort_by_relevance();
+X+	    break;
+X+	case Xapian::Enquire::Internal::VAL:
+X+	    enquire.set_sort_by_value(sort_key, sort_value_forward);
+X+	    break;
+X+	case Xapian::Enquire::Internal::VAL_REL:
+X+	    enquire.set_sort_by_value_then_relevance(sort_key, sort_value_forward);
+X+	    break;
+X+	case Xapian::Enquire::Internal::REL_VAL:
+X+	    enquire.set_sort_by_relevance_then_value(sort_key, sort_value_forward);
+X+	    break;
+X+    }
+X+
+X     double time_limit = unserialise_double(&p, p_end);
+X 
+X+    enquire.set_time_limit(time_limit);
+X+
+X     int percent_cutoff = *p++;
+X     if (percent_cutoff < 0 || percent_cutoff > 100) {
+X 	throw Xapian::NetworkError("bad message (percent_cutoff)");
+X@@ -442,6 +523,8 @@ RemoteServer::msg_query(const string &me
+X 	throw Xapian::NetworkError("bad message (weight_cutoff)");
+X     }
+X 
+X+    enquire.set_cutoff(percent_cutoff, weight_cutoff);
+X+
+X     // Unserialise the Weight object.
+X     decode_length_and_check(&p, p_end, len);
+X     string wtname(p, len);
+X@@ -458,6 +541,7 @@ RemoteServer::msg_query(const string &me
+X 
+X     decode_length_and_check(&p, p_end, len);
+X     AutoPtr<Xapian::Weight> wt(wttype->unserialise(string(p, len)));
+X+    enquire.set_weighting_scheme(*wt);
+X     p += len;
+X 
+X     // Unserialise the RSet object.
+X@@ -466,7 +550,7 @@ RemoteServer::msg_query(const string &me
+X     p += len;
+X 
+X     // Unserialise any MatchSpy objects.
+X-    vector<Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy>> matchspies;
+X+    vector<Xapian::MatchSpy*> matchspies;
+X     while (p != p_end) {
+X 	decode_length_and_check(&p, p_end, len);
+X 	string spytype(p, len);
+X@@ -478,17 +562,15 @@ RemoteServer::msg_query(const string &me
+X 	p += len;
+X 
+X 	decode_length_and_check(&p, p_end, len);
+X-	matchspies.push_back(spyclass->unserialise(string(p, len), reg)->release());
+X+	Xapian::MatchSpy *spy = spyclass->unserialise(string(p, len), reg);
+X+	matchspies.push_back(spy);
+X+	enquire.add_matchspy(spy->release());
+X 	p += len;
+X     }
+X 
+X-    Xapian::Weight::Internal local_stats;
+X-    MultiMatch match(*db, query, qlen, &rset, collapse_max, collapse_key,
+X-		     percent_cutoff, weight_cutoff, order,
+X-		     sort_key, sort_by, sort_value_forward, time_limit,
+X-		     local_stats, wt.get(), matchspies, false, false);
+X+    enquire.prepare_mset(&rset, nullptr);
+X 
+X-    send_message(REPLY_STATS, serialise_stats(local_stats));
+X+    send_message(REPLY_STATS, enquire.serialise_stats());
+X 
+X     string message;
+X     get_message(active_timeout, message, MSG_GETMSET);
+X@@ -503,14 +585,9 @@ RemoteServer::msg_query(const string &me
+X     Xapian::termcount check_at_least;
+X     decode_length(&p, p_end, check_at_least);
+X 
+X-    message.erase(0, message.size() - (p_end - p));
+X-    AutoPtr<Xapian::Weight::Internal> total_stats(new Xapian::Weight::Internal);
+X-    unserialise_stats(message, *(total_stats.get()));
+X-    total_stats->set_bounds_from_db(*db);
+X+    enquire.unserialise_stats(std::string(p, p_end));
+X 
+X-    Xapian::MSet mset;
+X-    match.get_mset(first, maxitems, check_at_least, mset, *(total_stats.get()), 0, 0);
+X-    mset.internal->stats = total_stats.release();
+X+    Xapian::MSet mset = enquire.get_mset(first, maxitems, check_at_least);
+X 
+X     message.resize(0);
+X     for (auto i : matchspies) {
+X@@ -518,13 +595,16 @@ RemoteServer::msg_query(const string &me
+X 	message += encode_length(spy_results.size());
+X 	message += spy_results;
+X     }
+X-    message += serialise_mset(mset);
+X+    message += mset.serialise();
+X     send_message(REPLY_RESULTS, message);
+X }
+X 
+X void
+X RemoteServer::msg_document(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     Xapian::docid did;
+X@@ -546,6 +626,9 @@ RemoteServer::msg_document(const string 
+X void
+X RemoteServer::msg_keepalive(const string &)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     // Ensure *our* database stays alive, as it may contain remote databases!
+X     db->keep_alive();
+X     send_message(REPLY_DONE, string());
+X@@ -554,24 +637,36 @@ RemoteServer::msg_keepalive(const string
+X void
+X RemoteServer::msg_termexists(const string &term)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     send_message((db->term_exists(term) ? REPLY_TERMEXISTS : REPLY_TERMDOESNTEXIST), string());
+X }
+X 
+X void
+X RemoteServer::msg_collfreq(const string &term)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     send_message(REPLY_COLLFREQ, encode_length(db->get_collection_freq(term)));
+X }
+X 
+X void
+X RemoteServer::msg_termfreq(const string &term)
+X {
+X+    if (!db)
+X+	     throw_no_db();
+X+
+X     send_message(REPLY_TERMFREQ, encode_length(db->get_termfreq(term)));
+X }
+X 
+X void
+X RemoteServer::msg_freqs(const string &term)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     string msg = encode_length(db->get_termfreq(term));
+X     msg += encode_length(db->get_collection_freq(term));
+X     send_message(REPLY_FREQS, msg);
+X@@ -580,6 +675,9 @@ RemoteServer::msg_freqs(const string &te
+X void
+X RemoteServer::msg_valuestats(const string & message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     while (p != p_end) {
+X@@ -601,6 +699,9 @@ RemoteServer::msg_valuestats(const strin
+X void
+X RemoteServer::msg_doclength(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+	
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     Xapian::docid did;
+X@@ -611,6 +712,9 @@ RemoteServer::msg_doclength(const string
+X void
+X RemoteServer::msg_uniqueterms(const string &message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     const char *p = message.data();
+X     const char *p_end = p + message.size();
+X     Xapian::docid did;
+X@@ -712,12 +816,18 @@ RemoteServer::msg_replacedocumentterm(co
+X void
+X RemoteServer::msg_getmetadata(const string & message)
+X {
+X+    if (!db)
+X+	throw_no_db();
+X+
+X     send_message(REPLY_METADATA, db->get_metadata(message));
+X }
+X 
+X void
+X RemoteServer::msg_openmetadatakeylist(const string & message)
+X {
+X+    if (!db)
+X+	    throw_no_db();
+X+
+X     string prev = message;
+X     string reply;
+X 
+X@@ -775,3 +885,37 @@ RemoteServer::msg_removespelling(const s
+X     decode_length(&p, p_end, freqdec);
+X     wdb->remove_spelling(string(p, p_end - p), freqdec);
+X }
+X+
+X+void
+X+RemoteServer::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags) {
+X+    if (writable_) {
+X+	AssertEq(dbpaths_.size(), 1); // Expecting exactly one database.
+X+	Xapian::WritableDatabase * wdb_ = new Xapian::WritableDatabase(dbpaths_[0], flags);
+X+	context = dbpaths_[0];
+X+	delete db;
+X+	db = wdb_;
+X+	wdb = wdb_;
+X+    } else {
+X+	Assert(!dbpaths_.empty());  // Expecting at least one database.
+X+	Xapian::Database * db_;
+X+	if (dbpaths_.size() == 1) {
+X+	    db_ = new Xapian::Database(dbpaths_[0], flags);
+X+	    context = dbpaths_[0];
+X+	} else {
+X+	    db_ = new Xapian::Database();
+X+	    // Build a better description than Database::get_description() gives
+X+	    // in the variable context.  FIXME: improve Database::get_description()
+X+	    // and then just use that instead.
+X+	    context = "";
+X+	    for (auto& path : dbpaths_) {
+X+		db->add_database(Xapian::Database(path, flags));
+X+		context += ' ';
+X+		context += path;
+X+	    }
+X+	}
+X+	delete db;
+X+	db = db_;
+X+	wdb = NULL;
+X+    }
+X+    dbpaths = dbpaths_;
+X+}
+cd2359dfb11d830004d48d3043a75101
+echo x - xapian-core/files/patch-net_remoteserver.h
+sed 's/^X//' >xapian-core/files/patch-net_remoteserver.h << '1811e7c1331cf56f9f2c5eb483581c69'
+X--- net/remoteserver.h.orig	2017-10-16 02:32:24 UTC
+X+++ net/remoteserver.h
+X@@ -69,6 +69,8 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteSe
+X     /// The registry, which allows unserialisation of user subclasses.
+X     Xapian::Registry reg;
+X 
+X+    std::vector<std::string> dbpaths;
+X+
+X     /// Accept a message from the client.
+X     message_type get_message(double timeout, std::string & result,
+X 			     message_type required_type = MSG_MAX);
+X@@ -170,6 +172,11 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteSe
+X     // get number of unique terms
+X     void msg_uniqueterms(const std::string & message);
+X 
+X+    // select an active database for read access
+X+    void msg_readaccess(const std::string & message);
+X+
+X+    void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags);
+X+
+X   public:
+X     /** Construct a RemoteServer.
+X      *
+1811e7c1331cf56f9f2c5eb483581c69
+echo x - xapian-core/files/patch-net_remotetcpclient.h
+sed 's/^X//' >xapian-core/files/patch-net_remotetcpclient.h << '8edbcb701c2f73405d7c18ffeac9b9b2'
+X--- net/remotetcpclient.h.orig	2017-10-16 02:32:24 UTC
+X+++ net/remotetcpclient.h
+X@@ -74,11 +74,11 @@ class RemoteTcpClient : SOCKET_INITIALIZ
+X      *	@param flags		Xapian::DB_RETRY_LOCK or 0.
+X      */
+X     RemoteTcpClient(const std::string & hostname, int port,
+X-		    double timeout_, double timeout_connect, bool writable,
+X-		    int flags)
+X+		    double timeout_, double timeout_connect, bool writable_,
+X+		    int flags_, const std::string & dir)
+X 	: RemoteDatabase(open_socket(hostname, port, timeout_connect),
+X 			 timeout_, get_tcpcontext(hostname, port),
+X-			 writable, flags) { }
+X+			 writable_, flags_, dir) { }
+X 
+X     /** Destructor. */
+X     ~RemoteTcpClient();
+8edbcb701c2f73405d7c18ffeac9b9b2
+echo x - xapian-core/files/patch-net_resolver.h
+sed 's/^X//' >xapian-core/files/patch-net_resolver.h << '5ba018ecf61a069d7161ca26d182d963'
+X--- net/resolver.h.orig	2017-10-16 02:32:24 UTC
+X+++ net/resolver.h
+X@@ -22,6 +22,7 @@
+X #define XAPIAN_INCLUDED_RESOLVER_H
+X 
+X #include <cstring>
+X+#include <sys/socket.h>
+X #include "safenetdb.h"
+X #include "safesyssocket.h"
+X #include "str.h"
+5ba018ecf61a069d7161ca26d182d963
 exit
 
