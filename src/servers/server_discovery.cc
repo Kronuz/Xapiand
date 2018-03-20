@@ -82,8 +82,6 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 void
 DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 {
-	char inet_addr[INET_ADDRSTRLEN];
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -105,7 +103,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 				L_INFO("Stalled node %s left the party!", remote_node->name);
 				if (XapiandManager::manager->put_node(remote_node)) {
 					if (heartbeat) {
-						L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name, inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
+						L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name, remote_node->host(), remote_node->http_port, remote_node->binary_port);
 					} else {
 						L_DISCOVERY("Node %s joining the party (1)...", remote_node->name);
 					}
@@ -122,7 +120,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	} else {
 		if (XapiandManager::manager->put_node(remote_node)) {
 			if (heartbeat) {
-				L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name, inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
+				L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name, remote_node->host(), remote_node->http_port, remote_node->binary_port);
 			} else {
 				L_DISCOVERY("Node %s joining the party (2)...", remote_node->name);
 			}
@@ -214,8 +212,6 @@ DiscoveryServer::enter(const std::string& message)
 		return;
 	}
 
-	char inet_addr[INET_ADDRSTRLEN];
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -223,7 +219,7 @@ DiscoveryServer::enter(const std::string& message)
 
 	XapiandManager::manager->put_node(remote_node);
 
-	L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name, inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
+	L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name, remote_node->host(), remote_node->http_port, remote_node->binary_port);
 }
 
 
@@ -307,8 +303,7 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
 	if (XapiandManager::manager->put_node(remote_node)) {
-		char inet_addr[INET_ADDRSTRLEN];
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name, inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name, remote_node->host(), remote_node->http_port, remote_node->binary_port);
 	}
 
 	L_DISCOVERY("Node %s has '%s' with a mastery of %llx!", remote_node->name, index_path, remote_mastery_level);
@@ -364,8 +359,7 @@ DiscoveryServer::db_updated(const std::string& message)
 		std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
 		if (XapiandManager::manager->put_node(remote_node)) {
-			char inet_addr[INET_ADDRSTRLEN];
-			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node->name, inet_ntop(AF_INET, &remote_node->addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node->http_port, remote_node->binary_port);
+			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node->name, remote_node->host(), remote_node->http_port, remote_node->binary_port);
 		}
 
 		Endpoint local_endpoint(index_path);

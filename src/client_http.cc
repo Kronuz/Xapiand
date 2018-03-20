@@ -1974,7 +1974,6 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 		node_name = index.host.empty() ? node_name : index.host;
 
 		// Convert node to endpoint:
-		char node_ip[INET_ADDRSTRLEN];
 		auto node = XapiandManager::manager->touch_node(node_name, UNKNOWN_REGION);
 		if (!node) {
 			THROW(Error, "Node %s not found", node_name);
@@ -1982,8 +1981,7 @@ HttpClient::_endpoint_maker(Request& request, std::chrono::duration<double, std:
 		if (!node_port) {
 			node_port = node->binary_port;
 		}
-		inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-		Endpoint endpoint(string::format("xapian://%s:%d/%s", node_ip, node_port, index_path), nullptr, -1, node_name);
+		Endpoint endpoint(string::format("xapian://%s:%d/%s", node->host(), node_port, index_path), nullptr, -1, node_name);
 #else
 		Endpoint endpoint(index_path);
 #endif
