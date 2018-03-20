@@ -207,7 +207,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 
 	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
 	buffer.append(buf, received);
-	while (buffer.length() >= 2) {
+	while (buffer.size() >= 2) {
 		const char *o = buffer.data();
 		const char *p = o;
 		const char *p_end = p + buffer.size();
@@ -220,8 +220,6 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		} catch (Xapian::SerialisationError) {
 			return;
 		}
-		std::string data = std::string(p, len);
-		buffer.erase(0, p - o + len);
 
 		L_BINARY("on_read message: '\\%02x' (state=0x%x)", type, state);
 		switch (type) {
@@ -232,7 +230,8 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				break;
 		}
 
-		messages_queue.push(std::make_unique<Buffer>(type, data, data.size()));
+		messages_queue.push(std::make_unique<Buffer>(type, p, len));
+		buffer.erase(0, p - o + len);
 	}
 
 	if (!messages_queue.empty()) {
