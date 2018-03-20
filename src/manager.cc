@@ -205,13 +205,13 @@ XapiandManager::load_node_name()
 
 
 void
-XapiandManager::save_node_name(const std::string& _node_name)
+XapiandManager::save_node_name(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::save_node_name(%s)", _node_name);
 
 	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
 	if (fd >= 0) {
-		if (io::write(fd, _node_name.c_str(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
+		if (io::write(fd, _node_name.data(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
 			L_CRIT("Cannot write in nodename file");
 			sig_exit(-EX_IOERR);
 		}
@@ -224,7 +224,7 @@ XapiandManager::save_node_name(const std::string& _node_name)
 
 
 std::string
-XapiandManager::set_node_name(const std::string& node_name_)
+XapiandManager::set_node_name(std::string_view node_name_)
 {
 	L_CALL("XapiandManager::set_node_name(%s)", node_name_);
 
@@ -258,7 +258,7 @@ XapiandManager::load_node_id()
 		buf[length] = '\0';
 		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		try {
-			node_id = unserialise_node_id(std::string(buf, length));
+			node_id = unserialise_node_id(std::string_view(buf, length));
 		} catch (...) {
 			L_CRIT("Cannot load node_id!");
 			sig_exit(-EX_IOERR);
@@ -366,7 +366,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	auto node_name_ = local_node_->name;
+	const auto& node_name_ = local_node_->name;
 	node_name = set_node_name(node_name_);
 	if (string::lower(node_name) != string::lower(node_name_)) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
@@ -842,25 +842,25 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 
 
 std::shared_ptr<const Node>
-XapiandManager::get_node(const std::string& _node_name)
+XapiandManager::get_node(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::get_node(%s)", _node_name);
 
-	try {
-		std::lock_guard<std::mutex> lk(nodes_mtx);
-		return nodes.at(string::lower(_node_name));
-	} catch (const std::out_of_range &err) {
-		return nullptr;
+	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto it = nodes.find(string::lower(_node_name));
+	if (it != nodes.end()) {
+		return nodes.value();
 	}
+	return nullptr;
 }
 
 
 std::shared_ptr<const Node>
-XapiandManager::touch_node(const std::string& _node_name, int32_t region)
+XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 {
 	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name, region);
 
-	std::string lower_node_name(string::lower(_node_name));
+	auto lower_node_name = string::lower(_node_name);
 
 	auto local_node_ = local_node.load();
 	if (lower_node_name == string::lower(local_node_->name)) {
@@ -892,7 +892,7 @@ XapiandManager::touch_node(const std::string& _node_name, int32_t region)
 
 
 void
-XapiandManager::drop_node(const std::string& _node_name)
+XapiandManager::drop_node(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::drop_node(%s)", _node_name);
 
@@ -916,7 +916,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 
 
 int32_t
-XapiandManager::get_region(const std::string& db_name)
+XapiandManager::get_region(std::string_view db_name)
 {
 	L_CALL("XapiandManager::get_region(%s)", db_name);
 

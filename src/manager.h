@@ -62,7 +62,7 @@ inline std::string serialise_node_id(uint64_t node_id) {
 }
 
 
-inline uint64_t unserialise_node_id(const std::string& node_id_str) {
+inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 	auto serialized = Base62::inverted().decode(node_id_str);
 	const char *p = serialized.data();
 	const char *p_end = p + serialized.size();
@@ -98,8 +98,8 @@ protected:
 
 	size_t nodes_size();
 	std::string load_node_name();
-	void save_node_name(const std::string& node_name);
-	std::string set_node_name(const std::string& node_name_);
+	void save_node_name(std::string_view node_name);
+	std::string set_node_name(std::string_view node_name_);
 
 	uint64_t load_node_id();
 	void save_node_id(uint64_t node_id);
@@ -176,14 +176,14 @@ public:
 	void reset_state();
 
 	bool put_node(std::shared_ptr<const Node> node);
-	std::shared_ptr<const Node> get_node(const std::string& node_name);
-	std::shared_ptr<const Node> touch_node(const std::string& node_name, int32_t region);
-	void drop_node(const std::string& node_name);
+	std::shared_ptr<const Node> get_node(std::string_view node_name);
+	std::shared_ptr<const Node> touch_node(std::string_view node_name, int32_t region);
+	void drop_node(std::string_view node_name);
 
 	size_t get_nodes_by_region(int32_t region);
 
 	// Return the region to which db name belongs
-	int32_t get_region(const std::string& db_name);
+	int32_t get_region(std::string_view db_name);
 	// Return the region to which local_node belongs
 	int32_t get_region();
 
