@@ -167,7 +167,7 @@ BinaryClient::on_read_file_done()
 				replication->replication_client_file_done();
 				break;
 			default:
-				L_ERR("ERROR: Invalid on_read_file_done for state: %d", state);
+				L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
 				checkin_database();
 				shutdown();
 		};
