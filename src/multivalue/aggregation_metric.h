@@ -650,11 +650,7 @@ public:
 	}
 
 	void _aggregate(double value) {
-		try {
-			++_histogram.at(value);
-		} catch (const std::out_of_range&) {
-			_histogram[value] = 1;
-		}
+		++_histogram[value];
 	}
 
 	void aggregate_float(double value, const Xapian::Document&) override {

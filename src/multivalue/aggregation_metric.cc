@@ -74,18 +74,18 @@ ValueHandle::operator()(SubAggregation* agg, const Xapian::Document& doc) const
 HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 	: SubAggregation(result)
 {
-	try {
-		const auto& agg = conf.at(AGGREGATION_FIELD);
-		try {
-			auto field_name = agg.str_view();
-			auto field_spc = schema->get_slot_field(field_name);
-			_handle.set(field_spc.slot, get_func_value_handle(field_spc.get_type(), field_name));
-		}  catch (const msgpack::type_error&) {
-			THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
-		}
-	} catch (const std::out_of_range&) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
-	} catch (const msgpack::type_error&) {
+	if (!conf.is_map()) {
 		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
 	}
+	const auto field_it = conf.find(AGGREGATION_FIELD);
+	if (field_it == conf.end()) {
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
+	}
+	const auto& field_conf = field_it.value();
+	if (!field_conf.is_string()) {
+		THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
+	}
+	auto field_name = field_conf.str_view();
+	auto field_spc = schema->get_slot_field(field_name);
+	_handle.set(field_spc.slot, get_func_value_handle(field_spc.get_type(), field_name));
 }

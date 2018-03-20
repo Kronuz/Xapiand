@@ -175,21 +175,26 @@ public:
 		  interval_f64(0.0)
 	{
 		const auto& histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
-		try {
-			const auto& interval = histogram_conf.at(AGGREGATION_INTERVAL);
-			try {
-				interval_u64 = interval.u64();
-			} catch (const msgpack::type_error&) { }
-			try {
-				interval_i64 = interval.i64();
-			} catch (const msgpack::type_error&) { }
-			try {
-				interval_f64 = interval.f64();
-			} catch (const msgpack::type_error&) { }
-		} catch (const std::out_of_range&) {
-			THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_INTERVAL, AGGREGATION_HISTOGRAM);
-		} catch (const msgpack::type_error&) {
+		if (!histogram_conf.is_map()) {
 			THROW(AggregationError, "'%s' must be object", AGGREGATION_HISTOGRAM);
+		}
+		const auto it = histogram_conf.find(AGGREGATION_INTERVAL);
+		if (it == histogram_conf.end()) {
+			THROW(AggregationError, "'%s' must be object with '%s'", AGGREGATION_HISTOGRAM, AGGREGATION_INTERVAL);
+		}
+		const auto& interval_value = it.value();
+		switch (interval_value.getType()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				interval_u64 = interval_value.u64();
+				break;
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				interval_i64 = interval_value.i64();
+				break;
+			case MsgPack::Type::FLOAT:
+				interval_f64 = interval_value.f64();
+				break;
+			default:
+				THROW(AggregationError, "'%s' must be object", AGGREGATION_HISTOGRAM);
 		}
 	}
 
@@ -252,76 +257,114 @@ public:
 		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema)
 	{
 		const auto& range_conf = _conf.at(AGGREGATION_RANGE);
-		try {
-			const auto& ranges = range_conf.at(AGGREGATION_RANGES);
-			for (const auto& range : ranges) {
-				std::string key;
-				uint64_t from_u64, to_u64;
-				int64_t from_i64, to_i64;
-				double from_f64, to_f64;
-
-				bool err_u64 = false;
-				bool err_i64 = false;
-				bool err_f64 = false;
-
-				try {
-					key = range.at(AGGREGATION_KEY).str();
-				} catch (const std::out_of_range&) { }
-
-				try {
-					const auto& from = range.at(AGGREGATION_FROM);
-					try {
-						from_u64 = from.u64();
-					} catch (const msgpack::type_error&) {
-						err_u64 = true;
-					}
-					try {
-						from_i64 = from.i64();
-					} catch (const msgpack::type_error&) {
-						err_i64 = true;
-					}
-					try {
-						from_f64 = from.f64();
-					} catch (const msgpack::type_error&) {
-						err_f64 = true;
-					}
-				} catch (const std::out_of_range&) {
-					from_u64 = std::numeric_limits<uint64_t>::min();
-					from_i64 = std::numeric_limits<int64_t>::min();
-					from_f64 = std::numeric_limits<double>::min();
-				}
-
-				try {
-					const auto& to = range.at(AGGREGATION_TO);
-					try {
-						to_u64 = to.u64();
-					} catch (const msgpack::type_error&) {
-						err_u64 = true;
-					}
-					try {
-						to_i64 = to.i64();
-					} catch (const msgpack::type_error&) {
-						err_i64 = true;
-					}
-					try {
-						to_f64 = to.f64();
-					} catch (const msgpack::type_error&) {
-						err_f64 = true;
-					}
-				} catch (const std::out_of_range&) {
-					to_u64 = std::numeric_limits<uint64_t>::max();
-					to_i64 = std::numeric_limits<int64_t>::max();
-					to_f64 = std::numeric_limits<double>::max();
-				}
-
-				if (!err_u64) ranges_u64.emplace_back(key.empty() ? _as_bucket(from_u64, to_u64) : key, std::make_pair(from_u64, to_u64));
-				if (!err_i64) ranges_i64.emplace_back(key.empty() ? _as_bucket(from_i64, to_i64) : key, std::make_pair(from_i64, to_i64));
-				if (!err_f64) ranges_f64.emplace_back(key.empty() ? _as_bucket(from_f64, to_f64) : key, std::make_pair(from_f64, to_f64));
-			}
-		} catch (const std::out_of_range&) {
-			THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_RANGES, AGGREGATION_RANGE);
-		} catch (const msgpack::type_error&) {
+		if (!range_conf.is_map()) {
 			THROW(AggregationError, "'%s' must be object", AGGREGATION_RANGE);
+		}
+		const auto it = range_conf.find(AGGREGATION_RANGES);
+		if (it == range_conf.end()) {
+			THROW(AggregationError, "'%s' must be object with '%s'", AGGREGATION_RANGE, AGGREGATION_RANGES);
+		}
+		const auto& ranges = it.value();
+		if (!ranges.is_array()) {
+			THROW(AggregationError, "'%s.%s' must be an array", AGGREGATION_RANGE, AGGREGATION_RANGES);
+		}
+		for (const auto& range : ranges) {
+			std::string_view key;
+			auto key_it = range.find(AGGREGATION_KEY);
+			if (key_it != range.end()) {
+				const auto& key_value = key_it.value();
+				if (!key_value.is_string()) {
+					THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
+				}
+				key = key_value.str_view();
+			}
+
+			bool is_u64 = false;
+			bool is_i64 = false;
+			bool is_f64 = false;
+
+			uint64_t from_u64 = std::numeric_limits<uint64_t>::min();
+			int64_t from_i64 = std::numeric_limits<int64_t>::min();
+			double from_f64 = std::numeric_limits<double>::min();
+			auto from_it = range.find(AGGREGATION_FROM);
+			if (from_it != range.end()) {
+				const auto& from_value = from_it.value();
+				switch (from_value.getType()) {
+					case MsgPack::Type::POSITIVE_INTEGER:
+						is_u64 = true;
+						from_u64 = from_value.u64();
+						break;
+					case MsgPack::Type::NEGATIVE_INTEGER:
+						is_i64 = true;
+						from_i64 = from_value.i64();
+						break;
+					case MsgPack::Type::FLOAT:
+						is_f64 = true;
+						from_f64 = from_value.f64();
+						break;
+					default:
+						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_FROM);
+				}
+			}
+
+			uint64_t to_u64 = std::numeric_limits<uint64_t>::max();
+			int64_t to_i64 = std::numeric_limits<int64_t>::max();
+			double to_f64 = std::numeric_limits<double>::max();
+			auto to_it = range.find(AGGREGATION_TO);
+			if (to_it != range.end()) {
+				const auto& to_value = to_it.value();
+				switch (to_value.getType()) {
+					case MsgPack::Type::POSITIVE_INTEGER:
+						to_u64 = to_value.u64();
+						if (is_i64) {
+							to_i64 = static_cast<int64_t>(to_u64);
+						} else if (is_f64) {
+							to_f64 = static_cast<double>(to_u64);
+						}
+						break;
+					case MsgPack::Type::NEGATIVE_INTEGER:
+						to_i64 = to_value.i64();
+						if (is_u64) {
+							is_u64 = false;
+							is_i64 = true;
+							from_i64 = static_cast<int64_t>(from_u64);
+						} else if (is_f64) {
+							to_f64 = static_cast<double>(to_i64);
+						}
+						break;
+					case MsgPack::Type::FLOAT:
+						to_f64 = to_value.f64();
+						if (is_u64) {
+							is_u64 = false;
+							is_f64 = true;
+							from_f64 = static_cast<double>(from_u64);
+						} else if (is_i64) {
+							is_i64 = false;
+							is_f64 = true;
+							from_f64 = static_cast<double>(from_i64);
+						}
+						break;
+					default:
+						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
+				}
+			}
+
+			if (is_f64) {
+				if (key.empty()) {
+					key = _as_bucket(from_f64, to_f64);
+				}
+				ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
+			} else if (is_i64) {
+				if (key.empty()) {
+					key = _as_bucket(from_i64, to_i64);
+				}
+				ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
+			} else if (is_u64) {
+				if (key.empty()) {
+					key = _as_bucket(from_u64, to_u64);
+				}
+				ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
+			}
 		}
 	}
 

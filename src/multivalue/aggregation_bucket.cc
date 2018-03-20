@@ -35,32 +35,45 @@ FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const
 	: SubAggregation(result),
 	  _agg(result, conf, schema)
 {
-	try {
-		const auto& field_term = conf.at(AGGREGATION_FILTER).at(AGGREGATION_TERM);
-		try {
-			for (const auto& field : field_term) {
-				auto field_name = field.str_view();
-				auto field_spc = schema->get_slot_field(field_name);
-				const auto& values = field_term.at(field_name);
-				std::set<std::string> s_values;
-				if (values.is_array()) {
-					for (const auto& value : values) {
-						s_values.insert(Serialise::MsgPack(field_spc, value));
-					}
-					func = &FilterAggregation::check_multiple;
-				} else {
-					s_values.insert(Serialise::MsgPack(field_spc, values));
-					func = &FilterAggregation::check_single;
-				}
-				_filters.emplace_back(field_spc.slot, std::move(s_values));
+	if (!conf.is_map()) {
+		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
+	}
+
+	const auto filter_it = conf.find(AGGREGATION_FILTER);
+	if (filter_it == conf.end()) {
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FILTER, repr(conf.to_string()));
+	}
+	const auto& filter_conf = filter_it.value();
+	if (!filter_conf.is_map()) {
+		THROW(AggregationError, "%s must be object", repr(filter_conf.to_string()));
+	}
+
+	const auto term_filter_it = filter_conf.find(AGGREGATION_TERM);
+	if (term_filter_it == filter_conf.end()) {
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_TERM, repr(filter_conf.to_string()));
+	}
+	const auto& term_filter_conf = term_filter_it.value();
+	if (!term_filter_conf.is_map()) {
+		THROW(AggregationError, "%s must be object", repr(term_filter_conf.to_string()));
+	}
+
+	const auto it = term_filter_conf.begin();
+	const auto it_end = term_filter_conf.end();
+	for (; it != it_end; ++it) {
+		auto field_name = it->str_view();
+		auto field_spc = schema->get_slot_field(field_name);
+		const auto& values = it.value();
+		std::set<std::string> s_values;
+		if (values.is_array()) {
+			for (const auto& value : values) {
+				s_values.insert(Serialise::MsgPack(field_spc, value));
 			}
-		} catch (const msgpack::type_error&) {
-			THROW(AggregationError, "'%s' must be object of objects", AGGREGATION_TERM);
+			func = &FilterAggregation::check_multiple;
+		} else {
+			s_values.insert(Serialise::MsgPack(field_spc, values));
+			func = &FilterAggregation::check_single;
 		}
-	} catch (const std::out_of_range&) {
-		THROW(AggregationError, "'%s' must be specified must be specified in '%s'", AGGREGATION_TERM, AGGREGATION_FILTER);
-	} catch (const msgpack::type_error&) {
-		THROW(AggregationError, "'%s' must be object", AGGREGATION_FILTER);
+		_filters.emplace_back(field_spc.slot, std::move(s_values));
 	}
 }
 

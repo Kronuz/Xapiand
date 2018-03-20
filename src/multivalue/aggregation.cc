@@ -78,12 +78,21 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 
 	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 
-	try {
-		const auto& aggs = conf.at(AGGREGATION_AGGS);
-		for (const auto& agg : aggs) {
-			auto sub_agg_name = agg.str_view();
+	const auto aggs_it = conf.find(AGGREGATION_AGGS);
+	if (aggs_it != conf.end()) {
+		const auto& aggs = aggs_it.value();
+		if (!aggs.is_map()) {
+			THROW(AggregationError, "'%s' must be an object", AGGREGATION_AGGS);
+		}
+		const auto it = aggs.begin();
+		const auto it_end = aggs.end();
+		for (; it != it_end; ++it) {
+			auto sub_agg_name = it->str_view();
 			if (is_valid(sub_agg_name)) {
-				const auto& sub_agg = aggs.at(sub_agg_name);
+				const auto& sub_agg = it.value();
+				if (!sub_agg.is_map()) {
+					THROW(AggregationError, "All aggregations must be objects");
+				}
 				auto sub_agg_type = sub_agg.begin()->str_view();
 				switch (_.fhh(sub_agg_type)) {
 					case _.fhh(AGGREGATION_COUNT):
@@ -177,9 +186,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 				THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", repr(sub_agg_name));
 			}
 		}
-	} catch (const msgpack::type_error) {
-		THROW(AggregationError, "Aggregations must be an object");
-	} catch (const std::out_of_range&) { }
+	}
 }
 
 
