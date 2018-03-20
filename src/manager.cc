@@ -366,9 +366,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	const auto& node_name_ = local_node_->name();
-	node_name = set_node_name(node_name_);
-	if (string::lower(node_name) != string::lower(node_name_)) {
+	node_name = set_node_name(local_node_->lower_name());
+	if (string::lower(node_name) != local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->name(node_name);
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
