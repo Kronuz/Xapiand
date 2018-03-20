@@ -52,7 +52,8 @@
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
-#define DATABASE_UPDATE_TIME 3
+#define REMOTE_DATABASE_UPDATE_TIME 3
+#define LOCAL_DATABASE_UPDATE_TIME 10
 
 #define DATA_STORAGE_PATH "docdata."
 
@@ -133,7 +134,7 @@ DatabaseWAL::open_current(bool commited)
 {
 	L_CALL("DatabaseWAL::open_current(%s)", commited ? "true" : "false");
 
-	uint32_t revision = database->checkout_revision;
+	uint32_t revision = database->reopen_revision;
 
 	DIR *dir = opendir(base_path.c_str(), true);
 	if (!dir) {
@@ -860,9 +861,9 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
-	  access_time(std::chrono::system_clock::now()),
 	  mastery_level(-1),
-	  checkout_revision(0)
+	  reopen_time(std::chrono::system_clock::now()),
+	  reopen_revision(0)
 {
 	reopen();
 
@@ -903,13 +904,13 @@ Database::reopen()
 {
 	L_CALL("Database::reopen()");
 
-	access_time = std::chrono::system_clock::now();
+	reopen_time = std::chrono::system_clock::now();
 
 	if (db) {
 		// Try to reopen
 		try {
 			bool ret = db->reopen();
-			L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(access_time, std::chrono::system_clock::now()));
+			L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
 			return ret;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
@@ -987,10 +988,10 @@ Database::reopen()
 		}
 
 		db->add_database(wdb);
-		dbs.push_back(wdb);
+		dbs.emplace_back(wdb, local);
 
 		if (local) {
-			checkout_revision = get_revision();
+			reopen_revision = get_revision();
 		}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -1009,7 +1010,7 @@ Database::reopen()
 #endif /* XAPIAND_DATA_STORAGE */
 
 #ifdef XAPIAND_DATABASE_WAL
-		/* If checkout_revision is not available Wal work as a log for the operations */
+		/* If reopen_revision is not available Wal work as a log for the operations */
 		if (local && !(flags & DB_NOWAL)) {
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(e.path, this);
@@ -1020,13 +1021,13 @@ Database::reopen()
 					}
 				}
 			} catch (const StorageCorruptVolume& exc) {
-				if (wal->create(checkout_revision)) {
-					L_WARNING("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), checkout_revision);
+				if (wal->create(reopen_revision)) {
+					L_WARNING("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
 					if (auto queue = weak_queue.lock()) {
 						queue->modified = true;
 					}
 				} else {
-					L_ERR("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), checkout_revision);
+					L_ERR("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
 				}
 			}
 		}
@@ -1096,7 +1097,7 @@ Database::reopen()
 			}
 
 			db->add_database(rdb);
-			dbs.push_back(rdb);
+			dbs.emplace_back(rdb, local);
 
 	#ifdef XAPIAND_DATA_STORAGE
 			if (local && endpoints_size == 1) {
@@ -1113,7 +1114,7 @@ Database::reopen()
 		}
 	}
 
-	L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(access_time, std::chrono::system_clock::now()));
+	L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
 
 	return true;
 }
@@ -2229,9 +2230,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()));
 	}
 
-	size_t hash = endpoints.hash();
-
 	if (!finished) {
+		size_t hash = endpoints.hash();
+
 		std::unique_lock<std::mutex> lk(qmtx);
 
 		std::shared_ptr<DatabaseQueue> queue;
@@ -2339,17 +2340,36 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoints.to_string()));
 	}
 
+	// Reopening of old/outdated databases:
 	if (!db_writable) {
 		bool reopen = false;
-		if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->access_time).count() >= DATABASE_UPDATE_TIME) {
+		auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();
+		if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
+			// Database is just too old, reopen
 			reopen = true;
 		} else {
 			for (size_t i = 0; i < endpoints.size(); ++i) {
+				const auto& db_pair = database->dbs[i];
+				auto hash = endpoints[i].hash();
 				std::lock_guard<std::mutex> lk(qmtx);
-				auto queue = writable_databases.get(endpoints[i].hash());
-				if (queue && queue->revision != database->dbs[i].get_revision()) {
-					reopen = true;
-					break;
+				if (db_pair.second) {
+					// Local database:
+					auto queue = writable_databases.get(hash);
+					if (queue) {
+						auto revision = queue->revision.load();
+						if (revision != db_pair.first.get_revision()) {
+							// Local writable database has changed revision.
+							reopen = true;
+							break;
+						}
+					}
+				} else {
+					// Remote database:
+					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
+						// Remote database is too old, reopen.
+						reopen = true;
+						break;
+					}
 				}
 			}
 		}
@@ -2367,7 +2387,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 	}
 
-	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->checkout_revision);
+	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->reopen_revision);
 }
 
 
@@ -2388,8 +2408,8 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		auto& endpoint = database->endpoints[0];
 		if (endpoint.is_local()) {
 			auto new_revision = database->get_revision();
-			if (database->checkout_revision != new_revision) {
-				database->checkout_revision = new_revision;
+			if (database->reopen_revision != new_revision) {
+				database->reopen_revision = new_revision;
 				if (database->mastery_level != -1) {
 					endpoint.mastery_level = database->mastery_level;
 					updated_databases.push(endpoint);

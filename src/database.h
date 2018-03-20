@@ -282,12 +282,12 @@ public:
 	Endpoints endpoints;
 	int flags;
 	size_t hash;
-	std::chrono::system_clock::time_point access_time;
 	long long mastery_level;
-	uint32_t checkout_revision;
+	std::chrono::system_clock::time_point reopen_time;
+	uint32_t reopen_revision;
 
 	std::unique_ptr<Xapian::Database> db;
-	std::vector<Xapian::Database> dbs;
+	std::vector<std::pair<Xapian::Database, bool>> dbs;
 
 #if XAPIAND_DATABASE_WAL
 	std::unique_ptr<DatabaseWAL> wal;
