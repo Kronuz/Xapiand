@@ -820,20 +820,19 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
-		try {
-			auto& node_ref = nodes.at(node->lower_name());
+		auto it = nodes.find(node->lower_name());
+		if (it != nodes.end()) {
+			auto& node_ref = it->second;
 			if (*node == *node_ref) {
 				auto node_copy = std::make_unique<Node>(*node_ref);
 				node_copy->touched = epoch::now<>();
 				node_ref = std::shared_ptr<const Node>(node_copy.release());
 			}
-		} catch (const std::out_of_range &err) {
+		} else {
 			auto node_copy = std::make_unique<Node>(*node);
 			node_copy->touched = epoch::now<>();
 			nodes[node->lower_name()] = std::shared_ptr<const Node>(node_copy.release());
 			return true;
-		} catch (...) {
-			throw;
 		}
 	}
 	return false;
@@ -848,7 +847,7 @@ XapiandManager::get_node(std::string_view _node_name)
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	auto it = nodes.find(string::lower(_node_name));
 	if (it != nodes.end()) {
-		return nodes.value();
+		return it->second;
 	}
 	return nullptr;
 }
@@ -871,8 +870,9 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 		return local_node.load();
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
-		try {
-			auto& node_ref = nodes.at(lower_node_name);
+		auto it = nodes.find(lower_node_name);
+		if (it != nodes.end()) {
+			auto& node_ref = it->second;
 			auto node_ref_copy = std::make_unique<Node>(*node_ref);
 			node_ref_copy->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
@@ -880,9 +880,6 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 			}
 			node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 			return node_ref;
-		} catch (const std::out_of_range &err) {
-		} catch (...) {
-			throw;
 		}
 	}
 	return nullptr;
@@ -931,7 +928,7 @@ XapiandManager::get_region(std::string_view db_name)
 		local_node_ = local_node.load();
 	}
 
-	std::hash<std::string> hash_fn;
+	std::hash<std::string_view> hash_fn;
 	return jump_consistent_hash(hash_fn(db_name), local_node_->regions);
 }
 
