@@ -25,7 +25,6 @@
 #include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
 
 #include <algorithm>            // for move
-#include <arpa/inet.h>          // for inet_ntop
 #include <atomic>
 #include <cstddef>              // for size_t
 #include <functional>           // for hash
@@ -125,9 +124,7 @@ struct Node {
 	static Node unserialise(const char **p, const char *end);
 
 	std::string host() const {
-		char ip[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-		return std::string(ip);
+		return fast_inet_ntop4(addr.sin_addr);
 	}
 
 	bool operator==(const Node& other) const {

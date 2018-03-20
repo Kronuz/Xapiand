@@ -23,7 +23,6 @@
 #include "manager.h"
 
 #include <algorithm>                         // for move
-#include <arpa/inet.h>                       // for inet_ntop
 #include <atomic>                            // for atomic, atomic_int
 #include <chrono>                            // for duration, system_clock
 #include <cstdint>                           // for uint64_t, UINT64_MAX
@@ -449,10 +448,8 @@ XapiandManager::host_address()
 	} else {
 		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
 			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
-				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
-				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				L_NOTICE("Node IP address is %s on interface %s", ip, ifa->ifa_name);
+				L_NOTICE("Node IP address is %s on interface %s", fast_inet_ntop4(addr.sin_addr), ifa->ifa_name);
 				break;
 			}
 		}

@@ -24,6 +24,7 @@
 
 #include "xapiand.h"
 
+#include <arpa/inet.h>        // for inet_ntop
 #include <cerrno>             // for EAGAIN, ECONNRESET, EHOSTDOWN, EHOSTUNREACH
 #include <chrono>             // for std::chrono
 #include <cmath>              // for std::log10, std::floor, std::pow
@@ -124,6 +125,18 @@ inline bool ignored_errorno(int e, bool tcp, bool udp) {
 		default:
 			return false;  // Do not ignore error
 	}
+}
+
+
+inline std::string fast_inet_ntop4(const struct in_addr& addr) {
+	// char ip[INET_ADDRSTRLEN];
+	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
+	// return std::string(ip);
+	return string::format("%d.%d.%d.%d",
+		(addr.s_addr >> 24) & 0xff,
+		(addr.s_addr >> 16) & 0xff,
+		(addr.s_addr >> 8) & 0xff,
+		addr.s_addr & 0xff);
 }
 
 
