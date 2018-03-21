@@ -133,10 +133,10 @@ inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
 	// return std::string(ip);
 	return string::format("%d.%d.%d.%d",
-		(addr.s_addr >> 24) & 0xff,
-		(addr.s_addr >> 16) & 0xff,
+		addr.s_addr & 0xff,
 		(addr.s_addr >> 8) & 0xff,
-		addr.s_addr & 0xff);
+		(addr.s_addr >> 16) & 0xff,
+		(addr.s_addr >> 24) & 0xff);
 }
 
 
