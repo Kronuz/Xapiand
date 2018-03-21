@@ -97,7 +97,9 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 }
 
 
-int create_db_wal(DB_Test& db_wal) {
+int create_db_wal() {
+	static DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
+
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
 
@@ -131,9 +133,8 @@ int create_db_wal(DB_Test& db_wal) {
 int restore_database() {
 	INIT_LOG
 #if XAPIAND_DATABASE_WAL
-	DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 	try {
-		if (create_db_wal(db_wal) == 0) {
+		if (create_db_wal() == 0) {
 			/* Trigger the backup wal */
 			std::shared_ptr<DatabaseQueue> b_queue;
 			Endpoints endpoints;

@@ -27,5 +27,5 @@
 
 uint32_t get_checksum(int fd);
 bool dir_compare(const std::string& dir1, const std::string& dir2);
-int create_db_wal(DB_Test& db_wal);
+int create_db_wal();
 int restore_database();

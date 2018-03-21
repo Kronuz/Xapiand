@@ -138,34 +138,33 @@ const std::vector<test_query_t> test_partials({
 });
 
 
-static DB_Test db_query(".db_query.db", std::vector<std::string>({
-		// Examples used in test geo.
-		path_test_query + "json/geo_1.txt",
-		path_test_query + "json/geo_2.txt",
-		path_test_query + "json/geo_3.txt",
-		path_test_query + "json/geo_4.txt",
-		path_test_query + "json/geo_5.txt",
-		path_test_query + "json/geo_6.txt",
-		path_test_query + "json/geo_7.txt",
-		path_test_query + "json/geo_8.txt",
-		// Examples used in test sort.
-		path_test_query + "sort/doc1.txt",
-		path_test_query + "sort/doc2.txt",
-		path_test_query + "sort/doc3.txt",
-		path_test_query + "sort/doc4.txt",
-		path_test_query + "sort/doc5.txt",
-		path_test_query + "sort/doc6.txt",
-		path_test_query + "sort/doc7.txt",
-		path_test_query + "sort/doc8.txt",
-		path_test_query + "sort/doc9.txt",
-		path_test_query + "sort/doc10.txt",
-		// Search examples.
-		path_test_query + "json/example_1.txt",
-		path_test_query + "json/example_2.txt"
-	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
-
 static int make_search(const std::vector<test_query_t> _tests) {
+	static DB_Test db_query(".db_query.db", std::vector<std::string>({
+			// Examples used in test geo.
+			path_test_query + "json/geo_1.txt",
+			path_test_query + "json/geo_2.txt",
+			path_test_query + "json/geo_3.txt",
+			path_test_query + "json/geo_4.txt",
+			path_test_query + "json/geo_5.txt",
+			path_test_query + "json/geo_6.txt",
+			path_test_query + "json/geo_7.txt",
+			path_test_query + "json/geo_8.txt",
+			// Examples used in test sort.
+			path_test_query + "sort/doc1.txt",
+			path_test_query + "sort/doc2.txt",
+			path_test_query + "sort/doc3.txt",
+			path_test_query + "sort/doc4.txt",
+			path_test_query + "sort/doc5.txt",
+			path_test_query + "sort/doc6.txt",
+			path_test_query + "sort/doc7.txt",
+			path_test_query + "sort/doc8.txt",
+			path_test_query + "sort/doc9.txt",
+			path_test_query + "sort/doc10.txt",
+			// Search examples.
+			path_test_query + "json/example_1.txt",
+			path_test_query + "json/example_2.txt"
+		}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+
 	int cont = 0;
 	query_field_t query;
 	query.limit = 20;

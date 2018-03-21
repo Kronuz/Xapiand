@@ -97,19 +97,18 @@ const std::vector<test_geo_t> geo_terms_tests({
 });
 
 
-static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
-		path_test_geo + "geo_1.txt",
-		path_test_geo + "geo_2.txt",
-		path_test_geo + "geo_3.txt",
-		path_test_geo + "geo_4.txt",
-		path_test_geo + "geo_5.txt",
-		path_test_geo + "geo_6.txt",
-		path_test_geo + "geo_7.txt",
-		path_test_geo + "geo_8.txt"
-	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
-
 static int make_search(const std::vector<test_geo_t> _tests) {
+	static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
+			path_test_geo + "geo_1.txt",
+			path_test_geo + "geo_2.txt",
+			path_test_geo + "geo_3.txt",
+			path_test_geo + "geo_4.txt",
+			path_test_geo + "geo_5.txt",
+			path_test_geo + "geo_6.txt",
+			path_test_geo + "geo_7.txt",
+			path_test_geo + "geo_8.txt"
+		}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+
 	int cont = 0;
 	query_field_t query;
 	query.sort.push_back(ID_FIELD_NAME);

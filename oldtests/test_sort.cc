@@ -668,22 +668,21 @@ const std::vector<sort_t> geo_tests({
 });
 
 
-static DB_Test db_sort(".db_sort.db", std::vector<std::string>({
-		// Examples used in test geo.
-		path_test_sort + "doc1.txt",
-		path_test_sort + "doc2.txt",
-		path_test_sort + "doc3.txt",
-		path_test_sort + "doc4.txt",
-		path_test_sort + "doc5.txt",
-		path_test_sort + "doc6.txt",
-		path_test_sort + "doc7.txt",
-		path_test_sort + "doc8.txt",
-		path_test_sort + "doc9.txt",
-		path_test_sort + "doc10.txt"
-	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
-
 static int make_search(const std::vector<sort_t> _tests, const std::string& metric=std::string()) {
+	static DB_Test db_sort(".db_sort.db", std::vector<std::string>({
+			// Examples used in test geo.
+			path_test_sort + "doc1.txt",
+			path_test_sort + "doc2.txt",
+			path_test_sort + "doc3.txt",
+			path_test_sort + "doc4.txt",
+			path_test_sort + "doc5.txt",
+			path_test_sort + "doc6.txt",
+			path_test_sort + "doc7.txt",
+			path_test_sort + "doc8.txt",
+			path_test_sort + "doc9.txt",
+			path_test_sort + "doc10.txt"
+		}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+
 	int cont = 0;
 	query_field_t query;
 	query.metric = metric;
