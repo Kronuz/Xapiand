@@ -1,27 +1,31 @@
-div.col-md-9 h1:first-of-type {
-    text-align: center;
-    font-size: 60px;
-    font-weight: 300;
+.bs-sidebar.affix {
+	z-index: 1;
 }
 
-div.col-md-9>p:first-of-type {
-    text-align: center;
+.col-md-9 h1:first-of-type {
+	text-align: center;
+	font-size: 60px;
+	font-weight: 300;
 }
 
-div.col-md-9 p.admonition-title:first-of-type {
-    text-align: left;
+.col-md-9>p:first-of-type {
+	text-align: center;
 }
 
-div.col-md-9 h1:first-of-type .headerlink {
-    display: none;
+.col-md-9 p.admonition-title:first-of-type {
+	text-align: left;
+}
+
+.col-md-9 h1:first-of-type .headerlink {
+	display: none;
 }
 
 code.no-highlight {
-    color: black;
+	color: black;
 }
 
 /* Definition List styles */
 
 dd {
-    padding-left: 20px;
+	padding-left: 20px;
 }
