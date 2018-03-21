@@ -1,0 +1,40 @@
+site_name: Xapiand
+site_url: https://github.com/Kronuz/Xapiand
+site_description: A RESTful Search Engine
+site_author: Dubalu Team
+
+repo_url: https://github.com/Kronuz/Xapiand
+edit_uri: ""
+
+pages:
+    - Home: index.md
+    - Getting Started: getting-started.md
+    - User Guide: user-guide/index.md
+    #     - Writing Your Docs: user-guide/writing-your-docs.md
+    #     - Styling Your Docs: user-guide/styling-your-docs.md
+    #     - Configuration: user-guide/configuration.md
+    #     - Deploying Your Docs: user-guide/deploying-your-docs.md
+    #     - Custom Themes: user-guide/custom-themes.md
+    #     - Plugins: user-guide/plugins.md
+    - Contributing: contributing.md
+    - About: about.md
+
+extra_css:
+    - css/extra.css
+
+# theme: readthedocs
+
+markdown_extensions:
+    - toc:
+        permalink: true
+    - smarty
+    - admonition
+    - attr_list
+    - def_list
+    # - codehilite(noclasses=True, css_class=redacted-pre, linenums=True)
+
+plugins:
+        - search
+
+copyright: Copyright &copy; 2015-2018 Dubalu LLC, Maintained by the <a href="/contributing/#maintenance-team">Dubalu Team</a>.
+# google_analytics: ['UA-27795084-5', 'mkdocs.org']
