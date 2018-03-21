@@ -194,7 +194,7 @@ Scheduler::finish(int wait)
 		thread_pool->finish();
 	}
 
-	if (wait) {
+	if (wait != 0) {
 		join();
 	}
 }
@@ -229,7 +229,7 @@ Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 		scheduler_queue.add(task, wakeup_time);
 
 		auto next_wakeup_time = atom_next_wakeup_time.load();
-		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time));
+		while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time)) { }
 
 		if (next_wakeup_time >= wakeup_time || next_wakeup_time <= now) {
 			{

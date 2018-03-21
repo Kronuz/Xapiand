@@ -91,9 +91,8 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
+	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 }
 
 
@@ -119,9 +118,8 @@ Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start
 	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timestamp_s), Serialise::timestamp(timestamp_e));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
+	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 }
 
 
@@ -137,9 +135,8 @@ Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start
 	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(time_s), Serialise::timestamp(time_e));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
+	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 }
 
 
@@ -155,9 +152,8 @@ Xapian::Query getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack& 
 	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timedelta_s), Serialise::timestamp(timedelta_e));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 	}
+	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
 }
 
 

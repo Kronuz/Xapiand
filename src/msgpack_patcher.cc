@@ -90,7 +90,7 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_ADD);
-		if (path_split.size() != 0) {
+		if (!path_split.empty()) {
 			const auto target = path_split.back();
 			path_split.pop_back();
 			auto& o = object.path(path_split);
@@ -115,7 +115,7 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_REM);
-		if (path_split.size() != 0) {
+		if (!path_split.empty()) {
 			const auto target = path_split.back();
 			path_split.pop_back();
 			auto& o = object.path(path_split);
@@ -157,10 +157,10 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_MOV);
-		if (path_split.size() != 0) {
+		if (!path_split.empty()) {
 			std::vector<std::string> from_split;
 			_tokenizer(obj_patch, from_split, PATCH_FROM, PATCH_MOV);
-			if (from_split.size() != 0) {
+			if (!from_split.empty()) {
 				const auto target = path_split.back();
 				path_split.pop_back();
 				auto& to = object.path(path_split);
@@ -193,10 +193,10 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH, PATCH_COP);
-		if (path_split.size() != 0) {
+		if (!path_split.empty()) {
 			std::vector<std::string> from_split;
 			_tokenizer(obj_patch, from_split, PATCH_FROM, PATCH_COP);
-			if (from_split.size() != 0) {
+			if (!from_split.empty()) {
 				const auto target = path_split.back();
 				path_split.pop_back();
 				auto& to = object.path(path_split);
@@ -307,11 +307,10 @@ const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op) {
 double get_patch_double(const MsgPack& val, const char* patch_op) {
 	if (val.is_string()) {
 		return strict_stod(val.str_view());
-	} else {
-		try {
-			return val.f64();
-		} catch (const msgpack::type_error&) {
-			THROW(ClientError, "'%s' must be string or numeric", patch_op);
-		}
+	}
+	try {
+		return val.f64();
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "'%s' must be string or numeric", patch_op);
 	}
 }

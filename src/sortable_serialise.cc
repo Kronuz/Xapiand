@@ -33,7 +33,7 @@ sortable_serialise_(long double value, char * buf)
 	int exponent;
 
 	// Negative infinity.
-	if (value < -LDBL_MAX) return 0;
+	if (value < -LDBL_MAX) { return 0; }
 
 	mantissa = frexpl(value, &exponent);
 
@@ -51,7 +51,7 @@ sortable_serialise_(long double value, char * buf)
 	}
 
 	bool negative = (mantissa < 0);
-	if (negative) mantissa = -mantissa;
+	if (negative) { mantissa = -mantissa; }
 
 	// Infinity, or extremely large non-IEEE representation.
 	if (value > LDBL_MAX || exponent > LDBL_MAX_EXP + LDBL_MAX_EXP - 1 + 8) {
@@ -59,10 +59,9 @@ sortable_serialise_(long double value, char * buf)
 			// This can only happen with a non-IEEE representation, because
 			// we've already tested for value < -LDBL_MAX
 			return 0;
-		} else {
-			memset(buf, '\xff', 18);
-			return 18;
 		}
+		memset(buf, '\xff', 18);
+		return 18;
 	}
 
 	// Encoding:
@@ -100,31 +99,31 @@ sortable_serialise_(long double value, char * buf)
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
 		// first byte:
 		next |= static_cast<unsigned char>(exponent >> 2);
-		if (negative ^ exponent_negative) next ^= 0x1f;
+		if (negative ^ exponent_negative) { next ^= 0x1f; }
 		buf[len++] = next;
 
 		// And the lower 2 bits of the exponent go into the upper 2 bits
 		// of the second byte:
 		next = static_cast<unsigned char>(exponent) << 6;
-		if (negative ^ exponent_negative) next ^= 0xc0;
+		if (negative ^ exponent_negative) { next ^= 0xc0; }
 
 	} else {
 		assert((exponent >> 15) == 0);
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
 		// first byte:
 		next |= static_cast<unsigned char>(exponent >> 10);
-		if (negative ^ exponent_negative) next ^= 0x1f;
+		if (negative ^ exponent_negative) { next ^= 0x1f; }
 		buf[len++] = next;
 
 		// Put the bits 3-10 of the exponent into the second byte:
 		next = static_cast<unsigned char>(exponent >> 2);
-		if (negative ^ exponent_negative) next ^= 0xff;
+		if (negative ^ exponent_negative) { next ^= 0xff; }
 		buf[len++] = next;
 
 		// And the lower 2 bits of the exponent go into the upper 2 bits
 		// of the third byte:
 		next = static_cast<unsigned char>(exponent) << 6;
-		if (negative ^ exponent_negative) next ^= 0xc0;
+		if (negative ^ exponent_negative) { next ^= 0xc0; }
 	}
 
 	// Convert the 112 (or 113) bits of the mantissa into two 32-bit words.
@@ -157,11 +156,11 @@ sortable_serialise_(long double value, char * buf)
 		// We negate the mantissa for negative numbers, so that the sort order
 		// is reversed (since larger negative numbers should come first).
 		word1 = -word1;
-		if (word2 != 0 || word3 != 0 || word4 != 0) ++word1;
+		if (word2 != 0 || word3 != 0 || word4 != 0) { ++word1; }
 		word2 = -word2;
-		if (word3 != 0 || word4 != 0) ++word2;
+		if (word3 != 0 || word4 != 0) { ++word2; }
 		word3 = -word3;
-		if (word4 != 0) ++word3;
+		if (word4 != 0) { ++word3; }
 		word4 = -word4;
 	}
 
@@ -223,16 +222,16 @@ long double
 sortable_unserialise(std::string_view value)
 {
 	// Zero.
-	if (value.size() == 1 && value[0] == '\x80') return 0.0;
+	if (value.size() == 1 && value[0] == '\x80') { return 0.0; }
 
 	// Positive infinity.
 	if (value.size() == 18 &&
 		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 18) == 0) {
 		#ifdef INFINITY
-				// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
-				// case it doesn't cast to double as infinity (apparently some
-				// implementations have this problem).
-				if ((long double)(INFINITY) > HUGE_VALL) return INFINITY;
+			// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
+			// case it doesn't cast to double as infinity (apparently some
+			// implementations have this problem).
+			if ((long double)(INFINITY) > HUGE_VALL) { return INFINITY; }
 		#endif
 		return HUGE_VALL;
 	}
@@ -240,7 +239,7 @@ sortable_unserialise(std::string_view value)
 	// Negative infinity.
 	if (value.empty()) {
 		#ifdef INFINITY
-				if ((long double)(INFINITY) > HUGE_VALL) return -INFINITY;
+			if ((long double)(INFINITY) > HUGE_VALL) { return -INFINITY; }
 		#endif
 		return -HUGE_VALL;
 	}
@@ -249,15 +248,15 @@ sortable_unserialise(std::string_view value)
 	size_t i = 0;
 
 	first ^= static_cast<unsigned char>(first & 0xc0) >> 1;
-	bool negative = !(first & 0x80);
-	bool exponent_negative = (first & 0x40);
-	bool explen = !(first & 0x20);
+	bool negative = (first & 0x80) == 0;
+	bool exponent_negative = (first & 0x40) != 0;
+	bool explen = (first & 0x20) == 0;
 	int exponent = first & 0x1f;
 	if (!explen) {
 		first = numfromstr(value, ++i);
 		exponent <<= 2;
 		exponent |= (first >> 6);
-		if (negative ^ exponent_negative) exponent ^= 0x07f;
+		if (negative ^ exponent_negative) { exponent ^= 0x07f; }
 	} else {
 		first = numfromstr(value, ++i);
 		exponent <<= 8;
@@ -265,7 +264,7 @@ sortable_unserialise(std::string_view value)
 		first = numfromstr(value, ++i);
 		exponent <<= 2;
 		exponent |= (first >> 6);
-		if (negative ^ exponent_negative) exponent ^= 0x7fff;
+		if (negative ^ exponent_negative) { exponent ^= 0x7fff; }
 	}
 
 	unsigned word1;
@@ -300,28 +299,28 @@ sortable_unserialise(std::string_view value)
 
 	if (negative) {
 		word1 = -word1;
-		if (word2 != 0 || word3 != 0 || word4 != 0) ++word1;
+		if (word2 != 0 || word3 != 0 || word4 != 0) { ++word1; }
 		word2 = -word2;
-		if (word3 != 0 || word4 != 0) ++word2;
+		if (word3 != 0 || word4 != 0) { ++word2; }
 		word3 = -word3;
-		if (word4 != 0) ++word3;
+		if (word4 != 0) { ++word3; }
 		word4 = -word4;
 		assert((word1 & 0xf0000000) != 0);
 		word1 &= 0x3fffffff;
 	}
-	if (!negative) word1 |= 1<<30;
+	if (!negative) { word1 |= 1<<30; }
 
 	long double mantissa = 0;
-	if (word4) mantissa += word4 / 79228162514264337593543950336.0L; // 1<<96
-	if (word3) mantissa += word3 / 18446744073709551616.0L; // 1<<64
-	if (word2) mantissa += word2 / 4294967296.0L; // 1<<32
-	if (word1) mantissa += word1;
+	if (word4 != 0u) { mantissa += word4 / 79228162514264337593543950336.0L; }  // 1<<96
+	if (word3 != 0u) { mantissa += word3 / 18446744073709551616.0L; }  // 1<<64
+	if (word2 != 0u) { mantissa += word2 / 4294967296.0L; }  // 1<<32
+	if (word1 != 0u) { mantissa += word1; }
 	mantissa /= (negative ? 1073741824.0 : 2147483648.0);  // 1<<30 : 1<<31
 
-	if (exponent_negative) exponent = -exponent;
+	if (exponent_negative) { exponent = -exponent; }
 	exponent += 8;
 
-	if (negative) mantissa = -mantissa;
+	if (negative) { mantissa = -mantissa; }
 
 	// We use scalbnl() since it's equivalent to ldexp() when FLT_RADIX == 2
 	// (which we currently assume), except that ldexp() will set errno if the

@@ -112,7 +112,7 @@ namespace Datetime {
 	inline tm_t DateParser(const std::string& date) {
 		return DateParser(std::string_view(date));
 	}
-	tm_t DateParser(const MsgPack& date);
+	tm_t DateParser(const MsgPack& value);
 	Format Iso8601Parser(std::string_view date, tm_t& tm);
 	Format Iso8601Parser(std::string_view date);
 	void processDateMath(std::string_view date_math, tm_t& tm);
@@ -132,8 +132,8 @@ namespace Datetime {
 		return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS;
 	}
 	bool isvalidDate(int year, int month, int day);
-	std::string iso8601(const std::tm& timep, bool trim=true, char sep='T');
-	std::string iso8601(const tm_t& timep, bool trim=true, char sep='T');
+	std::string iso8601(const std::tm& tm, bool trim=true, char sep='T');
+	std::string iso8601(const tm_t& tm, bool trim=true, char sep='T');
 	std::string iso8601(double timestamp, bool trim=true, char sep='T');
 	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true, char sep='T');
 	bool isDate(std::string_view date);
@@ -168,7 +168,7 @@ namespace Datetime {
 	double time_to_double(const clk_t& clk);
 	std::string time_to_string(const clk_t& clk, bool trim=true);
 	std::string time_to_string(double t, bool trim=true);
-	bool isTime(std::string_view date);
+	bool isTime(std::string_view _time);
 
 	inline bool isvalidTime(double t) {
 		static const long long min = -362339LL;       // 00:00:00+99:99
@@ -188,7 +188,7 @@ namespace Datetime {
 	double timedelta_to_double(const clk_t& clk);
 	std::string timedelta_to_string(const clk_t& clk, bool trim=true);
 	std::string timedelta_to_string(double t, bool trim=true);
-	bool isTimedelta(std::string_view date);
+	bool isTimedelta(std::string_view timedelta);
 
 	inline bool isvalidTimedelta(double t) {
 		static const long long min = -362439999999LL; // -99:99:99.999...

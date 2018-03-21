@@ -48,9 +48,8 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 
 	if (query.empty()) {
 		return geoQ;
-	} else {
-		return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
 	}
+	return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
 }
 
 

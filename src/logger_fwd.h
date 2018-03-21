@@ -56,14 +56,14 @@ public:
 	Log(Log&& o);
 	Log& operator=(Log&& o);
 
-	explicit Log(LogType log_);
+	explicit Log(LogType log);
 	~Log();
 
 	template <typename... Args>
 	bool unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
 		return vunlog(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 	}
-	bool vunlog(int priority, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
 
 	bool clear();
 	long double age();

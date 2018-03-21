@@ -373,11 +373,15 @@ FieldParser::parse(size_t lvl_max)
 						}
 						break;
 					case TOKEN_PARENTHESIS_RIGHT:
-						if (range == Range::closed) range = Range::closed_left;
+						if (range == Range::closed) {
+							range = Range::closed_left;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
-						if (range == Range::open) range = Range::closed_right;
+						if (range == Range::open) {
+							range = Range::closed_right;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					default:
@@ -397,11 +401,15 @@ FieldParser::parse(size_t lvl_max)
 						}
 						break;
 					case TOKEN_PARENTHESIS_RIGHT:
-						if (range == Range::closed) range = Range::closed_left;
+						if (range == Range::closed) {
+							range = Range::closed_left;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
-						if (range == Range::open) range = Range::closed_right;
+						if (range == Range::open) {
+							range = Range::closed_right;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					case '\0':
@@ -465,11 +473,15 @@ FieldParser::parse(size_t lvl_max)
 						}
 						break;
 					case TOKEN_PARENTHESIS_RIGHT:
-						if (range == Range::closed) range = Range::closed_left;
+						if (range == Range::closed) {
+							range = Range::closed_left;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
-						if (range == Range::open) range = Range::closed_right;
+						if (range == Range::open) {
+							range = Range::closed_right;
+						}
 						currentState = FieldParser::State::END;
 						break;
 					default:
@@ -480,12 +492,16 @@ FieldParser::parse(size_t lvl_max)
 			case FieldParser::State::SQUARE_BRACKET_END:
 				switch (*currentSymbol) {
 					case TOKEN_PARENTHESIS_RIGHT:
-						if (range == Range::closed) range = Range::closed_left;
+						if (range == Range::closed) {
+							range = Range::closed_left;
+						}
 						currentState = FieldParser::State::END;
 						++lens[lvl];
 						break;
 					case TOKEN_SQUARE_BRACKET_RIGHT:
-						if (range == Range::open) range = Range::closed_right;
+						if (range == Range::open) {
+							range = Range::closed_right;
+						}
 						currentState = FieldParser::State::END;
 						++lens[lvl];
 						break;
@@ -498,6 +514,8 @@ FieldParser::parse(size_t lvl_max)
 				return;
 		}
 
-		if (*currentSymbol) ++currentSymbol;
+		if (*currentSymbol != 0) {
+			++currentSymbol;
+		}
 	}
 }

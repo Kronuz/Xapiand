@@ -68,7 +68,7 @@ BooleanTree::BuildTree()
 		return std::make_unique<IdNode>(id);
 	}
 	/* Error case */
-	else if (stack_output.size() == 1 && stack_output.back().get_type() != TokenType::Id) {
+	if (stack_output.size() == 1 && stack_output.back().get_type() != TokenType::Id) {
 		Token token = stack_output.back();
 		std::string msj = "'" + token.get_lexeme() + "' not expected";
 		throw SyntacticException(msj.c_str());

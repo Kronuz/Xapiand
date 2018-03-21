@@ -58,7 +58,7 @@ Serialise::possiblyUUID(std::string_view field_value) noexcept
 		}
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
-			if (uuid_sz) {
+			if (uuid_sz != 0u) {
 				if (uuid_sz == UUID_LENGTH) {
 					if (UUID::is_valid(uuid)) {
 						continue;
@@ -94,7 +94,7 @@ Serialise::isUUID(std::string_view field_value) noexcept
 		}
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
-			if (uuid_sz) {
+			if (uuid_sz != 0u) {
 				if (uuid_sz == UUID_LENGTH) {
 					if (UUID::is_valid(uuid)) {
 						continue;
@@ -610,7 +610,7 @@ Serialise::uuid(std::string_view field_value)
 		std::string serialised;
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
-			if (uuid_sz) {
+			if (uuid_sz != 0u) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
 						serialised.append(UUID(uuid).serialise());
@@ -1198,7 +1198,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef XAPIAND_UUID_ENCODED
 		case UUIDRepr::encoded:
-			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
+			if (serialised_uuid.front() != 1 && (((serialised_uuid.back() & 1) != 0) || (serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0)))) {
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}

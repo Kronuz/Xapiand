@@ -1337,15 +1337,15 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 				result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-				if (!result.empty()) result += "/";
+				if (!result.empty()) { result += "/"; }
 				result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
 			}
 			if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
-				if (!result.empty()) result += "/";
+				if (!result.empty()) { result += "/"; }
 				result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
 			}
 			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
-				if (!result.empty()) result += "/";
+				if (!result.empty()) { result += "/"; }
 				result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
 			}
 			THROW(ClientError, "%s not supported.", repr(result), RESERVED_TYPE);
@@ -1364,30 +1364,26 @@ _get_acc_data(std::string_view field_acc)
 	auto accuracy_date = _get_accuracy_date(field_acc.substr(1));
 	if (accuracy_date != UnitTime::INVALID) {
 		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATE);
-	} else {
-		try {
-			switch (field_acc[1]) {
-				case 'g':
-					if (field_acc[2] == 'e' && field_acc[3] == 'o') {
-						return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
-					}
-					break;
-				case 't': {
-					if (field_acc[2] == 'd') {
-						return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(3)))), FieldType::TIMEDELTA);
-					} else {
-						return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(2)))), FieldType::TIME);
-					}
-					break;
-				}
-				default:
-					return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
-			}
-		} catch (const std::invalid_argument&) {
-		} catch (const std::out_of_range&) { }
-
-		THROW(ClientError, "The field name: %s is not valid", repr(field_acc));
 	}
+	try {
+		switch (field_acc[1]) {
+			case 'g':
+				if (field_acc[2] == 'e' && field_acc[3] == 'o') {
+					return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
+				}
+				break;
+			case 't':
+				if (field_acc[2] == 'd') {
+					return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(3)))), FieldType::TIMEDELTA);
+				}
+				return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(2)))), FieldType::TIME);
+			default:
+				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
+		}
+	} catch (const std::invalid_argument&) {
+	} catch (const std::out_of_range&) { }
+
+	THROW(ClientError, "The field name: %s is not valid", repr(field_acc));
 }
 
 
@@ -1672,24 +1668,23 @@ bool has_dispatch_process_concrete_properties(uint32_t key);
 
 const std::unique_ptr<SimpleStopper<>>& getStopper(std::string_view language) {
 	static std::mutex mtx;
-	static std::string stopwords_path(getenv("XAPIAN_STOPWORDS_PATH") ? getenv("XAPIAN_STOPWORDS_PATH") : STOPWORDS_PATH);
+	static std::string stopwords_path(getenv("XAPIAN_STOPWORDS_PATH") != nullptr ? getenv("XAPIAN_STOPWORDS_PATH") : STOPWORDS_PATH);
 	static std::unordered_map<uint32_t, std::unique_ptr<SimpleStopper<>>> stoppers;
 	auto language_hash = hh(language);
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = stoppers.find(language_hash);
-	if (it == stoppers.end()) {
-		auto& stopper = stoppers[language_hash];
-		auto path = stopwords_path + "/" + std::string(language) + ".txt";
-		std::ifstream words(path);
-		if (words.is_open()) {
-			stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
-		} else {
-			L_WARNING("Cannot open stop words file: %s", path);
-		}
-		return stopper;
-	} else {
+	if (it != stoppers.end()) {
 		return it->second;
 	}
+	auto& stopper = stoppers[language_hash];
+	auto path = stopwords_path + "/" + std::string(language) + ".txt";
+	std::ifstream words(path);
+	if (words.is_open()) {
+		stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
+	} else {
+		L_WARNING("Cannot open stop words file: %s", path);
+	}
+	return stopper;
 }
 
 
@@ -2328,7 +2323,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack>
 	  origin(o)
 {
 	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false, false);
-	if (checked.first) {
+	if (checked.first != nullptr) {
 		schema = get_initial_schema();
 	}
 }
@@ -2558,7 +2553,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		if (specification.script && db_handler) {
+		if (specification.script && (db_handler != nullptr)) {
 			assert(old_document_pair);
 			object = db_handler->run_script(object, term_id, *old_document_pair, *specification.script);
 			if (!object.is_map()) {
@@ -3170,7 +3165,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 
 	auto val = specification.value ? specification.value.get() : specification.value_rec.get();
 
-	if (val) {
+	if (val != nullptr) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			THROW(ClientError, "%s is a foreign type and as such it cannot have a value", repr(specification.full_meta_name));
 		}
@@ -3237,16 +3232,16 @@ Schema::update(const MsgPack& object)
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
-		if (checked.first) {
+		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, *checked.first },
 			}));
 
-			return checked.second ? checked.second->size() != 2 : false;
+			return checked.second != nullptr ? checked.second->size() != 2 : false;
 		}
 
-		if (checked.second) {
+		if (checked.second != nullptr) {
 			const auto& schema_obj = *checked.second;
 
 			auto properties = &get_newest_properties();
@@ -3678,16 +3673,16 @@ Schema::write(const MsgPack& object, bool replace)
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
 
-		if (checked.first) {
+		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, *checked.first },
 			}));
 
-			return checked.second ? checked.second->size() != 2 : false;
+			return checked.second != nullptr ? checked.second->size() != 2 : false;
 		}
 
-		if (checked.second) {
+		if (checked.second != nullptr) {
 			const auto& schema_obj = *checked.second;
 
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
@@ -4190,7 +4185,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_index_spcs.reserve(paths.size());
 
-		if (toUType(specification.index & TypeIndex::VALUES)) {
+		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
 			}
@@ -4208,18 +4203,18 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 						if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 							// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH and type is the same as global_type.
-							if (toUType(specification.index & TypeIndex::VALUES)) {
+							if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 								for (auto& acc_prefix : specification.acc_prefix) {
 									acc_prefix.insert(0, specification.prefix.field);
 								}
 							}
-						} else if (toUType(specification.index & TypeIndex::VALUES)) {
+						} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 						} else {
 							specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
 						}
-					} else if (toUType(specification.index & TypeIndex::VALUES)) {
+					} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
 					} else {
 						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]), specification.prefix.uuid);
@@ -4230,7 +4225,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 					if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 						// Use specification directly because type is the same as global_type.
-						if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+						if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 							if (specification.flags.has_uuid_prefix) {
 								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 							}
@@ -4238,7 +4233,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 								acc_prefix.insert(0, specification.prefix.field);
 							}
 						}
-					} else if (toUType(specification.index & TypeIndex::VALUES)) {
+					} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 					} else {
 						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
@@ -4246,7 +4241,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					break;
 				}
 				case UUIDFieldIndex::BOTH: {
-					if (toUType(specification.index & TypeIndex::VALUES)) {
+					if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
 					} else {
@@ -4263,12 +4258,12 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 				// Use specification directly because path is not uuid and type is the same as global_type.
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					for (auto& acc_prefix : specification.acc_prefix) {
 						acc_prefix.insert(0, specification.prefix.field);
 					}
 				}
-			} else if (toUType(specification.index & TypeIndex::VALUES)) {
+			} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 			} else {
 				specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
@@ -4314,7 +4309,7 @@ Schema::complete_specification(const MsgPack& item_value)
 			paths.erase(specification.prefix.uuid);
 		}
 
-		if (toUType(specification.index & TypeIndex::VALUES)) {
+		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 			for (auto& path : paths) {
 				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
 			}
@@ -4331,13 +4326,13 @@ Schema::complete_specification(const MsgPack& item_value)
 			case UUIDFieldIndex::UUID: {
 				if (specification.prefix.uuid.empty()) {
 					// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH.
-					if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+					if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 						for (auto& acc_prefix : specification.acc_prefix) {
 							acc_prefix.insert(0, specification.prefix.field);
 						}
 					}
-				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					index_spc_t spc_uuid(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
 						specification.accuracy, specification.acc_prefix);
 					for (auto& acc_prefix : spc_uuid.acc_prefix) {
@@ -4351,7 +4346,7 @@ Schema::complete_specification(const MsgPack& item_value)
 			}
 			case UUIDFieldIndex::UUID_FIELD: {
 				// Use specification directly.
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					if (specification.flags.has_uuid_prefix) {
 						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
 					}
@@ -4362,7 +4357,7 @@ Schema::complete_specification(const MsgPack& item_value)
 				break;
 			}
 			case UUIDFieldIndex::BOTH: {
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					index_spc_t spc_field(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field,
 						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
 						specification.accuracy, specification.acc_prefix);
@@ -4386,7 +4381,7 @@ Schema::complete_specification(const MsgPack& item_value)
 				break;
 		}
 	} else {
-		if (toUType(specification.index & TypeIndex::FIELD_VALUES)) {
+		if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 			for (auto& acc_prefix : specification.acc_prefix) {
 				acc_prefix.insert(0, specification.prefix.field);
 			}
@@ -4932,7 +4927,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL("Schema::index_partial_paths(<Xapian::Document>)");
 
-	if (toUType(specification.index & TypeIndex::FIELD_TERMS)) {
+	if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
 		if (specification.partial_prefixes.size() > 2) {
 			const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 			for (const auto& path : paths) {
@@ -4952,7 +4947,7 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 
 	const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
 	const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
-	if (position) {
+	if (position != 0u) {
 		doc.add_posting(std::string(term), position, weight);
 	} else {
 		doc.add_term(std::string(term), weight);
@@ -5189,7 +5184,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
 			const auto position = field_spc.position[getPos(pos, field_spc.position.size())]; // String uses position (not positions) which is off by default
-			if (position) {
+			if (position != 0u) {
 				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
 				L_INDEX("Field String to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.field, serialise_val, position ? "true" : "false");
 			} else {
@@ -5262,10 +5257,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			try {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::_float(f_val);
-				if (field_spc) {
+				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
-				if (global_spc) {
+				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
@@ -5279,10 +5274,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			try {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
-				if (field_spc) {
+				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
-				if (global_spc) {
+				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
@@ -5296,10 +5291,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			try {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
-				if (field_spc) {
+				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
-				if (global_spc) {
+				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
@@ -5312,10 +5307,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::DATE: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::date(value, tm);
-			if (field_spc) {
+			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
 			}
-			if (global_spc) {
+			if (global_spc != nullptr) {
 				index_term(doc, ser_value, *global_spc, pos);
 			}
 			s.insert(std::move(ser_value));
@@ -5325,10 +5320,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::TIME: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
-			if (field_spc) {
+			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
 			}
-			if (global_spc) {
+			if (global_spc != nullptr) {
 				index_term(doc, ser_value, *global_spc, pos);
 			}
 			s.insert(std::move(ser_value));
@@ -5338,10 +5333,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::TIMEDELTA: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::timedelta(value, t_val);
-			if (field_spc) {
+			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
 			}
-			if (global_spc) {
+			if (global_spc != nullptr) {
 				index_term(doc, ser_value, *global_spc, pos);
 			}
 			s.insert(std::move(ser_value));
@@ -5356,7 +5351,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				return;
 			}
 			std::string term;
-			if (field_spc) {
+			if (field_spc != nullptr) {
 				if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
 					term = Serialise::ranges(ranges);
 					index_term(doc, term, *field_spc, pos);
@@ -5366,8 +5361,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					index_term(doc, term, *field_spc, pos);
 				}
 			}
-			if (global_spc) {
-				if (field_spc) {
+			if (global_spc != nullptr) {
+				if (field_spc != nullptr) {
 					index_term(doc, std::move(term), *global_spc, pos);
 				} else {
 					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
@@ -5387,10 +5382,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::STRING: {
 			try {
 				auto ser_value = value.str();
-				if (field_spc) {
+				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
-				if (global_spc) {
+				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
@@ -5401,10 +5396,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		}
 		case FieldType::BOOLEAN: {
 			auto ser_value = Serialise::MsgPack(spc, value);
-			if (field_spc) {
+			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
 			}
-			if (global_spc) {
+			if (global_spc != nullptr) {
 				index_term(doc, ser_value, *global_spc, pos);
 			}
 			s.insert(std::move(ser_value));
@@ -5413,10 +5408,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::UUID: {
 			try {
 				auto ser_value = Serialise::uuid(value.str_view());
-				if (field_spc) {
+				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
-				if (global_spc) {
+				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
 				s.insert(std::move(ser_value));
@@ -5441,10 +5436,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			try {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::_float(f_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 					index_term(doc, ser_value, global_spc, pos);
 				}
 				s_f.insert(ser_value);
@@ -5464,10 +5459,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			try {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 					index_term(doc, ser_value, global_spc, pos);
 				}
 				s_f.insert(ser_value);
@@ -5487,10 +5482,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			try {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 					index_term(doc, ser_value, global_spc, pos);
 				}
 				s_f.insert(ser_value);
@@ -5509,10 +5504,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::DATE: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::date(value, tm);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
 			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 				index_term(doc, ser_value, global_spc, pos);
 			}
 			s_f.insert(ser_value);
@@ -5528,10 +5523,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::TIME: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
 			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 				index_term(doc, ser_value, global_spc, pos);
 			}
 			s_f.insert(ser_value);
@@ -5547,10 +5542,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::TIMEDELTA: {
 			double t_val;
 			auto ser_value = Serialise::timedelta(value, t_val);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
 			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 				index_term(doc, ser_value, global_spc, pos);
 			}
 			s_f.insert(ser_value);
@@ -5571,12 +5566,12 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				return;
 			}
 			if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
-				if (toUType(field_spc.index & TypeIndex::TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
 					auto ser_value = Serialise::ranges(ranges);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 						index_term(doc, ser_value, field_spc, pos);
 					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 						index_term(doc, std::move(ser_value), global_spc, pos);
 					}
 				}
@@ -5590,12 +5585,12 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				merge_geospatial_values(s_g, std::move(ranges), geometry->getCentroids());
 			} else {
 				auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
-				if (toUType(field_spc.index & TypeIndex::TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
 					const auto ser_value = Serialise::ranges(g_ranges);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 						index_term(doc, ser_value, field_spc, pos);
 					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 						index_term(doc, std::move(ser_value), global_spc, pos);
 					}
 				}
@@ -5611,10 +5606,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::STRING: {
 			try {
 				auto ser_value = value.str();
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 					index_term(doc, ser_value, global_spc, pos);
 				}
 				s_f.insert(ser_value);
@@ -5626,10 +5621,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		}
 		case FieldType::BOOLEAN: {
 			auto ser_value = Serialise::MsgPack(field_spc, value);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
 			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 				index_term(doc, ser_value, global_spc, pos);
 			}
 			s_f.insert(ser_value);
@@ -5639,10 +5634,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::UUID: {
 			try {
 				auto ser_value = Serialise::uuid(value.str_view());
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS)) {
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
 					index_term(doc, ser_value, global_spc, pos);
 				}
 				s_f.insert(ser_value);
@@ -6127,7 +6122,7 @@ has_dispatch_process_properties(uint32_t key)
 		hh(RESERVED_ERROR),
 	});
 
-	return _.count(key);
+	return _.count(key) != 0u;
 }
 
 inline bool
@@ -6257,7 +6252,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_NAMESPACE),
 		hh(RESERVED_SCHEMA),
 	});
-	return _.count(key);
+	return _.count(key) != 0u;
 }
 
 inline bool
@@ -7526,7 +7521,7 @@ Schema::write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_na
 
 
 void
-Schema::write_schema(MsgPack&, std::string_view prop_name, const MsgPack& doc_schema)
+Schema::write_schema(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& doc_schema)
 {
 	L_CALL("Schema::write_schema(%s)", repr(doc_schema.to_string()));
 
@@ -7947,7 +7942,7 @@ Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& doc_
 
 
 inline void
-Schema::process_value(std::string_view, const MsgPack& doc_value)
+Schema::process_value(std::string_view /*unused*/, const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	L_CALL("Schema::process_value(%s)", repr(doc_value.to_string()));
@@ -7961,7 +7956,7 @@ Schema::process_value(std::string_view, const MsgPack& doc_value)
 
 
 inline void
-Schema::process_script(std::string_view, const MsgPack& doc_script)
+Schema::process_script(std::string_view /*unused*/, const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable.
 	L_CALL("Schema::process_script(%s)", repr(doc_script.to_string()));
@@ -8758,7 +8753,7 @@ Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 
 
 inline bool
-Schema::readable_prefix(MsgPack&, MsgPack&)
+Schema::readable_prefix(MsgPack& /*unused*/, MsgPack& /*unused*/)
 {
 	L_CALL("Schema::readable_prefix(...)");
 
@@ -8767,7 +8762,7 @@ Schema::readable_prefix(MsgPack&, MsgPack&)
 
 
 inline bool
-Schema::readable_slot(MsgPack&, MsgPack&)
+Schema::readable_slot(MsgPack& /*unused*/, MsgPack& /*unused*/)
 {
 	L_CALL("Schema::readable_slot(...)");
 
@@ -8788,7 +8783,7 @@ Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
 
 
 inline bool
-Schema::readable_acc_prefix(MsgPack&, MsgPack&)
+Schema::readable_acc_prefix(MsgPack& /*unused*/, MsgPack& /*unused*/)
 {
 	L_CALL("Schema::readable_acc_prefix(...)");
 
@@ -8797,11 +8792,11 @@ Schema::readable_acc_prefix(MsgPack&, MsgPack&)
 
 
 inline bool
-Schema::readable_script(MsgPack& prop_script, MsgPack&)
+Schema::readable_script(MsgPack& prop_script, MsgPack& /*unused*/)
 {
 	L_CALL("Schema::readable_script(%s)", repr(prop_script.to_string()));
 
-	dispatch_readable(prop_script, 0);
+	dispatch_readable(prop_script, false);
 	return true;
 }
 
@@ -8811,13 +8806,12 @@ Schema::get_modified_schema()
 {
 	L_CALL("Schema::get_modified_schema()");
 
-	if (mut_schema) {
-		auto m_schema = std::shared_ptr<const MsgPack>(mut_schema.release());
-		m_schema->lock();
-		return m_schema;
-	} else {
+	if (!mut_schema) {
 		return std::shared_ptr<const MsgPack>();
 	}
+	auto m_schema = std::shared_ptr<const MsgPack>(mut_schema.release());
+	m_schema->lock();
+	return m_schema;
 }
 
 
@@ -8835,7 +8829,7 @@ Schema::to_string(bool prettify) const
 {
 	L_CALL("Schema::to_string(%d)", prettify);
 
-	return get_full(true).to_string(prettify);
+	return get_full(true).to_string(static_cast<int>(prettify));
 }
 
 

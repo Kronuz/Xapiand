@@ -122,7 +122,7 @@ long long read_mastery(std::string_view dir, bool force)
 	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir);
 
 	struct stat info;
-	if (::stat(sdir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
+	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
 		L_DATABASE("- NO MASTERY OF INDEX '%s'", sdir);
 		return -1;
 	}
@@ -143,7 +143,7 @@ long long read_mastery(std::string_view dir, bool force)
 			mastery_level = strict_stoll(buf, nullptr, 16);
 		}
 		io::close(fd);
-		if (!mastery_level) {
+		if (mastery_level == 0) {
 			mastery_level = save_mastery(dir);
 		}
 	}
@@ -227,7 +227,9 @@ std::string msgpack_to_html(const msgpack::object& o)
 		}
 		html += "</dl>";
 		return html;
-	} else if (o.type == msgpack::type::ARRAY) {
+	}
+
+	if (o.type == msgpack::type::ARRAY) {
 		std::string term_tag_head = "<li>";
 		std::string term_tag_tail = "</li>";
 
@@ -255,15 +257,26 @@ std::string msgpack_to_html(const msgpack::object& o)
 			}
 		}
 		html += "</ol>";
-	} else if (o.type == msgpack::type::STR) {
+		return html;
+	}
+
+	if (o.type == msgpack::type::STR) {
 		return std::string(o.via.str.ptr, o.via.str.size);
-	} else if (o.type == msgpack::type::POSITIVE_INTEGER) {
+	}
+
+	if (o.type == msgpack::type::POSITIVE_INTEGER) {
 		return std::to_string(o.via.u64);
-	} else if (o.type == msgpack::type::NEGATIVE_INTEGER) {
+	}
+
+	if (o.type == msgpack::type::NEGATIVE_INTEGER) {
 		return std::to_string(o.via.i64);
-	} else if (o.type == msgpack::type::FLOAT) {
+	}
+
+	if (o.type == msgpack::type::FLOAT) {
 		return std::to_string(o.via.f64);
-	} else if (o.type == msgpack::type::BOOLEAN) {
+	}
+
+	if (o.type == msgpack::type::BOOLEAN) {
 		return o.via.boolean ? "True" : "False";
 	}
 
@@ -278,15 +291,25 @@ std::string msgpack_map_value_to_html(const msgpack::object& o)
 
 	if (o.type == msgpack::type::STR) {
 		return tag_head + std::string(o.via.str.ptr, o.via.str.size) + tag_tail;
-	} else if (o.type == msgpack::type::POSITIVE_INTEGER) {
+	}
+
+	if (o.type == msgpack::type::POSITIVE_INTEGER) {
 		return tag_head + std::to_string(o.via.u64) + tag_tail;
-	} else if (o.type == msgpack::type::NEGATIVE_INTEGER) {
+	}
+
+	if (o.type == msgpack::type::NEGATIVE_INTEGER) {
 		return tag_head + std::to_string(o.via.i64) + tag_tail;
-	} else if (o.type == msgpack::type::FLOAT) {
+	}
+
+	if (o.type == msgpack::type::FLOAT) {
 		return tag_head + std::to_string(o.via.f64) + tag_tail;
-	} else if (o.type == msgpack::type::BOOLEAN) {
+	}
+
+	if (o.type == msgpack::type::BOOLEAN) {
 		return o.via.boolean ? tag_head + "True" +  tag_tail : tag_head + "False" + tag_tail;
-	} else if (o.type == msgpack::type::MAP or o.type == msgpack::type::ARRAY) {
+	}
+
+	if (o.type == msgpack::type::MAP or o.type == msgpack::type::ARRAY) {
 		return tag_head + msgpack_to_html(o) + tag_tail;
 	}
 
@@ -304,16 +327,16 @@ std::string msgpack_to_html_error(const msgpack::object& o)
 		for (auto p = o.via.map.ptr; p != pend; ++p, ++c) {
 			if (p->key.type == msgpack::type::STR) {
 				if (p->val.type == msgpack::type::STR) {
-					if (c) { html += " - "; }
+					if (c != 0) { html += " - "; }
 					html += std::string(p->val.via.str.ptr, p->val.via.str.size);
 				} else if (p->val.type == msgpack::type::POSITIVE_INTEGER) {
-					if (c) { html += " - "; }
+					if (c != 0) { html += " - "; }
 					html += std::to_string(p->val.via.u64);
 				} else if (p->val.type == msgpack::type::NEGATIVE_INTEGER) {
-					if (c) { html += " - "; }
+					if (c != 0) { html += " - "; }
 					html += std::to_string(p->val.via.i64);
 				} else if (p->val.type == msgpack::type::FLOAT) {
-					if (c) { html += " - "; }
+					if (c != 0) { html += " - "; }
 					html += std::to_string(p->val.via.f64);
 				}
 			}
@@ -369,7 +392,8 @@ std::pair<bool, std::string_view> split_data_store(std::string_view data)
 	const char *p_end = p + data.size();
 	if (*p == DATABASE_DATA_HEADER_MAGIC) {
 		return std::make_pair(false, "");
-	} else if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
+	}
+	if (*p == DATABASE_DATA_HEADER_MAGIC_STORED) {
 		++p;
 		try {
 			length = unserialise_length(&p, p_end, true);
@@ -465,10 +489,8 @@ std::string get_data_content_type(std::string_view data)
 		++p;
 		if (!stored_locator.empty()) {
 			return std::get<3>(storage_unserialise_locator(stored_locator));
-		} else if (p != p_end) {
+		} if (p != p_end) {
 			return unserialise_string_at(STORED_BLOB_CONTENT_TYPE, &p, p_end);
-		} else {
-			return "";
 		}
 	}
 

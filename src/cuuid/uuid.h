@@ -129,7 +129,7 @@ public:
 
 private:
 	// make the << operator a friend so it can access _bytes
-	friend std::ostream &operator<<(std::ostream& s, const UUID& uuid);
+	friend std::ostream &operator<<(std::ostream& os, const UUID& uuid);
 
 	union UUIDCompactor get_compactor(bool compacted) const;
 

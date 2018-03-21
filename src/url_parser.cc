@@ -347,9 +347,8 @@ PathParser::init(std::string_view p)
 						cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 						if (cn == ':' && (cn1 == ':' || cp1 == ':' || cp1 == '/')) {
 							break;
-						} else {
-							cn = '\0';
 						}
+						cn = '\0';
 					default:
 						break;
 				}
@@ -465,17 +464,16 @@ PathParser::next()
 						cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 						if (cn1 == ':' || cp1 == ':' || cp1 == '/') {
 							break;
-						} else {
-							assert(n1 >= n0);
-							length = n1 - n0;
-							if (!length) {
-								return State::INVALID_NSP;
-							}
-							off_nsp = n0;
-							len_nsp = length;
-							state = State::PTH;
-							n0 = n1 + 1;
 						}
+						assert(n1 >= n0);
+						length = n1 - n0;
+						if (!length) {
+							return State::INVALID_NSP;
+						}
+						off_nsp = n0;
+						len_nsp = length;
+						state = State::PTH;
+						n0 = n1 + 1;
 						break;
 					default:
 						break;

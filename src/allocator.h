@@ -33,14 +33,14 @@ namespace allocator {
 
 	class VanillaAllocator {
 	public:
-		static void* allocate(std::size_t size) noexcept;
-		static void deallocate(void *p) noexcept;
+		static void* allocate(std::size_t __sz) noexcept;
+		static void deallocate(void *__p) noexcept;
 	};
 
 	class TrackedAllocator {
 	public:
-		static void* allocate(std::size_t size) noexcept;
-		static void deallocate(void *p) noexcept;
+		static void* allocate(std::size_t __sz) noexcept;
+		static void deallocate(void *__p) noexcept;
 	};
 
 	template <typename _Tp, typename _Allocator>

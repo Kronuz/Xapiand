@@ -220,7 +220,7 @@ namespace Serialise {
 	std::string range(const range_t& range);
 
 	// Serialise type to its string representation.
-	const std::string& type(FieldType type);
+	const std::string& type(FieldType field_type);
 
 	// Guess type of field_value. If bool_term can not return FieldType::TEXT.
 	FieldType guess_type(const class MsgPack& field_value, bool bool_term=false);
@@ -286,7 +286,7 @@ namespace Unserialise {
 	std::string timedelta(std::string_view serialised_timedelta);
 
 	// Unserialise a serialised timedelta and returns the timestamp.
-	double timedelta_d(std::string_view serialised_timedelta);
+	double timedelta_d(std::string_view serialised_time);
 
 	// Unserialise a serialised float.
 	inline double _float(std::string_view serialised_float) {
@@ -321,7 +321,7 @@ namespace Unserialise {
 	std::string uuid(std::string_view serialised_uuid, UUIDRepr repr=UUIDRepr::simple);
 
 	// Unserialise a serialised cartesian coordinate.
-	Cartesian cartesian(std::string_view serialised_cartesian);
+	Cartesian cartesian(std::string_view serialised_val);
 
 	// Unserialise a serialised HTM trixel's id.
 	std::uint64_t trixel_id(std::string_view serialised_id);

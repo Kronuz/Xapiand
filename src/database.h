@@ -179,11 +179,11 @@ public:
 	~DatabaseWAL();
 
 	bool create(uint32_t revision);
-	bool open_current(bool current);
+	bool open_current(bool commited);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision);
 
 	bool init_database();
-	void write_line(Type type, std::string_view data, bool commit=false);
+	void write_line(Type type, std::string_view data, bool commit_=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
 	void write_delete_document_term(std::string_view term);
@@ -298,7 +298,7 @@ public:
 	std::vector<std::unique_ptr<DataStorage>> storages;
 #endif /* XAPIAND_DATA_STORAGE */
 
-	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
+	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_);
 	~Database();
 
 	long long read_mastery(const Endpoint& endpoint);

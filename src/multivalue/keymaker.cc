@@ -338,9 +338,8 @@ BoolKey::findSmallest(const Xapian::Document& doc) const
 
 	if (values.front().at(0) == _ref_val.at(0) || values.back().at(0) == _ref_val.at(0)) {
 		return SERIALISED_ZERO;
-	} else {
-		return SERIALISED_ONE;
 	}
+	return SERIALISED_ONE;
 }
 
 
@@ -356,9 +355,8 @@ BoolKey::findBiggest(const Xapian::Document& doc) const
 
 	if (values.front().at(0) != _ref_val.at(0) || values.back().at(0) != _ref_val.at(0)) {
 		return SERIALISED_ONE;
-	} else {
-		return SERIALISED_ZERO;
 	}
+	return SERIALISED_ZERO;
 }
 
 

@@ -57,43 +57,41 @@ namespace allocator {
 
 	// allocate/deallocate using ::malloc/::free
 
-	static inline void* allocate(std::size_t size) noexcept {
-    	if (size == 0) {
-        	size = 1;
-    	}
-    	void* p;
-    	while ((p = std::malloc(size)) == 0) {
-        	// If malloc fails and there is a new_handler, call it to try free up memory.
-        	std::new_handler nh = std::get_new_handler();
-        	if (nh) {
-        		nh();
-        	} else {
-        		break;
-        	}
-    	}
-    	return p;
-    }
-
-    static inline void deallocate(void* p) noexcept {
-    	if (p) {
-    		std::free(p);
-    	}
-    }
-
-
-    // VanillaAllocator
-
-	inline void* VanillaAllocator::allocate(std::size_t size) noexcept {
-		// fprintf(stderr, "{allocate %zu bytes}\n", size);
-		void* p = ::allocator::allocate(size);
-		if (!p) return nullptr;
-		return p;
+	static inline void* allocate(std::size_t __sz) noexcept {
+		if (__sz == 0) {
+			__sz = 1;
+		}
+		void* __p;
+		while ((__p = std::malloc(__sz)) == 0) {
+			// If malloc fails and there is a new_handler, call it to try free up memory.
+			std::new_handler nh = std::get_new_handler();
+			if (nh != nullptr) {
+				nh();
+			} else {
+				break;
+			}
+		}
+		return __p;
 	}
 
-	inline void VanillaAllocator::deallocate(void* p) noexcept {
-		if (p) {
+	static inline void deallocate(void* __p) noexcept {
+		if (__p != nullptr) {
+			std::free(__p);
+		}
+	}
+
+
+	// VanillaAllocator
+
+	inline void* VanillaAllocator::allocate(std::size_t __sz) noexcept {
+		// fprintf(stderr, "{allocate %zu bytes}\n", __sz);
+		return ::allocator::allocate(__sz);
+	}
+
+	inline void VanillaAllocator::deallocate(void* __p) noexcept {
+		if (__p != nullptr) {
 			// fprintf(stderr, "{deallocate}\n");
-			::allocator::deallocate(p);
+			::allocator::deallocate(__p);
 		}
 	}
 
@@ -151,74 +149,75 @@ namespace allocator {
 		return _total_allocated();
 	}
 
-	inline void* TrackedAllocator::allocate(std::size_t size) noexcept {
-		// fprintf(stderr, "[allocate %zu bytes]\n", size);
-		void* p = ::allocator::allocate(size + alloc_alignment);
-		if (!p) return nullptr;
-		auto& t_allocated = _total_allocated();
-		auto& l_allocated = _local_allocated();
-		t_allocated += size;
-		l_allocated += size;
-		*static_cast<std::size_t*>(p) = size;
-		// fprintf(stderr, "[allocated %zu bytes at %p, %lld [%lld] are now allocated]\n", size, p, l_allocated, t_allocated.load());
-		p = static_cast<char*>(p) + alloc_alignment;
-		return p;
-	}
-
-	inline void TrackedAllocator::deallocate(void* p) noexcept {
-		if (p) {
-			p = static_cast<char*>(p) - alloc_alignment;
-			// fprintf(stderr, "[deallocate %p]\n", p);
-			std::size_t size = *static_cast<std::size_t*>(p);
+	inline void* TrackedAllocator::allocate(std::size_t __sz) noexcept {
+		// fprintf(stderr, "[allocate %zu bytes]\n", __sz);
+		void* __p = ::allocator::allocate(__sz + alloc_alignment);
+		if (__p != nullptr) {
 			auto& t_allocated = _total_allocated();
 			auto& l_allocated = _local_allocated();
-			t_allocated -= size;
-			l_allocated -= size;
-			// fprintf(stderr, "[deallocating %zu bytes at %p, %lld [%lld] remain allocated]\n", size, p, l_allocated, t_allocated.load());
-			::allocator::deallocate(p);
+			t_allocated += __sz;
+			l_allocated += __sz;
+			*static_cast<std::size_t*>(__p) = __sz;
+			// fprintf(stderr, "[allocated %zu bytes at %__p, %lld [%lld] are now allocated]\n", __sz, __p, l_allocated, t_allocated.load());
+			__p = static_cast<char*>(__p) + alloc_alignment;
+		}
+		return __p;
+	}
+
+	inline void TrackedAllocator::deallocate(void* __p) noexcept {
+		if (__p != nullptr) {
+			__p = static_cast<char*>(__p) - alloc_alignment;
+			// fprintf(stderr, "[deallocate %__p]\n", __p);
+			std::size_t __sz = *static_cast<std::size_t*>(__p);
+			auto& t_allocated = _total_allocated();
+			auto& l_allocated = _local_allocated();
+			t_allocated -= __sz;
+			l_allocated -= __sz;
+			// fprintf(stderr, "[deallocating %zu bytes at %__p, %lld [%lld] remain allocated]\n", __sz, __p, l_allocated, t_allocated.load());
+			::allocator::deallocate(__p);
 		}
 	}
 }
 
 // Operators overload for tracking
 
-void* operator new(std::size_t size) noexcept(false) {
-	void* p = allocator::TrackedAllocator::allocate(size);
-	if (!p) {
+void* operator new(std::size_t __sz) noexcept(false) {
+	void* __p = allocator::TrackedAllocator::allocate(__sz);
+	if (__p == nullptr) {
 		static const std::bad_alloc nomem;
 		throw nomem;
 	}
-	return p;
+	return __p;
 }
 
 
-void* operator new(std::size_t size, const std::nothrow_t&) noexcept {
-	return allocator::TrackedAllocator::allocate(size);
+void* operator new(std::size_t __sz, const std::nothrow_t& /*unused*/) noexcept {
+	return allocator::TrackedAllocator::allocate(__sz);
 }
 
 
-void* operator new[](std::size_t size) noexcept(false) {
-	void* p = allocator::TrackedAllocator::allocate(size);
-	if (!p) {
+void* operator new[](std::size_t __sz) noexcept(false) {
+	void* __p = allocator::TrackedAllocator::allocate(__sz);
+	if (__p == nullptr) {
 		static const std::bad_alloc nomem;
 		throw nomem;
 	}
-	return p;
+	return __p;
 }
 
 
-void* operator new[](std::size_t size, const std::nothrow_t&) noexcept {
-	return allocator::TrackedAllocator::allocate(size);
+void* operator new[](std::size_t __sz, const std::nothrow_t& /*unused*/) noexcept {
+	return allocator::TrackedAllocator::allocate(__sz);
 }
 
 
-void operator delete(void* p) noexcept {
-	return allocator::TrackedAllocator::deallocate(p);
+void operator delete(void* __p) noexcept {
+	return allocator::TrackedAllocator::deallocate(__p);
 }
 
 
-void operator delete[](void* p) noexcept {
-	return allocator::TrackedAllocator::deallocate(p);
+void operator delete[](void* __p) noexcept {
+	return allocator::TrackedAllocator::deallocate(__p);
 }
 
 #else  /* XAPIAND_TRACKED_MEM */

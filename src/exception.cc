@@ -52,7 +52,7 @@ atos(const void* address)
 	if (fd == -1) {
 		Dl_info info;
 		memset(&info, 0, sizeof(Dl_info));
-		if (!dladdr(reinterpret_cast<const void*>(&atos), &info)) {
+		if (dladdr(reinterpret_cast<const void*>(&atos), &info) == 0) {
 			perror("Could not get base address for `atos`.");
 			return "";
 		}
@@ -154,15 +154,15 @@ traceback(const char* function, const char* filename, int line, void *const * ca
 		} else {
 			Dl_info info;
 			memset(&info, 0, sizeof(Dl_info));
-			if (dladdr(address, &info)) {
+			if (dladdr(address, &info) != 0) {
 				// Address:
 				snprintf(tmp, sizeof(tmp), "%p ", address);
 				result.append(tmp);
 				// Symbol name:
-				if (info.dli_sname) {
+				if (info.dli_sname != nullptr) {
 					int status = 0;
 					char* unmangled = abi::__cxa_demangle(info.dli_sname, nullptr, 0, &status);
-					if (status) {
+					if (status != 0) {
 						result.append(info.dli_sname);
 					} else {
 						try {
@@ -253,7 +253,7 @@ BaseException::BaseException(BaseException&& exc)
 
 
 BaseException::BaseException(const BaseException* exc)
-	: BaseException(exc ? *exc : BaseException())
+	: BaseException(exc != nullptr ? *exc : BaseException())
 { }
 
 
@@ -265,7 +265,7 @@ BaseException::BaseException(const BaseException& exc, const char *function_, co
 	  frames(0),
 	  message(fmt::vsprintf(format, args))
 {
-	if (!exc.type.empty() && exc.frames) {
+	if (!exc.type.empty() && (exc.frames != 0u)) {
 		function = exc.function;
 		filename = exc.filename;
 		line = exc.line;

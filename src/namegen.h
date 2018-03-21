@@ -167,7 +167,7 @@ class Generator {
 
 		std::unique_ptr<Generator> emit();
 		void split();
-		void wrap(Wrapper type);
+		void wrap(Wrapper _type);
 		void add(std::unique_ptr<Generator>&& g);
 
 		virtual void add(char c);

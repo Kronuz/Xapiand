@@ -114,7 +114,7 @@ class Logging : public ScheduledTask {
 	Logging& operator=(Logging&&) = delete;
 	Logging& operator=(const Logging&) = delete;
 
-	static Log add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
+	static Log add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 public:
@@ -127,7 +127,7 @@ public:
 	Logging(const char *function, const char *filename, int line, const std::string& str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
 	~Logging();
 
-	static std::string colorized(std::string_view s, bool try_coloring);
+	static std::string colorized(std::string_view str, bool try_coloring);
 	static void finish(int wait=10);
 	static void join();
 	static void dump_collected();

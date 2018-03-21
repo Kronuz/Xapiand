@@ -690,8 +690,8 @@ class Schema {
 
 	template <typename T>
 	void _index_item(Xapian::Document& doc, T&& values, size_t pos);
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, bool add_value=true);
-	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, size_t pos, bool add_values=true);
+	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
+	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
 
 
 	static void index_simple_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos);
@@ -781,38 +781,38 @@ class Schema {
 	void feed_partial_paths(const MsgPack& prop_partial_paths);
 	void feed_index_uuid_field(const MsgPack& prop_index_uuid_field);
 	void feed_script(const MsgPack& prop_script);
-	void feed_endpoint(const MsgPack& prop_script);
+	void feed_endpoint(const MsgPack& prop_endpoint);
 
 
 	/*
 	 * Functions for reserved words that are in document and need to be written in schema properties.
 	 */
 
-	void write_weight(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_weight);
-	void write_position(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_position);
-	void write_spelling(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_spelling);
-	void write_positions(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_positions);
-	void write_index(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_index);
-	void write_store(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_store);
-	void write_recurse(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_recurse);
-	void write_dynamic(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_dynamic);
-	void write_strict(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_strict);
-	void write_date_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_date_detection);
-	void write_time_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_time_detection);
-	void write_timedelta_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_timedelta_detection);
-	void write_numeric_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_numeric_detection);
-	void write_geo_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_geo_detection);
-	void write_bool_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_bool_detection);
-	void write_string_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_string_detection);
-	void write_text_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_text_detection);
-	void write_term_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_term_detection);
-	void write_uuid_detection(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_uuid_detection);
-	void write_bool_term(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_bool_term);
-	void write_namespace(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_namespace);
-	void write_partial_paths(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_partial_paths);
-	void write_index_uuid_field(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_index_uuid_field);
+	void write_weight(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_weight);
+	void write_position(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_position);
+	void write_spelling(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_spelling);
+	void write_positions(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_positions);
+	void write_index(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index);
+	void write_store(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_store);
+	void write_recurse(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_recurse);
+	void write_dynamic(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_dynamic);
+	void write_strict(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_strict);
+	void write_date_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_date_detection);
+	void write_time_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_time_detection);
+	void write_timedelta_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_timedelta_detection);
+	void write_numeric_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_numeric_detection);
+	void write_geo_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_geo_detection);
+	void write_bool_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_detection);
+	void write_string_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_string_detection);
+	void write_text_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_text_detection);
+	void write_term_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_term_detection);
+	void write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_uuid_detection);
+	void write_bool_term(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_term);
+	void write_namespace(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_namespace);
+	void write_partial_paths(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_partial_paths);
+	void write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index_uuid_field);
 	void write_schema(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_schema);
-	void write_endpoint(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_schema);
+	void write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_endpoint);
 
 
 	/*
@@ -824,7 +824,7 @@ class Schema {
 	void process_spelling(std::string_view prop_name, const MsgPack& doc_spelling);
 	void process_positions(std::string_view prop_name, const MsgPack& doc_positions);
 	void process_language(std::string_view prop_name, const MsgPack& doc_language);
-	void process_prefix(std::string_view prop_name, const MsgPack& doc_slot);
+	void process_prefix(std::string_view prop_name, const MsgPack& doc_prefix);
 	void process_slot(std::string_view prop_name, const MsgPack& doc_slot);
 	void process_stop_strategy(std::string_view prop_name, const MsgPack& doc_stop_strategy);
 	void process_stem_strategy(std::string_view prop_name, const MsgPack& doc_stem_strategy);
@@ -841,7 +841,7 @@ class Schema {
 	void process_partials(std::string_view prop_name, const MsgPack& doc_partials);
 	void process_error(std::string_view prop_name, const MsgPack& doc_error);
 	void process_value(std::string_view prop_name, const MsgPack& doc_value);
-	void process_endpoint(std::string_view prop_name, const MsgPack& doc_value);
+	void process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint);
 	void process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_object);
 	void process_script(std::string_view prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
@@ -878,7 +878,7 @@ class Schema {
 	 * Auxiliar functions for RESERVED_SCRIPT.
 	 */
 
-	void write_script(MsgPack& properties);
+	void write_script(MsgPack& mut_properties);
 	void normalize_script();
 #endif
 
@@ -887,7 +887,7 @@ class Schema {
 	 * Functions to update default specification for fields.
 	 */
 
-	void set_default_spc_id(MsgPack& properties);
+	void set_default_spc_id(MsgPack& mut_properties);
 
 
 	/*
@@ -972,8 +972,8 @@ public:
 	/*
 	 * Function to update the schema according to obj_schema.
 	 */
-	bool update(const MsgPack& obj_schema);
-	bool write(const MsgPack& obj_schema, bool replace);
+	bool update(const MsgPack& object);
+	bool write(const MsgPack& object, bool replace);
 
 	/*
 	 * Returns underlying msgpack schema.

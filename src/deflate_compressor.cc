@@ -78,7 +78,7 @@ DeflateCompressData::init()
 	}
 	state = DeflateState::INIT;
 
-	if (data) {
+	if (data != nullptr) {
 		return next();
 	}
 	return std::string();
@@ -281,9 +281,8 @@ DeflateCompressFile::next()
 		if (stream == Z_STREAM_END) {
 			state = DeflateState::END;
 			return std::string();
-		} else {
-			THROW(DeflateIOError, "IO error: read");
 		}
+		THROW(DeflateIOError, "IO error: read");
 	}
 	strm.avail_in = inpBytes;
 	bytes_readed+=strm.avail_in;
@@ -362,9 +361,8 @@ DeflateDecompressFile::next()
 		if (stream == Z_STREAM_END) {
 			state = DeflateState::END;
 			return std::string();
-		} else {
-			THROW(DeflateIOError, "IO error: read");
 		}
+		THROW(DeflateIOError, "IO error: read");
 	}
 	strm.avail_in = inpBytes;
 	strm.next_in = reinterpret_cast<Bytef*>(&cmpBuf[0]);

@@ -67,16 +67,14 @@ QueryDSL::get_in_type(const MsgPack& obj)
 		const auto& range = it.value();
 		try {
 			auto it_f = range.find(QUERYDSL_FROM);
-			if (it_f == range.end()) {
-				auto it_t = range.find(QUERYDSL_TO);
-				if (it_t == range.end()) {
-					return FieldType::EMPTY;
-				} else {
-					return Serialise::guess_type(it_t.value());
-				}
-			} else {
+			if (it_f != range.end()) {
 				return Serialise::guess_type(it_f.value());
 			}
+			auto it_t = range.find(QUERYDSL_TO);
+			if (it_t != range.end()) {
+				return Serialise::guess_type(it_t.value());
+			}
+			return FieldType::EMPTY;
 		} catch (const msgpack::type_error&) {
 			THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_RANGE, repr(range.to_string()));
 		}
@@ -144,7 +142,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 
 
 inline Xapian::Query
-QueryDSL::process_in(std::string_view, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool, bool is_wildcard)
+QueryDSL::process_in(std::string_view /*unused*/, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool /*unused*/, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_in(...)");
 
@@ -153,7 +151,7 @@ QueryDSL::process_in(std::string_view, Xapian::Query::op op, std::string_view pa
 
 
 inline Xapian::Query
-QueryDSL::process_range(std::string_view word, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_range(std::string_view word, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_range(...)");
 
@@ -162,7 +160,7 @@ QueryDSL::process_range(std::string_view word, Xapian::Query::op, std::string_vi
 
 
 inline Xapian::Query
-QueryDSL::process_raw(std::string_view, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool, bool is_in, bool is_wildcard)
+QueryDSL::process_raw(std::string_view /*unused*/, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool /*unused*/, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_raw(...)");
 
@@ -171,7 +169,7 @@ QueryDSL::process_raw(std::string_view, Xapian::Query::op op, std::string_view p
 
 
 inline Xapian::Query
-QueryDSL::process_value(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value(...)");
 
@@ -180,7 +178,7 @@ QueryDSL::process_value(std::string_view, Xapian::Query::op, std::string_view pa
 
 
 inline Xapian::Query
-QueryDSL::process_and(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and(...)");
 
@@ -189,7 +187,7 @@ QueryDSL::process_and(std::string_view, Xapian::Query::op, std::string_view pare
 
 
 inline Xapian::Query
-QueryDSL::process_and_maybe(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and_maybe(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_maybe(...)");
 
@@ -198,7 +196,7 @@ QueryDSL::process_and_maybe(std::string_view, Xapian::Query::op, std::string_vie
 
 
 inline Xapian::Query
-QueryDSL::process_and_not(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_and_not(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_and_not(...)");
 
@@ -207,7 +205,7 @@ QueryDSL::process_and_not(std::string_view, Xapian::Query::op, std::string_view 
 
 
 inline Xapian::Query
-QueryDSL::process_elite_set(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_elite_set(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_elite_set(...)");
 
@@ -216,7 +214,7 @@ QueryDSL::process_elite_set(std::string_view, Xapian::Query::op, std::string_vie
 
 
 inline Xapian::Query
-QueryDSL::process_filter(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_filter(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_filter(...)");
 
@@ -225,7 +223,7 @@ QueryDSL::process_filter(std::string_view, Xapian::Query::op, std::string_view p
 
 
 inline Xapian::Query
-QueryDSL::process_max(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_max(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_max(...)");
 
@@ -234,7 +232,7 @@ QueryDSL::process_max(std::string_view, Xapian::Query::op, std::string_view pare
 
 
 inline Xapian::Query
-QueryDSL::process_near(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_near(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_near(...)");
 
@@ -243,7 +241,7 @@ QueryDSL::process_near(std::string_view, Xapian::Query::op, std::string_view par
 
 
 inline Xapian::Query
-QueryDSL::process_or(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_or(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_or(...)");
 
@@ -252,7 +250,7 @@ QueryDSL::process_or(std::string_view, Xapian::Query::op, std::string_view paren
 
 
 inline Xapian::Query
-QueryDSL::process_phrase(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_phrase(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_phrase(...)");
 
@@ -261,7 +259,7 @@ QueryDSL::process_phrase(std::string_view, Xapian::Query::op, std::string_view p
 
 
 inline Xapian::Query
-QueryDSL::process_scale_weight(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_scale_weight(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_scale_weight(...)");
 
@@ -270,7 +268,7 @@ QueryDSL::process_scale_weight(std::string_view, Xapian::Query::op, std::string_
 
 
 inline Xapian::Query
-QueryDSL::process_synonym(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_synonym(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_synonym(...)");
 
@@ -279,7 +277,7 @@ QueryDSL::process_synonym(std::string_view, Xapian::Query::op, std::string_view 
 
 
 inline Xapian::Query
-QueryDSL::process_value_ge(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_ge(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_ge(...)");
 
@@ -288,7 +286,7 @@ QueryDSL::process_value_ge(std::string_view, Xapian::Query::op, std::string_view
 
 
 inline Xapian::Query
-QueryDSL::process_value_le(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_le(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_le(...)");
 
@@ -297,7 +295,7 @@ QueryDSL::process_value_le(std::string_view, Xapian::Query::op, std::string_view
 
 
 inline Xapian::Query
-QueryDSL::process_value_range(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_value_range(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_value_range(...)");
 
@@ -306,7 +304,7 @@ QueryDSL::process_value_range(std::string_view, Xapian::Query::op, std::string_v
 
 
 inline Xapian::Query
-QueryDSL::process_wildcard(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool)
+QueryDSL::process_wildcard(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool /*unused*/)
 {
 	L_CALL("QueryDSL::process_wildcard(...)");
 
@@ -315,7 +313,7 @@ QueryDSL::process_wildcard(std::string_view, Xapian::Query::op, std::string_view
 
 
 inline Xapian::Query
-QueryDSL::process_xor(std::string_view, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_xor(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_xor(...)");
 
@@ -324,7 +322,7 @@ QueryDSL::process_xor(std::string_view, Xapian::Query::op, std::string_view pare
 
 
 inline Xapian::Query
-QueryDSL::process_cast(std::string_view word, Xapian::Query::op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process_cast(std::string_view word, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_cast(%s, ...)", repr(word));
 
@@ -566,23 +564,22 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::ter
 			return get_namespace_query(default_spc, aux, wqf, q_flags, is_in, is_wildcard);
 		}
 		return get_namespace_query(default_spc, obj, wqf, q_flags, is_in, is_wildcard);
-	} else {
-		auto data_field = schema->get_data_field(path, is_in);
-		const auto& field_spc = data_field.first;
+	}
+	auto data_field = schema->get_data_field(path, is_in);
+	const auto& field_spc = data_field.first;
 
-		if (!data_field.second.empty()) {
-			return get_accuracy_query(field_spc, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, is_in);
-		}
+	if (!data_field.second.empty()) {
+		return get_accuracy_query(field_spc, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, is_in);
+	}
 
-		if (field_spc.flags.inside_namespace) {
-			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
-		}
+	if (field_spc.flags.inside_namespace) {
+		return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
+	}
 
-		try {
-			return get_regular_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
-		} catch (const SerialisationError&) {
-			return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
-		}
+	try {
+		return get_regular_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
+	} catch (const SerialisationError&) {
+		return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
 	}
 }
 
@@ -673,7 +670,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 
 	int errno_save;
 	auto acc = strict_stoull(errno_save, field_accuracy.substr(1));
-	if (errno_save) {
+	if (errno_save != 0) {
 		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
 	}
 	auto value = Cast::integer(obj);
@@ -689,7 +686,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 	if (string::startswith(field_accuracy, "_geo")) {
 		int errno_save;
 		auto nivel = strict_stoull(errno_save, field_accuracy.substr(4));
-		if (errno_save) {
+		if (errno_save != 0) {
 			THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
 		}
 		GeoSpatial geo(obj);
@@ -737,21 +734,20 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 			auto parsed = parse_guess_range(field_spc, obj.str_view());
 			if (parsed.first == FieldType::EMPTY) {
 				return Xapian::Query::MatchAll;
-			} else if (field_spc.prefix().empty()) {
+			}
+			if (field_spc.prefix().empty()) {
 				return get_in_query(specification_t::get_global(parsed.first), parsed.second);
-			} else {
-				return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second);
 			}
-		} else {
-			auto field_type = get_in_type(obj);
-			if (field_type == FieldType::EMPTY) {
-				return Xapian::Query::MatchAll;
-			} else if (field_spc.prefix().empty()) {
-				return get_in_query(specification_t::get_global(field_type), obj);
-			} else {
-				return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix()), obj);
-			}
+			return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second);
 		}
+		auto field_type = get_in_type(obj);
+		if (field_type == FieldType::EMPTY) {
+			return Xapian::Query::MatchAll;
+		}
+		if (field_spc.prefix().empty()) {
+			return get_in_query(specification_t::get_global(field_type), obj);
+		}
+		return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix()), obj);
 	}
 
 	switch (obj.getType()) {
@@ -761,7 +757,8 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 			auto val = obj.str_view();
 			if (val.empty()) {
 				return Xapian::Query(field_spc.prefix());
-			} else if (val == "*") {
+			}
+			if (val == "*") {
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix());
 			}
 			break;
@@ -785,9 +782,8 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 	if (is_in) {
 		if (obj.is_string()) {
 			return get_in_query(field_spc, parse_range(field_spc, obj.str_view()));
-		} else {
-			return get_in_query(field_spc, obj);
 		}
+		return get_in_query(field_spc, obj);
 	}
 
 	switch (obj.getType()) {
@@ -797,7 +793,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 			auto val = obj.str_view();
 			if (val.empty()) {
 				return Xapian::Query(field_spc.prefix());
-			} else if (val == "*") {
+			} if (val == "*") {
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, field_spc.prefix());
 			}
 			break;
@@ -850,11 +846,11 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			if (string::endswith(serialised_term, '*')) {
 				serialised_term.remove_suffix(1);
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
-			} else if (is_wildcard) {
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
-			} else {
-				return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 			}
+			if (is_wildcard) {
+				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
+			}
+			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 		}
 
 		default:
@@ -868,37 +864,35 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	L_CALL("QueryDSL::get_in_query(<field_spc>, %s)", repr(obj.to_string()));
 
-	if (obj.is_map() && obj.size() == 1) {
-		const auto it = obj.begin();
-		const auto field_name = it->str_view();
-		if (field_name.compare(QUERYDSL_RANGE) == 0) {
-			const auto& value = it.value();
-			if (value.is_map()) {
-				return MultipleValueRange::getQuery(field_spc, value);
-			} else {
-				THROW(QueryDslError, "%s must be object [%s]", repr(field_name), repr(value.to_string()));
-			}
-		} else {
-			switch (Cast::getHash(field_name)) {
-				case Cast::Hash::EWKT:
-				case Cast::Hash::POINT:
-				case Cast::Hash::CIRCLE:
-				case Cast::Hash::CONVEX:
-				case Cast::Hash::POLYGON:
-				case Cast::Hash::CHULL:
-				case Cast::Hash::MULTIPOINT:
-				case Cast::Hash::MULTICIRCLE:
-				case Cast::Hash::MULTIPOLYGON:
-				case Cast::Hash::MULTICHULL:
-				case Cast::Hash::GEO_COLLECTION:
-				case Cast::Hash::GEO_INTERSECTION:
-					return GeoSpatialRange::getQuery(field_spc, obj);
-				default:
-					THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()));
-			}
+	if (!obj.is_map() || obj.size() != 1) {
+		THROW(QueryDslError, "%s must be an object with a single element [%s]", QUERYDSL_IN, repr(obj.to_string()));
+	}
+
+	const auto it = obj.begin();
+	const auto field_name = it->str_view();
+	if (field_name.compare(QUERYDSL_RANGE) == 0) {
+		const auto& value = it.value();
+		if (!value.is_map()) {
+			THROW(QueryDslError, "%s must be object [%s]", repr(field_name), repr(value.to_string()));
 		}
-	} else {
-		THROW(QueryDslError, "%s must be object and only contains one element [%s]", QUERYDSL_IN, repr(obj.to_string()));
+		return MultipleValueRange::getQuery(field_spc, value);
+	}
+	switch (Cast::getHash(field_name)) {
+		case Cast::Hash::EWKT:
+		case Cast::Hash::POINT:
+		case Cast::Hash::CIRCLE:
+		case Cast::Hash::CONVEX:
+		case Cast::Hash::POLYGON:
+		case Cast::Hash::CHULL:
+		case Cast::Hash::MULTIPOINT:
+		case Cast::Hash::MULTICIRCLE:
+		case Cast::Hash::MULTIPOLYGON:
+		case Cast::Hash::MULTICHULL:
+		case Cast::Hash::GEO_COLLECTION:
+		case Cast::Hash::GEO_INTERSECTION:
+			return GeoSpatialRange::getQuery(field_spc, obj);
+		default:
+			THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()));
 	}
 }
 
@@ -937,67 +931,67 @@ QueryDSL::make_dsl_query(std::string_view query)
 			const auto& token = booltree.front();
 
 			switch (token.get_type()) {
-				case TokenType::Not:
-					if (stack_msgpack.size() < 1) {
+				case TokenType::Not: {
+					if (stack_msgpack.empty()) {
 						THROW(QueryDslError, "Bad boolean expression");
-					} else {
-						MsgPack object = {{ "_not", stack_msgpack.back() }}; // expression.
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
 					}
+					MsgPack object = {{ "_not", stack_msgpack.back() }}; // expression.
+					stack_msgpack.pop_back();
+					stack_msgpack.push_back(std::move(object));
 					break;
+				}
 
-				case TokenType::Or:
+				case TokenType::Or: {
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
-					} else {
-						MsgPack object;
-						auto& _or = object["_or"] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_or[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
 					}
+					MsgPack object;
+					auto& _or = object["_or"] = { nullptr, stack_msgpack.back() };  // right expression
+					stack_msgpack.pop_back();
+					_or[0] = stack_msgpack.back();  // left expression
+					stack_msgpack.pop_back();
+					stack_msgpack.push_back(std::move(object));
 					break;
+				}
 
-				case TokenType::And:
+				case TokenType::And: {
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
-					} else {
-						MsgPack object;
-						auto& _and = object["_and"] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_and[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
 					}
+					MsgPack object;
+					auto& _and = object["_and"] = { nullptr, stack_msgpack.back() };  // right expression
+					stack_msgpack.pop_back();
+					_and[0] = stack_msgpack.back();  // left expression
+					stack_msgpack.pop_back();
+					stack_msgpack.push_back(std::move(object));
 					break;
+				}
 
-				case TokenType::Maybe:
+				case TokenType::Maybe: {
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
-					} else {
-						MsgPack object;
-						auto& _and_maybe = object["_and_maybe"] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_and_maybe[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
 					}
+					MsgPack object;
+					auto& _and_maybe = object["_and_maybe"] = { nullptr, stack_msgpack.back() };  // right expression
+					stack_msgpack.pop_back();
+					_and_maybe[0] = stack_msgpack.back();  // left expression
+					stack_msgpack.pop_back();
+					stack_msgpack.push_back(std::move(object));
 					break;
+				}
 
-				case TokenType::Xor:
+				case TokenType::Xor: {
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
-					} else {
-						MsgPack object;
-						auto& _xor = object["_xor"] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_xor[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
 					}
+					MsgPack object;
+					auto& _xor = object["_xor"] = { nullptr, stack_msgpack.back() };  // right expression
+					stack_msgpack.pop_back();
+					_xor[0] = stack_msgpack.back();  // left expression
+					stack_msgpack.pop_back();
+					stack_msgpack.push_back(std::move(object));
 					break;
+				}
 
 				case TokenType::Id:	{
 					FieldParser fp(token.get_lexeme());
@@ -1031,9 +1025,8 @@ QueryDSL::make_dsl_query(std::string_view query)
 
 		if (stack_msgpack.size() == 1) {
 			return stack_msgpack.back();
-		} else {
-			THROW(QueryDslError, "Bad boolean expression");
 		}
+		THROW(QueryDslError, "Bad boolean expression");
 	} catch (const LexicalException& err) {
 		THROW(QueryDslError, err.what());
 	} catch (const SyntacticException& err) {

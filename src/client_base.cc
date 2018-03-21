@@ -413,11 +413,11 @@ BaseClient::write_directly(int fd)
 			if (ignored_errorno(errno, true, false)) {
 				L_CONN("WR:RETRY: {fd:%d} - %d: %s", fd, errno, strerror(errno));
 				return WR::RETRY;
-			} else {
-				L_ERR("ERROR: write error {fd:%d} - %d: %s", fd, errno, strerror(errno));
-				L_CONN("WR:ERR.2: {fd:%d}", fd);
-				return WR::ERR;
 			}
+
+			L_ERR("ERROR: write error {fd:%d} - %d: %s", fd, errno, strerror(errno));
+			L_CONN("WR:ERR.2: {fd:%d}", fd);
+			return WR::ERR;
 		}
 
 		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500), _written);
@@ -510,7 +510,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 
-	if (revents & EV_ERROR) {
+	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));
 		destroy();
 		detach();
@@ -547,7 +547,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 
-	if (revents & EV_ERROR) {
+	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {fd:%d} - %d: %s", fd, errno, strerror(errno));
 		destroy();
 		detach();
@@ -618,10 +618,10 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		mode = MODE::READ_FILE;
 	}
 
-	if (received && mode == MODE::READ_FILE) {
+	if ((received != 0) && mode == MODE::READ_FILE) {
 		do {
 			if (file_size == -1) {
-				if (buf_data) {
+				if (buf_data != nullptr) {
 					file_buffer.append(buf_data, received);
 				}
 				buf_data = file_buffer.data();
@@ -641,11 +641,11 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 						mode = MODE::READ_BUF;
 						decompressor.reset();
 						break;
-					} else {
-						L_ERR("Data is corrupt!");
-						L_EV_END("BaseClient::io_cb_read:END");
-						return;
 					}
+
+					L_ERR("Data is corrupt!");
+					L_EV_END("BaseClient::io_cb_read:END");
+					return;
 				}
 
 				block_size = file_size;
@@ -667,7 +667,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 				received = 0;
 			}
 
-			if (block_size_to_write) {
+			if (block_size_to_write != 0u) {
 				decompressor->append(file_buf_to_write, block_size_to_write);
 				block_size -= block_size_to_write;
 			}
@@ -678,7 +678,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 				receive_checksum = true;
 			} else if (block_size == 0) {
 				decompressor->decompress();
-				if (buf_data) {
+				if (buf_data != nullptr) {
 					file_buffer.assign(buf_data, received);
 					buf_data = nullptr;
 					received = 0;
@@ -690,7 +690,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		} while (file_size == -1);
 	}
 
-	if (received && mode == MODE::READ_BUF) {
+	if ((received != 0) && mode == MODE::READ_BUF) {
 		on_read(buf_data, received);
 	}
 
@@ -704,7 +704,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 
 void
-BaseClient::write_start_async_cb(ev::async&, int revents)
+BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
@@ -724,7 +724,7 @@ BaseClient::write_start_async_cb(ev::async&, int revents)
 
 
 void
-BaseClient::read_start_async_cb(ev::async&, int revents)
+BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
@@ -752,7 +752,7 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	if (now || (idle && write_queue.empty())) {
+	if ((now != 0) || (idle && write_queue.empty())) {
 		destroy();
 		detach();
 	}

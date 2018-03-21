@@ -78,7 +78,7 @@
 opts_t opts;
 
 
-static const bool is_tty = isatty(STDERR_FILENO);
+static const bool is_tty = isatty(STDERR_FILENO) != 0;
 
 
 template<typename T, std::size_t N>
@@ -182,8 +182,8 @@ public:
 static signals_t<arraySize(sys_siglist)> signals;
 
 
-void toggle_hooks(int) {
-	if (logger_info_hook) {
+void toggle_hooks(int /*unused*/) {
+	if (logger_info_hook != 0u) {
 		logger_info_hook = 0;
 		if (is_tty) {
 			::write(STDERR_FILENO, STEEL_BLUE + "Info hooks disabled!" + CLEAR_COLOR + "\n");
@@ -302,12 +302,12 @@ const char* ev_backend(unsigned int backend) {
 std::vector<std::string> ev_supported() {
 	std::vector<std::string> backends;
 	unsigned int supported = ev::supported_backends();
-	if (supported & ev::SELECT) backends.push_back(EV_SELECT_NAME);
-	if (supported & ev::POLL) backends.push_back(EV_POLL_NAME);
-	if (supported & ev::EPOLL) backends.push_back(EV_EPOLL_NAME);
-	if (supported & ev::KQUEUE) backends.push_back(EV_KQUEUE_NAME);
-	if (supported & ev::DEVPOLL) backends.push_back(EV_DEVPOLL_NAME);
-	if (supported & ev::PORT) backends.push_back(EV_PORT_NAME);
+	if ((supported & ev::SELECT) != 0u) { backends.push_back(EV_SELECT_NAME); }
+	if ((supported & ev::POLL) != 0u) { backends.push_back(EV_POLL_NAME); }
+	if ((supported & ev::EPOLL) != 0u) { backends.push_back(EV_EPOLL_NAME); }
+	if ((supported & ev::KQUEUE) != 0u) { backends.push_back(EV_KQUEUE_NAME); }
+	if ((supported & ev::DEVPOLL) != 0u) { backends.push_back(EV_DEVPOLL_NAME); }
+	if ((supported & ev::PORT) != 0u) { backends.push_back(EV_PORT_NAME); }
 	if (backends.empty()) {
 		backends.push_back("auto");
 	}
@@ -326,7 +326,7 @@ void parseOptions(int argc, char** argv) {
 		CmdOutput output;
 		ZshCompletionOutput zshoutput;
 
-		if (getenv("ZSH_COMPLETE")) {
+		if (getenv("ZSH_COMPLETE") != nullptr) {
 			cmd.setOutput(&zshoutput);
 		} else {
 			cmd.setOutput(&output);
@@ -412,7 +412,7 @@ void parseOptions(int argc, char** argv) {
 		for (int i = 0; i < argc; ++i) {
 			if (i == 0) {
 				const char* a = strrchr(argv[i], '/');
-				if (a) {
+				if (a != nullptr) {
 					++a;
 				} else {
 					a = argv[i];
@@ -429,14 +429,14 @@ void parseOptions(int argc, char** argv) {
 					}
 				}
 				const char* a = strchr(arg, '=');
-				if (a) {
-					if (a - arg) {
+				if (a != nullptr) {
+					if ((a - arg) != 0) {
 						std::string tmp(arg, a - arg);
 						args.push_back(tmp);
 					}
 					arg = a + 1;
 				}
-				if (*arg) {
+				if (*arg != 0) {
 					args.push_back(arg);
 				}
 			}
@@ -684,7 +684,7 @@ void adjustOpenFilesLimit() {
 
 	// Calculate max_files (from configuration, recommended and available numbers):
 	ssize_t max_files = opts.max_files;
-	if (max_files) {
+	if (max_files != 0) {
 		if (max_files > aprox_available_files) {
 			L_WARNING("The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
@@ -701,7 +701,7 @@ void adjustOpenFilesLimit() {
 	struct rlimit limit;
 	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
 		limit_cur_files = available_files;
-		if (!limit_cur_files || limit_cur_files > 4000) {
+		if ((limit_cur_files == 0) || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
 		L_WARNING("Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
@@ -713,7 +713,7 @@ void adjustOpenFilesLimit() {
 	// Set the the max number of files:
 	// Increase if the current limit is not enough for our needs or
 	// decrease if the user requests it.
-	if (opts.max_files || limit_cur_files < max_files) {
+	if ((opts.max_files != 0) || limit_cur_files < max_files) {
 		bool increasing = limit_cur_files < max_files;
 
 		const ssize_t step = 16;
@@ -743,7 +743,7 @@ void adjustOpenFilesLimit() {
 			new_max_files -= step;
 		}
 
-		if (setrlimit_error) {
+		if (setrlimit_error != 0) {
 			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
 		}
 		max_files = new_max_files;
@@ -816,7 +816,7 @@ void demote(const char* username, const char* group) {
 
 		if ((pw = getpwnam(username)) == nullptr) {
 			uid = atoi(username);
-			if (!uid || (pw = getpwuid(uid)) == nullptr) {
+			if ((uid == 0u) || (pw = getpwuid(uid)) == nullptr) {
 				L_CRIT("Can't find the user %s to switch to", username);
 				throw Exit(EX_NOUSER);
 			}
@@ -825,10 +825,10 @@ void demote(const char* username, const char* group) {
 		gid_t gid = pw->pw_gid;
 		username = pw->pw_name;
 
-		if (group && *group) {
+		if ((group != nullptr) && (*group != 0)) {
 			if ((gr = getgrnam(group)) == nullptr) {
 				gid = atoi(group);
-				if (!gid || (gr = getgrgid(gid)) == nullptr) {
+				if ((gid == 0u) || (gr = getgrgid(gid)) == nullptr) {
 					L_CRIT("Can't find the group %s to switch to", group);
 					throw Exit(EX_NOUSER);
 				}
@@ -864,7 +864,7 @@ void detach() {
 		dup2(fd, STDIN_FILENO);
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
-		if (fd > STDERR_FILENO) io::close(fd);
+		if (fd > STDERR_FILENO) { io::close(fd); }
 	}
 }
 
@@ -985,8 +985,8 @@ int server() {
 		// Flush threshold increased
 		int flush_threshold = 10000;  // Default is 10000 (if no set)
 		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-		if (p) flush_threshold = atoi(p);
-		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
+		if (p != nullptr) { flush_threshold = atoi(p); }
+		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", 0) == 0) {
 			L_INFO("Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 		}
 
@@ -1198,7 +1198,7 @@ int main(int argc, char **argv) {
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
 		// Prefer glass database
-		if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
+		if (setenv("XAPIAN_PREFER_GLASS", "1", 0) != 0) {
 			opts.chert = true;
 		}
 	}

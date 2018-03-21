@@ -97,7 +97,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	}
 	auto local_schema_ptr = atom_local_schema->load();
 
-	if (obj && obj->is_map()) {
+	if ((obj != nullptr) && obj->is_map()) {
 		const auto it = obj->find(reserved_schema);
 		if (it != obj->end()) {
 			schema_obj = &it.value();
@@ -219,7 +219,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		}
 	}
 
-	if (schema_obj && schema_obj->is_map()) {
+	if ((schema_obj != nullptr) && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		o.erase(RESERVED_ENDPOINT);
 		auto sep_types = required_spc_t::get_types(o[RESERVED_TYPE].str_view());
@@ -323,7 +323,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 			if (schema_ptr == new_schema) {
 				return true;
-			} else if (atom_local_schema->compare_exchange_strong(schema_ptr, new_schema)) {
+			}
+			if (atom_local_schema->compare_exchange_strong(schema_ptr, new_schema)) {
 				if (*schema_ptr != *new_schema) {
 					try {
 						db_handler->set_metadata(reserved_schema, new_schema->serialise());
@@ -403,7 +404,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	if (!failure) {
 		if (foreign_schema_ptr == new_schema) {
 			return true;
-		} else if (atom_shared_schema->compare_exchange_strong(foreign_schema_ptr, new_schema)) {
+		}
+		if (atom_shared_schema->compare_exchange_strong(foreign_schema_ptr, new_schema)) {
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
 					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
@@ -467,7 +469,8 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	std::shared_ptr<const MsgPack> new_schema = nullptr;
 	if (local_schema_ptr == new_schema) {
 		return true;
-	} else if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
+	}
+	if (atom_local_schema->compare_exchange_strong(local_schema_ptr, new_schema)) {
 		try {
 			db_handler->set_metadata(reserved_schema, "");
 		} catch(...) {

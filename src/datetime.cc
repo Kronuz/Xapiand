@@ -106,10 +106,10 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 		case 5: // 00:00
 			if (str_time[2] == ':') {
 				tm.hour = strict_stoul(errno_save, str_time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				if (tm.hour < 24) {
 					tm.min = strict_stoul(errno_save, str_time.substr(3, 2));
-					if (errno_save) goto error;
+					if (errno_save != 0) { goto error; }
 					if (tm.min < 60) {
 						tm.sec = 0;
 						tm.fsec = 0.0;
@@ -122,13 +122,13 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 		case 8: // 00:00:00
 			if (str_time[2] == ':' && str_time[5] == ':') {
 				tm.hour = strict_stoul(errno_save, str_time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				if (tm.hour < 24) {
 					tm.min = strict_stoul(errno_save, str_time.substr(3, 2));
-					if (errno_save) goto error;
+					if (errno_save != 0) { goto error; }
 					if (tm.min < 60) {
 						tm.sec = strict_stoul(errno_save, str_time.substr(6, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						if (tm.sec < 60) {
 							tm.fsec = 0.0;
 							return;
@@ -141,13 +141,13 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
 			if (size > 9 && (str_time[2] == ':' && str_time[5] == ':')) {
 				tm.hour = strict_stoul(errno_save, str_time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				if (tm.hour < 24) {
 					tm.min = strict_stoul(errno_save, str_time.substr(3, 2));
-					if (errno_save) goto error;
+					if (errno_save != 0) { goto error; }
 					if (tm.min < 60) {
 						tm.sec = strict_stoul(errno_save, str_time.substr(6, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						if (tm.sec < 60) {
 							switch (str_time[8]) {
 								case '+':
@@ -156,11 +156,11 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 										tm.fsec = 0.0;
 										auto tz_h = str_time.substr(9, 2);
 										auto h = strict_stoul(errno_save, tz_h);
-										if (errno_save) goto error;
+										if (errno_save != 0) { goto error; }
 										if (h < 24) {
 											auto tz_m = str_time.substr(12, 2);
 											auto m = strict_stoul(errno_save, tz_m);
-											if (errno_save) goto error;
+											if (errno_save != 0) { goto error; }
 											if (m < 60) {
 												computeTimeZone(tm, str_time[8], tz_h, tz_m);
 												return;
@@ -181,15 +181,15 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 													if (*aux_end == ':') {
 														auto tz_h = std::string_view(aux + 1, aux_end - aux - 1);
 														auto h = strict_stoul(errno_save, tz_h);
-														if (errno_save) goto error;
+														if (errno_save != 0) { goto error; }
 														if (h < 24) {
 															auto tz_m = std::string_view(aux_end + 1, it_e - aux_end - 1);
 															auto m = strict_stoul(errno_save, tz_m);
-															if (errno_save) goto error;
+															if (errno_save != 0) { goto error; }
 															if (m < 60) {
 																computeTimeZone(tm, c, tz_h, tz_m);
 																auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
-																if (errno_save) goto error;
+																if (errno_save != 0) { goto error; }
 																tm.fsec = Datetime::normalize_fsec(fsec);
 																return;
 															}
@@ -202,7 +202,7 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 										}
 									}
 									auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
-									if (errno_save) goto error;
+									if (errno_save != 0) { goto error; }
 									tm.fsec = Datetime::normalize_fsec(fsec);
 									return;
 								}
@@ -264,11 +264,11 @@ Datetime::DateParser(std::string_view date)
 	int errno_save;
 	if (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
 		tm.year = strict_stoi(errno_save, m.str(1));
-		if (errno_save) goto error;
+		if (errno_save != 0) { goto error; }
 		tm.mon = strict_stoi(errno_save, m.str(3));
-		if (errno_save) goto error;
+		if (errno_save != 0) { goto error; }
 		tm.day = strict_stoi(errno_save, m.str(4));
-		if (errno_save) goto error;
+		if (errno_save != 0) { goto error; }
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
 			goto error_out_of_range;
 		}
@@ -279,22 +279,22 @@ Datetime::DateParser(std::string_view date)
 			tm.fsec = 0.0;
 		} else {
 			tm.hour = strict_stoi(errno_save, m.str(6));
-			if (errno_save) goto error;
+			if (errno_save != 0) { goto error; }
 			tm.min = strict_stoi(errno_save, m.str(7));
-			if (errno_save) goto error;
+			if (errno_save != 0) { goto error; }
 			if (m.length(8) == 0) {
 				tm.sec = 0;
 				tm.fsec = 0.0;
 			} else {
 				tm.sec = strict_stoi(errno_save, m.str(9));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				if (m.length(10) == 0) {
 					tm.fsec = 0.0;
 				} else {
 					auto fs = m.str(11);
 					fs.insert(0, 1, '.');
 					auto fsec = strict_stod(errno_save, fs);
-					if (errno_save) goto error;
+					if (errno_save != 0) { goto error; }
 					tm.fsec = normalize_fsec(fsec);
 				}
 			}
@@ -398,11 +398,11 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 		case 10: // 0000-00-00
 			if (date[4] == '-' && date[7] == '-') {
 				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = 0;
 					tm.min  = 0;
@@ -416,20 +416,20 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 		case 19: // 0000-00-00[T ]00:00:00
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
 				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
 						tm.min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
 							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
 								tm.fsec = 0.0;
 								return Format::VALID;
@@ -444,20 +444,20 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == 'Z') {
 				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
 						tm.min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
 							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
 								tm.fsec = 0.0;
 								return Format::VALID;
@@ -472,20 +472,20 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 				date[13] == ':' && date[16] == ':') {
 				tm.year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
 						tm.min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
 							tm.sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
 								switch (date[19]) {
 									case '+':
@@ -494,11 +494,11 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 											tm.fsec = 0.0;
 											auto tz_h = date.substr(20, 2);
 											auto h = strict_stoul(errno_save, tz_h);
-											if (errno_save) return Format::ERROR;
+											if (errno_save != 0) { return Format::ERROR; }
 											if (h < 24) {
 												auto tz_m = date.substr(23, 2);
 												auto m = strict_stoul(errno_save, tz_m);
-												if (errno_save) return Format::ERROR;
+												if (errno_save != 0) { return Format::ERROR; }
 												if (m < 60) {
 													computeTimeZone(tm, date[19], tz_h, tz_m);
 													return Format::VALID;
@@ -517,7 +517,7 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 													case 'Z':
 														if ((aux + 1) == it_e) {
 															auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
-															if (errno_save) return Format::ERROR;
+															if (errno_save != 0) { return Format::ERROR; }
 															tm.fsec = normalize_fsec(fsec);
 															return Format::VALID;
 														}
@@ -529,14 +529,14 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 															if (*aux_end == ':') {
 																auto tz_h = std::string_view(aux + 1, aux_end - aux - 1);
 																auto h = strict_stoul(errno_save, tz_h);
-																if (errno_save) return Format::ERROR;
+																if (errno_save != 0) { return Format::ERROR; }
 																if (h < 24) {
 																	auto tz_m = std::string_view(aux_end + 1, it_e - aux_end - 1);
 																	auto m = strict_stoul(errno_save, tz_m);
-																	if (errno_save) return Format::ERROR;
+																	if (errno_save != 0) { return Format::ERROR; }
 																	if (m < 60) {
 																		auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
-																		if (errno_save) return Format::ERROR;
+																		if (errno_save != 0) { return Format::ERROR; }
 																		tm.fsec = normalize_fsec(fsec);
 																		computeTimeZone(tm, c, tz_h, tz_m);
 																		return Format::VALID;
@@ -552,7 +552,7 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 											}
 										}
 										auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
-										if (errno_save) return Format::ERROR;
+										if (errno_save != 0) { return Format::ERROR; }
 										tm.fsec = normalize_fsec(fsec);
 										return Format::VALID;
 									}
@@ -579,11 +579,11 @@ Datetime::Iso8601Parser(std::string_view date)
 		case 10: // 0000-00-00
 			if (date[4] == '-' && date[7] == '-') {
 				auto year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
 					return Format::VALID;
 				}
@@ -593,20 +593,20 @@ Datetime::Iso8601Parser(std::string_view date)
 		case 19: // 0000-00-00[T ]00:00:00
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
 				auto year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
 					auto hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
 						auto min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
 							auto sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
 								return Format::VALID;
 							}
@@ -620,20 +620,20 @@ Datetime::Iso8601Parser(std::string_view date)
 			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
 				date[16] == ':' && date[19] == 'Z') {
 				auto year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
 					auto hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
 						auto min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
 							auto sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
 								return Format::VALID;
 							}
@@ -647,20 +647,20 @@ Datetime::Iso8601Parser(std::string_view date)
 			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
 				date[13] == ':' && date[16] == ':') {
 				auto year  = strict_stoul(errno_save, date.substr(0, 4));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto mon   = strict_stoul(errno_save, date.substr(5, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(errno_save, date.substr(8, 2));
-				if (errno_save) return Format::ERROR;
+				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
 					auto hour = strict_stoul(errno_save, date.substr(11, 2));
-					if (errno_save) return Format::ERROR;
+					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
 						auto min = strict_stoul(errno_save, date.substr(14, 2));
-						if (errno_save) return Format::ERROR;
+						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
 							auto sec = strict_stoul(errno_save, date.substr(17, 2));
-							if (errno_save) return Format::ERROR;
+							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
 								switch (date[19]) {
 									case '+':
@@ -668,11 +668,11 @@ Datetime::Iso8601Parser(std::string_view date)
 										if (size == 25 && date[22] == ':') {
 											auto tz_h = date.substr(20, 2);
 											auto h = strict_stoul(errno_save, tz_h);
-											if (errno_save) return Format::ERROR;
+											if (errno_save != 0) { return Format::ERROR; }
 											if (h < 24) {
 												auto tz_m = date.substr(23, 2);
 												auto m = strict_stoul(errno_save, tz_m);
-												if (errno_save) return Format::ERROR;
+												if (errno_save != 0) { return Format::ERROR; }
 												if (m < 60) {
 													return Format::VALID;
 												}
@@ -699,11 +699,11 @@ Datetime::Iso8601Parser(std::string_view date)
 															if (*aux_end == ':') {
 																auto tz_h = std::string_view(aux + 1, aux_end - aux - 1);
 																auto h = strict_stoul(errno_save, tz_h);
-																if (errno_save) return Format::ERROR;
+																if (errno_save != 0) { return Format::ERROR; }
 																if (h < 24) {
 																	auto tz_m = std::string_view(aux_end + 1, it_e - aux_end - 1);
 																	auto m = strict_stoul(errno_save, tz_m);
-																	if (errno_save) return Format::ERROR;
+																	if (errno_save != 0) { return Format::ERROR; }
 																	if (m < 60) {
 																		return Format::VALID;
 																	}
@@ -786,7 +786,9 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 	switch (op[0]) {
 		case '+': {
 			auto num = strict_stoi(errno_save, op.substr(1));
-			if (errno_save) THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+			if (errno_save != 0) {
+				THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+			}
 			switch (unit) {
 				case 'y':
 					tm.year += num; break;
@@ -794,7 +796,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 					tm.mon += num;
 					normalizeMonths(tm.year, tm.mon);
 					auto max_days = getDays_month(tm.year, tm.mon);
-					if (tm.day > max_days) tm.day = max_days;
+					if (tm.day > max_days) { tm.day = max_days; }
 					break;
 				}
 				case 'w':
@@ -814,7 +816,9 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 		}
 		case '-': {
 			auto num = strict_stoi(errno_save, op.substr(1));
-			if (errno_save) THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+			if (errno_save != 0) {
+				THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+			}
 			switch (unit) {
 				case 'y':
 					tm.year -= num;
@@ -823,7 +827,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 					tm.mon -= num;
 					normalizeMonths(tm.year, tm.mon);
 					auto max_days = getDays_month(tm.year, tm.mon);
-					if (tm.day > max_days) tm.day = max_days;
+					if (tm.day > max_days) { tm.day = max_days; }
 					break;
 				}
 				case 'w':
@@ -958,7 +962,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 bool
 Datetime::isleapYear(int year)
 {
-	return year % 400 == 0 || (year % 4 == 0 && year % 100);
+	return year % 400 == 0 || (year % 4 == 0 && ((year % 100) != 0));
 }
 
 
@@ -977,7 +981,7 @@ int
 _getDays_month(int year, int month)
 {
 	assert(month > 0 && month <= 12);
-	int leap = Datetime::isleapYear(year);
+	int leap = static_cast<int>(Datetime::isleapYear(year));
 	return days[leap][month - 1];
 }
 
@@ -1003,9 +1007,11 @@ Datetime::normalizeMonths(int& year, int& mon)
 	if (mon > 12) {
 		year += mon / 12;
 		mon %= 12;
-	} else while (mon < 1) {
-		mon += 12;
-		year--;
+	} else {
+		while (mon < 1) {
+			mon += 12;
+			year--;
+		}
 	}
 }
 
@@ -1020,10 +1026,10 @@ Datetime::normalizeMonths(int& year, int& mon)
 std::time_t
 Datetime::toordinal(int year, int month, int day)
 {
-	if (year < 1) THROW(DatetimeError, "Year is out of range");
-	if (day < 1 || day > getDays_month(year, month)) THROW(DatetimeError, "Day is out of range for month");
+	if (year < 1) { THROW(DatetimeError, "Year is out of range"); }
+	if (day < 1 || day > getDays_month(year, month)) { THROW(DatetimeError, "Day is out of range for month"); }
 
-	int leap = isleapYear(year);
+	int leap = static_cast<int>(isleapYear(year));
 	std::time_t result = 365 * (year - 1) + (year - 1) / 4 - (year - 1) / 100 + (year - 1) / 400 + cumdays[leap][month - 1] + day;
 	return result;
 }
@@ -1182,8 +1188,10 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS)));
 			auto it_e = res.end();
 			auto it = it_e - 1;
-			for (; *it == '0'; --it);
-			if (*it != '.') ++it;
+			for (; *it == '0'; --it) { }
+			if (*it != '.') {
+				++it;
+			}
 			res.erase(it, it_e);
 		} else {
 			res.resize(20);
@@ -1256,40 +1264,40 @@ Datetime::TimeParser(std::string_view _time)
 		case 5: // 00:00
 			if (_time[2] == ':') {
 				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				return clk;
 			}
 			break;
 		case 8: // 00:00:00
 			if (_time[2] == ':' && _time[5] == ':') {
 				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				clk.sec = strict_stoul(errno_save, _time.substr(6, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				return clk;
 			}
 			break;
 		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
 			if (length > 9 && (_time[2] == ':' && _time[5] == ':')) {
 				clk.hour = strict_stoul(errno_save, _time.substr(0, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				clk.min = strict_stoul(errno_save, _time.substr(3, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				clk.sec = strict_stoul(errno_save, _time.substr(6, 2));
-				if (errno_save) goto error;
+				if (errno_save != 0) { goto error; }
 				switch (_time[8]) {
 					case '-':
 						clk.tz_s = '-';
 					case '+':
 						if (length == 14 && _time[11] == ':') {
 							clk.tz_h = strict_stoul(errno_save, _time.substr(9, 2));
-							if (errno_save) goto error;
+							if (errno_save != 0) { goto error; }
 							clk.tz_m = strict_stoul(errno_save, _time.substr(12, 2));
-							if (errno_save) goto error;
+							if (errno_save != 0) { goto error; }
 							return clk;
 						}
 						break;
@@ -1307,11 +1315,11 @@ Datetime::TimeParser(std::string_view _time)
 											auto aux_end = aux + 3;
 											if (*aux_end == ':') {
 												clk.tz_h = strict_stoul(errno_save, std::string_view(aux + 1, aux_end - aux - 1));
-												if (errno_save) goto error;
+												if (errno_save != 0) { goto error; }
 												clk.tz_m = strict_stoul(errno_save, std::string_view(aux_end + 1, it_e - aux_end - 1));
-												if (errno_save) goto error;
+												if (errno_save != 0) { goto error; }
 												auto fsec = strict_stod(errno_save, std::string_view(it, aux - it));
-												if (errno_save) goto error;
+												if (errno_save != 0) { goto error; }
 												clk.fsec = Datetime::normalize_fsec(fsec);
 												return clk;
 											}
@@ -1324,7 +1332,7 @@ Datetime::TimeParser(std::string_view _time)
 							}
 						}
 						auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.fsec = Datetime::normalize_fsec(fsec);
 						return clk;
 					}
@@ -1364,7 +1372,7 @@ Datetime::time_to_clk_t(double t)
 			}
 			clk.tz_m = (_time - aux) / 60;
 			clk.sec = _time - aux - clk.tz_m * 60;
-			if (clk.sec) {
+			if (clk.sec != 0) {
 				clk.sec = 60 - clk.sec;
 				++clk.tz_m;
 			}
@@ -1476,8 +1484,10 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS)));
 			auto it_e = res.end();
 			auto it = it_e - 1;
-			for (; *it == '0'; --it);
-			if (*it != '.') ++it;
+			for (; *it == '0'; --it) { }
+			if (*it != '.') {
+				++it;
+			}
 			res.erase(it, it_e);
 		} else {
 			res.resize(23);
@@ -1486,8 +1496,10 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 				clk.tz_s, clk.tz_h, clk.tz_m));
 			auto it_e = res.begin() + 15;
 			auto it = it_e - 1;
-			for (; *it == '0'; --it);
-			if (*it != '.') ++it;
+			for (; *it == '0'; --it) { }
+			if (*it != '.') {
+				++it;
+			}
 			res.erase(it, it_e);
 		}
 	} else if (clk.tz_h == 0 && clk.tz_m == 0) {
@@ -1516,28 +1528,28 @@ Datetime::isTime(std::string_view _time) {
 	auto length = _time.length();
 	switch (length) {
 		case 5: // 00:00
-			return std::isdigit(_time[0]) && std::isdigit(_time[1]) && _time[2] == ':' &&
-				std::isdigit(_time[3]) && std::isdigit(_time[4]);
+			return (std::isdigit(_time[0]) != 0) && (std::isdigit(_time[1]) != 0) && _time[2] == ':' &&
+				(std::isdigit(_time[3]) != 0) && (std::isdigit(_time[4]) != 0);
 		case 8: // 00:00:00
-			return std::isdigit(_time[0]) && std::isdigit(_time[1]) && _time[2] == ':' &&
-				std::isdigit(_time[3]) && std::isdigit(_time[4]) && _time[5] == ':' &&
-				std::isdigit(_time[6]) && std::isdigit(_time[7]);
+			return (std::isdigit(_time[0]) != 0) && (std::isdigit(_time[1]) != 0) && _time[2] == ':' &&
+				(std::isdigit(_time[3]) != 0) && (std::isdigit(_time[4]) != 0) && _time[5] == ':' &&
+				(std::isdigit(_time[6]) != 0) && (std::isdigit(_time[7]) != 0);
 		default: //  00:00:00[+-]00:00  00:00:00.000...  00:00:00.000...[+-]00:00
-			if (length > 9 && std::isdigit(_time[0]) && std::isdigit(_time[1]) && _time[2] == ':' &&
-				std::isdigit(_time[3]) && std::isdigit(_time[4]) && _time[5] == ':' &&
-				std::isdigit(_time[6]) && std::isdigit(_time[7])) {
+			if (length > 9 && (std::isdigit(_time[0]) != 0) && (std::isdigit(_time[1]) != 0) && _time[2] == ':' &&
+				(std::isdigit(_time[3]) != 0) && (std::isdigit(_time[4]) != 0) && _time[5] == ':' &&
+				(std::isdigit(_time[6]) != 0) && (std::isdigit(_time[7]) != 0)) {
 				switch (_time[8]) {
 					case '+':
 					case '-':
-						return length == 14 && std::isdigit(_time[9]) && std::isdigit(_time[10]) && _time[11] == ':' &&
-							std::isdigit(_time[12]) && std::isdigit(_time[13]);
+						return length == 14 && (std::isdigit(_time[9]) != 0) && (std::isdigit(_time[10]) != 0) && _time[11] == ':' &&
+							(std::isdigit(_time[12]) != 0) && (std::isdigit(_time[13]) != 0);
 					case '.':
 						for (size_t i = 9; i < length; ++i) {
 							const auto c = _time[i];
-							if (!std::isdigit(c)) {
-								return (c == '+' || c == '-') && length == (i + 6) && std::isdigit(_time[i + 1]) &&
-									std::isdigit(_time[i + 2]) && _time[i + 3] == ':' && std::isdigit(_time[i + 4]) &&
-									std::isdigit(_time[i + 5]);
+							if (std::isdigit(c) == 0) {
+								return (c == '+' || c == '-') && length == (i + 6) && (std::isdigit(_time[i + 1]) != 0) &&
+									(std::isdigit(_time[i + 2]) != 0) && _time[i + 3] == ':' && (std::isdigit(_time[i + 4]) != 0) &&
+									(std::isdigit(_time[i + 5]) != 0);
 							}
 						}
 						return true;
@@ -1562,9 +1574,9 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 				case '+':
 					if (timedelta[3] == ':') {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						return clk;
 					}
 				default:
@@ -1579,11 +1591,11 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 				case '+':
 					if (timedelta[3] == ':' && timedelta[6] == ':') {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.sec = strict_stoul(errno_save, timedelta.substr(7, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						return clk;
 					}
 				default:
@@ -1598,11 +1610,11 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 				case '+':
 					if (size > 10 && (timedelta[3] == ':' && timedelta[6] == ':' && timedelta[9] == '.')) {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.min = strict_stoul(errno_save, timedelta.substr(4, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.sec = strict_stoul(errno_save, timedelta.substr(7, 2));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						auto it = timedelta.begin() + 9;
 						const auto it_e = timedelta.end();
 						for (auto aux = it + 1; aux != it_e; ++aux) {
@@ -1612,7 +1624,7 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 							}
 						}
 						auto fsec = strict_stod(errno_save, std::string_view(it, it_e - it));
-						if (errno_save) goto error;
+						if (errno_save != 0) { goto error; }
 						clk.fsec = Datetime::normalize_fsec(fsec);
 						return clk;
 					}
@@ -1703,11 +1715,7 @@ double
 Datetime::timedelta_to_double(const clk_t& clk)
 {
 	double t = (clk.hour * 60 + clk.min) * 60 + clk.sec + clk.fsec;
-	if (clk.tz_s == '-') {
-		return -t;
-	} else {
-		return t;
-	}
+	return clk.tz_s == '-' ? -t : t;
 }
 
 
@@ -1722,8 +1730,10 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 		if (trim) {
 			auto it_e = res.end();
 			auto it = it_e - 1;
-			for (; *it == '0'; --it);
-			if (*it != '.') ++it;
+			for (; *it == '0'; --it) { }
+			if (*it != '.') {
+				++it;
+			}
 			res.erase(it, it_e);
 		}
 	} else {
@@ -1748,19 +1758,19 @@ Datetime::isTimedelta(std::string_view timedelta)
 	auto size = timedelta.size();
 	switch (size) {
 		case 6: // [+-]00:00
-			return (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) && std::isdigit(timedelta[2]) &&
-				timedelta[3] == ':' && std::isdigit(timedelta[4]) && std::isdigit(timedelta[5]);
+			return (timedelta[0] == '+' || timedelta[0] == '-') && (std::isdigit(timedelta[1]) != 0) && (std::isdigit(timedelta[2]) != 0) &&
+				timedelta[3] == ':' && (std::isdigit(timedelta[4]) != 0) && (std::isdigit(timedelta[5]) != 0);
 		case 9: // [+-]00:00:00
-			return (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) && std::isdigit(timedelta[2]) &&
-				timedelta[3] == ':' && std::isdigit(timedelta[4]) && std::isdigit(timedelta[5]) &&
-				timedelta[6] == ':' && std::isdigit(timedelta[7]) && std::isdigit(timedelta[8]);
+			return (timedelta[0] == '+' || timedelta[0] == '-') && (std::isdigit(timedelta[1]) != 0) && (std::isdigit(timedelta[2]) != 0) &&
+				timedelta[3] == ':' && (std::isdigit(timedelta[4]) != 0) && (std::isdigit(timedelta[5]) != 0) &&
+				timedelta[6] == ':' && (std::isdigit(timedelta[7]) != 0) && (std::isdigit(timedelta[8]) != 0);
 		default: // [+-]00:00:00  [+-]00:00:00.000...
-			if (size > 10 && (timedelta[0] == '+' || timedelta[0] == '-') && std::isdigit(timedelta[1]) &&
-				std::isdigit(timedelta[2]) && timedelta[3] == ':' && std::isdigit(timedelta[4]) &&
-				std::isdigit(timedelta[5]) && timedelta[6] == ':' && std::isdigit(timedelta[7]) &&
-				std::isdigit(timedelta[8]) && timedelta[9] == '.') {
+			if (size > 10 && (timedelta[0] == '+' || timedelta[0] == '-') && (std::isdigit(timedelta[1]) != 0) &&
+				(std::isdigit(timedelta[2]) != 0) && timedelta[3] == ':' && (std::isdigit(timedelta[4]) != 0) &&
+				(std::isdigit(timedelta[5]) != 0) && timedelta[6] == ':' && (std::isdigit(timedelta[7]) != 0) &&
+				(std::isdigit(timedelta[8]) != 0) && timedelta[9] == '.') {
 				for (size_t i = 10; i < size; ++i) {
-					if (!std::isdigit(timedelta[i])) {
+					if (std::isdigit(timedelta[i]) == 0) {
 						return false;
 					}
 				}

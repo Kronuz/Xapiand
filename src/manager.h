@@ -98,7 +98,7 @@ protected:
 
 	size_t nodes_size();
 	std::string load_node_name();
-	void save_node_name(std::string_view node_name);
+	void save_node_name(std::string_view _node_name);
 	std::string set_node_name(std::string_view node_name_);
 
 	uint64_t load_node_id();

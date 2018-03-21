@@ -135,7 +135,7 @@ lock_database::lock_database(DatabaseHandler* db_handler_)
 
 lock_database::~lock_database()
 {
-	if (db_handler) {
+	if (db_handler != nullptr) {
 		if (db_handler->database) {
 			unlock();
 		}
@@ -164,7 +164,7 @@ lock_database::lock()
 {
 	L_CALL("lock_database::lock()");
 
-	if (db_handler) {
+	if (db_handler != nullptr) {
 		if (db_handler->database) {
 			THROW(Error, "lock_database is already locked: %s", repr(db_handler->database->endpoints.to_string()));
 		} else {
@@ -179,7 +179,7 @@ lock_database::unlock()
 {
 	L_CALL("lock_database::unlock(...)");
 
-	if (db_handler) {
+	if (db_handler != nullptr) {
 		if (db_handler->database) {
 			XapiandManager::manager->database_pool.checkin(db_handler->database);
 		} else {
@@ -212,7 +212,7 @@ std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
-	auto s = XapiandManager::manager->schemas.get(this, obj, obj && (flags & DB_WRITABLE));
+	auto s = XapiandManager::manager->schemas.get(this, obj, (obj != nullptr) && ((flags & DB_WRITABLE) != 0));
 	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
@@ -232,7 +232,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 {
 	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()), flags_);
 
-	if (endpoints_.size() == 0) {
+	if (endpoints_.empty()) {
 		THROW(ClientError, "It is expected at least one endpoint");
 	}
 
@@ -272,7 +272,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 	lock_database lk_db(this);
 	auto did = database->find_document(term_id);
-	return Document(this, database->get_document(did, database->flags & DB_WRITABLE));
+	return Document(this, database->get_document(did, (database->flags & DB_WRITABLE) != 0));
 }
 
 
@@ -538,8 +538,8 @@ DatabaseHandler::index(std::string_view document_id, bool stored, std::string_vi
 				lock_database lk_db(this);
 				try {
 					try {
-						if (did) database->replace_document(did, doc, commit_);
-						else did = database->replace_document_term(prefixed_term_id, doc, commit_);
+						if (did != 0u) { database->replace_document(did, doc, commit_);
+						} else { did = database->replace_document_term(prefixed_term_id, doc, commit_); }
 						return std::make_pair(std::move(did), std::move(obj));
 					} catch (const Xapian::DatabaseError& exc) {
 						// Try to recover from DatabaseError (i.e when the index is manually deleted)
@@ -547,8 +547,8 @@ DatabaseHandler::index(std::string_view document_id, bool stored, std::string_vi
 						lk_db.unlock();
 						recover_index();
 						lk_db.lock();
-						if (did) database->replace_document(did, doc, commit_);
-						else did = database->replace_document_term(prefixed_term_id, doc, commit_);
+						if (did != 0u) { database->replace_document(did, doc, commit_);
+						} else { did = database->replace_document_term(prefixed_term_id, doc, commit_); }
 						return std::make_pair(std::move(did), std::move(obj));
 					}
 				} catch (...) {
@@ -591,7 +591,7 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 {
 	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id), stored ? "true" : "false", repr(body.to_string()), commit_ ? "true" : "false", ct_type.first, ct_type.second);
 
-	if (!(flags & DB_WRITABLE)) {
+	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -617,7 +617,7 @@ DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, boo
 {
 	L_CALL("DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id), commit_ ? "true" : "false", ct_type.first, ct_type.second);
 
-	if (!(flags & DB_WRITABLE)) {
+	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -648,7 +648,7 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 {
 	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first, ct_type.second);
 
-	if (!(flags & DB_WRITABLE)) {
+	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -751,9 +751,9 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
-			if (!t) THROW(Error, "Problem communicating with the remote database: %s", exc.get_description());
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -903,13 +903,13 @@ DatabaseHandler::restore(int fd)
 			XXH32_update(xxh_state, key.data(), key.size());
 			auto value = unserialise_string(fd, buffer, off);
 			XXH32_update(xxh_state, value.data(), value.size());
-			if (key.empty() && value.empty()) break;
-
+			if (key.empty() && value.empty()) {
+				break;
+			}
 			if (key.empty()) {
 				L_WARNING("Metadata with no key ignored [%zu]", ID_FIELD_NAME, i);
 				continue;
 			}
-
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata %s = %s", key, value);
 			database->set_metadata(key, value, false, false);
 		} while (true);
@@ -943,7 +943,7 @@ DatabaseHandler::restore(int fd)
 			XXH32_update(xxh_state, obj_ser.data(), obj_ser.size());
 			auto blob = unserialise_string(fd, buffer, off);
 			XXH32_update(xxh_state, blob.data(), blob.size());
-			if (obj_ser.empty() && blob.empty()) break;
+			if (obj_ser.empty() && blob.empty()) { break; }
 
 			Xapian::Document doc;
 			required_spc_t spc_id;
@@ -1025,7 +1025,7 @@ DatabaseHandler::restore(int fd)
 
 		lk_db.unlock();
 		auto schema_begins = std::chrono::system_clock::now();
-		while (!update_schema(schema_begins));
+		while (!update_schema(schema_begins)) { }
 		lk_db.lock();
 	}
 
@@ -1057,7 +1057,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 		}
 
 		case HTTP_POST: {
-			if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
+			if ((qdsl != nullptr) && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
 				QueryDSL query_object(schema);
 				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
 			} else {
@@ -1134,7 +1134,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			if (collapse_key != Xapian::BAD_VALUENO) {
 				enquire.set_collapse_key(collapse_key, e.collapse_max);
 			}
-			if (aggs) {
+			if (aggs != nullptr) {
 				enquire.add_matchspy(aggs);
 			}
 			if (sorter) {
@@ -1152,9 +1152,9 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			mset = enquire.get_mset(e.offset, e.limit, e.check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
-			if (!t) THROW(Error, "Problem communicating with the remote database: %s", exc.get_description());
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1216,9 +1216,9 @@ DatabaseHandler::get_prefixed_term_id(std::string_view document_id)
 		field_spc.set_type(type_ser.first);
 		Schema::set_namespace_spc_id(field_spc);
 		return prefixed(type_ser.second, field_spc.prefix(), field_spc.get_ctype());
-	} else {
-		return prefixed(Serialise::serialise(field_spc, document_id), field_spc.prefix(), field_spc.get_ctype());
 	}
+
+	return prefixed(Serialise::serialise(field_spc, document_id), field_spc.prefix(), field_spc.get_ctype());
 }
 
 
@@ -1289,7 +1289,7 @@ DatabaseHandler::get_document(std::string_view document_id)
 	L_CALL("DatabaseHandler::get_document((std::string)%s)", repr(document_id));
 
 	auto did = to_docid(document_id);
-	if (did) {
+	if (did != 0u) {
 		return get_document(did);
 	}
 
@@ -1297,7 +1297,7 @@ DatabaseHandler::get_document(std::string_view document_id)
 
 	lock_database lk_db(this);
 	did = database->find_document(term_id);
-	return Document(this, database->get_document(did, database->flags & DB_WRITABLE));
+	return Document(this, database->get_document(did, (database->flags & DB_WRITABLE) != 0));
 }
 
 
@@ -1307,7 +1307,7 @@ DatabaseHandler::get_docid(std::string_view document_id)
 	L_CALL("DatabaseHandler::get_docid(%s)", repr(document_id));
 
 	auto did = to_docid(document_id);
-	if (did) {
+	if (did != 0u) {
 		return did;
 	}
 
@@ -1324,7 +1324,7 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit_, boo
 	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id));
 
 	auto did = to_docid(document_id);
-	if (did) {
+	if (did != 0u) {
 		database->delete_document(did, commit_, wal_);
 		return;
 	}
@@ -1732,7 +1732,7 @@ Document::get_document()
 	L_CALL("Document::get_document()");
 
 	Xapian::Document doc;
-	if (db_handler && db_handler->database) {
+	if ((db_handler != nullptr) && db_handler->database) {
 		doc = db_handler->database->get_document(did, true);
 	}
 	return doc;
@@ -1756,11 +1756,10 @@ Document::serialise(size_t retries)
 		auto doc = get_document();
 		return doc.serialise();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return serialise(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1775,11 +1774,10 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 		auto doc = get_document();
 		return doc.get_value(slot);
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return get_value(slot, --retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1794,11 +1792,10 @@ Document::get_data(size_t retries)
 		auto doc = get_document();
 		return doc.get_data();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return get_data(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1812,18 +1809,17 @@ Document::get_blob(size_t retries)
 		lock_database lk_db(db_handler);
 		auto doc = get_document();
 #ifdef XAPIAND_DATA_STORAGE
-		if (db_handler) {
+		if (db_handler != nullptr) {
 			return db_handler->database->storage_get_blob(doc);
 		}
 #endif
 		auto data = doc.get_data();
 		return std::string(split_data_blob(data));
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return get_blob(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1849,7 +1845,7 @@ Document::get_terms(size_t retries)
 				auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
 				term[RESPONSE_TERM_FREQ] = _term_freq;
 			} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
-			if (it.positionlist_count()) {
+			if (it.positionlist_count() != 0u) {
 				auto& term_pos = term[RESPONSE_POS];
 				term_pos.reserve(it.positionlist_count());
 				const auto pit_e = it.positionlist_end();
@@ -1860,11 +1856,10 @@ Document::get_terms(size_t retries)
 		}
 		return terms;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return get_terms(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1887,11 +1882,10 @@ Document::get_values(size_t retries)
 		}
 		return values;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return get_values(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }
 
@@ -1901,12 +1895,11 @@ Document::get_value(std::string_view slot_name)
 {
 	L_CALL("Document::get_value(%s)", repr(slot_name));
 
-	if (db_handler) {
+	if (db_handler != nullptr) {
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
 		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
-	} else {
-		return MsgPack(MsgPack::Type::NIL);
 	}
+	return MsgPack(MsgPack::Type::NIL);
 }
 
 
@@ -1989,10 +1982,9 @@ Document::hash(size_t retries)
 
 		return hash;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries) {
+		if (retries != 0u) {
 			return hash(--retries);
-		} else {
-			THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 		}
+		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
 }

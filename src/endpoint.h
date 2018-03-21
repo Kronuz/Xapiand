@@ -226,7 +226,7 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(std::string_view path_, const Node* node_=nullptr, long long mastery_level_=-1, std::string_view node_name="");
+	Endpoint(std::string_view uri, const Node* node_=nullptr, long long mastery_level_=-1, std::string_view node_name_="");
 
 	bool is_local() const {
 		auto local_node_ = local_node.load();

@@ -766,7 +766,7 @@ Random::combinations() const
 	for (const auto& g : generators) {
 		total += g->combinations();
 	}
-	return total ? total : 1;
+	return total != 0u ? total : 1;
 }
 
 
@@ -801,7 +801,7 @@ Random::max() const
 std::string
 Random::toString() const
 {
-	if (!generators.size()) {
+	if (generators.empty()) {
 		return std::string();
 	}
 
@@ -938,7 +938,7 @@ Generator::Generator(const std::string& pattern, bool collapse_triples)
 				break;
 			case '>':
 			case ')':
-				if (stack.size() == 0) {
+				if (stack.empty()) {
 					throw std::invalid_argument("Unbalanced brackets");
 				} else if (c == '>' && top->type != GroupType::Symbol) {
 					throw std::invalid_argument("Unexpected '>' in pattern");
@@ -973,7 +973,7 @@ Generator::Generator(const std::string& pattern, bool collapse_triples)
 		}
 	}
 
-	if (stack.size() != 0) {
+	if (!stack.empty()) {
 		throw std::invalid_argument("Missing closing bracket");
 	}
 
@@ -1003,7 +1003,7 @@ Generator::Group::add(std::unique_ptr<Generator>&& g)
 		}
 		wrappers.pop();
 	}
-	if (set.size() == 0) {
+	if (set.empty()) {
 		set.push_back(make_unique<Sequence>());
 	}
 	set.back()->add(std::move(g));
@@ -1037,7 +1037,7 @@ Generator::Group::emit()
 void
 Generator::Group::split()
 {
-	if (set.size() == 0) {
+	if (set.empty()) {
 		set.push_back(make_unique<Sequence>());
 	}
 	set.push_back(make_unique<Sequence>());

@@ -358,9 +358,9 @@ EWKT::_parse_circle(int SRID, Iterator first, Iterator last)
 
 	if (++first != last && *first == ' ') {
 		return Circle(std::move(center), strict_stod(std::string_view(first + 1, last - first - 1)));
-	} else {
-		return Circle(std::move(center), strict_stod(std::string_view(first, last - first)));
 	}
+
+	return Circle(std::move(center), strict_stod(std::string_view(first, last - first)));
 }
 
 
@@ -382,7 +382,8 @@ EWKT::_parse_convex(int SRID, Iterator first, Iterator last)
 				first = closed_it;
 				if (first == last - 1) {
 					return convex;
-				} else if (*(++first) == ',') {
+				}
+				if (*(++first) == ',') {
 					if (*(++first) == ' ') {
 						++first;
 					}
@@ -424,7 +425,8 @@ EWKT::_parse_polygon(int SRID, Iterator first, Iterator last, Geometry::Type typ
 					if (first == closed_it) {
 						polygon.add(std::move(pts));
 						break;
-					} else if (*(++first) == ' ') {
+					}
+					if (*(++first) == ' ') {
 						++first;
 					}
 					_first = first;
@@ -432,7 +434,8 @@ EWKT::_parse_polygon(int SRID, Iterator first, Iterator last, Geometry::Type typ
 				++first;
 				if (first == last) {
 					return polygon;
-				} else if (*first == ',') {
+				}
+				if (*first == ',') {
 					if (*(++first) == ' ') {
 						++first;
 					}
@@ -469,7 +472,8 @@ EWKT::_parse_multipoint(int SRID, Iterator first, Iterator last)
 					first = closed_it;
 					if (first == last - 1) {
 						return multipoint;
-					} else if (*(++first) == ',') {
+					}
+					if (*(++first) == ',') {
 						if (*(++first) == ' ') {
 							++first;
 						}
@@ -492,7 +496,8 @@ EWKT::_parse_multipoint(int SRID, Iterator first, Iterator last)
 			multipoint.add(Point(_parse_cartesian(SRID, first, first)));
 			if (first == last) {
 				return multipoint;
-			} else if (*(++first) == ' ') {
+			}
+			if (*(++first) == ' ') {
 				++first;
 			}
 		}
@@ -519,7 +524,8 @@ EWKT::_parse_multicircle(int SRID, Iterator first, Iterator last)
 				first = closed_it;
 				if (first == last - 1) {
 					return multicircle;
-				} else if (*(++first) == ',') {
+				}
+				if (*(++first) == ',') {
 					if (*(++first) == ' ') {
 						++first;
 					}
@@ -556,7 +562,8 @@ EWKT::_parse_multiconvex(int SRID, Iterator first, Iterator last)
 				first = closed_it;
 				if (first == last - 1) {
 					return multiconvex;
-				} else if (*(++first) == ',') {
+				}
+				if (*(++first) == ',') {
 					if (*(++first) == ' ') {
 						++first;
 					}
@@ -593,7 +600,8 @@ EWKT::_parse_multipolygon(int SRID, Iterator first, Iterator last, Geometry::Typ
 				first = closed_it;
 				if (first == last - 1) {
 					return multipolygon;
-				} else if (*(++first) == ',') {
+				}
+				if (*(++first) == ',') {
 					if (*(++first) == ' ') {
 						++first;
 					}
@@ -668,7 +676,8 @@ EWKT::_parse_geometry_collection(int SRID, Iterator first, Iterator last)
 		first = it_geo_last;
 		if (first == last - 1) {
 			return collection;
-		} else if (*(++first) == ',') {
+		}
+		if (*(++first) == ',') {
 			if (*(++first) == ' ') {
 				++first;
 			}
@@ -737,7 +746,8 @@ EWKT::_parse_geometry_intersection(int SRID, Iterator first, Iterator last)
 		first = it_geo_last;
 		if (first == last - 1) {
 			return intersection;
-		} else if (*(++first) == ',') {
+		}
+		if (*(++first) == ',') {
 			if (*(++first) == ' ') {
 				++first;
 			}
@@ -760,25 +770,25 @@ EWKT::_isEWKT(Iterator first, Iterator last)
 
 	if (first == last) {
 		return false;
-	} else {
-		try {
-			get_geometry_type(std::string_view(_first, first - _first));
-		} catch (const std::out_of_range&) {
-			return false;
-		}
-		switch (*first) {
-			case '(': {
-				auto closed_it = closed_parenthesis(++first, last);
-				if (closed_it == last) {
-					return false;
-				}
-				return closed_it == (last - 1);
-			}
-			case ' ':
-				return std::string(++first, last).compare("EMPTY") == 0;
-			default:
+	}
+
+	try {
+		get_geometry_type(std::string_view(_first, first - _first));
+	} catch (const std::out_of_range&) {
+		return false;
+	}
+	switch (*first) {
+		case '(': {
+			auto closed_it = closed_parenthesis(++first, last);
+			if (closed_it == last) {
 				return false;
+			}
+			return closed_it == (last - 1);
 		}
+		case ' ':
+			return std::string(++first, last).compare("EMPTY") == 0;
+		default:
+			return false;
 	}
 }
 
@@ -791,7 +801,6 @@ EWKT::isEWKT(std::string_view str)
 			return _isEWKT(str.begin() + 10, str.end());
 		}
 		return false;
-	} else {
-		return _isEWKT(str.begin(), str.end());
 	}
+	return _isEWKT(str.begin(), str.end());
 }

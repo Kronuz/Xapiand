@@ -239,9 +239,8 @@ Script::process_chai(bool strict)
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, body      },
 					});
-				} else {
-					THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
 				}
+				THROW(ClientError, "For type %s, %s must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
 			} else if (name.empty()) {
 				auto body_hash = chaipp::hash(body);
 				try {

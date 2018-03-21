@@ -438,18 +438,17 @@ bool exists(std::string_view path) {
 bool build_path(std::string_view path) {
 	if (exists(path)) {
 		return true;
-	} else {
-		Split<char> directories(path, '/');
-		std::string dir;
-		dir.reserve(path.size());
-		for (const auto& _dir : directories) {
-			dir.append(_dir).push_back('/');
-			if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
-				return false;
-			}
-		}
-		return true;
 	}
+	Split<char> directories(path, '/');
+	std::string dir;
+	dir.reserve(path.size());
+	for (const auto& _dir : directories) {
+		dir.append(_dir).push_back('/');
+		if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
+			return false;
+		}
+	}
+	return true;
 }
 
 
@@ -457,27 +456,17 @@ bool build_path_index(std::string_view path_index) {
 	size_t found = path_index.find_last_of('/');
 	if (found == std::string_view::npos) {
 		return build_path(path_index);
-	} else {
-		return build_path(path_index.substr(0, found));
 	}
+	return build_path(path_index.substr(0, found));
 }
 
 
 DIR* opendir(std::string_view path, bool create) {
 	stringified path_string(path);
 	DIR* dirp = ::opendir(path_string.c_str());
-	if (!dirp) {
-		if (errno == ENOENT && create) {
-			if (::mkdir(path_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				return nullptr;
-			} else {
-				dirp = ::opendir(path_string.c_str());
-				if (!dirp) {
-					return nullptr;
-				}
-			}
-		} else {
-			return nullptr;
+	if (dirp == nullptr && errno == ENOENT && create) {
+		if (::mkdir(path_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
+			dirp = ::opendir(path_string.c_str());
 		}
 	}
 	return dirp;

@@ -77,33 +77,35 @@ static inline const std::string&
 detectColoring()
 {
 	const char* no_color = getenv("NO_COLOR");
-	if (no_color) {
-		static const std::string _ = "";
+	if (no_color != nullptr) {
+		static const std::string _;
 		return _;
 	}
 	std::string colorterm;
 	const char* env_colorterm = getenv("COLORTERM");
-	if (env_colorterm) {
+	if (env_colorterm != nullptr) {
 		colorterm = env_colorterm;
 	}
 	std::string term;
 	const char* env_term = getenv("TERM");
-	if (env_term) {
+	if (env_term != nullptr) {
 		term = env_term;
 	}
+
 	if (colorterm.find("truecolor") != std::string::npos || term.find("24bit") != std::string::npos) {
 		static const std::string _ = "$1";
 		return _;
-	} else if (term.find("256color") != std::string::npos) {
+	}
+	if (term.find("256color") != std::string::npos) {
 		static const std::string _ = "$2";
 		return _;
-	} else if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
-		static const std::string _ = "$3";
-		return _;
-	} else {
-		static const std::string _ = "$3";
-		return _;
 	}
+	// if (term.find("ansi") != std::string::npos || term.find("16color") != std::string::npos) {
+	// 	static const std::string _ = "$3";
+	// 	return _;
+	// }
+	static const std::string _ = "$3";
+	return _;
 }
 
 
@@ -148,7 +150,7 @@ Log::Log(LogType log)
 
 Log::~Log()
 {
-	if (log) log->cleanup();
+	if (log) { log->cleanup(); }
 }
 
 
@@ -205,7 +207,7 @@ StreamLogger::log(int priority, std::string_view str, bool with_priority, bool w
 void
 StderrLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
-	static const bool is_tty = isatty(fileno(stderr));
+	static const bool is_tty = isatty(fileno(stderr)) != 0;
 	bool colorized = (is_tty || Logging::colors) && !Logging::no_colors;
 	std::cerr << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
 	std::cerr << Logging::colorized(str, colorized);
@@ -228,7 +230,7 @@ SysLog::~SysLog()
 
 
 void
-SysLog::log(int priority, std::string_view str, bool with_priority, bool)
+SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_endl*/)
 {
 	bool colorized = Logging::colors && !Logging::no_colors;
 	auto a = Logging::colorized(with_priority ? priorities[priority] : "", colorized);

@@ -28,11 +28,11 @@
 static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* const units[], const long double scaling[], const char* const colors[], long double rounding) {
 	long double num = delta;
 
-	if (delta < 0) delta = -delta;
+	if (delta < 0) { delta = -delta; }
 	int order = (delta == 0) ? n : -std::floor(std::log(delta) / div);
 	order += i;
-	if (order < 0) order = 0;
-	else if (order > n) order = n;
+	if (order < 0) { order = 0;
+	} else if (order > n) { order = n; }
 
 	const char* color = colored ? colors[order] : "";
 	num = roundl(rounding * num / scaling[order]) / rounding;

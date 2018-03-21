@@ -32,11 +32,11 @@ Polygon::ConvexPolygon::get_direction(const Cartesian& a, const Cartesian& b, co
 	double angle = (a ^ b) * c;
 	if (angle > DBL_TOLERANCE) {
 		return Direction::CLOCKWISE;
-	} else if (angle < -DBL_TOLERANCE) {
-		return Direction::COUNTERCLOCKWISE;
-	} else {
-		return Direction::COLLINEAR;
 	}
+	if (angle < -DBL_TOLERANCE) {
+		return Direction::COUNTERCLOCKWISE;
+	}
+	return Direction::COLLINEAR;
 }
 
 
@@ -111,15 +111,12 @@ Polygon::ConvexPolygon::graham_scan(std::vector<Cartesian>&& points)
 			if (convex_points.size() == 1) {
 				THROW(GeometryError, "Convex Hull not found");
 			}
-
 			const auto it_last = convex_points.end() - 1;
 			const auto dir = get_direction(*(it_last - 1), *it_last, *it);
-			if (dir != Direction::COUNTERCLOCKWISE) {
-				convex_points.pop_back();
-				continue;
-			} else {
+			if (dir == Direction::COUNTERCLOCKWISE) {
 				break;
 			}
+			convex_points.pop_back();
 		}
 		convex_points.push_back(std::move(*it));
 	}
@@ -785,8 +782,7 @@ Polygon::getCentroids() const
 {
 	if (convexpolygons.size() == 1) {
 		return convexpolygons.back().getCentroids();
-	} else {
-		// FIXME: Efficient way for calculate centroids for a Polygon with holes.
-		return std::vector<Cartesian>();
 	}
+	// FIXME: Efficient way for calculate centroids for a Polygon with holes.
+	return std::vector<Cartesian>();
 }

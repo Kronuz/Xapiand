@@ -43,7 +43,7 @@ class BaseException {
 		return default_exc;
 	}
 
-	BaseException(const BaseException& exc, const char *function, const char *filename, int line, const char* type, std::string_view format, fmt::printf_args args);
+	BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::printf_args args);
 
 protected:
 	std::string type;

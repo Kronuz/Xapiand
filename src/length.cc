@@ -97,7 +97,7 @@ serialise_double(double v)
 
 	bool negative = (v < 0.0);
 
-	if (negative) v = -v;
+	if (negative) { v = -v; }
 
 	int exp = base256ify_double(v);
 
@@ -106,7 +106,7 @@ serialise_double(double v)
 
 	if (exp <= 6 && exp >= -7) {
 		unsigned char b = static_cast<unsigned char>(exp + 7);
-		if (negative) b |= static_cast<unsigned char>(0x80);
+		if (negative) { b |= static_cast<unsigned char>(0x80); }
 		result.push_back(static_cast<char>(b));
 	} else {
 		if (exp >= -128 && exp < 127) {
@@ -130,7 +130,7 @@ serialise_double(double v)
 		result.push_back(static_cast<char>(byte));
 		v -= static_cast<double>(byte);
 		v *= 256.0;
-	} while (v != 0.0 && --max_bytes);
+	} while (v != 0.0 && (--max_bytes != 0));
 
 	n = result.size() - n;
 	if (n > 1) {
@@ -191,17 +191,17 @@ unserialise_double(const char** p, const char* end)
 		v = HUGE_VAL;
 	} else {
 		const char *q = *p;
-		while (mantissa_len--) {
+		while ((mantissa_len--) != 0u) {
 			v *= 0.00390625; // 1/256
 			v += static_cast<double>(static_cast<unsigned char>(*--q));
 		}
 
 #if FLT_RADIX == 2
-		if (exp) v = scalbn(v, exp * 8);
+		if (exp != 0) { v = scalbn(v, exp * 8); }
 #elif FLT_RADIX == 16
-		if (exp) v = scalbn(v, exp * 2);
+		if (exp != 0) { v = scalbn(v, exp * 2); }
 #else
-		if (exp) v = ldexp(v, exp * 8);
+		if (exp != 0) { v = ldexp(v, exp * 8); }
 #endif
 
 #if 0
@@ -211,7 +211,7 @@ unserialise_double(const char** p, const char* end)
 #endif
 	}
 
-	if (negative) v = -v;
+	if (negative) { v = -v; }
 
 	return v;
 }
@@ -230,7 +230,7 @@ serialise_length(unsigned long long len)
 		while (true) {
 			unsigned char b = static_cast<unsigned char>(len & 0x7f);
 			len >>= 7;
-			if (!len) {
+			if (len == 0u) {
 				result.push_back(b | static_cast<unsigned char>(0x80));
 				break;
 			}
@@ -314,7 +314,7 @@ serialise_length(int fd, unsigned long long len)
 
 	auto length = serialise_length(len);
 	w = io::write(fd, length.data(), length.size());
-	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
 }
 
 
@@ -325,7 +325,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off)
 	if (buffer.size() - off < 10) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
-		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
 		buffer.append(buf, r);
 	}
 
@@ -346,7 +346,7 @@ serialise_string(int fd, std::string_view input)
 	serialise_length(fd, input.size());
 
 	ssize_t w = io::write(fd, input.data(), input.size());
-	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
 }
 
 
@@ -370,8 +370,8 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 		str.append(pos, end);
 		str.resize(length);
 		ssize_t r = io::read(fd, &str[available], length - available);
-		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
-		if (r != length - available) THROW(SerialisationError, "Invalid input: insufficient data");
+		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		if (r != length - available) { THROW(SerialisationError, "Invalid input: insufficient data"); }
 		buffer.clear();
 		off = 0;
 	}
@@ -409,9 +409,9 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 	++at;
 	do {
 		ptr += length;
-		if (ptr >= end) break;
+		if (ptr >= end) { break; }
 		length = unserialise_length(&ptr, end, true);
-	} while (--at);
+	} while (--at != 0u);
 
 	if (at == 0) {
 		string.assign(ptr, length);

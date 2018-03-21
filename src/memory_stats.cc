@@ -75,7 +75,7 @@ uint64_t get_total_virtual_used()
 	size_t mib_len = sizeof(mib) / sizeof(int);
 #endif
 #ifdef _SYSCTL_NAME
-	xsw_usage vmusage = {0, 0, 0, 0, false};
+	xsw_usage vmusage = {0, 0, 0, 0, 0u};
 	size_t vmusage_len = sizeof(vmusage);
 	if (sysctl(mib, mib_len, &vmusage, &vmusage_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));

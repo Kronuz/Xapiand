@@ -195,10 +195,9 @@ XapiandManager::load_node_name()
 	if (fd >= 0) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
-		if (length < 0) length = 0;
+		if (length < 0) { length = 0; }
 		buf[length] = '\0';
-		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
-
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++])) == 0) { }
 	}
 	return std::string(buf, length);
 }
@@ -254,9 +253,9 @@ XapiandManager::load_node_id()
 	if (fd >= 0) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
-		if (length < 0) length = 0;
+		if (length < 0) { length = 0; }
 		buf[length] = '\0';
-		for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++])) == 0) { }
 		try {
 			node_id = unserialise_node_id(std::string_view(buf, length));
 		} catch (...) {
@@ -295,7 +294,7 @@ XapiandManager::get_node_id()
 
 	uint64_t node_id = load_node_id();
 
-	if (!node_id) {
+	if (node_id == 0u) {
 		node_id = random_int(1, UINT64_MAX - 1);
 		save_node_id(node_id);
 	}
@@ -446,7 +445,7 @@ XapiandManager::host_address()
 		L_ERR("ERROR: getifaddrs: %s", strerror(errno));
 	} else {
 		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
-			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
+			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) { // check it is IP4
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				L_NOTICE("Node IP address is %s on interface %s", fast_inet_ntop4(addr.sin_addr), ifa->ifa_name);
 				break;
@@ -467,7 +466,7 @@ XapiandManager::signal_sig(int sig)
 
 
 void
-XapiandManager::signal_sig_async_cb(ev::async&, int revents)
+XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
@@ -502,13 +501,13 @@ XapiandManager::shutdown_sig(int sig)
 	if (sig < 0) {
 		throw Exit(-sig);
 	}
-	if (shutdown_now && sig != SIGTERM) {
-		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+	if ((shutdown_now != 0) && sig != SIGTERM) {
+		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			L_WARNING("You insisted... Xapiand exiting now!");
 			throw Exit(1);
 		}
-	} else if (shutdown_asap && sig != SIGTERM) {
-		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+	} else if ((shutdown_asap != 0) && sig != SIGTERM) {
+		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
 			L_INFO("Trying immediate shutdown.");
 		} else if (sig == 0) {
@@ -570,7 +569,7 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 
 	destroy();
 
-	if (now) {
+	if (now != 0) {
 		detach();
 		break_loop();
 	}
@@ -1103,20 +1102,20 @@ void
 XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req)
 {
 	std::smatch m;
-	if (time_req.length() && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
+	if ((time_req.length() != 0u) && std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.length()) {
 		int start = 0, end = 0, increment = 0;
-		start += 60 * 60 * (m.length(1) ? strict_stoul(m.str(1)) : 0);
-		start += 60 * (m.length(2) ? strict_stoul(m.str(2)) : 0);
-		start += (m.length(3) ? strict_stoul(m.str(3)) : 0);
-		end += 60 * 60 * (m.length(5) ? strict_stoul(m.str(5)) : 0);
-		end += 60 * (m.length(6) ? strict_stoul(m.str(6)) : 0);
-		end += (m.length(7) ? strict_stoul(m.str(7)) : 0);
+		start += 60 * 60 * (m.length(1) != 0 ? strict_stoul(m.str(1)) : 0);
+		start += 60 * (m.length(2) != 0 ? strict_stoul(m.str(2)) : 0);
+		start += (m.length(3) != 0 ? strict_stoul(m.str(3)) : 0);
+		end += 60 * 60 * (m.length(5) != 0 ? strict_stoul(m.str(5)) : 0);
+		end += 60 * (m.length(6) != 0 ? strict_stoul(m.str(6)) : 0);
+		end += (m.length(7) != 0 ? strict_stoul(m.str(7)) : 0);
 
-		if (gran_req.length()) {
+		if (gran_req.length() != 0u) {
 			if (std::regex_match(gran_req, m, time_re) && static_cast<size_t>(m.length()) == gran_req.length() && m.length(4) == 0) {
-				increment += 60 * 60 * (m.length(1) ? strict_stoul(m.str(1)) : 0);
-				increment += 60 * (m.length(2) ? strict_stoul(m.str(2)) : 0);
-				increment += (m.length(3) ? strict_stoul(m.str(3)) : 0);
+				increment += 60 * 60 * (m.length(1) != 0 ? strict_stoul(m.str(1)) : 0);
+				increment += 60 * (m.length(2) != 0 ? strict_stoul(m.str(2)) : 0);
+				increment += (m.length(3) != 0 ? strict_stoul(m.str(3)) : 0);
 			} else {
 				THROW(ClientError, "Incorrect input: %s", gran_req);
 			}
@@ -1152,7 +1151,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 	minute = (minute > stats_cnt.current_pos.minute ? SLOT_TIME_MINUTE + stats_cnt.current_pos.minute : stats_cnt.current_pos.minute) - minute;
 	second = (second > stats_cnt.current_pos.second ? SLOT_TIME_SECOND + stats_cnt.current_pos.second : stats_cnt.current_pos.second) - second;
 
-	if (!increment) {
+	if (increment == 0) {
 		increment = total_inc;
 	}
 
@@ -1187,7 +1186,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 		}
 
 		for (auto& counter : added_counters) {
-			if (counter.second.cnt) {
+			if (counter.second.cnt != 0u) {
 				auto& counter_stats = stat[counter.first];
 				counter_stats["cnt"] = counter.second.cnt;
 				counter_stats["avg"] = string::from_delta(counter.second.total / counter.second.cnt);

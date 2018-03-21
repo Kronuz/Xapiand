@@ -410,11 +410,11 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 
 	if (!query_upper.empty() && !query_needed.empty()) {
 		return Xapian::Query(Xapian::Query::OP_AND, query_upper, query_needed);
-	} else if (!query_upper.empty()) {
-		return query_upper;
-	} else {
-		return query_needed;
 	}
+	if (!query_upper.empty()) {
+		return query_upper;
+	}
+	return query_needed;
 }
 
 

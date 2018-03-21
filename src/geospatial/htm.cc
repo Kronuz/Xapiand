@@ -217,7 +217,8 @@ HTM::range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 		if (prev.end < it1->start - 1) {   // (start - 1) for join adjacent integer ranges.
 			res.insert(res.end(), std::make_move_iterator(it1), std::make_move_iterator(it1_e));
 			break;
-		} else if (prev.end < it1->end) {  // if ranges overlap, previous range end is updated.
+		}
+		if (prev.end < it1->end) {  // if ranges overlap, previous range end is updated.
 			prev.end = it1->end;
 		}
 		++it1;
@@ -228,7 +229,8 @@ HTM::range_union(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 		if (prev.end < it2->start - 1) {  // (start - 1) for join adjacent integer ranges.
 			res.insert(res.end(), std::make_move_iterator(it2), std::make_move_iterator(it2_e));
 			break;
-		} else if (prev.end < it2->end) {  // if ranges overlap, previous range end is updated.
+		}
+		if (prev.end < it2->end) {  // if ranges overlap, previous range end is updated.
 			prev.end = it2->end;
 		}
 		++it2;
@@ -359,10 +361,9 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 		if (prev.end < it1->start) {
 			res.insert(res.end(), std::make_move_iterator(it1), std::make_move_iterator(it1_e));
 			break;
-		} else {
-			exclusive_disjunction(res, *it1);
-			++it1;
 		}
+		exclusive_disjunction(res, *it1);
+		++it1;
 	}
 
 	while (it2 != it2_e) {
@@ -370,10 +371,9 @@ HTM::range_exclusive_disjunction(std::vector<range_t>&& rs1, std::vector<range_t
 		if (prev.end < it2->start) {
 			res.insert(res.end(), std::make_move_iterator(it2), std::make_move_iterator(it2_e));
 			break;
-		} else {
-			exclusive_disjunction(res, *it2);
-			++it2;
 		}
+		exclusive_disjunction(res, *it2);
+		++it2;
 	}
 
 	return res;
@@ -680,9 +680,8 @@ HTM::getRange(uint64_t id, uint8_t level)
 		int8_t mask = (HTM_MAX_LEVEL - level) << 1;
 		uint64_t start = id << mask;
 		return range_t(start, start + ((uint64_t) 1 << mask) - 1);
-	} else {
-		return range_t(id, id);
 	}
+	return range_t(id, id);
 }
 
 

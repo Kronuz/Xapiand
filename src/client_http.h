@@ -258,10 +258,10 @@ class HttpClient : public BaseClient {
 	std::mutex requests_mutex;
 	std::deque<Request> requests;
 
-	static int _on_info(http_parser* p);
-	int on_info(http_parser* p);
-	static int _on_data(http_parser* p, const char* at, size_t length);
-	int on_data(http_parser* p, const char* at, size_t length);
+	static int _on_info(http_parser* parser);
+	int on_info(http_parser* parser);
+	static int _on_data(http_parser* parser, const char* at, size_t length);
+	int on_data(http_parser* parser, const char* at, size_t length);
 
 	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void info_view(Request& request, Response& response, enum http_method method, Command cmd);
@@ -302,14 +302,14 @@ class HttpClient : public BaseClient {
 	void log_request(Request& request);
 	void log_response(Response& response);
 
-	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
+	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count=0, int matches_estimated=0, const std::string& _body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request(Request& request, Response& response);
 	void set_idle();
 	ct_type_t serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
 	ct_type_t resolve_ct_type(Request& request, std::string ct_type_str);
 	template <typename T>
-	const ct_type_t& get_acceptable_type(Request& request, const T& ct_types);
+	const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types);
 	void write_status_response(Request& request, Response& response, enum http_status status, const std::string& message="");

@@ -195,28 +195,27 @@ std::vector<Cartesian>
 GeoSpatial::getPoints(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack* height)
 {
 	try {
-		if (data.lat->size() == data.lon->size()) {
-			std::vector<Cartesian> points;
-			points.reserve(latitude.size());
-			if (height) {
-				auto it = latitude.begin();
-				auto hit = height->begin();
-				for (const auto& lon : longitude) {
-					points.emplace_back(it->f64(), lon.f64(), hit->f64(), data.units, data.srid);
-					++it;
-					++hit;
-				}
-			} else {
-				auto it = latitude.begin();
-				for (const auto& lon : longitude) {
-					points.emplace_back(it->f64(), lon.f64(), 0, data.units, data.srid);
-					++it;
-				}
-			}
-			return points;
-		} else {
+		if (data.lat->size() != data.lon->size()) {
 			THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 		}
+		std::vector<Cartesian> points;
+		points.reserve(latitude.size());
+		if (height) {
+			auto it = latitude.begin();
+			auto hit = height->begin();
+			for (const auto& lon : longitude) {
+				points.emplace_back(it->f64(), lon.f64(), hit->f64(), data.units, data.srid);
+				++it;
+				++hit;
+			}
+		} else {
+			auto it = latitude.begin();
+			for (const auto& lon : longitude) {
+				points.emplace_back(it->f64(), lon.f64(), 0, data.units, data.srid);
+				++it;
+			}
+		}
+		return points;
 	} catch (const msgpack::type_error&) {
 		THROW(GeoSpatialError, "%s, %s and %s must be array of numbers or nested array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 	}
@@ -226,19 +225,17 @@ GeoSpatial::getPoints(const data_t& data, const MsgPack& latitude, const MsgPack
 Point
 GeoSpatial::make_point(const MsgPack& o)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o);
-		if (data.lat && data.lon) {
-			try {
-				return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid));
-			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-			}
-		} else {
-			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POINT, GEO_LATITUDE, GEO_LONGITUDE);
-		}
-	} else {
+	if (!o.is_map()) {
 		THROW(GeoSpatialError, "%s must be map", RESERVED_POINT);
+	}
+	const auto data = get_data(o);
+	if (!data.lat || !data.lon) {
+		THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POINT, GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	try {
+		return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid));
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 	}
 }
 
@@ -246,19 +243,17 @@ GeoSpatial::make_point(const MsgPack& o)
 Circle
 GeoSpatial::make_circle(const MsgPack& o)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o, true);
-		if (data.lat && data.lon && data.radius) {
-			try {
-				return Circle(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid), data.radius->f64());
-			} catch (const msgpack::type_error&) {
-				THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
-			}
-		} else {
-			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
-		}
-	} else {
+	if (!o.is_map()) {
 		THROW(GeoSpatialError, "%s must be map", RESERVED_CIRCLE);
+	}
+	const auto data = get_data(o, true);
+	if (!data.lat || !data.lon || !data.radius) {
+		THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
+	}
+	try {
+		return Circle(Cartesian(data.lat->f64(), data.lon->f64(), data.height ? data.height->f64() : 0, data.units, data.srid), data.radius->f64());
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 	}
 }
 
@@ -266,45 +261,41 @@ GeoSpatial::make_circle(const MsgPack& o)
 Convex
 GeoSpatial::make_convex(const MsgPack& o)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o, true);
-		if (data.lat && data.lon && data.radius) {
-			if (data.lat->size() == data.lon->size()) {
-				try {
-					Convex convex;
-					if (data.height) {
-						if (data.lat->size() == data.height->size()) {
-							auto it = data.lon->begin();
-							auto hit = data.height->begin();
-							convex.reserve(data.lat->size());
-							for (const auto& latitude : *data.lat) {
-								convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
-								++it;
-								++hit;
-							}
-						} else {
-							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-						}
-					} else {
-						auto it = data.lon->begin();
-						convex.reserve(data.lat->size());
-						for (const auto& latitude : *data.lat) {
-							convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
-							++it;
-						}
-					}
-					return convex;
-				} catch (const msgpack::type_error&) {
-					THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
-				}
-			} else {
-				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	if (!o.is_map()) {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_CONVEX);
+	}
+	const auto data = get_data(o, true);
+	if (!data.lat || !data.lon || !data.radius) {
+		THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CONVEX, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
+	}
+	if (data.lat->size() != data.lon->size()) {
+		THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	try {
+		Convex convex;
+		if (data.height) {
+			if (data.lat->size() != data.height->size()) {
+				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+			auto it = data.lon->begin();
+			auto hit = data.height->begin();
+			convex.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
+				++it;
+				++hit;
 			}
 		} else {
-			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_CONVEX, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
+			auto it = data.lon->begin();
+			convex.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
+				++it;
+			}
 		}
-	} else {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_CONVEX);
+		return convex;
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 	}
 }
 
@@ -312,90 +303,81 @@ GeoSpatial::make_convex(const MsgPack& o)
 Polygon
 GeoSpatial::make_polygon(const MsgPack& o, Geometry::Type type)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o);
-		if (data.lat && data.lon) {
-			if (data.lat->size() == data.lon->size()) {
-				auto it = data.lon->begin();
-				if (it->is_array()) {
-					Polygon polygon(type);
-					if (data.height) {
-						if (data.lat->size() == data.height->size()) {
-							auto hit = data.height->begin();
-							polygon.reserve(data.lat->size());
-							for (const auto& lat : *data.lat) {
-								polygon.add(getPoints(data, lat, *it, &*hit));
-								++it;
-								++hit;
-							}
-						} else {
-							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-						}
-					} else {
-						polygon.reserve(data.lat->size());
-						for (const auto& lat : *data.lat) {
-							polygon.add(getPoints(data, lat, *it));
-							++it;
-						}
-					}
-					return polygon;
-				} else {
-					return Polygon(type, getPoints(data, *data.lat, *data.lon, data.height));
-				}
-			} else {
-				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
-			}
-		} else {
-			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POLYGON, GEO_LATITUDE, GEO_LONGITUDE);
-		}
-	} else {
+	if (!o.is_map()) {
 		THROW(GeoSpatialError, "%s must be map", RESERVED_POLYGON);
 	}
+	const auto data = get_data(o);
+	if (!data.lat || !data.lon) {
+		THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POLYGON, GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	if (data.lat->size() != data.lon->size()) {
+		THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	auto it = data.lon->begin();
+	if (it->is_array()) {
+		Polygon polygon(type);
+		if (data.height) {
+			if (data.lat->size() != data.height->size()) {
+				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+			auto hit = data.height->begin();
+			polygon.reserve(data.lat->size());
+			for (const auto& lat : *data.lat) {
+				polygon.add(getPoints(data, lat, *it, &*hit));
+				++it;
+				++hit;
+			}
+		} else {
+			polygon.reserve(data.lat->size());
+			for (const auto& lat : *data.lat) {
+				polygon.add(getPoints(data, lat, *it));
+				++it;
+			}
+		}
+		return polygon;
+	}
+	return Polygon(type, getPoints(data, *data.lat, *data.lon, data.height));
 }
 
 
 MultiPoint
 GeoSpatial::make_multipoint(const MsgPack& o)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o);
-		if (data.lat && data.lon) {
-			if (data.lat->size() == data.lon->size()) {
-				try {
-					MultiPoint multipoint;
-					if (data.height) {
-						if (data.lat->size() == data.height->size()) {
-							auto it = data.lon->begin();
-							auto hit = data.height->begin();
-							multipoint.reserve(data.lat->size());
-							for (const auto& latitude : *data.lat) {
-								multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid)));
-								++it;
-								++hit;
-							}
-						} else {
-							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-						}
-					} else {
-						auto it = data.lon->begin();
-						multipoint.reserve(data.lat->size());
-						for (const auto& latitude : *data.lat) {
-							multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid)));
-							++it;
-						}
-					}
-					return multipoint;
-				} catch (const msgpack::type_error&) {
-					THROW(GeoSpatialError, "%s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-				}
-			} else {
-				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	if (!o.is_map()) {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_MULTIPOINT);
+	}
+	const auto data = get_data(o);
+	if (!data.lat || !data.lon) {
+		THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOINT, GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	if (data.lat->size() != data.lon->size()) {
+		THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	try {
+		MultiPoint multipoint;
+		if (data.height) {
+			if (data.lat->size() != data.height->size()) {
+				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+			auto it = data.lon->begin();
+			auto hit = data.height->begin();
+			multipoint.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid)));
+				++it;
+				++hit;
 			}
 		} else {
-			THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOINT, GEO_LATITUDE, GEO_LONGITUDE);
+			auto it = data.lon->begin();
+			multipoint.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				multipoint.add(Point(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid)));
+				++it;
+			}
 		}
-	} else {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_MULTIPOINT);
+		return multipoint;
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
 	}
 }
 
@@ -403,45 +385,41 @@ GeoSpatial::make_multipoint(const MsgPack& o)
 MultiCircle
 GeoSpatial::make_multicircle(const MsgPack& o)
 {
-	if (o.is_map()) {
-		const auto data = get_data(o, true);
-		if (data.lat && data.lon && data.radius) {
-			if (data.lat->size() == data.lon->size()) {
-				try {
-					MultiCircle multicircle;
-					if (data.height) {
-						if (data.lat->size() == data.height->size()) {
-							auto it = data.lon->begin();
-							auto hit = data.height->begin();
-							multicircle.reserve(data.lat->size());
-							for (const auto& latitude : *data.lat) {
-								multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
-								++it;
-								++hit;
-							}
-						} else {
-							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-						}
-					} else {
-						auto it = data.lon->begin();
-						multicircle.reserve(data.lat->size());
-						for (const auto& latitude : *data.lat) {
-							multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
-							++it;
-						}
-					}
-					return multicircle;
-				} catch (const msgpack::type_error&) {
-					THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
-				}
-			} else {
-				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	if (!o.is_map()) {
+		THROW(GeoSpatialError, "%s must be map", RESERVED_MULTICIRCLE);
+	}
+	const auto data = get_data(o, true);
+	if (!data.lat || !data.lon || data.radius) {
+		THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_MULTICIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
+	}
+	if (data.lat->size() != data.lon->size()) {
+		THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+	}
+	try {
+		MultiCircle multicircle;
+		if (data.height) {
+			if (data.lat->size() != data.height->size()) {
+				THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+			auto it = data.lon->begin();
+			auto hit = data.height->begin();
+			multicircle.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
+				++it;
+				++hit;
 			}
 		} else {
-			THROW(GeoSpatialError, "%s must contain %s, %s and %s", RESERVED_MULTICIRCLE, GEO_LATITUDE, GEO_LONGITUDE, GEO_RADIUS);
+			auto it = data.lon->begin();
+			multicircle.reserve(data.lat->size());
+			for (const auto& latitude : *data.lat) {
+				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
+				++it;
+			}
 		}
-	} else {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_MULTICIRCLE);
+		return multicircle;
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "%s, %s, %s and %s must be array of numbers", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT, GEO_RADIUS);
 	}
 }
 
@@ -471,60 +449,57 @@ GeoSpatial::make_multipolygon(const MsgPack& o)
 		}
 		case MsgPack::Type::ARRAY: {
 			const auto data = get_data(o);
-			if (data.lat && data.lon) {
-				if (data.lat->size() == data.lon->size()) {
-					MultiPolygon multipolygon;
-					multipolygon.reserve(data.lat->size());
-					if (data.height) {
-						if (data.lat->size() == data.height->size()) {
-							auto m_it = data.lon->begin();
-							auto m_hit = data.height->begin();
-							for (const auto& m_lat : *data.lat) {
-								if (m_lat.is_array()) {
-									Polygon polygon(Geometry::Type::POLYGON);
-									polygon.reserve(m_lat.size());
-									auto it = m_it->begin();
-									auto hit = m_hit->begin();
-									for (const auto& lat : m_lat) {
-										polygon.add(getPoints(data, lat, *it, &*hit));
-										++it;
-										++hit;
-									}
-									multipolygon.add(std::move(polygon));
-								} else {
-									multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it, &*m_hit)));
-								}
-								++m_it;
-								++m_hit;
-							}
-						} else {
-							THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
-						}
-					} else {
-						auto m_it = data.lon->begin();
-						for (const auto& m_lat : *data.lat) {
-							if (m_lat.is_array()) {
-								Polygon polygon(Geometry::Type::POLYGON);
-								polygon.reserve(m_lat.size());
-								auto it = m_it->begin();
-								for (const auto& lat : m_lat) {
-									polygon.add(getPoints(data, lat, *it));
-									++it;
-								}
-								multipolygon.add(std::move(polygon));
-							} else {
-								multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it)));
-							}
-							++m_it;
-						}
-					}
-					return multipolygon;
-				} else {
-					THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
-				}
-			} else {
+			if (!data.lat || !data.lon) {
 				THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_MULTIPOLYGON, GEO_LATITUDE, GEO_LONGITUDE);
 			}
+			if (data.lat->size() != data.lon->size()) {
+				THROW(GeoSpatialError, "%s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE);
+			}
+			MultiPolygon multipolygon;
+			multipolygon.reserve(data.lat->size());
+			if (data.height) {
+				if (data.lat->size() != data.height->size()) {
+					THROW(GeoSpatialError, "%s, %s and %s must have the same size", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+				}
+				auto m_it = data.lon->begin();
+				auto m_hit = data.height->begin();
+				for (const auto& m_lat : *data.lat) {
+					if (m_lat.is_array()) {
+						Polygon polygon(Geometry::Type::POLYGON);
+						polygon.reserve(m_lat.size());
+						auto it = m_it->begin();
+						auto hit = m_hit->begin();
+						for (const auto& lat : m_lat) {
+							polygon.add(getPoints(data, lat, *it, &*hit));
+							++it;
+							++hit;
+						}
+						multipolygon.add(std::move(polygon));
+					} else {
+						multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it, &*m_hit)));
+					}
+					++m_it;
+					++m_hit;
+				}
+			} else {
+				auto m_it = data.lon->begin();
+				for (const auto& m_lat : *data.lat) {
+					if (m_lat.is_array()) {
+						Polygon polygon(Geometry::Type::POLYGON);
+						polygon.reserve(m_lat.size());
+						auto it = m_it->begin();
+						for (const auto& lat : m_lat) {
+							polygon.add(getPoints(data, lat, *it));
+							++it;
+						}
+						multipolygon.add(std::move(polygon));
+					} else {
+						multipolygon.add(Polygon(Geometry::Type::POLYGON, getPoints(data, m_lat, *m_it)));
+					}
+					++m_it;
+				}
+			}
+			return multipolygon;
 		}
 		default: {
 			THROW(GeoSpatialError, "%s must be map or nested array of numbers", RESERVED_MULTIPOLYGON);
@@ -577,9 +552,8 @@ GeoSpatial::make_collection(const MsgPack& o)
 			}
 		}
 		return collection;
-	} else {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_COLLECTION);
 	}
+	THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_COLLECTION);
 }
 
 
@@ -628,7 +602,6 @@ GeoSpatial::make_intersection(const MsgPack& o)
 			}
 		}
 		return intersection;
-	} else {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_INTERSECTION);
 	}
+	THROW(GeoSpatialError, "%s must be map", RESERVED_GEO_INTERSECTION);
 }

@@ -95,24 +95,24 @@ normalize_and_partition(const void *p, size_t size)
 #endif
 #ifdef XAPIAND_UUID_ENCODED
 		case UUIDRepr::encoded:
-			if (serialised_uuid.front() != 1 && ((serialised_uuid.back() & 1) || (serialised_uuid.size() > 5 && *(serialised_uuid.rbegin() + 5) & 2))) {
+			if (serialised_uuid.front() != 1 && (((serialised_uuid.back() & 1) != 0) || (serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0)))) {
 				auto cit = normalized.cbegin();
 				auto cit_e = normalized.cend();
 				result.reserve(2 + normalized.size());
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back('/');
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
-				if (cit == cit_e) return result;
+				if (cit == cit_e) { return result; }
 				result.push_back('/');
 				result.append(cit, cit_e);
 				break;
@@ -250,7 +250,9 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_le
 		host = uri;
 		int errno_save;
 		port = strict_stoi(errno_save, _port);
-		if (!port) port = XAPIAND_BINARY_SERVERPORT;
+		if (port == 0) {
+			port = XAPIAND_BINARY_SERVERPORT;
+		}
 		search = _search;
 		password = _password;
 		user = _user;
@@ -277,12 +279,14 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_le
 
 	if (protocol == "file") {
 		auto local_node_ = local_node.load();
-		if (!node_) {
+		if (node_ == nullptr) {
 			node_ = local_node_.get();
 		}
 		host = node_->host();
 		port = node_->binary_port;
-		if (!port) port = XAPIAND_BINARY_SERVERPORT;
+		if (port == 0) {
+			port = XAPIAND_BINARY_SERVERPORT;
+		}
 	}
 }
 
@@ -377,7 +381,9 @@ Endpoints::to_string() const
 	std::string ret;
 	auto j = endpoints.cbegin();
 	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
-		if (i) ret += ";";
+		if (i != 0) {
+			ret += ";";
+		}
 		ret += (*j).to_string();
 	}
 	return ret;
