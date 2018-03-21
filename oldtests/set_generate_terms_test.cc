@@ -24,6 +24,8 @@
 
 #include "gtest/gtest.h"
 
+#include "utils.h"
+
 
 TEST(GenerateTermsTest, Numeric) {
 	EXPECT_EQ(numeric_test(), 0);
@@ -41,6 +43,9 @@ TEST(GenerateTermsTest, Geo) {
 
 
 int main(int argc, char **argv) {
+	auto initializer = Initializer::create();
 	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+	int ret = RUN_ALL_TESTS();
+	initializer.destroy();
+	return ret;
 }

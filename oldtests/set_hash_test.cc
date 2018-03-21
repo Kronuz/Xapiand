@@ -24,6 +24,8 @@
 
 #include "gtest/gtest.h"
 
+#include "utils.h"
+
 
 TEST(HashTest, MD5) {
 	EXPECT_EQ(test_md5(), 0);
@@ -36,6 +38,9 @@ TEST(HashTest, SHA256) {
 
 
 int main(int argc, char **argv) {
+	auto initializer = Initializer::create();
 	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+	int ret = RUN_ALL_TESTS();
+	initializer.destroy();
+	return ret;
 }

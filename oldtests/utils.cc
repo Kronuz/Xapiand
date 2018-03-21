@@ -73,9 +73,15 @@ Initializer::Initializer()
 			/* std::string filename = */ "",
 		};
 
-		ev::default_loop default_loop(opts.ev_flags);
+		static ev::default_loop default_loop(opts.ev_flags);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
 	}
+}
+
+
+void Initializer::destroy()
+{
+	XapiandManager::manager.reset();
 }
 
 
@@ -143,7 +149,6 @@ DB_Test::~DB_Test()
 void
 DB_Test::destroy()
 {
-	XapiandManager::manager.reset();
 	delete_files(name_database);
 }
 

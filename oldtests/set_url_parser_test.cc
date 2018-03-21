@@ -24,6 +24,8 @@
 
 #include "gtest/gtest.h"
 
+#include "utils.h"
+
 
 TEST(UtilsTest, URL_Path) {
 	EXPECT_EQ(test_url_path(), 0);
@@ -31,6 +33,9 @@ TEST(UtilsTest, URL_Path) {
 
 
 int main(int argc, char **argv) {
+	auto initializer = Initializer::create();
 	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+	int ret = RUN_ALL_TESTS();
+	initializer.destroy();
+	return ret;
 }

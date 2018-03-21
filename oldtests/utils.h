@@ -33,8 +33,13 @@
 #include "../src/manager.h"
 struct Initializer {
 	Initializer();
+	void destroy();
+
+	static Initializer& create() {
+		static Initializer initializer;
+		return initializer;
+	}
 };
-static const Initializer initializer;
 
 
 #ifndef TESTING_LOGS
