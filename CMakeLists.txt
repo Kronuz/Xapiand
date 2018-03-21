@@ -38,7 +38,11 @@ set (PACKAGE_TARNAME "${PROJECT_NAME}")
 # Options
 ########################################################################
 
-option(IWYU "Enable include-what-you-use"                           OFF)
+option(LINK_WHAT_YOU_USE    "Enable link-what-you-use"              OFF)
+option(INCLUDE_WHAT_YOU_USE "Enable include-what-you-use"           OFF)
+option(CLANG_TIDY           "Enable Clang Tidy"                     OFF)
+option(CPPLINT              "Enable CppLint"                        OFF)
+
 option(BUILD_TESTS "Build all tests"                                OFF)
 option(BUILD_BENCHMARKS "Build all benchmarks"                      OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
@@ -85,6 +89,92 @@ include (CMakePushCheckState)
 include (GetGitVersion)
 include (GNUInstallDirs)
 include (RemoveDuplicateSubstrings)
+
+
+
+########################################################################
+#  _____           _
+# |_   _|__   ___ | |___
+#   | |/ _ \ / _ \| / __|
+#   | | (_) | (_) | \__ \
+#   |_|\___/ \___/|_|___/
+#
+########################################################################
+
+# -DCMAKE_CMAKE_LINK_WHAT_YOU_USE:BOOL=ON
+
+if (LINK_WHAT_YOU_USE)
+	message(STATUS "Enabling link-what-you-use - ok")
+	set (CMAKE_LINK_WHAT_YOU_USE ON)
+endif (LINK_WHAT_YOU_USE)
+
+
+# Enable Google's Include What You Use
+# ------------------------------------
+# -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE:STRING="include-what-you-use;-Xiwyu;--mapping_file=../iwyu.imp"
+
+if (INCLUDE_WHAT_YOU_USE)
+	find_program(INCLUDE_WHAT_YOU_USE_PATH NAMES include-what-you-use iwyu)
+	if (INCLUDE_WHAT_YOU_USE_PATH)
+		message(STATUS "Looking for include-what-you-use - found")
+		set (INCLUDE_WHAT_YOU_USE_OPTS
+			${INCLUDE_WHAT_YOU_USE_PATH}
+			"-Xiwyu"
+			"--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp"
+		)
+		set (CMAKE_C_INCLUDE_WHAT_YOU_USE "${INCLUDE_WHAT_YOU_USE_OPTS}")
+		set (CMAKE_CXX_INCLUDE_WHAT_YOU_USE "${INCLUDE_WHAT_YOU_USE_OPTS}")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ferror-limit=0")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ferror-limit=0")
+	else ()
+		message(STATUS "Looking for include-what-you-use - not found")
+	endif ()
+endif (INCLUDE_WHAT_YOU_USE)
+
+
+# Enable Clang Tidy
+# -----------------
+# -DCMAKE_CXX_CLANG_TIDY:STRING="clang-tidy;-checks=-*,readability-*"
+
+if (CLANG_TIDY)
+	find_program(CLANG_TIDY_PATH NAMES clang-tidy)
+	if (CLANG_TIDY_PATH)
+		message(STATUS "Looking for clang-tidy - found")
+		set (CLANG_TIDY_OPTS
+			${CLANG_TIDY_PATH}
+			# "-fix"
+			"-checks=-*,readability-*,modernize-*"
+		)
+		set (CMAKE_C_CLANG_TIDY "${CLANG_TIDY_OPTS}")
+		set (CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_OPTS}")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ferror-limit=0")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ferror-limit=0")
+	else ()
+		message(STATUS "Looking for clang-tidy - not found")
+	endif ()
+endif (CLANG_TIDY)
+
+
+# Enable CppLint
+# --------------
+# -DCMAKE_CXX_CPPLINT:STRING="cpplint;--linelength=79"
+
+if (CPPLINT)
+	find_program(CPPLINT_PATH NAMES cpplint)
+	if (CPPLINT_PATH)
+		message(STATUS "Looking for CppLint - found")
+		set (CPPLINT_OPTS
+			${CPPLINT_PATH}
+			"--linelength=79"
+		)
+		set (CMAKE_C_CPPLINT "${CPPLINT_OPTS}")
+		set (CMAKE_CXX_CPPLINT "${CPPLINT_OPTS}")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ferror-limit=0")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ferror-limit=0")
+	else ()
+		message(STATUS "Looking for CppLint - not found")
+	endif ()
+endif (CPPLINT)
 
 
 
@@ -743,46 +833,3 @@ if (BUILD_BENCHMARKS)
 		endforeach ()
 	endif ()
 endif ()
-
-
-
-########################################################################
-#  _____           _
-# |_   _|__   ___ | |___
-#   | |/ _ \ / _ \| / __|
-#   | | (_) | (_) | \__ \
-#   |_|\___/ \___/|_|___/
-#
-########################################################################
-
-# Enable Google's Include What You Use
-# ------------------------------------
-
-if (IWYU)
-	find_program(IWYU_PATH NAMES include-what-you-use iwyu)
-	if (IWYU_PATH)
-		message(STATUS "Looking for include-what-you-use - found")
-		set (IWYU_OPTS
-			${IWYU_PATH}
-			-Xiwyu
-			--mapping_file=${PROJECT_SOURCE_DIR}/iwyu.imp)
-		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET BOOLEAN_PARSER_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LIBEV_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LIBEV_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LZ4_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET LZ4_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET UUID_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET UUID_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET PACKAGE_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET PACKAGE_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET MAIN_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET MAIN_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET XAPIAND_OBJ PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET XAPIAND_OBJ PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET ${PROJECT_NAME} PROPERTY C_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-		set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_OPTS})
-	else ()
-		message(STATUS "Looking for include-what-you-use - not found")
-	endif ()
-endif (IWYU)
