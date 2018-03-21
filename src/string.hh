@@ -26,7 +26,6 @@
 
 #include <algorithm>          // for std::count
 #include <chrono>             // for std::chrono
-#include <cstdio>             // for std::vsnprintf
 #include <ostream>            // for std::ostream
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
