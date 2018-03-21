@@ -24,7 +24,7 @@
 
 #include <algorithm>             // for equal, uniform_int_distribution
 #include <cstdint>               // for uint64_t
-#include <functional>            // for function, __base, std::reference_wrapper
+#include <functional>            // for function, __base
 #include <math.h>                // for powl, logl, floorl, roundl
 #include <memory>                // for allocator
 #include <mutex>                 // for std::mutex
@@ -42,7 +42,6 @@
 #include <sysexits.h>            // for EX_OSFILE
 #include <unistd.h>              // for close, rmdir, write, ssize_t
 #include <unordered_map>         // for std::unordered_map
-#include <utility>               // for std::pair
 
 #include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
 #include "exception.h"           // for Exit
@@ -81,22 +80,11 @@
 #define STATE_HST 5
 
 
-// https://isocpp.org/wiki/faq/ctors#static-init-order
-// Avoid the "static initialization order fiasco"
+static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
+static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
-auto& rng() {
-	static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-	static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
-	return rng;
-}
-
-
-auto
-locked_thread_names() {
-	static std::unordered_map<std::thread::id, std::string> thread_names;
-	static std::mutex thread_names_mutex;
-	return std::make_pair(std::reference_wrapper<std::unordered_map<std::thread::id, std::string>>(thread_names), std::unique_lock<std::mutex>(thread_names_mutex));
-}
+static std::unordered_map<std::thread::id, std::string> thread_names;
+static std::mutex thread_names_mutex;
 
 
 void set_thread_name(const std::string& name) {
@@ -109,17 +97,17 @@ void set_thread_name(const std::string& name) {
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
 	pthread_set_name_np(pthread_self(), stringified(name).c_str());
 #endif
-	auto thread_names = locked_thread_names();
-	thread_names.first.emplace(std::piecewise_construct,
+	std::lock_guard<std::mutex> lk(thread_names_mutex);
+	thread_names.emplace(std::piecewise_construct,
 		std::forward_as_tuple(std::this_thread::get_id()),
 		std::forward_as_tuple(name));
 }
 
 
 const std::string& get_thread_name(std::thread::id thread_id) {
-	auto thread_names = locked_thread_names();
-	auto thread = thread_names.first.find(thread_id);
-	if (thread == thread_names.first.end()) {
+	std::lock_guard<std::mutex> lk(thread_names_mutex);
+	auto thread = thread_names.find(thread_id);
+	if (thread == thread_names.end()) {
 		static std::string _ = "???";
 		return _;
 	}
@@ -134,13 +122,13 @@ const std::string& get_thread_name() {
 
 double random_real(double initial, double last) {
 	std::uniform_real_distribution<double> distribution(initial, last);
-	return distribution(rng());  // Use rng as a generator
+	return distribution(rng);  // Use rng as a generator
 }
 
 
 uint64_t random_int(uint64_t initial, uint64_t last) {
 	std::uniform_int_distribution<uint64_t> distribution(initial, last);
-	return distribution(rng());  // Use rng as a generator
+	return distribution(rng);  // Use rng as a generator
 }
 
 
