@@ -266,8 +266,8 @@ add_custom_target(uninstall
 find_package(ZLIB)
 if (ZLIB_FOUND)
 	set (HAVE_ZLIB 1)
-	include_directories(BEFORE "${ZLIB_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${ZLIB_INCLUDE_DIRS}")
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${ZLIB_LIBRARIES})
 else ()
 	set (HAVE_ZLIB 0)
 endif ()
@@ -278,15 +278,15 @@ if (V8)
 	# V8 Engine Library
 	####################################################################
 	find_package(V8 REQUIRED)
-	include_directories(BEFORE "${V8_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} ${V8_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${V8_INCLUDE_DIRS}")
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${V8_LIBRARIES})
 
 elseif (CHAISCRIPT)
 	# ChaiScript Engine Library
 	####################################################################
 	find_package(CHAISCRIPT)
 	if (CHAISCRIPT_FOUND)
-		include_directories(BEFORE "${CHAISCRIPT_INCLUDE_DIRS}")
+		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${CHAISCRIPT_INCLUDE_DIRS}")
 	endif ()
 endif ()
 
@@ -298,7 +298,7 @@ endif ()
 find_library(EXECINFO_LIBRARIES execinfo)
 if (EXECINFO_LIBRARIES)
 	set (HAVE_EXECINFO 1)
-	target_link_libraries(${PROJECT_NAME} ${EXECINFO_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${EXECINFO_LIBRARIES})
 else ()
 	set (HAVE_EXECINFO 0)
 endif ()
@@ -311,7 +311,7 @@ endif ()
 find_library(RT_LIBRARIES rt)
 if (RT_LIBRARIES)
 	set (HAVE_RT 1)
-	target_link_libraries(${PROJECT_NAME} ${RT_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${RT_LIBRARIES})
 else ()
 	set (HAVE_RT 0)
 endif ()
@@ -324,7 +324,7 @@ endif ()
 find_library(M_LIBRARIES m)
 if (M_LIBRARIES)
 	set (HAVE_M 1)
-	target_link_libraries(${PROJECT_NAME} ${M_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${M_LIBRARIES})
 else ()
 	set (HAVE_M 0)
 	set (M_LIBRARIES "")
@@ -337,7 +337,7 @@ endif ()
 
 set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
 if (CMAKE_USE_PTHREADS_INIT)
 	set (HAVE_PTHREADS 1)
@@ -351,8 +351,8 @@ endif ()
 ########################################################################
 
 find_package(UUID REQUIRED)
-include_directories(BEFORE "${UUID_INCLUDE_DIRS}")
-target_link_libraries(${PROJECT_NAME} ${UUID_LIBRARIES})
+target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${UUID_INCLUDE_DIRS}")
+target_link_libraries(${PROJECT_NAME} PRIVATE ${UUID_LIBRARIES})
 
 
 ########################################################################
@@ -360,8 +360,8 @@ target_link_libraries(${PROJECT_NAME} ${UUID_LIBRARIES})
 ########################################################################
 
 find_package(Xapian REQUIRED)
-include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}")
-target_link_libraries(${PROJECT_NAME} ${XAPIAN_LIBRARIES})
+target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${XAPIAN_INCLUDE_DIR}")
+target_link_libraries(${PROJECT_NAME} PRIVATE ${XAPIAN_LIBRARIES})
 
 cmake_push_check_state()
 set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
@@ -668,13 +668,14 @@ if (BUILD_TESTS)
 	if (NOT GTEST_FOUND)
 		message(FATAL_ERROR "GTest not found!")
 	else ()
-		include_directories(${GTEST_INCLUDE_DIRS})
+		target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
+
 		foreach (VAR_TEST string)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 			)
-			target_link_libraries(${PROJECT_TEST} ${GTEST_BOTH_LIBRARIES})
+			target_link_libraries(${PROJECT_TEST} PRIVATE ${GTEST_BOTH_LIBRARIES})
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
@@ -698,7 +699,7 @@ if (BUILD_TESTS)
 				"$<TARGET_OBJECTS:LZ4_OBJ>"
 				"$<TARGET_OBJECTS:UUID_OBJ>"
 			)
-			target_link_libraries(${PROJECT_TEST}
+			target_link_libraries(${PROJECT_TEST} PRIVATE
 				${GTEST_BOTH_LIBRARIES}
 				${XAPIAN_LIBRARIES}
 				${CMAKE_THREAD_LIBS_INIT}
@@ -730,13 +731,13 @@ if (BUILD_BENCHMARKS)
 	if (NOT GBENCHMARK_FOUND)
 		message(WARNING "GBenchmark not found!")
 	else ()
-		include_directories(${GBENCHMARK_INCLUDE_DIRS})
+		target_include_directories(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_INCLUDE_DIRS})
 		foreach (VAR_BENCHMARK string)
 			set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
 			add_executable(${PROJECT_BENCHMARK}
 				"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
 			)
-			target_link_libraries(${PROJECT_BENCHMARK} ${GBENCHMARK_LIBRARIES})
+			target_link_libraries(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_LIBRARIES})
 			add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
 			add_dependencies(check "${PROJECT_BENCHMARK}")
 		endforeach ()
