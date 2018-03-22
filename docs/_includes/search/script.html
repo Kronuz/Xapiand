@@ -1,0 +1,11 @@
+{% if site.docsearch_key %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"></script>
+<script type="text/javascript"> docsearch({
+	apiKey: '{{ site.docsearch_key }}',
+	indexName: '{{ site.docsearch_name }}',
+	inputSelector: '#docsearch-input',
+	enhancedSearchInput: true,
+	debug: false // Set debug to true if you want to inspect the dropdown
+});
+</script>
+{% endif %}

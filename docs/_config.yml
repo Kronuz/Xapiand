@@ -1,0 +1,82 @@
+################################################################################
+# This config file is meant for settings that affect the whole site, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'bundle exec jekyll serve'. If you change this file, please restart the server
+# process.
+
+
+################################################################################
+# Site settings
+# These are used to personalize your new site. If you look in the HTML files,
+# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
+# You can create any custom variable you would like, and they will be accessible
+# in the templates via {{ site.myvariable }}.
+version: 1.0.0
+name: Xapiand
+title: Xapiand
+email: german.mb@gmail.com
+description: >- # this means to ignore newlines until "baseurl:"
+  Xapiand: A Highly Available Distributed RESTful Search and Storage
+           Engine built for the Cloud and with Data Locality in mind.
+baseurl: "/Xapiand" # the subpath of your site, e.g. /blog
+url: https://Kronuz.github.io/Xapiand
+repository: https://github.com/Kronuz/Xapiand
+twitter_username: germbravo
+github_username:  Kronuz
+
+logo: "/img/logo-2x.png"
+# google_analytics_id: UA-00000000-0
+# google_site_verification: google_site_verification_key
+# docsearch_name: Kronuz
+# docsearch_key: 00000000000000000000000000000000
+
+################################################################################
+# Build settings
+markdown: kramdown
+
+collections:
+  docs:
+    permalink: "/:collection/:path/"
+    output: true
+  posts:
+    permalink: "/news/:year/:month/:day/:title/"
+    output: true
+  tutorials:
+    output: true
+
+defaults:
+  - scope:
+      path: _docs
+      type: docs
+    values:
+      layout: docs
+  - scope:
+      path: _posts
+      type: posts
+    values:
+      layout: news_item
+      image: "/img/twitter-card.png"
+
+plugins:
+  - jekyll-avatar
+  - jekyll-feed
+  - jekyll-mentions
+  - jekyll-redirect-from
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jemoji
+
+sass:
+  style: compressed
+
+exclude:
+  - .gitignore
+  - Gemfile
+  - Gemfile.lock
+  - icomoon-selection.json
+  - readme.md
+  - CNAME

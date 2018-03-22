@@ -1,0 +1,17 @@
+<ul>
+	<li class="{% if page.overview %}current{% endif %}">
+		<a href="{{ '/' | relative_url }}">Home</a>
+	</li>
+	<li class="{% if page.url contains '/docs/' %}current{% endif %}">
+		<a href="{{ '/docs/home/' | relative_url }}">Docs</a>
+	</li>
+	<li class="{% if page.author %}current{% endif %}">
+		<a href="{{ '/news/' | relative_url }}">News</a>
+	</li>
+	<li class="{% if page.url contains '/help/' %}current{% endif %}">
+		<a href="{{ '/help/' | relative_url }}">Help</a>
+	</li>
+	<li>
+		<a href="{{ site.repository }}">GitHub</a>
+	</li>
+</ul>

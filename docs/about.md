@@ -1,6 +1,30 @@
-# Xapiand License
+---
+layout: page
+title: About
+permalink: /about/
+---
 
-The legal stuff...
+Xapiand is a Highly Available Distributed RESTful Search and Storage Engine
+built for the cloud and with Data Locality. Built on top of [Xapian].
+
+You can find the source code for Xapiand at GitHub:
+[Xapiand][xapiand-organization]
+
+[Xapian]: https://xapian.org
+[Xapiand-organization]: https://github.com/Kronuz/Xapiand
+
+
+## Core Team
+
+*The Xapiand Core Team's responsibility is to ensure the development and
+community around the Xapiand ecosystem thrive.*
+
+* <a href="https://twitter.com/germbravo">Germán Méndez Bravo (Kronuz)</a>
+* <a href="#">José Madrigal Cárdenas (YosefMac)</a>
+* <a href="#">José María Valencia Ramírez (JoseMariaVR)</a>
+
+
+## Xapiand License
 
 ```plain
 Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.

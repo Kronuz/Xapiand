@@ -1,0 +1,16 @@
+- title: Getting Started
+  docs:
+    - home
+    - quickstart
+    - installation
+    - building
+
+- title: User Manual
+  docs:
+    - user-manual/storage
+
+- title: Miscellaneous
+  docs:
+    - contributing
+    - conduct
+    - history

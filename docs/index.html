@@ -1,0 +1,113 @@
+---
+layout: default
+---
+
+<section class="intro">
+	<div class="grid">
+
+		<div class="unit whole center-on-mobiles">
+			<p class="first">Search and Storage Engine</p>
+		</div>
+
+	</div>
+</section>
+
+<section class="standalone">
+	<div class="grid">
+
+		<div class="unit whole">
+			Xapiand is a fast, simple and modern search and storage engine.
+		</div>
+
+		<div class="clear"></div>
+
+	</div>
+</section>
+
+<section class="features">
+	<div class="grid">
+		<div class="unit one-third">
+			<h2>Fast</h2>
+			<p>
+				Xapiand is <em>fast</em>, it relies in the
+				<a href="https://xapian.org" target="_blank">Xapian</a>
+				search engine and is written in modern <em>C++</em> for
+				efficiency and scalability.
+			</p>
+			<a href="{{ '/docs/home/' | relative_url }}">Features &rarr;</a>
+		</div>
+		<div class="unit one-third">
+			<h2>Simple</h2>
+			<p>
+				Straightforward <em>RESTful API</em> is <em>JSON</em> document
+				oriented with no need for upfront schema definition.
+			</p>
+			<a href="{{ '/docs/quickstart/' | relative_url }}">Quick-start &rarr;</a>
+		</div>
+		<div class="unit one-third">
+			<h2>Modern</h2>
+			<p>
+				(Near) <em>Real Time Search</em> and data <em>Storage</em> with
+				<em>Multi&nbsp;Tenant</em> &amp; <em>Multi&nbsp;Types</em> indexes
+				also supporting <em>Geospatial</em> queries.
+			</p>
+			<a href="{{ '/docs/user-manual/' | relative_url }}">User Manual &rarr;</a>
+		</div>
+		<div class="clear"></div>
+	</div>
+</section>
+
+<section class="quickstart">
+	<div class="grid">
+		<div class="unit golden-small center-on-mobiles">
+			<h3>Get up and running <em>in&nbsp;seconds</em>.</h3>
+		</div>
+		<div class="unit golden-large code">
+			<p class="title">Quick-start Instructions</p>
+			<div class="shell">
+				<p class="command line">
+					<span class="path">~</span>
+					<span class="prompt">$</span>
+					brew install xapiand
+				</p>
+				<p class="command line">
+					<span class="path">~</span>
+					<span class="prompt">$</span>
+					mkdir my-database
+				</p>
+				<p class="command line">
+					<span class="path">~</span>
+					<span class="prompt">$</span>
+					cd my-database
+				</p>
+				<p class="command line">
+					<span class="path">~/my-database</span>
+					<span class="prompt">$</span>
+					xapiand
+				</p>
+			</div>
+			<div class="shell">
+				<p class="line">
+					<span class="output"># => Ready to index at http://localhost:8880</span>
+				</p>
+				<p class="command line">
+					<span class="path">~</span>
+					<span class="prompt">$</span>
+					curl 'localhost:8880/msgs' -d '{<br/>
+    				&nbsp;&nbsp;"user": "Kronuz",<br />
+    				&nbsp;&nbsp;"message": "Trying out Xapiand..."<br />
+					}'
+				</p>
+				<p class="line">
+					<span class="output"># => Ready to search!</span>
+				</p>
+				<p class="command line">
+					<span class="path">~</span>
+					<span class="prompt">$</span>
+					curl 'localhost:8880/msgs/:search?q=user:Kronuz'
+				</p>
+			</div>
+		</div>
+		<div class="clear"></div>
+	</div>
+</section>
