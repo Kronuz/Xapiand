@@ -36,7 +36,7 @@
 
 class BooleanTree {
 public:
-	explicit BooleanTree(std::string_view input);
+	explicit BooleanTree(std::string_view input_);
 	~BooleanTree() = default;
 
 	std::unique_ptr<BaseNode> root;

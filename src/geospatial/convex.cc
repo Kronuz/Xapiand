@@ -31,7 +31,7 @@ Convex::simplify()
 {
 	if (!simplified) {
 		// Sort circles.
-		std::sort(circles.begin(), circles.end(), std::less<Circle>());
+		std::sort(circles.begin(), circles.end(), std::less<>());
 
 		sign = Sign::ZERO;
 		for (auto it = circles.begin(); it != circles.end(); ++it) {
@@ -72,10 +72,10 @@ Convex::insideVertex(const Cartesian& v) const noexcept
 
 
 bool
-Convex::intersectCircles(const Constraint& c) const
+Convex::intersectCircles(const Constraint& bounding_circle) const
 {
 	for (const auto& circle : circles) {
-		if (!HTM::intersectConstraints(circle.constraint, c)) {
+		if (!HTM::intersectConstraints(circle.constraint, bounding_circle)) {
 			return false;
 		}
 	}
@@ -86,9 +86,13 @@ Convex::intersectCircles(const Constraint& c) const
 TypeTrixel
 Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
-	int sum = insideVertex(v0) + insideVertex(v1) + insideVertex(v2);
+	int F = (
+		(insideVertex(v0) != 0 ? 1 : 0) +
+		(insideVertex(v1) != 0 ? 1 : 0) +
+		(insideVertex(v2) != 0 ? 1 : 0)
+	);
 
-	switch (sum) {
+	switch (F) {
 		case 0: {
 			// If bounding circle doesnot intersect all circles, the trixel is considered OUTSIDE.
 			if (!intersectCircles(HTM::getBoundingCircle(v0, v1, v2))) {
@@ -185,7 +189,12 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	};
 
 	// Number of full subtrixels.
-	uint8_t F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	// Finish the recursion.
 	if (F == 4) {
@@ -262,7 +271,12 @@ Convex::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	};
 
 	// Number of full subtrixels.
-	uint8_t F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	// Finish the recursion.
 	if (F == 4) {

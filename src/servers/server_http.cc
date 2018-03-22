@@ -63,7 +63,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
-	if (EV_ERROR & revents) {
+	if ((EV_ERROR & revents) != 0) {
 		L_EV("ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}

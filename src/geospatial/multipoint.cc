@@ -30,7 +30,7 @@ MultiPoint::simplify()
 {
 	if (!simplified) {
 		// Sort points.
-		std::sort(points.begin(), points.end(), std::less<Point>());
+		std::sort(points.begin(), points.end(), std::less<>());
 		// Delete duplicate points
 		points.erase(std::unique(points.begin(), points.end()), points.end());
 
@@ -67,7 +67,7 @@ MultiPoint::to_string() const
 
 
 std::vector<std::string>
-MultiPoint::getTrixels(bool, double) const
+MultiPoint::getTrixels(bool /*partials*/, double /*error*/) const
 {
 	std::vector<std::string> trixels;
 	trixels.reserve(points.size());
@@ -82,7 +82,7 @@ MultiPoint::getTrixels(bool, double) const
 
 
 std::vector<range_t>
-MultiPoint::getRanges(bool, double) const
+MultiPoint::getRanges(bool /*partials*/, double /*error*/) const
 {
 	std::vector<range_t> ranges;
 	ranges.reserve(points.size());
@@ -91,7 +91,7 @@ MultiPoint::getRanges(bool, double) const
 		ranges.emplace_back(id, id);
 	}
 
-	std::sort(ranges.begin(), ranges.end(), std::less<range_t>());
+	std::sort(ranges.begin(), ranges.end(), std::less<>());
 	HTM::simplifyRanges(ranges);
 
 	return ranges;

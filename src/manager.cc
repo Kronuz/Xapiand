@@ -197,7 +197,7 @@ XapiandManager::load_node_name()
 		io::close(fd);
 		if (length < 0) { length = 0; }
 		buf[length] = '\0';
-		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++])) == 0) { }
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++]) == 0)) { }
 	}
 	return std::string(buf, length);
 }
@@ -255,7 +255,7 @@ XapiandManager::load_node_id()
 		io::close(fd);
 		if (length < 0) { length = 0; }
 		buf[length] = '\0';
-		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++])) == 0) { }
+		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++]) == 0)) { }
 		try {
 			node_id = unserialise_node_id(std::string_view(buf, length));
 		} catch (...) {

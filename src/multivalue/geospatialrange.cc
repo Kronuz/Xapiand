@@ -90,7 +90,7 @@ GeoSpatialRange::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
 	while (!at_end()) {
-		if (insideRanges()) break;
+		if (insideRanges()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -101,7 +101,7 @@ GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (!at_end()) {
-		if (insideRanges()) break;
+		if (insideRanges()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -154,10 +154,10 @@ GeoSpatialRange::serialise() const
 
 
 GeoSpatialRange*
-GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
+GeoSpatialRange::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
 {
 	try {
-		StringList data(s);
+		StringList data(serialised);
 
 		if (data.size() != 2) {
 			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");

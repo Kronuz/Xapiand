@@ -77,7 +77,7 @@ Polygon::ConvexPolygon::graham_scan(std::vector<Cartesian>&& points)
 		const auto dir = get_direction(P0, a, b);
 		switch (dir) {
 			case Direction::COLLINEAR:
-				return ((dist(P0, b) > dist(P0, a)) ? true : false);
+				return (dist(P0, b) > dist(P0, a));
 			case Direction::COUNTERCLOCKWISE:
 				return true;
 			case Direction::CLOCKWISE:
@@ -202,7 +202,7 @@ void
 Polygon::ConvexPolygon::process_polygon(std::vector<Cartesian>&& points)
 {
 	// Repeats the first corner at the end if it does not repeat.
-	if (points.size() && points.front() != points.back()) {
+	if (!points.empty() && points.front() != points.back()) {
 		points.push_back(points.front());
 	}
 
@@ -366,7 +366,11 @@ Polygon::ConvexPolygon::insideVertex(const Cartesian& v) const noexcept
 TypeTrixel
 Polygon::ConvexPolygon::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
-	int sum = insideVertex(v0) + insideVertex(v1) + insideVertex(v2);
+	int sum = (
+		(insideVertex(v0) != 0 ? 1 : 0) +
+		(insideVertex(v1) != 0 ? 1 : 0) +
+		(insideVertex(v2) != 0 ? 1 : 0)
+	);
 
 	switch (sum) {
 		case 0: {
@@ -408,7 +412,12 @@ Polygon::ConvexPolygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, c
 	};
 
 	// Number of full and partial subtrixels.
-	int F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	if (F == 4) {
 		data.trixels.push_back(std::move(name));
@@ -484,7 +493,12 @@ Polygon::ConvexPolygon::lookupTrixel(const Cartesian& v0, const Cartesian& v1, c
 	};
 
 	// Number of full and partial subtrixels.
-	int F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	if (F == 4) {
 		HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));
@@ -698,7 +712,7 @@ Polygon::simplify()
 {
 	if (!simplified && convexpolygons.size() > 1) {
 		// Sort convexpolygons.
-		std::sort(convexpolygons.begin(), convexpolygons.end(), std::less<ConvexPolygon>());
+		std::sort(convexpolygons.begin(), convexpolygons.end(), std::less<>());
 
 		// Deleting redundant convexpolygons.
 		for (auto it = convexpolygons.begin(); it != convexpolygons.end(); ) {
@@ -710,7 +724,7 @@ Polygon::simplify()
 					n_it = convexpolygons.erase(n_it);
 					++cont;
 				}
-				if (cont % 2) {
+				if ((cont % 2) != 0) {
 					it = convexpolygons.erase(it);
 				} else {
 					++it;

@@ -98,7 +98,7 @@ HTM::trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::strin
  * result is sort.
  */
 inline static void exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth) {
-	if (depth) {
+	if (depth != 0u) {
 		switch (son.at(father.length())) {
 			case '0':
 				exclusive_disjunction(result, father + std::string(1, '0'), son, --depth);
@@ -449,10 +449,11 @@ HTM::insideVertex_Constraint(const Cartesian& v, const Constraint& c)
 bool
 HTM::intersectConstraint_EdgeTrixel(const Constraint& c, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
 {
-	if (intersection(c, v0, v1) ||
+	return (
+		intersection(c, v0, v1) ||
 		intersection(c, v1, v2) ||
-		intersection(c, v2, v0)) return true;
-	return false;
+		intersection(c, v2, v0)
+	);
 }
 
 
@@ -469,8 +470,9 @@ HTM::intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2)
 	double _c = gamma1 - c.distance;
 	double aux = (_b * _b) - (4 * _a * _c);
 
-	if (aux < 0.0 || (_a > -DBL_TOLERANCE && _a < DBL_TOLERANCE)) return false;
-
+	if (aux < 0.0 || (_a > -DBL_TOLERANCE && _a < DBL_TOLERANCE)) {
+		return false;
+	}
 
 	aux = std::sqrt(aux);
 	_a = 2 * _a;
@@ -478,9 +480,7 @@ HTM::intersection(const Constraint& c, const Cartesian& v1, const Cartesian& v2)
 	double r1 = (_b + aux) / _a;
 	double r2 = (_b - aux) / _a;
 
-	if ((r1 >= 0.0 && r1 <= 1.0) || (r2 >= 0.0 && r2 <= 1.0)) return true;
-
-	return false;
+	return ((r1 >= 0.0 && r1 <= 1.0) || (r2 >= 0.0 && r2 <= 1.0));
 }
 
 
@@ -537,20 +537,20 @@ HTM::simplifyTrixels(std::vector<std::string>& trixels)
 void
 HTM::simplifyRanges(std::vector<range_t>& ranges)
 {
-	if (ranges.empty()) return;
-
-	for (auto it = ranges.begin() + 1; it != ranges.end(); ) {
-		// Get previous range.
-		auto tmp = it - 1;
-		// Test if current range is not overlapping with previous.
-		if (tmp->end < it->start - 1) {   // (start - 1) for join adjacent integer ranges.
-			++it;
-		} else if (tmp->end < it->end) {  // if ranges overlap, previous range end is updated.
-			tmp->end = it->end;
-			it = ranges.erase(it);
-		} else {
-			// Ranges overlapping.
-			it = ranges.erase(it);
+	if (!ranges.empty()) {
+		for (auto it = ranges.begin() + 1; it != ranges.end(); ) {
+			// Get previous range.
+			auto tmp = it - 1;
+			// Test if current range is not overlapping with previous.
+			if (tmp->end < it->start - 1) {   // (start - 1) for join adjacent integer ranges.
+				++it;
+			} else if (tmp->end < it->end) {  // if ranges overlap, previous range end is updated.
+				tmp->end = it->end;
+				it = ranges.erase(it);
+			} else {
+				// Ranges overlapping.
+				it = ranges.erase(it);
+			}
 		}
 	}
 }
@@ -601,13 +601,13 @@ std::string
 HTM::getTrixelName(uint64_t id)
 {
 	uint8_t last_pos = std::ceil(std::log2(id));
-	last_pos += (last_pos % 2 == 1); // Must be multiple of two.
+	last_pos += (last_pos & 1); // Must be multiple of two.
 	std::string trixel;
 	trixel.reserve(last_pos / 2);
 	last_pos -= 2;
 	uint64_t mask = static_cast<uint64_t>(3) << last_pos;
 	trixel.push_back(((id & mask) >> last_pos) == 3 ? 'S' : 'N');
-	while (mask >>= 2) {
+	while ((mask >>= 2) != 0u) {
 		last_pos -= 2;
 		trixel.push_back('0' + ((id & mask) >> last_pos));
 	}
@@ -681,7 +681,7 @@ HTM::getRange(uint64_t id, uint8_t level)
 		uint64_t start = id << mask;
 		return {start, start + ((uint64_t) 1 << mask) - 1};
 	}
-	return range_t(id, id);
+	return {id, id};
 }
 
 
@@ -699,17 +699,17 @@ inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start
 	}
 
 	uint8_t log_inc = std::ceil(std::log2(end - start));
-	log_inc -= (log_inc % 2 == 1);
+	log_inc -= (log_inc & 1);
 	uint64_t max_inc = std::pow(2, log_inc);
 
 	uint64_t mod = start % max_inc;
-	uint64_t _start = mod ? start + max_inc - mod : start;
+	uint64_t _start = mod != 0u ? start + max_inc - mod : start;
 
 	while (end < (_start + max_inc - 1) || log_inc > HTM_START_POS) {
 		log_inc -= 2;
 		max_inc = std::pow(2, log_inc);
 		mod = start % max_inc;
-		_start = mod ? start + max_inc - mod : start;
+		_start = mod != 0u ? start + max_inc - mod : start;
 	}
 
 	if (_start > start) {
@@ -748,17 +748,17 @@ inline static void get_id_trixels(std::vector<uint64_t>& id_trixels, uint64_t st
 	}
 
 	uint8_t log_inc = std::ceil(std::log2(end - start));
-	log_inc -= (log_inc % 2 == 1);
+	log_inc -= (log_inc & 1);
 	uint64_t max_inc = std::pow(2, log_inc);
 
 	uint64_t mod = start % max_inc;
-	uint64_t _start = mod ? start + max_inc - mod : start;
+	uint64_t _start = mod != 0u ? start + max_inc - mod : start;
 
 	while (end < (_start + max_inc - 1) || log_inc > HTM_START_POS) {
 		log_inc -= 2;
 		max_inc = std::pow(2, log_inc);
 		mod = start % max_inc;
-		_start = mod ? start + max_inc - mod : start;
+		_start = mod != 0u ? start + max_inc - mod : start;
 	}
 
 	if (_start > start) {

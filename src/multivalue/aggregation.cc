@@ -211,7 +211,7 @@ Aggregation::update()
 
 
 void
-AggregationMatchSpy::operator()(const Xapian::Document& doc, double)
+AggregationMatchSpy::operator()(const Xapian::Document& doc, double /*wt*/)
 {
 	++_total;
 	_aggregation(doc);
@@ -241,10 +241,10 @@ AggregationMatchSpy::serialise() const
 
 
 Xapian::MatchSpy*
-AggregationMatchSpy::unserialise(const std::string& s, const Xapian::Registry&) const
+AggregationMatchSpy::unserialise(const std::string& serialised, const Xapian::Registry& /*context*/) const
 {
 	try {
-		StringList data(s);
+		StringList data(serialised);
 
 		if (data.size() != 2) {
 			throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");

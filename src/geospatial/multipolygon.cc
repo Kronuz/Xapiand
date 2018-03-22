@@ -35,7 +35,7 @@ MultiPolygon::simplify()
 		}
 
 		// Sort polygons.
-		std::sort(polygons.begin(), polygons.end(), std::less<Polygon>());
+		std::sort(polygons.begin(), polygons.end(), std::less<>());
 
 		// Deleting duplicated and empty polygons.
 		for (auto it = polygons.begin(); it != polygons.end(); ) {

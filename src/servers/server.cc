@@ -75,7 +75,7 @@ XapiandServer::run()
 
 
 void
-XapiandServer::setup_node_async_cb(ev::async&, int revents)
+XapiandServer::setup_node_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
@@ -118,7 +118,7 @@ XapiandServer::shutdown_impl(time_t asap, time_t now)
 
 	destroy();
 
-	if (now) {
+	if (now != 0) {
 		detach();
 		break_loop();
 	}

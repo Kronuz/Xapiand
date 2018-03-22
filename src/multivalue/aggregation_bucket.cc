@@ -106,7 +106,7 @@ FilterAggregation::check_multiple(const Xapian::Document& doc)
 		StringList::unserialise(doc.get_value(filter.first), std::inserter(values, values.begin()));
 		Counter c;
 		std::set_intersection(values.begin(), values.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));
-		if (c.count) {
+		if (c.count != 0u) {
 			return _agg(doc);
 		}
 	}

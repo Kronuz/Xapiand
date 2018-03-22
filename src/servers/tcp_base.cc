@@ -92,7 +92,7 @@ BaseTCP::shutdown_impl(time_t asap, time_t now)
 
 	destroy();
 
-	if (now) {
+	if (now != 0) {
 		detach();
 	}
 }
@@ -130,7 +130,7 @@ BaseTCP::bind(int tries)
 	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	// }
 
-	if (flags & CONN_TCP_DEFER_ACCEPT) {
+	if ((flags & CONN_TCP_DEFER_ACCEPT) != 0) {
 		// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
 		// We want the HTTP server to wakeup accepting connections that already have some data
 		// to read; this is not the case for binary servers where the server is the one first
@@ -162,7 +162,7 @@ BaseTCP::bind(int tries)
 
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
-				if (i == tries - 1) break;
+				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 				continue;
 			}
@@ -215,7 +215,7 @@ BaseTCP::accept()
 	// 	L_ERR("ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
-	if (flags & CONN_TCP_NODELAY) {
+	if ((flags & CONN_TCP_NODELAY) != 0) {
 		if (setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
 			L_ERR("ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 		}

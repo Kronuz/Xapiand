@@ -174,8 +174,8 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	}
 
 	try {
-		if (!start) {
-			if (!end) {
+		if (start == nullptr) {
+			if (end == nullptr) {
 				return Xapian::Query::MatchAll;
 			}
 			if (field_spc.get_type() == FieldType::GEO) {
@@ -185,7 +185,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			return Xapian::Query(mvle->release());
 		}
 
-		if (!end) {
+		if (end == nullptr) {
 			if (field_spc.get_type() == FieldType::GEO) {
 				return GeoSpatialRange::getQuery(field_spc, *start);
 			}
@@ -254,7 +254,7 @@ MultipleValueRange::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -265,7 +265,7 @@ MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -318,10 +318,10 @@ MultipleValueRange::serialise() const
 
 
 MultipleValueRange*
-MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
+MultipleValueRange::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
 {
 	try {
-		StringList data(s);
+		StringList data(serialised);
 
 		if (data.size() != 3) {
 			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
@@ -379,7 +379,7 @@ MultipleValueGE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -390,7 +390,7 @@ MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -443,10 +443,10 @@ MultipleValueGE::serialise() const
 
 
 MultipleValueGE*
-MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
+MultipleValueGE::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
 {
 	try {
-		StringList data(s);
+		StringList data(serialised);
 
 		if (data.size() != 2) {
 			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
@@ -503,7 +503,7 @@ MultipleValueLE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -514,7 +514,7 @@ MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (!at_end()) {
-		if (insideRange()) break;
+		if (insideRange()) { break; }
 		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
@@ -567,10 +567,10 @@ MultipleValueLE::serialise() const
 
 
 MultipleValueLE*
-MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
+MultipleValueLE::unserialise_with_registry(const std::string& serialised, const Xapian::Registry& /*registry*/) const
 {
 	try {
-		StringList data(s);
+		StringList data(serialised);
 
 		if (data.size() != 2) {
 			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");

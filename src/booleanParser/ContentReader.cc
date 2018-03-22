@@ -35,20 +35,20 @@ Symbol
 ContentReader::NextSymbol()
 {
 	Symbol ret;
-	if (content[currentPosition]) {
+	if (content[currentPosition] != '\0') {
 		char c = content[currentPosition++];
 		switch (c) {
-			case 10:
+			case '\n':
 				currentColumn++;
 				currentLine = 1;
-				if (content[currentPosition] == 13) {
+				if (content[currentPosition] == '\r') {
 					currentPosition++;
 				}
 				break;
-			case 13:
+			case '\r':
 				currentColumn++;
 				currentLine = 1;
-				if (content[currentPosition] == 10) {
+				if (content[currentPosition] == '\n') {
 					currentPosition++;
 				}
 				break;

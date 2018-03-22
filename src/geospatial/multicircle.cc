@@ -31,7 +31,7 @@ MultiCircle::simplify()
 {
 	if (!simplified) {
 		// Sort circles.
-		std::sort(circles.begin(), circles.end(), std::greater<Circle>());
+		std::sort(circles.begin(), circles.end(), std::greater<>());
 
 		// Deleting redundant circles.
 		for (auto it = circles.begin(); it != circles.end(); ++it) {

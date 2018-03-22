@@ -136,16 +136,19 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
-	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
-	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
-	if (max_size) size = ((max_a - q) + (p_end - max_b) - 1) * 4 + 2 + 3;  // Consider "\xNN", two quotes and '...'
-	else size = size * 4 + 2;  // Consider "\xNN" and two quotes
+	const char *max_a = max_size != 0u ? q + (max_size * 2 / 3) : p_end + 1;
+	const char *max_b = max_size != 0u ? p_end - (max_size / 3) : q - 1;
+	if (max_size != 0u) {
+		size = ((max_a - q) + (p_end - max_b) - 1) * 4 + 2 + 3;  // Consider "\xNN", two quotes and '...'
+	} else {
+		size = size * 4 + 2;  // Consider "\xNN" and two quotes
+	}
 	std::string ret;
 	ret.resize(size);
 	char *buff = &ret[0];
 	char *d = buff;
-	if (quote == '\1') quote = '\'';
-	if (quote) *d++ = quote;
+	if (quote == '\1') { quote = '\''; }
+	if (quote != '\0') { *d++ = quote; }
 	while (q != p_end) {
 		unsigned char c = *q++;
 		if (q >= max_a && q <= max_b) {
@@ -189,7 +192,7 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 					*d++ = '\\';
 					break;
 				default:
-					if (quote && c == quote) {
+					if (quote != '\0' && c == quote) {
 						*d++ = '\\';
 						*d++ = quote;
 					} else if (c < ' ' || c >= 0x7f) {
@@ -206,7 +209,7 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 		}
 		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
 	}
-	if (quote) *d++ = quote;
+	if (quote != '\0') { *d++ = quote; }
 	ret.resize(d - buff);
 	return ret;
 }
@@ -220,8 +223,8 @@ std::string escape(const void* p, size_t size, char quote) {
 	ret.resize(size);  // Consider "\xNN" and quotes
 	char *buff = &ret[0];
 	char *d = buff;
-	if (quote == '\1') quote = '\'';
-	if (quote) *d++ = quote;
+	if (quote == '\1') { quote = '\''; }
+	if (quote != '\0') { *d++ = quote; }
 	while (q != p_end) {
 		unsigned char c = *q++;
 		switch (c) {
@@ -258,7 +261,7 @@ std::string escape(const void* p, size_t size, char quote) {
 				*d++ = '\\';
 				break;
 			default:
-				if (quote && c == quote) {
+				if (quote != '\0' && c == quote) {
 					*d++ = '\\';
 					*d++ = quote;
 				} else if (c < ' ' || c >= 0x7f) {
@@ -271,7 +274,7 @@ std::string escape(const void* p, size_t size, char quote) {
 		}
 		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
 	}
-	if (quote) *d++ = quote;
+	if (quote != '\0') { *d++ = quote; }
 	ret.resize(d - buff);
 	return ret;
 }
@@ -301,14 +304,16 @@ char* normalize_path(const char* src, const char* end, char* dst, bool slashed) 
 	int levels = 0;
 	char* ret = dst;
 	char ch = '\0';
-	while (*src && src < end) {
+	while (*src != '\0' && src < end) {
 		ch = *src++;
-		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
+		if (ch == '.' && (levels != 0 || dst == ret || *(dst - 1) == '/' )) {
 			*dst++ = ch;
 			++levels;
 		} else if (ch == '/') {
-			while (levels && dst > ret) {
-				if (*--dst == '/') levels -= 1;
+			while (levels != 0 && dst > ret) {
+				if (*--dst == '/') {
+					levels -= 1;
+				}
 			}
 			if (dst == ret || *(dst - 1) != '/') {
 				*dst++ = ch;
@@ -344,7 +349,7 @@ std::string normalize_path(std::string_view src, bool slashed) {
 
 bool strhasupper(std::string_view str) {
 	for (const auto& c : str) {
-		if (isupper(c)) {
+		if (isupper(c) != 0) {
 			return true;
 		}
 	}
@@ -367,7 +372,7 @@ bool isRange(std::string_view str) {
 void delete_files(std::string_view path) {
 	stringified path_string(path);
 	DIR *dirp = ::opendir(path_string.c_str());
-	if (!dirp) {
+	if (dirp == nullptr) {
 		return;
 	}
 
@@ -403,7 +408,7 @@ void delete_files(std::string_view path) {
 void move_files(std::string_view src, std::string_view dst) {
 	stringified src_string(src);
 	DIR *dirp = ::opendir(src_string.c_str());
-	if (!dirp) {
+	if (dirp == nullptr) {
 		return;
 	}
 
@@ -481,7 +486,7 @@ void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_
 		match_pattern = string::endswith;
 	}
 
-	if (fptr.ent) {
+	if (fptr.ent != nullptr) {
 #if defined(__APPLE__) && defined(__MACH__)
 		seekdir(dir, fptr.ent->d_seekoff);
 #elif defined(__FreeBSD__)
@@ -505,7 +510,7 @@ void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_
 int copy_file(std::string_view src, std::string_view dst, bool create, std::string_view file_name, std::string_view new_name) {
 	stringified src_string(src);
 	DIR* dir_src = ::opendir(src_string.c_str());
-	if (!dir_src) {
+	if (dir_src == nullptr) {
 		L_ERR("ERROR: couldn't open directory %s: %s", strerror(errno));
 		return -1;
 	}
@@ -571,7 +576,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 					return -1;
 				}
 
-				if (0 == bytes) break;
+				if (0 == bytes) { break; }
 
 				bytes = write(dst_fd, buffer, bytes);
 				if (-1 == bytes) {
@@ -617,7 +622,7 @@ unsigned long long file_descriptors_cnt() {
 	unsigned long long n = 0;
 	for (unsigned long long fd = 0; fd < fdmax; ++fd) {
 		struct stat buf;
-		if (fstat(fd, &buf)) {
+		if (fstat(fd, &buf) != 0) {
 			// errno should be EBADF (not a valid open file descriptor)
 			// or other error. In either case, don't count.
 			continue;

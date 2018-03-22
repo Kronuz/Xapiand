@@ -48,7 +48,7 @@ Lexer::Lexer(char* input)
 Token
 Lexer::NextToken()
 {
-	std::string lexeme = "";
+	std::string lexeme;
 	LexerState currentState = LexerState::INIT;
 	Token token;
 	char quote;

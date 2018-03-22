@@ -226,7 +226,8 @@ sortable_unserialise(std::string_view value)
 
 	// Positive infinity.
 	if (value.size() == 18 &&
-		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 18) == 0) {
+		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 18) == 0  // NOLINT
+	) {
 		#ifdef INFINITY
 			// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
 			// case it doesn't cast to double as infinity (apparently some

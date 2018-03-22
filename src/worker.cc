@@ -101,7 +101,7 @@ Worker::_shutdown_async_cb()
 
 
 void
-Worker::_break_loop_async_cb(ev::async&, int revents)
+Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
@@ -114,7 +114,7 @@ Worker::_break_loop_async_cb(ev::async&, int revents)
 
 
 void
-Worker::_destroy_async_cb(ev::async&, int revents)
+Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
@@ -127,7 +127,7 @@ Worker::_destroy_async_cb(ev::async&, int revents)
 
 
 void
-Worker::_detach_children_async_cb(ev::async&, int revents)
+Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
 
@@ -184,8 +184,10 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 		std::this_thread::yield();
 
 		if (auto child = weak_child.lock()) {
-			if (child->_runner && child->ev_loop->depth()) {
-				if (!i) L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
+			if (child->_runner && (child->ev_loop->depth() != 0u)) {
+				if (i == 0) {
+					L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
+				}
 				continue;
 			}
 			__detach(child);
@@ -199,7 +201,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 
 		if (auto child = weak_child.lock()) {
 			__attach(child);
-			if (!i) L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
+			if (i == 0) {
+				L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
+			}
 			continue;
 		}
 
@@ -231,7 +235,7 @@ Worker::__repr__(const std::string& name) const
 		name,
 		this,
 		_runner ? "runner" : "worker",
-		ev_loop->depth() ? "running loop" : "loop",
+		ev_loop->depth() != 0u ? "running loop" : "loop",
 		ev_loop->raw_loop,
 		_detaching ? " (deteaching)" : ""
 	);
@@ -243,7 +247,9 @@ Worker::dump_tree(int level)
 {
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 	std::string ret = "\n";
-	for (int l = 0; l < level; ++l) ret += "    ";
+	for (int l = 0; l < level; ++l) {
+		ret += "    ";
+	}
 	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + ")";
 	for (const auto& c : _children) {
 		ret += c->dump_tree(level + 1);
@@ -285,7 +291,7 @@ Worker::detach_children_impl()
 		int retries = 0;
 		if (auto child = weak_child.lock()) {
 			child->_detach_children();
-			if (!child->_detaching) continue;
+			if (!child->_detaching) { continue; }
 			retries = child->_detaching_retries;
 		}
 		_detach_impl(weak_child, retries);
@@ -308,7 +314,7 @@ Worker::shutdown(time_t asap, time_t now)
 {
 	L_CALL("Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__());
 
-	if (ev_loop->depth()) {
+	if (ev_loop->depth() != 0u) {
 		_asap = asap;
 		_now = now;
 		_shutdown_async.send();
@@ -323,7 +329,7 @@ Worker::break_loop()
 {
 	L_CALL("Worker::break_loop() [%s]", __repr__());
 
-	if (ev_loop->depth()) {
+	if (ev_loop->depth() != 0u) {
 		_break_loop_async.send();
 	} else {
 		break_loop_impl();
@@ -336,7 +342,7 @@ Worker::destroy()
 {
 	L_CALL("Worker::destroy() [%s]", __repr__());
 
-	if (ev_loop->depth()) {
+	if (ev_loop->depth() != 0u) {
 		_destroy_async.send();
 	} else {
 		destroy_impl();
@@ -347,7 +353,7 @@ Worker::destroy()
 void
 Worker::_detach_children()
 {
-	if (ev_loop->depth()) {
+	if (ev_loop->depth() != 0u) {
 		_detach_children_async.send();
 	} else {
 		detach_children_impl();

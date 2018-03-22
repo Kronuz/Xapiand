@@ -54,7 +54,11 @@ Circle::operator>(const Circle& c) const noexcept
 TypeTrixel
 Circle::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
-	int sum = HTM::insideVertex_Constraint(v0, constraint) + HTM::insideVertex_Constraint(v1, constraint) + HTM::insideVertex_Constraint(v2, constraint);
+	int sum = (
+		(HTM::insideVertex_Constraint(v0, constraint) ? 1 : 0) +
+		(HTM::insideVertex_Constraint(v1, constraint) ? 1 : 0) +
+		(HTM::insideVertex_Constraint(v2, constraint) ? 1 : 0)
+	);
 
 	switch (sum) {
 		case 0: {
@@ -83,9 +87,13 @@ Circle::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			 */
 			if (constraint.sign == Constraint::Sign::NEG) {
 				// If there is a hole the trixel is flag to TypeTrixel::PARTIAL.
-				if (HTM::thereisHole(constraint, v0, v1, v2)) return TypeTrixel::PARTIAL;
+				if (HTM::thereisHole(constraint, v0, v1, v2)) {
+					return TypeTrixel::PARTIAL;
+				}
 				// Test whether one of the negative halfspace’s boundary circles intersects with one of the edges of the triangle.
-				if (HTM::intersectConstraint_EdgeTrixel(constraint, v0, v1, v2)) return TypeTrixel::PARTIAL;
+				if (HTM::intersectConstraint_EdgeTrixel(constraint, v0, v1, v2)) {
+					return TypeTrixel::PARTIAL;
+				}
 			}
 			return TypeTrixel::FULL;
 		default:
@@ -115,7 +123,12 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	};
 
 	// Number of full and partial subtrixels.
-	int F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	if (F == 4) {
 		data.trixels.push_back(std::move(name));
@@ -191,7 +204,12 @@ Circle::lookupTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 	};
 
 	// Number of full and partial subtrixels.
-	int F = (type_trixels[0] == TypeTrixel::FULL) + (type_trixels[1] == TypeTrixel::FULL) + (type_trixels[2] == TypeTrixel::FULL) + (type_trixels[3] == TypeTrixel::FULL);
+	int F = (
+		(type_trixels[0] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[1] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[2] == TypeTrixel::FULL ? 1 : 0) +
+		(type_trixels[3] == TypeTrixel::FULL ? 1 : 0)
+	);
 
 	if (F == 4) {
 		HTM::insertGreaterRange(data.ranges, HTM::getRange(id, level));

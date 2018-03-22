@@ -59,7 +59,7 @@ public:
 	int next(T (&s)[N_PLUS_1]) {
 		return next(s, N_PLUS_1 - 1);
 	}
-	int next(const char *name, size_t size);
+	int next(const char *name, size_t name_len);
 
 	std::string_view get();
 };

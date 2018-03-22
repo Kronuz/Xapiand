@@ -109,11 +109,13 @@ void SHA256::processBlock(const void* data)
 	uint32_t words[64];
 	int i;
 	for (i = 0; i < 16; ++i)
+	{
 #if __BYTE_ORDER == __BIG_ENDIAN
 		words[i] =      input[i];
 #else
 		words[i] = swap(input[i]);
 #endif
+	}
 
 	uint32_t x,y; // temporaries
 
@@ -139,10 +141,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 24 words
 	for (; i < 24; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// third round
 	x = h + f1(e,f,g) + 0xe49b69c1 + words[16]; y = f2(a,b,c); d += x; h = x + y;
@@ -156,10 +160,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 32 words
 	for (; i < 32; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// fourth round
 	x = h + f1(e,f,g) + 0x983e5152 + words[24]; y = f2(a,b,c); d += x; h = x + y;
@@ -173,10 +179,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 40 words
 	for (; i < 40; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// fifth round
 	x = h + f1(e,f,g) + 0x27b70a85 + words[32]; y = f2(a,b,c); d += x; h = x + y;
@@ -190,10 +198,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 48 words
 	for (; i < 48; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// sixth round
 	x = h + f1(e,f,g) + 0xa2bfe8a1 + words[40]; y = f2(a,b,c); d += x; h = x + y;
@@ -207,10 +217,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 56 words
 	for (; i < 56; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// seventh round
 	x = h + f1(e,f,g) + 0x19a4c116 + words[48]; y = f2(a,b,c); d += x; h = x + y;
@@ -224,10 +236,12 @@ void SHA256::processBlock(const void* data)
 
 	// extend to 64 words
 	for (; i < 64; ++i)
+	{
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
 				(rotate(words[i- 2], 17) ^ rotate(words[i- 2], 19) ^ (words[i- 2] >> 10));
+	}
 
 	// eigth round
 	x = h + f1(e,f,g) + 0x748f82ee + words[56]; y = f2(a,b,c); d += x; h = x + y;
@@ -275,7 +289,9 @@ void SHA256::add(const void* data, size_t numBytes)
 
 	// no more data ?
 	if (numBytes == 0)
+	{
 		return;
+	}
 
 	// process full blocks
 	while (numBytes >= BlockSize)
@@ -313,9 +329,13 @@ void SHA256::processBuffer()
 	// number of bits must be (numBits % 512) = 448
 	size_t lower11Bits = paddedLength & 511;
 	if (lower11Bits <= 448)
+	{
 		paddedLength +=       448 - lower11Bits;
+	}
 	else
+	{
 		paddedLength += 512 + 448 - lower11Bits;
+	}
 	// convert from bits to bytes
 	paddedLength /= 8;
 
@@ -324,24 +344,36 @@ void SHA256::processBuffer()
 
 	// append a "1" bit, 128 => binary 10000000
 	if (m_bufferSize < BlockSize)
+	{
 		m_buffer[m_bufferSize] = 128;
+	}
 	else
+	{
 		extra[0] = 128;
+	}
 
 	size_t i;
 	for (i = m_bufferSize + 1; i < BlockSize; ++i)
+	{
 		m_buffer[i] = 0;
+	}
 	for (; i < paddedLength; ++i)
+	{
 		extra[i - BlockSize] = 0;
+	}
 
 	// add message length in bits as 64 bit number
 	uint64_t msgBits = 8 * (m_numBytes + m_bufferSize);
 	// find right position
 	unsigned char* addLength;
 	if (paddedLength < BlockSize)
+	{
 		addLength = m_buffer + paddedLength;
+	}
 	else
+	{
 		addLength = extra + paddedLength - BlockSize;
+	}
 
 	// must be big endian
 	*addLength++ = (unsigned char)((msgBits >> 56) & 0xFF);
@@ -357,7 +389,9 @@ void SHA256::processBuffer()
 	processBlock(m_buffer);
 	// flowed over into a second block ?
 	if (paddedLength > BlockSize)
+	{
 		processBlock(extra);
+	}
 }
 
 
@@ -388,7 +422,9 @@ void SHA256::getHash(unsigned char buffer[SHA256::HashBytes])
 	// save old hash if buffer is partially filled
 	uint32_t oldHash[HashValues];
 	for (int i = 0; i < HashValues; ++i)
+	{
 		oldHash[i] = m_hash[i];
+	}
 
 	// process remaining bytes
 	processBuffer();

@@ -91,7 +91,7 @@ BaseUDP::shutdown_impl(time_t asap, time_t now)
 
 	destroy();
 
-	if (now) {
+	if (now != 0) {
 		detach();
 	}
 }
@@ -141,7 +141,7 @@ BaseUDP::bind(int tries, const std::string& group)
 
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
-				if (i == tries - 1) break;
+				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 				continue;
 			}

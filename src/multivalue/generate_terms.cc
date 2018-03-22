@@ -128,7 +128,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos % 2 == 1); // Must be multiple of two.
+		last_pos -= (last_pos & 1); // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
@@ -271,7 +271,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos % 2 == 1); // Must be multiple of two.
+		last_pos -= (last_pos & 1); // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
@@ -305,7 +305,7 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 
 	uint64_t diff = tm_e.year - tm_s.year, acc = -1;
 	// Find the accuracy needed.
-	if (diff) {
+	if (diff != 0u) {
 		if (diff >= 1000) {
 			acc = toUType(UnitTime::MILLENNIUM);
 		} else if (diff >= 100) {
@@ -315,13 +315,13 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		} else {
 			acc = toUType(UnitTime::YEAR);
 		}
-	} else if (tm_e.mon - tm_s.mon) {
+	} else if (tm_e.mon != tm_s.mon) {
 		acc = toUType(UnitTime::MONTH);
-	} else if (tm_e.day - tm_s.day) {
+	} else if (tm_e.day != tm_s.day) {
 		acc = toUType(UnitTime::DAY);
-	} else if (tm_e.hour - tm_s.hour) {
+	} else if (tm_e.hour != tm_s.hour) {
 		acc = toUType(UnitTime::HOUR);
-	} else if (tm_e.min - tm_s.min) {
+	} else if (tm_e.min != tm_s.min) {
 		acc = toUType(UnitTime::MINUTE);
 	} else {
 		acc = toUType(UnitTime::SECOND);
@@ -622,11 +622,11 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos % 2 == 1); // Must be multiple of two.
+		last_pos -= (last_pos & 1); // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
-		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos);
+		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) { }
 		if (pos != size_acc) {
 			++pos;
 			map_terms[pos].insert(val >> accuracy[pos]);

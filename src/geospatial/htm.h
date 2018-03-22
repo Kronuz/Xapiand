@@ -216,7 +216,7 @@ namespace HTM {
 	void simplifyRanges(std::vector<range_t>& ranges);
 
 	// Calculates its trixel name.
-	std::string getTrixelName(const Cartesian& name);
+	std::string getTrixelName(const Cartesian& coord);
 	std::string getTrixelName(uint64_t id);
 
 	// Calculates its HTM id.
@@ -225,7 +225,7 @@ namespace HTM {
 
 	// Get range of given data.
 	range_t getRange(uint64_t id, uint8_t level);
-	range_t getRange(const std::string& trixel_name);
+	range_t getRange(const std::string& name);
 
 	// Get trixels of ranges.
 	std::vector<std::string> getTrixels(const std::vector<range_t>& ranges);

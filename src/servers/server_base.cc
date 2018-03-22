@@ -53,7 +53,7 @@ BaseServer::shutdown_impl(time_t asap, time_t now)
 
 	destroy();
 
-	if (now) {
+	if (now != 0) {
 		detach();
 	}
 }

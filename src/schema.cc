@@ -2153,12 +2153,12 @@ specification_t::to_obj() const
 
 	auto& obj_spelling = obj["spelling"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& s : spelling) {
-		obj_spelling.append(s ? true : false);
+		obj_spelling.append(static_cast<bool>(s));
 	}
 
 	auto& obj_positions = obj["positions"] = MsgPack(MsgPack::Type::ARRAY);
 	for (const auto& p : positions) {
-		obj_positions.append(p ? true : false);
+		obj_positions.append(static_cast<bool>(p));
 	}
 
 	obj["index"] = _get_str_index(index);

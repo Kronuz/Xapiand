@@ -123,7 +123,7 @@ QueryParser::next(const char *name, size_t name_len)
 				v0 = n1;
 			case '\0':  // '\0' and '&'
 				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
-					if (v0) {
+					if (v0 != nullptr) {
 						const char *v1 = v0 + 1;
 						while (true) {
 							char cv = (v1 == nf) ? '\0' : *v1;
@@ -157,7 +157,7 @@ QueryParser::next(const char *name, size_t name_len)
 std::string_view
 QueryParser::get()
 {
-	if (!off) return "";
+	if (off == nullptr) { return ""; }
 	return std::string_view(off, len);
 }
 
@@ -223,7 +223,7 @@ PathParser::init(std::string_view p)
 	n0 = n1 = ni;
 
 	cn = '\xff';
-	while (cn) {
+	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(GREEN + "1 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
 			switch(state) {
@@ -261,7 +261,7 @@ PathParser::init(std::string_view p)
 	n0 = n1 = nf - 1;
 
 	cn = '\xff';
-	while (cn) {
+	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(BLUE + "2 <<- %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
 			switch(state) {
@@ -296,7 +296,7 @@ PathParser::init(std::string_view p)
 					case State::PMT:
 						assert(n0 >= n1);
 						length = n0 - n1;
-						if (length) {
+						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
 							if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
@@ -305,7 +305,9 @@ PathParser::init(std::string_view p)
 								state = State::ID;
 							} else {
 								off_ppmt = off_pmt;
-								if (len_ppmt) ++len_ppmt;
+								if (len_ppmt != 0u) {
+									++len_ppmt;
+								}
 								len_ppmt += len_pmt;
 								off_pmt = n1 + 1;
 								len_pmt = length;
@@ -317,7 +319,7 @@ PathParser::init(std::string_view p)
 					case State::ID:
 						assert(n0 >= n1);
 						length = n0 - n1;
-						if (length) {
+						if (length != 0u) {
 							off_id = n1 + 1;
 							len_id = length;
 							cn = '\0';
@@ -392,16 +394,16 @@ PathParser::next()
 	state = State::NSP;
 	off_hst = nullptr;
 	n0 = n1 = off;
-	if (off_ppmt && off_ppmt < nf) {
+	if (off_ppmt != nullptr && off_ppmt < nf) {
 		nf = off_ppmt - 1;
 	}
-	if (off_pmt && off_pmt < nf) {
+	if (off_pmt != nullptr && off_pmt < nf) {
 		nf = off_pmt - 1;
 	}
-	if (off_cmd && off_cmd < nf) {
+	if (off_cmd != nullptr && off_cmd < nf) {
 		nf = off_cmd - 1;
 	}
-	if (off_id && off_id < nf) {
+	if (off_id != nullptr && off_id < nf) {
 		nf = off_id - 1;
 	}
 	if (nf < ni) {
@@ -445,7 +447,7 @@ PathParser::next()
 					case State::HST:
 						assert(n1 >= n0);
 						length = n1 - n0;
-						if (!length) {
+						if (length == 0u) {
 							return State::INVALID_HST;
 						}
 						off_hst = n0;
@@ -467,7 +469,7 @@ PathParser::next()
 						}
 						assert(n1 >= n0);
 						length = n1 - n0;
-						if (!length) {
+						if (length == 0u) {
 							return State::INVALID_NSP;
 						}
 						off_nsp = n0;
@@ -516,7 +518,7 @@ PathParser::skip_id() noexcept
 std::string_view
 PathParser::get_pth()
 {
-	if (!off_pth) return "";
+	if (off_pth == nullptr) { return ""; }
 	return std::string_view(off_pth, len_pth);
 }
 
@@ -524,7 +526,7 @@ PathParser::get_pth()
 std::string_view
 PathParser::get_hst()
 {
-	if (!off_hst) return "";
+	if (off_hst == nullptr) { return ""; }
 	return std::string_view(off_hst, len_hst);
 }
 
@@ -532,7 +534,7 @@ PathParser::get_hst()
 std::string_view
 PathParser::get_nsp()
 {
-	if (!off_nsp) return "";
+	if (off_nsp == nullptr) { return ""; }
 	return std::string_view(off_nsp, len_nsp);
 }
 
@@ -540,15 +542,15 @@ PathParser::get_nsp()
 std::string_view
 PathParser::get_pmt()
 {
-	if (!off_pmt) return "";
-	return std::string_view(off_pmt, len_pmt + (off_ppmt ? 0 : len_ppmt));
+	if (off_pmt == nullptr) { return ""; }
+	return std::string_view(off_pmt, len_pmt + (off_ppmt != nullptr ? 0 : len_ppmt));
 }
 
 
 std::string_view
 PathParser::get_ppmt()
 {
-	if (!off_ppmt) return "";
+	if (off_ppmt == nullptr) { return ""; }
 	return std::string_view(off_ppmt, len_ppmt - 1);
 }
 
@@ -556,7 +558,7 @@ PathParser::get_ppmt()
 std::string_view
 PathParser::get_cmd()
 {
-	if (!off_cmd) return "";
+	if (off_cmd == nullptr) { return ""; }
 	return std::string_view(off_cmd, len_cmd);
 }
 
@@ -564,7 +566,7 @@ PathParser::get_cmd()
 std::string_view
 PathParser::get_id()
 {
-	if (!off_id) return "";
+	if (off_id == nullptr) { return ""; }
 	return std::string_view(off_id, len_id);
 }
 
