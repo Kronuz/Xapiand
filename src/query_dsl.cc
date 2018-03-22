@@ -22,6 +22,8 @@
 
 #include "query_dsl.h"
 
+#include <utility>
+
 #include "booleanParser/BooleanParser.h"       // for BooleanTree
 #include "booleanParser/LexicalException.h"    // for LexicalException
 #include "booleanParser/SyntacticException.h"  // for SyntacticException
@@ -48,8 +50,8 @@
 /* A domain-specific language (DSL) for query */
 
 
-QueryDSL::QueryDSL(const std::shared_ptr<Schema>& schema_)
-	: schema(schema_) { }
+QueryDSL::QueryDSL(std::shared_ptr<Schema>  schema_)
+	: schema(std::move(schema_)) { }
 
 
 FieldType

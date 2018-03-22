@@ -27,7 +27,7 @@
 #include <chrono>                            // for duration, system_clock
 #include <cstdint>                           // for uint64_t, UINT64_MAX
 #include <ctime>                             // for time_t, ctime, NULL
-#include <ctype.h>                           // for isspace
+#include <cctype>                            // for isspace
 #include <exception>                         // for exception
 #include <functional>                        // for __base
 #include <ifaddrs.h>                         // for ifaddrs, freeifaddrs
@@ -37,8 +37,8 @@
 #include <netinet/in.h>                      // for sockaddr_in, INET_ADDRST...
 #include <ratio>                             // for milli
 #include <regex>                             // for smatch, regex, operator|
-#include <stdlib.h>                          // for size_t, exit
-#include <string.h>                          // for strerror
+#include <cstdlib>                           // for size_t, exit
+#include <cstring>                           // for strerror
 #include <string>                            // for string, basic_string
 #include <sys/errno.h>                       // for __error, errno
 #include <sys/fcntl.h>                       // for O_CLOEXEC, O_CREAT, O_RD...
@@ -376,8 +376,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	{
 		// Get a node (any node)
 		std::lock_guard<std::mutex> lk_n(nodes_mtx);
-		for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
-			auto& node = it->second;
+		for (const auto & it : nodes) {
+			auto& node = it.second;
 			Endpoint remote_endpoint(".", node.get());
 			// Replicate database from the other node
 	#ifdef XAPIAND_CLUSTERING
@@ -444,8 +444,8 @@ XapiandManager::host_address()
 	if (getifaddrs(&if_addr_struct) < 0) {
 		L_ERR("ERROR: getifaddrs: %s", strerror(errno));
 	} else {
-		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
-			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) { // check it is IP4
+		for (struct ifaddrs *ifa = if_addr_struct; ifa != nullptr; ifa = ifa->ifa_next) {
+			if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) { // check it is IP4
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				L_NOTICE("Node IP address is %s on interface %s", fast_inet_ntop4(addr.sin_addr), ifa->ifa_name);
 				break;
@@ -993,7 +993,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 	ignore_unused(n_endps, timeout);
 #endif
 	{
-		endpv.push_back(Endpoint(path));
+		endpv.emplace_back(path);
 		return true;
 	}
 }

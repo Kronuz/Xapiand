@@ -276,7 +276,7 @@ DeflateCompressFile::init()
 std::string
 DeflateCompressFile::next()
 {
-	int inpBytes = static_cast<int>(io::read(fd, &buffer[0], DEFLATE_BLOCK_SIZE));
+	auto inpBytes = static_cast<int>(io::read(fd, &buffer[0], DEFLATE_BLOCK_SIZE));
 	if (inpBytes <= 0) {
 		if (stream == Z_STREAM_END) {
 			state = DeflateState::END;

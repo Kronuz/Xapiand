@@ -237,7 +237,7 @@ Cartesian::operator*(double _scale) noexcept
 Cartesian
 Cartesian::operator^(const Cartesian& p) const noexcept
 {
-	return Cartesian(y * p.z - p.y * z, z * p.x - p.z * x, x * p.y - p.x * y);
+	return {y * p.z - p.y * z, z * p.x - p.z * x, x * p.y - p.x * y};
 }
 
 
@@ -257,7 +257,7 @@ Cartesian::operator^=(const Cartesian& p) noexcept
 Cartesian
 Cartesian::operator+(const Cartesian& p) const noexcept
 {
-	return Cartesian(x + p.x, y + p.y, z + p.z);
+	return {x + p.x, y + p.y, z + p.z};
 }
 
 
@@ -274,7 +274,7 @@ Cartesian::operator+=(const Cartesian& p) noexcept
 Cartesian
 Cartesian::operator-(const Cartesian& p) const noexcept
 {
-	return Cartesian(x - p.x, y - p.y, z - p.z);
+	return {x - p.x, y - p.y, z - p.z};
 }
 
 
@@ -481,10 +481,10 @@ std::string
 Cartesian::toDegMinSec() const
 {
 	const auto geodetic = toGeodetic();
-	int dlat = (int)std::get<0>(geodetic);
-	int dlon = (int)std::get<1>(geodetic);
-	int mlat = (int)((std::get<0>(geodetic) - dlat) * 60.0);
-	int mlon = (int)((std::get<1>(geodetic) - dlon) * 60.0);
+	auto dlat = (int)std::get<0>(geodetic);
+	auto dlon = (int)std::get<1>(geodetic);
+	auto mlat = (int)((std::get<0>(geodetic) - dlat) * 60.0);
+	auto mlon = (int)((std::get<1>(geodetic) - dlon) * 60.0);
 	double slat = (std::get<0>(geodetic) - dlat - mlat / 60.0) * 3600.0;
 	double slon = (std::get<1>(geodetic) - dlon - mlon / 60.0) * 3600.0;
 

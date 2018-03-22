@@ -22,10 +22,11 @@
 
 #include "server_http.h"
 
-#include <string.h>               // for strerror
+#include <cstring>               // for strerror
 #include <sys/errno.h>            // for __error, errno
 #include <chrono>                 // for operator""ms
 #include <ratio>                  // for ratio
+#include <utility>
 
 #include "./server.h"             // for XapiandServer
 #include "./server_base.h"        // for BaseServer
@@ -37,9 +38,9 @@
 #include "worker.h"               // for Worker
 
 
-HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http_)
+HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_)
 	: BaseServer(server_, ev_loop_, ev_flags_),
-	  http(http_)
+	  http(std::move(http_))
 {
 	io.start(http->sock, ev::READ);
 	L_EV("Start http's server accept event (sock=%d)", http->sock);

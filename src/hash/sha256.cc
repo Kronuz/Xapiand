@@ -254,7 +254,7 @@ void SHA256::processBlock(const void* data)
 /// add arbitrary number of bytes
 void SHA256::add(const void* data, size_t numBytes)
 {
-	const uint8_t* current = (const uint8_t*) data;
+	const auto* current = (const uint8_t*) data;
 
 	if (m_bufferSize > 0)
 	{
@@ -371,11 +371,11 @@ std::string SHA256::getHash()
 	// convert to hex string
 	std::string result;
 	result.reserve(2 * HashBytes);
-	for (int i = 0; i < HashBytes; ++i)
+	for (unsigned char i : rawHash)
 	{
 		static const char dec2hex[16+1] = "0123456789abcdef";
-		result += dec2hex[(rawHash[i] >> 4) & 15];
-		result += dec2hex[ rawHash[i]       & 15];
+		result += dec2hex[(i >> 4) & 15];
+		result += dec2hex[ i       & 15];
 	}
 
 	return result;

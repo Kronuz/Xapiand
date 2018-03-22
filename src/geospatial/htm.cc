@@ -679,7 +679,7 @@ HTM::getRange(uint64_t id, uint8_t level)
 	if (level < HTM_MAX_LEVEL) {
 		int8_t mask = (HTM_MAX_LEVEL - level) << 1;
 		uint64_t start = id << mask;
-		return range_t(start, start + ((uint64_t) 1 << mask) - 1);
+		return {start, start + ((uint64_t) 1 << mask) - 1};
 	}
 	return range_t(id, id);
 }

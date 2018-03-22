@@ -124,7 +124,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Logging(const char *function, const char *filename, int line, const std::string& str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
+	Logging(const char *function, const char *filename, int line, std::string  str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
 	~Logging();
 
 	static std::string colorized(std::string_view str, bool try_coloring);

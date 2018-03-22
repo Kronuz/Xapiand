@@ -69,7 +69,7 @@ static inline std::string _from_small_time(long double seconds, bool colored) {
 	static const long double base = 1000;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { 1, std::pow(base, -1), std::pow(base, -2), std::pow(base, -3), std::pow(base, -4) };
-	static const char* const units[] = { "s", "ms", "\xc2\xb5s", "ns", "ps" };
+	static const char* const units[] = { "s", "ms", R"(µs)", "ns", "ps" };
 	static const char* const colors[] = { "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0;32m", "\033[0m" };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);

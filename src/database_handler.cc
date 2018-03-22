@@ -23,9 +23,10 @@
 #include "database_handler.h"
 
 #include <algorithm>                        // for min, move
-#include <ctype.h>                          // for isupper, tolower
+#include <cctype>                           // for isupper, tolower
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
+#include <utility>
 
 #include "cast.h"                           // for Cast
 #include "database.h"                       // for DatabasePool, Database
@@ -103,10 +104,10 @@ class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
 public:
-	FilterPrefixesExpandDecider(const std::vector<std::string>& prefixes_)
-		: prefixes(prefixes_) { }
+	FilterPrefixesExpandDecider(std::vector<std::string>  prefixes_)
+		: prefixes(std::move(prefixes_)) { }
 
-	virtual bool operator() (const std::string& term) const override {
+	bool operator() (const std::string& term) const override {
 		for (const auto& prefix : prefixes) {
 			if (string::startswith(term, prefix)) {
 				return true;
@@ -194,11 +195,11 @@ DatabaseHandler::DatabaseHandler()
 	  method(HTTP_GET) { }
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
-	: endpoints(endpoints_),
+DatabaseHandler::DatabaseHandler(Endpoints  endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<size_t>>  context_)
+	: endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  method(method_),
-	  context(context_) { }
+	  context(std::move(context_)) { }
 
 
 std::shared_ptr<Database>
@@ -1554,7 +1555,7 @@ DatabaseHandler::get_master_count()
 		std::vector<std::string> suggestions;
 		query_field_t q_t;
 		q_t.limit = 0;
-		q_t.query.push_back("master:M");
+		q_t.query.emplace_back("master:M");
 		auto mset = db_handler.get_mset(q_t, nullptr, nullptr, suggestions);
 		return mset.get_matches_estimated();
 	} catch (const CheckoutError&) {
@@ -1713,17 +1714,13 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
 
 
 Document::Document(const Document& doc_)
-	: did(doc_.did),
-	  db_handler(doc_.db_handler) { }
+	
+	  = default;
 
 
 Document&
 Document::operator=(const Document& doc_)
-{
-	did = doc_.did;
-	db_handler = doc_.db_handler;
-	return *this;
-}
+= default;
 
 
 Xapian::Document

@@ -59,13 +59,12 @@ public:
 	UUID();
 
 	// copy constructor
-	UUID(const UUID& other);
+	UUID(const UUID& other) = default;
+	// copy-assignment operator
+	UUID& operator=(const UUID& other) = default;
 
 	// move constructor
 	UUID(UUID&& other);
-
-	// overload assignment operator
-	UUID& operator=(const UUID& other);
 
 	// overload move operator
 	UUID& operator=(UUID&& other);

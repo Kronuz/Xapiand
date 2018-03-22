@@ -195,7 +195,7 @@ Stats::update_pos_time()
 	if (current_pos.minute < SLOT_TIME_MINUTE) {
 		clear_stats_min(b_time_minute + 1, current_pos.minute);
 	} else {
-		int int_min = static_cast<int>(current_pos.minute);
+		auto int_min = static_cast<int>(current_pos.minute);
 		int mod_min = int_min % SLOT_TIME_MINUTE;
 		current_pos.minute = current_pos.minute - int_min + mod_min;
 		if (t_elapsed < SLOT_TIME_MINUTE) {

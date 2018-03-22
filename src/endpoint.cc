@@ -22,7 +22,7 @@
 
 #include "endpoint.h"
 
-#include <stdlib.h>         // for atoi
+#include <cstdlib>          // for atoi
 #include <xapian.h>         // for SerialisationError
 
 #include "length.h"         // for serialise_length, unserialise_length, ser...
@@ -37,7 +37,7 @@ atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
 static inline std::string
 normalize(const void *p, size_t size)
 {
-	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
+	auto repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
 	std::string unserialised(static_cast<const char*>(p), size);
@@ -54,7 +54,7 @@ normalize(const void *p, size_t size)
 static inline std::string
 normalize_and_partition(const void *p, size_t size)
 {
-	UUIDRepr repr = static_cast<UUIDRepr>(opts.uuid_repr);
+	auto repr = static_cast<UUIDRepr>(opts.uuid_repr);
 	std::string serialised_uuid;
 	std::string normalized;
 	std::string unserialised(static_cast<const char*>(p), size);
@@ -133,7 +133,7 @@ normalize_and_partition(const void *p, size_t size)
 }
 
 
-typedef std::string(*normalizer_t)(const void *p, size_t size);
+using normalizer_t = std::string (*)(const void *, size_t);
 template<normalizer_t normalize>
 static inline std::string
 normalizer(const void *p, size_t size)

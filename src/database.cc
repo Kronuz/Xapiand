@@ -28,6 +28,7 @@
 #include <iterator>               // for distance
 #include <limits>                 // for numeric_limits
 #include <ratio>                  // for ratio
+#include <utility>
 #include <strings.h>              // for strncasecmp
 #include <sys/errno.h>            // for __error, errno
 #include <sys/fcntl.h>            // for O_CREAT, O_WRONLY, O_EXCL
@@ -83,8 +84,8 @@
 void
 WalHeader::init(void* param, void* args)
 {
-	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
-	bool commit_eof = static_cast<bool>(args);
+	const auto* wal = static_cast<const DatabaseWAL*>(param);
+	auto commit_eof = static_cast<bool>(args);
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -106,7 +107,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 		THROW(StorageCorruptVolume, "Bad WAL header magic number");
 	}
 
-	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
+	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	if (wal->validate_uuid && (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0)) {
 		THROW(StorageCorruptVolume, "WAL UUID mismatch");
 	}
@@ -275,7 +276,7 @@ DatabaseWAL::repr_line(std::string_view line)
 
 	repr["revision"] = unserialise_length(&p, p_end);
 
-	Type type = static_cast<Type>(unserialise_length(&p, p_end));
+	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
 	std::string data(p, p_end);
 
@@ -486,7 +487,7 @@ DatabaseWAL::execute(std::string_view line)
 		return false;
 	}
 
-	Type type = static_cast<Type>(unserialise_length(&p, p_end));
+	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
 	std::string data(p, p_end);
 
@@ -779,7 +780,7 @@ DatabaseWAL::write_remove_spelling(std::string_view word, Xapian::termcount freq
 void
 DataHeader::init(void* param, void* /*unused*/)
 {
-	const Database* database = static_cast<const Database*>(param);
+	const auto* database = static_cast<const Database*>(param);
 
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	head.magic = STORAGE_MAGIC;
@@ -794,7 +795,7 @@ DataHeader::validate(void* param, void* /*unused*/)
 		THROW(StorageCorruptVolume, "Bad data storage header magic number");
 	}
 
-	const Database* database = static_cast<const Database*>(param);
+	const auto* database = static_cast<const Database*>(param);
 	if (strncasecmp(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid)) != 0) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
@@ -856,9 +857,9 @@ DataStorage::highest_volume()
  */
 
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_)
 	: weak_queue(queue_),
-	  endpoints(endpoints_),
+	  endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  mastery_level(-1),
@@ -1172,7 +1173,7 @@ Database::commit(bool wal_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Commit: t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
@@ -1221,7 +1222,7 @@ Database::cancel(bool wal_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Cancel: t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->begin_transaction(false);
 			wdb->cancel_transaction();
@@ -1259,7 +1260,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Deleting document: %d  t: %d", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(did);
 			if (auto queue = weak_queue.lock()) {
@@ -1301,7 +1302,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Deleting document: '%s'  t: %d", term, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(term);
 			if (auto queue = weak_queue.lock()) {
@@ -1467,7 +1468,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Adding new document.  t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->add_document(doc_);
 			if (auto queue = weak_queue.lock()) {
@@ -1512,7 +1513,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Replacing: %d  t: %d", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->replace_document(did, doc_);
 			if (auto queue = weak_queue.lock()) {
@@ -1559,7 +1560,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Replacing: '%s'  t: %d", term, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->replace_document(term, doc_);
 			if (auto queue = weak_queue.lock()) {
@@ -1598,7 +1599,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->add_spelling(word, freqinc);
 			if (auto queue = weak_queue.lock()) {
@@ -1635,7 +1636,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->remove_spelling(word, freqdec);
 			if (auto queue = weak_queue.lock()) {
@@ -1825,7 +1826,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
 			if (auto queue = weak_queue.lock()) {
@@ -2050,7 +2051,7 @@ DatabaseQueue::dec_count()
 
 DatabasesLRU::DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state)
 	: LRU(dbpool_size),
-	  _queue_state(queue_state) { }
+	  _queue_state(std::move(queue_state)) { }
 
 
 std::shared_ptr<DatabaseQueue>
@@ -2138,8 +2139,8 @@ DatabasesLRU::finish()
 {
 	L_CALL("DatabasesLRU::finish()");
 
-	for (auto it = begin(); it != end(); ++it) {
-		it->second->finish();
+	for (auto& queue : *this) {
+		queue.second->finish();
 	}
 }
 
@@ -2313,7 +2314,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			} else {
 				// Lock until a database is available if it can't get one.
 				lk.unlock();
-				int s = static_cast<int>(queue->pop(database, DB_TIMEOUT));
+				auto s = static_cast<int>(queue->pop(database, DB_TIMEOUT));
 				if (s == 0) {
 					THROW(TimeOutError, "Database is not available");
 				}
@@ -2559,8 +2560,8 @@ DatabasePool::total_writable_databases()
 
 	size_t db_count = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
-	for (auto d = writable_databases.begin(); d != writable_databases.end(); d++) {
-		db_count += d->second->size();
+	for (auto & writable_database : writable_databases) {
+		db_count += writable_database.second->size();
 	}
 	return std::make_pair(writable_databases.size(), db_count);
 }
@@ -2573,8 +2574,8 @@ DatabasePool::total_readable_databases()
 
 	size_t db_count = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
-	for (auto d = databases.begin(); d != databases.end(); d++) {
-		db_count += d->second->size();
+	for (auto & database : databases) {
+		db_count += database.second->size();
 	}
 	return std::make_pair(databases.size(), db_count);
 }

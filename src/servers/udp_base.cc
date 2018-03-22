@@ -23,7 +23,8 @@
 #include "udp_base.h"
 
 #include <arpa/inet.h>              // for inet_addr, htonl, htons
-#include <string.h>                 // for strerror, memset
+#include <cstring>                  // for strerror, memset
+#include <utility>
 #include <sys/errno.h>              // for __error, errno
 #include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, bind, recvfrom, sendto
@@ -38,10 +39,10 @@
 #include "utils.h"                  // for ignored_errorno
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_)
+BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
 	: Worker(manager_, ev_loop_, ev_flags_),
 	  port(port_),
-	  description(description_),
+	  description(std::move(description_)),
 	  version(version_)
 {
 	bind(tries_, group_);

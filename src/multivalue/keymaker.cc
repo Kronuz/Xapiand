@@ -542,7 +542,7 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document& doc) const
 			// except for '\0' which we convert to "\xff\0".  We insert
 			// "\xff\xff" after the encoded value.
 			for (const auto& ch_ : v) {
-				unsigned char ch = static_cast<unsigned char>(ch_);
+				auto ch = static_cast<unsigned char>(ch_);
 				result += char(255 - ch);
 				if (ch == 0) result += '\0';
 			}

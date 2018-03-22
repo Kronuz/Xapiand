@@ -22,7 +22,7 @@
 
 #include "io_utils.h"
 
-#include <string.h>     // for strerror, size_t
+#include <cstring>     // for strerror, size_t
 #include <sys/errno.h>  // for __error, errno, EINTR
 
 #include "config.h"     // for HAVE_PWRITE, HAVE_FSYNC
@@ -160,7 +160,7 @@ const char* strerrno(int errnum) {
 ssize_t write(int fd, const void* buf, size_t nbyte) {
 	L_CALL("io::write(%d, <buf>, %lu)", fd, nbyte);
 
-	const char* p = static_cast<const char*>(buf);
+	const auto* p = static_cast<const char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c < 0) {
@@ -185,7 +185,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pwrite(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
 
-	const char* p = static_cast<const char*>(buf);
+	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
 		return -1;
@@ -220,7 +220,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 ssize_t read(int fd, void* buf, size_t nbyte) {
 	L_CALL("io::read(%d, <buf>, %lu)", fd, nbyte);
 
-	char* p = static_cast<char*>(buf);
+	auto* p = static_cast<char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c < 0) {
@@ -251,7 +251,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 		return -1;
 	}
 #endif
-	char* p = static_cast<char*>(buf);
+	auto* p = static_cast<char*>(buf);
 	while (nbyte != 0u) {
 #ifndef HAVE_PWRITE
 		ssize_t c = ::read(fd, p, nbyte);

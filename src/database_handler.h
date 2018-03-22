@@ -202,7 +202,7 @@ class DatabaseHandler {
 
 public:
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<size_t>>& context_=nullptr);
+	DatabaseHandler(Endpoints  endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<size_t>>  context_=nullptr);
 
 	~DatabaseHandler() = default;
 

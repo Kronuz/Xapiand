@@ -26,7 +26,7 @@
 #include <cmath>            // for ceil
 #include <exception>        // for exception
 #include <stdexcept>        // for invalid_argument, out_of_range
-#include <stdio.h>          // for snprintf
+#include <cstdio>           // for snprintf
 #include <string_view>      // for std::string_view
 
 #include "log.h"            // for L_ERR
@@ -41,7 +41,7 @@ constexpr const char RESERVED_DAY[]                 = "_day";
 constexpr const char RESERVED_TIME[]                = "_time";
 
 
-const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
+const std::regex Datetime::date_re(R"(([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\|\|[ ]*([+-/\dyMwdhms]+))?)", std::regex::optimize);
 const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
 
 
@@ -981,7 +981,7 @@ int
 _getDays_month(int year, int month)
 {
 	assert(month > 0 && month <= 12);
-	int leap = static_cast<int>(Datetime::isleapYear(year));
+	auto leap = static_cast<int>(Datetime::isleapYear(year));
 	return days[leap][month - 1];
 }
 
@@ -1029,7 +1029,7 @@ Datetime::toordinal(int year, int month, int day)
 	if (year < 1) { THROW(DatetimeError, "Year is out of range"); }
 	if (day < 1 || day > getDays_month(year, month)) { THROW(DatetimeError, "Day is out of range for month"); }
 
-	int leap = static_cast<int>(isleapYear(year));
+	auto leap = static_cast<int>(isleapYear(year));
 	std::time_t result = 365 * (year - 1) + (year - 1) / 4 - (year - 1) / 100 + (year - 1) / 400 + cumdays[leap][month - 1] + day;
 	return result;
 }
@@ -1082,11 +1082,11 @@ Datetime::to_tm_t(std::time_t timestamp)
 {
 	struct tm timeinfo;
 	gmtime_r(&timestamp, &timeinfo);
-	return tm_t(
+	return {
 		timeinfo.tm_year + DATETIME_START_YEAR, timeinfo.tm_mon + 1,
 		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
 		timeinfo.tm_sec
-	);
+	};
 }
 
 
@@ -1099,11 +1099,11 @@ Datetime::to_tm_t(double timestamp)
 	auto _time = static_cast<std::time_t>(timestamp);
 	struct tm timeinfo;
 	gmtime_r(&_time, &timeinfo);
-	return tm_t(
+	return {
 		timeinfo.tm_year + DATETIME_START_YEAR, timeinfo.tm_mon + 1,
 		timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
 		timeinfo.tm_sec, normalize_fsec(timestamp - _time)
-	);
+	};
 }
 
 

@@ -230,7 +230,7 @@ class Literal : public Generator {
 	std::string value;
 
 public:
-	explicit Literal(const std::string& value_);
+	explicit Literal(std::string  value_);
 
 	size_t combinations() const override;
 	size_t min() const override;

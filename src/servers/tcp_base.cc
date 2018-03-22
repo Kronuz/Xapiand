@@ -26,7 +26,8 @@
 #include <netdb.h>                  // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>             // for sockaddr_in, INADDR_ANY, IPPROTO_TCP
 #include <netinet/tcp.h>            // for TCP_NODELAY
-#include <string.h>                 // for strerror, memset
+#include <cstring>                  // for strerror, memset
+#include <utility>
 #include <sys/errno.h>              // for __error, errno
 #include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
@@ -39,11 +40,11 @@
 #include "utils.h"                  // for ignored_errorno
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, int tries_, int flags_)
+BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_)
 	: Worker(manager_, ev_loop_, ev_flags_),
 	  port(port_),
 	  flags(flags_),
-	  description(description_)
+	  description(std::move(description_))
 {
 	bind(tries_);
 

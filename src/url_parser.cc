@@ -41,7 +41,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 {
 	std::string buf;
 	buf.reserve(size);
-	const char* q = (const char *)p;
+	const auto* q = (const char *)p;
 	auto p_end = q + size;
 	while (q != p_end) {
 		char c = *q++;
@@ -125,7 +125,7 @@ QueryParser::next(const char *name, size_t name_len)
 				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
 					if (v0) {
 						const char *v1 = v0 + 1;
-						while (1) {
+						while (true) {
 							char cv = (v1 == nf) ? '\0' : *v1;
 							switch(cv) {
 								case '\0':  // '\0' and '&'
@@ -509,7 +509,7 @@ PathParser::next()
 void
 PathParser::skip_id() noexcept
 {
-	off_id = 0;
+	off_id = nullptr;
 }
 
 

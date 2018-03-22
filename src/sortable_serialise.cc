@@ -129,19 +129,19 @@ sortable_serialise_(long double value, char * buf)
 	// Convert the 112 (or 113) bits of the mantissa into two 32-bit words.
 
 	mantissa *= (negative ? 1073741824.0 : 2147483648.0);  // 1<<30 : 1<<31
-	unsigned word1 = static_cast<unsigned>(mantissa);
+	auto word1 = static_cast<unsigned>(mantissa);
 	mantissa -= word1;
 
 	mantissa *= 4294967296.0L;  // 1<<32
-	unsigned word2 = static_cast<unsigned>(mantissa);
+	auto word2 = static_cast<unsigned>(mantissa);
 	mantissa -= word2;
 
 	mantissa *= 4294967296.0L;  // 1<<32
-	unsigned word3 = static_cast<unsigned>(mantissa);
+	auto word3 = static_cast<unsigned>(mantissa);
 	mantissa -= word3;
 
 	mantissa *= 4294967296.0L;  // 1<<32
-	unsigned word4 = static_cast<unsigned>(mantissa);
+	auto word4 = static_cast<unsigned>(mantissa);
 
 	// If the number is positive, the first bit will always be set because 0.5
 	// <= mantissa < 1, unless mantissa is zero, which we handle specially

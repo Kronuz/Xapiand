@@ -26,13 +26,14 @@
 #include <cmath>                           // for pow
 #include <cstdint>                         // for uint64_t
 #include <cstring>                         // for size_t, strlen
-#include <ctype.h>                         // for tolower
+#include <cctype>                          // for tolower
 #include <functional>                      // for ref, reference_wrapper
 #include <mutex>                           // for mutex
 #include <ostream>                         // for operator<<, basic_ostream
 #include <set>                             // for __tree_const_iterator, set
 #include <stdexcept>                       // for out_of_range
 #include <type_traits>                     // for remove_reference<>::type
+#include <utility>
 
 #include "cast.h"                          // for Cast
 #include "database_handler.h"              // for DatabaseHandler
@@ -1755,12 +1756,12 @@ required_spc_t::required_spc_t()
 	  error(DEFAULT_GEO_ERROR) { }
 
 
-required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
-	const std::vector<std::string>& _acc_prefix)
+required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, std::vector<uint64_t>  acc,
+	std::vector<std::string>  _acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, type }}),
 	  slot(_slot),
-	  accuracy(acc),
-	  acc_prefix(_acc_prefix),
+	  accuracy(std::move(acc)),
+	  acc_prefix(std::move(_acc_prefix)),
 	  language(DEFAULT_LANGUAGE),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
@@ -1769,17 +1770,8 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, const std:
 
 
 required_spc_t::required_spc_t(const required_spc_t& o)
-	: sep_types(o.sep_types),
-	  prefix(o.prefix),
-	  slot(o.slot),
-	  flags(o.flags),
-	  accuracy(o.accuracy),
-	  acc_prefix(o.acc_prefix),
-	  language(o.language),
-	  stop_strategy(o.stop_strategy),
-	  stem_strategy(o.stem_strategy),
-	  stem_language(o.stem_language),
-	  error(o.error) { }
+	
+	  = default;
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -1798,20 +1790,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 
 required_spc_t&
 required_spc_t::operator=(const required_spc_t& o)
-{
-	sep_types = o.sep_types;
-	prefix = o.prefix;
-	slot = o.slot;
-	flags = o.flags;
-	accuracy = o.accuracy;
-	acc_prefix = o.acc_prefix;
-	language = o.language;
-	stop_strategy = o.stop_strategy;
-	stem_strategy = o.stem_strategy;
-	stem_language = o.stem_language;
-	error = o.error;
-	return *this;
-}
+= default;
 
 
 required_spc_t&
@@ -2317,8 +2296,8 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 }
 
 
-Schema::Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, std::string_view o)
-	: schema(s),
+Schema::Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, std::string_view o)
+	: schema(std::move(s)),
 	  mut_schema(std::move(m)),
 	  origin(o)
 {
@@ -2459,7 +2438,7 @@ Schema::restart_namespace_specification()
 struct FedSpecification : MsgPack::Data {
 	specification_t specification;
 
-	FedSpecification(const specification_t& specification) : specification(specification) { }
+	FedSpecification(specification_t  specification) : specification(std::move(specification)) { }
 };
 
 

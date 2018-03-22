@@ -393,7 +393,7 @@ struct required_spc_t {
 	// Methods:
 
 	required_spc_t();
-	required_spc_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
+	required_spc_t(Xapian::valueno _slot, FieldType type, std::vector<uint64_t>  acc, std::vector<std::string>  _acc_prefix);
 	required_spc_t(const required_spc_t& o);
 	required_spc_t(required_spc_t&& o) noexcept;
 
@@ -931,7 +931,7 @@ class Schema {
 	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, std::string_view full_name) const;
 
 public:
-	Schema(const std::shared_ptr<const MsgPack>& s, std::unique_ptr<MsgPack> m, std::string_view o);
+	Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, std::string_view o);
 
 	Schema() = delete;
 	Schema(Schema&& schema) = delete;

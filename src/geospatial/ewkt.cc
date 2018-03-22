@@ -319,7 +319,7 @@ EWKT::_parse_cartesian(int SRID, Iterator first, Iterator last)
 	double lat = strict_stod(std::string_view(_first, first - _first));
 
 	if (first == last) {
-		return Cartesian(lat, lon, 0, Cartesian::Units::DEGREES, SRID);
+		return {lat, lon, 0, Cartesian::Units::DEGREES, SRID};
 	}
 	double height = strict_stod(std::string_view(first + 1, last - first - 1));
 	return Cartesian(lat, lon, height, Cartesian::Units::DEGREES, SRID);

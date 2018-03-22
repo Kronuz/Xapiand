@@ -27,7 +27,7 @@
 #include <exception>             // for exception
 #include <memory>                // for shared_ptr, unique_ptr, default_delete
 #include <ratio>                 // for ratio
-#include <stdio.h>               // for SEEK_SET
+#include <cstdio>                // for SEEK_SET
 #include <sys/errno.h>           // for __error, errno, ECONNRESET
 #include <sys/socket.h>          // for shutdown, SHUT_RDWR
 #include <sysexits.h>            // for EX_SOFTWARE
@@ -242,7 +242,7 @@ public:
 		XXH32_reset(xxh_state, CMP_SEED);
 	}
 
-	~ClientNoDecompressor() {
+	~ClientNoDecompressor() override {
 		XXH32_freeState(xxh_state);
 	}
 

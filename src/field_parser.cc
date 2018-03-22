@@ -24,7 +24,7 @@
 
 #include <cassert>
 #include <cstring>  // for memset
-#include <ctype.h>  // for isspace
+#include <cctype>  // for isspace
 
 
 #define TOKEN_COLON                 ':'

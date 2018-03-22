@@ -30,18 +30,18 @@
 #include <list>                      // for __list_iterator, list, operator!=
 #include <memory>                    // for unique_ptr, allocator, make_unique
 #include <pwd.h>                     // for passwd, getpwnam, getpwuid
-#include <signal.h>                  // for sigaction, sigemptyset
+#include <csignal>                   // for sigaction, sigemptyset
 #include <sstream>                   // for basic_stringbuf<>::int_type, bas...
-#include <stdio.h>                   // for snprintf
-#include <stdlib.h>                  // for size_t, atoi, setenv, exit, getenv
-#include <string.h>                  // for strcat, strchr, strlen, strrchr
+#include <cstdio>                    // for snprintf
+#include <cstdlib>                   // for size_t, atoi, setenv, exit, getenv
+#include <cstring>                   // for strcat, strchr, strlen, strrchr
 #include <strings.h>                 // for strcasecmp
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/resource.h>            // for rlimit
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <thread>                    // for thread
-#include <time.h>                    // for tm, localtime, mktime, time_t
+#include <ctime>                     // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
 #include <vector>                    // for vector
 #include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
@@ -224,7 +224,7 @@ void sig_handler(int sig) {
 }
 
 
-void setup_signal_handlers(void) {
+void setup_signal_handlers() {
 	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
@@ -302,14 +302,14 @@ const char* ev_backend(unsigned int backend) {
 std::vector<std::string> ev_supported() {
 	std::vector<std::string> backends;
 	unsigned int supported = ev::supported_backends();
-	if ((supported & ev::SELECT) != 0u) { backends.push_back(EV_SELECT_NAME); }
-	if ((supported & ev::POLL) != 0u) { backends.push_back(EV_POLL_NAME); }
-	if ((supported & ev::EPOLL) != 0u) { backends.push_back(EV_EPOLL_NAME); }
-	if ((supported & ev::KQUEUE) != 0u) { backends.push_back(EV_KQUEUE_NAME); }
-	if ((supported & ev::DEVPOLL) != 0u) { backends.push_back(EV_DEVPOLL_NAME); }
-	if ((supported & ev::PORT) != 0u) { backends.push_back(EV_PORT_NAME); }
+	if ((supported & ev::SELECT) != 0u) { backends.emplace_back(EV_SELECT_NAME); }
+	if ((supported & ev::POLL) != 0u) { backends.emplace_back(EV_POLL_NAME); }
+	if ((supported & ev::EPOLL) != 0u) { backends.emplace_back(EV_EPOLL_NAME); }
+	if ((supported & ev::KQUEUE) != 0u) { backends.emplace_back(EV_KQUEUE_NAME); }
+	if ((supported & ev::DEVPOLL) != 0u) { backends.emplace_back(EV_DEVPOLL_NAME); }
+	if ((supported & ev::PORT) != 0u) { backends.emplace_back(EV_PORT_NAME); }
 	if (backends.empty()) {
-		backends.push_back("auto");
+		backends.emplace_back("auto");
 	}
 	return backends;
 }
@@ -417,7 +417,7 @@ void parseOptions(int argc, char** argv) {
 				} else {
 					a = argv[i];
 				}
-				args.push_back(a);
+				args.emplace_back(a);
 			} else {
 				// Split arguments when possible (e.g. -Dnode, --verbosity=3)
 				const char* arg = argv[i];
@@ -437,7 +437,7 @@ void parseOptions(int argc, char** argv) {
 					arg = a + 1;
 				}
 				if (*arg != 0) {
-					args.push_back(arg);
+					args.emplace_back(arg);
 				}
 			}
 		}
@@ -998,10 +998,10 @@ int server() {
 
 		std::vector<std::string> modes;
 		if (opts.strict) {
-			modes.push_back("strict");
+			modes.emplace_back("strict");
 		}
 		if (opts.optimal) {
-			modes.push_back("optimal");
+			modes.emplace_back("optimal");
 		}
 		if (!modes.empty()) {
 			L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));

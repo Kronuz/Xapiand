@@ -33,6 +33,7 @@
 #include <thread>             // for std::this_thread
 #include <unistd.h>           // for isatty
 #include <unordered_map>      // for unordered_map
+#include <utility>
 #include <vector>             // for vector
 
 #include "datetime.h"         // for to_string
@@ -143,7 +144,7 @@ Log::Log(Log&& o)
 
 
 Log::Log(LogType log)
-	: log(log)
+	: log(std::move(log))
 {
 }
 
@@ -239,7 +240,7 @@ SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_
 }
 
 
-Logging::Logging(const char *function, const char *filename, int line, const std::string& str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
+Logging::Logging(const char *function, const char *filename, int line, std::string  str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
 	: ScheduledTask(created_at),
 	  thread_id(std::this_thread::get_id()),
 	  function(function),
@@ -247,7 +248,7 @@ Logging::Logging(const char *function, const char *filename, int line, const std
 	  line(line),
 	  stack_level(0),
 	  clean(clean),
-	  str(str),
+	  str(std::move(str)),
 	  exception(exc),
 	  async(async),
 	  info(info),
@@ -417,7 +418,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 	auto str = fmt::vsprintf(format, args);
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
-		collected.push_back(std::make_pair(std::move(str), with_endl));
+		collected.emplace_back(std::move(str), with_endl);
 	} else {
 		log(0, str, 0, false, with_endl);
 	}

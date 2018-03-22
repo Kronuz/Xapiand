@@ -25,15 +25,15 @@
 #include <algorithm>             // for equal, uniform_int_distribution
 #include <cstdint>               // for uint64_t
 #include <functional>            // for function, __base
-#include <math.h>                // for powl, logl, floorl, roundl
+#include <cmath>                // for powl, logl, floorl, roundl
 #include <memory>                // for allocator
 #include <mutex>                 // for std::mutex
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <random>                // for mt19937_64, random_device, uniform_r...
 #include <ratio>                 // for ratio
-#include <stdio.h>               // for size_t, sprintf, remove, rename, snp...
-#include <string.h>              // for strerror, strcmp
+#include <cstdio>               // for size_t, sprintf, remove, rename, snp...
+#include <cstring>              // for strerror, strcmp
 #include <string>                // for string, operator+, char_traits, basi...
 #include <sys/fcntl.h>           // for O_CREAT, O_RDONLY, O_WRONLY
 #include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
@@ -134,7 +134,7 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 
 std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
-	const char* q = static_cast<const char *>(p);
+	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
 	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
@@ -213,7 +213,7 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 
 std::string escape(const void* p, size_t size, char quote) {
 	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
-	const char* q = static_cast<const char *>(p);
+	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	size = size * 4 + 2;  // Consider "\xNN" and two quotes
 	std::string ret;
@@ -564,7 +564,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 				return -1;
 			}
 
-			while (1) {
+			while (true) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (-1 == bytes) {
 					L_ERR("ERROR: reading file. %s: %s\n", src_path, strerror(errno));

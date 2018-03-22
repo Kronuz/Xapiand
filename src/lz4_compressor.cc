@@ -22,8 +22,8 @@
 
 #include "lz4_compressor.h"
 
-#include <stdio.h>   // for SEEK_SET
-#include <string.h>  // for size_t, memcpy
+#include <cstdio>    // for SEEK_SET
+#include <cstring>   // for size_t, memcpy
 
 
 static void read_uint16(const void* blockStream, uint16_t* i) {
@@ -101,7 +101,7 @@ LZ4CompressData::next()
 	size_t totalBytes = sizeof(uint16_t) + cmpBytes;
 	_size += totalBytes;
 
-	uint16_t num_bytes = static_cast<uint16_t>(cmpBytes);
+	auto num_bytes = static_cast<uint16_t>(cmpBytes);
 	std::string result;
 	result.reserve(totalBytes);
 	result.append(reinterpret_cast<const char*>(&num_bytes), sizeof(uint16_t));
@@ -210,7 +210,7 @@ LZ4CompressFile::next()
 	char* const inpPtr = &buffer[_offset];
 
 	// Read line to the ring buffer.
-	int inpBytes = static_cast<int>(io::read(fd, inpPtr, get_read_size()));
+	auto inpBytes = static_cast<int>(io::read(fd, inpPtr, get_read_size()));
 	if (inpBytes <= 0) {
 		return std::string();
 	}
@@ -230,7 +230,7 @@ LZ4CompressFile::next()
 	size_t totalBytes = sizeof(uint16_t) + cmpBytes;
 	_size += totalBytes;
 
-	uint16_t num_bytes = static_cast<uint16_t>(cmpBytes);
+	auto num_bytes = static_cast<uint16_t>(cmpBytes);
 	std::string result;
 	result.reserve(totalBytes);
 	result.append(reinterpret_cast<const char*>(&num_bytes), sizeof(uint16_t));

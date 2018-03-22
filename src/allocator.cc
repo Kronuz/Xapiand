@@ -62,7 +62,7 @@ namespace allocator {
 			__sz = 1;
 		}
 		void* __p;
-		while ((__p = std::malloc(__sz)) == 0) {
+		while ((__p = std::malloc(__sz)) == nullptr) {
 			// If malloc fails and there is a new_handler, call it to try free up memory.
 			std::new_handler nh = std::get_new_handler();
 			if (nh != nullptr) {

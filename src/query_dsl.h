@@ -98,7 +98,7 @@ class QueryDSL {
 	Xapian::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj);
 
 public:
-	QueryDSL(const std::shared_ptr<Schema>& schema_);
+	QueryDSL(std::shared_ptr<Schema>  schema_);
 
 	MsgPack make_dsl_query(std::string_view query);
 	MsgPack make_dsl_query(const query_field_t& e);

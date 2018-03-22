@@ -16,6 +16,7 @@
 #include <memory>     // for make_unique
 #include <random>     // for mt19937, random_device, uniform_real_distribution
 #include <stdexcept>  // for invalid_argument, out_of_range
+#include <utility>
 
 
 using namespace NameGen;
@@ -815,8 +816,8 @@ Sequence::Sequence(std::vector<std::unique_ptr<Generator>>&& generators_)
 	: Generator(std::move(generators_)) { }
 
 
-Literal::Literal(const std::string &value_)
-	: value(value_) { }
+Literal::Literal(std::string value_)
+	: value(std::move(value_)) { }
 
 
 size_t

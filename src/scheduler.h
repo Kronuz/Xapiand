@@ -118,8 +118,8 @@ class Scheduler {
 	void run();
 
 public:
-	explicit Scheduler(const std::string& name_);
-	Scheduler(const std::string& name_, const std::string& format, size_t num_threads);
+	explicit Scheduler(std::string  name_);
+	Scheduler(std::string  name_, const std::string& format, size_t num_threads);
 	~Scheduler();
 
 	size_t threadpool_capacity();

@@ -105,7 +105,7 @@ serialise_double(double v)
 	result.reserve(3 + max_mantissa_bytes);
 
 	if (exp <= 6 && exp >= -7) {
-		unsigned char b = static_cast<unsigned char>(exp + 7);
+		auto b = static_cast<unsigned char>(exp + 7);
 		if (negative) { b |= static_cast<unsigned char>(0x80); }
 		result.push_back(static_cast<char>(b));
 	} else {
@@ -126,7 +126,7 @@ serialise_double(double v)
 
 	int max_bytes = max_mantissa_bytes;
 	do {
-		unsigned char byte = static_cast<unsigned char>(v);
+		auto byte = static_cast<unsigned char>(v);
 		result.push_back(static_cast<char>(byte));
 		v -= static_cast<double>(byte);
 		v *= 256.0;
@@ -162,7 +162,7 @@ unserialise_double(const char** p, const char* end)
 		int bigexp = static_cast<unsigned char>(*(*p)++);
 		if (exp == 15) {
 			if unlikely(*p == end) {
-				*p = NULL;
+				*p = nullptr;
 				THROW(SerialisationError, "Bad encoded double: short large exponent");
 			}
 			exp = bigexp | (static_cast<unsigned char>(*(*p)++) << 8);
@@ -228,7 +228,7 @@ serialise_length(unsigned long long len)
 		result.push_back('\xff');
 		len -= 255;
 		while (true) {
-			unsigned char b = static_cast<unsigned char>(len & 0x7f);
+			auto b = static_cast<unsigned char>(len & 0x7f);
 			len >>= 7;
 			if (len == 0u) {
 				result.push_back(b | static_cast<unsigned char>(0x80));
@@ -250,7 +250,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 
 	if unlikely(ptr == end) {
 		// Out of data.
-		*p = NULL;
+		*p = nullptr;
 		THROW(SerialisationError, "Bad encoded length: no data");
 	}
 
@@ -261,7 +261,7 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 		unsigned shift = 0;
 		do {
 			if unlikely(ptr == end || shift > (max_length_size * 7)) {
-				*p = NULL;
+				*p = nullptr;
 				THROW(SerialisationError, "Bad encoded length: insufficient data");
 			}
 			ch = *ptr++;

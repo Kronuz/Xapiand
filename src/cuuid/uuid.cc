@@ -372,23 +372,9 @@ UUID::UUID()
 	: _bytes{ } { }
 
 
-// copy constructor
-UUID::UUID(const UUID& other)
-	: _bytes(other._bytes) { }
-
-
 // move constructor
 UUID::UUID(UUID&& other)
 	: _bytes(std::move(other._bytes)) { }
-
-
-// overload assignment operator
-UUID&
-UUID::operator=(const UUID& other)
-{
-	_bytes = other._bytes;
-	return *this;
-}
 
 
 // overload move operator

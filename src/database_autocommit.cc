@@ -22,6 +22,8 @@
 
 #include "database_autocommit.h"
 
+#include <utility>
+
 #include "database.h"          // for Database, DatabasePool
 #include "database_handler.h"  // for DatabaseHandler
 #include "endpoint.h"          // for Endpoints
@@ -36,8 +38,8 @@ std::unordered_map<Endpoints, DatabaseAutocommit::Status> DatabaseAutocommit::st
 
 DatabaseAutocommit::DatabaseAutocommit(bool forced_, Endpoints endpoints_, std::weak_ptr<const Database> weak_database_)
 	: forced(forced_),
-	  endpoints(endpoints_),
-	  weak_database(weak_database_) { }
+	  endpoints(std::move(endpoints_)),
+	  weak_database(std::move(weak_database_)) { }
 
 
 void

@@ -27,8 +27,8 @@
 #include <functional>                       // for __base, function
 #include <regex>                            // for regex_iterator, match_res...
 #include <stdexcept>                        // for invalid_argument, range_e...
-#include <stdlib.h>                         // for mkstemp
-#include <string.h>                         // for strerror, strcpy
+#include <cstdlib>                          // for mkstemp
+#include <cstring>                          // for strerror, strcpy
 #include <sys/errno.h>                      // for __error, errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
@@ -102,9 +102,9 @@ constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 
 
-static const std::regex header_params_re("\\s*;\\s*([a-z]+)=(\\d+(?:\\.\\d+)?)", std::regex::optimize);
-static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
-static const std::regex header_accept_encoding_re("([-a-z+]+|\\*)((?:\\s*;\\s*[a-z]+=\\d+(?:\\.\\d+)?)*)", std::regex::optimize);
+static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
+static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
+static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
 
 static const std::string eol("\r\n");
 
@@ -2066,18 +2066,18 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 		while (request.query_parser.next("query") != -1) {
 			L_SEARCH("query=%s", request.query_parser.get());
-			query_field.query.push_back(std::string(request.query_parser.get()));
+			query_field.query.emplace_back(request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
 		while (request.query_parser.next("q") != -1) {
 			L_SEARCH("query=%s", request.query_parser.get());
-			query_field.query.push_back(std::string(request.query_parser.get()));
+			query_field.query.emplace_back(request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
 		while (request.query_parser.next("sort") != -1) {
-			query_field.sort.push_back(std::string(request.query_parser.get()));
+			query_field.sort.emplace_back(request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
@@ -2132,12 +2132,12 @@ HttpClient::query_field_maker(Request& request, int flags)
 			request.query_parser.rewind();
 
 			while (request.query_parser.next("fuzzy.field") != -1) {
-				query_field.fuzzy.field.push_back(std::string(request.query_parser.get()));
+				query_field.fuzzy.field.emplace_back(request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			while (request.query_parser.next("fuzzy.type") != -1) {
-				query_field.fuzzy.type.push_back(std::string(request.query_parser.get()));
+				query_field.fuzzy.type.emplace_back(request.query_parser.get());
 			}
 			request.query_parser.rewind();
 		}
@@ -2173,12 +2173,12 @@ HttpClient::query_field_maker(Request& request, int flags)
 			request.query_parser.rewind();
 
 			while (request.query_parser.next("nearest.field") != -1) {
-				query_field.nearest.field.push_back(std::string(request.query_parser.get()));
+				query_field.nearest.field.emplace_back(request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			while (request.query_parser.next("nearest.type") != -1) {
-				query_field.nearest.type.push_back(std::string(request.query_parser.get()));
+				query_field.nearest.type.emplace_back(request.query_parser.get());
 			}
 			request.query_parser.rewind();
 		}

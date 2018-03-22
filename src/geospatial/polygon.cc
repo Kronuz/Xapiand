@@ -189,7 +189,7 @@ Polygon::ConvexPolygon::process_chull(std::vector<Cartesian>&& points)
 	for (auto it = convex_points.rbegin(); it != it_last; ++it) {
 		auto center = *it ^ *(it + 1);
 		center.normalize();
-		constraints.push_back(Constraint(std::move(center)));
+		constraints.emplace_back(std::move(center));
 		corners.push_back(std::move(*it));
 	}
 	corners.push_back(std::move(*it_last));

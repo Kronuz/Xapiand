@@ -60,7 +60,7 @@ atos(const void* address)
 		struct termios term_opts;
 		cfmakeraw(&term_opts);  // have to set this first, otherwise queries echo until child kicks in
 		pid_t childpid;
-		if unlikely((childpid = forkpty(&fd, NULL, &term_opts, NULL)) < 0) {
+		if unlikely((childpid = forkpty(&fd, nullptr, &term_opts, nullptr)) < 0) {
 			perror("Could not forkpty for `atos` call.");
 			return "";
 		}
@@ -161,7 +161,7 @@ traceback(const char* function, const char* filename, int line, void *const * ca
 				// Symbol name:
 				if (info.dli_sname != nullptr) {
 					int status = 0;
-					char* unmangled = abi::__cxa_demangle(info.dli_sname, nullptr, 0, &status);
+					char* unmangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
 					if (status != 0) {
 						result.append(info.dli_sname);
 					} else {
