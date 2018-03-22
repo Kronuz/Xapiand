@@ -22,8 +22,8 @@ email: german.mb@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Xapiand: A Highly Available Distributed RESTful Search and Storage
            Engine built for the Cloud and with Data Locality in mind.
-baseurl: "/Xapiand" # the subpath of your site, e.g. /blog
-url: https://Kronuz.github.io/Xapiand
+baseurl: /Xapiand # the subpath of your site, e.g. /blog
+url: http://kronuz.io/Xapiand
 repository: https://github.com/Kronuz/Xapiand
 twitter_username: germbravo
 github_username:  Kronuz
