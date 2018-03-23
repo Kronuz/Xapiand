@@ -67,10 +67,6 @@ GEM
       ruby_dep (~> 1.2)
     mercenary (0.3.6)
     mini_portile2 (2.3.0)
-    minima (2.4.0)
-      jekyll (~> 3.5)
-      jekyll-feed (~> 0.9)
-      jekyll-seo-tag (~> 2.1)
     minitest (5.11.3)
     nokogiri (1.8.2)
       mini_portile2 (~> 2.3.0)
@@ -104,7 +100,6 @@ DEPENDENCIES
   jekyll-seo-tag
   jekyll-sitemap
   jemoji
-  minima (~> 2.0)
   tzinfo-data
 
 BUNDLED WITH
