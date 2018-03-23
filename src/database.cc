@@ -970,9 +970,12 @@ Database::reopen()
 #endif /* XAPIAND_CLUSTERING */
 		{
 #ifdef XAPIAND_DATABASE_WAL
-			{
+			try {
 				DatabaseWAL tmp_wal(e.path, this);
 				tmp_wal.init_database();
+			} catch (const Exception& exc) {
+				L_EXC("WAL ERROR: %s", exc.get_message());
+				throw;
 			}
 #endif
 			build_path_index(e.path);
@@ -1011,26 +1014,31 @@ Database::reopen()
 #endif /* XAPIAND_DATA_STORAGE */
 
 #ifdef XAPIAND_DATABASE_WAL
-		/* If reopen_revision is not available Wal work as a log for the operations */
-		if (local && ((flags & DB_NOWAL) == 0)) {
-			// WAL required on a local writable database, open it.
-			wal = std::make_unique<DatabaseWAL>(e.path, this);
-			try {
-				if (wal->open_current(true)) {
-					if (auto queue = weak_queue.lock()) {
-						queue->modified = true;
+		try {
+			/* If reopen_revision is not available Wal work as a log for the operations */
+			if (local && ((flags & DB_NOWAL) == 0)) {
+				// WAL required on a local writable database, open it.
+				wal = std::make_unique<DatabaseWAL>(e.path, this);
+				try {
+					if (wal->open_current(true)) {
+						if (auto queue = weak_queue.lock()) {
+							queue->modified = true;
+						}
 					}
-				}
-			} catch (const StorageCorruptVolume& exc) {
-				if (wal->create(reopen_revision)) {
-					L_WARNING("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
-					if (auto queue = weak_queue.lock()) {
-						queue->modified = true;
+				} catch (const StorageCorruptVolume& exc) {
+					if (wal->create(reopen_revision)) {
+						L_WARNING("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
+						if (auto queue = weak_queue.lock()) {
+							queue->modified = true;
+						}
+					} else {
+						L_ERR("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
 					}
-				} else {
-					L_ERR("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
 				}
 			}
+		} catch (const Exception& exc) {
+			L_EXC("WAL ERROR: %s", exc.get_message());
+			throw;
 		}
 #endif /* XAPIAND_DATABASE_WAL */
 	} else {
@@ -1061,9 +1069,12 @@ Database::reopen()
 #endif /* XAPIAND_CLUSTERING */
 			{
 #ifdef XAPIAND_DATABASE_WAL
-				{
+				try {
 					DatabaseWAL tmp_wal(e.path, this);
 					tmp_wal.init_database();
+				} catch (const Exception& exc) {
+					L_EXC("WAL ERROR: %s", exc.get_message());
+					throw;
 				}
 #endif
 				try {
@@ -2296,7 +2307,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 									checkout(d, Endpoints(endpoint), DB_WRITABLE);
 									reopen = true;
 									checkin(d);
-								} catch (const CheckoutError&) { }
+								} catch (const CheckoutError&) {
+								} catch (...) {
+									database.reset();
+									reopen = false;
+									break;
+								}
 							}
 						}
 						if (reopen) {
