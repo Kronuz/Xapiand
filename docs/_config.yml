@@ -22,7 +22,7 @@ email: german.mb@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Search and Storage Engine
 baseurl: /Xapiand # the subpath of your site, e.g. /blog
-url: http://kronuz.io/Xapiand
+url: https://kronuz.io/Xapiand
 repository: https://github.com/Kronuz/Xapiand
 twitter_username: germbravo
 github_username:  Kronuz
