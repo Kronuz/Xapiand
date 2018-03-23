@@ -23,10 +23,11 @@ set (__get_git_version INCLUDED)
 function (get_date_revision var)
 	set (ENV{TZ} "UTC")
 	execute_process(
-		COMMAND date "+%S"
+		COMMAND date "+%Y%m%d%H%M%S"
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
 		RESULT_VARIABLE status
 		OUTPUT_VARIABLE DATE_REVISION
+		OUTPUT_STRIP_TRAILING_WHITESPACE
 		ERROR_QUIET)
 	if (NOT ${status})
 		message(STATUS "Date Revision: ${DATE_REVISION}")

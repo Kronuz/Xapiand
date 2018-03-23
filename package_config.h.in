@@ -12,7 +12,7 @@
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "@PACKAGE_VERSION@"
 
-/* Define git revision if available */
+/* Define git revision if available (or build date) */
 #cmakedefine PACKAGE_REVISION "@PACKAGE_REVISION@"
 
 /* Define git hash if available */
