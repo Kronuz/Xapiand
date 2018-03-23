@@ -15,14 +15,14 @@ Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:
 
 ```sh
-brew install xapiand
+~ $ brew install xapiand
 ```
 
 
 ## Linux
 
 ```sh
-apt-get install xapiand
+~ $ apt-get install xapiand
 ```
 
 

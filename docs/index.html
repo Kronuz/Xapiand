@@ -62,51 +62,57 @@ layout: default
 		<div class="unit golden-small center-on-mobiles">
 			<h3>Get up and running <em>in&nbsp;seconds</em>.</h3>
 		</div>
-		<div class="unit golden-large code">
-			<p class="title">Quick-start Instructions</p>
-			<div class="shell">
-				<p class="command line">
-					<span class="path">~</span>
-					<span class="prompt">$</span>
-					<span class="osx">brew install xapiand</span>
-					<span class="linux">apt-get install xapiand</span>
-					<span class="windows">apt-get install xapiand</span>
-				</p>
-				<p class="command line">
-					<span class="path">~</span>
-					<span class="prompt">$</span>
-					mkdir my-database
-				</p>
-				<p class="command line">
-					<span class="path">~</span>
-					<span class="prompt">$</span>
-					cd my-database
-				</p>
-				<p class="command line">
-					<span class="path">~/my-database</span>
-					<span class="prompt">$</span>
-					xapiand
-				</p>
-				<hr>
-				<p class="line">
-					<span class="output"># => Ready to index at http://localhost:8880</span>
-				</p>
-				<p class="command line">
-					<span class="path">~</span>
-					<span class="prompt">$</span>
-					curl 'localhost:8880/msgs' -d '{<br/>
-    				&nbsp;&nbsp;"user": "Kronuz",<br />
-    				&nbsp;&nbsp;"message": "Trying out Xapiand..."<br />
-					}'
-				</p>
-				<p class="line">
-					<span class="output"># => Ready to search!</span>
-				</p>
-				<p class="command line">
-					<span class="path">~</span>
-					<span class="prompt">$</span>
-					curl 'localhost:8880/msgs/:search?q=user:Kronuz'
-				</p>
+		<div class="unit golden-large">
+			<div class="osx language-sh highlighter">
+{% highlight sh %}
+~ $ brew install xapiand
+~ $ mkdir my-database
+~ $ cd my-database
+~/my-database $ xapiand
+
+# => Ready to index at http://localhost:8880
+~ $ curl 'localhost:8880/msgs' -d '{
+    "user": "Kronuz",
+    "message": "Trying out Xapiand..."
+}'
+
+# => Ready to search!
+~ $ curl 'localhost:8880/msgs/:search?q=user:Kronuz'
+{% endhighlight %}
+			</div>
+			<div class="linux language-sh highlighter">
+{% highlight sh %}
+~ $ apt-get install xapiand
+~ $ mkdir my-database
+~ $ cd my-database
+~/my-database $ xapiand
+
+# => Ready to index at http://localhost:8880
+~ $ curl 'localhost:8880/msgs' -d '{
+    "user": "Kronuz",
+    "message": "Trying out Xapiand..."
+}'
+
+# => Ready to search!
+~ $ curl 'localhost:8880/msgs/:search?q=user:Kronuz'
+{% endhighlight %}
+			</div>
+			<div class="windows language-sh highlighter">
+{% highlight sh %}
+~ $ apt-get install xapiand
+~ $ mkdir my-database
+~ $ cd my-database
+~/my-database $ xapiand
+
+# => Ready to index at http://localhost:8880
+~ $ curl 'localhost:8880/msgs' -d '{
+    "user": "Kronuz",
+    "message": "Trying out Xapiand..."
+}'
+
+# => Ready to search!
+~ $ curl 'localhost:8880/msgs/:search?q=user:Kronuz'
+{% endhighlight %}
 			</div>
 		</div>
 		<div class="clear"></div>
