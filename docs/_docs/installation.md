@@ -29,4 +29,4 @@ brew install --HEAD https://github.com/Kronuz/Xapiand/raw/master/contrib/homebre
 ## Building
 
 You can also build and install from the sources if there's no other way. You can
-find information about how to build from the sources [here](/docs/building).
+find information about how to build from the sources [here]({{ '/docs/building' | relative_url }}).
