@@ -962,8 +962,8 @@ void banner() {
 			rgb(96, 96, 96) + "        /_/" + rgb(144, 238, 144) + "%s" + rgb(96, 96, 96) + "|/" + rgb(144, 238, 144) + "%s" + "\n" +
 			rgb(0, 128, 0) + "%s" + "\n" +
 			rgb(0, 96, 0) + "%s" + "\n\n",
-			string::center(Package::HASH, 8),
-			string::center(Package::FULLVERSION, 25),
+			string::center(Package::HASH, 8, true),
+			string::center(Package::FULLVERSION, 25, true),
 			string::center("[" + Package::BUGREPORT + "]", 54),
 			string::center("Using " + string::join(values, ", ", " and "), 54));
 	} else {

@@ -257,12 +257,32 @@ inline std::string indent(std::string_view str, char sep, int level, bool indent
 }
 
 
-inline std::string center(std::string_view str, int width) {
+inline std::string left(std::string_view str, int width, bool fill = false) {
 	std::string result;
-	for (auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2); idx > 0; --idx) {
+	result.append(str.data(), str.size());
+	if (fill) {
+		for (auto idx = int(width - str.size()); idx > 0; --idx) {
+			result += " ";
+		}
+	}
+	return result;
+}
+
+
+inline std::string center(std::string_view str, int width, bool fill = false) {
+	std::string result;
+	auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2);
+	width -= idx;
+	width -= str.size();
+	for (; idx > 0; --idx) {
 		result += " ";
 	}
 	result.append(str.data(), str.size());
+	if (fill) {
+		for (; width > 0; --width) {
+			result += " ";
+		}
+	}
 	return result;
 }
 
