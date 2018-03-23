@@ -1223,12 +1223,6 @@ Database::cancel(bool wal_)
 		THROW(Error, "database is read-only");
 	}
 
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_cancel(); }
-#else
-	ignore_unused(wal_);
-#endif
-
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1249,6 +1243,12 @@ Database::cancel(bool wal_)
 	}
 
 	L_DATABASE_WRAP("Cancel made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_cancel(); }
+#else
+	ignore_unused(wal_);
+#endif
 }
 
 
@@ -1260,12 +1260,6 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) {
-		wal->write_delete_document(did);
-	}
-#endif
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1290,6 +1284,12 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_delete_document(did); }
+#else
+	ignore_unused(wal_);
+#endif
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -1304,10 +1304,6 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_delete_document_term(term); }
-#endif
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1331,6 +1327,12 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	}
 
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_delete_document_term(term); }
+#else
+	ignore_unused(wal_);
+#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1466,10 +1468,6 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	Xapian::docid did = 0;
 
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_add_document(doc); }
-#endif /* XAPIAND_DATABASE_WAL */
-
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
 	storage_push_blob(doc_);
@@ -1498,6 +1496,12 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_add_document(doc); }
+#else
+	ignore_unused(wal_);
+#endif /* XAPIAND_DATABASE_WAL */
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -1510,10 +1514,6 @@ Xapian::docid
 Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::replace_document(%d, <doc>, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_replace_document(did, doc); }
-#endif /* XAPIAND_DATABASE_WAL */
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
@@ -1543,6 +1543,12 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_replace_document(did, doc); }
+#else
+	ignore_unused(wal_);
+#endif /* XAPIAND_DATABASE_WAL */
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -1557,10 +1563,6 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	L_CALL("Database::replace_document_term(%s, <doc>, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	Xapian::docid did = 0;
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_replace_document_term(term, doc); }
-#endif
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
@@ -1590,6 +1592,12 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_replace_document_term(term, doc); }
+#else
+	ignore_unused(wal_);
+#endif
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -1602,10 +1610,6 @@ void
 Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_, bool wal_)
 {
 	L_CALL("Database::add_spelling(<word, <freqinc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_add_spelling(word, freqinc); }
-#endif
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1629,6 +1633,12 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 
 	L_DATABASE_WRAP("Spelling added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_add_spelling(word, freqinc); }
+#else
+	ignore_unused(wal_);
+#endif
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -1639,10 +1649,6 @@ void
 Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_, bool wal_)
 {
 	L_CALL("Database::remove_spelling(<word>, <freqdec>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_remove_spelling(word, freqdec); }
-#endif
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1665,6 +1671,12 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	}
 
 	L_DATABASE_WRAP("Spelling removed (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_remove_spelling(word, freqdec); }
+#else
+	ignore_unused(wal_);
+#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1830,10 +1842,6 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 {
 	L_CALL("Database::set_metadata(%s, %s, %s, %s)", repr(key), repr(value), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_set_metadata(key, value); }
-#endif
-
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1855,6 +1863,12 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	}
 
 	L_DATABASE_WRAP("Set metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_set_metadata(key, value); }
+#else
+	ignore_unused(wal_);
+#endif
 
 	if (commit_) {
 		commit(wal_);
