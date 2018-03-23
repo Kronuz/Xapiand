@@ -89,7 +89,6 @@ nav, .meta {
 }
 
 .main-nav, .meta {
-
 	li {
 		a {
 			@include border-radius(5px);
@@ -97,7 +96,6 @@ nav, .meta {
 			font-size: 0.75em;
 			padding: 0.5em 1em;
 			text-shadow: none;
-			text-transform: uppercase;
 			@include transition(all .25s);
 
 			&:hover {
@@ -115,6 +113,11 @@ nav, .meta {
 				text-shadow: 0 1px 0 rgba(255,255,255,.3);
 			}
 		}
+	}
+}
+.main-nav {
+	a {
+		text-transform: uppercase;
 	}
 }
 .mobile-nav {
