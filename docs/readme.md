@@ -10,6 +10,9 @@ For information about contributing, see the [Contributing page](http://kronuz.io
 
 ## Running locally
 
+1. `gem install jekyll bundler`
+2. `bundle exec jekyll serve`
+
 You can preview your contributions before opening a pull request by running from within the directory:
 
 1. `bundle install --without test test_legacy benchmark`
