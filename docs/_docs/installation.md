@@ -15,7 +15,8 @@ Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:
 
 ```sh
-~ $ brew install https://github.com/Kronuz/Xapiand/raw/master/contrib/homebrew/xapiand.rb
+~ $ brew tap Kronuz/tap
+~ $ brew install xapiand
 ```
 
 
