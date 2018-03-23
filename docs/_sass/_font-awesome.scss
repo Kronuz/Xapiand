@@ -8,6 +8,7 @@
 	font-weight: normal;
 	font-style: normal;
 }
+
 .fa {
 	display: inline-block;
 	font: normal normal normal 14px/1 FontAwesome;
@@ -16,9 +17,16 @@
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
-.fa-link:before {
-	content: "\f0c1";
+
+.fa-github:before {
+	content: "\f09b";
 }
 .fa-pencil:before {
 	content: "\f040";
+}
+.fa-chain:before {
+	content: "\f0c1";
+}
+.fa-link:before {
+	content: "\f0c1";
 }
