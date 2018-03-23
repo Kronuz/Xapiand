@@ -335,11 +335,6 @@ footer {
 			display: block;
 			margin: 0;
 			padding: 0;
-
-			span {
-				display: inline-block;
-				vertical-align: top;
-			}
 		}
 
 		.path {
@@ -1103,4 +1098,11 @@ hr {
 
 p.first {
 	margin-top: 1em;
+}
+
+/* platform */
+html:not(.plat_osx) .osx,
+html:not(.plat_linux) .linux,
+html:not(.plat_windows) .windows {
+	display: none !important;
 }
