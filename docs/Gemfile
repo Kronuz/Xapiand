@@ -17,7 +17,7 @@ gem "jekyll", "~> 3.7.3"
 # If you have any plugins, put them here!
 group :jekyll_plugins do
   gem "jekyll-avatar"
-  gem "jekyll-feed", "~> 0.9"
+  gem "jekyll-feed"
   gem "jekyll-mentions"
   gem "jekyll-redirect-from"
   gem "jekyll-seo-tag"

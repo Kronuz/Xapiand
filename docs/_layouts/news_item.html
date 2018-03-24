@@ -30,16 +30,16 @@ layout: news
 	</div>
 </article>
 
-{% if site.disqus_username %}
+{% if site.disqus_shortname %}
 <article id="disqus_thread"></article>
 <script>
 var disqus_config = function () {
 	this.page.url = '{{ page.url | absolute_url }}';
-	this.page.identifier = '{{ page.url | absolute_url }}';
+	this.page.identifier = '{% if page.identifier %}{{ page.identifier }}{% else %}{{ page.id }}{% endif %}';
 };
 (function() {
 	var d = document, s = d.createElement('script');
-	s.src = 'https://{{ site.disqus_username }}.disqus.com/embed.js';
+	s.src = 'https://{{ site.disqus_shortname }}.disqus.com/embed.js';
 	s.setAttribute('data-timestamp', +new Date());
 	(d.head || d.body).appendChild(s);
 })();

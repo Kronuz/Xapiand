@@ -64,7 +64,10 @@ header {
 
 	.logo {
 		display: block;
-		img { margin-top: -7px }
+		img {
+			margin-top: -7px;
+			vertical-align: middle;
+		}
 	}
 
 	.search .svg-icons { display: none }

@@ -94,7 +94,7 @@ PLATFORMS
 DEPENDENCIES
   jekyll (~> 3.7.3)
   jekyll-avatar
-  jekyll-feed (~> 0.9)
+  jekyll-feed
   jekyll-mentions
   jekyll-redirect-from
   jekyll-seo-tag
