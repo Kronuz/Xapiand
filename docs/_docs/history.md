@@ -10,7 +10,7 @@ read_only: true
 - First release
 
 
-## 0.0.0 / 2016-10-19
+## 0.0.0 / 2015-02-20
 {: #v0-0-0}
 
 - Birthday!
