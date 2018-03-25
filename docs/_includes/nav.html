@@ -1,7 +1,4 @@
 <ul>
-	<li class="{% if page.overview %}current{% endif %}">
-		<a href="{{ '/' | relative_url }}">Home</a>
-	</li>
 	<li class="{% if page.url contains '/docs/' %}current{% endif %}">
 		<a href="{{ '/docs/home/' | relative_url }}">Docs</a>
 	</li>
@@ -11,7 +8,7 @@
 	<li class="{% if page.url contains '/help/' %}current{% endif %}">
 		<a href="{{ '/help/' | relative_url }}">Help</a>
 	</li>
-	<li>
-		<a href="{{ site.repository }}"><i class="fa fa-github"></i></a>
+	<li class="{% if page.url contains '/about/' %}current{% endif %}">
+		<a href="{{ '/about/' | relative_url }}">About</a>
 	</li>
 </ul>
