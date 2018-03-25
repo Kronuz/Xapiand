@@ -18,6 +18,15 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
+.fa-envelope:before {
+	content: "\e902";
+}
+.fa-stack-overflow:before {
+	content: "\e900";
+}
+.fa-linkedin:before {
+	content: "\e901";
+}
 .fa-github:before {
 	content: "\f09b";
 }
@@ -29,4 +38,13 @@
 }
 .fa-link:before {
 	content: "\f0c1";
+}
+.fa-twitter:before {
+	content: "\f099";
+}
+.fa-facebook:before {
+	content: "\f09a";
+}
+.fa-facebook-f:before {
+	content: "\f09a";
 }
