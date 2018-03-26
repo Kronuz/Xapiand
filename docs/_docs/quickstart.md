@@ -9,7 +9,7 @@ search indexes. **DON'T PANIC**, it will take just a few minutes.
 
 ---
 
-# Indexing
+## Indexing
 
 Let's try and index some twitter like information. First, let's create a
 twitter user, and add some tweets (the twitter index will be created
@@ -45,7 +45,7 @@ Now, let’s see if the information was added by GETting it:
 
 ---
 
-# Searching
+## Searching
 
 Let’s find all the tweets that Kronuz posted:
 
@@ -57,7 +57,7 @@ Let’s find all the tweets that Kronuz posted:
 
 ---
 
-# Where to go from here?
+## Where to go from here?
 
 *TODO: Work in progress...*
 
