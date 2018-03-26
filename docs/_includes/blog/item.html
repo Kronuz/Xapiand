@@ -1,0 +1,19 @@
+<article>
+	<h2>
+		<a href="{{ post.url | relative_url }}">
+			{{ post.title }}
+		</a>
+	</h2>
+	<div class="post-meta">
+		<span class="post-date">
+			{{ post.date | date_to_string }}
+		</span>
+		&nbsp;&nbsp;&bullet;&nbsp;&nbsp;
+		<span class="label">
+			{{ post.categories | array_to_sentence_string }}
+		</span>
+	</div>
+	<div class="post-content">
+		{{ post.excerpt }}
+	</div>
+</article>

@@ -1,0 +1,10 @@
+<div class="projects-nav-mobile unit whole show-on-mobiles">
+	<select onchange="if (this.value) window.location.href=this.value">
+		<option value="">Navigate the projects…</option>
+		{% for section in site.data.projects %}
+		<optgroup label="{{ section.title }}">
+			{% include projects/option.html items=section.projects %}
+		</optgroup>
+		{% endfor %}
+	</select>
+</div>

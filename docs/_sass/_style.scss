@@ -507,6 +507,7 @@ article h2:first-child { margin-top: 0; }
 .post-category {
 	display: inline-block;
 	margin-left: -30px;
+	margin-right: 10px;
 	padding: 6px 10px 8px;
 	padding-left: 50px;
 	@include border-radius(0 5px 5px 0);
@@ -532,16 +533,17 @@ article h2:first-child { margin-top: 0; }
 		width: 0;
 		height: 0;
 	}
+
+	.label {
+		float: left;
+		text-transform: uppercase;
+		font-weight: 700;
+		text-shadow: 0 -1px 0 rgba(0,0,0,.5);
+	}
 }
 
 .post-content img { max-width: 100% }
 
-.label {
-	float: left;
-	text-transform: uppercase;
-	font-weight: 700;
-	text-shadow: 0 -1px 0 rgba(0,0,0,.5);
-}
 
 @media (max-width: 568px) {
 	.post-category { padding-left: 30px; }
@@ -561,13 +563,13 @@ article h2:first-child { margin-top: 0; }
 
 .post-meta {
 	padding: 5px 0;
-	color: #c0c0c0;
-	font-weight: 600;
+	color: #a0a0a0;
 	text-shadow: 0 -1px 0 #000;
 }
 
-.post-date,
-.post-author { margin-left: 10px; }
+.news .post-meta {
+	font-weight: 600;
+}
 
 .blog article + article,
 .news article + article {
@@ -576,6 +578,8 @@ article h2:first-child { margin-top: 0; }
 	border-top: 1px solid #555;
 	@include box-shadow(0 -1px 0 #2f2f2f);
 }
+
+.blog article h2:first-child { margin-bottom: 0; }
 
 /* Code Highlighting */
 

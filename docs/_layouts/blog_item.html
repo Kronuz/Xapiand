@@ -1,0 +1,27 @@
+---
+layout: blog
+---
+
+<article>
+	<h2>
+		{{ page.title }}
+		<a href="{{ page.url }}" class="header-link" title="Permalink">
+			<span class="sr-only">Permalink</span>
+			<i class="fa fa-link"></i>
+		</a>
+	</h2>
+	<div class="post-meta">
+		<span class="post-date">
+			{{ page.date | date_to_string }}
+		</span>
+		&nbsp;&nbsp;&bullet;&nbsp;&nbsp;
+		<span class="label">
+			{{ page.categories | array_to_sentence_string }}
+		</span>
+	</div>
+	<div class="post-content">
+		{{ content }}
+	</div>
+</article>
+
+{% include disqus.html %}
