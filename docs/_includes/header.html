@@ -3,7 +3,7 @@
 		<div class="center-on-mobiles">
 			<h1>
 				<a href="{{ '/' | relative_url }}" class="logo">
-					<img src="{{ site.logo | relative_url }}" width="65" height="65" alt="{{ site.name }} Logo">
+					<img src="{{ site.logo | relative_url }}" width="{{ site.logo_width | times:65  | divided_by:site.logo_height }}" height="65" alt="{{ site.name }} Logo">
 					<span>{{ site.name }}</span>
 				</a>
 			</h1>

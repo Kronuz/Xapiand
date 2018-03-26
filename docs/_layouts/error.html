@@ -6,7 +6,7 @@
 			<div class="unit whole align-center">
 				<h1>
 					<a href="{{ '/' | relative_url }}" class="logo" style="font-size: 1.8em">
-						<img src="{{ site.logo | relative_url }}" width="115" height="115" alt="{{ site.name }} Logo">
+						<img src="{{ site.logo | relative_url }}" width="{{ site.logo_width | times:115  | divided_by:site.logo_height }}" height="115" alt="{{ site.name }} Logo">
 						<span>{{ site.name }}</span>
 					</a>
 				</h1>
