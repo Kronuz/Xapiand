@@ -83,4 +83,4 @@ information about how to build from the sources [here]({{ '/docs/building' | rel
 
 ---
 
-<sup><a id="footnote-1">1</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf)
+<sup><a id="footnote-1">1</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf){:target="_blank"}

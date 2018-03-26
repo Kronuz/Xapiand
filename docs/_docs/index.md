@@ -26,7 +26,7 @@ documents and indexes them efficiently for later retrieval.
   * No need for upfront schema definition.
 
 * Search Engine:
-  * Built on top of [Xapian](http://xapian.org/) indexes.
+  * Built on top of [Xapian](http://xapian.org/){:target="_blank"} indexes.
 
 * Support for query Aggregations.
 
@@ -41,7 +41,7 @@ documents and indexes them efficiently for later retrieval.
 
 * Efficient and Scalable architecture:
   * (Near) Real Time Search.
-  * Event driven asynchronous architecture using [libev](http://software.schmorp.de/pkg/libev.html).
+  * Event driven asynchronous architecture using [libev](http://software.schmorp.de/pkg/libev.html){:target="_blank"}.
   * Written in modern C++.
 
 * Geo-spatial support:
@@ -72,6 +72,6 @@ including it in this guide.
 
 ---
 
-<sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf)
+<sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
 
-<sup><a id="footnote-2">2</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf)
+<sup><a id="footnote-2">2</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf){:target="_blank"}

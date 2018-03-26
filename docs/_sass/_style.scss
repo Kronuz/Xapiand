@@ -565,6 +565,7 @@ article h2:first-child { margin-top: 0; }
 .post-date,
 .post-author { margin-left: 10px; }
 
+.blog article + article,
 .news article + article {
 	margin-top: -10px;
 	@include border-radius(0 0 10px 10px);

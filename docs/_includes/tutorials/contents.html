@@ -3,7 +3,7 @@
 		{% for section in site.data.tutorials %}
 			<h4>{{ section.title }}</h4>
 
-			{% include tutorials_ul.html items=section.tutorials %}
+			{% include tutorials/ul.html items=section.tutorials %}
 
 		{% endfor %}
 	</aside>
