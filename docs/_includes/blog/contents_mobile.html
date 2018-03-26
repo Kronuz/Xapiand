@@ -2,7 +2,7 @@
   <select onchange="if (this.value) window.location.href=this.value">
 	<option value="">Navigate the blog…</option>
 	<option value="/blog/">Home</option>
-	<optgroup label="Posts">
+	<optgroup label="Articles">
 	{% for post in site.posts %}
 		<option value="{{ post.url | relative_url }}">{{ post.title }}</option>
 	{% endfor %}
