@@ -395,7 +395,9 @@ aside {
 
 /* Documentation */
 
-.docs {
+.docs,
+.tutorials,
+.projects {
 	.content { padding: 0; }
 }
 
@@ -470,7 +472,9 @@ aside {
 	}
 }
 
-.docs-nav-mobile select {
+.docs-nav-mobile select,
+.tutorials-nav-mobile select,
+.projects-nav-mobile select {
 	padding: 5px;
 	width: 100%;
 	font-size: 0.85em;
