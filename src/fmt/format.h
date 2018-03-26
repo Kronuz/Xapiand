@@ -1399,8 +1399,9 @@ class arg_formatter_base {
   }
 
   void write(const char_type *value) {
-    auto length = value != FMT_NULL ?
-      std::char_traits<char_type>::length(value) : 0;
+    if (!value)
+      FMT_THROW(format_error("string pointer is null"));
+    auto length = std::char_traits<char_type>::length(value);
     writer_.write_str(basic_string_view<char_type>(value, length), specs_);
   }
 
@@ -2275,7 +2276,7 @@ class basic_writer {
   template <typename F>
   struct padded_int_writer {
     string_view prefix;
-    wchar_t fill;
+    char_type fill;
     std::size_t padding;
     F f;
 
@@ -2295,7 +2296,7 @@ class basic_writer {
   void write_int(unsigned num_digits, string_view prefix,
                  const Spec &spec, F f) {
     std::size_t size = prefix.size() + num_digits;
-    auto fill = spec.fill();
+    char_type fill = static_cast<char_type>(spec.fill());
     std::size_t padding = 0;
     if (spec.align() == ALIGN_NUMERIC) {
       if (spec.width() > size) {
@@ -2647,8 +2648,6 @@ void basic_writer<Range>::write_str(
   internal::char_traits<char_type>::convert(Char());
   const Char *data = s.data();
   std::size_t size = s.size();
-  if (size == 0 && !data)
-    FMT_THROW(format_error("string pointer is null"));
   std::size_t precision = static_cast<std::size_t>(spec.precision_);
   if (spec.precision_ >= 0 && precision < size)
     size = precision;
@@ -3546,7 +3545,7 @@ operator"" _a(const wchar_t *s, std::size_t) { return {s}; }
 
 #ifdef FMT_HEADER_ONLY
 # define FMT_FUNC inline
-# include "format.cc"
+# include "format-inl.h"
 #else
 # define FMT_FUNC
 #endif

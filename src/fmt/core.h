@@ -13,7 +13,6 @@
 #include <cstring>
 #include <iterator>
 #include <string>
-#include <string_view>
 #include <type_traits>
 
 // The fmt library version in the form major * 10000 + minor * 100 + patch.
@@ -156,6 +155,21 @@
     Type(const Type &) FMT_DELETED; \
     void operator=(const Type &) FMT_DELETED
 
+// libc++ supports string_view in pre-c++17.
+#if (FMT_HAS_INCLUDE(<string_view>) && \
+      (__cplusplus > 201402L || _LIBCPP_VERSION)) || \
+    (defined(_MSVC_LANG) && _MSVC_LANG > 201402L && _MSC_VER >= 1910) 
+# include <string_view>
+# define FMT_USE_STD_STRING_VIEW
+// std::experimental::basic_string_view::remove_prefix isn't constexpr until
+// gcc 7.3.
+#elif (FMT_HAS_INCLUDE(<experimental/string_view>) && \
+       (FMT_GCC_VERSION == 0 || FMT_GCC_VERSION >= 730) && \
+       __cplusplus >= 201402L)
+# include <experimental/string_view>
+# define FMT_USE_EXPERIMENTAL_STRING_VIEW
+#endif
+
 // std::result_of is defined in <functional> in gcc 4.4.
 #if FMT_GCC_VERSION && FMT_GCC_VERSION <= 404
 # include <functional>
@@ -163,16 +177,116 @@
 
 namespace fmt {
 
-using std::basic_string_view;
-using std::string_view;
-using std::wstring_view;
-
-
 // An implementation of declval for pre-C++11 compilers such as gcc 4.
 namespace internal {
 template <typename T>
 typename std::add_rvalue_reference<T>::type declval() FMT_NOEXCEPT;
 }
+
+/**
+  \rst
+  An implementation of ``std::basic_string_view`` for pre-C++17. It provides a
+  subset of the API. ``fmt::basic_string_view`` is used for format strings even
+  if ``std::string_view`` is available to prevent issues when a library is
+  compiled with a different ``-std`` option than the client code (which is not
+  recommended).
+  \endrst
+ */
+template <typename Char>
+class basic_string_view {
+ private:
+  const Char *data_;
+  size_t size_;
+
+ public:
+  typedef Char char_type;
+  typedef const Char *iterator;
+
+  // Standard basic_string_view type.
+#if defined(FMT_USE_STD_STRING_VIEW)
+  typedef std::basic_string_view<Char> type;
+#elif defined(FMT_USE_EXPERIMENTAL_STRING_VIEW)
+  typedef std::experimental::basic_string_view<Char> type;
+#else
+  struct type {
+    const char *data() const { return FMT_NULL; }
+    size_t size() const { return 0; };
+  };
+#endif
+
+  FMT_CONSTEXPR basic_string_view() FMT_NOEXCEPT : data_(FMT_NULL), size_(0) {}
+
+  /** Constructs a string reference object from a C string and a size. */
+  FMT_CONSTEXPR basic_string_view(const Char *s, size_t size) FMT_NOEXCEPT
+    : data_(s), size_(size) {}
+
+  /**
+    \rst
+    Constructs a string reference object from a C string computing
+    the size with ``std::char_traits<Char>::length``.
+    \endrst
+   */
+  basic_string_view(const Char *s)
+    : data_(s), size_(std::char_traits<Char>::length(s)) {}
+
+  /**
+    \rst
+    Constructs a string reference from a ``std::basic_string`` object.
+    \endrst
+   */
+  template <typename Alloc>
+  FMT_CONSTEXPR basic_string_view(
+      const std::basic_string<Char, Alloc> &s) FMT_NOEXCEPT
+  : data_(s.c_str()), size_(s.size()) {}
+
+  FMT_CONSTEXPR basic_string_view(type s) FMT_NOEXCEPT
+  : data_(s.data()), size_(s.size()) {}
+
+  /** Returns a pointer to the string data. */
+  const Char *data() const { return data_; }
+
+  /** Returns the string size. */
+  FMT_CONSTEXPR size_t size() const { return size_; }
+
+  FMT_CONSTEXPR iterator begin() const { return data_; }
+  FMT_CONSTEXPR iterator end() const { return data_ + size_; }
+
+  FMT_CONSTEXPR void remove_prefix(size_t n) {
+    data_ += n;
+    size_ -= n;
+  }
+
+  // Lexicographically compare this string reference to other.
+  int compare(basic_string_view other) const {
+    size_t size = size_ < other.size_ ? size_ : other.size_;
+    int result = std::char_traits<Char>::compare(data_, other.data_, size);
+    if (result == 0)
+      result = size_ == other.size_ ? 0 : (size_ < other.size_ ? -1 : 1);
+    return result;
+  }
+
+  friend bool operator==(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) == 0;
+  }
+  friend bool operator!=(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) != 0;
+  }
+  friend bool operator<(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) < 0;
+  }
+  friend bool operator<=(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) <= 0;
+  }
+  friend bool operator>(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) > 0;
+  }
+  friend bool operator>=(basic_string_view lhs, basic_string_view rhs) {
+    return lhs.compare(rhs) >= 0;
+  }
+};
+
+typedef basic_string_view<char> string_view;
+typedef basic_string_view<wchar_t> wstring_view;
 
 template <typename Context>
 class basic_arg;
