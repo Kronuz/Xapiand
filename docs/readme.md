@@ -11,7 +11,7 @@ For information about contributing, see the [Contributing page](https://kronuz.i
 ## Running locally
 
 1. `gem install jekyll bundler`
-2. `bundle exec jekyll serve`
+2. `bundle exec jekyll serve --livereload`
 
 
 
