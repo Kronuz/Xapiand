@@ -6,6 +6,5 @@ version: 1.0.0
 categories: [release]
 ---
 
-After many months of hard work by Xapiand's contributors, we're excited
-to announce the first major release of the project, v1.0.0, is
-*finally here!*
+After many months of hard work by {{ site.name }}'s contributors, we're excited
+to announce the first major release of the project is *finally here!*

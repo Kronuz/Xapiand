@@ -16,9 +16,11 @@
 		</div>
 		<div class="meta hide-on-mobiles">
 			<ul>
+				{% if site.version %}
 				<li>
 					<a href="{{ site.repository }}/releases/tag/v{{ site.version }}">v{{ site.version }}</a>
 				</li>
+				{% endif %}
 				<li>
 					<a href="{{ site.repository }}"><i class="fa fa-github"></i> GitHub</a>
 				</li>

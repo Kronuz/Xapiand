@@ -3,11 +3,12 @@ layout: page
 title: Getting Help
 ---
 
-Need help with Xapiand? Try these resources.
+Need help with {{ site.name }}? Try these resources.
 
 ### [Documentation]({{ '/docs/home/' | relative_url }})
 
-Start with our official guide to Xapiand covering installation, searching, deployment, and more.
+Start with our official guide to {{ site.name }} covering installation, usage,
+deployment, and more.
 
 
 ### [Xapiand IRC Channel](irc:irc.freenode.net/Xapiand){:target="_blank"}
@@ -16,20 +17,20 @@ Get live support at **#Xapiand** on **irc.freenode.net**, the official
 Xapiand IRC channel.
 
 
-### [GitHub Issues](https://github.com/Kronuz/Xapiand/issues){:target="_blank"}
+### [GitHub Issues]({{ site.repository }}/issues){:target="_blank"}
 
-Search through the issues on the main Xapiand development. Think you've
+Search through the issues on the main {{ site.name }} development. Think you've
 found a bug? File a new issue.
 
 
-### [Xapiand Source Code](https://github.com/Kronuz/Xapiand/tree/master/src){:target="_blank"}
+### [{{ site.name }} Source Code]({{ site.repository }}/tree/master/src){:target="_blank"}
 
-Try reading the source code of Xapiand to see how things work internally.
+Try reading the source code of {{ site.name }} to see how things work internally.
 
 
-### [Google](https://www.google.com/?q=Xapian){:target="_blank"}
+### [Google](https://www.google.com/?q={{ site.name }}){:target="_blank"}
 
-Add **Xapian** or **Xapiand** to almost any query, and you'll find just what you need.
+Add **{{ site.name }}** to almost any query, and you'll find just what you need.
 
 
 ### [@germbravo on Twitter](https://twitter.com/germbravo){:target="_blank"}

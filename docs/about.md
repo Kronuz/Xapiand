@@ -16,17 +16,17 @@ You can find the source code for Xapiand at GitHub:
 
 ## Core Team
 
-*The Xapiand Core Team's responsibility is to ensure the development and
-community around the Xapiand ecosystem thrive.*
+*The {{ site.name }} Core Team's responsibility is to ensure the development and
+community around the {{ site.name }} ecosystem thrive.*
 
 * [Germán Méndez Bravo (Kronuz)](https://kronuz.io)
 * [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
 * [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}
 
 
-## Xapiand License
+## {{ site.name }} License
 
-Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+Copyright &copy; 2015-2018 Dubalu LLC. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
