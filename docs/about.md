@@ -19,9 +19,9 @@ You can find the source code for Xapiand at GitHub:
 *The Xapiand Core Team's responsibility is to ensure the development and
 community around the Xapiand ecosystem thrive.*
 
-* <a href="https://twitter.com/germbravo">Germán Méndez Bravo (Kronuz)</a>
-* <a href="#">José Madrigal Cárdenas (YosefMac)</a>
-* <a href="#">José María Valencia Ramírez (JoseMariaVR)</a>
+* [Germán Méndez Bravo (Kronuz)](https://kronuz.io)
+* [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
+* [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}
 
 
 ## Xapiand License
