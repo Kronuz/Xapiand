@@ -18,6 +18,12 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
+.fa-file-text:before {
+	content: "\e904";
+}
+.fa-globe:before {
+	content: "\e903";
+}
 .fa-envelope:before {
 	content: "\e902";
 }
