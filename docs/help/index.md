@@ -5,7 +5,7 @@ title: Getting Help
 
 Need help with Xapiand? Try these resources.
 
-### [Documentation]({{ '/docs/' | relative_url }})
+### [Documentation]({{ '/docs/home/' | relative_url }})
 
 Start with our official guide to Xapiand covering installation, searching, deployment, and more.
 
