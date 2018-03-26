@@ -1,6 +1,6 @@
 ---
 title: Quick-start
-permalink: "/docs/quickstart/"
+permalink: /docs/quickstart/
 ---
 
 This guide will take you through the process of installing Xapiand and

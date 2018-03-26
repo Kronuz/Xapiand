@@ -1,6 +1,6 @@
 ---
 title: History
-permalink: "/docs/history/"
+permalink: /docs/history/
 read_only: true
 ---
 

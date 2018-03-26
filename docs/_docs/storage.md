@@ -1,6 +1,6 @@
 ---
 title: Storage
-permalink: "/docs/user-manual/storage/"
+permalink: /docs/user-manual/storage/
 ---
 
 The storage is designed to put files in volumes much in the way Facebook's
