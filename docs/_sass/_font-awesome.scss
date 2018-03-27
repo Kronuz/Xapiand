@@ -18,20 +18,26 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
+.fa-clipboard:before {
+	content: "\f0ea";
+}
+.fa-paste:before {
+	content: "\f0ea";
+}
 .fa-file-text:before {
-	content: "\e904";
+	content: "\f15c";
 }
 .fa-globe:before {
-	content: "\e903";
+	content: "\f0ac";
 }
 .fa-envelope:before {
-	content: "\e902";
+	content: "\f0e0";
 }
 .fa-stack-overflow:before {
-	content: "\e900";
+	content: "\f16c";
 }
 .fa-linkedin:before {
-	content: "\e901";
+	content: "\f0e1";
 }
 .fa-github:before {
 	content: "\f09b";
