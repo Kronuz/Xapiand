@@ -1,0 +1,5 @@
+<script>
+document.querySelectorAll('.language-sh code').forEach(function(tag) {
+	tag.innerHTML = tag.innerHTML.replace(/([^\n][^<\n]+)<span class=\"nv\">\$ <\/span>/g, '<span class="gp">$1</span><span class="sb">$ </span>')
+});
+</script>

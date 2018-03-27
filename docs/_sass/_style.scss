@@ -273,8 +273,10 @@ footer {
 	margin: 60px 0;
 	@include box-shadow(inset 0 3px 10px rgba(0,0,0,.4));
 
-	.highlighter {
+	.language-sh {
 		font-size: 12px;
+	}
+	.highlighter {
 		margin: 0 0 -30px;
 	}
 
@@ -288,8 +290,10 @@ footer {
 
 @media (min-width: 768px) {
 	.quickstart {
+		.language-sh {
+			font-size: 18px;
+		}
 		.highlighter {
-			font-size: 16px;
 			margin: -30px 0;
 		}
 
@@ -626,8 +630,9 @@ h5 > code,
 }
 
 .language-sh code {
-	.nv {
-		color: #cd5c5c;
+	color: #f0e68c;
+	.sb {
+		color: #cd5c5c
 	}
 }
 

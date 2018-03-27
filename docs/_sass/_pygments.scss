@@ -1,13 +1,14 @@
 .highlight {
+	color: #cccccc;
 	.hll { background-color: #ffffcc }
-	.c { color: #555; font-style: italic } /* Comment */
-	.err { color: #cccccc} /* Error */
-	.g { color: #cccccc} /* Generic */
+	.c { color: #777; font-style: italic } /* Comment */
+	// .err { color: #cccccc} /* Error */
+	// .g { color: #cccccc} /* Generic */
 	.k { color: #f0e68c} /* Keyword */
-	.l { color: #cccccc} /* Literal */
-	.n { color: #cccccc} /* Name */
-	.o { color: #cccccc} /* Operator */
-	.x { color: #cccccc} /* Other */
+	// .l { color: #cccccc} /* Literal */
+	// .n { color: #cccccc} /* Name */
+	// .o { color: #cccccc} /* Operator */
+	// .x { color: #cccccc} /* Other */
 	.p { color: #98b9ef} /* Punctuation */
 	.cm { color: #87ceeb} /* Comment.Multiline */
 	.cp { color: #cd5c5c} /* Comment.Preproc */
@@ -19,8 +20,8 @@
 	.gh { color: #cd5c5c} /* Generic.Heading */
 	.gi { color: #27b42c} /* Generic.Inserted */
 	span.go { color: #add8e6; font-weight: bold; background-color: #4d4d4d } /* Generic.Output, qualified with span to prevent applying this style to the Go language, see #1153. */
-	.gp { color: #cccccc} /* Generic.Prompt */
-	.gs { color: #cccccc} /* Generic.Strong */
+	.gp { color: #87ceeb} /* Generic.Prompt */
+	// .gs { color: #cccccc} /* Generic.Strong */
 	.gu { color: #cd5c5c} /* Generic.Subheading */
 	.gt { color: #c0c0c0; font-weight: bold; background-color: #c00000 } /* Generic.Traceback */
 	.kc { color: #f0e68c} /* Keyword.Constant */
@@ -29,29 +30,29 @@
 	.kp { color: #f0e68c} /* Keyword.Pseudo */
 	.kr { color: #f0e68c} /* Keyword.Reserved */
 	.kt { color: #bdb76b} /* Keyword.Type */
-	.ld { color: #cccccc} /* Literal.Date */
-	.m { color: #cccccc} /* Literal.Number */
+	// .ld { color: #cccccc} /* Literal.Date */
+	// .m { color: #cccccc} /* Literal.Number */
 	.s { color: #a5c261} /* Literal.String */
-	.na { color: #cccccc} /* Name.Attribute */
-	.nb { color: #cccccc} /* Name.Builtin */
-	.nc { color: #cccccc} /* Name.Class */
+	// .na { color: #cccccc} /* Name.Attribute */
+	// .nb { color: #cccccc} /* Name.Builtin */
+	// .nc { color: #cccccc} /* Name.Class */
 	.no { color: #ffa0a0} /* Name.Constant */
-	.nd { color: #cccccc} /* Name.Decorator */
+	// .nd { color: #cccccc} /* Name.Decorator */
 	.ni { color: #ffdead} /* Name.Entity */
-	.ne { color: #cccccc} /* Name.Exception */
-	.nf { color: #cccccc} /* Name.Function */
-	.nl { color: #cccccc} /* Name.Label */
-	.nn { color: #cccccc} /* Name.Namespace */
-	.nx { color: #cccccc} /* Name.Other */
-	.py { color: #cccccc} /* Name.Property */
+	// .ne { color: #cccccc} /* Name.Exception */
+	// .nf { color: #cccccc} /* Name.Function */
+	// .nl { color: #cccccc} /* Name.Label */
+	// .nn { color: #cccccc} /* Name.Namespace */
+	// .nx { color: #cccccc} /* Name.Other */
+	// .py { color: #cccccc} /* Name.Property */
 	.nt { color: #f0e68c} /* Name.Tag */
 	.nv { color: #88d472} /* Name.Variable */
-	.ow { color: #cccccc} /* Operator.Word */
-	.w { color: #cccccc} /* Text.Whitespace */
-	.mf { color: #cccccc} /* Literal.Number.Float */
-	.mh { color: #cccccc} /* Literal.Number.Hex */
-	.mi { color: #cccccc} /* Literal.Number.Integer */
-	.mo { color: #cccccc} /* Literal.Number.Oct */
+	// .ow { color: #cccccc} /* Operator.Word */
+	// .w { color: #cccccc} /* Text.Whitespace */
+	// .mf { color: #cccccc} /* Literal.Number.Float */
+	// .mh { color: #cccccc} /* Literal.Number.Hex */
+	// .mi { color: #cccccc} /* Literal.Number.Integer */
+	// .mo { color: #cccccc} /* Literal.Number.Oct */
 	.sb { color: #a5c261} /* Literal.String.Backtick */
 	.sc { color: #a5c261} /* Literal.String.Char */
 	.sd { color: #a5c261} /* Literal.String.Doc */
@@ -63,11 +64,11 @@
 	.sr { color: #a5c261} /* Literal.String.Regex */
 	.s1 { color: #a5c261} /* Literal.String.Single */
 	.ss { color: #a5c261} /* Literal.String.Symbol */
-	.bp { color: #cccccc} /* Name.Builtin.Pseudo */
+	// .bp { color: #cccccc} /* Name.Builtin.Pseudo */
 	.vc { color: #98fb98} /* Name.Variable.Class */
 	.vg { color: #98fb98} /* Name.Variable.Global */
 	.vi { color: #98fb98} /* Name.Variable.Instance */
-	.il { color: #cccccc} /* Literal.Number.Integer.Long */
+	// .il { color: #cccccc} /* Literal.Number.Integer.Long */
 	.bash .nv {
 		user-select: none;
 	}
