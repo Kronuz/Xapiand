@@ -1,7 +1,7 @@
 ---
 ---
-$theme_color: {{ site.theme_color }};
-$theme_color_hover: {{ site.theme_color_hover }};
+$theme_color_light: {{ site.theme_color_light }};
+$theme_color_dark: {{ site.theme_color_dark }};
 
 @import "mixins";
 @import "normalize";

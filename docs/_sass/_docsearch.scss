@@ -26,7 +26,7 @@
 	}
 }
 
-.searchbox__submit svg { fill: $theme_color }
+.searchbox__submit svg { fill: $theme_color_dark }
 .searchbox__reset svg { fill: #999 }
 
 .algolia-autocomplete {
@@ -50,11 +50,11 @@
 	}
 
 	.algolia-docsearch-suggestion--highlight {
-		background-color: $theme_color;
+		background-color: $theme_color_dark;
 		color: #222;
 	}
 
 	.algolia-docsearch-suggestion--text .algolia-docsearch-suggestion--highlight {
-		box-shadow: inset 0 -2px 0 0 $theme_color;
+		box-shadow: inset 0 -2px 0 0 $theme_color_dark;
 	}
 }
