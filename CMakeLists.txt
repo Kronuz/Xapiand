@@ -758,13 +758,12 @@ if (BUILD_TESTS)
 	if (NOT GTEST_FOUND)
 		message(FATAL_ERROR "GTest not found!")
 	else ()
-		target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
-
 		foreach (VAR_TEST string)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 			)
+			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE ${GTEST_BOTH_LIBRARIES})
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
@@ -789,6 +788,7 @@ if (BUILD_TESTS)
 				"$<TARGET_OBJECTS:LZ4_OBJ>"
 				"$<TARGET_OBJECTS:UUID_OBJ>"
 			)
+			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				${GTEST_BOTH_LIBRARIES}
 				${XAPIAN_LIBRARIES}
