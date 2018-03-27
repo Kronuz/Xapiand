@@ -101,6 +101,8 @@ Going back to our last example, we executed a query to retrieve all documents
 using `q=*`. Here is the same exact search using the alternative request body
 method:
 
+{% capture json %}
+
 ```json
 GET /bank/:search
 {
@@ -110,6 +112,8 @@ GET /bank/:search
   ]
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 The difference here is that instead of passing `q=*` in the URI, we POST a
 JSON-style query request body to the `:search` API.
@@ -122,6 +126,8 @@ In addition to the query parameter, we also can pass other parameters to
 influence the search results. In the example in the section above we passed in
 sort, here we pass in `limit`:
 
+{% capture json %}
+
 ```json
 GET /bank/:search
 {
@@ -129,10 +135,14 @@ GET /bank/:search
   "limit": 1
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 Note that if `limit` is not specified, it defaults to 10.
 
 This example does a `match_all` and returns documents 10 through 19:
+
+{% capture json %}
 
 ```json
 GET /bank/:search
@@ -142,6 +152,8 @@ GET /bank/:search
   "limit": 10
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 The `offset` parameter (0-based) specifies which document index to start from
 and the `limit` parameter specifies how many documents to return starting at the
@@ -151,6 +163,8 @@ results. Note that if `offset` is not specified, it defaults to 0.
 This example does a `match_all` and sorts the results by account balance in
 descending order and returns the top 10 (default `limit`) documents.
 
+{% capture json %}
+
 ```json
 GET /bank/:search
 {
@@ -158,6 +172,8 @@ GET /bank/:search
   "sort": { "balance": { "order": "desc" } }
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 
 ## Executing Searches
@@ -172,6 +188,8 @@ only a few fields from within source to be returned.
 This example shows how to return two fields, `account_number` and `balance`
 (inside of _source), from the search:
 
+{% capture json %}
+
 ```json
 GET /bank/:search
 {
@@ -179,11 +197,15 @@ GET /bank/:search
   "_source": ["account_number", "balance"]
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 {: .note .unreleased}
 **_TODO:_** Work in progress...
 
 ## Executing Filters
+
+{% capture json %}
 
 ```json
 GET /bank/:search
@@ -203,6 +225,8 @@ GET /bank/:search
   }
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 {: .note .unreleased}
 **_TODO:_** Work in progress...
@@ -221,6 +245,8 @@ roundtrips using a concise and simplified API.
 To start with, this example groups all the accounts by state, and then returns
 the top 10 (default) states sorted by count descending (also default):
 
+{% capture json %}
+
 ```json
 GET /bank/:search
 {
@@ -234,6 +260,8 @@ GET /bank/:search
   }
 }
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 In SQL, the above aggregation is similar in concept to:
 

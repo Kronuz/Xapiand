@@ -1077,3 +1077,92 @@ html:not(.plat_linux) .linux,
 html:not(.plat_windows) .windows {
 	display: none !important;
 }
+
+
+.curl {
+	position: relative;
+	.btn {
+		position: absolute;
+		bottom: 0;
+		right: 0;
+		margin: 0;
+		border: 0;
+		background: none;
+		padding: 0 8px 4px 0;
+		color: $theme_color_dark;
+		user-select: none;
+		outline: 0;
+
+		opacity: 0;
+		font-size: 1.2rem;
+		-webkit-transition: opacity 0.2s ease-in-out 0.1s;
+		-moz-transition: opacity 0.2s ease-in-out 0.1s;
+		-o-transition: opacity 0.2s ease-in-out 0.1s;
+		transition: opacity 0.2s ease-in-out 0.1s;
+
+		:hover, :active {
+			color: $theme_color_light;
+			cursor: pointer;
+		}
+	}
+	&:hover .btn {
+		opacity: 1;
+	}
+}
+
+.tooltipped {
+	position: relative;
+
+	&:before {
+		position: absolute;
+		z-index: 1000001;
+		display: none;
+		width: 0;
+		height: 0;
+		color: rgba(0, 0, 0, .8);
+		pointer-events: none;
+		content: "";
+		border: 5px solid transparent;
+
+		top: auto;
+		right: 50%;
+		bottom: -5px;
+		margin-right: -5px;
+		border-bottom-color: rgba(0, 0, 0, .8)
+	}
+
+	&:after {
+		position: absolute;
+		z-index: 1000000;
+		display: none;
+		padding: 5px 8px;
+		font: normal normal 11px / 1.5 Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+		color: #fff;
+		text-align: center;
+		text-decoration: none;
+		text-shadow: none;
+		text-transform: none;
+		letter-spacing: normal;
+		word-wrap: break-word;
+		white-space: pre;
+		pointer-events: none;
+		content: attr(aria-label);
+		background: rgba(0, 0, 0, .8);
+		border-radius: 3px;
+		-webkit-font-smoothing: subpixel-antialiased;
+
+		top: 100%;
+		right: 50%;
+		margin-top: 5px;
+
+		-webkit-transform: translateX(50%);
+		-ms-transform: translateX(50%);
+		transform: translateX(50%)
+	}
+
+	&:hover:before, &:hover:after, &:active:before,
+	&:active:after, &:focus:before, &:focus:after {
+		display: inline-block;
+		text-decoration: none;
+	}
+}
