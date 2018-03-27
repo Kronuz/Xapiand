@@ -821,12 +821,12 @@ if (BUILD_BENCHMARKS)
 	if (NOT GBENCHMARK_FOUND)
 		message(WARNING "GBenchmark not found!")
 	else ()
-		target_include_directories(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_INCLUDE_DIRS})
 		foreach (VAR_BENCHMARK string)
 			set (PROJECT_BENCHMARK "${PROJECT_NAME}_benchmark_${VAR_BENCHMARK}")
 			add_executable(${PROJECT_BENCHMARK}
 				"${PROJECT_SOURCE_DIR}/benchmarks/benchmark_${VAR_BENCHMARK}.cc"
 			)
+			target_include_directories(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_BENCHMARK} PRIVATE ${GBENCHMARK_LIBRARIES})
 			add_test(NAME "benchmark_${VAR_BENCHMARK}" COMMAND ${PROJECT_BENCHMARK})
 			add_dependencies(check "${PROJECT_BENCHMARK}")
