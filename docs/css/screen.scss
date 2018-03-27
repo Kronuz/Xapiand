@@ -1,5 +1,7 @@
 ---
 ---
+$theme_color: {{ site.theme_color }};
+$theme_color_hover: {{ site.theme_color_hover }};
 
 @import "mixins";
 @import "normalize";
