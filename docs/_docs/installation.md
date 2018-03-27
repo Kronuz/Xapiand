@@ -1,6 +1,5 @@
 ---
 title: Installation
-permalink: /docs/installation/
 ---
 
 Getting {{ site.name }} installed and ready-to-go should only take a few minutes.
@@ -9,7 +8,7 @@ If it ever becomes a pain, please [file an issue]({{ site.repository }}/issues/n
 we might make the process easier.
 
 
-## Homebrew
+## Installation with Homebrew
 
 Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:

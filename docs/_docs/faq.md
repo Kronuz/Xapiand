@@ -1,6 +1,5 @@
 ---
 title: Frequently Asked Questions
-permalink: /docs/faq/
 ---
 
 

@@ -1,6 +1,5 @@
 ---
 title: Quick-start
-permalink: /docs/quickstart/
 ---
 
 This guide will take you through the process of installing Xapiand and
@@ -16,24 +15,30 @@ twitter user, and add some tweets (the twitter index will be created
 automatically):
 
 ```sh
-~ $ curl -XPUT 'localhost:8880/twitter/user/Kronuz?commit' -d '{
+~ $ curl -XPUT 'localhost:8880/twitter/user/Kronuz' -d '{
 	"name" : "German M. Bravo"
 }'
 
-~ $ curl -XPUT 'localhost:8880/twitter/tweet/1?commit' -d '{
+~ $ curl -XPUT 'localhost:8880/twitter/tweet/1' -d '{
     "user": "Kronuz",
     "postDate": "2016-11-15T13:12:00",
     "message": "Trying out Xapiand, so far, so good... so what!"
 }'
 
-~ $ curl -XPUT 'localhost:8880/twitter/tweet/2?commit' -d '{
+~ $ curl -XPUT 'localhost:8880/twitter/tweet/2' -d '{
     "user": "Kronuz",
     "postDate": "2016-10-15T10:31:18",
     "message": "Another tweet, will it be indexed?"
 }'
 ```
 
-Now, let’s see if the information was added by GETting it:
+You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying/' | relative_url }}) section.
+
+---
+
+## Searching
+
+Now, let's see if the information that was added by GETting it:
 
 ```sh
 ~ $ curl 'localhost:8880/twitter/user/Kronuz?pretty'
@@ -41,26 +46,23 @@ Now, let’s see if the information was added by GETting it:
 ~ $ curl 'localhost:8880/twitter/tweet/2?pretty'
 ```
 
-*TODO: Work in progress...*
-
----
-
-## Searching
-
-Let’s find all the tweets that Kronuz posted:
+Let's find all the tweets that Kronuz posted:
 
 ```sh
-~ $ curl 'localhost:8880/twitter/tweet/.search?q=user:Kronuz&pretty'
+~ $ curl 'localhost:8880/twitter/tweet/:search?q=user:Kronuz&pretty'
 ```
 
-*TODO: Work in progress...*
+You can find out more in the [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}) section.
 
 ---
 
 ## Where to go from here?
 
-*TODO: Work in progress...*
+Xapiand is both a simple and complex product. We've so far learned the basics
+of what it is, how to look inside of it, and how to work with it using some of
+the REST APIs. Hopefully this guide has given you a better understanding of
+what Xapiand is and more importantly, inspired you to further experiment with
+the rest of its great features!
 
----
-
-<sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
+Tutorials can be found in the [Tutorials]({{ '/tutorials/' | relative_url }})
+section.

@@ -818,8 +818,7 @@ code.output {
 .note {
 	margin: 30px 0;
 	margin-left: -30px;
-	padding: 20px 20px 24px;
-	padding-left: 50px;
+	padding: 20px 20px 24px 50px;
 	@include border-radius(0 5px 5px 0);
 	position: relative;
 	@include box-shadow(0 1px 5px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255,255,255,.2), inset 0 -1px 0 rgba(0,0,0,.3));
@@ -854,29 +853,12 @@ code.output {
 		height: 0;
 	}
 
-	h5,
-	p {
-		margin: 0;
-		color: #fff;
-	}
-
-	h5 {
-		line-height: 1.5em;
-		font-weight: 900;
-		font-style: normal;
-	}
-
-	p {
-		font-weight: 400;
-		font-size: .75em;
-	}
-
 	&:after {
 		content: '\2605';
-		color: $theme_color_light;
+		color: #fff;
 		position: absolute;
-		top: 14px;
-		left: 14px;
+		top: 20px;
+		left: 15px;
 		font-size: 28px;
 		font-weight: 700;
 		text-shadow: 0 -1px 0 rgba(0,0,0,.5);
@@ -924,9 +906,8 @@ code.output {
 
 .info:after {
 	content: '\24D8';
-	color: #fff;
 	position: absolute;
-	top: 15px;
+	top: 20px;
 	left: 15px;
 	font-size: 28px;
 	font-weight: 700;
@@ -935,9 +916,8 @@ code.output {
 
 .warning:after {
 	content: '\203C';
-	color: $theme_color_light;
 	position: absolute;
-	top: 15px;
+	top: 20px;
 	left: 15px;
 	font-size: 32px;
 	font-weight: 700;
@@ -946,12 +926,12 @@ code.output {
 
 .unreleased:after {
 	content: '\2692';
-	color: #2b2a12;
 	position: absolute;
-	top: 8px;
-	left: 15px;
-	font-size: 38px;
+	top: 22px;
+	left: 10px;
+	font-size: 32px;
 	font-weight: 700;
+	// color: #2b2a12;
 	text-shadow: 0 1px 0 rgba(255,255,255,.25);
 }
 

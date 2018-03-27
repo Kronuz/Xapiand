@@ -2,12 +2,29 @@
   docs:
     - welcome
     - quickstart
+    - modifying
+    - exploring
+
+- title: Set up
+  docs:
     - installation
     - building
 
-- title: User Manual
+- title: Reference Guide
   docs:
-    - user-manual/storage
+    - reference-guide/api
+    - reference-guide/indices
+    - reference-guide/documents
+    - reference-guide/info
+    - reference-guide/schema
+    - reference-guide/search
+    - reference-guide/query-dsl
+    - reference-guide/aggregations
+    - reference-guide/scripting
+    - reference-guide/storage
+    - reference-guide/stats
+    - reference-guide/monitoring
+    - reference-guide/wal
 
 - title: Miscellaneous
   docs:

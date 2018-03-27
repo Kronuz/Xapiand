@@ -1,6 +1,5 @@
 ---
 title: Code of Conduct
-permalink: /docs/conduct/
 redirect_from: /conduct/
 read_only: true
 ---

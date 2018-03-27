@@ -1,6 +1,5 @@
 ---
 title: Building
-permalink: /docs/building/
 ---
 
 [GitHub]: https://github.com/Kronuz/Xapiand

@@ -1,6 +1,5 @@
 ---
-title: Storage
-permalink: /docs/user-manual/storage/
+title: Storage API
 ---
 
 The storage is designed to put files in volumes much in the way Facebook's
@@ -25,7 +24,8 @@ And getting it is just a matter of retreiving it using GET:
 	'localhost:8880/twitter/images/Kronuz.png'
 ```
 
-*TODO: Work in progress...*
+{: .note .unreleased}
+**_TODO:_** Work in progress...
 
 
 ---

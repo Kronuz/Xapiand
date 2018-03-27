@@ -4,15 +4,59 @@ title: About
 permalink: /about/
 ---
 
-Xapiand is a Highly Available Distributed RESTful Search and Storage Engine
-built for the cloud and with Data Locality. Built on top of [Xapian].
-
-You can find the source code for Xapiand at GitHub:
-[Xapiand][xapiand-organization]
-
 [Xapian]: https://xapian.org
-[Xapiand-organization]: https://github.com/Kronuz/Xapiand
+[GitHub]: https://github.com/Kronuz/Xapiand
 
+Xapiand is a Modern Highly Available Distributed RESTful Search and Storage Engine
+built for the cloud and with Data Locality. It features:
+
+##### Liberal Open Source license:
+  * MIT license *(Note Xapian engine itself is GNU GPL)*.
+  * You can find the source code for Xapiand at [GitHub]:
+
+##### HTTP RESTful API:
+  * Document oriented.
+  * No need for upfront schema definition.
+
+##### Search Engine:
+  * Built on top of [Xapian]{:target="_blank"} indexes.
+
+##### Storage Engine:
+  * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
+
+##### Support for query Aggregations.
+
+##### Multi Tenant with Multi Types:
+  * Support for more than one index.
+  * Support for different types, one per index.
+  * Index level configuration:
+    * Schema.
+
+##### Efficient and Scalable architecture:
+  * (Near) Real Time Search.
+  * Event driven asynchronous architecture using [libev](http://software.schmorp.de/pkg/libev.html){:target="_blank"}.
+  * Written in modern C++.
+
+##### Geo-spatial support:
+  * Uses The Hierarchical Triangular Mesh for indexing.
+  * Accepts multiple Coordinate Reference Systems, including WGS84.
+  * Implements EWKT.
+
+##### High Availability:
+  * Automatic node operation rerouting.
+  * Replicas exists to maximize high availability *and* data locality.
+  * Read and Search operations performed on any of the replicas.
+  * Reliable, asynchronous replication for long term persistence.
+
+##### Multi-Partitioning and Distribution Strategies:
+  * Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
+  * Random Consistent Partitioning and Replication.
+
+<sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
+
+<sup><a id="footnote-2">2</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf){:target="_blank"}
+
+---
 
 ## Core Team
 
@@ -23,6 +67,7 @@ community around the {{ site.name }} ecosystem thrive.*
 * [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
 * [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}
 
+---
 
 ## {{ site.name }} License
 

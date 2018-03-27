@@ -11,6 +11,12 @@ Start with our official guide to {{ site.name }} covering installation, usage,
 deployment, and more.
 
 
+### [Tutorials]({{ '/tutorials/' | relative_url }})
+
+Similar to documentation, but more detailed scenario-based walk-throughs
+covering a variety of topics.
+
+
 ### [Xapiand IRC Channel](irc:irc.freenode.net/Xapiand){:target="_blank"}
 
 Get live support at **#Xapiand** on **irc.freenode.net**, the official

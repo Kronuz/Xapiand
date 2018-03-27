@@ -1,6 +1,5 @@
 ---
 title: Contributing
-permalink: /docs/contributing/
 ---
 
 [Code of Conduct]: {{ '/docs/conduct' | relative_url }}

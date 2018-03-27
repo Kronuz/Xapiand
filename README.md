@@ -3,7 +3,7 @@
 
 ## A RESTful Search Engine
 
-Xapiand aims to be: A Highly Available Distributed RESTful Search and Storage Engine built for the Cloud and with Data Locality in mind.
+Xapiand aims to be: A Modern Highly Available Distributed RESTful Search and Storage Engine built for the Cloud and with Data Locality in mind.
 
 * HTTP RESTful API:
 	* Document oriented.

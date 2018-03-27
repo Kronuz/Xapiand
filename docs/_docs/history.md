@@ -1,8 +1,8 @@
 ---
 title: History
-permalink: /docs/history/
 read_only: true
 ---
+
 
 ## 1.0.0 / 2018-03-22
 {: #v1-0-0}

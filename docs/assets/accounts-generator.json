@@ -1,0 +1,25 @@
+[
+  {
+    'repeat(100, 100)': {
+      balance: '{{floating(1000, 4000, 2)}}',
+      account_number: '{{integer(100000, 999999)}}',
+      age: '{{integer(20, 40)}}',
+      eyeColor: '{{random("blue", "brown", "green")}}',
+      gender: '{{random("male", "female")}}',
+      firstname: '{{firstName(this.gender)}}',
+      lastname: '{{surname()}}',
+      company: '{{company()}}',
+      city: '{{city()}}',
+      state: '{{state()}}',
+      address: function (tags) {
+        return tags.integer(100, 999) + ' ' + tags.street();
+      },
+      email: function (tags) {
+        // Email tag is deprecated, because now you can produce an email as simple as this:
+        return (this.firstname + '.' + this.lastname + '@' + this.company + tags.domainZone()).toLowerCase();
+      },
+      phone: '+1 {{phone()}}',
+      favoriteFruit: '{{random("apple", "banana", "strawberry")}}'
+    }
+  }
+]

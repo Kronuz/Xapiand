@@ -62,6 +62,11 @@ defaults:
     values:
       layout: docs
   - scope:
+      path: _tutorials
+      type: tutorials
+    values:
+      layout: tutorials
+  - scope:
       path: _posts
       type: posts
     values:
