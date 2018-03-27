@@ -1,6 +1,6 @@
 # Xapiand docs site
 
-This directory contains the code for the Xapiand docs site, [kronuz.io/Xapiand](https://kronuz.io/Xapiand).
+This directory contains the code for the [Xapiand docs site](https://kronuz.io/Xapiand).
 
 
 ## Contributing

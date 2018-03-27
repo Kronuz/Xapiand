@@ -5,7 +5,7 @@ title: Getting Help
 
 Need help with {{ site.name }}? Try these resources.
 
-### [Documentation]({{ '/docs/home/' | relative_url }})
+### [Documentation]({{ '/docs/' | relative_url }})
 
 Start with our official guide to {{ site.name }} covering installation, usage,
 deployment, and more.

@@ -1,7 +1,7 @@
 ---
 title: Welcome
-permalink: /docs/home/
-redirect_from: /docs/index.html
+permalink: /docs/welcome/
+redirect_from: /docs/
 ---
 
 This documentation aims to be a comprehensive guide to Xapiand. We'll cover

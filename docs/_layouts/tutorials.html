@@ -11,7 +11,7 @@ layout: default
 				<article>
 					{% unless page.read_only %}
 						<div class="improve right hide-on-mobiles">
-							<a href="{{ site.repository }}/edit/master/docs/{{ page.path }}">
+							<a href="{{ site.repository }}/edit/{{ site.docs_branch }}/{{ page.path }}">
 								<i class="fa fa-pencil"></i> &nbsp;Improve this page
 							</a>
 						</div>

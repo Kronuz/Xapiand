@@ -24,6 +24,7 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: /Xapiand # the subpath of your site, e.g. /blog
 url: https://kronuz.io/Xapiand
 repository: https://github.com/Kronuz/Xapiand
+docs_branch: master/docs
 twitter_username: germbravo
 github_username:  Kronuz
 disqus_shortname: xapiand
