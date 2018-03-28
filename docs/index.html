@@ -65,23 +65,14 @@ layout: default
 		<div class="unit golden-large">
 			<div class="language-sh highlighter">
 {% highlight sh %}
-# Install with Homebrew:
 ~ $ brew tap Kronuz/tap
 ~ $ brew install xapiand
 
-# Run in foreground with very verbose output:
 ~ $ mkdir my-database
 ~ $ cd my-database
 ~/my-database $ xapiand -vvvv
 
-# => Ready to index at http://localhost:8880
-~ $ curl 'localhost:8880/msgs' -d '{
-    "user": "Kronuz",
-    "message": "Trying out Xapiand..."
-}'
-
-# => Ready to search!
-~ $ curl 'localhost:8880/msgs/:search?q=user:Kronuz'
+# => Ready to Rock!
 {% endhighlight %}
 			</div>
 		</div>
