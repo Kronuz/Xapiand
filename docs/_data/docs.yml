@@ -5,11 +5,6 @@
     - modifying
     - exploring
 
-- title: Set up
-  docs:
-    - installation
-    - building
-
 - title: Reference Guide
   docs:
     - reference-guide/api
@@ -25,6 +20,11 @@
     - reference-guide/stats
     - reference-guide/monitoring
     - reference-guide/wal
+
+- title: Set up
+  docs:
+    - installation
+    - building
 
 - title: Miscellaneous
   docs:

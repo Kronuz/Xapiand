@@ -19,6 +19,15 @@ be installed by using the following command:
 ```
 
 
+## FreeBSD
+
+```sh
+pkg install xapiand
+```
+
+There is also a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/freebsd/xapiand.shar){:target="_blank"} available. The package is built from that one.
+
+
 ## Linux
 
 ```sh

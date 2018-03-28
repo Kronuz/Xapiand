@@ -1,5 +1,5 @@
 ---
-title: Building
+title: Using the Source
 ---
 
 [GitHub]: https://github.com/Kronuz/Xapiand

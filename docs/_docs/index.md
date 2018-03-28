@@ -17,6 +17,7 @@ Xapiand is *A Modern Highly Available Distributed RESTful Search and Storage
 Engine built for the Cloud and with Data Locality in mind*. It takes JSON
 (or MessagePack) documents and indexes them efficiently for later retrieval.
 
+---
 
 ## Helpful Hints
 
@@ -39,6 +40,29 @@ Be aware of these messages if you wish to avoid certain death.
 {: .note .unreleased}
 **_You'll see this by a feature that hasn't been released_**<br>
 Some pieces are for future versions of {{ site.name }} that are not yet released.
+
+---
+
+## API Snippets
+
+Throughout this guide there are many examples of API calls that look something
+like this:
+
+{% capture json %}
+
+```json
+PUT /twitter/user/Kronuz
+{
+  "name" : "German M. Bravo"
+}
+```
+{% endcapture %}
+{% include curl.html json=json %}
+
+For those, you can always copy the equivalent curl code for it by hovering the
+snippet and clicking on the copy to the clipboard button: &nbsp;&nbsp;<i class="fa fa-clipboard"></i>
+
+---
 
 If you come across anything along the way that we haven't covered, or if you
 know of a tip you think others would find handy, please [file an

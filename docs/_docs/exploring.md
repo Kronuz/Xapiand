@@ -57,9 +57,13 @@ method.
 The REST API for search is accessible from the `:search` endpoint. This example
 returns all documents in the bank index:
 
+{% capture json %}
+
 ```json
 GET /bank/:search?q=*&sort=account_number:asc&pretty
 ```
+{% endcapture %}
+{% include curl.html json=json %}
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
 the `bank` index, and the `q=*` parameter instructs Xapiand to match all
