@@ -117,6 +117,9 @@ MERGE /customer/1?pretty
 {% endcapture %}
 {% include curl.html json=json %}
 
+{% if site.serving %}
+
+<!-- TODO: Implement feature -->
 Updates can also be performed by using simple scripts. This example uses a
 script to increment the age by 5:
 
@@ -125,7 +128,7 @@ script to increment the age by 5:
 ```json
 MERGE /customer/1?pretty
 {
-  "script": "obj.age += 5"
+  "_script": "obj.age += 5"
 }
 ```
 {% endcapture %}
@@ -133,8 +136,6 @@ MERGE /customer/1?pretty
 
 In the above example, `obj` refers to the current source document that is about
 to be updated.
-
-{% if site.serving %}
 
 <!-- TODO: Implement feature -->
 Xapiand provides the ability to update multiple documents given a specific
@@ -145,7 +146,7 @@ query condition (like an SQL UPDATE-WHERE statement):
 ```json
 MERGE /customer/:search?q=*&pretty
 {
-  "script": "obj.age += 1"
+  "_script": "obj.age += 1"
 }
 ```
 {% endcapture %}
