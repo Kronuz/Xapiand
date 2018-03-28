@@ -14,14 +14,14 @@ Lets put something in the storage using PUT:
 ```sh
 ~ $ curl -H 'Content-Type: image/png' \
     --data-binary '@Kronuz.png' \
-	-X PUT 'localhost:8880/twitter/images/Kronuz.png'
+    -X PUT 'localhost:8880/twitter/images/Kronuz.png'
 ```
 
 And getting it is just a matter of retreiving it using GET:
 
 ```sh
 ~ $ curl -H 'Accept: image/png' \
-	'localhost:8880/twitter/images/Kronuz.png'
+    'localhost:8880/twitter/images/Kronuz.png'
 ```
 
 {: .note .unreleased}

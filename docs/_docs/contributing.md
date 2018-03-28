@@ -25,14 +25,14 @@ are planned to be supported by Xapiand some time soonish in order to get closer
 to the final product:
 
 * Multi-Partitioning and Distribution Strategies:
-	* Social-Based Partitioning and Replication (SPAR <sup>[1](#footnote-1)</sup>).
-	* Random Consistent Partitioning and Replication.
+  * Social-Based Partitioning and Replication (SPAR <sup>[1](#footnote-1)</sup>).
+  * Random Consistent Partitioning and Replication.
 
 * Highly Available:
-	* Automatic node operation rerouting.
-	* Replicas exists to maximize high availability *and* data locality.
-	* Read and Search operations performed on any of the replicas.
-	* Reliable, asynchronous replication for long term persistency.
+  * Automatic node operation rerouting.
+  * Replicas exists to maximize high availability *and* data locality.
+  * Read and Search operations performed on any of the replicas.
+  * Reliable, asynchronous replication for long term persistency.
 
 
 ### Multi-Partitioning and Distribution Strategies
