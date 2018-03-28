@@ -12,15 +12,15 @@ won't be changing often.
 Lets put something in the storage using PUT:
 
 ```sh
-~ $ curl -XPUT -H "Content-Type: image/png" \
-	'localhost:8880/twitter/images/Kronuz.png?commit' \
-	--data-binary @'Kronuz.png'
+~ $ curl -H 'Content-Type: image/png' \
+    --data-binary '@Kronuz.png' \
+	-X PUT 'localhost:8880/twitter/images/Kronuz.png'
 ```
 
 And getting it is just a matter of retreiving it using GET:
 
 ```sh
-~ $ curl -H "Accept: image/png" \
+~ $ curl -H 'Accept: image/png' \
 	'localhost:8880/twitter/images/Kronuz.png'
 ```
 

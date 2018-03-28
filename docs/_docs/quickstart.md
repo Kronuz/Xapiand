@@ -35,7 +35,7 @@ automatically):
 {% capture json %}
 
 ```json
-PUT /twitter/user/Kronuz
+PUT /twitter/user/Kronuz?pretty
 {
   "name" : "German M. Bravo"
 }
@@ -47,7 +47,7 @@ PUT /twitter/user/Kronuz
 {% capture json %}
 
 ```json
-PUT /twitter/tweet/1
+PUT /twitter/tweet/1?pretty
 {
   "user": "Kronuz",
   "postDate": "2016-11-15T13:12:00",
@@ -61,7 +61,7 @@ PUT /twitter/tweet/1
 {% capture json %}
 
 ```json
-PUT /twitter/tweet/2
+PUT /twitter/tweet/2?pretty
 {
   "user": "Kronuz",
   "postDate": "2016-10-15T10:31:18",

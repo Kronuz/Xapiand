@@ -38,9 +38,9 @@ You can download the [sample dataset]({{ '/assets/accounts.json' | absolute_url 
 our current directory and let's load it into our cluster as follows:
 
 ```sh
-~ $ curl -H "Content-Type: application/json" \
-    "localhost:8880/bank/:bulk?pretty" \
-    --data-binary "@accounts.json"
+~ $ curl -H 'Content-Type: application/json' \
+    --data-binary '@accounts.json' \
+    -X POST 'localhost:8880/bank/:bulk?pretty'
 ```
 
 
@@ -108,7 +108,7 @@ method:
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": { "match_all": {} },
   "sort": [
@@ -133,7 +133,7 @@ sort, here we pass in `limit`:
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": { "match_all": {} },
   "limit": 1
@@ -149,7 +149,7 @@ This example does a `match_all` and returns documents 10 through 19:
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": { "match_all": {} },
   "offset": 10,
@@ -170,7 +170,7 @@ descending order and returns the top 10 (default `limit`) documents.
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": { "match_all": {} },
   "sort": { "balance": { "order": "desc" } }
@@ -195,7 +195,7 @@ This example shows how to return two fields, `account_number` and `balance`
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": { "match_all": {} },
   "_source": ["account_number", "balance"]
@@ -212,7 +212,7 @@ GET /bank/:search
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "query": {
     "bool": {
@@ -252,7 +252,7 @@ the top 10 (default) states sorted by count descending (also default):
 {% capture json %}
 
 ```json
-GET /bank/:search
+GET /bank/:search?pretty
 {
   "size": 0,
   "aggs": {
