@@ -329,7 +329,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off)
 		buffer.append(buf, r);
 	}
 
-	auto start = buffer.data();
+	const char* start = buffer.data();
 	auto end = start + buffer.size();
 	start += off;
 	auto pos = start;
