@@ -251,7 +251,6 @@ inline std::string indent(std::string_view str, char sep, int level, bool indent
 	}
 	const auto& line = *it;
 	result.append(line);
-	result.push_back('\n');
 
 	return result;
 }
