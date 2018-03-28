@@ -50,15 +50,15 @@
 
 
 template<typename F, typename Tuple, std::size_t... I>
-static constexpr auto apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
+static constexpr auto apply_args_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
 	return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
 }
 
 
 template<typename F, typename Tuple>
-static constexpr auto apply(F&& f, Tuple&& t) {
+static constexpr auto apply_args(F&& f, Tuple&& t) {
 	using Indices = std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>;
-	return apply_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
+	return apply_args_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
 }
 
 
@@ -169,7 +169,7 @@ public:
 		auto packed_task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
 		(
 			[f = std::forward<F>(f), t = std::make_tuple(std::forward<Args>(args)...)] (Params... params) mutable {
-				return apply(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
+				return apply_args(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
 			}
 		);
 		auto res = packed_task.get_future().share();
