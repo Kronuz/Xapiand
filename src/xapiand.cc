@@ -951,21 +951,24 @@ void banner() {
 	});
 
 	if (Logging::log_level >= LOG_NOTICE) {
+		constexpr auto outer = rgb(0, 128, 0);
+		constexpr auto inner = rgb(144, 238, 144);
+		constexpr auto top = rgb(255, 255, 255);
 		L(-LOG_INFO, NO_COLOR,
 			"\n\n" +
-			rgb(255, 255, 255) + "              __\n" +
-			rgb(255, 255, 255) + "         __  / /          _                |\\\n" +
-			rgb(230, 0, 110) + "  o   O" + rgb(224, 224, 224) + "  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n" +
-			rgb(130, 0, 100) + "   \\" + rgb(230, 0, 110) + "o" + rgb(130, 0, 100) + "/." + rgb(230, 0, 110) + "o" + rgb(192, 192, 192) + "  \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
-			rgb(230, 0, 110) + "O" + rgb(130, 0, 100) + "-{" + rgb(10, 232, 103) + "(" + rgb(255, 255, 255) + "0" + rgb(10, 232, 103) + ")" + rgb(130, 0, 100) + "}-" + rgb(230, 0, 110) + "o" + rgb(160, 160, 160) + " /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
-			rgb(230, 0, 110) + "  O      " + rgb(128, 128, 128) + "/ /\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-			rgb(96, 96, 96) + "        /_/" + rgb(144, 238, 144) + "%s" + rgb(96, 96, 96) + "|/" + rgb(144, 238, 144) + "%s" + "\n" +
-			rgb(0, 128, 0) + "%s" + "\n" +
-			rgb(0, 96, 0) + "%s" + "\n\n",
+			outer + "      _       "                                                       + rgb(255, 255, 255) + "      __\n" +
+			outer + "  _-´´" +      top + "_" + outer  + "``-_   "                         + rgb(255, 255, 255) + " __  / /          _                 _\n" +
+			outer + ".´ " +       top + "_-´ `-_" + outer + " `. "                         + rgb(224, 224, 224) + " \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n" +
+			outer + "| " +       top + "`-_   _-´" + outer + " | "                         + rgb(192, 192, 192) + "  \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
+			outer + "| " +     inner + "`-_" + top + "`-´" + inner + "_-´" + outer + " | " + rgb(160, 160, 160) + "  /  \\ (_| | |_) | | (_| | | | | (_| |\n" +
+			outer + "| " +     inner + "`-_`-´_-´" + outer + " | "                         + rgb(128, 128, 128) + " / /\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
+			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + "%s" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "%s" + "\n" +
+			outer + "    ``-´´   " + rgb(0, 128, 0) + "%s" + "\n" +
+					"            " + rgb(0, 96, 0)  + "%s" + "\n\n",
 			string::center(Package::HASH, 8, true),
 			string::center(Package::FULLVERSION, 25, true),
-			string::center("[" + Package::BUGREPORT + "]", 54),
-			string::center("Using " + string::join(values, ", ", " and "), 54));
+			string::center("Using " + string::join(values, ", ", " and "), 42),
+			string::center("[" + Package::BUGREPORT + "]", 42));
 	} else {
 		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING);
 	}
