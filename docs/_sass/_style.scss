@@ -1078,6 +1078,21 @@ html:not(.plat_windows) .windows {
 	display: none !important;
 }
 
+.btn {
+	margin: 0;
+	border: 0;
+	outline: 0;
+	background: none;
+	color: $theme_color_dark;
+	user-select: none;
+	font-size: 1.2rem;
+
+	:hover,
+	:active {
+		color: $theme_color_light;
+		cursor: pointer;
+	}
+}
 
 .curl {
 	position: relative;
@@ -1085,25 +1100,13 @@ html:not(.plat_windows) .windows {
 		position: absolute;
 		bottom: 0;
 		right: 0;
-		margin: 0;
-		border: 0;
-		background: none;
-		padding: 0 8px 4px 0;
-		color: $theme_color_dark;
-		user-select: none;
-		outline: 0;
 
+		padding: 0 8px 4px 0;
 		opacity: 0;
-		font-size: 1.2rem;
 		-webkit-transition: opacity 0.2s ease-in-out 0.1s;
 		-moz-transition: opacity 0.2s ease-in-out 0.1s;
 		-o-transition: opacity 0.2s ease-in-out 0.1s;
 		transition: opacity 0.2s ease-in-out 0.1s;
-
-		:hover, :active {
-			color: $theme_color_light;
-			cursor: pointer;
-		}
 	}
 	&:hover .btn {
 		opacity: 1;
