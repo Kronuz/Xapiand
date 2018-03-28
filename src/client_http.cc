@@ -1744,7 +1744,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				}
 
 				if (!l_buffer.empty()) {
-					response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+					response.body += string::indent(l_buffer, ' ', 3 * 4) + l_eol_chunk;
 				}
 
 				response.body += l_last_chunk;
@@ -1768,7 +1768,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			}
 
 			if (!buffer.empty()) {
-				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + sep_chunk + eol_chunk;
+				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + eol_chunk;
 				if (type_encoding != Encoding::none) {
 					auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 					if (!encoded.empty()) {
