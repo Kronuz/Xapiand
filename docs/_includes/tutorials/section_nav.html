@@ -15,22 +15,24 @@ next, lets build a link to it.
 	{% if tutorial_url == page.url %}
 		<div class="section-nav">
 			<div class="left align-right">
-					{% if forloop.first %}
-						<span class="prev disabled">Back</span>
-					{% else %}
-						{% assign previous = forloop.index0 | minus: 1 %}
-						{% assign previous_page = tutorials[previous] | prepend:"/tutorials/" | append:"/" %}
-						<a href="{{ previous_page | relative_url }}" class="prev">Back</a>
-					{% endif %}
+				{% if forloop.first %}
+					<span class="prev disabled">Back</span>
+				{% else %}
+					{% assign prev = forloop.index0 | minus: 1 %}
+					{% assign prev_url = tutorials[prev] | prepend:"/tutorials/" | append:"/" %}
+					{% assign prev_doc = site.docs | where: "url", prev_url | first %}
+					<a href="{{ prev_url | relative_url }}" class="prev" title="{{ prev_doc.title }}">Back</a>
+				{% endif %}
 			</div>
 			<div class="right align-left">
-					{% if forloop.last %}
-						<span class="next disabled">Next</span>
-					{% else %}
-						{% assign next = forloop.index0 | plus: 1 %}
-						{% assign next_page = tutorials[next] | prepend:"/tutorials/" | append:"/" %}
-						<a href="{{ next_page | relative_url }}" class="next">Next</a>
-					{% endif %}
+				{% if forloop.last %}
+					<span class="next disabled">Next</span>
+				{% else %}
+					{% assign next = forloop.index0 | plus: 1 %}
+					{% assign next_url = tutorials[next] | prepend:"/tutorials/" | append:"/" %}
+					{% assign next_doc = site.docs | where: "url", next_url | first %}
+					<a href="{{ next_url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
+				{% endif %}
 			</div>
 		</div>
 		<div class="clear"></div>

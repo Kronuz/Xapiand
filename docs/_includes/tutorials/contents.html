@@ -2,9 +2,13 @@
 	<aside>
 		{% for section in site.data.tutorials %}
 			<h4>{{ section.title }}</h4>
-
-			{% include tutorials/ul.html items=section.tutorials %}
-
+			<ul>
+			{% for item in section.tutorials %}
+				{% assign item_url = item | prepend:"/tutorials/" | append:"/" %}
+				{% assign p = site.tutorials | where:"url", item_url | first %}
+				<li class="{% if item_url == page.url %}current{% endif %}"><a href="{{ p.url | relative_url }}">{{ p.title }}</a></li>
+			{% endfor %}
+			</ul>
 		{% endfor %}
 	</aside>
 </div>

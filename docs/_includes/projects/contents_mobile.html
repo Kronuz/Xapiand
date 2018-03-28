@@ -3,7 +3,11 @@
 		<option value="">Navigate the projects…</option>
 		{% for section in site.data.projects %}
 		<optgroup label="{{ section.title }}">
-			{% include projects/option.html items=section.projects %}
+		{% for item in section.projects %}
+			{% assign item_url = item | prepend:"/projects/" | append:"/" %}
+			{% assign project = site.projects | where: "url", item_url | first %}
+			<option value="{{ project.url | relative_url }}">{{ project.title }}</option>
+		{% endfor %}
 		</optgroup>
 		{% endfor %}
 	</select>
