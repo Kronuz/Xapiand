@@ -147,14 +147,14 @@ namespace ev {
 
   struct loop_ref
   {
-    loop_ref (EV_P) throw ()
+    loop_ref (EV_P)
 #if EV_MULTIPLICITY
     : EV_AX (EV_A)
 #endif
     {
     }
 
-    bool operator == (const loop_ref &other) const throw ()
+    bool operator == (const loop_ref &other) const
     {
 #if EV_MULTIPLICITY
       return EV_AX == other.EV_AX;
@@ -163,7 +163,7 @@ namespace ev {
 #endif
     }
 
-    bool operator != (const loop_ref &other) const throw ()
+    bool operator != (const loop_ref &other) const
     {
 #if EV_MULTIPLICITY
       return ! (*this == other);
@@ -173,27 +173,27 @@ namespace ev {
     }
 
 #if EV_MULTIPLICITY
-    bool operator == (const EV_P) const throw ()
+    bool operator == (const EV_P) const
     {
       return this->EV_AX == EV_A;
     }
 
-    bool operator != (const EV_P) const throw ()
+    bool operator != (const EV_P) const
     {
       return (*this == EV_A);
     }
 
-    operator struct ev_loop * () const throw ()
+    operator struct ev_loop * () const
     {
       return EV_AX;
     }
 
-    operator const struct ev_loop * () const throw ()
+    operator const struct ev_loop * () const
     {
       return EV_AX;
     }
 
-    bool is_default () const throw ()
+    bool is_default () const
     {
       return EV_AX == ev_default_loop (0);
     }
@@ -205,7 +205,7 @@ namespace ev {
       ev_run (EV_AX_ flags);
     }
 
-    void unloop (how_t how = ONE) throw ()
+    void unloop (how_t how = ONE)
     {
       ev_break (EV_AX_ how);
     }
@@ -216,80 +216,80 @@ namespace ev {
       ev_run (EV_AX_ flags);
     }
 
-    void break_loop (how_t how = ONE) throw ()
+    void break_loop (how_t how = ONE)
     {
       ev_break (EV_AX_ how);
     }
 
-    void post_fork () throw ()
+    void post_fork ()
     {
       ev_loop_fork (EV_AX);
     }
 
-    unsigned int backend () const throw ()
+    unsigned int backend () const
     {
       return ev_backend (EV_AX);
     }
 
-    tstamp now () const throw ()
+    tstamp now () const
     {
       return ev_now (EV_AX);
     }
 
-    void ref () throw ()
+    void ref ()
     {
       ev_ref (EV_AX);
     }
 
-    void unref () throw ()
+    void unref ()
     {
       ev_unref (EV_AX);
     }
 
 #if EV_FEATURE_API
-    unsigned int iteration () const throw ()
+    unsigned int iteration () const
     {
       return ev_iteration (EV_AX);
     }
 
-    unsigned int depth () const throw ()
+    unsigned int depth () const
     {
       return ev_depth (EV_AX);
     }
 
-    void set_io_collect_interval (tstamp interval) throw ()
+    void set_io_collect_interval (tstamp interval)
     {
       ev_set_io_collect_interval (EV_AX_ interval);
     }
 
-    void set_timeout_collect_interval (tstamp interval) throw ()
+    void set_timeout_collect_interval (tstamp interval)
     {
       ev_set_timeout_collect_interval (EV_AX_ interval);
     }
 #endif
 
     // function callback
-    void once (int fd, int events, tstamp timeout, void (*cb)(int, void *), void *arg = 0) throw ()
+    void once (int fd, int events, tstamp timeout, void (*cb)(int, void *) EV_THROW, void *arg = 0)
     {
       ev_once (EV_AX_ fd, events, timeout, cb, arg);
     }
 
     // method callback
     template<class K, void (K::*method)(int)>
-    void once (int fd, int events, tstamp timeout, K *object) throw ()
+    void once (int fd, int events, tstamp timeout, K *object)
     {
       once (fd, events, timeout, method_thunk<K, method>, object);
     }
 
     // default method == operator ()
     template<class K>
-    void once (int fd, int events, tstamp timeout, K *object) throw ()
+    void once (int fd, int events, tstamp timeout, K *object)
     {
       once (fd, events, timeout, method_thunk<K, &K::operator ()>, object);
     }
 
     template<class K, void (K::*method)(int)>
-    static void method_thunk (int revents, void *arg)
+    static void method_thunk (int revents, void *arg) EV_THROW
     {
       (static_cast<K *>(arg)->*method)
         (revents);
@@ -297,52 +297,52 @@ namespace ev {
 
     // no-argument method callback
     template<class K, void (K::*method)()>
-    void once (int fd, int events, tstamp timeout, K *object) throw ()
+    void once (int fd, int events, tstamp timeout, K *object)
     {
       once (fd, events, timeout, method_noargs_thunk<K, method>, object);
     }
 
     template<class K, void (K::*method)()>
-    static void method_noargs_thunk (int revents, void *arg)
+    static void method_noargs_thunk (int revents, void *arg) EV_THROW
     {
       (static_cast<K *>(arg)->*method)
         ();
     }
 
     // simpler function callback
-    template<void (*cb)(int)>
-    void once (int fd, int events, tstamp timeout) throw ()
+    template<void (*cb)(int) EV_THROW>
+    void once (int fd, int events, tstamp timeout)
     {
       once (fd, events, timeout, simpler_func_thunk<cb>);
     }
 
-    template<void (*cb)(int)>
-    static void simpler_func_thunk (int revents, void *arg)
+    template<void (*cb)(int) EV_THROW>
+    static void simpler_func_thunk (int revents, void *arg) EV_THROW
     {
       (*cb)
         (revents);
     }
 
     // simplest function callback
-    template<void (*cb)()>
-    void once (int fd, int events, tstamp timeout) throw ()
+    template<void (*cb)() EV_THROW>
+    void once (int fd, int events, tstamp timeout)
     {
       once (fd, events, timeout, simplest_func_thunk<cb>);
     }
 
-    template<void (*cb)()>
-    static void simplest_func_thunk (int revents, void *arg)
+    template<void (*cb)() EV_THROW>
+    static void simplest_func_thunk (int revents, void *arg) EV_THROW
     {
       (*cb)
         ();
     }
 
-    void feed_fd_event (int fd, int revents) throw ()
+    void feed_fd_event (int fd, int revents)
     {
       ev_feed_fd_event (EV_AX_ fd, revents);
     }
 
-    void feed_signal_event (int signum) throw ()
+    void feed_signal_event (int signum)
     {
       ev_feed_signal_event (EV_AX_ signum);
     }
@@ -357,14 +357,14 @@ namespace ev {
   struct dynamic_loop : loop_ref
   {
 
-    dynamic_loop (unsigned int flags = AUTO) throw (bad_loop)
+    dynamic_loop (unsigned int flags = AUTO)
     : loop_ref (ev_loop_new (flags))
     {
       if (!EV_AX)
         throw bad_loop ();
     }
 
-    ~dynamic_loop () throw ()
+    ~dynamic_loop ()
     {
       ev_loop_destroy (EV_AX);
       EV_AX = 0;
@@ -381,7 +381,7 @@ namespace ev {
 
   struct default_loop : loop_ref
   {
-    default_loop (unsigned int flags = AUTO) throw (bad_loop)
+    default_loop (unsigned int flags = AUTO)
 #if EV_MULTIPLICITY
     : loop_ref (ev_default_loop (flags))
 #endif
@@ -401,7 +401,7 @@ namespace ev {
     default_loop &operator = (const default_loop &);
   };
 
-  inline loop_ref get_default_loop () throw ()
+  inline loop_ref get_default_loop ()
   {
 #if EV_MULTIPLICITY
     return ev_default_loop (0);
@@ -430,13 +430,13 @@ namespace ev {
       EV_PX;
 
       // loop set
-      void set (EV_P) throw ()
+      void set (EV_P)
       {
         this->EV_A = EV_A;
       }
     #endif
 
-    base (EV_PX) throw ()
+    base (EV_PX)
     #if EV_MULTIPLICITY
       : EV_A (EV_A)
     #endif
@@ -444,7 +444,7 @@ namespace ev {
       ev_init (this, 0);
     }
 
-    void set_ (const void *data, void (*cb)(EV_P_ ev_watcher *w, int revents)) throw ()
+    void set_ (const void *data, void (*cb)(EV_P_ ev_watcher *w, int revents) EV_THROW)
     {
       this->data = (void *)data;
       ev_set_cb (static_cast<ev_watcher *>(this), cb);
@@ -452,13 +452,13 @@ namespace ev {
 
     // function callback
     template<void (*function)(watcher &w, int)>
-    void set (void *data = 0) throw ()
+    void set (void *data = 0)
     {
       set_ (data, function_thunk<function>);
     }
 
     template<void (*function)(watcher &w, int)>
-    static void function_thunk (EV_P_ ev_watcher *w, int revents)
+    static void function_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
       function
         (*static_cast<watcher *>(w), revents);
@@ -466,20 +466,20 @@ namespace ev {
 
     // method callback
     template<class K, void (K::*method)(watcher &w, int)>
-    void set (K *object) throw ()
+    void set (K *object)
     {
       set_ (object, method_thunk<K, method>);
     }
 
     // default method == operator ()
     template<class K>
-    void set (K *object) throw ()
+    void set (K *object)
     {
       set_ (object, method_thunk<K, &K::operator ()>);
     }
 
     template<class K, void (K::*method)(watcher &w, int)>
-    static void method_thunk (EV_P_ ev_watcher *w, int revents)
+    static void method_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
       (static_cast<K *>(w->data)->*method)
         (*static_cast<watcher *>(w), revents);
@@ -487,13 +487,13 @@ namespace ev {
 
     // no-argument callback
     template<class K, void (K::*method)()>
-    void set (K *object) throw ()
+    void set (K *object)
     {
       set_ (object, method_noargs_thunk<K, method>);
     }
 
     template<class K, void (K::*method)()>
-    static void method_noargs_thunk (EV_P_ ev_watcher *w, int revents)
+    static void method_noargs_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
       (static_cast<K *>(w->data)->*method)
         ();
@@ -506,99 +506,99 @@ namespace ev {
           (static_cast<ev_watcher *>(this), events);
     }
 
-    bool is_active () const throw ()
+    bool is_active () const
     {
       return ev_is_active (static_cast<const ev_watcher *>(this));
     }
 
-    bool is_pending () const throw ()
+    bool is_pending () const
     {
       return ev_is_pending (static_cast<const ev_watcher *>(this));
     }
 
-    void feed_event (int revents) throw ()
+    void feed_event (int revents)
     {
       ev_feed_event (EV_A_ static_cast<ev_watcher *>(this), revents);
     }
   };
 
-  inline tstamp now (EV_P) throw ()
+  inline tstamp now (EV_P)
   {
     return ev_now (EV_A);
   }
 
-  inline void delay (tstamp interval) throw ()
+  inline void delay (tstamp interval)
   {
     ev_sleep (interval);
   }
 
-  inline int version_major () throw ()
+  inline int version_major ()
   {
     return ev_version_major ();
   }
 
-  inline int version_minor () throw ()
+  inline int version_minor ()
   {
     return ev_version_minor ();
   }
 
-  inline unsigned int supported_backends () throw ()
+  inline unsigned int supported_backends ()
   {
     return ev_supported_backends ();
   }
 
-  inline unsigned int recommended_backends () throw ()
+  inline unsigned int recommended_backends ()
   {
     return ev_recommended_backends ();
   }
 
-  inline unsigned int embeddable_backends () throw ()
+  inline unsigned int embeddable_backends ()
   {
     return ev_embeddable_backends ();
   }
 
-  inline void set_allocator (void *(*cb)(void *ptr, long size) throw ()) throw ()
+  inline void set_allocator (void *(*cb)(void *ptr, long size) EV_THROW)
   {
     ev_set_allocator (cb);
   }
 
-  inline void set_syserr_cb (void (*cb)(const char *msg) throw ()) throw ()
+  inline void set_syserr_cb (void (*cb)(const char *msg) EV_THROW)
   {
     ev_set_syserr_cb (cb);
   }
 
   #if EV_MULTIPLICITY
     #define EV_CONSTRUCT(cppstem,cstem)	                                                \
-      (EV_PX = get_default_loop ()) throw ()                                            \
+      (EV_PX = get_default_loop ())                                                     \
         : base<ev_ ## cstem, cppstem> (EV_A)                                            \
       {                                                                                 \
       }
   #else
     #define EV_CONSTRUCT(cppstem,cstem)                                                 \
-      () throw ()                                                                       \
+      ()                                                                                \
       {                                                                                 \
       }
   #endif
 
   /* using a template here would require quite a few more lines,
    * so a macro solution was chosen */
-  #define EV_BEGIN_WATCHER(cppstem,cstem)	                                        \
+  #define EV_BEGIN_WATCHER(cppstem,cstem)	                                              \
                                                                                         \
   struct cppstem : base<ev_ ## cstem, cppstem>                                          \
   {                                                                                     \
-    void start () throw ()                                                              \
+    void start ()                                                                       \
     {                                                                                   \
       ev_ ## cstem ## _start (EV_A_ static_cast<ev_ ## cstem *>(this));                 \
     }                                                                                   \
                                                                                         \
-    void stop () throw ()                                                               \
+    void stop ()                                                                        \
     {                                                                                   \
       ev_ ## cstem ## _stop (EV_A_ static_cast<ev_ ## cstem *>(this));                  \
     }                                                                                   \
                                                                                         \
     cppstem EV_CONSTRUCT(cppstem,cstem)                                                 \
                                                                                         \
-    ~cppstem () throw ()                                                                \
+    ~cppstem ()                                                                         \
     {                                                                                   \
       stop ();                                                                          \
     }                                                                                   \
@@ -617,7 +617,7 @@ namespace ev {
   };
 
   EV_BEGIN_WATCHER (io, io)
-    void set (int fd, int events) throw ()
+    void set (int fd, int events)
     {
       int active = is_active ();
       if (active) stop ();
@@ -625,7 +625,7 @@ namespace ev {
       if (active) start ();
     }
 
-    void set (int events) throw ()
+    void set (int events)
     {
       int active = is_active ();
       if (active) stop ();
@@ -633,7 +633,7 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (int fd, int events) throw ()
+    void start (int fd, int events)
     {
       set (fd, events);
       start ();
@@ -641,7 +641,7 @@ namespace ev {
   EV_END_WATCHER (io, io)
 
   EV_BEGIN_WATCHER (timer, timer)
-    void set (ev_tstamp after, ev_tstamp repeat = 0.) throw ()
+    void set (ev_tstamp after, ev_tstamp repeat = 0.)
     {
       int active = is_active ();
       if (active) stop ();
@@ -649,13 +649,13 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (ev_tstamp after, ev_tstamp repeat = 0.) throw ()
+    void start (ev_tstamp after, ev_tstamp repeat = 0.)
     {
       set (after, repeat);
       start ();
     }
 
-    void again () throw ()
+    void again ()
     {
       ev_timer_again (EV_A_ static_cast<ev_timer *>(this));
     }
@@ -668,7 +668,7 @@ namespace ev {
 
   #if EV_PERIODIC_ENABLE
   EV_BEGIN_WATCHER (periodic, periodic)
-    void set (ev_tstamp at, ev_tstamp interval = 0.) throw ()
+    void set (ev_tstamp at, ev_tstamp interval = 0.)
     {
       int active = is_active ();
       if (active) stop ();
@@ -676,13 +676,13 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (ev_tstamp at, ev_tstamp interval = 0.) throw ()
+    void start (ev_tstamp at, ev_tstamp interval = 0.)
     {
       set (at, interval);
       start ();
     }
 
-    void again () throw ()
+    void again ()
     {
       ev_periodic_again (EV_A_ static_cast<ev_periodic *>(this));
     }
@@ -691,7 +691,7 @@ namespace ev {
 
   #if EV_SIGNAL_ENABLE
   EV_BEGIN_WATCHER (sig, signal)
-    void set (int signum) throw ()
+    void set (int signum)
     {
       int active = is_active ();
       if (active) stop ();
@@ -699,7 +699,7 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (int signum) throw ()
+    void start (int signum)
     {
       set (signum);
       start ();
@@ -709,7 +709,7 @@ namespace ev {
 
   #if EV_CHILD_ENABLE
   EV_BEGIN_WATCHER (child, child)
-    void set (int pid, int trace = 0) throw ()
+    void set (int pid, int trace = 0)
     {
       int active = is_active ();
       if (active) stop ();
@@ -717,7 +717,7 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (int pid, int trace = 0) throw ()
+    void start (int pid, int trace = 0)
     {
       set (pid, trace);
       start ();
@@ -727,7 +727,7 @@ namespace ev {
 
   #if EV_STAT_ENABLE
   EV_BEGIN_WATCHER (stat, stat)
-    void set (const char *path, ev_tstamp interval = 0.) throw ()
+    void set (const char *path, ev_tstamp interval = 0.)
     {
       int active = is_active ();
       if (active) stop ();
@@ -735,14 +735,14 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (const char *path, ev_tstamp interval = 0.) throw ()
+    void start (const char *path, ev_tstamp interval = 0.)
     {
       stop ();
       set (path, interval);
       start ();
     }
 
-    void update () throw ()
+    void update ()
     {
       ev_stat_stat (EV_A_ static_cast<ev_stat *>(this));
     }
@@ -751,25 +751,25 @@ namespace ev {
 
   #if EV_IDLE_ENABLE
   EV_BEGIN_WATCHER (idle, idle)
-    void set () throw () { }
+    void set () { }
   EV_END_WATCHER (idle, idle)
   #endif
 
   #if EV_PREPARE_ENABLE
   EV_BEGIN_WATCHER (prepare, prepare)
-    void set () throw () { }
+    void set () { }
   EV_END_WATCHER (prepare, prepare)
   #endif
 
   #if EV_CHECK_ENABLE
   EV_BEGIN_WATCHER (check, check)
-    void set () throw () { }
+    void set () { }
   EV_END_WATCHER (check, check)
   #endif
 
   #if EV_EMBED_ENABLE
   EV_BEGIN_WATCHER (embed, embed)
-    void set_embed (struct ev_loop *embedded_loop) throw ()
+    void set_embed (struct ev_loop *embedded_loop)
     {
       int active = is_active ();
       if (active) stop ();
@@ -777,7 +777,7 @@ namespace ev {
       if (active) start ();
     }
 
-    void start (struct ev_loop *embedded_loop) throw ()
+    void start (struct ev_loop *embedded_loop)
     {
       set (embedded_loop);
       start ();
@@ -792,18 +792,18 @@ namespace ev {
 
   #if EV_FORK_ENABLE
   EV_BEGIN_WATCHER (fork, fork)
-    void set () throw () { }
+    void set () { }
   EV_END_WATCHER (fork, fork)
   #endif
 
   #if EV_ASYNC_ENABLE
   EV_BEGIN_WATCHER (async, async)
-    void send () throw ()
+    void send ()
     {
       ev_async_send (EV_A_ static_cast<ev_async *>(this));
     }
 
-    bool async_pending () throw ()
+    bool async_pending ()
     {
       return ev_async_pending (static_cast<ev_async *>(this));
     }
