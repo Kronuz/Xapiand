@@ -180,11 +180,12 @@ public:
 	}
 
 	// Enqueues a Task object to be executed
-	auto enqueue(std::shared_ptr<Task<Params...>> nt) {
-		return enqueue([nt = std::move(nt)](Params... params) mutable {
-			nt->run(std::move(params)...);
+	template<typename... Args>
+	auto enqueue(std::shared_ptr<Task<Params...>> nt, Args&&... args) {
+		return enqueue([nt = std::move(nt)](Params... params, Args... args) mutable {
+			nt->run(std::move(params)..., std::move(args)...);
 			nt.reset();
-		});
+		}, std::forward<Args>(args)...);
 	}
 
 	void clear() {
