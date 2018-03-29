@@ -30,6 +30,7 @@
 #include <xapian.h>
 
 #include "client_base.h"
+#include "threadpool.h"         // for Task
 
 class BinaryServer;
 class Database;
@@ -46,7 +47,7 @@ enum class State {
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class BinaryClient : public BaseClient {
+class BinaryClient : public Task<>, public BaseClient {
 	std::atomic_int running;
 
 	State state;

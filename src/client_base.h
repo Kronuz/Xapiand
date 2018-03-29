@@ -34,7 +34,6 @@
 #include "endpoint.h"    // for Endpoints
 #include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
 #include "queue.h"       // for Queue
-#include "threadpool.h"  // for Task
 #include "worker.h"      // for Worker
 
 // #define L_CONN L_DEBUG
@@ -80,7 +79,7 @@ enum class WR;
 class ClientDecompressor;
 
 
-class BaseClient : public Task<>, public Worker {
+class BaseClient : public Worker {
 	friend LZ4CompressFile;
 
 	WR _write(int fd);

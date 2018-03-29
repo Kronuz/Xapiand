@@ -46,6 +46,7 @@
 #include "http_parser.h"        // for http_parser, http_parser_settings
 #include "lru.h"                // for LRU
 #include "msgpack.h"            // for MsgPack
+#include "threadpool.h"         // for Task
 #include "url_parser.h"         // for PathParser, QueryParser
 #include "hashes.hh"            // for fnv1ah32
 
@@ -236,7 +237,7 @@ public:
 
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
-class HttpClient : public BaseClient {
+class HttpClient : public Task<>, public BaseClient {
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
