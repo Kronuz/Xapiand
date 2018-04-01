@@ -29,7 +29,7 @@
 #include <sstream>        // for std::ostringstream
 #include <stdexcept>      // for std::bad_alloc
 
-#include "endian.h"       // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
+#include "endian.hh"      // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
 #include "utils.h"        // for hexdigit, hexdec
 #include "log.h"          // for L_*

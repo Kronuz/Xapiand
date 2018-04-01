@@ -27,7 +27,7 @@
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
-#include "endian.h"                                   // for htobe32, htobe56
+#include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
