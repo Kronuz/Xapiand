@@ -27,7 +27,7 @@
 #include <exception>        // for exception
 #include <stdexcept>        // for invalid_argument, out_of_range
 #include <cstdio>           // for snprintf
-#include <string_view>      // for std::string_view
+#include "string_view.hh"   // for std::string_view
 
 #include "log.h"            // for L_ERR
 #include "msgpack.h"        // for MsgPack

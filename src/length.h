@@ -26,7 +26,7 @@
 
 #include <stddef.h>       // for size_t, NULL
 #include <string>         // for string
-#include <string_view>    // for std::string_view
+#include "string_view.hh" // for std::string_view
 
 #include "exception.h"    // for MSG_SerialisationError, SerialisationError
 

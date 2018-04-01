@@ -26,7 +26,7 @@
 #include <array>           // for std::array
 #include <ostream>         // for std::ostream
 #include <string>          // for std::string
-#include <string_view>     // for std::string_view
+#include "string_view.hh"  // for std::string_view
 
 #ifdef UUID_ANDROID
 #include <jni.h>

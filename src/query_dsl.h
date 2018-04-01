@@ -26,7 +26,7 @@
 
 #include <memory>           // for shared_ptr
 #include <string>           // for string
-#include <string_view>      // for std::string_view
+#include "string_view.hh"   // for std::string_view
 #include <unordered_map>    // for unordered_map
 #include <unordered_set>    // for unordered_set
 #include <xapian.h>         // for Query, Query::op, termcount

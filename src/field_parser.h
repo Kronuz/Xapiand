@@ -24,12 +24,12 @@
 
 #include "xapiand.h"
 
-#include <cstdio>       // for size_t
-#include <string>       // for string, allocator, operator+, basic_string
-#include <string_view>  // for std::string_view
-#include <type_traits>  // for forward
+#include <cstdio>           // for size_t
+#include <string>           // for string, allocator, operator+, basic_string
+#include "string_view.hh"   // for std::string_view
+#include <type_traits>      // for forward
 
-#include "exception.h"  // for ClientError
+#include "exception.h"      // for ClientError
 
 #define LVL_MAX 10
 

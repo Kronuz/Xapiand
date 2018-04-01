@@ -26,7 +26,7 @@
 
 #include <stdexcept>          // for runtime_error
 #include <string>             // for string
-#include <string_view>        // for std::string_view
+#include "string_view.hh"     // for std::string_view
 #include <type_traits>        // for forward
 #include <xapian.h>           // for DocNotFoundError, InternalError, InvalidArgum...
 

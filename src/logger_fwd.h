@@ -24,7 +24,7 @@
 
 #include <atomic>             // for std::atomic
 #include <chrono>             // for system_clock, time_point, duration, millise...
-#include <string_view>        // for std::string_view
+#include "string_view.hh"     // for std::string_view
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
 #include "exception.h"        // for BaseException

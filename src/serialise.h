@@ -25,7 +25,7 @@
 #include "xapiand.h"
 
 #include <string>                   // for std::string
-#include <string_view>              // for std::string_view
+#include "string_view.hh"           // for std::string_view
 #include <cstdint>                  // for std::uint64_t, std::int64_t, std::uint32_t, std::uint8_t
 #include <utility>                  // for std::pair
 #include <vector>                   // for std::vector

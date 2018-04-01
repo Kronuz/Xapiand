@@ -23,8 +23,8 @@
 #ifndef STRINGIFIED_HH
 #define STRINGIFIED_HH
 
-#include <string>       // for std::string
-#include <string_view>  // for std::string_view
+#include <string>                // for std::string
+#include "string_view.hh"        // for std::string_view
 
 /*
  * The stringified class is a wrapper for std::string_view which makes

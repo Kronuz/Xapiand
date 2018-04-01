@@ -22,8 +22,8 @@
 
 #include "xapiand.h"
 
-#include <string>       // for std::string
-#include <string_view>  // for std::string_view
+#include <string>                // for std::string
+#include "string_view.hh"        // for std::string_view
 
 
 long double sortable_unserialise(std::string_view value);
