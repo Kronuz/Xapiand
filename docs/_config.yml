@@ -31,6 +31,7 @@ disqus_shortname: xapiand
 
 theme_color_light: "#bfdd97"
 theme_color_dark: "#8fc44a"
+theme_color_quickstart: "#689137"
 
 logo: "/img/logo-2x.png"
 logo_width: 180

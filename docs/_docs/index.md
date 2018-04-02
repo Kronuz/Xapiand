@@ -76,7 +76,7 @@ directly used to support {{ site.name }}'s developers.
 
 We accept donations via PayPal:
 
-<a class="paypalme" href="https://www.paypal.me/Kronuz/20" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>
+<a class="paypalme" href="https://www.paypal.me/Kronuz/25" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>
 
 
 ---

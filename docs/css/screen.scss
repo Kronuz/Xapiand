@@ -2,6 +2,7 @@
 ---
 $theme_color_light: {{ site.theme_color_light }};
 $theme_color_dark: {{ site.theme_color_dark }};
+$theme_color_quickstart:  {{ site.theme_color_quickstart }};
 
 @import "mixins";
 @import "normalize";
