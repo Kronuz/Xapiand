@@ -47,4 +47,6 @@
 namespace std {
     using std::experimental::string_view;
 }
+#else
+#error "Need string_view (or experimental/string_view) to compile!"
 #endif
