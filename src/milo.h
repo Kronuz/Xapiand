@@ -454,7 +454,7 @@ private:
 	char* format_double(double value, int maxDecimalPlaces) {
 		assert(maxDecimalPlaces >= 1);
 
-		if (isnan(value)) {
+		if (std::isnan(value)) {
 			buffer_[0] = 'n';
 			buffer_[1] = 'a';
 			buffer_[2] = 'n';
@@ -462,7 +462,7 @@ private:
 			return buffer_;
 		}
 
-		if (isinf(value)) {
+		if (std::isinf(value)) {
 			buffer_[0] = 'i';
 			buffer_[1] = 'n';
 			buffer_[2] = 'f';
