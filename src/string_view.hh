@@ -41,7 +41,7 @@
     (defined(_MSVC_LANG) && _MSVC_LANG > 201402L && _MSC_VER >= 1910)
 #include <string_view>
 #elif (HAS_INCLUDE(<experimental/string_view>) && \
-       (GCC_VERSION == 0 || GCC_VERSION >= 730) && \
+       (GCC_VERSION == 0 || GCC_VERSION >= 501) && \
        __cplusplus >= 201402L)
 #include <experimental/string_view>
 namespace std {
