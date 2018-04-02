@@ -1170,3 +1170,31 @@ html:not(.plat_windows) .windows {
 		text-decoration: none;
 	}
 }
+
+
+a.paypalme {
+	display: block;
+	margin: 0 auto;
+	width: 100%;
+	max-width: 285px;
+	height: 43px;
+	margin-top: 36px;
+	font-size: 15px;
+	line-height: 43px;
+	background: none repeat 0 0 #0070ba;
+	color: #fff;
+	padding: 0 15px;
+	border-radius: 24px;
+	outline: none;
+	-webkit-transition: background .5s ease;
+	-o-transition: background .5s ease;
+	transition: background .5s ease;
+	text-decoration: none;
+	white-space: normal;
+	text-align: center;
+
+	&:hover {
+		background: none repeat 0 0 #008fed;
+		text-decoration: none;
+	}
+}

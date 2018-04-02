@@ -63,6 +63,23 @@ For those, you can always copy the equivalent curl code for it by hovering the
 snippet and clicking on the copy to the clipboard button: &nbsp;&nbsp;<i class="fa fa-clipboard"></i>
 
 ---
+## Donate to {{ site.name }}!
+
+### How will my donation be used?
+
+Development of *{{ site.name }}* is done as an open-source project and
+maintaining it is hard and time consuming, if you like {{ site.name }}, please
+donate whatever you feel comfortable with via PayPal. The donations will be
+directly used to support {{ site.name }}'s developers.
+
+### How do I donate?
+
+We accept donations via PayPal:
+
+<a class="paypalme" href="https://www.paypal.me/Kronuz/20" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>
+
+
+---
 
 If you come across anything along the way that we haven't covered, or if you
 know of a tip you think others would find handy, please [file an

@@ -17,10 +17,10 @@ Similar to documentation, but more detailed scenario-based walk-throughs
 covering a variety of topics.
 
 
-### [Xapiand IRC Channel](irc:irc.freenode.net/Xapiand){:target="_blank"}
+### [{{ site.name }} IRC Channel](irc:irc.freenode.net/Xapiand){:target="_blank"}
 
 Get live support at **#Xapiand** on **irc.freenode.net**, the official
-Xapiand IRC channel.
+{{ site.name }} IRC channel.
 
 
 ### [GitHub Issues]({{ site.repository }}/issues){:target="_blank"}
@@ -41,5 +41,5 @@ Add **{{ site.name }}** to almost any query, and you'll find just what you need.
 
 ### [@germbravo on Twitter](https://twitter.com/germbravo){:target="_blank"}
 
-The Xapiand maintainer is on Twitter. The account is not checked often, so try
+The {{ site.name }} maintainer is on Twitter. The account is not checked often, so try
 the above first.
