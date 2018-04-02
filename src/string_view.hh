@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <ciso646>  // defines _LIBCPP_VERSION
+
 #ifdef __has_include
 #define HAS_INCLUDE(x) __has_include(x)
 #else
