@@ -1,12 +1,11 @@
 ---
 title: "Xapiand 0.5.2 Released"
-date: "2018-03-31 13:00:00 -0600"
+date: "2018-04-02 13:00:00 -0600"
 author: Kronuz
 version: 0.5.2
 categories: [release]
 ---
 
-This release updates logo and compiles using C++17
+This release updates logo
 
 - Logo updated
-- Compile using C++17
