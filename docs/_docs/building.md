@@ -30,16 +30,16 @@ codebase). The only external dependencies for building it are:
 2. Prepare build using:
 
 ```sh
-~/Xapiand/src $ mkdir build
-~/Xapiand/src/build $ cd build
-~/Xapiand/src/build $ cmake -GNinja ..
+~/Xapiand $ mkdir build
+~/Xapiand/build $ cd build
+~/Xapiand/build $ cmake -GNinja ..
 ```
 
 3. build and install using:
 
 ```sh
-~/Xapiand/src/build $ ninja
-~/Xapiand/src/build $ ninja install
+~/Xapiand/build $ ninja
+~/Xapiand/build $ ninja install
 ```
 
 4. Run `xapiand` inside a new directory to be assigned to the node.
@@ -74,12 +74,12 @@ codebase). The only external dependencies for building it are:
 ## Running the tests
 
 ```sh
-~/Xapiand/src/build $ ninja check
+~/Xapiand/build $ ninja check
 ```
 
 
 ## Installing
 
 ```sh
-~/Xapiand/src/build $ ninja install
+~/Xapiand/build $ ninja install
 ```
