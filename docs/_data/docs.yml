@@ -20,6 +20,7 @@
     - reference-guide/stats
     - reference-guide/monitoring
     - reference-guide/wal
+    - reference-guide/backups
 
 - title: Set up
   docs:
