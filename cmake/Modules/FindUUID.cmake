@@ -74,6 +74,10 @@ if (UUID_NAME_LIB)
 		$ENV{UUID_DIR}/lib
 		/usr/local/lib
 		/usr/lib
+		/lib/i386-linux-gnu
+		/lib/x86_64-linux-gnu
+		/usr/lib/i386-linux-gnu
+		/usr/lib/x86_64-linux-gnu
 		/sw/lib
 		/opt/local/lib
 		/opt/csw/lib
