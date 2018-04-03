@@ -19,7 +19,7 @@ sed 's/^X//' >xapiand/Makefile << 'END-of-xapiand/Makefile'
 X# $FreeBSD$
 X
 XPORTNAME=	xapiand
-XPORTVERSION=	0.5.1
+XPORTVERSION=	0.5.2
 X
 XCATEGORIES=	textproc devel
 X
