@@ -1,11 +1,11 @@
 {% include top.html %}
 
 <body class="wrap">
-	<header>
+	<header class="error">
 		<div class="grid">
 			<div class="unit whole align-center">
 				<h1>
-					<a href="{{ '/' | relative_url }}" class="logo" style="font-size: 1.8em">
+					<a href="{{ '/' | relative_url }}" class="logo" style="font-size: 2em">
 						<img src="{{ site.logo | relative_url }}?_={{ site.time | date: '%s%N' }}" width="{{ site.logo_width | times:115  | divided_by:site.logo_height }}" height="115" alt="{{ site.name }} Logo">
 						<span>{{ site.name }}</span>
 					</a>
