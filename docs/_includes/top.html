@@ -13,6 +13,7 @@
 	<link rel="stylesheet" href="{{ '/css/screen.css' | relative_url }}?_={{ site.time | date: '%s%N' }}">
 	<link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url}}?_={{ site.time | date: '%s%N' }}">
 	{% seo %}
+	{% include analytics.html %}
 	<script type="text/javascript">
 		var plat = 'windows'
 		if (/Mac OS X/.test(navigator.userAgent)) {

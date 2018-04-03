@@ -37,7 +37,7 @@ logo: "/img/logo-2x.png"
 logo_width: 180
 logo_height: 230
 
-# google_analytics_id: UA-00000000-0
+google_analytics_id: UA-7630729-4
 # google_site_verification: google_site_verification_key
 docsearch_name: xapiand
 docsearch_key: c8d366fe0097eaed440790927ac37805
