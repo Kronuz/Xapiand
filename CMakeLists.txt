@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.5)
 project(xapiand C CXX)
 
 # Make sure we can import out CMake functions
