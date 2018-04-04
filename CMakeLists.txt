@@ -330,7 +330,7 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 ########################################################################
 
 configure_file(
-	"${PROJECT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
 	"${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
 	@ONLY)
 
