@@ -529,7 +529,7 @@ message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 # Add compiler flags.
-add_required_cxx_compiler_flag("-std=c++14")
+add_required_cxx_compiler_flag("-std=c++1z")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
 add_cxx_compiler_flag("-pedantic")
