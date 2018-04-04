@@ -7,9 +7,6 @@
 #define _CONFIG_H_
 
 
-/* define if the compiler supports basic C++14 syntax */
-#cmakedefine HAVE_CXX_FLAG_STD_CXX14 @HAVE_CXX_FLAG_STD_CXX14@
-
 /* Define to 1 if you have the <strings.h> header file. */
 #cmakedefine HAVE_STRINGS_H @HAVE_STRINGS_H@
 
