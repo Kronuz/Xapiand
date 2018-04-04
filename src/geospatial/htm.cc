@@ -27,6 +27,7 @@
 #include <set>
 
 #include "collection.h"
+#include "string.hh"
 
 
 std::vector<std::string>
@@ -850,16 +851,9 @@ constexpr int HTM_LINE_POINTS     = 25;
 
 
 static std::string getConstraint3D(const Constraint& bCircle, char color) {
-	char x0s[HTM_DIGITS];
-	char y0s[HTM_DIGITS];
-	char z0s[HTM_DIGITS];
-	snprintf(x0s, HTM_DIGITS, "%.50f", bCircle.center.x);
-	snprintf(y0s, HTM_DIGITS, "%.50f", bCircle.center.y);
-	snprintf(z0s, HTM_DIGITS, "%.50f", bCircle.center.z);
-
-	std::string xs = "x = [" + std::string(x0s) + "]\n";
-	xs += "y = [" + std::string(y0s) + "]\n";
-	xs += "z = [" + std::string(z0s) + "]\n";
+	std::string xs = "x = [" + string::Number(bCircle.center.x).str() + "]\n";
+	xs += "y = [" + string::Number(bCircle.center.y).str() + "]\n";
+	xs += "z = [" + string::Number(bCircle.center.z).str() + "]\n";
 	xs += "ax.plot3D(x, y, z, '" + std::string(1, color) + "o', linewidth = 2.0)\n\n"; // 211
 
 	auto c_inv = bCircle.center;
@@ -883,19 +877,16 @@ static std::string getConstraint3D(const Constraint& bCircle, char color) {
 		vc.x = bCircle.distance * bCircle.center.x + rc * a.x + rs * b.x;
 		vc.y = bCircle.distance * bCircle.center.y + rc * a.y + rs * b.y;
 		vc.z = bCircle.distance * bCircle.center.z + rc * a.z + rs * b.z;
-		char vcx[HTM_DIGITS];
-		char vcy[HTM_DIGITS];
-		char vcz[HTM_DIGITS];
-		snprintf(vcx, HTM_DIGITS, "%.50f", vc.x);
-		snprintf(vcy, HTM_DIGITS, "%.50f", vc.y);
-		snprintf(vcz, HTM_DIGITS, "%.50f", vc.z);
-		xs += std::string(vcx) + ", ";
-		ys += std::string(vcy) + ", ";
-		zs += std::string(vcz) + ", ";
+		string::Number vcx(vc.x);
+		string::Number vcy(vc.y);
+		string::Number vcz(vc.z);
+		xs += vcx.str() + ", ";
+		ys += vcy.str() + ", ";
+		zs += vcz.str() + ", ";
 		if (t == 0.0) {
-			x0 = std::string(vcx);
-			y0 = std::string(vcy);
-			z0 = std::string(vcz);
+			x0 = vcx.str();
+			y0 = vcy.str();
+			z0 = vcz.str();
 		}
 		++i;
 	}
@@ -1431,9 +1422,6 @@ static void writePython3D(std::ofstream& fs, const Convex& convex, bool& sphere,
 
 
 static void writePython3D(std::ofstream& fs, const Polygon& polygon, bool& sphere, double umbral) {
-	char vx[HTM_DIGITS];
-	char vy[HTM_DIGITS];
-	char vz[HTM_DIGITS];
 	std::string x, y, z;
 	for (const auto& convexpolygon : polygon.getConvexPolygons()) {
 		if (!sphere && std::acos(convexpolygon.getRadius() / M_PER_RADIUS_EARTH) < umbral) {
@@ -1451,21 +1439,15 @@ static void writePython3D(std::ofstream& fs, const Polygon& polygon, bool& spher
 			for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 				const auto inc = i / HTM_LINE_POINTS;
 				const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-				snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
-				snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
-				snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-				x.append(vx).append(", ");
-				y.append(vy).append(", ");
-				z.append(vz).append(", ");
+				x.append(string::Number(mp.x).str()).append(", ");
+				y.append(string::Number(mp.y).str()).append(", ");
+				z.append(string::Number(mp.z).str()).append(", ");
 			}
 		}
 		// Close polygon.
-		snprintf(vx, HTM_DIGITS, "%.50f", it->x);
-		snprintf(vy, HTM_DIGITS, "%.50f", it->y);
-		snprintf(vz, HTM_DIGITS, "%.50f", it->z);
-		x.append(vx).append("]\n");
-		y.append(vy).append("]\n");
-		z.append(vz).append("]\n");
+		x.append(string::Number(it->x).str()).append("]\n");
+		y.append(string::Number(it->y).str()).append("]\n");
+		z.append(string::Number(it->z).str()).append("]\n");
 		fs << x << y << z;
 		fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
 		const auto& c = convexpolygon.getCentroid();
@@ -1649,49 +1631,34 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 		const auto& v0 = std::get<0>(corners);
 		const auto& v1 = std::get<1>(corners);
 		const auto& v2 = std::get<2>(corners);
-		char vx[HTM_DIGITS];
-		char vy[HTM_DIGITS];
-		char vz[HTM_DIGITS];
 		x = "x = [";
 		y = "y = [";
 		z = "z = [";
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
-			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
-			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x.append(vx).append(", ");
-			y.append(vy).append(", ");
-			z.append(vz).append(", ");
+			x.append(string::Number(mp.x).str()).append(", ");
+			y.append(string::Number(mp.y).str()).append(", ");
+			z.append(string::Number(mp.z).str()).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v1 + inc * v2).normalize();
-			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
-			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
-			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x.append(vx).append(", ");
-			y.append(vy).append(", ");
-			z.append(vz).append(", ");
+			x.append(string::Number(mp.x).str()).append(", ");
+			y.append(string::Number(mp.y).str()).append(", ");
+			z.append(string::Number(mp.z).str()).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v2 + inc * v0).normalize();
-			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
-			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
-			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x.append(vx).append(", ");
-			y.append(vy).append(", ");
-			z.append(vz).append(", ");
+			x.append(string::Number(mp.x).str()).append(", ");
+			y.append(string::Number(mp.y).str()).append(", ");
+			z.append(string::Number(mp.z).str()).append(", ");
 		}
 		// Close the trixel.
-		snprintf(vx, HTM_DIGITS, "%.50f", v0.x);
-		snprintf(vy, HTM_DIGITS, "%.50f", v0.y);
-		snprintf(vz, HTM_DIGITS, "%.50f", v0.z);
-		x.append(vx).append("]\n");
-		y.append(vy).append("]\n");
-		z.append(vz).append("]\n");
+		x.append(string::Number(v0.x).str()).append("]\n");
+		y.append(string::Number(v0.y).str()).append("]\n");
+		z.append(string::Number(v0.z).str()).append("]\n");
 		fs << (x + y + z);
 		fs << rule_trixel;
 	}
@@ -1755,10 +1722,6 @@ HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& po
 	}
 
 	// Polygon formed by convex points
-	char vx[HTM_DIGITS];
-	char vy[HTM_DIGITS];
-	char vz[HTM_DIGITS];
-
 	std::string x = "x = [";
 	std::string y = "y = [";
 	std::string z = "z = [";
@@ -1770,21 +1733,15 @@ HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& po
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-			snprintf(vx, HTM_DIGITS, "%.50f", mp.x);
-			snprintf(vy, HTM_DIGITS, "%.50f", mp.y);
-			snprintf(vz, HTM_DIGITS, "%.50f", mp.z);
-			x.append(vx).append(", ");
-			y.append(vy).append(", ");
-			z.append(vz).append(", ");
+			x.append(string::Number(mp.x).str()).append(", ");
+			y.append(string::Number(mp.y).str()).append(", ");
+			z.append(string::Number(mp.z).str()).append(", ");
 		}
 	}
 	// Close polygon.
-	snprintf(vx, HTM_DIGITS, "%.50f", it->x);
-	snprintf(vy, HTM_DIGITS, "%.50f", it->y);
-	snprintf(vz, HTM_DIGITS, "%.50f", it->z);
-	x.append(vx).append("]\n");
-	y.append(vy).append("]\n");
-	z.append(vz).append("]\n");
+	x.append(string::Number(it->x).str()).append("]\n");
+	y.append(string::Number(it->y).str()).append("]\n");
+	z.append(string::Number(it->z).str()).append("]\n");
 	fs << x << y << z;
 	fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
 	fs << "plt.ion()\nplt.grid()\nplt.show()";

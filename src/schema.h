@@ -288,19 +288,19 @@ inline constexpr size_t getPos(size_t pos, size_t size) noexcept {
 	} else {
 		return size - 1;
 	}
-};
+}
 
 
 extern UnitTime get_accuracy_time(std::string_view str_accuracy_time);
 extern UnitTime get_accuracy_date(std::string_view str_accuracy_date);
 
 
-MSGPACK_ADD_ENUM(UnitTime);
-MSGPACK_ADD_ENUM(TypeIndex);
-MSGPACK_ADD_ENUM(UUIDFieldIndex);
-MSGPACK_ADD_ENUM(StopStrategy);
-MSGPACK_ADD_ENUM(StemStrategy);
-MSGPACK_ADD_ENUM(FieldType);
+MSGPACK_ADD_ENUM(UnitTime)
+MSGPACK_ADD_ENUM(TypeIndex)
+MSGPACK_ADD_ENUM(UUIDFieldIndex)
+MSGPACK_ADD_ENUM(StopStrategy)
+MSGPACK_ADD_ENUM(StemStrategy)
+MSGPACK_ADD_ENUM(FieldType)
 
 
 struct required_spc_t {
@@ -1028,6 +1028,7 @@ public:
 				for (auto& acc_prefix : spc.acc_prefix) {
 					acc_prefix.insert(0, spc.prefix.field);
 				}
+				/* FALLTHROUGH */
 			default:
 				return spc;
 		}

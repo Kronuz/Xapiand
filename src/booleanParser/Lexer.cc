@@ -215,6 +215,7 @@ Lexer::NextToken()
 							continue;
 						}
 				}
+				/* FALLTHROUGH */
 
 			case LexerState::END_SQUARE_BRACKET:
 				switch (currentSymbol.symbol) {

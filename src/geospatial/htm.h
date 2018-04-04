@@ -256,4 +256,4 @@ namespace HTM {
 	// Functions to test Graham scan algorithm.
 	void writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map);
 	void writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points);
-};
+}

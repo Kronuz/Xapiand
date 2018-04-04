@@ -127,6 +127,7 @@ Cast::cast(FieldType type, std::string_view field_value)
 					return MsgPack(r);
 				}
 			}
+			/* FALLTHROUGH */
 		default:
 			// Default type String.
 			return MsgPack(field_value);

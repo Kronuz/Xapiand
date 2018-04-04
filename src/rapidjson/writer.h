@@ -442,10 +442,11 @@ protected:
                         char e = escape[static_cast<unsigned char>(c)];
                         switch (e) {
                             case 0:
-                            if (static_cast<unsigned char>(c) >= 0x20 && static_cast<unsigned char>(c) < 0x7f) {
-                                PutUnsafe(*os_, c);
-                                break;
-                            }
+                                if (static_cast<unsigned char>(c) >= 0x20 && static_cast<unsigned char>(c) < 0x7f) {
+                                    PutUnsafe(*os_, c);
+                                    break;
+                                }
+                                /* FALLTHROUGH */
                             case 'x':
                                 PutUnsafe(*os_, '\\');
                                 PutUnsafe(*os_, 'x');

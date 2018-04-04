@@ -120,15 +120,15 @@ inline auto strict_##name(int& errno_save, std::string_view str, std::size_t* id
 inline auto strict_##name(std::string_view str, std::size_t* idx = nullptr) { \
 	return _strict_##name.stox_throw<T>(str, idx); \
 }
-STOXIFY_BASE(stoul, std::strtoul, void);
-STOXIFY_BASE(stoull, std::strtoull, void);
-STOXIFY_BASE(stoi, std::strtol, int);
-STOXIFY_BASE(stou, std::strtoul, unsigned);
-STOXIFY_BASE(stol, std::strtol, void);
-STOXIFY_BASE(stoll, std::strtoll, void);
-STOXIFY_BASE(stoz, std::strtoull, std::size_t);
-STOXIFY(stof, std::strtof, void);
-STOXIFY(stod, std::strtod, void);
-STOXIFY(stold, std::strtold, void);
+STOXIFY_BASE(stoul, std::strtoul, void)
+STOXIFY_BASE(stoull, std::strtoull, void)
+STOXIFY_BASE(stoi, std::strtol, int)
+STOXIFY_BASE(stou, std::strtoul, unsigned)
+STOXIFY_BASE(stol, std::strtol, void)
+STOXIFY_BASE(stoll, std::strtoll, void)
+STOXIFY_BASE(stoz, std::strtoull, std::size_t)
+STOXIFY(stof, std::strtof, void)
+STOXIFY(stod, std::strtod, void)
+STOXIFY(stold, std::strtold, void)
 #undef STOXIFY_BASE
 #undef STOXIFY

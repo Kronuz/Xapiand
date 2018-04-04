@@ -261,7 +261,7 @@ namespace Serialise {
 	inline std::string serialise(const std::vector<range_t>& val) {
 		return ranges(val);
 	}
-};
+}
 
 
 namespace Unserialise {
@@ -331,4 +331,4 @@ namespace Unserialise {
 
 	// Unserialise str_type to its FieldType.
 	FieldType type(std::string_view str_type);
-};
+}

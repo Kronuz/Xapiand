@@ -2486,15 +2486,16 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 }
 
 
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
-//      ___           _
-//     |_ _|_ __   __| | _____  __
-//      | || '_ \ / _` |/ _ \ \/ /
-//      | || | | | (_| |  __/>  <
-//     |___|_| |_|\__,_|\___/_/\_\
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
+/*  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ *      ___           _
+ *     |_ _|_ __   __| | _____  __
+ *      | || '_ \ / _` |/ _ \ \/ /
+ *      | || | | | (_| |  __/>  <
+ *     |___|_| |_|\__,_|\___/_/\_\
+ *  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ */
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 MsgPack
@@ -3074,6 +3075,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 				break;
 			}
 		}
+		/* FALLTHROUGH */
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			if (!specification.flags.concrete) {
@@ -3187,16 +3189,17 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 }
 
 
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
-//      _   _           _       _
-//     | | | |_ __   __| | __ _| |_ ___
-//     | | | | '_ \ / _` |/ _` | __/ _ \
-//     | |_| | |_) | (_| | (_| | ||  __/
-//      \___/| .__/ \__,_|\__,_|\__\___|
-//           |_|
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
+/*  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ *      _   _           _       _
+ *     | | | |_ __   __| | __ _| |_ ___
+ *     | | | | '_ \ / _` |/ _` | __/ _ \
+ *     | |_| | |_) | (_| | (_| | ||  __/
+ *      \___/| .__/ \__,_|\__,_|\__\___|
+ *           |_|
+ *  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ */
 
 bool
 Schema::update(const MsgPack& object)
@@ -3629,15 +3632,16 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 }
 
 
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
-//     __        __    _ _
-//     \ \      / / __(_) |_ ___
-//      \ \ /\ / / '__| | __/ _ \
-//       \ V  V /| |  | | ||  __/
-//        \_/\_/ |_|  |_|\__\___|
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
+/*  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ *     __        __    _ _
+ *     \ \      / / __(_) |_ ___
+ *      \ \ /\ / / '__| | __/ _ \
+ *       \ V  V /| |  | | ||  __/
+ *        \_/\_/ |_|  |_|\__\___|
+ *  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ */
 
 bool
 Schema::write(const MsgPack& object, bool replace)
@@ -4063,9 +4067,9 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 	}
 }
 
-//  _____ _____ _____ _____ _____ _____ _____ _____
-// |_____|_____|_____|_____|_____|_____|_____|_____|
-
+/*  _____ _____ _____ _____ _____ _____ _____ _____
+ * |_____|_____|_____|_____|_____|_____|_____|_____|
+ */
 
 std::unordered_set<std::string>
 Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path)
@@ -5177,6 +5181,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			if (!field_spc.flags.bool_term) {
 				string::to_lower(serialise_val);
 			}
+			/* FALLTHROUGH */
 
 		default: {
 			serialise_val = prefixed(serialise_val, field_spc.prefix.field, field_spc.get_ctype());
@@ -8942,6 +8947,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 						res.error = error_it.value().f64();
 					}
 				}
+				/* FALLTHROUGH */
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:

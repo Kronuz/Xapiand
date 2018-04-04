@@ -232,6 +232,7 @@ Script::process_chai(bool strict)
 				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
 			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
+			/* FALLTHROUGH */
 		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {
@@ -296,6 +297,7 @@ Script::process_ecma(bool strict)
 				THROW(MissingTypeError, "Type of field %s is missing", RESERVED_SCRIPT);
 			}
 			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
+			/* FALLTHROUGH */
 		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				if (name.empty()) {

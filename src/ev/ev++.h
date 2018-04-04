@@ -37,13 +37,13 @@
  * either the BSD or the GPL.
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wc++1z-compat-mangling"
-
 #ifndef EVPP_H__
 #define EVPP_H__
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wshadow"
 
 #ifdef EV_H
 # include EV_H
@@ -817,5 +817,6 @@ namespace ev {
   #undef EV_END_WATCHER
 }
 
-#endif
 #pragma GCC diagnostic pop
+
+#endif

@@ -108,6 +108,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						if (++len_field >= 1024) {
 							THROW(FieldParserError, "Syntax error in query");
@@ -152,6 +153,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						++len_field;
 						++len_field_colon;
@@ -197,6 +199,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						currentState = (currentState == FieldParser::State::VALUE_INIT) ? FieldParser::State::VALUE : FieldParser::State::DOT_DOT;
 						offs[lvl] = currentSymbol;
@@ -223,6 +226,7 @@ FieldParser::parse(size_t lvl_max)
 								break;
 						}
 						++currentSymbol;
+						/* FALLTHROUGH */
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::COLON;
@@ -291,6 +295,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
 				}
@@ -316,6 +321,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						++lens[lvl];
 						break;
@@ -342,6 +348,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
+						/* FALLTHROUGH */
 					default:
 						++lens[lvl];
 						break;
@@ -438,6 +445,7 @@ FieldParser::parse(size_t lvl_max)
 								break;
 						}
 						++currentSymbol;
+						/* FALLTHROUGH */
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::SQUARE_BRACKET_COMMA;

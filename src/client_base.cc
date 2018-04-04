@@ -490,6 +490,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 		case WR::RETRY:
 		case WR::PENDING:
 			write_start_async.send();
+			/* FALLTHROUGH */
 		case WR::OK:
 			return true;
 		default:

@@ -220,6 +220,15 @@ void operator delete[](void* __p) noexcept {
 	return allocator::TrackedAllocator::deallocate(__p);
 }
 
+void operator delete(void* __p, std::size_t /*unused*/) noexcept {
+	return allocator::TrackedAllocator::deallocate(__p);
+}
+
+
+void operator delete[](void* __p, std::size_t /*unused*/) noexcept {
+	return allocator::TrackedAllocator::deallocate(__p);
+}
+
 #else  /* XAPIAND_TRACKED_MEM */
 
 namespace allocator {

@@ -1092,6 +1092,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			switch (field.at(0)) {
 				case '-':
 					descending = true;
+					/* FALLTHROUGH */
 				case '+':
 					field.erase(field.begin());
 					break;
@@ -1125,7 +1126,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
 	}
 
-	MSet mset;
+	MSet mset{};
 
 	lock_database lk_db(this);
 	for (int t = DB_RETRIES; t >= 0; --t) {

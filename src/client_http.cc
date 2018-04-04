@@ -1440,7 +1440,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	bool single = !id.empty() && !isRange(id);
 
-	MSet mset;
+	MSet mset{};
 	std::vector<std::string> suggestions;
 
 	request.processing = std::chrono::system_clock::now();
@@ -2679,6 +2679,7 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 	switch (e) {
 		case Encoding::gzip:
 			gzip = true;
+			/* FALLTHROUGH */
 		case Encoding::deflate: {
 			if (chunk) {
 				if (start) {

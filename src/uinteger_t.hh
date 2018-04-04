@@ -2390,7 +2390,7 @@ namespace std {  // This is probably not a good idea
 	inline const std::string to_string(const uinteger_t& num) {
 		return num.str();
 	}
-};
+}
 
 // lhs type T as first arguemnt
 // If the output is not a bool, casts to type T

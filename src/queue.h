@@ -494,4 +494,4 @@ namespace queue {
 			return 1;
 		}
 	};
-};
+}

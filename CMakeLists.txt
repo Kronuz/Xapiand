@@ -532,17 +532,10 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 add_required_cxx_compiler_flag("-std=c++1z")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
-add_cxx_compiler_flag("-pedantic")
-add_cxx_compiler_flag("-pedantic-errors")
 
 add_cxx_compiler_flag("-Wall")
 add_cxx_compiler_flag("-Wextra")
 add_cxx_compiler_flag("-Wshadow")
-add_cxx_compiler_flag("-Werror" RELEASE)
-add_cxx_compiler_flag("-Werror" RELWITHDEBINFO)
-add_cxx_compiler_flag("-Werror" MINSIZEREL)
-add_cxx_compiler_flag("-Wsuggest-final-types")
-add_cxx_compiler_flag("-Wfstrict-aliasing")
 # add_cxx_compiler_flag("-Wshorten-64-to-32") ##
 # add_cxx_compiler_flag("-Wfloat-equal") ##
 
@@ -553,6 +546,13 @@ add_cxx_compiler_flag("-Wno-variadic-macros")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	# using Clang
+	add_cxx_compiler_flag("-pedantic")
+	add_cxx_compiler_flag("-pedantic-errors")
+	add_cxx_compiler_flag("-Werror" RELEASE)
+	add_cxx_compiler_flag("-Werror" RELWITHDEBINFO)
+	add_cxx_compiler_flag("-Werror" MINSIZEREL)
+	add_cxx_compiler_flag("-Wstrict-aliasing")
+	add_cxx_compiler_flag("-Wsuggest-final-types")
 	add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# using GCC

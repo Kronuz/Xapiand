@@ -117,6 +117,7 @@ normalize_and_partition(const void *p, size_t size)
 				result.append(cit, cit_e);
 				break;
 			}
+			/* FALLTHROUGH */
 #endif
 		default:
 		case UUIDRepr::simple:

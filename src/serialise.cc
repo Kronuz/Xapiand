@@ -1199,6 +1199,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}
+			/* FALLTHROUGH */
 #endif
 		default:
 		case UUIDRepr::simple:

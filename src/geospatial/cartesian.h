@@ -191,4 +191,4 @@ namespace std {
 			return hash_fn(p.to_string());
 		}
 	};
-};
+}

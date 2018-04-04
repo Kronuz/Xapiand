@@ -196,4 +196,4 @@ namespace Datetime {
 		long long scaled = static_cast<long long>(t / DATETIME_MICROSECONDS);
 		return scaled >= min && scaled <= max;
 	}
-};
+}

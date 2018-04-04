@@ -1292,6 +1292,7 @@ Datetime::TimeParser(std::string_view _time)
 				switch (_time[8]) {
 					case '-':
 						clk.tz_s = '-';
+						/* FALLTHROUGH */
 					case '+':
 						if (length == 14 && _time[11] == ':') {
 							clk.tz_h = strict_stoul(errno_save, _time.substr(9, 2));
@@ -1310,6 +1311,7 @@ Datetime::TimeParser(std::string_view _time)
 								switch (c) {
 									case '-':
 										clk.tz_s = '-';
+										/* FALLTHROUGH */
 									case '+':
 										if ((it_e - aux) == 6) {
 											auto aux_end = aux + 3;
@@ -1571,6 +1573,7 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 			switch (timedelta[0]) {
 				case '-':
 					clk.tz_s = '-';
+					/* FALLTHROUGH */
 				case '+':
 					if (timedelta[3] == ':') {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
@@ -1588,6 +1591,7 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 			switch (timedelta[0]) {
 				case '-':
 					clk.tz_s = '-';
+					/* FALLTHROUGH */
 				case '+':
 					if (timedelta[3] == ':' && timedelta[6] == ':') {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));
@@ -1607,6 +1611,7 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 			switch (timedelta[0]) {
 				case '-':
 					clk.tz_s = '-';
+					/* FALLTHROUGH */
 				case '+':
 					if (size > 10 && (timedelta[3] == ':' && timedelta[6] == ':' && timedelta[9] == '.')) {
 						clk.hour = strict_stoul(errno_save, timedelta.substr(1, 2));

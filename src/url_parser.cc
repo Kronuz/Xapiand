@@ -64,6 +64,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 					c = dec;
 				}
 			}
+			/* FALLTHROUGH */
 			default:
 				buf.push_back(c);
 		}
@@ -121,6 +122,7 @@ QueryParser::next(const char *name, size_t name_len)
 		switch (cn) {
 			case '\1':  // '='
 				v0 = n1;
+				/* FALLTHROUGH */
 			case '\0':  // '\0' and '&'
 				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
 					if (v0 != nullptr) {
