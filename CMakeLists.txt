@@ -523,6 +523,7 @@ endif ()
 ########################################################################
 # Compiler Flags
 ########################################################################
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
 # Setup CMAKE_CXX_FLAGS Debug flags.
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
@@ -549,7 +550,18 @@ add_cxx_compiler_flag("-Wfstrict-aliasing")
 add_cxx_compiler_flag("-Wnon-virtual-dtor")
 add_cxx_compiler_flag("-Wno-unknown-pragmas")
 add_cxx_compiler_flag("-Wno-variadic-macros")
-add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	# using Clang
+	add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	# using GCC
+	add_cxx_compiler_flag("-Wno-shadow")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+	# using Intel C++
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	# using Visual Studio C++
+endif()
 
 
 ########################################################################
