@@ -400,8 +400,8 @@ BaseClient::write_directly(int fd)
 
 	std::shared_ptr<Buffer> buffer;
 	if (write_queue.front(buffer)) {
-		size_t buf_size = buffer->nbytes();
-		const char *buf_data = buffer->dpos();
+		size_t buf_size = buffer->size();
+		const char *buf_data = buffer->data();
 
 #ifdef MSG_NOSIGNAL
 		ssize_t _written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
@@ -421,8 +421,8 @@ BaseClient::write_directly(int fd)
 		}
 
 		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500), _written);
-		buffer->pos += _written;
-		if (buffer->nbytes() == 0) {
+		buffer->remove_prefix(_written);
+		if (buffer->size() == 0) {
 			if (write_queue.pop(buffer)) {
 				if (write_queue.empty()) {
 					L_CONN("WR:OK: {fd:%d}", fd);

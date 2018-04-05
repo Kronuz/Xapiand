@@ -33,6 +33,7 @@
 
 #include "endpoint.h"    // for Endpoints
 #include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
+#include "io_utils.h"    // for io::*
 #include "queue.h"       // for Queue
 #include "worker.h"      // for Worker
 
@@ -47,27 +48,82 @@ class LZ4CompressFile;
 //
 
 class Buffer {
-	std::string data;
+	std::string _data;
+	std::string_view _data_view;
+
+	std::string _path;
+	int _fd;
+	bool _unlink;
+	size_t _max_pos;
+
+	void feed() {
+		if (!_path.empty() && _data_view.empty() && pos < _max_pos) {
+			_data.resize(4096);
+			io::lseek(_fd, pos, SEEK_SET);
+			auto _read = io::read(_fd, &_data[0], 4096UL);
+			if (_read > 0) {
+				_data.resize(_read);
+			}
+			_data_view = _data;
+		}
+	}
 
 public:
 	size_t pos;
 	char type;
 
-	Buffer(char type_, const char *bytes, size_t nbytes)
-		: data(bytes, nbytes),
+	Buffer(std::string_view path, bool unlink = false)
+		: _path(path),
+		  _fd(io::open(_path.c_str())),
+		  _unlink(unlink),
+		  _max_pos(io::lseek(_fd, 0, SEEK_END)),
 		  pos(0),
-		  type(type_)
+		  type('\0')
 	{ }
+
+	Buffer(char type, const char *bytes, size_t nbytes)
+		: _data(bytes, nbytes),
+		  _data_view(_data),
+		  _fd(-1),
+		  _unlink(false),
+		  _max_pos(nbytes),
+		  pos(0),
+		  type(type)
+	{ }
+
+	~Buffer() {
+		if (!_path.empty() && _unlink) {
+			io::unlink(_path.c_str());
+		}
+	}
 
 	Buffer(const Buffer&) = delete;
 	Buffer& operator=(const Buffer&) = delete;
 
+	const char *data() {
+		feed();
+		return _data_view.data();
+	}
+
+	size_t size() {
+		feed();
+		return std::min(4096UL, _data_view.size());
+	}
+
+	void remove_prefix(size_t n) {
+		assert(n <= _data_view.size());
+		_data_view.remove_prefix(n);
+		pos += n;
+	}
+
+	// Legacy:
+
 	const char *dpos() {
-		return data.data() + pos;
+		return _data.data() + pos;
 	}
 
 	size_t nbytes() {
-		return data.size() - pos;
+		return _data.size() - pos;
 	}
 };
 
