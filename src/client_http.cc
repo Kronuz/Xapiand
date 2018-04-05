@@ -1653,18 +1653,18 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			MsgPack obj;
 			if (single) {
 				// Figure out the document's ContentType.
-				std::string ct_type_str = get_data_content_type(data);
+				std::string blob_ct_type_str = get_data_content_type(data);
 
 				// If there's a ContentType in the blob store or in the ContentType's field
 				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
-				auto blob_ct_type = resolve_ct_type(request, ct_type_str);
+				auto blob_ct_type = resolve_ct_type(request, blob_ct_type_str);
 				if (blob_ct_type.empty()) {
 					if (ct_type.empty()) {
 						// No content type could be resolved, return NOT ACCEPTABLE.
 						enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 						MsgPack err_response = {
 							{ RESPONSE_STATUS, (int)error_code },
-							{ RESPONSE_MESSAGE, { "Response type " + ct_type_str + " not provided in the Accept header" } }
+							{ RESPONSE_MESSAGE, { "Response type " + blob_ct_type_str + " not provided in the Accept header" } }
 						};
 						write_http_response(request, response, error_code, err_response);
 						L_SEARCH("ABORTED SEARCH");
