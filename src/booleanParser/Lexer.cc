@@ -321,7 +321,7 @@ Lexer::IsSymbolOp(char c) const
 		case ')':
 		case '&':
 		case '|':
-		case '~':
+		case '!':
 			return true;
 		default:
 			return false;
