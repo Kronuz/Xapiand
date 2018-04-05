@@ -183,7 +183,7 @@ class UUID(six.binary_type, _uuid.UUID):
             self = six.binary_type.__new__(cls, u)
             self.__dict__['int'] = u.int
             return self
-        except Exception as exc:
+        except Exception:
             return six.binary_type.__new__(cls, string)
 
     def __init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, data=None):
@@ -219,7 +219,7 @@ class UUID(six.binary_type, _uuid.UUID):
             node |= 0x010000000000  # Multicast bit set
             fields = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node)
         elif hex is not None:
-            if isinstance(hex, six.binary_type):
+            if isinstance(hex, six.string_types):
                 hex = cls.unserialise(cls._decode(hex, 1))
             if isinstance(hex, _uuid.UUID):
                 int, hex = hex.int, None
