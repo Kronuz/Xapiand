@@ -1339,26 +1339,45 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 
 	request.db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 
-	char path[] = "/tmp/xapian_dump.XXXXXX";
-	int file_descriptor = mkstemp(path);
-	try {
-		request.db_handler.dump_documents(file_descriptor);
-	} catch (...) {
+	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
+
+	std::string dump_ct_type_str = "application/octet-stream";
+	auto dump_ct_type = resolve_ct_type(request, dump_ct_type_str);
+	if (dump_ct_type.empty()) {
+		if (ct_type.empty()) {
+			// No content type could be resolved, return NOT ACCEPTABLE.
+			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Response type " + dump_ct_type_str + " not provided in the Accept header" } }
+			};
+			write_http_response(request, response, error_code, err_response);
+			L_SEARCH("ABORTED SEARCH");
+			return;
+		}
+	} else {
+		char path[] = "/tmp/xapian_dump.XXXXXX";
+		int file_descriptor = mkstemp(path);
+		try {
+			request.db_handler.dump_documents(file_descriptor);
+		} catch (...) {
+			io::close(file_descriptor);
+			io::unlink(path);
+			throw;
+		}
+
+		request.ready = std::chrono::system_clock::now();
+
+		size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
 		io::close(file_descriptor);
-		io::unlink(path);
-		throw;
+		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", dump_ct_type.first + "/" + dump_ct_type.second, "", content_length));
+		write_file(path, true);
 	}
 
-	size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
-	io::close(file_descriptor);
+	auto docs = request.db_handler.dump_documents();
 
 	request.ready = std::chrono::system_clock::now();
-
-	MsgPack response_obj;
-	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
-
-	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", "application/octet-stream", "", content_length));
-	write_file(path, true);
+	write_http_response(request, response, HTTP_STATUS_OK, docs);
 }
 
 
