@@ -64,10 +64,11 @@ class Worker;
 #define HTTP_BODY_RESPONSE              (1 << 3)
 #define HTTP_CONTENT_TYPE_RESPONSE      (1 << 4)
 #define HTTP_CONTENT_ENCODING_RESPONSE  (1 << 5)
-#define HTTP_CHUNKED_RESPONSE           (1 << 6)
-#define HTTP_OPTIONS_RESPONSE           (1 << 7)
-#define HTTP_TOTAL_COUNT_RESPONSE       (1 << 8)
-#define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 9)
+#define HTTP_CONTENT_LENGTH_RESPONSE    (1 << 6)
+#define HTTP_CHUNKED_RESPONSE           (1 << 7)
+#define HTTP_OPTIONS_RESPONSE           (1 << 8)
+#define HTTP_TOTAL_COUNT_RESPONSE       (1 << 9)
+#define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 10)
 
 
 template <typename T>
@@ -303,7 +304,7 @@ class HttpClient : public Task<>, public BaseClient {
 	void log_request(Request& request);
 	void log_response(Response& response);
 
-	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count=0, int matches_estimated=0, const std::string& _body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
+	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void clean_http_request(Request& request, Response& response);
 	void set_idle();
 	ct_type_t serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);

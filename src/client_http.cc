@@ -110,7 +110,7 @@ static const std::string eol("\r\n");
 
 
 std::string
-HttpClient::http_response(Request& request, Response& response, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& _body, const std::string& ct_type, const std::string& ct_encoding) {
+HttpClient::http_response(Request& request, Response& response, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
 	L_CALL("HttpClient::http_response()");
 
 	std::string head;
@@ -168,18 +168,20 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 
 		if ((mode & HTTP_CHUNKED_RESPONSE) != 0) {
 			headers += "Transfer-Encoding: chunked" + eol;
+		} else if ((mode & HTTP_CONTENT_LENGTH_RESPONSE) != 0) {
+			headers += string::format("Content-Length: %lu", content_length) + eol;
 		} else {
-			headers += string::format("Content-Length: %lu", _body.size()) + eol;
+			headers += string::format("Content-Length: %lu", body.size()) + eol;
 		}
 		headers_sep += eol;
 	}
 
 	if ((mode & HTTP_BODY_RESPONSE) != 0) {
 		if ((mode & HTTP_CHUNKED_RESPONSE) != 0) {
-			response_text += string::format("%lx", _body.size()) + eol;
-			response_text += _body + eol;
+			response_text += string::format("%lx", body.size()) + eol;
+			response_text += body + eol;
 		} else {
-			response_text += _body;
+			response_text += body;
 		}
 	}
 
