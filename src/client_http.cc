@@ -1372,6 +1372,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 		io::close(file_descriptor);
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", dump_ct_type.first + "/" + dump_ct_type.second, "", content_length));
 		write_file(path, true);
+		return;
 	}
 
 	auto docs = request.db_handler.dump_documents();
