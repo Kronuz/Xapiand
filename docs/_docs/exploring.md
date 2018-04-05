@@ -130,14 +130,14 @@ And the response (partially shown):
 
 As for the response, we see the following parts:
 
-* `#total_count` - Total number of returned hits.
-* `#matches_estimated` - Number of estimated documents that match the query.
-* `#took` - time in milliseconds for Xapiand to execute the search.
-* `#hits` - search results.
+* `#query.#total_count` - Total number of returned hits.
+* `#query.#matches_estimated` - Number of estimated documents that match the query.
+* `#query.#took` - time in milliseconds for Xapiand to execute the search.
+* `#query.#hits` - search results.
 
 ## Introducing the Query Language
 
-Xapiand provides a JSON-style domain-specific language that you can use to
+Xapiand provides a JSON-style _domain-specific language_ that you can use to
 execute queries. This is referred to as the Query DSL. The query language is
 quite comprehensive and can be intimidating at first glance but the best way to
 actually learn it is to start with a few basic examples.
@@ -154,8 +154,8 @@ method:
 ```json
 GET /bank/:search?pretty
 {
-  "query": { "match_all": {} },
-  "sort": [
+  "_query": "*",
+  "_sort": [
     { "account_number": "asc" }
   ]
 }
@@ -179,8 +179,8 @@ sort, here we pass in `limit`:
 ```json
 GET /bank/:search?pretty
 {
-  "query": { "match_all": {} },
-  "limit": 1
+  "_query": "*",
+  "_limit": 1
 }
 ```
 {% endcapture %}
@@ -195,9 +195,9 @@ This example does a `match_all` and returns documents 10 through 19:
 ```json
 GET /bank/:search?pretty
 {
-  "query": { "match_all": {} },
-  "offset": 10,
-  "limit": 10
+  "_query": "*",
+  "_offset": 10,
+  "_limit": 10
 }
 ```
 {% endcapture %}
@@ -216,8 +216,8 @@ descending order and returns the top 10 (default `limit`) documents.
 ```json
 GET /bank/:search?pretty
 {
-  "query": { "match_all": {} },
-  "sort": { "balance": { "order": "desc" } }
+  "_query": "*",
+  "_sort": { "balance": { "_order": "desc" } }
 }
 ```
 {% endcapture %}
@@ -241,7 +241,7 @@ This example shows how to return two fields, `account_number` and `balance`
 ```json
 GET /bank/:search?pretty
 {
-  "query": { "match_all": {} },
+  "_query": "*",
   "_source": ["account_number", "balance"]
 }
 ```
@@ -258,9 +258,9 @@ GET /bank/:search?pretty
 ```json
 GET /bank/:search?pretty
 {
-  "query": {
+  "_query": {
     "bool": {
-      "must": { "match_all": {} },
+      "must": "*",
       "filter": {
         "range": {
           "balance": {
@@ -298,9 +298,9 @@ the top 10 (default) states sorted by count descending (also default):
 ```json
 GET /bank/:search?pretty
 {
-  "size": 0,
-  "aggs": {
-    "group_by_state": {
+  "_limit": 0,
+  "_aggs": {
+    "_group_by_state": {
       "terms": {
         "field": "state.keyword"
       }
