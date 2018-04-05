@@ -1042,6 +1042,17 @@ DatabaseHandler::restore(int fd)
 }
 
 
+MsgPack
+DatabaseHandler::dump_documents()
+{
+	L_CALL("DatabaseHandler::dump_documents()");
+
+	lock_database lk_db(this);
+
+	return database->dump_documents();
+}
+
+
 void
 DatabaseHandler::restore_documents(const MsgPack& docs)
 {

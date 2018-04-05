@@ -1984,6 +1984,67 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 }
 
 
+MsgPack
+Database::dump_documents()
+{
+	L_CALL("Database::dump_documents()");
+
+	L_DATABASE_WRAP_INIT();
+
+	MsgPack docs(MsgPack::Type::ARRAY);
+	Xapian::docid initial = 1;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		Xapian::docid did = initial;
+		try {
+			auto it = db->postlist_begin("");
+			auto it_e = db->postlist_end("");
+			it.skip_to(initial);
+			for (; it != it_e; ++it) {
+				did = *it;
+				auto doc = db->get_document(did);
+				auto data = doc.get_data();
+				auto obj_ser = split_data_obj(data);
+				auto blob = split_data_blob(data);
+#ifdef XAPIAND_DATA_STORAGE
+				if (blob.empty()) {
+					auto store = split_data_store(data);
+					if (store.first) {
+						if (!store.second.empty()) {
+							int subdatabase = (did - 1) % endpoints.size();
+							const auto& storage = storages[subdatabase];
+							if (storage) {
+								blob = storage_get(storage, store.second);
+							}
+						}
+					}
+				}
+#endif
+				auto obj = MsgPack::unserialise(obj_ser);
+				if (!blob.empty()) {
+					// TODO: add "_blob" to obj here
+				}
+				docs.push_back(obj);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_description());
+		}
+		reopen();
+		initial = did;
+	}
+
+	L_DATABASE_WRAP("Dump documents (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+	return docs;
+}
+
+
 /*  ____        _        _                     ___
  * |  _ \  __ _| |_ __ _| |__   __ _ ___  ___ / _ \ _   _  ___ _   _  ___
  * | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ | | | | | |/ _ \ | | |/ _ \

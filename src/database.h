@@ -334,6 +334,7 @@ public:
 
 	void dump_metadata(int fd, XXH32_state_t* xxh_state);
 	void dump_documents(int fd, XXH32_state_t* xxh_state);
+	MsgPack dump_documents();
 
 	std::string to_string() const {
 		return endpoints.to_string();
