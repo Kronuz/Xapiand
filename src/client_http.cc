@@ -1341,10 +1341,10 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 
 	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 
-	std::string dump_ct_type_str = "application/octet-stream";
-	auto dump_ct_type = resolve_ct_type(request, dump_ct_type_str);
-	if (dump_ct_type.empty()) {
-		if (ct_type.empty()) {
+	if (ct_type.empty()) {
+		std::string dump_ct_type_str = "application/octet-stream";
+		auto dump_ct_type = resolve_ct_type(request, dump_ct_type_str);
+		if (dump_ct_type.empty()) {
 			// No content type could be resolved, return NOT ACCEPTABLE.
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
@@ -1355,7 +1355,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 			L_SEARCH("ABORTED SEARCH");
 			return;
 		}
-	} else {
+
 		char path[] = "/tmp/xapian_dump.XXXXXX";
 		int file_descriptor = mkstemp(path);
 		try {
