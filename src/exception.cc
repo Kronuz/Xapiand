@@ -115,7 +115,7 @@ atos(const void* address)
 }
 #else
 inline static std::string
-atos(const void* address)
+atos(const void*)
 {
 	return "";
 }
