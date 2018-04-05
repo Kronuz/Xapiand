@@ -39,9 +39,30 @@ our current directory and let's load it into our cluster as follows:
 
 ```sh
 ~ $ curl -H 'Content-Type: application/json' \
-    --data-binary '@accounts.json' \
-    -X POST 'localhost:8880/bank/:bulk?pretty'
+   -X POST --data-binary '@accounts.json' \
+   'localhost:8880/bank/:restore?pretty'
 ```
+
+And then you can use `:info` to get information about the new index:
+
+```sh
+~ $ curl 'localhost:8880/bank/:info?pretty'
+{
+    "#database_info": {
+        "#uuid": "923a4470-7cdc-45ec-827c-fa85703fa8f6",
+        "#doc_count": 1000,
+        "#last_id": 1000,
+        "#doc_del": 0,
+        "#av_length": 22.432,
+        "#doc_len_lower": 22,
+        "#doc_len_upper": 25,
+        "#has_positions": false
+    }
+}
+```
+
+Which means that we just successfully bulk indexed 1000 documents into the
+bank index.
 
 
 ## The Search API
@@ -60,14 +81,14 @@ returns all documents in the bank index:
 {% capture json %}
 
 ```json
-GET /bank/:search?q=*&sort=account_number:asc&pretty
+GET /bank/:search?q=*&sort=account_number&pretty
 ```
 {% endcapture %}
 {% include curl.html json=json %}
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
 the `bank` index, and the `q=*` parameter instructs Xapiand to match all
-documents in the index. The `sort=account_number:asc` parameter indicates to
+documents in the index. The `sort=account_number` parameter indicates to
 sort the results using the `account_number` field of each document in an
 ascending order. The `pretty` parameter just tells Xapiand to return
 pretty-printed JSON results, the same effect can be achieved by using the
@@ -77,19 +98,42 @@ And the response (partially shown):
 
 ```json
 {
-  "took" : 63,
-  "total": 1000,
-  "hits": [
-    {
-    }, ...
-  ]
+  "#query": {
+    "#total_count": 10,
+    "#matches_estimated": 1000,
+    "#hits": [
+      {
+          "city": "Fairview",
+          "gender": "female",
+          "balance": "1073.05",
+          "firstname": "Hester",
+          "lastname": "Blake",
+          "company": "Affluex",
+          "favoriteFruit": "strawberry",
+          "eyeColor": "brown",
+          "phone": "+1 (919) 400-3616",
+          "state": "Virgin Islands",
+          "account_number": 100123,
+          "address": "756 Strauss Street",
+          "age": 24,
+          "email": "hester.blake@affluex.net",
+          "_id": 233,
+          "#docid": 233,
+          "#rank": 0,
+          "#weight": 0.0,
+          "#percent": 100
+      }, ...
+    ]
+  }
 }
 ```
 
 As for the response, we see the following parts:
 
-* `took` - time in milliseconds for Xapiand to execute the search.
-* `hits` - search results.
+* `#total_count` - Total number of returned hits.
+* `#matches_estimated` - Number of estimated documents that match the query.
+* `#took` - time in milliseconds for Xapiand to execute the search.
+* `#hits` - search results.
 
 ## Introducing the Query Language
 
