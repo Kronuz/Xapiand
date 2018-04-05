@@ -251,7 +251,7 @@ add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 
 ########################################################################
-# Xapaind package configuration target
+# Xapiand package configuration target
 ########################################################################
 
 
@@ -450,7 +450,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${UUID_LIBRARIES})
 ########################################################################
 
 find_package(Xapian REQUIRED)
-target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${XAPIAN_INCLUDE_DIR}")
+include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}") # <xapian.h> is imported everywhere (for exceptions)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${XAPIAN_LIBRARIES})
 
 cmake_push_check_state()
