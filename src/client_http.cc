@@ -852,6 +852,14 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			request.path_parser.skip_id();  // Command has no ID
 			commit_view(request, response, method, cmd);
 			break;
+		case Command::CMD_DUMP:
+			request.path_parser.skip_id();  // Command has no ID
+			dump_view(request, response, method, cmd);
+			break;
+		case Command::CMD_RESTORE:
+			request.path_parser.skip_id();  // Command has no ID
+			restore_view(request, response, method, cmd);
+			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
@@ -1307,6 +1315,80 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
 	request.db_handler.commit();  // Ensure touch.
+
+	request.ready = std::chrono::system_clock::now();
+
+	MsgPack response_obj;
+	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
+
+	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+}
+
+
+void
+HttpClient::dump_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+{
+	L_CALL("HttpClient::dump_view()");
+
+	endpoints_maker(request, 1s);
+
+	request.processing = std::chrono::system_clock::now();
+
+	request.db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+
+	char path[] = "/tmp/xapian_dump.XXXXXX";
+	int file_descriptor = mkstemp(path);
+	try {
+		request.db_handler.dump_documents(file_descriptor);
+	} catch (...) {
+		io::close(file_descriptor);
+		io::unlink(path);
+		throw;
+	}
+
+	size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
+	io::close(file_descriptor);
+
+	request.ready = std::chrono::system_clock::now();
+
+	MsgPack response_obj;
+	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
+
+	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", "application/octet-stream", "", content_length));
+	write_file(path, true);
+}
+
+
+void
+HttpClient::restore_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+{
+	L_CALL("HttpClient::restore_view()");
+
+	endpoints_maker(request, 1s);
+
+	request.processing = std::chrono::system_clock::now();
+
+	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL, method);
+
+	char path[] = "/tmp/xapian_dump.XXXXXX";
+	int file_descriptor = mkstemp(path);
+	try {
+		auto decoded_body = request.decoded_body();
+		if (!decoded_body.is_string()) {
+			THROW(ClientError, "Expected a binary dump");
+		}
+		auto body = decoded_body.str_view();
+		io::write(file_descriptor, body.data(), body.size());
+		io::lseek(file_descriptor, 0, SEEK_SET);
+		request.db_handler.restore(file_descriptor);
+	} catch (...) {
+		io::close(file_descriptor);
+		io::unlink(path);
+		throw;
+	}
+
+	io::close(file_descriptor);
+	io::unlink(path);
 
 	request.ready = std::chrono::system_clock::now();
 

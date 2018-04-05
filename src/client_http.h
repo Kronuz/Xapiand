@@ -135,10 +135,12 @@ enum class Encoding {
 // Available commands
 
 constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
+constexpr const char COMMAND_DUMP[]        = COMMAND_PREFIX "dump";
 constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
 constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
 constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
 constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
+constexpr const char COMMAND_RESTORE[]     = COMMAND_PREFIX "restore";
 constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
 constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
 constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
@@ -147,10 +149,12 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 
 #define COMMAND_OPTIONS() \
 	OPTION(COMMIT) \
+	OPTION(DUMP) \
 	OPTION(INFO) \
 	OPTION(METADATA) \
 	OPTION(NODES) \
 	OPTION(QUIT) \
+	OPTION(RESTORE) \
 	OPTION(SCHEMA) \
 	OPTION(SEARCH) \
 	OPTION(STATS) \
@@ -280,6 +284,8 @@ class HttpClient : public Task<>, public BaseClient {
 	void search_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void touch_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void commit_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void dump_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void restore_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void schema_view(Request& request, Response& response, enum http_method method, Command cmd);
 #if XAPIAND_DATABASE_WAL
 	void wal_view(Request& request, Response& response, enum http_method method, Command cmd);
