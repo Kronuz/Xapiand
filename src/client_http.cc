@@ -1373,25 +1373,28 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL, method);
 
-	char path[] = "/tmp/xapian_dump.XXXXXX";
-	int file_descriptor = mkstemp(path);
-	try {
-		auto decoded_body = request.decoded_body();
-		if (!decoded_body.is_string()) {
-			THROW(ClientError, "Expected a binary dump");
+	auto decoded_body = request.decoded_body();
+	if (decoded_body.is_string()) {
+		char path[] = "/tmp/xapian_dump.XXXXXX";
+		int file_descriptor = mkstemp(path);
+		try {
+			auto body = decoded_body.str_view();
+			io::write(file_descriptor, body.data(), body.size());
+			io::lseek(file_descriptor, 0, SEEK_SET);
+			request.db_handler.restore(file_descriptor);
+		} catch (...) {
+			io::close(file_descriptor);
+			io::unlink(path);
+			throw;
 		}
-		auto body = decoded_body.str_view();
-		io::write(file_descriptor, body.data(), body.size());
-		io::lseek(file_descriptor, 0, SEEK_SET);
-		request.db_handler.restore(file_descriptor);
-	} catch (...) {
+
 		io::close(file_descriptor);
 		io::unlink(path);
-		throw;
+	} else if (decoded_body.is_array()) {
+		request.db_handler.restore_documents(decoded_body);
+	} else {
+		THROW(ClientError, "Expected a binary or list dump");
 	}
-
-	io::close(file_descriptor);
-	io::unlink(path);
 
 	request.ready = std::chrono::system_clock::now();
 

@@ -229,6 +229,7 @@ public:
 	void dump_schema(int fd);
 	void dump_documents(int fd);
 	void restore(int fd);
+	void restore_documents(const MsgPack& docs);
 
 	std::string get_prefixed_term_id(std::string_view document_id);
 
