@@ -260,25 +260,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 	L_HTTP_WIRE("HttpClient::on_read: %zd bytes", received);
 	ssize_t parsed = http_parser_execute(&new_request.parser, &settings, buf, received);
-	if (parsed == received) {
-		unsigned final_state = new_request.parser.state;
-		if (final_state == init_state) {
-			if (received == 1 and buf[0] == '\n') {  // ignore '\n' request
-				return;
-			}
-		}
-		if (final_state == 1 || final_state == 18) {  // dead or message_complete
-			if (!closed) {
-				std::lock_guard<std::mutex> lk(requests_mutex);
-				if (requests.empty()) {
-					// There wasn't one, start runner
-					XapiandManager::manager->thread_pool.enqueue(share_this<HttpClient>());
-				}
-				requests.push_back(std::move(new_request));
-				new_request = Request(this);
-			}
-		}
-	} else {
+	if (parsed != received) {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request.parser);
 		if (err == HPE_INVALID_METHOD) {
@@ -358,6 +340,15 @@ HttpClient::on_info(http_parser* parser)
 
 	switch (state) {
 		case 18:  // message_complete
+			if (!closed) {
+				std::lock_guard<std::mutex> lk(requests_mutex);
+				if (requests.empty()) {
+					// There wasn't one, start runner
+					XapiandManager::manager->thread_pool.enqueue(share_this<HttpClient>());
+				}
+				requests.push_back(std::move(new_request));
+			}
+			new_request = Request(this);
 			break;
 		case 19:  // message_begin
 			idle = false;
