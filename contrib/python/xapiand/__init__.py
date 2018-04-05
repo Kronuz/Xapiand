@@ -241,7 +241,7 @@ class Xapiand(object):
                     body = body.copy()
                     schema = body['_schema']
                     if isinstance(schema, dict):
-                        schema['_value'] = '{}{}'.format(self.prefix, schema['_value'].strip('/'))
+                        schema['_endpoint'] = '{}{}'.format(self.prefix, schema['_endpoint'].strip('/'))
                     else:
                         schema = '{}{}'.format(self.prefix, schema.strip('/'))
                     body['_schema'] = schema
