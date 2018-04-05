@@ -1917,7 +1917,7 @@
     "eyeColor": "blue",
     "age": 29,
     "account_number": 636392,
-    "balance": 2842
+    "balance": "2842.00"
   },
   {
     "favoriteFruit": "banana",
@@ -4573,7 +4573,7 @@
     "eyeColor": "green",
     "age": 34,
     "account_number": 981912,
-    "balance": 3066
+    "balance": "3066.00"
   },
   {
     "favoriteFruit": "strawberry",
@@ -5021,7 +5021,7 @@
     "eyeColor": "brown",
     "age": 31,
     "account_number": 112495,
-    "balance": 2288
+    "balance": "2288.00"
   },
   {
     "favoriteFruit": "apple",
@@ -8413,7 +8413,7 @@
     "eyeColor": "green",
     "age": 27,
     "account_number": 294217,
-    "balance": 3388
+    "balance": "3388.00"
   },
   {
     "favoriteFruit": "apple",
@@ -8733,7 +8733,7 @@
     "eyeColor": "green",
     "age": 20,
     "account_number": 999857,
-    "balance": 1824
+    "balance": "1824.00"
   },
   {
     "favoriteFruit": "banana",
@@ -11805,7 +11805,7 @@
     "eyeColor": "brown",
     "age": 23,
     "account_number": 904408,
-    "balance": 1755
+    "balance": "1755.00"
   },
   {
     "favoriteFruit": "strawberry",
@@ -12061,7 +12061,7 @@
     "eyeColor": "brown",
     "age": 31,
     "account_number": 807537,
-    "balance": 3591
+    "balance": "3591.00"
   },
   {
     "favoriteFruit": "strawberry",
@@ -12109,7 +12109,7 @@
     "eyeColor": "blue",
     "age": 29,
     "account_number": 472127,
-    "balance": 2885
+    "balance": "2885.00"
   },
   {
     "favoriteFruit": "banana",
@@ -12285,7 +12285,7 @@
     "eyeColor": "green",
     "age": 26,
     "account_number": 233733,
-    "balance": 2221
+    "balance": "2221.00"
   },
   {
     "favoriteFruit": "banana",
@@ -12845,7 +12845,7 @@
     "eyeColor": "green",
     "age": 22,
     "account_number": 558949,
-    "balance": 1895
+    "balance": "1895.00"
   },
   {
     "favoriteFruit": "banana",
@@ -13373,7 +13373,7 @@
     "eyeColor": "blue",
     "age": 25,
     "account_number": 345039,
-    "balance": 3100
+    "balance": "3100.00"
   },
   {
     "favoriteFruit": "apple",
