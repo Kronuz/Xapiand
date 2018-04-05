@@ -1126,13 +1126,7 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
-			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
-			};
-			write_http_response(request, response, error_code, err_response);
-			return;
+			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
@@ -1221,13 +1215,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
-			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
-			};
-			write_http_response(request, response, error_code, err_response);
-			return;
+			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
@@ -1346,13 +1334,7 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
-			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
-			};
-			write_http_response(request, response, error_code, err_response);
-			return;
+			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
@@ -1383,13 +1365,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method meth
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
-			enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
-			};
-			write_http_response(request, response, error_code, err_response);
-			return;
+			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
 		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
@@ -1440,13 +1416,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	try {
 		if (query_field.as_volatile) {
 			if (endpoints.size() != 1) {
-				enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-				MsgPack err_response = {
-					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, { "Expecting exactly one index with volatile" } }
-				};
-				write_http_response(request, response, error_code, err_response);
-				return;
+				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
 			request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 		} else {
