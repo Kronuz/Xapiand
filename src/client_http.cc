@@ -565,6 +565,9 @@ HttpClient::run_one(Request& request, Response& response)
 			} else {
 				if (request.ct_type() == json_type || request.ct_type() == msgpack_type) {
 					request.body = request.decoded_body().to_string(4);
+					if (request.body.size() > 1024 * 10) {
+						request.body = "<body " + string::from_bytes(request.body.size()) + ">";
+					}
 				} else if (!request.raw.empty()) {
 					request.body = "<blob " + string::from_bytes(request.raw.size()) + ">";
 				}
@@ -1682,6 +1685,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 							response.body += '\a';
 						} else if (!blob_data.empty()) {
 							response.body = "<blob " + string::from_bytes(blob_data.size()) + ">";
+						} else if (response.body.size() > 1024 * 10) {
+							response.body = "<body " + string::from_bytes(response.body.size()) + ">";
 						}
 					}
 					if (type_encoding != Encoding::none) {
