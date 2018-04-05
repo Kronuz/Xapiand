@@ -160,10 +160,11 @@ public:
 	void close();
 
 	bool write(const char *buf, size_t buf_size);
-
 	inline bool write(std::string_view buf) {
 		return write(buf.data(), buf.size());
 	}
+
+	bool write_file(std::string_view path, bool unlink = false);
 
 protected:
 	ev::io io_read;

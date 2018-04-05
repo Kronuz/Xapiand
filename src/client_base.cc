@@ -495,7 +495,36 @@ BaseClient::write(const char *buf, size_t buf_size)
 			return true;
 		default:
 			return false;
+	}
+}
 
+
+bool
+BaseClient::write_file(std::string_view path, bool unlink)
+{
+	L_CALL("BaseClient::write_file(%s, %s)", repr(path), unlink ? "true" : "false");
+
+	if (!write_queue.push(std::make_shared<Buffer>(path, unlink))) {
+		return false;
+	}
+	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
+
+	int fd = sock.load();
+	if (fd == -1) {
+		return false;
+	}
+
+	written += 1;
+
+	switch (_write(fd)) {
+		case WR::RETRY:
+		case WR::PENDING:
+			write_start_async.send();
+			/* FALLTHROUGH */
+		case WR::OK:
+			return true;
+		default:
+			return false;
 	}
 }
 
