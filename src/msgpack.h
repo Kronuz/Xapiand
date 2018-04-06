@@ -68,6 +68,21 @@ class MsgPack {
 
 	void _assignment(const msgpack::object& obj);
 
+	static msgpack::object _undefined_msgpack() {
+		static const char data = (char)Type::UNDEFINED & MSGPACK_EXT_MASK;
+		msgpack::object o;
+		o.type = msgpack::type::EXT;
+		o.via.ext.ptr = &data;
+		o.via.ext.size = 1;
+		return o;
+	}
+
+	static MsgPack _undefined() {
+		MsgPack undefined(_undefined_msgpack());
+		undefined.lock();
+		return undefined;
+	}
+
 public:
 	struct Data {
 		virtual ~Data() { };
@@ -96,17 +111,8 @@ public:
 		duplicate_key(Args&&... args) : OutOfRange(std::forward<Args>(args)...) { }
 	};
 
-	static msgpack::object _undefined() {
-		static const char data = (char)Type::UNDEFINED & MSGPACK_EXT_MASK;
-		msgpack::object o;
-		o.type = msgpack::type::EXT;
-		o.via.ext.ptr = &data;
-		o.via.ext.size = 1;
-		return o;
-	}
-
-	static const MsgPack& undefined() {
-		static const MsgPack undefined(_undefined());
+	static MsgPack& undefined() {
+		static auto undefined = _undefined();
 		return undefined;
 	}
 
