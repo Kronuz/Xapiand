@@ -34,23 +34,103 @@ namespace chaipp {
 inline static chaiscript::ModulePtr ModuleMsgPack() {
 	chaiscript::ModulePtr module(new chaiscript::Module());
 
-	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack& obj) { return obj.as_boolean(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack& obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack& obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack& obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, long>([](const MsgPack& obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, unsigned long long>([](const MsgPack& obj) { return obj.as_u64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack& obj) { return obj.as_i64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack& obj) { return obj.as_f64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack& obj) { return obj.as_f64(); }));
-	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack& obj) { return obj.as_str(); }));
-
-	module->add(chaiscript::type_conversion<const std::string, std::string_view>([](const std::string& obj) { return std::string_view(obj); }));
+	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_boolean();
+			}
+		}
+		return obj.as_boolean();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_u64();
+			}
+		}
+		return obj.as_u64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_i64();
+			}
+		}
+		return obj.as_i64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_u64();
+			}
+		}
+		return obj.as_u64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, long>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_i64();
+			}
+		}
+		return obj.as_i64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, unsigned long long>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_u64();
+			}
+		}
+		return obj.as_u64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_i64();
+			}
+		}
+		return obj.as_i64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_f64();
+			}
+		}
+		return obj.as_f64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_f64();
+			}
+		}
+		return obj.as_f64();
+	}));
+	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack& obj) {
+		if (obj.is_map()) {
+			auto it = obj.find("_value");
+			if (it != obj.end()) {
+				return it.value().as_str();
+			}
+		}
+		return obj.as_str();
+	}));
 
 	module->add(chaiscript::type_conversion<unsigned, size_t>([](const unsigned& orig) { return static_cast<size_t>(orig); }));
 	module->add(chaiscript::type_conversion<int, size_t>([](const int& orig) { return static_cast<size_t>(orig); }));
 	module->add(chaiscript::type_conversion<unsigned long, size_t>([](const unsigned long& orig) { return static_cast<size_t>(orig); }));
 	module->add(chaiscript::type_conversion<long, size_t>([](const long& orig) { return static_cast<size_t>(orig); }));
+
+	module->add(chaiscript::type_conversion<const std::string, std::string_view>([](const std::string& obj) { return std::string_view(obj); }));
 
 	chaiscript::utility::add_class<MsgPack>(
 		*module,
@@ -81,74 +161,98 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			chaiscript::constructor<MsgPack(const std::map<std::string, chaiscript::Boxed_Value>&)>(),
 		},
 		{
-			// Specific instantiation of the template MsgPack::operator[](M&&).
-			{ chaiscript::fun<MsgPack&, MsgPack, MsgPack&&>(&MsgPack::operator[]<MsgPack>),                          "[]" },
-			{ chaiscript::fun<MsgPack&, MsgPack, MsgPack&>(&MsgPack::operator[]<MsgPack&>),                          "[]" },
-			{ chaiscript::fun<MsgPack&, MsgPack, const MsgPack&>(&MsgPack::operator[]<const MsgPack&>),              "[]" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&&>(&MsgPack::operator[]<MsgPack>),              "[]" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&>(&MsgPack::operator[]<MsgPack&>),              "[]" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, const MsgPack&>(&MsgPack::operator[]<const MsgPack&>),  "[]" },
-			// Specific instantiation of the template MsgPack::operator[](std::string_view).
-			{ chaiscript::fun<MsgPack&, MsgPack, std::string_view>(&MsgPack::operator[]),                            "[]" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, std::string_view>(&MsgPack::operator[]),                "[]" },
-			// Specific instantiation of the template MsgPack::operator[](size_t).
-			{ chaiscript::fun<MsgPack&, MsgPack, size_t>(&MsgPack::operator[]),                                      "[]" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, size_t>(&MsgPack::operator[]),                          "[]" },
+			// operator []
+			{ chaiscript::fun([](MsgPack& obj, size_t idx) -> MsgPack& {
+				if (obj.is_array()) {
+					return obj.operator[](idx);
+				}
+				return MsgPack::undefined();
+			}), "[]" },
+			{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> const MsgPack& {
+				if (obj.is_array()) {
+					return obj.operator[](idx);
+				}
+				return MsgPack::undefined();
+			}), "[]" },
+			{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack& {
+				if (obj.is_map()) {
+					return obj.operator[](str);
+				}
+				return MsgPack::undefined();
+			}), "[]" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> const MsgPack& {
+				if (obj.is_map()) {
+					return obj.operator[](str);
+				}
+				return MsgPack::undefined();
+			}), "[]" },
 
-			// Specific instantiation of the template MsgPack::at(M&&).
-			{ chaiscript::fun<MsgPack&, MsgPack, MsgPack&&>(&MsgPack::at<MsgPack>),                          "at" },
-			{ chaiscript::fun<MsgPack&, MsgPack, MsgPack&>(&MsgPack::at<MsgPack&>),                          "at" },
-			{ chaiscript::fun<MsgPack&, MsgPack, const MsgPack&>(&MsgPack::at<const MsgPack&>),              "at" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&&>(&MsgPack::at<MsgPack>),              "at" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&>(&MsgPack::at<MsgPack&>),              "at" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, const MsgPack&>(&MsgPack::at<const MsgPack&>),  "at" },
-			// Specific instantiation of the template MsgPack::at(std::string_view).
-			{ chaiscript::fun<MsgPack&, MsgPack, std::string_view>(&MsgPack::at),                            "at" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, std::string_view>(&MsgPack::at),                "at" },
-			// Specific instantiation of the template MsgPack::at(size_t).
-			{ chaiscript::fun<MsgPack&, MsgPack, size_t>(&MsgPack::at),                                      "at" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, size_t>(&MsgPack::at),                          "at" },
+			// method at()
+			{ chaiscript::fun([](MsgPack& obj, size_t idx) -> MsgPack& {
+				if (obj.is_array()) {
+					return obj.at(idx);
+				}
+				return MsgPack::undefined();
+			}), "at" },
+			{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> const MsgPack& {
+				if (obj.is_array()) {
+					return obj.at(idx);
+				}
+				return MsgPack::undefined();
+			}), "at" },
+			{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack& {
+				if (obj.is_map()) {
+					return obj.at(str);
+				}
+				return MsgPack::undefined();
+			}), "at" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> const MsgPack& {
+				if (obj.is_map()) {
+					return obj.at(str);
+				}
+				return MsgPack::undefined();
+			}), "at" },
 
-			// Specific instantiation of the template MsgPack::find(M&&).
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, MsgPack&&>(&MsgPack::find<MsgPack>),                          "find" },
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, MsgPack&>(&MsgPack::find<MsgPack&>),                          "find" },
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, const MsgPack&>(&MsgPack::find<const MsgPack&>),              "find" },
-			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, MsgPack&&>(&MsgPack::find<MsgPack>),              "find" },
-			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, MsgPack&>(&MsgPack::find<MsgPack&>),              "find" },
-			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, const MsgPack&>(&MsgPack::find<const MsgPack&>),  "find" },
-			// Specific instantiation of the template MsgPack::find(std::string_view).
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, std::string_view>(&MsgPack::find),                            "find" },
-			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, std::string_view>(&MsgPack::find),                "find" },
-			// Specific instantiation of the template MsgPack::find(size_t).
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, size_t>(&MsgPack::find),                                      "find" },
-			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, size_t>(&MsgPack::find),                          "find" },
+			// method find()
+			{ chaiscript::fun([](MsgPack& obj, size_t idx) -> MsgPack::iterator {
+				return obj.find(idx);
+			}), "find" },
+			{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> MsgPack::const_iterator {
+				return obj.find(idx);
+			}), "find" },
+			{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack::iterator {
+				return obj.find(str);
+			}), "find" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> MsgPack::const_iterator {
+				return obj.find(str);
+			}), "find" },
 
 			// Specific instantiation of the template MsgPack::update.
 			{ chaiscript::fun(&MsgPack::update<MsgPack>),            "update" },
 			{ chaiscript::fun(&MsgPack::update<MsgPack&>),           "update" },
 			{ chaiscript::fun(&MsgPack::update<const MsgPack&>),     "update" },
 
-			// Specific instantiation of the template MsgPack::count.
-			{ chaiscript::fun(&MsgPack::count<MsgPack>),             "count" },
-			{ chaiscript::fun(&MsgPack::count<MsgPack&>),            "count" },
-			{ chaiscript::fun(&MsgPack::count<const MsgPack&>),      "count" },
-			{ chaiscript::fun(&MsgPack::count<std::string>),         "count" },
-			{ chaiscript::fun(&MsgPack::count<std::string&>),        "count" },
-			{ chaiscript::fun(&MsgPack::count<const std::string&>),  "count" },
-			{ chaiscript::fun(&MsgPack::count<size_t>),              "count" },
-			{ chaiscript::fun(&MsgPack::count<size_t&>),             "count" },
-			{ chaiscript::fun(&MsgPack::count<const size_t&>),       "count" },
+			// method count()
+			{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> size_t {
+				return obj.count(idx);
+			}), "count" },
+			{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> size_t {
+				return obj.count(str);
+			}), "count" },
 
-			// Specific instantiation of the template MsgPack::erase(M&&).
-			{ chaiscript::fun<size_t, MsgPack, MsgPack&&>(&MsgPack::erase<MsgPack>),              "erase" },
-			{ chaiscript::fun<size_t, MsgPack, MsgPack&>(&MsgPack::erase<MsgPack&>),              "erase" },
-			{ chaiscript::fun<size_t, MsgPack, const MsgPack&>(&MsgPack::erase<const MsgPack&>),  "erase" },
-			// Specific instantiation of the template MsgPack::erase(std::string_view).
-			{ chaiscript::fun<size_t, MsgPack, std::string_view>(&MsgPack::erase),                "erase" },
-			// Specific instantiation of the template MsgPack::erase(size_t).
-			{ chaiscript::fun<size_t, MsgPack, size_t>(&MsgPack::erase),                          "erase" },
-			// Specific instantiation of the template MsgPack::erase(const MsgPack::iterator&).
-			{ chaiscript::fun<MsgPack::iterator, MsgPack, MsgPack::iterator>(&MsgPack::erase),    "erase" },
+			// method erase()
+			{ chaiscript::fun([](MsgPack& obj, size_t idx) -> size_t {
+				if (obj.is_array()) {
+					return obj.erase(idx);
+				}
+				return 0;
+			}), "erase" },
+			{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> size_t {
+				if (obj.is_map()) {
+					return obj.erase(str);
+				}
+				return 0;
+			}), "erase" },
 
 			{ chaiscript::fun(&MsgPack::clear),         "clear"         },
 			{ chaiscript::fun(&MsgPack::reserve),       "reserve"       },
@@ -228,8 +332,8 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(&MsgPack::append<MsgPack&>),            "append" },
 			{ chaiscript::fun(&MsgPack::append<const MsgPack&>),      "append" },
 
-			{ chaiscript::fun<MsgPack&, MsgPack, const std::vector<std::string_view>&>(&MsgPack::path),              "path" },
-			{ chaiscript::fun<const MsgPack&, const MsgPack, const std::vector<std::string_view>&>(&MsgPack::path),  "path" },
+			{ chaiscript::fun<MsgPack&, MsgPack, const std::vector<std::string>&>(&MsgPack::path),              "path" },
+			{ chaiscript::fun<const MsgPack&, const MsgPack, const std::vector<std::string>&>(&MsgPack::path),  "path" },
 
 			// Specific instantiation of the template MsgPack::put<const MsgPack&, T>.
 			{ chaiscript::fun(&MsgPack::put<const MsgPack&, unsigned>),                                                                          "put" },
