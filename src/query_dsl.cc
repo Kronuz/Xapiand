@@ -1042,11 +1042,14 @@ QueryDSL::get_query(const MsgPack& obj)
 {
 	L_CALL("QueryDSL::get_query(%s)", repr(obj.to_string()));
 
+	Xapian::Query query;
+
 	if (obj.is_string() && obj.str_view().compare("*") == 0) {
-		return Xapian::Query::MatchAll;
+		query = Xapian::Query::MatchAll;
+	} else {
+		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
 	}
 
-	auto query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
 	L_QUERY("query = " + STEEL_BLUE + "%s" + CLEAR_COLOR + "\n" + DIM_GREY + "%s" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
 	return query;
 }
