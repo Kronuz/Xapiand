@@ -447,6 +447,9 @@ bool build_path(std::string_view path) {
 	Split<char> directories(path, '/');
 	std::string dir;
 	dir.reserve(path.size());
+	if (path.front() == '/') {
+		dir.push_back('/');
+	}
 	for (const auto& _dir : directories) {
 		dir.append(_dir).push_back('/');
 		if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
