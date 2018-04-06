@@ -926,8 +926,14 @@ void usedir(const char* path, bool solo) {
 #endif
 
 	if (chdir(path) == -1) {
-		L_CRIT("Cannot change current working directory to %s", path);
-		throw Exit(EX_OSFILE);
+		if (build_path(std::string(path))) {
+			if (chdir(path) == -1) {
+				L_CRIT("Cannot change current working directory to %s", path);
+				throw Exit(EX_OSFILE);
+			}
+		} else {
+			L_ERR("Cannot create working directory: %s (%s)", path, strerror(errno));
+		}
 	}
 
 	char buffer[PATH_MAX];
