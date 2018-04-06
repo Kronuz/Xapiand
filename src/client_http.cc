@@ -553,25 +553,6 @@ HttpClient::run_one(Request& request, Response& response)
 
 	try {
 		if (Logging::log_level > LOG_DEBUG) {
-			if (Logging::log_level > LOG_DEBUG + 1 && request.content_type.find("image/") != std::string::npos) {
-				// From [https://www.iterm2.com/documentation-images.html]
-				std::string b64_name = cppcodec::base64_rfc4648::encode("");
-				std::string b64_request_body = cppcodec::base64_rfc4648::encode(request.raw);
-				request.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-					b64_name,
-					b64_request_body.size());
-				request.body += b64_request_body;
-				request.body += '\a';
-			} else {
-				if (request.ct_type() == json_type || request.ct_type() == msgpack_type) {
-					request.body = request.decoded_body().to_string(4);
-					if (request.body.size() > 1024 * 10) {
-						request.body = "<body " + string::from_bytes(request.body.size()) + ">";
-					}
-				} else if (!request.raw.empty()) {
-					request.body = "<blob " + string::from_bytes(request.raw.size()) + ">";
-				}
-			}
 			log_request(request);
 		}
 
@@ -1611,7 +1592,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			}
 			basic_response[RESPONSE_QUERY] = basic_query;
 
-			if (Logging::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 				l_first_chunk = basic_response.to_string(4);
 				l_first_chunk = l_first_chunk.substr(0, l_first_chunk.size() - 9) + "\n";
 				l_last_chunk = "        ]\n    }\n}";
@@ -1673,18 +1654,18 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			MsgPack obj;
 			if (single) {
 				// Figure out the document's ContentType.
-				std::string blob_ct_type_str = get_data_content_type(data);
+				response.content_type = get_data_content_type(data);
 
 				// If there's a ContentType in the blob store or in the ContentType's field
 				// in the object, try resolving to it (or otherwise don't touch the current ct_type)
-				auto blob_ct_type = resolve_ct_type(request, blob_ct_type_str);
+				auto blob_ct_type = resolve_ct_type(request, response.content_type);
 				if (blob_ct_type.empty()) {
 					if (ct_type.empty()) {
 						// No content type could be resolved, return NOT ACCEPTABLE.
 						enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 						MsgPack err_response = {
 							{ RESPONSE_STATUS, (int)error_code },
-							{ RESPONSE_MESSAGE, { "Response type " + blob_ct_type_str + " not provided in the Accept header" } }
+							{ RESPONSE_MESSAGE, { "Response type " + response.content_type + " not provided in the Accept header" } }
 						};
 						write_http_response(request, response, error_code, err_response);
 						L_SEARCH("ABORTED SEARCH");
@@ -1695,32 +1676,16 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 					ct_type = blob_ct_type;
 
 					auto blob = document.get_blob();
-					auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
-					if (Logging::log_level > LOG_DEBUG) {
-						if (Logging::log_level > LOG_DEBUG + 1 && ct_type.first == "image") {
-							// From [https://www.iterm2.com/documentation-images.html]
-							std::string b64_name = cppcodec::base64_rfc4648::encode("");
-							std::string b64_response_body = cppcodec::base64_rfc4648::encode(blob_data);
-							response.body = string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-								b64_name,
-								b64_response_body.size());
-							response.body += b64_response_body;
-							response.body += '\a';
-						} else if (!blob_data.empty()) {
-							response.body = "<blob " + string::from_bytes(blob_data.size()) + ">";
-						} else if (response.body.size() > 1024 * 10) {
-							response.body = "<body " + string::from_bytes(response.body.size()) + ">";
-						}
-					}
+					response.blob = unserialise_string_at(STORED_BLOB_DATA, blob);
 					if (type_encoding != Encoding::none) {
-						auto encoded = encoding_http_response(response, type_encoding, blob_data, false, true, true);
-						if (!encoded.empty() && encoded.size() <= blob_data.size()) {
+						auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
+						if (!encoded.empty() && encoded.size() <= response.blob.size()) {
 							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.first + "/" + ct_type.second, readable_encoding(type_encoding)));
 						} else {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, blob_data, ct_type.first + "/" + ct_type.second, readable_encoding(Encoding::identity)));
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.first + "/" + ct_type.second, readable_encoding(Encoding::identity)));
 						}
 					} else {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, blob_data, ct_type.first + "/" + ct_type.second));
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.first + "/" + ct_type.second));
 					}
 					return;
 				}
@@ -1749,7 +1714,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				obj = obj.select(selector);
 			}
 
-			if (Logging::log_level > LOG_DEBUG) {
+			if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 				if (single) {
 					response.body += obj.to_string(4);
 				} else {
@@ -1810,7 +1775,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			if (single) { break; }
 		}
 
-		if (Logging::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 			if (!single) {
 				if (rc == 0) {
 					response.body += l_first_chunk;
@@ -2365,7 +2330,33 @@ HttpClient::log_request(Request& request)
 			break;
 	};
 
-	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color + request.body;
+	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color;
+	if (!request.raw.empty()) {
+		if (Logging::log_level > LOG_DEBUG + 1 && request.content_type.find("image/") != std::string::npos) {
+			// From [https://www.iterm2.com/documentation-images.html]
+			std::string b64_name = cppcodec::base64_rfc4648::encode("");
+			std::string b64_data = cppcodec::base64_rfc4648::encode(request.raw);
+			request_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				b64_name,
+				b64_data.size());
+			request_text += b64_data;
+			request_text += '\a';
+		} else {
+			if (request.raw.size() > 1024 * 10) {
+				request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
+			} else if (request.ct_type() == json_type || request.ct_type() == msgpack_type) {
+				request_text += request.decoded_body().to_string(4);
+			} else {
+				request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
+			}
+		}
+	} else if (!request.body.empty()) {
+		if (request.body.size() > 1024 *10) {
+			request_text += "<body " + string::from_bytes(request.body.size()) + ">";
+		} else {
+			request_text += request.body;
+		}
+	}
 	L(priority, NO_COLOR, "%s%s", request_prefix, string::indent(request_text, ' ', 4, false));
 }
 
@@ -2424,7 +2415,31 @@ HttpClient::log_response(Response& response)
 		priority = -LOG_ERR;
 	}
 
-	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color + response.body;
+	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color;
+	if (!response.blob.empty()) {
+		if (Logging::log_level > LOG_DEBUG + 1 && response.content_type.find("image/") != std::string::npos) {
+			// From [https://www.iterm2.com/documentation-images.html]
+			std::string b64_name = cppcodec::base64_rfc4648::encode("");
+			std::string b64_data = cppcodec::base64_rfc4648::encode(response.blob);
+			response_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				b64_name,
+				b64_data.size());
+			response_text += b64_data;
+			response_text += '\a';
+		} else {
+			if (response.blob.size() > 1024 * 10) {
+				response_text += "<blob " + string::from_bytes(response.blob.size()) + ">";
+			} else {
+				response_text += "<blob " + string::from_bytes(response.blob.size()) + ">";
+			}
+		}
+	} else if (!response.body.empty()) {
+		if (response.size > 1024 *10) {
+			response_text += "<body " + string::from_bytes(response.size) + ">";
+		} else {
+			response_text += response.body;
+		}
+	}
 	L(priority, NO_COLOR, "%s%s", response_prefix, string::indent(response_text, ' ', 4, false));
 }
 
@@ -2635,7 +2650,7 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 
 	try {
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
-		if (Logging::log_level > LOG_DEBUG) {
+		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
 				response.body.append(obj.to_string(4));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {

@@ -174,6 +174,9 @@ public:
 	std::string headers;
 	std::string body;
 
+	std::string content_type;
+	std::string blob;
+
 	enum http_status status;
 	size_t size;
 
