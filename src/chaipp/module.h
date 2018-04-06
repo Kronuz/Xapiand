@@ -45,6 +45,8 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 	module->add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack& obj) { return obj.as_f64(); }));
 	module->add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack& obj) { return obj.as_str(); }));
 
+	module->add(chaiscript::type_conversion<const std::string, std::string_view>([](const std::string& obj) { return std::string_view(obj); }));
+
 	module->add(chaiscript::type_conversion<unsigned, size_t>([](const unsigned& orig) { return static_cast<size_t>(orig); }));
 	module->add(chaiscript::type_conversion<int, size_t>([](const int& orig) { return static_cast<size_t>(orig); }));
 	module->add(chaiscript::type_conversion<unsigned long, size_t>([](const unsigned long& orig) { return static_cast<size_t>(orig); }));
@@ -86,7 +88,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&&>(&MsgPack::operator[]<MsgPack>),              "[]" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&>(&MsgPack::operator[]<MsgPack&>),              "[]" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, const MsgPack&>(&MsgPack::operator[]<const MsgPack&>),  "[]" },
-			// Specific instantiation of the template MsgPack::operator[](const std::string&).
+			// Specific instantiation of the template MsgPack::operator[](std::string_view).
 			{ chaiscript::fun<MsgPack&, MsgPack, std::string_view>(&MsgPack::operator[]),                            "[]" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, std::string_view>(&MsgPack::operator[]),                "[]" },
 			// Specific instantiation of the template MsgPack::operator[](size_t).
@@ -100,7 +102,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&&>(&MsgPack::at<MsgPack>),              "at" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, MsgPack&>(&MsgPack::at<MsgPack&>),              "at" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, const MsgPack&>(&MsgPack::at<const MsgPack&>),  "at" },
-			// Specific instantiation of the template MsgPack::at(const std::string&).
+			// Specific instantiation of the template MsgPack::at(std::string_view).
 			{ chaiscript::fun<MsgPack&, MsgPack, std::string_view>(&MsgPack::at),                            "at" },
 			{ chaiscript::fun<const MsgPack&, const MsgPack, std::string_view>(&MsgPack::at),                "at" },
 			// Specific instantiation of the template MsgPack::at(size_t).
@@ -114,7 +116,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, MsgPack&&>(&MsgPack::find<MsgPack>),              "find" },
 			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, MsgPack&>(&MsgPack::find<MsgPack&>),              "find" },
 			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, const MsgPack&>(&MsgPack::find<const MsgPack&>),  "find" },
-			// Specific instantiation of the template MsgPack::find(const std::string&).
+			// Specific instantiation of the template MsgPack::find(std::string_view).
 			{ chaiscript::fun<MsgPack::iterator, MsgPack, std::string_view>(&MsgPack::find),                            "find" },
 			{ chaiscript::fun<MsgPack::const_iterator, const MsgPack, std::string_view>(&MsgPack::find),                "find" },
 			// Specific instantiation of the template MsgPack::find(size_t).
@@ -141,7 +143,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun<size_t, MsgPack, MsgPack&&>(&MsgPack::erase<MsgPack>),              "erase" },
 			{ chaiscript::fun<size_t, MsgPack, MsgPack&>(&MsgPack::erase<MsgPack&>),              "erase" },
 			{ chaiscript::fun<size_t, MsgPack, const MsgPack&>(&MsgPack::erase<const MsgPack&>),  "erase" },
-			// Specific instantiation of the template MsgPack::erase(const std::string&).
+			// Specific instantiation of the template MsgPack::erase(std::string_view).
 			{ chaiscript::fun<size_t, MsgPack, std::string_view>(&MsgPack::erase),                "erase" },
 			// Specific instantiation of the template MsgPack::erase(size_t).
 			{ chaiscript::fun<size_t, MsgPack, size_t>(&MsgPack::erase),                          "erase" },
@@ -245,7 +247,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(&MsgPack::put<const MsgPack&, MsgPack>),                                                                           "put" },
 			{ chaiscript::fun(&MsgPack::put<const MsgPack&, MsgPack&>),                                                                          "put" },
 			{ chaiscript::fun(&MsgPack::put<const MsgPack&, const MsgPack&>),                                                                    "put" },
-			// Specific instantiation of the template MsgPack::put<cons std::string&, T>.
+			// Specific instantiation of the template MsgPack::put<std::string_view, T>.
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, unsigned&&)>(&MsgPack::put<unsigned>)),                        "put" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, int&&)>(&MsgPack::put<int>)),                                  "put" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, unsigned long&&)>(&MsgPack::put<unsigned long>)),              "put" },
@@ -294,7 +296,7 @@ inline static chaiscript::ModulePtr ModuleMsgPack() {
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(const MsgPack&, MsgPack&&)>(&MsgPack::add<const MsgPack&, MsgPack>)),                        "add" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(const MsgPack&, MsgPack&)>(&MsgPack::add<const MsgPack&, MsgPack&>)),                        "add" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(const MsgPack&, const MsgPack&)>(&MsgPack::add<const MsgPack&, const MsgPack&>)),            "add" },
-			// Specific instantiation of the template MsgPack::add<cons std::string&, T&&>.
+			// Specific instantiation of the template MsgPack::add<std::string_view, T&&>.
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, unsigned&&)>(&MsgPack::add<unsigned>)),                                    "add" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, int&&)>(&MsgPack::add<int>)),                                              "add" },
 			{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, unsigned long&&)>(&MsgPack::add<unsigned long>)),                          "add" },
