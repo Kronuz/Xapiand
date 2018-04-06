@@ -2,6 +2,12 @@
 title: Backups
 ---
 
+Here we'll learn about how to backup your data by making full dumps and restores
+using specific commands from the command line, how to dump and restore documents
+(in bulk) using the _dump_ and _restore_ endpoints, and we'll see an example
+of updating and reindexing documents using different a schema.
+
+---
 
 ## Full Dump and Restore
 
@@ -37,6 +43,7 @@ For all the above commands you _should_ use the same parameters you use while
 running the server. For example, if the server runs in "optimal" mode by using
 the `--optimal` flag, also add the same flag to the dump/restore command above.
 
+---
 
 ## Online Dump and Restore
 
@@ -77,6 +84,7 @@ POST /twitter/:restore?pretty
 {% endcapture %}
 {% include curl.html json=json %}
 
+---
 
 ## Restore using different schema
 
