@@ -68,7 +68,7 @@ class MsgPack {
 
 	void _assignment(const msgpack::object& obj);
 
-	static msgpack::object _undefined_msgpack() {
+	static msgpack::object _undefined() {
 		static const char data = (char)Type::UNDEFINED & MSGPACK_EXT_MASK;
 		msgpack::object o;
 		o.type = msgpack::type::EXT;
@@ -77,11 +77,7 @@ class MsgPack {
 		return o;
 	}
 
-	static MsgPack _undefined() {
-		MsgPack undefined(_undefined_msgpack());
-		undefined.lock();
-		return undefined;
-	}
+	MsgPack(msgpack::object&& _object, bool _const);
 
 public:
 	struct Data {
@@ -112,7 +108,7 @@ public:
 	};
 
 	static MsgPack& undefined() {
-		static auto undefined = _undefined();
+		static MsgPack undefined(_undefined(), true);
 		return undefined;
 	}
 
@@ -167,7 +163,7 @@ private:
 	std::pair<size_t, MsgPack::iterator> _erase(std::string_view key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
-	void _clear() noexcept;
+	void _clear();
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
@@ -202,7 +198,7 @@ public:
 	size_t erase(size_t pos);
 	iterator erase(iterator it);
 
-	void clear() noexcept;
+	void clear();
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack::iterator replace(M&& o, T&& val);
@@ -494,6 +490,7 @@ struct MsgPack::Body {
 
 	std::atomic_bool _lock;
 	bool _initialized;
+	bool _const;
 
 	const std::shared_ptr<msgpack::zone> _zone;
 	const std::shared_ptr<msgpack::object> _base;
@@ -513,6 +510,7 @@ struct MsgPack::Body {
 		 msgpack::object* obj
 		) : _lock(false),
 			_initialized(false),
+			_const(false),
 			_zone(zone),
 			_base(base),
 			_parent(parent),
@@ -528,6 +526,7 @@ struct MsgPack::Body {
 		 msgpack::object* obj
 		) : _lock(false),
 			_initialized(false),
+			_const(false),
 			_zone(zone),
 			_base(base),
 			_parent(parent),
@@ -538,9 +537,10 @@ struct MsgPack::Body {
 			_capacity(size()) { }
 
 	template <typename T>
-	Body(T&& v)
+	Body(T&& v, bool _const = false)
 		: _lock(false),
 		  _initialized(false),
+		  _const(_const),
 		  _zone(std::make_shared<msgpack::zone>()),
 		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
 		  _parent(std::shared_ptr<Body>()),
@@ -769,6 +769,11 @@ inline MsgPack::MsgPack(const MsgPack& other)
 
 inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
+	  _const_body(_body.get()) { }
+
+
+inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
+	: _body(std::make_shared<Body>(std::forward<msgpack::object>(_object), _const)),
 	  _const_body(_body.get()) { }
 
 
@@ -1117,6 +1122,9 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 
 template <typename M, typename>
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1135,6 +1143,9 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1169,6 +1180,9 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key
 
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1211,7 +1225,10 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 }
 
 
-inline void MsgPack::_clear() noexcept {
+inline void MsgPack::_clear() {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	_body->_initialized = false;
 
@@ -1235,6 +1252,9 @@ inline void MsgPack::_clear() noexcept {
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1254,6 +1274,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bool overwrite) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1292,6 +1315,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwrite) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1330,6 +1356,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrite) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (o._body->getType()) {
 		case Type::STR:
@@ -1349,6 +1378,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool overwrite) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
@@ -1500,7 +1532,7 @@ inline MsgPack::iterator MsgPack::erase(MsgPack::iterator it) {
 }
 
 
-inline void MsgPack::clear() noexcept {
+inline void MsgPack::clear() {
 	// no need to _fill something that will be cleared.
 	_clear();
 }

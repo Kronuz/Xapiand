@@ -23,6 +23,12 @@ struct type_error : public BaseException, public std::bad_cast {
 };
 
 
+struct const_error : public type_error {
+    template<typename... Args>
+    const_error(Args&&... args) : type_error(std::forward<Args>(args)...) { }
+};
+
+
 struct container_size_overflow : public BaseException, public std::runtime_error {
     template<typename... Args>
     container_size_overflow(Args&&... args) : BaseException(std::forward<Args>(args)...), std::runtime_error(message) { }
