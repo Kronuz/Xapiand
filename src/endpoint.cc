@@ -249,8 +249,7 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_le
 		port = 0;
 	} else {
 		host = uri;
-		int errno_save;
-		port = strict_stoi(errno_save, _port);
+		port = strict_stoi(nullptr, _port);
 		if (port == 0) {
 			port = XAPIAND_BINARY_SERVERPORT;
 		}

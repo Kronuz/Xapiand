@@ -2098,20 +2098,17 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 	if (((flags & QUERY_FIELD_ID) != 0) || ((flags & QUERY_FIELD_SEARCH) != 0)) {
 		if (request.query_parser.next("offset") != -1) {
-			int errno_save;
-			query_field.offset = strict_stou(errno_save, request.query_parser.get());
+			query_field.offset = strict_stou(nullptr, request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
 		if (request.query_parser.next("check_at_least") != -1) {
-			int errno_save;
-			query_field.check_at_least = strict_stou(errno_save, request.query_parser.get());
+			query_field.check_at_least = strict_stou(nullptr, request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
 		if (request.query_parser.next("limit") != -1) {
-			int errno_save;
-			query_field.limit = strict_stou(errno_save, request.query_parser.get());
+			query_field.limit = strict_stou(nullptr, request.query_parser.get());
 		}
 		request.query_parser.rewind();
 	}
@@ -2165,8 +2162,7 @@ HttpClient::query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 
 		if (request.query_parser.next("collapse_max") != -1) {
-			int errno_save;
-			query_field.collapse_max = strict_stou(errno_save, request.query_parser.get());
+			query_field.collapse_max = strict_stou(nullptr, request.query_parser.get());
 		}
 		request.query_parser.rewind();
 
@@ -2187,20 +2183,17 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 		if (query_field.is_fuzzy) {
 			if (request.query_parser.next("fuzzy.n_rset") != -1) {
-				int errno_save;
-				query_field.fuzzy.n_rset = strict_stou(errno_save, request.query_parser.get());
+				query_field.fuzzy.n_rset = strict_stou(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			if (request.query_parser.next("fuzzy.n_eset") != -1) {
-				int errno_save;
-				query_field.fuzzy.n_eset = strict_stou(errno_save, request.query_parser.get());
+				query_field.fuzzy.n_eset = strict_stou(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			if (request.query_parser.next("fuzzy.n_term") != -1) {
-				int errno_save;
-				query_field.fuzzy.n_term = strict_stou(errno_save, request.query_parser.get());
+				query_field.fuzzy.n_term = strict_stou(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
@@ -2228,20 +2221,17 @@ HttpClient::query_field_maker(Request& request, int flags)
 		if (query_field.is_nearest) {
 			query_field.nearest.n_rset = 5;
 			if (request.query_parser.next("nearest.n_rset") != -1) {
-				int errno_save;
-				query_field.nearest.n_rset = strict_stoul(errno_save, request.query_parser.get());
+				query_field.nearest.n_rset = strict_stoul(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			if (request.query_parser.next("nearest.n_eset") != -1) {
-				int errno_save;
-				query_field.nearest.n_eset = strict_stoul(errno_save, request.query_parser.get());
+				query_field.nearest.n_eset = strict_stoul(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 
 			if (request.query_parser.next("nearest.n_term") != -1) {
-				int errno_save;
-				query_field.nearest.n_term = strict_stoul(errno_save, request.query_parser.get());
+				query_field.nearest.n_term = strict_stoul(nullptr, request.query_parser.get());
 			}
 			request.query_parser.rewind();
 

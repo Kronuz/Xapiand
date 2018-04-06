@@ -1834,8 +1834,8 @@ inline MsgPack& MsgPack::path(const std::vector<T>& path) {
 			}
 			case Type::ARRAY: {
 				int errno_save;
-				auto pos = strict_stoz(errno_save, s);
-				if (errno_save) {
+				auto pos = strict_stoz(&errno_save, s);
+				if (errno_save != 0) {
 					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
 				}
 				current = &current->at(pos);
@@ -1862,8 +1862,8 @@ inline const MsgPack& MsgPack::path(const std::vector<T>& path) const {
 			}
 			case Type::ARRAY: {
 				int errno_save;
-				auto pos = strict_stoz(errno_save, s);
-				if (errno_save) {
+				auto pos = strict_stoz(&errno_save, s);
+				if (errno_save != 0) {
 					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
 				}
 				current = &current->at(pos);
@@ -2106,7 +2106,6 @@ inline MsgPack::operator bool() const {
 
 
 inline MsgPack::operator unsigned long long() const {
-	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2119,9 +2118,9 @@ inline MsgPack::operator unsigned long long() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			return strict_stoull(errno_save, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			return strict_stoull(errno_save, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}
@@ -2129,7 +2128,6 @@ inline MsgPack::operator unsigned long long() const {
 
 
 inline MsgPack::operator long long() const {
-	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2142,9 +2140,9 @@ inline MsgPack::operator long long() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			return strict_stoll(errno_save, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			return strict_stoll(errno_save, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}
@@ -2196,7 +2194,6 @@ inline MsgPack::operator float() const {
 
 
 inline MsgPack::operator double() const {
-	int errno_save;
 	switch (_const_body->getType()) {
 		case Type::NIL:
 			return 0;
@@ -2209,9 +2206,9 @@ inline MsgPack::operator double() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		case Type::STR:
-			return strict_stod(errno_save, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
 		case Type::BIN:
-			return strict_stod(errno_save, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
 		default:
 			return 0;
 	}

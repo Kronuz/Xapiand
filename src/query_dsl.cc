@@ -671,7 +671,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 	L_CALL("QueryDSL::get_acc_num_query(<required_spc_t>, %s, %s, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
 	int errno_save;
-	auto acc = strict_stoull(errno_save, field_accuracy.substr(1));
+	auto acc = strict_stoull(&errno_save, field_accuracy.substr(1));
 	if (errno_save != 0) {
 		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
 	}
@@ -687,7 +687,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 
 	if (string::startswith(field_accuracy, "_geo")) {
 		int errno_save;
-		auto nivel = strict_stoull(errno_save, field_accuracy.substr(4));
+		auto nivel = strict_stoull(&errno_save, field_accuracy.substr(4));
 		if (errno_save != 0) {
 			THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
 		}
