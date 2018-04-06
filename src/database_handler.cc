@@ -1177,12 +1177,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 
 	Xapian::Query query;
 	switch (method) {
-		case HTTP_GET: {
-			QueryDSL query_object(schema);
-			query = query_object.get_query(query_object.make_dsl_query(e));
-			break;
-		}
-
+		case HTTP_GET:
 		case HTTP_POST: {
 			if ((qdsl != nullptr) && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
 				QueryDSL query_object(schema);
