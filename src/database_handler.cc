@@ -1175,6 +1175,8 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 
 	schema = get_schema();
 
+	auto limit = -1;
+	auto offset = -1;
 	Xapian::Query query;
 	switch (method) {
 		case HTTP_GET:
@@ -1182,6 +1184,24 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			if ((qdsl != nullptr) && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
 				QueryDSL query_object(schema);
 				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+
+				if (qdsl->find(QUERYDSL_LIMIT) != qdsl->end()) {
+					auto lm = qdsl->at(QUERYDSL_LIMIT);
+					if (lm.is_integer()) {
+						limit = lm.as_u64();
+					} else {
+						THROW(ClientError, "The _limit must be a unsigned int");
+					}
+				}
+
+				if (qdsl->find(QUERYDSL_OFFSET) != qdsl->end()) {
+					auto off = qdsl->at(QUERYDSL_OFFSET);
+					if (off.is_integer()) {
+						offset = off.as_u64();
+					} else {
+						THROW(ClientError, "The _offset must be a unsigned int");
+					}
+				}
 			} else {
 				QueryDSL query_object(schema);
 				query = query_object.get_query(query_object.make_dsl_query(e));
@@ -1191,6 +1211,14 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 
 		default:
 			break;
+	}
+
+	if (offset < 0) {
+		offset = e.offset;
+	}
+
+	if (limit < 0) {
+		limit = e.limit;
 	}
 
 	// L_DEBUG("query: %s", query.get_description());
@@ -1272,7 +1300,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), e.fuzzy.n_term));
 			}
 			enquire.set_query(final_query);
-			mset = enquire.get_mset(e.offset, e.limit, e.check_at_least);
+			mset = enquire.get_mset(offset, limit, e.check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }

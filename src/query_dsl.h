@@ -42,6 +42,9 @@ constexpr const char QUERYDSL_QUERY[]  = "_query";
 constexpr const char QUERYDSL_RANGE[]  = "_range";
 constexpr const char QUERYDSL_RAW[]    = "_raw";
 constexpr const char QUERYDSL_TO[]     = "_to";
+constexpr const char QUERYDSL_LIMIT[]  = "_limit";
+constexpr const char QUERYDSL_OFFSET[] = "_offset";
+constexpr const char QUERYDSL_SORT[]   = "_sort";
 
 
 /* A domain-specific language (DSL) for query */
