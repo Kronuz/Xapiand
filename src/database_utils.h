@@ -34,6 +34,7 @@
 #include "rapidjson/document.h"    // for Document
 #include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
+#include "database_data.h"         // for ct_type_t, Data
 
 
 // Reserved field names.
@@ -138,9 +139,6 @@ constexpr Xapian::valueno DB_SLOT_UUID         = 15; // Slot for saving global u
 constexpr Xapian::valueno DB_SLOT_TIME         = 16; // Slot for saving global time values.
 constexpr Xapian::valueno DB_SLOT_TIMEDELTA    = 17; // Slot for saving global timedelta values.
 
-constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
-constexpr char DATABASE_DATA_HEADER_MAGIC_STORED = 0x12;
-constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
 
 // Default prefixes
 constexpr const char DOCUMENT_ID_TERM_PREFIX[]           = "Q";
@@ -148,74 +146,6 @@ constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[] = "C";
 
 constexpr const char DOCUMENT_DB_MASTER[] = "M";
 constexpr const char DOCUMENT_DB_SLAVE[]  = "S";
-
-constexpr const char ANY_CONTENT_TYPE[]               = "*/*";
-constexpr const char HTML_CONTENT_TYPE[]              = "text/html";
-constexpr const char TEXT_CONTENT_TYPE[]              = "text/plain";
-constexpr const char JSON_CONTENT_TYPE[]              = "application/json";
-constexpr const char MSGPACK_CONTENT_TYPE[]           = "application/msgpack";
-constexpr const char X_MSGPACK_CONTENT_TYPE[]         = "application/x-msgpack";
-constexpr const char FORM_URLENCODED_CONTENT_TYPE[]   = "application/www-form-urlencoded";
-constexpr const char X_FORM_URLENCODED_CONTENT_TYPE[] = "application/x-www-form-urlencoded";
-
-
-struct ct_type_t {
-	std::string first;
-	std::string second;
-
-	ct_type_t() = default;
-
-	template<typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
-	ct_type_t(S&& first_, S&& second_)
-		: first(std::forward<S>(first_)),
-		  second(std::forward<S>(second_)) { }
-
-	explicit ct_type_t(std::string_view ct_type_str) {
-		const auto found = ct_type_str.rfind('/');
-		if (found != std::string::npos) {
-			first = ct_type_str.substr(0, found);
-			second = ct_type_str.substr(found + 1);
-		}
-	}
-
-	bool operator==(const ct_type_t& other) const noexcept {
-		return first == other.first && second == other.second;
-	}
-
-	bool operator!=(const ct_type_t& other) const {
-		return !operator==(other);
-	}
-
-	void clear() noexcept {
-		first.clear();
-		second.clear();
-	}
-
-	bool empty() const noexcept {
-		return first.empty() && second.empty();
-	}
-
-	std::string to_string() const {
-		std::string res;
-		res.reserve(first.length() + second.length() + 1);
-		res.assign(first).push_back('/');
-		res.append(second);
-		return res;
-	}
-};
-
-
-static const ct_type_t no_type{};
-static const ct_type_t any_type(ANY_CONTENT_TYPE);
-static const ct_type_t html_type(HTML_CONTENT_TYPE);
-static const ct_type_t text_type(TEXT_CONTENT_TYPE);
-static const ct_type_t json_type(JSON_CONTENT_TYPE);
-static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
-static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
-static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
-
-constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
-constexpr int STORED_BLOB_DATA          = 1;
 
 constexpr int DB_OPEN         = 0x0000; // Opens a database
 constexpr int DB_WRITABLE     = 0x0001; // Opens as writable
@@ -299,6 +229,15 @@ std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
 
+
+
+
+// constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
+constexpr char DATABASE_DATA_HEADER_MAGIC_STORED = 0x12;
+// constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
+
+constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
+constexpr int STORED_BLOB_DATA          = 1;
 
 std::string join_data(bool stored, std::string_view stored_locator, std::string_view obj, std::string_view blob);
 std::pair<bool, std::string_view> split_data_store(std::string_view data);

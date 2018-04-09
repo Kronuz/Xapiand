@@ -71,17 +71,6 @@ class Worker;
 #define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 10)
 
 
-template <typename T>
-struct accept_preference_comp {
-	constexpr bool operator()(const std::tuple<double, int, T, unsigned>& l, const std::tuple<double, int, T, unsigned>& r) const noexcept {
-		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
-	}
-};
-
-
-using accept_set_t = std::set<std::tuple<double, int, ct_type_t, int>, accept_preference_comp<ct_type_t>>;
-
-
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
 	std::mutex qmtx;
 
@@ -100,8 +89,15 @@ public:
 	}
 };
 
+struct AcceptEncoding {
+	int position;
+	double priority;
 
-using accept_encoding_t = std::set<std::tuple<double, int, std::string, unsigned>, accept_preference_comp<std::string>>;
+	std::string encoding;
+
+	AcceptEncoding(int position, double priority, std::string encoding) : position(position), priority(priority), encoding(encoding) { }
+};
+using accept_encoding_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
 
 
 class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_t> {

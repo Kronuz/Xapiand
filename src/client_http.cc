@@ -450,7 +450,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 									++next_param;
 								}
 							}
-							new_request.accept_set.insert(std::make_tuple(q, i, ct_type_t(next->str(1), next->str(2)), indent));
+							new_request.accept_set.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
 							++next;
 							++i;
 						}
@@ -481,7 +481,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 								}
 							} else {
 							}
-							new_request.accept_encoding_set.insert(std::make_tuple(q, i, next->str(1), 0));
+							new_request.accept_encoding_set.emplace(i, q, next->str(1));
 							++next;
 							++i;
 						}
@@ -2577,25 +2577,25 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 
 	if (request.accept_set.empty()) {
 		if (!request.content_type.empty()) {
-			request.accept_set.insert(std::tuple<double, int, ct_type_t, unsigned>(1, 0, request.content_type, 0));
+			request.accept_set.emplace(0, 1.0, ct_type_t(request.content_type), 0);
 		}
-		request.accept_set.insert(std::make_tuple(1, 1, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0));
+		request.accept_set.emplace(1, 1.0, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0);
 	}
 	for (const auto& accept : request.accept_set) {
-		if (is_acceptable_type(std::get<2>(accept), ct)) {
-			auto indent = std::get<3>(accept);
+		if (is_acceptable_type(accept.ct_type, ct)) {
+			auto indent = accept.indent;
 			if (indent != -1) {
 				request.indented = indent;
 			}
-			return std::get<2>(accept);
+			return accept.ct_type;
 		}
 	}
 	const auto& accept = *request.accept_set.begin();
-	auto indent = std::get<3>(accept);
+	auto indent = accept.indent;
 	if (indent != -1) {
 		request.indented = indent;
 	}
-	return std::get<2>(accept);
+	return accept.ct_type;
 }
 
 
@@ -2728,7 +2728,7 @@ HttpClient::resolve_encoding(Request& request)
 	});
 
 	for (const auto& encoding : request.accept_encoding_set) {
-		switch(_.fhhl(std::get<2>(encoding))) {
+		switch(_.fhhl(encoding.encoding)) {
 			case _.fhhl("gzip"):
 				return Encoding::gzip;
 			case _.fhhl("deflate"):
