@@ -1059,7 +1059,7 @@ QueryDSL::get_query(const MsgPack& obj)
 void
 QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj)
 {
-	L_BLUE("QueryDSL::get_sorter(%s)", repr(obj.to_string()));
+	L_CALL("QueryDSL::get_sorter(%s)", repr(obj.to_string()));
 
 	sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 	switch (obj.getType()) {
