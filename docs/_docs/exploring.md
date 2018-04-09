@@ -156,9 +156,7 @@ method:
 GET /bank/:search?pretty
 {
   "_query": "*",
-  "_sort": [
-    { "account_number": "asc" }
-  ]
+  "_sort": "account_number"
 }
 ```
 {% endcapture %}
