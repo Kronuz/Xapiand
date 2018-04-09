@@ -2599,23 +2599,23 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 }
 
 
-ct_type_t
+std::pair<std::string, std::string>
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
 	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()), repr(ct_type.first + "/" + ct_type.second), indent, serialize_error ? "true" : "false");
 
 	if (is_acceptable_type(ct_type, json_type) != nullptr) {
-		return ct_type_t(obj.to_string(indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
+		return std::make_pair(obj.to_string(indent), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	}
 	if (is_acceptable_type(ct_type, msgpack_type) != nullptr) {
-		return ct_type_t(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
+		return std::make_pair(obj.serialise(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	}
 	if (is_acceptable_type(ct_type, x_msgpack_type) != nullptr) {
-		return ct_type_t(obj.serialise(), x_msgpack_type.first + "/" + x_msgpack_type.second + "; charset=utf-8");
+		return std::make_pair(obj.serialise(), x_msgpack_type.first + "/" + x_msgpack_type.second + "; charset=utf-8");
 	}
 	if (is_acceptable_type(ct_type, html_type) != nullptr) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
-		return ct_type_t(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
+		return std::make_pair(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
 	}
 	/*if (is_acceptable_type(ct_type, text_type)) {
 		error:

@@ -312,7 +312,7 @@ class HttpClient : public Task<>, public BaseClient {
 	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void clean_http_request(Request& request, Response& response);
 	void set_idle();
-	ct_type_t serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
+	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
 	ct_type_t resolve_ct_type(Request& request, std::string ct_type_str);
 	template <typename T>
