@@ -1178,6 +1178,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	auto limit = -1;
 	auto offset = -1;
 	Xapian::Query query;
+	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
 	switch (method) {
 		case HTTP_GET:
 		case HTTP_POST: {
@@ -1190,7 +1191,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 					if (lm.is_integer()) {
 						limit = lm.as_u64();
 					} else {
-						THROW(ClientError, "The _limit must be a unsigned int");
+						THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_LIMIT);
 					}
 				}
 
@@ -1199,8 +1200,13 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 					if (off.is_integer()) {
 						offset = off.as_u64();
 					} else {
-						THROW(ClientError, "The _offset must be a unsigned int");
+						THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_OFFSET);
 					}
+				}
+
+				if (qdsl->find(QUERYDSL_SORT) != qdsl->end()) {
+					auto sort = qdsl->at(QUERYDSL_SORT);
+					query_object.get_sorter(sorter, sort);
 				}
 			} else {
 				QueryDSL query_object(schema);
@@ -1224,8 +1230,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 	// L_DEBUG("query: %s", query.get_description());
 
 	// Configure sorter.
-	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
-	if (!e.sort.empty()) {
+	if (!sorter && !e.sort.empty()) {
 		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 		std::string field, value;
 		for (const auto& sort : e.sort) {

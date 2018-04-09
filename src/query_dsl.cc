@@ -36,6 +36,7 @@
 #include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "serialise.h"                         // for MsgPack, get_range_type...
+#include <strings.h>                           // for strncasecmp
 #include "utils.h"                             // for repr
 #include "string.hh"                           // for string::startswith
 #include "hashes.hh"                           // for fnv1ah32
@@ -1052,6 +1053,84 @@ QueryDSL::get_query(const MsgPack& obj)
 
 	L_QUERY("query = " + STEEL_BLUE + "%s" + CLEAR_COLOR + "\n" + DIM_GREY + "%s" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
 	return query;
+}
+
+
+void
+QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj)
+{
+	L_BLUE("QueryDSL::get_sorter(%s)", repr(obj.to_string()));
+
+	sorter = std::make_unique<Multi_MultiValueKeyMaker>();
+	switch (obj.getType()) {
+		case MsgPack::Type::MAP: {
+			const auto it_e = obj.end();
+			for (auto it = obj.begin(); it != it_e; ++it) {
+				query_field_t e;
+				std::string value;
+				bool descending = false;
+				const auto field = it->str_view();
+				auto const& o = it.value();
+				const auto it_val_e = o.end();
+				for (auto it_val = o.begin(); it_val != it_val_e; ++it_val) {
+					const auto field_key = it_val->str_view();
+					auto const& val = it_val.value();
+					constexpr static auto _srt = phf::make_phf({
+						hh(QUERYDSL_ORDER),
+						hh(RESERVED_VALUE),
+						hh(QUERYDSL_METRIC),
+					});
+					switch (_srt.fhh(field_key)) {
+						case _srt.fhh(QUERYDSL_ORDER):
+							if (!val.is_string()) {
+								THROW(QueryDslError, "%s must be string (asc/desc) [%s]", QUERYDSL_ORDER, repr(val.to_string()));
+							}
+							if (strncasecmp(val.as_str().data(), QUERYDSL_DESC, sizeof(QUERYDSL_DESC)) == 0) {
+								descending = true;
+							}
+							break;
+						case _srt.fhh(RESERVED_VALUE):
+							value = val.as_str();
+							break;
+						case _srt.fhh(QUERYDSL_METRIC):
+							if (!val.is_string()) {
+								THROW(QueryDslError, "%s must be string (%s) [%s]", QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
+							}
+							e.metric = val.as_str();
+							break;
+						default:
+							break;
+					}
+				}
+				const auto field_spc = schema->get_slot_field(field);
+				if (field_spc.get_type() != FieldType::EMPTY) {
+					sorter->add_value(field_spc, descending, value, e);
+				}
+			}
+		}
+		break;
+		case MsgPack::Type::STR: {
+			auto field = obj.as_str();
+			bool descending = false;
+			query_field_t e;
+			switch (field.at(0)) {
+				case '-':
+					descending = true;
+					/* FALLTHROUGH */
+				case '+':
+					field.erase(field.begin());
+					break;
+			}
+			const auto field_spc = schema->get_slot_field(field);
+			if (field_spc.get_type() != FieldType::EMPTY) {
+				sorter->add_value(field_spc, descending, "", e);
+			}
+		}
+		break;
+		default:
+			THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_SORT, repr(obj.to_string()));
+	}
+
 }
 
 

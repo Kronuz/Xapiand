@@ -24,15 +24,16 @@
 
 #include "xapiand.h"
 
-#include <memory>           // for shared_ptr
-#include <string>           // for string
-#include "string_view.hh"   // for std::string_view
-#include <unordered_map>    // for unordered_map
-#include <unordered_set>    // for unordered_set
-#include <xapian.h>         // for Query, Query::op, termcount
+#include <memory>                 // for shared_ptr
+#include <string>                 // for string
+#include "string_view.hh"         // for std::string_view
+#include <unordered_map>          // for unordered_map
+#include <unordered_set>          // for unordered_set
+#include <xapian.h>               // for Query, Query::op, termcount
 
-#include "msgpack.h"        // for MsgPack
-#include "schema.h"         // for Schema, FieldType, required_spc_t
+#include "msgpack.h"              // for MsgPack
+#include "schema.h"               // for Schema, FieldType, required_spc_t
+#include "multivalue/keymaker.h"  // for Multi_MultiValueKeyMaker"
 #include "utils.h"
 
 
@@ -45,7 +46,11 @@ constexpr const char QUERYDSL_TO[]     = "_to";
 constexpr const char QUERYDSL_LIMIT[]  = "_limit";
 constexpr const char QUERYDSL_OFFSET[] = "_offset";
 constexpr const char QUERYDSL_SORT[]   = "_sort";
+constexpr const char QUERYDSL_ORDER[]  = "_order";
+constexpr const char QUERYDSL_METRIC[] = "_metric";
 
+constexpr const char QUERYDSL_ASC[]    = "asc";
+constexpr const char QUERYDSL_DESC[]   = "desc";
 
 /* A domain-specific language (DSL) for query */
 
@@ -107,4 +112,5 @@ public:
 	MsgPack make_dsl_query(const query_field_t& e);
 
 	Xapian::Query get_query(const MsgPack& obj);
+	void get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj);
 };
