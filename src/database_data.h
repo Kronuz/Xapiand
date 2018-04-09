@@ -38,58 +38,59 @@ constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
 
 constexpr char DATABASE_DATA_DEFAULT[]  = { DATABASE_DATA_HEADER_MAGIC, 0x03, 0x00, 0x00, '\x80', 0x00, DATABASE_DATA_FOOTER_MAGIC };
 
-constexpr const char ANY_CONTENT_TYPE[]               = "*/*";
-constexpr const char HTML_CONTENT_TYPE[]              = "text/html";
-constexpr const char TEXT_CONTENT_TYPE[]              = "text/plain";
-constexpr const char JSON_CONTENT_TYPE[]              = "application/json";
-constexpr const char MSGPACK_CONTENT_TYPE[]           = "application/msgpack";
-constexpr const char X_MSGPACK_CONTENT_TYPE[]         = "application/x-msgpack";
-constexpr const char FORM_URLENCODED_CONTENT_TYPE[]   = "application/www-form-urlencoded";
-constexpr const char X_FORM_URLENCODED_CONTENT_TYPE[] = "application/x-www-form-urlencoded";
+constexpr std::string_view ANY_CONTENT_TYPE               = "*/*";
+constexpr std::string_view HTML_CONTENT_TYPE              = "text/html";
+constexpr std::string_view TEXT_CONTENT_TYPE              = "text/plain";
+constexpr std::string_view JSON_CONTENT_TYPE              = "application/json";
+constexpr std::string_view MSGPACK_CONTENT_TYPE           = "application/msgpack";
+constexpr std::string_view X_MSGPACK_CONTENT_TYPE         = "application/x-msgpack";
+constexpr std::string_view FORM_URLENCODED_CONTENT_TYPE   = "application/www-form-urlencoded";
+constexpr std::string_view X_FORM_URLENCODED_CONTENT_TYPE = "application/x-www-form-urlencoded";
 
 
 struct ct_type_t {
-	std::string first;
-	std::string second;
+	std::string str;
+	std::string_view first;
+	std::string_view second;
 
 	ct_type_t() = default;
 
-	template<typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
-	ct_type_t(S&& first_, S&& second_)
-		: first(std::forward<S>(first_)),
-		  second(std::forward<S>(second_)) { }
-
-	explicit ct_type_t(std::string_view ct_type_str) {
-		const auto found = ct_type_str.rfind('/');
+	ct_type_t(std::string&& ct_type_str) : str(std::move(ct_type_str)) {
+		const auto found = str.rfind('/');
 		if (found != std::string::npos) {
-			first = ct_type_str.substr(0, found);
-			second = ct_type_str.substr(found + 1);
+			std::string_view str_view(str);
+			first = str_view.substr(0, found);
+			second = str_view.substr(found + 1);
 		}
 	}
 
+	ct_type_t(std::string_view ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
+
+	ct_type_t(const char *ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
+
+	// ct_type_t(const char *ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
+
+	ct_type_t(const std::string& first_, const std::string& second_) : ct_type_t(first_ + "/" + second_) { }
+
 	bool operator==(const ct_type_t& other) const noexcept {
-		return first == other.first && second == other.second;
+		return str == other.str;
 	}
 
-	bool operator!=(const ct_type_t& other) const {
+	bool operator!=(const ct_type_t& other) const noexcept {
 		return !operator==(other);
 	}
 
 	void clear() noexcept {
-		first.clear();
-		second.clear();
+		str.clear();
+		first = second = str;
 	}
 
 	bool empty() const noexcept {
-		return first.empty() && second.empty();
+		return str.empty();
 	}
 
-	std::string to_string() const {
-		std::string res;
-		res.reserve(first.length() + second.length() + 1);
-		res.assign(first).push_back('/');
-		res.append(second);
-		return res;
+	const std::string& to_string() const {
+		return str;
 	}
 };
 
@@ -137,7 +138,7 @@ public:
 	struct Locator {
 		Type type;
 
-		std::string_view content_type;
+		ct_type_t ct_type;
 
 		std::string_view data;
 
@@ -150,7 +151,7 @@ public:
 			const char *p = locator_str.data();
 			const char *p_end = p + locator_str.size();
 			auto length = unserialise_length(&p, p_end, true);
-			new_locator.content_type = std::string_view(p, length);
+			new_locator.ct_type = ct_type_t(std::string_view(p, length));
 			p += length;
 			new_locator.type = static_cast<Type>(*p++);
 			switch (new_locator.type) {
@@ -171,7 +172,7 @@ public:
 
 		std::string serialise() const {
 			std::string result;
-			result.append(serialise_string(content_type));
+			result.append(serialise_string(ct_type.to_string()));
 			result.push_back(toUType(type));
 			switch (type) {
 				case Type::inplace:
@@ -196,7 +197,7 @@ private:
 	std::vector<Locator> locators;
 	std::string_view trailing;
 
-	void feed(std::string new_serialised) {
+	void feed(std::string&& new_serialised) {
 		serialised = std::move(new_serialised);
 		locators.clear();
 		if (serialised.size() < 6) {
@@ -234,15 +235,15 @@ private:
 	void update(const Locator& new_locator) {
 		std::string new_serialised;
 		new_serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
-		if (!new_locator.content_type.empty()) {
+		if (!new_locator.ct_type.empty()) {
 			new_serialised.append(new_locator.serialise());
 		}
 		for (const auto& locator : locators) {
-			if (locator.content_type != new_locator.content_type) {
+			if (locator.ct_type != new_locator.ct_type) {
 				new_serialised.append(locator.serialise());
 			}
 		}
-		if (new_locator.content_type.empty()) {
+		if (new_locator.ct_type.empty()) {
 			new_serialised.append(new_locator.serialise());
 		}
 		new_serialised.push_back('\0');
@@ -257,20 +258,27 @@ public:
 	}
 
 	Data(std::string&& serialised) {
-		feed(serialised);
+		feed(std::move(serialised));
 	}
 
-	void update(std::string_view content_type, std::string_view data) {
+	template <typename S>
+	void update(ct_type_t&& ct_type, S&& data) {
 		Locator new_locator;
-		new_locator.content_type = content_type;
+		new_locator.ct_type = std::move(ct_type);
 		new_locator.type = Type::inplace;
-		new_locator.data = data;
+		new_locator.data = std::forward<S>(data);
 		update(new_locator);
 	}
 
-	void update(std::string_view content_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") {
+	template <typename S>
+	void update(const ct_type_t& ct_type, S&& data = "") {
+		update(ct_type_t(ct_type), std::forward<S>(data));
+	}
+
+	template <typename S>
+	void update(ct_type_t&& ct_type, ssize_t volume, size_t offset, size_t size, S&& data = "") {
 		Locator new_locator;
-		new_locator.content_type = content_type;
+		new_locator.ct_type = std::move(ct_type);
 		new_locator.type = Type::stored;
 		new_locator.volume = volume;
 		if (volume == -1) {
@@ -280,15 +288,20 @@ public:
 			new_locator.offset = offset;
 			new_locator.size = size;
 		}
-		new_locator.data = data;
+		new_locator.data = std::forward<S>(data);
 		update(new_locator);
 	}
 
-	void erase(std::string_view content_type) {
+	template <typename S>
+	void update(const ct_type_t& ct_type, ssize_t volume, size_t offset, size_t size, S&& data = "") {
+		update(ct_type_t(ct_type), volume, offset, size, std::forward<S>(data));
+	}
+
+	void erase(const ct_type_t& ct_type) {
 		std::string new_serialised;
 		new_serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
 		for (const auto& locator : locators) {
-			if (locator.content_type != content_type) {
+			if (locator.ct_type != ct_type) {
 				new_serialised.append(locator.serialise());
 			}
 		}
@@ -318,9 +331,9 @@ public:
 		return locators.cend();
 	}
 
-	const Locator* get(std::string_view content_type) {
+	const Locator* get(const ct_type_t& ct_type) const {
 		for (const auto& locator : locators) {
-			if (locator.content_type == content_type) {
+			if (locator.ct_type == ct_type) {
 				return &locator;
 			}
 		}
@@ -333,10 +346,10 @@ public:
 		double accepted_priority = -1.0;
 		for (auto& locator : *this) {
 			std::vector<ct_type_t> ct_types;
-			if (locator.content_type.empty()) {
+			if (locator.ct_type.empty()) {
 				ct_types = msgpack_serializers;
 			} else {
-				ct_types.push_back(ct_type_t(locator.content_type));
+				ct_types.push_back(locator.ct_type);
 			}
 			for (auto& ct_type : ct_types) {
 				for (auto& accept : accept_set) {

@@ -314,7 +314,7 @@ class HttpClient : public Task<>, public BaseClient {
 	void set_idle();
 	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
-	ct_type_t resolve_ct_type(Request& request, std::string ct_type_str);
+	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);
 	template <typename T>
 	const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
