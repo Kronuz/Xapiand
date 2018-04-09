@@ -35,7 +35,7 @@ namespace io {
 #elif defined HAVE_FSYNC
 #define __FSYNC ::fsync
 #else
-inline int __fsync(int fd) { return 0; }
+inline int __fsync(int /*unused*/) { return 0; }
 #define __FSYNC __fsync
 #endif
 
