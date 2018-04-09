@@ -406,6 +406,7 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
+		SwitchArg forceup("", "force-up", "Force to up xapiand on any directory.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -460,6 +461,7 @@ void parseOptions(int argc, char** argv) {
 		opts.strict = strict.getValue();
 		opts.optimal = optimal.getValue();
 		opts.foreign = foreign.getValue();
+		opts.forceup = forceup.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
@@ -883,10 +885,9 @@ void writepid(const char* pidfile) {
 }
 
 
-void usedir(const char* path, bool solo) {
+void usedir(const char* path, bool forceup) {
 
-#ifdef XAPIAND_CLUSTERING
-	if (!solo) {
+	if (!forceup) {
 		DIR *dirp;
 		dirp = opendir(path, true);
 		if (!dirp) {
@@ -921,9 +922,6 @@ void usedir(const char* path, bool solo) {
 			throw Exit(EX_DATAERR);
 		}
 	}
-#else
-	ignore_unused(solo);
-#endif
 
 	if (chdir(path) == -1) {
 		if (build_path(std::string(path))) {
@@ -1027,7 +1025,7 @@ int server() {
 		ev::default_loop default_loop(opts.ev_flags);
 		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
-		usedir(opts.database.c_str(), opts.solo);
+		usedir(opts.database.c_str(), opts.forceup);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
 		XapiandManager::manager->run();
 
