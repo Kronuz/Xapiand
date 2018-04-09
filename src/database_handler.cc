@@ -55,8 +55,7 @@
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
-constexpr const char RESPONSE_BLOB[]                = "#blob";
-constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
+constexpr const char RESPONSE_BLOBS[]               = "#blobs";
 constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
 constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
 constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
@@ -1511,15 +1510,16 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 	const auto store = split_data_store(data);
 	if (store.first) {
 		if (store.second.empty()) {
-			info[RESPONSE_BLOB] = nullptr;
+			info[RESPONSE_BLOBS] = nullptr;
 		} else {
 			const auto locator = storage_unserialise_locator(store.second);
-			info[RESPONSE_BLOB] = {
+			auto info_blob = info[RESPONSE_BLOBS];
+			auto blob_ct = std::get<3>(locator);
+			info_blob[blob_ct] = {
 				{ RESPONSE_TYPE, "stored" },
 				{ RESPONSE_VOLUME, std::get<0>(locator) },
 				{ RESPONSE_OFFSET, std::get<1>(locator) },
 				{ RESPONSE_SIZE, std::get<2>(locator) },
-				{ RESPONSE_CONTENT_TYPE, std::get<3>(locator) },
 			};
 		}
 	} else
@@ -1528,13 +1528,13 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 		const auto blob = split_data_blob(data);
 		const auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
 		if (blob_data.empty()) {
-			info[RESPONSE_BLOB] = nullptr;
+			info[RESPONSE_BLOBS] = nullptr;
 		} else {
+			auto info_blob = info[RESPONSE_BLOBS];
 			auto blob_ct = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
-			info[RESPONSE_BLOB] = {
+			info_blob[blob_ct] = {
 				{ RESPONSE_TYPE, "local" },
 				{ RESPONSE_SIZE, blob_data.size() },
-				{ RESPONSE_CONTENT_TYPE, blob_ct },
 			};
 		}
 	}
