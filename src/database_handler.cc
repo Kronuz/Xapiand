@@ -660,7 +660,7 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 	auto main_locator = data.get("");
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
-	switch (obj.getType()) {
+	switch (body.getType()) {
 		case MsgPack::Type::STR: {
 			auto blob = serialise_strings({ ct_type.to_string(), body.str_view() });
 			if (stored) {
