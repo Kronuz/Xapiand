@@ -1389,8 +1389,10 @@ Database::storage_push_blobs(Xapian::Document& doc) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
+	assert((flags & DB_WRITABLE) != 0);
+
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	const auto& storage = storages[subdatabase];
+	const auto& storage = writable_storages[subdatabase];
 	if (storage) {
 		auto data = Data(doc.get_data());
 		for (auto& locator : data) {
