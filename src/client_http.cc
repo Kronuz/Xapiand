@@ -1606,7 +1606,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 		if ((is_acceptable_type(msgpack_type, ct_type) != nullptr) || (is_acceptable_type(x_msgpack_type, ct_type) != nullptr)) {
 			first_chunk = basic_response.serialise();
-			L_RED(repr(first_chunk));
 			// Remove zero size array and manually add the msgpack array header
 			first_chunk.erase(first_chunk.size() - 3);
 			if (total_count < 16) {
