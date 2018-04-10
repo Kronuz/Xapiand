@@ -124,7 +124,7 @@ static const ct_type_t text_type(TEXT_CONTENT_TYPE);
 static const ct_type_t json_type(JSON_CONTENT_TYPE);
 static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
 static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
-static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type, html_type, text_type });
+static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type });
 
 
 class Data {
