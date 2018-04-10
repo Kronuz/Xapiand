@@ -36,6 +36,7 @@ Initializer::Initializer()
 			/* bool solo = */ true,
 			/* bool strict = */ false,
 			/* bool foreign = */ false,
+			/* forceup = */ false,
 			/* bool optimal = */ false,
 			/* bool colors = */ false,
 			/* bool no_colors = */ false,
