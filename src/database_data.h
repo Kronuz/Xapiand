@@ -388,12 +388,11 @@ public:
 					if (priority < accepted_priority) {
 						break;
 					}
-					auto& accept_ct = accept.ct_type;
 					if (
-						(accept_ct.first == "*" && accept_ct.second == "*") ||
-						(accept_ct.first == "*" && accept_ct.second == ct_type.second) ||
-						(accept_ct.first == ct_type.second && accept_ct.second == "*") ||
-						(accept_ct == ct_type)
+						(accept.ct_type.first == "*" && accept.ct_type.second == "*") ||
+						(accept.ct_type.first == "*" && accept.ct_type.second == ct_type.second) ||
+						(accept.ct_type.first == ct_type.first && accept.ct_type.second == "*") ||
+						(accept.ct_type == ct_type)
 					) {
 						accepted_priority = priority;
 						accepted = &locator;
