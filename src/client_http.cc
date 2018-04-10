@@ -344,6 +344,12 @@ HttpClient::on_info(http_parser* parser)
 	switch (state) {
 		case 18:  // message_complete
 			if (!closed) {
+				if (new_request.accept_set.empty()) {
+					if (!new_request.content_type.empty()) {
+						new_request.accept_set.emplace(0, 1.0, ct_type_t(new_request.content_type), 0);
+					}
+					new_request.accept_set.emplace(1, 1.0, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0);
+				}
 				std::lock_guard<std::mutex> lk(requests_mutex);
 				if (requests.empty()) {
 					// There wasn't one, start runner
@@ -2571,12 +2577,6 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 {
 	L_CALL("HttpClient::get_acceptable_type()");
 
-	if (request.accept_set.empty()) {
-		if (!request.content_type.empty()) {
-			request.accept_set.emplace(0, 1.0, ct_type_t(request.content_type), 0);
-		}
-		request.accept_set.emplace(1, 1.0, ct_type_t(std::string(1, '*'), std::string(1, '*')), 0);
-	}
 	for (const auto& accept : request.accept_set) {
 		if (is_acceptable_type(accept.ct_type, ct)) {
 			auto indent = accept.indent;
