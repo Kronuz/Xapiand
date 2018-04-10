@@ -52,31 +52,27 @@ constexpr std::string_view X_FORM_URLENCODED_CONTENT_TYPE = "application/x-www-f
 
 
 struct ct_type_t {
-	std::string str;
-	std::string_view first;
-	std::string_view second;
+	std::string first;
+	std::string second;
 
 	ct_type_t() = default;
 
-	ct_type_t(std::string&& ct_type_str) : str(std::move(ct_type_str)) {
-		const auto found = str.rfind('/');
+	ct_type_t(const std::string& first, const std::string& second) :
+		first(first),
+		second(second) { }
+
+	ct_type_t(std::string_view ct_type_str) {
+		const auto found = ct_type_str.rfind('/');
 		if (found != std::string::npos) {
-			std::string_view str_view(str);
-			first = str_view.substr(0, found);
-			second = str_view.substr(found + 1);
+			first = ct_type_str.substr(0, found);
+			second = ct_type_str.substr(found + 1);
 		}
 	}
 
-	ct_type_t(std::string_view ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
-
-	ct_type_t(const char *ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
-
-	// ct_type_t(const char *ct_type_str) : ct_type_t(std::string(ct_type_str)) { }
-
-	ct_type_t(const std::string& first_, const std::string& second_) : ct_type_t(first_ + "/" + second_) { }
+	ct_type_t(const char* ct_type_str) : ct_type_t(std::string_view(ct_type_str)) { }
 
 	bool operator==(const ct_type_t& other) const noexcept {
-		return str == other.str;
+		return first == other.first && second == other.second;
 	}
 
 	bool operator!=(const ct_type_t& other) const noexcept {
@@ -84,16 +80,16 @@ struct ct_type_t {
 	}
 
 	void clear() noexcept {
-		str.clear();
-		first = second = str;
+		first.clear();
+		second.clear();
 	}
 
 	bool empty() const noexcept {
-		return str.empty();
+		return first.empty() && second.empty();
 	}
 
-	const std::string& to_string() const {
-		return str;
+	std::string to_string() const {
+		return first + "/" + second;
 	}
 };
 
