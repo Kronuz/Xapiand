@@ -1394,10 +1394,11 @@ Database::storage_push_blobs(Xapian::Document& doc) const
 	if (storage) {
 		auto data = Data(doc.get_data());
 		for (auto& locator : data) {
+			if (locator.size == 0) {
+				data.erase(locator.ct_type);
+			}
 			if (locator.type == Data::Type::stored) {
-				if (locator.data().empty()) {
-					data.erase(locator.ct_type);
-				} else {
+				if (!locator.data().empty()) {
 					uint32_t offset;
 					while (true) {
 						try {
