@@ -89,7 +89,7 @@ struct ct_type_t {
 	}
 
 	std::string to_string() const {
-		return first + "/" + second;
+		return empty() ? "" : first + "/" + second;
 	}
 };
 
