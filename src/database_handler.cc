@@ -395,9 +395,9 @@ DatabaseHandler::run_script(MsgPack& data, std::string_view term_id, std::shared
 
 
 DataType
-DatabaseHandler::index(std::string_view document_id, bool stored, std::string_view stored_locator, MsgPack& obj, std::string_view blob, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(std::string_view document_id, MsgPack& obj, Data& data, bool commit_)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <stored_locator>, %s, <blob>, %s, <ct_type>)", repr(document_id), stored ? "true" : "false", repr(obj.to_string()), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id), repr(obj.to_string()), commit_ ? "true" : "false");
 
 	static UUIDGenerator generator;
 
@@ -520,14 +520,10 @@ DatabaseHandler::index(std::string_view document_id, bool stored, std::string_vi
 			} while (!update_schema(schema_begins));
 
 			// Finish document: add data, ID term and ID value.
-			if (blob.empty()) {
-				L_INDEX("Data: %s", repr(obj.to_string()));
-				doc.set_data(join_data(false, "", obj.serialise(), ""));
-			} else {
-				L_INDEX("Data: %s", repr(obj.to_string()));
-				auto ct_type_str = ct_type.to_string();
-				doc.set_data(join_data(stored, stored_locator, obj.serialise(), serialise_strings({ ct_type_str, blob })));
-			}
+			data.update("", obj.serialise());
+			data.flush();
+			doc.set_data(data.serialise());
+
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
@@ -595,12 +591,18 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 		THROW(Error, "Database is read-only");
 	}
 
+	Data data;
 	MsgPack obj;
-	std::string_view blob;
 	switch (body.getType()) {
-		case MsgPack::Type::STR:
-			blob = body.str_view();
+		case MsgPack::Type::STR: {
+			auto blob = serialise_strings({ ct_type.to_string(), body.str_view() });
+			if (stored) {
+				data.update(ct_type, -1, 0, 0, std::move(blob));
+			} else {
+				data.update(ct_type, std::move(blob));
+			}
 			break;
+		}
 		case MsgPack::Type::MAP:
 			obj = body.clone();
 			break;
@@ -608,14 +610,14 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
 	}
 
-	return index(document_id, stored, "", obj, blob, commit_, ct_type);
+	return index(document_id, obj, data, commit_);
 }
 
 
 DataType
-DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& /*ct_type*/)
 {
-	L_CALL("DatabaseHandler::patch(%s, <patches>, %s, %s/%s)", repr(document_id), commit_ ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id), commit_ ? "true" : "false");
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
@@ -630,16 +632,13 @@ DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, boo
 	}
 
 	auto document = get_document(document_id);
+	auto data = Data(document.get_data());
+	auto main_locator = data.get("");
+	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
-	const auto data = document.get_data();
-
-	auto obj = MsgPack::unserialise(split_data_obj(data));
 	apply_patch(patches, obj);
 
-	const auto store = split_data_store(data);
-	const auto blob = store.first ? "" : document.get_blob();
-
-	return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
+	return index(document_id, obj, data, commit_);
 }
 
 
@@ -656,25 +655,24 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	if (!body.is_map()) {
-		THROW(ClientError, "Must be a JSON or MsgPack");
-	}
-
 	auto document = get_document(document_id);
+	auto data = Data(document.get_data());
+	auto main_locator = data.get("");
+	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
-	const auto data = document.get_data();
-
-	auto obj = MsgPack::unserialise(split_data_obj(data));
 	switch (obj.getType()) {
 		case MsgPack::Type::STR: {
-			const auto blob = body.str_view();
-			return index(document_id, stored, "", obj, blob, commit_, ct_type);
+			auto blob = serialise_strings({ ct_type.to_string(), body.str_view() });
+			if (stored) {
+				data.update(ct_type, -1, 0, 0, std::move(blob));
+			} else {
+				data.update(ct_type, std::move(blob));
+			}
+			return index(document_id, obj, data, commit_);
 		}
 		case MsgPack::Type::MAP: {
 			obj.update(body);
-			const auto store = split_data_store(data);
-			const auto blob = store.first ? "" : document.get_blob(); // only get blob when needed (when it's not stored)
-			return index(document_id, store.first, store.second, obj, blob, commit_, ct_type);
+			return index(document_id, obj, data, commit_);
 		}
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
@@ -1010,11 +1008,13 @@ DatabaseHandler::restore(int fd)
 			}
 
 			// Finish document: add data, ID term and ID value.
-			if (blob.empty()) {
-				doc.set_data(join_data(false, "", obj.serialise(), ""));
-			} else {
-				doc.set_data(join_data(true, "", obj.serialise(), blob));
+			Data data;
+			data.update("", obj.serialise());
+			if (!blob.empty()) {
+				data.update(ct_type, -1, 0, 0, std::move(blob));
 			}
+			data.flush();
+			doc.set_data(data.serialise());
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
@@ -1068,7 +1068,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	for (auto obj : docs) {
 		std::string_view blob;
 		std::string_view ct_type_str;
-		auto blob_it = obj.find("_blob");
+		auto blob_it = obj.find("_blobs");
 		if (blob_it != obj.end()) {
 			auto _blob = blob_it.value();
 			blob = _blob.at("_data").str_view();
@@ -1147,11 +1147,13 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 		}
 
 		// Finish document: add data, ID term and ID value.
-		if (blob.empty()) {
-			doc.set_data(join_data(false, "", obj.serialise(), ""));
-		} else {
-			doc.set_data(join_data(true, "", obj.serialise(), blob));
+		Data data;
+		data.update("", obj.serialise());
+		if (!blob.empty()) {
+			data.update(ct_type, -1, 0, 0, blob);
 		}
+		data.flush();
+		doc.set_data(data.serialise());
 		doc.add_boolean_term(prefixed_term_id);
 		doc.add_value(spc_id.slot, term_id);
 
@@ -1497,45 +1499,34 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 	L_CALL("DatabaseHandler::get_document_info(%s)", repr(document_id));
 
 	auto document = get_document(document_id);
-	const auto data = document.get_data();
-
-	const auto obj = MsgPack::unserialise(split_data_obj(data));
+	const auto data = Data(document.get_data());
+	auto main_locator = data.get("");
+	const auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 
 	MsgPack info;
 
 	info[RESPONSE_DOCID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
-#ifdef XAPIAND_DATA_STORAGE
-	const auto store = split_data_store(data);
-	if (store.first) {
-		if (store.second.empty()) {
-			info[RESPONSE_BLOBS] = nullptr;
-		} else {
-			const auto locator = storage_unserialise_locator(store.second);
-			auto info_blob = info[RESPONSE_BLOBS];
-			auto blob_ct = std::get<3>(locator);
-			info_blob[blob_ct] = {
-				{ RESPONSE_TYPE, "stored" },
-				{ RESPONSE_VOLUME, std::get<0>(locator) },
-				{ RESPONSE_OFFSET, std::get<1>(locator) },
-				{ RESPONSE_SIZE, std::get<2>(locator) },
-			};
-		}
-	} else
-#endif
-	{
-		const auto blob = split_data_blob(data);
-		const auto blob_data = unserialise_string_at(STORED_BLOB_DATA, blob);
-		if (blob_data.empty()) {
-			info[RESPONSE_BLOBS] = nullptr;
-		} else {
-			auto info_blob = info[RESPONSE_BLOBS];
-			auto blob_ct = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
-			info_blob[blob_ct] = {
-				{ RESPONSE_TYPE, "local" },
-				{ RESPONSE_SIZE, blob_data.size() },
-			};
+	auto info_blob = info[RESPONSE_BLOBS];
+	for (auto& locator : data) {
+		if (!locator.ct_type.empty()) {
+			switch (locator.type) {
+				case Data::Type::inplace:
+					info_blob[locator.ct_type.to_string()] = {
+						{ RESPONSE_TYPE, "local" },
+						{ RESPONSE_SIZE, locator.data().size() },
+					};
+					break;
+				case Data::Type::stored:
+					info_blob[locator.ct_type.to_string()] = {
+						{ RESPONSE_TYPE, "stored" },
+						{ RESPONSE_VOLUME, locator.volume },
+						{ RESPONSE_OFFSET, locator.offset },
+						{ RESPONSE_SIZE, locator.size },
+					};
+					break;
+			}
 		}
 	}
 
@@ -1953,23 +1944,29 @@ Document::get_data(size_t retries)
 
 
 std::string
-Document::get_blob(size_t retries)
+Document::get_blob(const ct_type_t& ct_type, size_t retries)
 {
 	L_CALL("Document::get_blob(%zu)", retries);
 
 	try {
 		lock_database lk_db(db_handler);
 		auto doc = get_document();
+		auto data = Data(doc.get_data());
+		auto locator = data.get(ct_type);
+		if (locator != nullptr) {
+			if (!locator->data().empty()) {
+				return std::string(locator->data());
+			}
 #ifdef XAPIAND_DATA_STORAGE
-		if (db_handler != nullptr) {
-			return db_handler->database->storage_get_blob(doc);
-		}
+			if (locator->type == Data::Type::stored) {
+ 				return db_handler->database->storage_get_blob(doc, *locator);
+			}
 #endif
-		auto data = doc.get_data();
-		return std::string(split_data_blob(data));
+		}
+		return "";
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries != 0u) {
-			return get_blob(--retries);
+			return get_blob(ct_type, --retries);
 		}
 		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
@@ -2055,21 +2052,15 @@ Document::get_value(std::string_view slot_name)
 }
 
 
-std::pair<bool, std::string_view>
-Document::get_store()
-{
-	L_CALL("Document::get_store()");
-
-	return split_data_store(get_data());
-}
-
-
 MsgPack
 Document::get_obj()
 {
 	L_CALL("Document::get_obj()");
 
-	return MsgPack::unserialise(split_data_obj(get_data()));
+	auto data = Data(get_data());
+	auto main_locator = data.get("");
+	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
+	return obj;
 }
 
 

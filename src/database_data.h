@@ -33,6 +33,9 @@
 #include "utils.h"                 // for toUType
 
 
+constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
+constexpr int STORED_BLOB_DATA          = 1;
+
 constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
 constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
 
@@ -140,34 +143,67 @@ public:
 
 		ct_type_t ct_type;
 
-		std::string_view data;
+		bool _has_str;
+		std::string _str;
+		std::string_view _view;
 
 		ssize_t volume;
 		size_t offset;
 		size_t size;
 
+		template <typename C>
+		Locator(C&& ct_type, std::string_view data = "") :
+			type(Type::inplace),
+			ct_type(std::forward<C>(ct_type)),
+			_has_str(false),
+			_view(data),
+			volume(-1),
+			offset(0),
+			size(_view.size()) { }
+
+		template <typename C>
+		Locator(C&& ct_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") :
+			type(Type::stored),
+			ct_type(std::forward<C>(ct_type)),
+			_has_str(false),
+			_view(data),
+			volume(volume),
+			offset(volume == -1 ? 0 : offset),
+			size(volume == -1 ? _view.size() : size) { }
+
+		template <typename S>
+		void data(S&& new_data) {
+			_has_str = true;
+			_str.assign(std::forward<S>(new_data));
+			size = _str.size();
+		}
+
+		std::string_view data() const {
+			return _has_str ? _str : _view;
+		}
+
 		static Locator unserialise(std::string_view locator_str) {
-			Locator new_locator;
 			const char *p = locator_str.data();
 			const char *p_end = p + locator_str.size();
 			auto length = unserialise_length(&p, p_end, true);
-			new_locator.ct_type = ct_type_t(std::string_view(p, length));
+			Locator locator(ct_type_t(std::string_view(p, length)));
 			p += length;
-			new_locator.type = static_cast<Type>(*p++);
-			switch (new_locator.type) {
+			locator.type = static_cast<Type>(*p++);
+			switch (locator.type) {
 				case Type::inplace:
-					new_locator.data = std::string_view(p, p_end - p);
+					locator._view = std::string_view(p, p_end - p);
+					locator.size = p_end - p;
 					break;
 				case Type::stored:
-					new_locator.volume = unserialise_length(&p, p_end);
-					new_locator.offset = unserialise_length(&p, p_end);
-					new_locator.size = unserialise_length(&p, p_end);
-					new_locator.data = std::string_view(p, p_end - p);
+					locator.volume = unserialise_length(&p, p_end);
+					locator.offset = unserialise_length(&p, p_end);
+					locator.size = unserialise_length(&p, p_end);
+					locator._view = std::string_view(p, p_end - p);
 					break;
 				default:
 					THROW(SerialisationError, "Bad encoded data locator: Unknown type");
 			}
-			return new_locator;
+			return locator;
 		}
 
 		std::string serialise() const {
@@ -176,17 +212,22 @@ public:
 			result.push_back(toUType(type));
 			switch (type) {
 				case Type::inplace:
-					result.append(data);
+					if (size == 0) {
+						return "";
+					}
 					break;
 				case Type::stored:
+					if (size == 0) {
+						return "";
+					}
 					result.append(serialise_length(volume));
 					result.append(serialise_length(offset));
 					result.append(serialise_length(size));
-					result.append(data);
 					break;
 				default:
 					THROW(SerialisationError, "Bad data locator: Unknown type");
 			}
+			result.append(data());
 			result.insert(0, serialise_length(result.size()));
 			return result;
 		}
@@ -196,6 +237,8 @@ private:
 	std::string serialised;
 	std::vector<Locator> locators;
 	std::string_view trailing;
+
+	std::vector<Locator> pending;
 
 	void feed(std::string&& new_serialised) {
 		serialised = std::move(new_serialised);
@@ -232,10 +275,10 @@ private:
 		trailing = std::string_view(p, p_end - p);
 	}
 
-	void update(const Locator& new_locator) {
+	void flush(const Locator& new_locator) {
 		std::string new_serialised;
 		new_serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
-		if (!new_locator.ct_type.empty()) {
+		if (new_locator.ct_type.empty()) {
 			new_serialised.append(new_locator.serialise());
 		}
 		for (const auto& locator : locators) {
@@ -243,7 +286,7 @@ private:
 				new_serialised.append(locator.serialise());
 			}
 		}
-		if (new_locator.ct_type.empty()) {
+		if (!new_locator.ct_type.empty()) {
 			new_serialised.append(new_locator.serialise());
 		}
 		new_serialised.push_back('\0');
@@ -261,66 +304,58 @@ public:
 		feed(std::move(serialised));
 	}
 
-	template <typename S>
-	void update(ct_type_t&& ct_type, S&& data) {
-		Locator new_locator;
-		new_locator.ct_type = std::move(ct_type);
-		new_locator.type = Type::inplace;
-		new_locator.data = std::forward<S>(data);
-		update(new_locator);
+	template <typename C>
+	void update(C&& ct_type) {
+		pending.emplace_back(std::forward<C>(ct_type));
 	}
 
-	template <typename S>
-	void update(const ct_type_t& ct_type, S&& data = "") {
-		update(ct_type_t(ct_type), std::forward<S>(data));
+	template <typename C, typename S>
+	void update(C&& ct_type, S&& data) {
+		auto& ref = pending.emplace_back(std::forward<C>(ct_type));
+		ref.data(std::forward<S>(data));
 	}
 
-	template <typename S>
-	void update(ct_type_t&& ct_type, ssize_t volume, size_t offset, size_t size, S&& data = "") {
-		Locator new_locator;
-		new_locator.ct_type = std::move(ct_type);
-		new_locator.type = Type::stored;
-		new_locator.volume = volume;
-		if (volume == -1) {
-			new_locator.offset = 0;
-			new_locator.size = data.size();
-		} else {
-			new_locator.offset = offset;
-			new_locator.size = size;
+	template <typename C>
+	void update(C&& ct_type, ssize_t volume, size_t offset, size_t size) {
+		pending.emplace_back(std::forward<C>(ct_type), volume, offset, size);
+	}
+
+	template <typename C, typename S>
+	void update(C&& ct_type, ssize_t volume, size_t offset, size_t size, S&& data) {
+		auto& ref = pending.emplace_back(std::forward<C>(ct_type), volume, offset, size);
+		ref.data(std::forward<S>(data));
+	}
+
+	template <typename C>
+	void erase(C&& ct_type) {
+		pending.emplace_back(std::forward<C>(ct_type));
+	}
+
+	void flush() {
+		for (auto& op : pending) {
+			flush(op);
 		}
-		new_locator.data = std::forward<S>(data);
-		update(new_locator);
-	}
-
-	template <typename S>
-	void update(const ct_type_t& ct_type, ssize_t volume, size_t offset, size_t size, S&& data = "") {
-		update(ct_type_t(ct_type), volume, offset, size, std::forward<S>(data));
-	}
-
-	void erase(const ct_type_t& ct_type) {
-		std::string new_serialised;
-		new_serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
-		for (const auto& locator : locators) {
-			if (locator.ct_type != ct_type) {
-				new_serialised.append(locator.serialise());
-			}
-		}
-		new_serialised.push_back('\0');
-		new_serialised.push_back(DATABASE_DATA_FOOTER_MAGIC);
-		new_serialised.append(trailing);
-		feed(std::move(new_serialised));
+		pending.clear();
 	}
 
 	const std::string& serialise() const {
 		return serialised;
 	}
 
-	size_t empty() const {
+	auto empty() const {
 		return locators.empty();
 	}
 
-	size_t size() const {
+	auto size() const {
 		return locators.size();
+	}
+
+	auto begin() {
+		return locators.begin();
+	}
+
+	auto end() {
+		return locators.end();
 	}
 
 	auto begin() const {
@@ -354,7 +389,7 @@ public:
 			for (auto& ct_type : ct_types) {
 				for (auto& accept : accept_set) {
 					double priority = accept.priority;
-					if (priority <= accepted_priority) {
+					if (priority < accepted_priority) {
 						break;
 					}
 					auto& accept_ct = accept.ct_type;

@@ -229,23 +229,4 @@ std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
 
-
-
-
-// constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
-constexpr char DATABASE_DATA_HEADER_MAGIC_STORED = 0x12;
-// constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
-
-constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
-constexpr int STORED_BLOB_DATA          = 1;
-
-std::string join_data(bool stored, std::string_view stored_locator, std::string_view obj, std::string_view blob);
-std::pair<bool, std::string_view> split_data_store(std::string_view data);
-std::string_view split_data_obj(std::string_view data);
-std::string_view split_data_blob(std::string_view data);
-std::string get_data_content_type(std::string_view data);
 void split_path_id(std::string_view path_id, std::string_view& path, std::string_view& id);
-#ifdef XAPIAND_DATA_STORAGE
-std::tuple<ssize_t, size_t, size_t, std::string> storage_unserialise_locator(std::string_view store);
-std::string storage_serialise_locator(ssize_t volume, size_t offset, size_t size, std::string_view content_type);
-#endif /* XAPIAND_DATA_STORAGE */

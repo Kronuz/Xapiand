@@ -1657,53 +1657,51 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
 		auto document = request.db_handler.get_document(*m);
 
-		const auto data = document.get_data();
+		const auto data = Data(document.get_data());
 		if (data.empty()) {
 			continue;
 		}
 
 		MsgPack obj;
 		if (single) {
-			// Figure out the document's ContentType.
-			response.content_type = get_data_content_type(data);
-
-			// If there's a ContentType in the blob store or in the ContentType's field
-			// in the object, try resolving to it (or otherwise don't touch the current ct_type)
-			auto blob_ct_type = resolve_ct_type(request, ct_type_t(response.content_type));
-			if (blob_ct_type.empty()) {
-				if (ct_type.empty()) {
-					// No content type could be resolved, return NOT ACCEPTABLE.
-					enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-					MsgPack err_response = {
-						{ RESPONSE_STATUS, (int)error_code },
-						{ RESPONSE_MESSAGE, { "Response type " + response.content_type + " not provided in the Accept header" } }
-					};
-					write_http_response(request, response, error_code, err_response);
-					L_SEARCH("ABORTED SEARCH");
+			auto accepted = data.get_accepted(request.accept_set);
+			if (accepted.first != nullptr) {
+				auto& locator = *accepted.first;
+				if (locator.ct_type.empty()) {
+					obj = MsgPack::unserialise(locator.data());
+				} else {
+					ct_type = locator.ct_type;
+					auto blob = document.get_blob(ct_type);
+					response.content_type = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
+					response.blob = unserialise_string_at(STORED_BLOB_DATA, blob);
+					if (type_encoding != Encoding::none) {
+						auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
+						if (!encoded.empty() && encoded.size() <= response.blob.size()) {
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(type_encoding)));
+						} else {
+							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
+						}
+					} else {
+						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string()));
+					}
 					return;
 				}
 			} else {
-				// Returns blob_data in case that type is unkown
-				ct_type = blob_ct_type;
-
-				auto blob = document.get_blob();
-				response.blob = unserialise_string_at(STORED_BLOB_DATA, blob);
-				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
-					if (!encoded.empty() && encoded.size() <= response.blob.size()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(type_encoding)));
-					} else {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
-					}
-				} else {
-					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string()));
-				}
+				// No content type could be resolved, return NOT ACCEPTABLE.
+				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, (int)error_code },
+					{ RESPONSE_MESSAGE, { "Response type not accepted by the Accept header" } }
+				};
+				write_http_response(request, response, error_code, err_response);
+				L_SEARCH("ABORTED SEARCH");
 				return;
 			}
-		}
-
-		if (obj.is_undefined()) {
-			obj = MsgPack::unserialise(split_data_obj(data));
+		} else {
+			auto main_locator = data.get("");
+			if (main_locator != nullptr) {
+				obj = MsgPack::unserialise(main_locator->data());
+			}
 		}
 
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
