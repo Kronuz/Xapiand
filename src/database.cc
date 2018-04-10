@@ -1342,107 +1342,85 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get(const std::unique_ptr<DataStorage>& storage, std::string_view store) const
-{
-	L_CALL("Database::storage_get()");
-
-	auto locator = storage_unserialise_locator(store);
-
-	storage->open(DATA_STORAGE_PATH + std::to_string(std::get<0>(locator)), STORAGE_OPEN);
-	storage->seek(static_cast<uint32_t>(std::get<1>(locator)));
-
-	return storage->read();
-}
-
-
-std::string
-Database::storage_get_blob(const Xapian::Document& doc) const
+Database::storage_get_blob(const Xapian::Document& doc, const Data::Locator& locator) const
 {
 	L_CALL("Database::storage_get_blob()");
 
-	auto data = doc.get_data();
-	std::string blob(split_data_blob(data));
+	assert(locator.type == Data::Type::stored);
+	assert(locator.volume != -1);
 
-	if (blob.empty()) {
-		auto store = split_data_store(data);
-		if (store.first) {
-			if (!store.second.empty()) {
-				int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-				const auto& storage = storages[subdatabase];
-				if (storage) {
-					blob = storage_get(storage, store.second);
-				}
-			}
-		}
+	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	const auto& storage = storages[subdatabase];
+	if (storage) {
+		storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume), STORAGE_OPEN);
+		storage->seek(static_cast<uint32_t>(locator.offset));
+		return storage->read();
 	}
 
-	return blob;
+	return "";
 }
 
 
 void
-Database::storage_pull_blob(Xapian::Document& doc) const
+Database::storage_pull_blobs(Xapian::Document& doc) const
 {
-	L_CALL("Database::storage_pull_blob()");
+	L_CALL("Database::storage_pull_blobs()");
 
-	auto data = doc.get_data();
-	std::string blob(split_data_blob(data));
-
-	if (blob.empty()) {
-		auto store = split_data_store(data);
-		if (store.first) {
-			if (!store.second.empty()) {
-				int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-				const auto& storage = storages[subdatabase];
-				if (storage) {
-					blob = storage_get(storage, store.second);
-					doc.set_data(join_data(store.first, "", split_data_obj(data), blob));
-				}
+	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	const auto& storage = storages[subdatabase];
+	if (storage) {
+		auto data = Data(doc.get_data());
+		for (auto& locator : data) {
+			if (locator.type == Data::Type::stored) {
+				assert(locator.volume != -1);
+				storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume), STORAGE_OPEN);
+				storage->seek(static_cast<uint32_t>(locator.offset));
+				data.update(locator.ct_type, storage->read());
 			}
 		}
+		data.flush();
+		doc.set_data(data.serialise());
 	}
 }
 
 
 void
-Database::storage_push_blob(Xapian::Document& doc) const
+Database::storage_push_blobs(Xapian::Document& doc) const
 {
-	L_CALL("Database::storage_push_blob()");
+	L_CALL("Database::storage_push_blobs()");
+
+	assert((flags & DB_WRITABLE) != 0);
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	const auto& storage = writable_storages[subdatabase];
-	if (!storage) {
-		return;
-	}
-
-	uint32_t offset;
-	auto data = doc.get_data();
-	auto blob = split_data_blob(data);
-	if (blob.empty()) {
-		return;
-	}
-
-	auto store = split_data_store(data);
-	if (store.first) {
-		if (store.second.empty()) {
-			while (true) {
-				try {
-					if (storage->closed()) {
-						storage->volume = storage->highest_volume();
-						storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+	if (storage) {
+		auto data = Data(doc.get_data());
+		for (auto& locator : data) {
+			if (locator.size == 0) {
+				data.erase(locator.ct_type);
+			}
+			if (locator.type == Data::Type::stored) {
+				if (!locator.data().empty()) {
+					uint32_t offset;
+					while (true) {
+						try {
+							if (storage->closed()) {
+								storage->volume = storage->highest_volume();
+								storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+							}
+							offset = storage->write(locator.data());
+							break;
+						} catch (StorageEOF) {
+							++storage->volume;
+							storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+						}
 					}
-					offset = storage->write(blob);
-					break;
-				} catch (StorageEOF) {
-					++storage->volume;
-					storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+					data.update(locator.ct_type, storage->volume, offset, locator.data().size());
 				}
 			}
-			auto stored_locator = storage_serialise_locator(storage->volume, offset, blob.size(), unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob));
-			doc.set_data(join_data(true, stored_locator, split_data_obj(data), ""));
-		} else {
-			doc.set_data(join_data(store.first, store.second, split_data_obj(data), ""));
 		}
+		data.flush();
+		doc.set_data(data.serialise());
 	}
 }
 
@@ -1470,7 +1448,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blob(doc_);
+	storage_push_blobs(doc_);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1517,7 +1495,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blob(doc_);
+	storage_push_blobs(doc_);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1566,7 +1544,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blob(doc_);
+	storage_push_blobs(doc_);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1744,7 +1722,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			}
 #ifdef XAPIAND_DATA_STORAGE
 			if (pull_) {
-				storage_pull_blob(doc);
+				storage_pull_blobs(doc);
 			}
 #else
 	ignore_unused(pull_);
@@ -1938,28 +1916,25 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			for (; it != it_e; ++it) {
 				did = *it;
 				auto doc = db->get_document(did);
-				auto data = doc.get_data();
-				auto obj_ser = split_data_obj(data);
-				auto blob = split_data_blob(data);
+				auto data = Data(doc.get_data());
+				auto main_locator = data.get("");
+				serialise_string(fd, main_locator != nullptr ? main_locator->data() : "\x00");
+				XXH32_update(xxh_state, main_locator->data().data(), main_locator->data().size());
 #ifdef XAPIAND_DATA_STORAGE
-				if (blob.empty()) {
-					auto store = split_data_store(data);
-					if (store.first) {
-						if (!store.second.empty()) {
-							int subdatabase = (did - 1) % endpoints.size();
-							const auto& storage = storages[subdatabase];
-							if (storage) {
-								blob = storage_get(storage, store.second);
-							}
-						}
+				for (auto& locator : data) {
+					if (locator.ct_type.empty()) {
+						continue;
+					} else if (locator.type == Data::Type::stored) {
+						auto blob = storage_get_blob(doc, locator);
+						serialise_string(fd, blob);
+						XXH32_update(xxh_state, blob.data(), blob.size());
+					} else {
+						auto blob = locator.data();
+						serialise_string(fd, blob);
+						XXH32_update(xxh_state, blob.data(), blob.size());
 					}
 				}
 #endif
-				serialise_string(fd, obj_ser);
-				XXH32_update(xxh_state, obj_ser.data(), obj_ser.size());
-
-				serialise_string(fd, blob);
-				XXH32_update(xxh_state, blob.data(), blob.size());
 			}
 			// mark end:
 			serialise_string(fd, "");
@@ -2002,27 +1977,23 @@ Database::dump_documents()
 			for (; it != it_e; ++it) {
 				did = *it;
 				auto doc = db->get_document(did);
-				auto data = doc.get_data();
-				auto obj_ser = split_data_obj(data);
-				auto blob = split_data_blob(data);
+				auto data = Data(doc.get_data());
+				auto main_locator = data.get("");
+				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 #ifdef XAPIAND_DATA_STORAGE
-				if (blob.empty()) {
-					auto store = split_data_store(data);
-					if (store.first) {
-						if (!store.second.empty()) {
-							int subdatabase = (did - 1) % endpoints.size();
-							const auto& storage = storages[subdatabase];
-							if (storage) {
-								blob = storage_get(storage, store.second);
-							}
-						}
+				for (auto& locator : data) {
+					if (locator.ct_type.empty()) {
+						continue;
+					} else if (locator.type == Data::Type::stored) {
+						// auto blob = storage_get_blob(doc, locator);
+						// TODO: add blob "_blobs" here
+					} else {
+						// auto& blob = locator.data;
+						// TODO: add blob "_blobs" here
 					}
 				}
 #endif
-				auto obj = MsgPack::unserialise(obj_ser);
-				if (!blob.empty()) {
-					// TODO: add "_blob" to obj here
-				}
+				// TODO: add "_blobs" to obj here
 				docs.push_back(obj);
 			}
 			break;

@@ -39,6 +39,7 @@
 #include <vector>             // for std::vector
 
 #include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
+#include "escape.h"           // for repr() and escape()
 #include "string.hh"
 
 
@@ -67,34 +68,6 @@ std::uint64_t random_int(std::uint64_t initial, std::uint64_t last);
 void set_thread_name(const std::string& name);
 const std::string& get_thread_name(std::thread::id thread_id);
 const std::string& get_thread_name();
-
-
-std::string repr(const void* p, std::size_t size, bool friendly = true, char quote = '\'', std::size_t max_size = 0);
-
-inline std::string repr(const void* p, const void* e, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
-	return repr(p, static_cast<const char*>(e) - static_cast<const char*>(p), friendly, quote, max_size);
-}
-
-inline std::string repr(std::string_view string, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
-	return repr(string.data(), string.size(), friendly, quote, max_size);
-}
-
-template<typename T, std::size_t N>
-inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
-	return repr(s, N - 1, friendly, quote, max_size);
-}
-
-
-std::string escape(const void* p, std::size_t size, char quote = '\'');
-
-inline std::string escape(std::string_view string, char quote = '\'') {
-	return escape(string.data(), string.size(), quote);
-}
-
-template<typename T, std::size_t N>
-inline std::string escape(T (&s)[N], char quote = '\'') {
-	return escape(s, N - 1, quote);
-}
 
 
 inline bool ignored_errorno(int e, bool tcp, bool udp) {

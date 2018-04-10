@@ -194,7 +194,7 @@ class DatabaseHandler {
 	MsgPack& run_script(MsgPack& data, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(std::string_view document_id, bool stored, std::string_view stored_locator, MsgPack& obj, std::string_view blob, bool commit_, const ct_type_t& ct_type);
+	DataType index(std::string_view document_id, MsgPack& obj, Data& data, bool commit_);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -289,12 +289,11 @@ public:
 	std::string serialise(size_t retries=DB_RETRIES);
 	std::string get_value(Xapian::valueno slot, size_t retries=DB_RETRIES);
 	std::string get_data(size_t retries=DB_RETRIES);
-	std::string get_blob(size_t retries=DB_RETRIES);
+	std::string get_blob(const ct_type_t& ct_type, size_t retries=DB_RETRIES);
 	MsgPack get_terms(size_t retries=DB_RETRIES);
 	MsgPack get_values(size_t retries=DB_RETRIES);
 
 	MsgPack get_value(std::string_view slot_name);
-	std::pair<bool, std::string_view> get_store();
 	MsgPack get_obj();
 	MsgPack get_field(std::string_view slot_name);
 	static MsgPack get_field(std::string_view slot_name, const MsgPack& obj);

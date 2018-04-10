@@ -71,17 +71,6 @@ class Worker;
 #define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 10)
 
 
-template <typename T>
-struct accept_preference_comp {
-	constexpr bool operator()(const std::tuple<double, int, T, unsigned>& l, const std::tuple<double, int, T, unsigned>& r) const noexcept {
-		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
-	}
-};
-
-
-using accept_set_t = std::set<std::tuple<double, int, ct_type_t, int>, accept_preference_comp<ct_type_t>>;
-
-
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
 	std::mutex qmtx;
 
@@ -100,8 +89,15 @@ public:
 	}
 };
 
+struct AcceptEncoding {
+	int position;
+	double priority;
 
-using accept_encoding_t = std::set<std::tuple<double, int, std::string, unsigned>, accept_preference_comp<std::string>>;
+	std::string encoding;
+
+	AcceptEncoding(int position, double priority, std::string encoding) : position(position), priority(priority), encoding(encoding) { }
+};
+using accept_encoding_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
 
 
 class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_t> {
@@ -316,9 +312,9 @@ class HttpClient : public Task<>, public BaseClient {
 	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void clean_http_request(Request& request, Response& response);
 	void set_idle();
-	ct_type_t serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
+	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
-	ct_type_t resolve_ct_type(Request& request, std::string ct_type_str);
+	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);
 	template <typename T>
 	const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
