@@ -91,15 +91,24 @@ class Object(NestedDict):
 
 class Results(object):
     def __init__(self, meta, generator):
-        for k, v in meta.get(RESPONSE_QUERY, {}).items():
+        meta['_'] = self
+        self.generator = generator
+
+        query = meta.pop(RESPONSE_QUERY, {})
+        aggregations = meta.pop(RESPONSE_AGGREGATIONS, {})
+
+        dict.__setattr__(self, 'aggregations', NestedDict(aggregations))
+
+        self._update(meta)
+        self._update(aggregations)
+        self._update(query)
+
+    def _update(self, obj):
+        for k, v in obj.items():
             if k[0] == '#':
                 dict.__setattr__(self, k[1:], v)
             elif k[0] == '_':
                 dict.__setattr__(self, k, v)
-
-        aggregations = NestedDict(meta.get(RESPONSE_AGGREGATIONS, {}))
-        dict.__setattr__(self, 'aggregations', aggregations)
-        self.generator = generator
 
     def __len__(self):
         return int(getattr(self, 'total_count', 0))
@@ -274,46 +283,73 @@ class Xapiand(object):
         is_json = 'application/json' in content_type
 
         if stream:
+            meta = {}
             def results(chunks, size=100):
                 def fetch():
                     fetch.cache = []
                     fetch.cache.extend(l for l in itertools.islice(chunks, size) if l)
                 fetch()
-                first = True
-                while fetch.cache:
-                    for chunk in fetch.cache:
-                        if is_msgpack:
-                            if first:
-                                first = False
+                total = None
+
+                if is_msgpack:
+                    while fetch.cache:
+                        for num, chunk in enumerate(fetch.cache):
+                            if num == 0:
                                 for o, m, v in ((-1, 0xf0, 0x90), (-3, 0xff, 0xdc), (-5, 0xff, 0xdd)):
                                     if ord(chunk[o]) & m == v:
                                         try:
-                                            yield msgpack.loads(chunk[:o] + '\x90')
+                                            if v == 0xdd:
+                                                total = msgpack.unpackb('\xce' + chunk[o + 1:]) + 1
+                                            elif v == 0xdc:
+                                                total = msgpack.unpackb('\xcd' + chunk[o + 1:]) + 1
+                                            else:
+                                                total = msgpack.unpackb(chr(ord(chunk[o]) & 0x0f)) + 1
+                                            chunk = chunk[:o] + '\x90' + msgpack.dumps({"#took": 0.0})[1:]
                                             break
                                         except Exception:
                                             pass
                                 else:
                                     raise IOError("Unexpected chunk!")
+                            if total == 0:
+                                # Add single-item dictionary:
+                                meta['_']._update(msgpack.loads('\x81' + chunk))
                             else:
-                                yield msgpack.loads(chunk)
-                        elif is_json:
-                            if first:
-                                first = False
+                                obj = msgpack.loads(chunk)
+                                yield obj
+                                total -= 1
+                        fetch()
+
+                elif is_json:
+                    while fetch.cache:
+                        for num, chunk in enumerate(fetch.cache):
+                            if num == 0:
                                 if chunk.rstrip().endswith('['):
                                     chunk += ']}}'
                                 else:
                                     raise IOError("Unexpected chunk!")
                             elif chunk.lstrip().startswith(']'):
-                                continue
+                                # Remove "],}" and use as single-item dictionary:
+                                chunk = '{' + chunk.lstrip()[1:].lstrip()[1:].lstrip()[1:]
+                                total = 0
                             else:
                                 chunk = chunk.rstrip().rstrip(',')
-                            yield json.loads(chunk)
-                        else:
+                            if total == 0:
+                                meta['_']._update(json.loads(chunk))
+                            else:
+                                obj = json.loads(chunk)
+                                yield obj
+                        fetch()
+
+                else:
+                    while fetch.cache:
+                        for num, chunk in enumerate(fetch.cache):
                             yield chunk
-                    fetch()
+                        fetch()
+
             results = results(res.iter_content(chunk_size=None))
-            meta = next(results)
+            meta.update(next(results))
         else:
+            meta = {}
             if is_msgpack:
                 content = msgpack.loads(res.content)
             elif is_json:
@@ -321,7 +357,6 @@ class Xapiand(object):
             else:
                 content = res.content
             results = [content]
-            meta = {}
 
         results = Results(meta, results)
         if key == 'result':
