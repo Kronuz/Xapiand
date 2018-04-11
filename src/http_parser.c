@@ -1065,7 +1065,7 @@ reexecute:
             /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
             break;
           case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
-          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH */ break;
+          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, STORE */ break;
           case 'T': parser->method = HTTP_TRACE; break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE, UNBIND, UNLINK */ break;
           default:
@@ -1108,6 +1108,7 @@ reexecute:
             XX(MKCOL,     2, 'A', MKACTIVITY)
             XX(MKCOL,     3, 'A', MKCALENDAR)
             XX(SUBSCRIBE, 1, 'E', SEARCH)
+            XX(SUBSCRIBE, 1, 'T', STORE)
             XX(REPORT,    2, 'B', REBIND)
             XX(POST,      1, 'R', PROPFIND)
             XX(PROPFIND,  4, 'P', PROPPATCH)

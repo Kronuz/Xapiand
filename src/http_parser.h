@@ -206,6 +206,8 @@ enum http_status
   /* RFC-2068, section 19.6.1.2 */  \
   XX(31, LINK,        LINK)         \
   XX(32, UNLINK,      UNLINK)       \
+  /* Dubalu */                      \
+  XX(33, STORE,       STORE)        \
 
 enum http_method
   {
