@@ -41,6 +41,19 @@ Be aware of these messages if you wish to avoid certain death.
 **_You'll see this by a feature that hasn't been released_**<br>
 Some pieces are for future versions of {{ site.name }} that are not yet released.
 
+<!--
+## Keyboard symbols used:
+- Ctrl: ⌃
+- Alt: ⎇
+- Cmd: ⌘
+- Windows: ❖
+- Backspace: ⌫
+- Enter: ⏎
+- Shift: ⇧
+- Caps lock: ⇪
+- Arrows: ⬅ ➡ ⬆ ⬇
+-->
+
 ---
 
 ## API Snippets
