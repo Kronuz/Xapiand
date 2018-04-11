@@ -941,6 +941,13 @@ Database::reopen()
 	auto endpoints_size = endpoints.size();
 	auto i = endpoints.cbegin();
 	if ((flags & DB_WRITABLE) != 0) {
+		////////////////////////////////////////////////////////////////
+		// __        __    _ _        _     _        ____  ____
+		// \ \      / / __(_) |_ __ _| |__ | | ___  |  _ \| __ )
+		//  \ \ /\ / / '__| | __/ _` | '_ \| |/ _ \ | | | |  _ \
+		//   \ V  V /| |  | | || (_| | |_) | |  __/ | |_| | |_) |
+		//    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
+		//
 		assert(endpoints_size == 1);
 		db = std::make_unique<Xapian::WritableDatabase>();
 		const auto& e = *i;
@@ -1049,7 +1056,16 @@ Database::reopen()
 			throw;
 		}
 #endif /* XAPIAND_DATABASE_WAL */
+		// Ends Writable DB
+		////////////////////////////////////////////////////////////////
 	} else {
+		////////////////////////////////////////////////////////////////
+		//  ____                _       _     _        ____  ____
+		// |  _ \ ___  __ _  __| | __ _| |__ | | ___  |  _ \| __ )
+		// | |_) / _ \/ _` |/ _` |/ _` | '_ \| |/ _ \ | | | |  _ \
+		// |  _ <  __/ (_| | (_| | (_| | |_) | |  __/ | |_| | |_) |
+		// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
+		//
 		auto size_endp = endpoints.size();
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			const auto& e = *i;
@@ -1132,6 +1148,8 @@ Database::reopen()
 		if (size_endp == 0u) {
 			throw Xapian::DatabaseOpeningError("Empty set of databases");
 		}
+		// Ends Readable DB
+		////////////////////////////////////////////////////////////////
 	}
 
 	L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
