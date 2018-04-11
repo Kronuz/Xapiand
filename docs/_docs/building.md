@@ -25,8 +25,7 @@ The only external dependencies for building it are:
 
 * zlib
 * libpthread (internally used by the Standard C++ thread library)
-* xapian-core v1.4+ (With patches by Kronuz applied, see [https://github.com/Kronuz/xapian])
-* Optionally, Google's V8 Javascript engine library (tested with v5.1)
+* xapian-core v1.4+ (Optionally, with patches by Kronuz applied, see [https://github.com/Kronuz/xapian])
 
 
 ## Building process
