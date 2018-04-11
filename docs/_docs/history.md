@@ -8,6 +8,7 @@ read_only: true
 {: #v0-5-2}
 
 - Logo updated
+- Fixes issues while compiling with GCC + cleanups
 
 
 ## 0.5.1 / 2018-03-28

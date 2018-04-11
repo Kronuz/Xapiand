@@ -9,3 +9,4 @@ categories: [release]
 This release updates logo
 
 - Logo updated
+- Fixes issues while compiling with GCC + cleanups
