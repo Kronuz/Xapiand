@@ -2,10 +2,47 @@
 title: API Conventions
 ---
 
-The Xapiand REST APIs are exposed using JSON (or MessagePack) over HTTP.
+## RESTful Features of the Xapiand API
+
+Xapiand uses a RESTful API exposed using JSON (or MessagePack) over HTTP.
+
+When we talk about our API, we use terms like "_REST_" and "_RESTful_." "_REST_"
+stands for [Representational State Transfer](https://en.wikipedia.org/wiki/Representational_state_transfer){:target="_blank"}.
 
 The conventions listed in here can be applied throughout the REST API, unless
 otherwise specified.
+
+### RESTful HTTP Methods
+
+You may see these standard HTTP methods referred to as CRUD, or _Create_, _Read_,
+_Update_, _Delete_. Although CRUD has roots in database operations, you can also
+map those operations to the standard HTTP methods. For example, use a _POST_
+request to create a new resource, a _GET_ request to read or retrieve a resource,
+a _PATCH_ request to edit a resource, and a _DELETE_ request to delete a resource.
+
+### Deviations from REST
+
+Additionally to the standard methods, we also use _MERGE_ and _STORE_ methods
+for certain operations.
+
+### HTTP methods and response codes
+
+You can override the method by passing the  header
+HTTP-Method-Override
+
+We do our best to use standard HTTP methods with accurate and well-known status
+codes in the Xapiand API, but here are some additions and deviations.
+
+- **GET** requests are safe, and won't alter a resource.
+- **PATCH**, **MERGE** and **DELETE** methods are idempotent.
+- **POST** and **STORE** aren't safe or idempotent.
+
+If your firewall rules don't support HTTP methods like _PATCH_, _MERGE_, _STORE_
+or _DELETE_, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"} (or _HTTP-Method-Override_) header. Pass the method you want to use in the
+`X-HTTP-Method-Override` header and make your call using the POST method. The
+override won't work with any other method, so if you try and use the override
+header with a _GET_, _PATCH_, _MERGE_, _STORE_, _PUT_, or _DELETE_ method,
+you'll receive an error.
 
 
 ## Multiple Indices
@@ -22,7 +59,7 @@ It also support  `_all` for all indices, wildcards, for example: `test*`,
 
 All multi indices API support the following url query string parameters:
 
-* `ignore_unavailable` - Controls whether to ignore if any specified indices are unavailable, this includes indices that don’t exist or closed indices. Either true or false can be specified.
+* `ignore_unavailable` - Controls whether to ignore if any specified indices are unavailable, this includes indices that don't exist or closed indices. Either true or false can be specified.
 * `allow_no_indices` - Controls whether to fail if a wildcard indices expressions results into no concrete indices. Either true or false can be specified. For example if the wildcard expression foo* is specified and no indices are available that start with foo then depending on this setting the request will fail. This setting is also applicable when _all, * or no index has been specified. This settings also applies for aliases, in case an alias points to a closed index.
 * `expand_wildcards` - Controls to what kind of concrete indices wildcard indices expression expand to. If open is specified then the wildcard expression is expanded to only open indices and if closed is specified then the wildcard expression is expanded only to closed indices. Also both values (open,closed) can be specified to expand to all indices.
 
