@@ -438,9 +438,9 @@ public:
 	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
 		L_CALL("Storage::write() [1]");
 
-		// if ((flags & STORAGE_WRITABLE) == 0) {
-		// 	THROW(StorageIOError, "IO error: read-only storage");
-		// }
+		if ((flags & STORAGE_WRITABLE) == 0) {
+			THROW(StorageIOError, "IO error: read-only storage");
+		}
 
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
@@ -540,9 +540,9 @@ public:
 	uint32_t write_file(std::string_view filename, void* args=nullptr) {
 		L_CALL("Storage::write_file()");
 
-		// if ((flags & STORAGE_WRITABLE) == 0) {
-		// 	THROW(StorageIOError, "IO error: read-only storage");
-		// }
+		if ((flags & STORAGE_WRITABLE) == 0) {
+			THROW(StorageIOError, "IO error: read-only storage");
+		}
 
 		uint32_t curr_offset = header.head.offset;
 
@@ -746,12 +746,12 @@ public:
 	void commit() {
 		L_CALL("Storage::commit()");
 
-		// if ((flags & STORAGE_WRITABLE) == 0) {
-		// 	THROW(StorageIOError, "IO error: read-only storage");
-		// }
-
 		if (!changed) {
 			return;
+		}
+
+		if ((flags & STORAGE_WRITABLE) == 0) {
+			THROW(StorageIOError, "IO error: read-only storage");
 		}
 
 		changed = false;
