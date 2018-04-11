@@ -26,7 +26,7 @@ And getting it is just a matter of retreiving it using GET:
 
 {: .note}
 **_Toggle console previews_**<br>
-You can enable previews for images in the terminal using the very-very-very
+You can enable previews for images in the terminal using the very-very-very-very
 verbose command line option (`-vvvvv`). Note you a compatible terminal for this
 feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example).
 
