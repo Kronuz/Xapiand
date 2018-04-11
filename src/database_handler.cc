@@ -592,22 +592,23 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 	}
 
 	Data data;
-	MsgPack obj;
+	MsgPack obj(MsgPack::Type::MAP);
 	switch (body.getType()) {
-		case MsgPack::Type::STR: {
-			auto blob = serialise_strings({ ct_type.to_string(), body.str_view() });
+		case MsgPack::Type::STR:
 			if (stored) {
-				data.update(ct_type, -1, 0, 0, std::move(blob));
+				data.update(ct_type, -1, 0, 0, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			} else {
-				data.update(ct_type, std::move(blob));
+				data.update(ct_type, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			}
 			break;
-		}
+		case MsgPack::Type::UNDEFINED:
+			data.erase(ct_type);
+			break;
 		case MsgPack::Type::MAP:
 			obj = body.clone();
 			break;
 		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 	}
 
 	return index(document_id, obj, data, commit_);
@@ -661,22 +662,24 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
 	switch (body.getType()) {
-		case MsgPack::Type::STR: {
-			auto blob = serialise_strings({ ct_type.to_string(), body.str_view() });
+		case MsgPack::Type::STR:
 			if (stored) {
-				data.update(ct_type, -1, 0, 0, std::move(blob));
+				data.update(ct_type, -1, 0, 0, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			} else {
-				data.update(ct_type, std::move(blob));
+				data.update(ct_type, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			}
-			return index(document_id, obj, data, commit_);
-		}
-		case MsgPack::Type::MAP: {
+			break;
+		case MsgPack::Type::UNDEFINED:
+			data.erase(ct_type);
+			break;
+		case MsgPack::Type::MAP:
 			obj.update(body);
-			return index(document_id, obj, data, commit_);
-		}
+			break;
 		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob");
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 	}
+
+	return index(document_id, obj, data, commit_);
 }
 
 
