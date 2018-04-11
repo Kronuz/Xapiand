@@ -802,8 +802,9 @@ DataHeader::validate(void* param, void* /*unused*/)
 }
 
 
-DataStorage::DataStorage(std::string_view base_path_, void* param_)
-	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_)
+DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
+	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_),
+	  flags(flags)
 {
 	L_OBJ("CREATED DATABASE DATA STORAGE!");
 }
@@ -812,6 +813,13 @@ DataStorage::DataStorage(std::string_view base_path_, void* param_)
 DataStorage::~DataStorage()
 {
 	L_OBJ("DELETED DATABASE DATA STORAGE!");
+}
+
+
+bool
+DataStorage::open(std::string_view relative_path)
+{
+	return Storage<DataHeader, DataBinHeader, DataBinFooter>::open(relative_path, flags);
 }
 
 
@@ -1002,10 +1010,10 @@ Database::reopen()
 		if (local) {
 			if ((flags & DB_NOSTORAGE) != 0) {
 				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-				storages.push_back(std::make_unique<DataStorage>(e.path, this));
+				storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
 			} else {
-				writable_storages.push_back(std::make_unique<DataStorage>(e.path, this));
-				storages.push_back(std::make_unique<DataStorage>(e.path, this));
+				writable_storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
+				storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
 			}
 		} else {
 			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
@@ -1114,7 +1122,7 @@ Database::reopen()
 	#ifdef XAPIAND_DATA_STORAGE
 			if (local && endpoints_size == 1) {
 				// WAL required on a local database, open it.
-				storages.push_back(std::make_unique<DataStorage>(e.path, this));
+				storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
 			} else {
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			}
@@ -1352,7 +1360,7 @@ Database::storage_get_blob(const Xapian::Document& doc, const Data::Locator& loc
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
-		storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume), STORAGE_OPEN);
+		storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume));
 		storage->seek(static_cast<uint32_t>(locator.offset));
 		return storage->read();
 	}
@@ -1373,7 +1381,7 @@ Database::storage_pull_blobs(Xapian::Document& doc) const
 		for (auto& locator : data) {
 			if (locator.type == Data::Type::stored) {
 				assert(locator.volume != -1);
-				storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume), STORAGE_OPEN);
+				storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume));
 				storage->seek(static_cast<uint32_t>(locator.offset));
 				data.update(locator.ct_type, storage->read());
 			}
@@ -1406,13 +1414,13 @@ Database::storage_push_blobs(Xapian::Document& doc) const
 						try {
 							if (storage->closed()) {
 								storage->volume = storage->highest_volume();
-								storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+								storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume));
 							}
 							offset = storage->write(locator.data());
 							break;
 						} catch (StorageEOF) {
 							++storage->volume;
-							storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+							storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume));
 						}
 					}
 					data.update(locator.ct_type, storage->volume, offset, locator.data().size());

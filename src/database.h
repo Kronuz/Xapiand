@@ -259,10 +259,14 @@ struct DataBinFooter {
 
 class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
+	int flags;
+
 	uint32_t volume;
 
-	DataStorage(std::string_view base_path_, void* param_);
+	DataStorage(std::string_view base_path_, void* param_, int flags);
 	~DataStorage();
+
+	bool open(std::string_view relative_path);
 
 	uint32_t highest_volume();
 };
