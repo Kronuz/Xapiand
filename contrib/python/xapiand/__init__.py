@@ -125,6 +125,9 @@ class Session(requests.Session):
     def merge(self, url, data=None, **kwargs):
         return self.request('MERGE', url, data=data, **kwargs)
 
+    def store(self, url, data=None, **kwargs):
+        return self.request('STORE', url, data=data, **kwargs)
+
 
 class DoesNotExist(ObjectDoesNotExist):
     pass
@@ -156,6 +159,7 @@ class Xapiand(object):
         put=(session.put, False, 'result'),
         patch=(session.patch, False, 'result'),
         merge=(session.merge, False, 'result'),
+        store=(session.store, False, 'result'),
     )
 
     def __init__(self, host=None, port=None, commit=None, prefix=None, default_accept=None, default_accept_encoding=None):
@@ -467,6 +471,16 @@ class Xapiand(object):
             pretty=pretty,
         )
         return self._send_request('merge', index, **kwargs)
+
+    def store(self, index, id, body, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['id'] = id
+        kwargs['body'] = body
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self._send_request('store', index, **kwargs)
 
 
 live = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
