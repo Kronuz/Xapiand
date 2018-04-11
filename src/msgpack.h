@@ -1947,7 +1947,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 					if (input) {
 						auto it = input->find(name);
 						if (it != input->end()) {
-							input = &*it;
+							input = &it.value();
 						} else {
 							input = nullptr;
 						}
@@ -1967,7 +1967,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 					if (input && output) {
 						auto it = input->find(name);
 						if (it != input->end()) {
-							input = &*it;
+							input = &it.value();
 							base = input;
 							output = &(*output)[name];
 						} else {
@@ -1987,7 +1987,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 					if (input && output) {
 						auto it = input->find(name);
 						if (it != input->end()) {
-							(*output)[name] = *it;
+							(*output)[name] = it.value();
 						}
 					}
 					name = "";
@@ -2019,7 +2019,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 					if (input && output) {
 						auto it = input->find(name);
 						if (it != input->end()) {
-							(*output)[name] = *it;
+							(*output)[name] = it.value();
 						}
 					}
 					name = "";
@@ -2043,7 +2043,7 @@ inline MsgPack MsgPack::select(std::string_view selector) const {
 		if (input && output) {
 			auto it = input->find(name);
 			if (it != input->end()) {
-				*output = *it;
+				*output = it.value();
 			}
 		}
 		name = "";
