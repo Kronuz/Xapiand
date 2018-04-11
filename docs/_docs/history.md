@@ -4,6 +4,21 @@ read_only: true
 ---
 
 
+## 0.6.0 / 2018-04-11
+{: #v0-6-0}
+
+- Breaking: Support for multi-content (by Content-Type) documents
+- Added :dump and :restore endpoints
+- Fixes problem with big body responses breaking the logs
+- Added time it took (in milliseconds) to execute a :search query
+- Added sort, limit and offset to query DSL
+- Python: Xapiand client updated
+- Using C++17
+- GCC 7 compatibility
+- Updated FreeBSD port
+- Towards MultiarchSpec compatibility for Linux
+
+
 ## 0.5.2 / 2018-04-02
 {: #v0-5-2}
 
