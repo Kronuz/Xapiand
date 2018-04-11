@@ -1844,15 +1844,17 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			last_chunk = MsgPack({
 				{ RESPONSE_TOOK, took_milliseconds },
 			}).serialise().substr(1);
+		} else {
+			last_chunk = string::format(last_chunk, took_delta);
 		}
 
 		if (type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, type_encoding, string::format(last_chunk, took_delta), true, false, true);
+			auto encoded = encoding_http_response(response, type_encoding, last_chunk, true, false, true);
 			if (!encoded.empty()) {
 				write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 			}
 		} else {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, string::format(last_chunk, took_delta)));
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, last_chunk));
 		}
 
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
