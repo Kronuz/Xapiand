@@ -411,6 +411,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 				hh("content-length"),
 				hh("accept"),
 				hh("accept-encoding"),
+				hh("http-method-override"),
 				hh("x-http-method-override"),
 			});
 
@@ -496,7 +497,8 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 					break;
 				}
 
-				case _.fhhl("x-http-method-override"): {
+				case _.fhhl("x-http-method-override"):
+				case _.fhhl("http-method-override"): {
 					constexpr static auto __ = phf::make_phf({
 						hhl("PUT"),
 						hhl("PATCH"),
