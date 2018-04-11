@@ -680,6 +680,9 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 			data.erase(ct_type);
 			break;
 		case MsgPack::Type::MAP:
+			if (stored) {
+				THROW(ClientError, "Objects of this type cannot be put in storage");
+			}
 			obj.update(body);
 			break;
 		default:
