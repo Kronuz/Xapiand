@@ -1508,7 +1508,7 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 	info[RESPONSE_DOCID] = document.get_docid();
 	info[RESPONSE_DATA] = obj;
 
-	auto info_blob = info[RESPONSE_BLOBS];
+	auto& info_blob = info[RESPONSE_BLOBS];
 	for (auto& locator : data) {
 		if (!locator.ct_type.empty()) {
 			switch (locator.type) {
