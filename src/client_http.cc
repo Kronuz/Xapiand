@@ -2832,7 +2832,9 @@ Request::_decode()
 			ct_type_str = JSON_CONTENT_TYPE;
 		}
 
-		if (!raw.empty()) {
+		if (raw.empty()) {
+			_ct_type = ct_type_t(ct_type_str);
+		} else {
 			rapidjson::Document rdoc;
 			constexpr static auto _ = phf::make_phf({
 				hhl(FORM_URLENCODED_CONTENT_TYPE),
