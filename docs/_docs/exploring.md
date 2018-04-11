@@ -37,16 +37,31 @@ randomly generated.
 You can download the [sample dataset]({{ '/assets/accounts.json' | absolute_url }}){:target="_blank"}. Extract it to
 our current directory and let's load it into our cluster as follows:
 
-```sh
-~ $ curl -H 'Content-Type: application/json' \
-   -X POST --data-binary '@accounts.json' \
-   'localhost:8880/bank/:restore?pretty'
+{% capture req %}
+
+```json
+POST /bank/:restore?pretty
+Content-Type: application/json
+
+@accounts.json
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
 
 And then you can use `:info` to get information about the new index:
 
-```sh
-~ $ curl 'localhost:8880/bank/:info?pretty'
+{% capture req %}
+
+```json
+GET /bank/:info?pretty
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+Response should be something like:
+
+```json
 {
     "#database_info": {
         "#uuid": "923a4470-7cdc-45ec-827c-fa85703fa8f6",
@@ -78,13 +93,13 @@ method.
 The REST API for search is accessible from the `:search` endpoint. This example
 returns all documents in the bank index:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?q=*&sort=account_number&pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
 the `bank` index, and the `q=*` parameter instructs Xapiand to match all
@@ -150,17 +165,18 @@ Going back to our last example, we executed a query to retrieve all documents
 using `q=*`. Here is the same exact search using the alternative request body
 method:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": "*",
   "_sort": "account_number"
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 The difference here is that instead of passing `q=*` in the URI, we POST a
 JSON-style query request body to the `:search` API.
@@ -173,26 +189,28 @@ In addition to the query parameter, we also can pass other parameters to
 influence the search results. In the example in the section above we passed in
 sort, here we pass in `limit`:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": "*",
   "_limit": 1
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 Note that if `limit` is not specified, it defaults to 10.
 
 This example does a `match_all` and returns documents 10 through 19:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": "*",
   "_offset": 10,
@@ -200,7 +218,7 @@ GET /bank/:search?pretty
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 The `offset` parameter (0-based) specifies which document index to start from
 and the `limit` parameter specifies how many documents to return starting at the
@@ -210,17 +228,18 @@ results. Note that if `offset` is not specified, it defaults to 0.
 This example does a `match_all` and sorts the results by account balance in
 descending order and returns the top 10 (default `limit`) documents.
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": "*",
   "_sort": { "balance": { "_order": "desc" } }
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 
 ## Executing Searches
@@ -235,27 +254,29 @@ only a few fields from within source to be returned.
 This example shows how to return two fields, `account_number` and `balance`
 (inside of _source), from the search:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": "*",
   "_source": ["account_number", "balance"]
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 {: .note .unreleased}
 **_TODO:_** Work in progress...
 
 ## Executing Filters
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_query": {
     "bool": {
@@ -273,7 +294,7 @@ GET /bank/:search?pretty
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 {: .note .unreleased}
 **_TODO:_** Work in progress...
@@ -292,10 +313,11 @@ roundtrips using a concise and simplified API.
 To start with, this example groups all the accounts by state, and then returns
 the top 10 (default) states sorted by count descending (also default):
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /bank/:search?pretty
+
 {
   "_limit": 0,
   "_aggs": {
@@ -308,7 +330,7 @@ GET /bank/:search?pretty
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 In SQL, the above aggregation is similar in concept to:
 

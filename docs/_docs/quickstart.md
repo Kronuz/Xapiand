@@ -32,22 +32,24 @@ Let's try and index some twitter like information. First, let's create a
 twitter user, and add some tweets (the twitter index will be created
 automatically):
 
-{% capture json %}
+{% capture req %}
 
 ```json
 PUT /twitter/user/Kronuz?pretty
+
 {
   "name" : "German M. Bravo"
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 
-{% capture json %}
+{% capture req %}
 
 ```json
 PUT /twitter/tweet/1?pretty
+
 {
   "user": "Kronuz",
   "postDate": "2016-11-15T13:12:00",
@@ -55,13 +57,14 @@ PUT /twitter/tweet/1?pretty
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 
-{% capture json %}
+{% capture req %}
 
 ```json
 PUT /twitter/tweet/2?pretty
+
 {
   "user": "Kronuz",
   "postDate": "2016-10-15T10:31:18",
@@ -69,7 +72,7 @@ PUT /twitter/tweet/2?pretty
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying/' | relative_url }}) section.
 
@@ -79,39 +82,39 @@ You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying/' |
 
 Now, let's see if the information that was added by GETting it:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /twitter/user/Kronuz?pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /twitter/tweet/1?pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /twitter/tweet/2?pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 Let's find all the tweets that Kronuz posted:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 GET /twitter/tweet/:search?q=user:Kronuz&pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 You can find out more in the [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}) section.
 

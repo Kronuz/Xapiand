@@ -61,16 +61,17 @@ Some pieces are for future versions of {{ site.name }} that are not yet released
 Throughout this guide there are many examples of API calls that look something
 like this:
 
-{% capture json %}
+{% capture req %}
 
 ```json
 PUT /twitter/user/Kronuz
+
 {
   "name" : "German M. Bravo"
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 For those, you can always copy the equivalent curl code for it by hovering the
 snippet and clicking on the copy to the clipboard button: &nbsp;&nbsp;<i class="fa fa-clipboard"></i>

@@ -52,20 +52,21 @@ documents to and from JSON (or MessagePack) over HTTP.
 
 ### Dump
 
-{% capture json %}
+{% capture req %}
 
 ```json
 POST /twitter/:dump?pretty
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 ### Restore
 
-{% capture json %}
+{% capture req %}
 
 ```json
 POST /twitter/:restore?pretty
+
 [
   {
     "user": "Kronuz",
@@ -82,7 +83,7 @@ POST /twitter/:restore?pretty
 ]
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 ---
 
@@ -94,10 +95,11 @@ for the index to be restored; and then restore the documents to that index:
 
 #### Create a new schema ([foreign]({{ '/docs/reference-guide/schema#foreign' | relative_url }}) in this example) for a new index
 
-{% capture json %}
+{% capture req %}
 
 ```json
 PUT /new_twitter/:schema
+
 {
   "_type": "foreign/object",
   "_endpoint": ".schemas/00000000-0000-1000-8000-010000000000",
@@ -123,14 +125,15 @@ PUT /new_twitter/:schema
 }
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}
 
 #### Restore the index documents to the new index
 
-{% capture json %}
+{% capture req %}
 
 ```json
 POST /twitter/:restore?pretty
+
 [
   {
     "user": "Kronuz",
@@ -147,4 +150,4 @@ POST /twitter/:restore?pretty
 ]
 ```
 {% endcapture %}
-{% include curl.html json=json %}
+{% include curl.html req=req %}

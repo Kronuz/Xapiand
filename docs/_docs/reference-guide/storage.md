@@ -11,18 +11,27 @@ won't be changing often.
 
 Lets add something to the storage using `STORE`:
 
-```sh
-~ $ curl -H 'Content-Type: image/png' \
-  --data-binary '@Kronuz.png' \
-  -X STORE 'localhost:8880/twitter/images/Kronuz'
+{% capture req %}
+
+```json
+STORE /twitter/images/Kronuz
+Content-Type: image/png
+
+@Kronuz.png
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 And getting it is just a matter of retreiving it using GET:
 
-```sh
-~ $ curl -H 'Accept: image/png' \
-  'localhost:8880/twitter/images/Kronuz'
+{% capture req %}
+
+```json
+GET /twitter/images/Kronuz
+Accept: image/png
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 {: .note}
 **_Toggle console previews_**<br>
@@ -34,29 +43,41 @@ feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example
 
 Use `STORE` with a different Content-Type to add new content to the same document:
 
-```sh
-~ $ curl -H 'Content-Type: image/jpeg' \
-  --data-binary '@Kronuz.jpg' \
-  -X STORE 'localhost:8880/twitter/images/Kronuz'
+{% capture req %}
+
+```json
+STORE /twitter/images/Kronuz
+Content-Type: image/jpeg
+
+@Kronuz.jpg
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 Then you can get either of them requesting the appropriate Content-Type:
 
-```sh
-~ $ curl -H 'Accept: image/jpeg' \
-  'localhost:8880/twitter/images/Kronuz'
-```
+{% capture req %}
 
+```json
+GET /twitter/images/Kronuz
+Accept: image/jpeg
+```
+{% endcapture %}
+{% include curl.html req=req %}
 
 ## Removing Content
 
 Tou remove stored content by storing an empty object:
 
-```sh
-~ $ curl -H 'Content-Type: image/jpeg' \
-  --data-binary '' \
-  -X STORE 'localhost:8880/twitter/images/Kronuz'
+{% capture req %}
+
+```json
+STORE /twitter/images/Kronuz
+Content-Type: image/jpeg
+Content-Length: 0
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 ---
 
