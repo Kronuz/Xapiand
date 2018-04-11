@@ -65,9 +65,45 @@ Accept: image/jpeg
 {% endcapture %}
 {% include curl.html req=req %}
 
+## Retrieving Information
+
+You can get the information about the document as usual:
+
+{% capture req %}
+
+```json
+GET /twitter/images/:info/Kronuz?pretty
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+The result (partially shown) has the available content types listed inside
+ `#document_info ➛ #blobs`
+
+```json
+{
+  "#document_info": {
+    "#blobs": {
+      "image/png": {
+        "#type": "stored",
+        "#volume": 0,
+        "#offset": 512,
+        "#size": 572272
+      },
+      "image/jpeg": {
+        "#type": "stored",
+        "#volume": 0,
+        "#offset": 72411,
+        "#size": 484591
+      }
+    }, ...
+  }
+}
+```
+
 ## Removing Content
 
-Tou remove stored content by storing an empty object:
+To remove stored content by storing an empty object:
 
 {% capture req %}
 

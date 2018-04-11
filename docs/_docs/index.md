@@ -49,9 +49,10 @@ Some pieces are for future versions of {{ site.name }} that are not yet released
 - Windows: ❖
 - Backspace: ⌫
 - Enter: ⏎
-- Shift: ⇧
+- Shift: ⇫
 - Caps lock: ⇪
-- Arrows: ⬅ ➡ ⬆ ⬇
+- Arrows: ⇦⇧⇨⇩
+- Others: ➛
 -->
 
 ---
