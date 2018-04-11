@@ -404,15 +404,15 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 		}
 		if (state == 50) {
 			constexpr static auto _ = phf::make_phf({
-				hh("host"),
-				hh("expect"),
-				hh("100-continue"),
-				hh("content-type"),
-				hh("content-length"),
-				hh("accept"),
-				hh("accept-encoding"),
-				hh("http-method-override"),
-				hh("x-http-method-override"),
+				hhl("host"),
+				hhl("expect"),
+				hhl("100-continue"),
+				hhl("content-type"),
+				hhl("content-length"),
+				hhl("accept"),
+				hhl("accept-encoding"),
+				hhl("http-method-override"),
+				hhl("x-http-method-override"),
 			});
 
 			switch (_.fhhl(new_request._header_name)) {
