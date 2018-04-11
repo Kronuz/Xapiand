@@ -300,6 +300,34 @@ public:
 		feed(std::move(serialised));
 	}
 
+	Data(Data&& other) {
+		feed(std::move(other.serialised));
+		pending = std::move(other.pending);
+	}
+
+	Data(const Data& other) {
+		serialised = other.serialised;
+		feed(std::move(serialised));
+		for (auto& op : other.pending) {
+			flush(op);
+		}
+	}
+
+	Data& operator=(Data&& other) {
+		feed(std::move(other.serialised));
+		pending = std::move(other.pending);
+		return *this;
+	}
+
+	Data& operator=(const Data& other) {
+		serialised = other.serialised;
+		feed(std::move(serialised));
+		for (auto& op : other.pending) {
+			flush(op);
+		}
+		return *this;
+	}
+
 	template <typename C>
 	void update(C&& ct_type) {
 		pending.emplace_back(std::forward<C>(ct_type));
