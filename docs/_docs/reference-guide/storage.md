@@ -9,12 +9,12 @@ a change is needed, a new file blob will be written to the volume. Storage is
 envisioned to be used when there are files you need to store which you know
 won't be changing often.
 
-Lets put something in the storage using PUT:
+Lets add something to the storage using `STORE`:
 
 ```sh
 ~ $ curl -H 'Content-Type: image/png' \
   --data-binary '@Kronuz.png' \
-  -X PUT 'localhost:8880/twitter/images/Kronuz'
+  -X STORE 'localhost:8880/twitter/images/Kronuz'
 ```
 
 And getting it is just a matter of retreiving it using GET:
@@ -32,12 +32,12 @@ feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example
 
 ## Multi-Content Documents
 
-Use `MERGE` instead of `PUT` to add new content types to the same document:
+Use `STORE` with a different Content-Type to add new content to the same document:
 
 ```sh
 ~ $ curl -H 'Content-Type: image/jpeg' \
   --data-binary '@Kronuz.jpg' \
-  -X MERGE 'localhost:8880/twitter/images/Kronuz'
+  -X STORE 'localhost:8880/twitter/images/Kronuz'
 ```
 
 Then you can get either of them requesting the appropriate Content-Type:
@@ -47,9 +47,16 @@ Then you can get either of them requesting the appropriate Content-Type:
   'localhost:8880/twitter/images/Kronuz'
 ```
 
-{: .note .unreleased}
-**_TODO:_** Work in progress...
 
+## Removing Content
+
+Tou remove stored content by storing an empty object:
+
+```sh
+~ $ curl -H 'Content-Type: image/jpeg' \
+  --data-binary '' \
+  -X STORE 'localhost:8880/twitter/images/Kronuz'
+```
 
 ---
 
