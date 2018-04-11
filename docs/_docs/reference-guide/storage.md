@@ -13,15 +13,38 @@ Lets put something in the storage using PUT:
 
 ```sh
 ~ $ curl -H 'Content-Type: image/png' \
-    --data-binary '@Kronuz.png' \
-    -X PUT 'localhost:8880/twitter/images/Kronuz.png'
+  --data-binary '@Kronuz.png' \
+  -X PUT 'localhost:8880/twitter/images/Kronuz'
 ```
 
 And getting it is just a matter of retreiving it using GET:
 
 ```sh
 ~ $ curl -H 'Accept: image/png' \
-    'localhost:8880/twitter/images/Kronuz.png'
+  'localhost:8880/twitter/images/Kronuz'
+```
+
+{: .note}
+**_Toggle console previews_**<br>
+You can enable previews for images in the terminal using the very-very-very
+verbose command line option (`-vvvvv`). Note you a compatible terminal for this
+feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example).
+
+## Multi-Content Documents
+
+Use `MERGE` instead of `PUT` to add new content types to the same document:
+
+```sh
+~ $ curl -H 'Content-Type: image/jpeg' \
+  --data-binary '@Kronuz.jpg' \
+  -X MERGE 'localhost:8880/twitter/images/Kronuz'
+```
+
+Then you can get either of them requesting the appropriate Content-Type:
+
+```sh
+~ $ curl -H 'Accept: image/jpeg' \
+  'localhost:8880/twitter/images/Kronuz'
 ```
 
 {: .note .unreleased}
