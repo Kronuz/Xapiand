@@ -1126,9 +1126,10 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	if (method == HTTP_PATCH) {
 		response_obj = request.db_handler.patch(doc_id, request.decoded_body(), query_field.commit, request.ct_type()).second;
+	} else if (method == HTTP_STORE) {
+		response_obj = request.db_handler.merge(doc_id, true, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	} else {
-		bool stored = (method == HTTP_STORE);
-		response_obj = request.db_handler.merge(doc_id, stored, request.decoded_body(), query_field.commit, request.ct_type()).second;
+		response_obj = request.db_handler.merge(doc_id, false, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
