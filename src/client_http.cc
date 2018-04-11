@@ -1439,9 +1439,13 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 	}
 
 	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	auto took_milliseconds = took / 1000000.0;
 
-	MsgPack response_obj;
-	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
+	MsgPack response_obj = {
+		{ RESPONSE_ENDPOINT, endpoints.to_string() },
+		{ RESPONSE_TOOK, took_milliseconds },
+	};
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
