@@ -499,6 +499,10 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 
 				case _.fhhl("x-http-method-override"):
 				case _.fhhl("http-method-override"): {
+					if (parser->method != HTTP_POST) {
+						THROW(ClientError, "%s header must use the POST method", repr(new_request._header_name));
+					}
+
 					constexpr static auto __ = phf::make_phf({
 						hhl("PUT"),
 						hhl("PATCH"),
