@@ -656,8 +656,11 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	auto document = get_document(document_id);
-	auto data = Data(document.get_data());
+	Data data;
+	try {
+		auto document = get_document(document_id);
+		data = Data(document.get_data());
+	} catch (const DocNotFoundError&) { }
 	auto main_locator = data.get("");
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
