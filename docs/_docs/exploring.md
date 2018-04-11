@@ -146,9 +146,9 @@ And the response (partially shown):
 
 As for the response, we see the following parts:
 
-* `#query.#total_count` - Total number of returned hits.
-* `#query.#matches_estimated` - Number of estimated documents that match the query.
-* `#query.#hits` - search results.
+* `#query ➛ #total_count` - Total number of returned hits.
+* `#query ➛ #matches_estimated` - Number of estimated documents that match the query.
+* `#query ➛ #hits` - search results.
 * `#took` - time in milliseconds for Xapiand to execute the search.
 
 ## Introducing the Query Language
