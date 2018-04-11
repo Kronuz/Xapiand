@@ -33,7 +33,7 @@
 #include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 
 
-#define TRACEBACK() traceback(__func__, __FILE__, __LINE__)
+#define TRACEBACK() ::traceback(__func__, __FILE__, __LINE__)
 
 std::string traceback(const char* function, const char* filename, int line, int skip = 1);
 
