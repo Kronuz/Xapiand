@@ -1243,6 +1243,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	L_CALL("HttpClient::info_view()");
 
 	MsgPack response_obj;
+	std::string selector;
 
 	endpoints_maker(request, 1s);
 
@@ -1267,10 +1268,21 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 	// Info about a specific document was requested
 	if (request.path_parser.off_pmt != nullptr) {
-		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(request.path_parser.get_pmt());
+		auto id = request.path_parser.get_pmt();
+		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+		if (needle != std::string::npos) {
+			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
+			id = id.substr(0, needle);
+		}
+
+		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(id);
 	}
 
 	request.ready = std::chrono::system_clock::now();
+
+	if (!selector.empty()) {
+		response_obj = response_obj.select(selector);
+	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
