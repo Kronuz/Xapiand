@@ -296,6 +296,7 @@ class HttpClient : public Task<>, public BaseClient {
 	void _head(Request& request, Response& response, enum http_method method);
 	void _get(Request& request, Response& response, enum http_method method);
 	void _merge(Request& request, Response& response, enum http_method method);
+	void _store(Request& request, Response& response, enum http_method method);
 	void _put(Request& request, Response& response, enum http_method method);
 	void _post(Request& request, Response& response, enum http_method method);
 	void _patch(Request& request, Response& response, enum http_method method);

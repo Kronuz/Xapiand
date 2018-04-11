@@ -148,7 +148,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		}
 
 		if ((mode & HTTP_OPTIONS_RESPONSE) != 0) {
-			headers += "Allow: GET, POST, PUT, PATCH, MERGE, DELETE, HEAD, OPTIONS" + eol;
+			headers += "Allow: GET, POST, PUT, PATCH, MERGE, STORE, DELETE, HEAD, OPTIONS" + eol;
 		}
 
 		if ((mode & HTTP_TOTAL_COUNT_RESPONSE) != 0) {
@@ -501,6 +501,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 						hhl("PUT"),
 						hhl("PATCH"),
 						hhl("MERGE"),
+						hhl("STORE"),
 						hhl("DELETE"),
 						hhl("GET"),
 						hhl("POST"),
@@ -515,6 +516,9 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 							break;
 						case __.fhhl("MERGE"):
 							parser->method = HTTP_MERGE;
+							break;
+						case __.fhhl("STORE"):
+							parser->method = HTTP_STORE;
 							break;
 						case __.fhhl("DELETE"):
 							parser->method = HTTP_DELETE;
@@ -579,6 +583,9 @@ HttpClient::run_one(Request& request, Response& response)
 				break;
 			case HTTP_MERGE:
 				_merge(request, response, method);
+				break;
+			case HTTP_STORE:
+				_store(request, response, method);
 				break;
 			case HTTP_PUT:
 				_put(request, response, method);
@@ -783,6 +790,24 @@ HttpClient::_merge(Request& request, Response& response, enum http_method method
 		case Command::CMD_METADATA:
 			request.path_parser.skip_id();  // Command has no ID
 			update_metadata_view(request, response, method, cmd);
+			break;
+		default:
+			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			break;
+	}
+}
+
+
+void
+HttpClient::_store(Request& request, Response& response, enum http_method method)
+{
+	L_CALL("HttpClient::_store()");
+
+
+	auto cmd = url_resolve(request);
+	switch (cmd) {
+		case Command::NO_CMD_ID:
+			update_document_view(request, response, method, cmd);
 			break;
 		default:
 			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1096,7 +1121,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	if (method == HTTP_PATCH) {
 		response_obj = request.db_handler.patch(doc_id, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	} else {
-		bool stored = true;
+		bool stored = (method == HTTP_STORE);
 		response_obj = request.db_handler.merge(doc_id, stored, request.decoded_body(), query_field.commit, request.ct_type()).second;
 	}
 
@@ -2316,6 +2341,16 @@ HttpClient::log_request(Request& request)
 			break;
 		}
 		case HTTP_MERGE: {
+			// rgb(88, 226, 194)
+			constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_STORE: {
 			// rgb(88, 226, 194)
 			constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
 			request_headers_color = _request_headers_color.c_str();

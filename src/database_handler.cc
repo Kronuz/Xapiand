@@ -75,6 +75,7 @@ constexpr const char RESPONSE_DATA[]                = "#data";
 constexpr const char RESPONSE_TERMS[]               = "#terms";
 constexpr const char RESPONSE_VALUES[]              = "#values";
 
+constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 
 const std::string dump_metadata_header ("xapiand-dump-meta");
 const std::string dump_schema_header("xapiand-dump-schm");
@@ -669,6 +670,9 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 			if (stored) {
 				data.update(ct_type, -1, 0, 0, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			} else {
+				if (body.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+				}
 				data.update(ct_type, serialise_strings({ ct_type.to_string(), body.str_view() }));
 			}
 			break;
