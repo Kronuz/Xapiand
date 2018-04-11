@@ -111,7 +111,7 @@ bool read_file_contents(const std::string& filename, std::string* contents) {
 }
 
 
-DB_Test::DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type)
+DB_Test::DB_Test(std::string_view db_name, const std::vector<std::string>& docs, int flags, const std::string_view ct_type)
 	: name_database(db_name)
 {
 	// Delete database to create new db.
@@ -154,8 +154,8 @@ DB_Test::destroy()
 }
 
 
-std::pair<std::string, MsgPack>
-DB_Test::get_body(const std::string& body, const std::string& ct_type)
+std::pair<std::string_view, MsgPack>
+DB_Test::get_body(std::string_view body, std::string_view ct_type)
 {
 	MsgPack msgpack;
 	rapidjson::Document rdoc;

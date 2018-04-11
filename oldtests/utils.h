@@ -112,10 +112,10 @@ struct DB_Test {
 	std::string name_database;
 	Endpoints endpoints;
 
-	DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags, const std::string& ct_type=JSON_CONTENT_TYPE);
+	DB_Test(std::string_view db_name, const std::vector<std::string>& docs, int flags, std::string_view ct_type=JSON_CONTENT_TYPE);
 	~DB_Test();
 
 	void destroy();
-	std::pair<std::string, MsgPack> get_body(const std::string& body, const std::string& ct_type);
+	std::pair<std::string_view, MsgPack> get_body(std::string_view body, std::string_view ct_type);
 };
 #endif
