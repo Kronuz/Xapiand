@@ -22,20 +22,24 @@ a _PATCH_ request to edit a resource, and a _DELETE_ request to delete a resourc
 
 ### Deviations from REST
 
-Additionally to the standard methods, we also use _MERGE_ and _STORE_ methods
-for certain operations.
-
-### HTTP methods and response codes
-
-You can override the method by passing the  header
-HTTP-Method-Override
-
 We do our best to use standard HTTP methods with accurate and well-known status
 codes in the Xapiand API, but here are some additions and deviations.
 
-- **GET** requests are safe, and won't alter a resource.
-- **PATCH**, **MERGE** and **DELETE** methods are idempotent.
-- **POST** and **STORE** aren't safe or idempotent.
+Additionally to the standard HTTP methods, we also use _MERGE_ and _STORE_
+methods for certain operations.
+
+### HTTP methods and response codes
+
+- **GET**, **OPTIONS** and **HEAD** requests are safe and idempotent, and won't alter a resource.
+- **DELETE**, **PUT**, **MERGE** and **STORE** methods are idempotent.
+- **POST** and **PATCH** aren't safe or idempotent.
+
+{: .note .info}
+**_Idempotent methods_**<br>
+An _idempotent_ HTTP method is a HTTP method that can be called many times
+without different outcomes. It would not matter if the method is called only
+once, twice or a hundred times over, the result should be the same. This only
+applies to the result, not the resource itself.
 
 If your firewall rules don't support HTTP methods like _PATCH_, _MERGE_, _STORE_
 or _DELETE_, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"} (or _HTTP-Method-Override_) header. Pass the method you want to use in the
