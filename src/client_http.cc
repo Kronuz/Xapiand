@@ -1755,7 +1755,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				if (locator.ct_type.empty()) {
 					obj = MsgPack::unserialise(locator.data());
 				} else {
-					response.ct_type = locator.ct_type;
+					ct_type = locator.ct_type;
+					response.ct_type = ct_type;
 					response.blob = document.get_blob(response.ct_type);
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
