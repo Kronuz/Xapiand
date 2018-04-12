@@ -55,7 +55,6 @@
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
-constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
 constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
 constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
 constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
@@ -1521,31 +1520,28 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 	if (data.empty()) {
 		info[RESPONSE_DATA] = data.serialise();
 	} else {
-		auto& info_data = info[RESPONSE_DATA] = MsgPack(MsgPack::Type::ARRAY);
+		auto& info_data = info[RESPONSE_DATA];
 		for (auto& locator : data) {
 			auto ct_type_str = locator.ct_type.to_string();
 			switch (locator.type) {
 				case Data::Type::inplace:
 					if (ct_type_str.empty()) {
-						info_data.push_back(MsgPack({
-							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
+						info_data[MSGPACK_CONTENT_TYPE] = {
 							{ RESPONSE_SIZE, locator.data().size() },
 							{ RESPONSE_OBJECT, MsgPack::unserialise(locator.data()) }
-						}));
+						};
 					} else {
-						info_data.push_back(MsgPack({
-							{ RESPONSE_CONTENT_TYPE, ct_type_str },
+						info_data[ct_type_str] = {
 							{ RESPONSE_SIZE, locator.data().size() },
-						}));
+						};
 					}
 					break;
 				case Data::Type::stored:
-					info_data.push_back(MsgPack({
-						{ RESPONSE_CONTENT_TYPE, ct_type_str },
+					info_data[ct_type_str] = {
 						{ RESPONSE_SIZE, locator.size },
 						{ RESPONSE_VOLUME, locator.volume },
 						{ RESPONSE_OFFSET, locator.offset },
-					}));
+					};
 					break;
 			}
 		}
