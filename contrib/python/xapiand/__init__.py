@@ -60,6 +60,7 @@ __all__ = ['Xapiand']
 
 RESPONSE_QUERY = '#query'
 RESPONSE_AGGREGATIONS = '#aggregations'
+RESPONSE_TOOK = '#took'
 COMMAND_PREFIX = ':'
 
 XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
@@ -308,7 +309,7 @@ class Xapiand(object):
                                                 total = msgpack.loads('\xcd' + chunk[o + 1:]) + 1
                                             else:
                                                 total = msgpack.loads(chr(ord(chunk[o]) & 0x0f)) + 1
-                                            chunk = chunk[:o] + '\x90' + msgpack.dumps({"#took": 0.0})[1:]
+                                            chunk = chunk[:o] + '\x90' + msgpack.dumps({RESPONSE_TOOK: 0.0})[1:]
                                             break
                                         except Exception:
                                             pass
