@@ -62,12 +62,11 @@ constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
 constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "#doc_len_upper";
 constexpr const char RESPONSE_HAS_POSITIONS[]       = "#has_positions";
 constexpr const char RESPONSE_LAST_ID[]             = "#last_id";
-constexpr const char RESPONSE_OBJ[]                 = "#obj";
+constexpr const char RESPONSE_OBJECT[]              = "#object";
 constexpr const char RESPONSE_OFFSET[]              = "#offset";
 constexpr const char RESPONSE_POS[]                 = "#pos";
 constexpr const char RESPONSE_SIZE[]                = "#size";
 constexpr const char RESPONSE_TERM_FREQ[]           = "#term_freq";
-constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
@@ -1530,14 +1529,12 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 					if (ct_type_str.empty()) {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
-							{ RESPONSE_TYPE, "local" },
 							{ RESPONSE_SIZE, locator.data().size() },
-							{ RESPONSE_OBJ, MsgPack::unserialise(locator.data()) }
+							{ RESPONSE_OBJECT, MsgPack::unserialise(locator.data()) }
 						}));
 					} else {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, ct_type_str },
-							{ RESPONSE_TYPE, "local" },
 							{ RESPONSE_SIZE, locator.data().size() },
 						}));
 					}
@@ -1545,10 +1542,9 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 				case Data::Type::stored:
 					info_data.push_back(MsgPack({
 						{ RESPONSE_CONTENT_TYPE, ct_type_str },
-						{ RESPONSE_TYPE, "stored" },
+						{ RESPONSE_SIZE, locator.size },
 						{ RESPONSE_VOLUME, locator.volume },
 						{ RESPONSE_OFFSET, locator.offset },
-						{ RESPONSE_SIZE, locator.size },
 					}));
 					break;
 			}
