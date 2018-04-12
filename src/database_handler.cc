@@ -55,13 +55,14 @@
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
-constexpr const char RESPONSE_BLOBS[]               = "#blobs";
+constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
 constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
 constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
 constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
 constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "#doc_len_upper";
 constexpr const char RESPONSE_HAS_POSITIONS[]       = "#has_positions";
 constexpr const char RESPONSE_LAST_ID[]             = "#last_id";
+constexpr const char RESPONSE_OBJ[]                 = "#obj";
 constexpr const char RESPONSE_OFFSET[]              = "#offset";
 constexpr const char RESPONSE_POS[]                 = "#pos";
 constexpr const char RESPONSE_SIZE[]                = "#size";
@@ -1513,31 +1514,42 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 
 	auto document = get_document(document_id);
 	const auto data = Data(document.get_data());
-	auto main_locator = data.get("");
-	const auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 
 	MsgPack info;
 
 	info[RESPONSE_DOCID] = document.get_docid();
-	info[RESPONSE_DATA] = obj;
 
-	auto& info_blob = info[RESPONSE_BLOBS];
-	for (auto& locator : data) {
-		if (!locator.ct_type.empty()) {
+	if (data.empty()) {
+		info[RESPONSE_DATA] = data.serialise();
+	} else {
+		auto& info_data = info[RESPONSE_DATA] = MsgPack(MsgPack::Type::ARRAY);
+		for (auto& locator : data) {
+			auto ct_type_str = locator.ct_type.to_string();
 			switch (locator.type) {
 				case Data::Type::inplace:
-					info_blob[locator.ct_type.to_string()] = {
-						{ RESPONSE_TYPE, "local" },
-						{ RESPONSE_SIZE, locator.data().size() },
-					};
+					if (ct_type_str.empty()) {
+						info_data.push_back(MsgPack({
+							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
+							{ RESPONSE_TYPE, "local" },
+							{ RESPONSE_SIZE, locator.data().size() },
+							{ RESPONSE_OBJ, MsgPack::unserialise(locator.data()) }
+						}));
+					} else {
+						info_data.push_back(MsgPack({
+							{ RESPONSE_CONTENT_TYPE, ct_type_str },
+							{ RESPONSE_TYPE, "local" },
+							{ RESPONSE_SIZE, locator.data().size() },
+						}));
+					}
 					break;
 				case Data::Type::stored:
-					info_blob[locator.ct_type.to_string()] = {
+					info_data.push_back(MsgPack({
+						{ RESPONSE_CONTENT_TYPE, ct_type_str },
 						{ RESPONSE_TYPE, "stored" },
 						{ RESPONSE_VOLUME, locator.volume },
 						{ RESPONSE_OFFSET, locator.offset },
 						{ RESPONSE_SIZE, locator.size },
-					};
+					}));
 					break;
 			}
 		}
