@@ -55,6 +55,7 @@
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
+constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
 constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
 constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
 constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
@@ -66,6 +67,7 @@ constexpr const char RESPONSE_OFFSET[]              = "#offset";
 constexpr const char RESPONSE_POS[]                 = "#pos";
 constexpr const char RESPONSE_SIZE[]                = "#size";
 constexpr const char RESPONSE_TERM_FREQ[]           = "#term_freq";
+constexpr const char RESPONSE_TYPE[]                = "#type";
 constexpr const char RESPONSE_UUID[]                = "#uuid";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
@@ -1522,26 +1524,31 @@ DatabaseHandler::get_document_info(std::string_view document_id)
 	} else {
 		auto& info_data = info[RESPONSE_DATA];
 		for (auto& locator : data) {
-			auto ct_type_str = locator.ct_type.to_string();
 			switch (locator.type) {
 				case Data::Type::inplace:
-					if (ct_type_str.empty()) {
-						info_data[MSGPACK_CONTENT_TYPE] = {
+					if (locator.ct_type.empty()) {
+						info_data.push_back(MsgPack({
+							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
+							{ RESPONSE_TYPE, "inplace" },
 							{ RESPONSE_SIZE, locator.data().size() },
 							{ RESPONSE_OBJECT, MsgPack::unserialise(locator.data()) }
-						};
+						}));
 					} else {
-						info_data[ct_type_str] = {
+						info_data.push_back(MsgPack({
+							{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
+							{ RESPONSE_TYPE, "inplace" },
 							{ RESPONSE_SIZE, locator.data().size() },
-						};
+						}));
 					}
 					break;
 				case Data::Type::stored:
-					info_data[ct_type_str] = {
-						{ RESPONSE_SIZE, locator.size },
+					info_data.push_back(MsgPack({
+						{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
+						{ RESPONSE_TYPE, "stored" },
 						{ RESPONSE_VOLUME, locator.volume },
 						{ RESPONSE_OFFSET, locator.offset },
-					};
+						{ RESPONSE_SIZE, locator.size },
+					}));
 					break;
 			}
 		}
