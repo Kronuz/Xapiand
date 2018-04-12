@@ -819,6 +819,7 @@ class Schema {
 	 * Functions for reserved words that are in the document.
 	 */
 
+	void process_data(std::string_view prop_name, const MsgPack& doc_data);
 	void process_weight(std::string_view prop_name, const MsgPack& doc_weight);
 	void process_position(std::string_view prop_name, const MsgPack& doc_position);
 	void process_spelling(std::string_view prop_name, const MsgPack& doc_spelling);

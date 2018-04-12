@@ -6175,6 +6175,7 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6245,6 +6246,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	L_CALL("Schema::_dispatch_process_concrete_properties(%s)", repr(prop_name));
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6308,6 +6310,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_DATA):
+			Schema::process_data(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::process_weight(prop_name, value);
 			return true;
@@ -7755,6 +7760,14 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
+}
+
+
+inline void
+Schema::process_data(std::string_view /*unused*/, const MsgPack& /*unused*/)
+{
+	// RESERVED_DATA is ignored by the schema.
+	L_CALL("Schema::process_data(%s)", repr(doc_data.to_string()));
 }
 
 
