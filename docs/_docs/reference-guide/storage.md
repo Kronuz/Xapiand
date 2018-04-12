@@ -47,6 +47,17 @@ Use `STORE` with a different Content-Type to add new content to the same documen
 
 ```json
 STORE /twitter/images/Kronuz
+Content-Type: application/pdf
+
+@Kronuz.pdf
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% capture req %}
+
+```json
+STORE /twitter/images/Kronuz
 Content-Type: image/jpeg
 
 @Kronuz.jpg
