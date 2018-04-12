@@ -1098,9 +1098,8 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 
 	MsgPack response_obj;
 	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	bool stored = true;
 	auto& decoded_body = request.decoded_body();
-	response_obj = request.db_handler.index(doc_id, stored, decoded_body, query_field.commit, request.ct_type).second;
+	response_obj = request.db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
 
