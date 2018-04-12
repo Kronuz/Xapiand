@@ -1981,8 +1981,6 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			// mark end:
 			serialise_string(fd, "");
 			XXH32_update(xxh_state, "", 0);
-			serialise_string(fd, "");
-			XXH32_update(xxh_state, "", 0);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }

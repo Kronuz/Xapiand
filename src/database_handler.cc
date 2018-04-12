@@ -1044,7 +1044,10 @@ DatabaseHandler::restore(int fd)
 		do {
 			++i;
 
+			MsgPack obj(MsgPack::Type::MAP);
+
 			Data data;
+			bool eof = true;
 			do {
 				auto blob = unserialise_string(fd, buffer, off);
 				XXH32_update(xxh_state, blob.data(), blob.size());
@@ -1053,15 +1056,21 @@ DatabaseHandler::restore(int fd)
 				XXH32_update(xxh_state, content_type.data(), content_type.size());
 				auto type_ser = unserialise_char(fd, buffer, off);
 				XXH32_update(xxh_state, &type_ser, 1);
-				switch (static_cast<Data::Type>(type_ser)) {
-					case Data::Type::inplace:
-						data.update(content_type, blob);
-						break;
-					case Data::Type::stored:
-						data.update(content_type, -1, 0, 0, blob);
-						break;
+				if (content_type.empty()) {
+					obj = MsgPack::unserialise(blob);
+				} else {
+					switch (static_cast<Data::Type>(type_ser)) {
+						case Data::Type::inplace:
+							data.update(content_type, blob);
+							break;
+						case Data::Type::stored:
+							data.update(content_type, -1, 0, 0, blob);
+							break;
+					}
 				}
+				eof = false;
 			} while (true);
+			if (eof) { break; }
 
 			Xapian::Document doc;
 			required_spc_t spc_id;
@@ -1069,8 +1078,6 @@ DatabaseHandler::restore(int fd)
 			std::string prefixed_term_id;
 
 			MsgPack document_id;
-			auto main_locator = data.get("");
-			auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
 			// Get term ID.
 			spc_id = schema->get_data_id();
@@ -1146,7 +1153,7 @@ DatabaseHandler::restore(int fd)
 	XXH32_freeState(xxh_state);
 
 	if (saved_hash != current_hash) {
-		L_WARNING("Invalid dump hash (0x%08x != 0x%08x)", saved_hash, current_hash);
+		L_WARNING("Invalid dump hash. Should be 0x%08x, but instead is 0x%08x", saved_hash, current_hash);
 	}
 
 	database->commit(false);
