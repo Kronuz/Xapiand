@@ -249,7 +249,7 @@ public:
 
 	void delete_document(std::string_view document_id, bool commit_=false, bool wal_=true);
 
-	MsgPack get_document_info(std::string_view document_id);
+	MsgPack get_document_info(std::string_view document_id, bool raw_data);
 	MsgPack get_database_info();
 
 	bool commit(bool _wal=true);
