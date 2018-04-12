@@ -289,16 +289,14 @@ serialise_string(std::string_view input) {
 }
 
 
-std::string
+std::string_view
 unserialise_string(const char** p, const char* end) {
 	const char *ptr = *p;
 	assert(ptr);
 	assert(ptr <= end);
 
-	std::string string;
-
 	unsigned long long length = unserialise_length(&ptr, end, true);
-	string.append(ptr, length);
+	std::string_view string(ptr, length);
 	ptr += length;
 
 	*p = ptr;
@@ -396,14 +394,13 @@ serialise_strings(const std::vector<std::string_view>& strings)
 }
 
 
-std::string
+std::string_view
 unserialise_string_at(size_t at, const char** p, const char* end)
 {
 	const char *ptr = *p;
 	assert(ptr);
 	assert(ptr <= end);
 
-	std::string string;
 	unsigned long long length = 0;
 
 	++at;
@@ -413,8 +410,10 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 		length = unserialise_length(&ptr, end, true);
 	} while (--at != 0u);
 
+	std::string_view string = "";
+
 	if (at == 0) {
-		string.assign(ptr, length);
+		string = std::string_view(ptr, length);
 		ptr += length;
 		*p = ptr;
 	}

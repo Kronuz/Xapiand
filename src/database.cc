@@ -1943,24 +1943,21 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 				did = *it;
 				auto doc = db->get_document(did);
 				auto data = Data(doc.get_data());
-				auto main_locator = data.get("");
-				serialise_string(fd, main_locator != nullptr ? main_locator->data() : "\x00");
-				XXH32_update(xxh_state, main_locator->data().data(), main_locator->data().size());
-#ifdef XAPIAND_DATA_STORAGE
 				for (auto& locator : data) {
-					if (locator.ct_type.empty()) {
-						continue;
-					} else if (locator.type == Data::Type::stored) {
+					if (locator.type == Data::Type::stored) {
+#ifdef XAPIAND_DATA_STORAGE
 						auto blob = storage_get_blob(doc, locator);
 						serialise_string(fd, blob);
 						XXH32_update(xxh_state, blob.data(), blob.size());
+#endif
 					} else {
 						auto blob = locator.data();
 						serialise_string(fd, blob);
 						XXH32_update(xxh_state, blob.data(), blob.size());
 					}
 				}
-#endif
+				serialise_string(fd, "");
+				XXH32_update(xxh_state, "", 0);
 			}
 			// mark end:
 			serialise_string(fd, "");
@@ -2006,20 +2003,28 @@ Database::dump_documents()
 				auto data = Data(doc.get_data());
 				auto main_locator = data.get("");
 				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
-#ifdef XAPIAND_DATA_STORAGE
 				for (auto& locator : data) {
-					if (locator.ct_type.empty()) {
-						continue;
-					} else if (locator.type == Data::Type::stored) {
-						// auto blob = storage_get_blob(doc, locator);
-						// TODO: add blob "_blobs" here
-					} else {
-						// auto& blob = locator.data;
-						// TODO: add blob "_blobs" here
+					switch (locator.type) {
+						case Data::Type::inplace:
+							if (!locator.ct_type.empty()) {
+								obj["_data"].push_back(MsgPack({
+									{ "_content_type", locator.ct_type.to_string() },
+									{ "_type", "inplace" },
+									{ "_blob", locator.data() },
+								}));
+							}
+							break;
+						case Data::Type::stored:
+#ifdef XAPIAND_DATA_STORAGE
+							obj["_data"].push_back(MsgPack({
+								{ "_content_type", locator.ct_type.to_string() },
+								{ "_type", "stored" },
+								{ "_blob", storage_get_blob(doc, locator) },
+							}));
+#endif
+							break;
 					}
 				}
-#endif
-				// TODO: add "_blobs" to obj here
 				docs.push_back(obj);
 			}
 			break;
