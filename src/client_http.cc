@@ -1305,7 +1305,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 			id = id.substr(0, needle);
 		}
 
-		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(id, true);
+		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(id, false);
 	}
 
 	request.ready = std::chrono::system_clock::now();
