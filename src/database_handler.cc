@@ -962,7 +962,7 @@ DatabaseHandler::restore(int fd)
 			std::string term_id;
 			std::string prefixed_term_id;
 
-			std::string ct_type_str;
+			std::string_view ct_type_str;
 			if (!blob.empty()) {
 				ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
 			}

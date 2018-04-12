@@ -234,7 +234,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	}
 	p += sizeof(uint16_t);
 
-	std::string remote_cluster_name = unserialise_string(&p, p_end);
+	auto remote_cluster_name = unserialise_string(&p, p_end);
 	if (remote_cluster_name.empty()) {
 		THROW(NetworkError, "Badly formed message: No cluster name!");
 	}
