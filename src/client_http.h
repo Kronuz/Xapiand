@@ -170,7 +170,7 @@ public:
 	std::string headers;
 	std::string body;
 
-	std::string content_type;
+	ct_type_t ct_type;
 	std::string blob;
 
 	enum http_status status;
@@ -184,7 +184,6 @@ public:
 
 
 class Request {
-	ct_type_t _ct_type;
 	MsgPack _decoded_body;
 
 	void _decode();
@@ -205,7 +204,7 @@ public:
 
 	std::string raw;
 
-	std::string content_type;
+	ct_type_t ct_type;
 	std::string content_length;
 
 	int indented;
@@ -227,11 +226,6 @@ public:
 
 	~Request();
 	Request(class HttpClient* client);
-
-	const ct_type_t& ct_type() {
-		_decode();
-		return _ct_type;
-	}
 
 	const MsgPack& decoded_body() {
 		_decode();
