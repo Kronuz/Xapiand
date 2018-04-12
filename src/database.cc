@@ -2016,10 +2016,11 @@ Database::dump_documents()
 							break;
 						case Data::Type::stored:
 #ifdef XAPIAND_DATA_STORAGE
+							auto blob = storage_get_blob(doc, locator);
 							obj["_data"].push_back(MsgPack({
-								{ "_content_type", locator.ct_type.to_string() },
+								{ "_content_type", unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob) },
 								{ "_type", "stored" },
-								{ "_blob", storage_get_blob(doc, locator) },
+								{ "_blob", unserialise_string_at(STORED_BLOB_DATA, blob) },
 							}));
 #endif
 							break;
