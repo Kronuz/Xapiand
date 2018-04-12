@@ -382,6 +382,41 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 	return str;
 }
 
+void
+serialise_char(int fd, char ch)
+{
+	ssize_t w;
+
+	w = io::write(fd, &ch, 1);
+	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
+}
+
+
+char
+unserialise_char(int fd, std::string &buffer, std::size_t& off)
+{
+	ssize_t r;
+	if (buffer.size() - off < 1) {
+		char buf[1024];
+		r = io::read(fd, buf, sizeof(buf));
+		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		buffer.append(buf, r);
+	}
+
+	const char* start = buffer.data();
+	auto end = start + buffer.size();
+	start += off;
+	auto pos = start;
+	if (pos == end) {
+		THROW(SerialisationError, "Invalid input: insufficient data");
+	}
+	char ch = *pos;
+	++pos;
+	off += (pos - start);
+
+	return ch;
+}
+
 
 std::string
 serialise_strings(const std::vector<std::string_view>& strings)

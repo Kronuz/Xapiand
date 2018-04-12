@@ -65,6 +65,10 @@ void serialise_string(int fd, std::string_view input);
 
 std::string unserialise_string(int fd, std::string &buffer, std::size_t& off);
 
+void serialise_char(int fd, char ch);
+
+char unserialise_char(int fd, std::string &buffer, std::size_t& off);
+
 std::string serialise_strings(const std::vector<std::string_view>& strings);
 
 std::string_view unserialise_string_at(size_t at, const char** p, const char* end);
