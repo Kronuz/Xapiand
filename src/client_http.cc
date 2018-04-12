@@ -110,6 +110,35 @@ static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-
 static const std::string eol("\r\n");
 
 
+bool can_preview(const ct_type_t& ct_type) {
+	#define CONTENT_TYPE_OPTIONS() \
+		OPTION("application/eps") \
+		OPTION("application/pdf") \
+		OPTION("application/postscript") \
+		OPTION("application/x-bzpdf") \
+		OPTION("application/x-eps") \
+		OPTION("application/x-gzpdf") \
+		OPTION("application/x-pdf") \
+		OPTION("application/x-photoshop") \
+		OPTION("application/photoshop") \
+		OPTION("application/psd")
+
+	constexpr static auto _ = phf::make_phf({
+		#define OPTION(ct) hhl(ct),
+		CONTENT_TYPE_OPTIONS()
+		#undef OPTION
+	});
+	switch (_.fhhl(ct_type.to_string())) {
+		#define OPTION(ct) case _.fhhl(ct):
+		CONTENT_TYPE_OPTIONS()
+		#undef OPTION
+			return true;
+		default:
+			return ct_type.first == "image";
+	}
+}
+
+
 std::string
 HttpClient::http_response(Request& request, Response& response, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
 	L_CALL("HttpClient::http_response()");
@@ -2412,7 +2441,7 @@ HttpClient::log_request(Request& request)
 
 	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color;
 	if (!request.raw.empty()) {
-		if (Logging::log_level > LOG_DEBUG + 1 && request.ct_type().first == "image") {
+		if (Logging::log_level > LOG_DEBUG + 1 && can_preview(request.ct_type)) {
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(request.raw);
@@ -2497,7 +2526,7 @@ HttpClient::log_response(Response& response)
 
 	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color;
 	if (!response.blob.empty()) {
-		if (Logging::log_level > LOG_DEBUG + 1 && response.ct_type().first == "image") {
+		if (Logging::log_level > LOG_DEBUG + 1 && can_preview(response.ct_type)) {
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(response.blob);
