@@ -34,8 +34,8 @@
 #include "string.hh"               // for string::*
 
 
-constexpr int STORED_BLOB_CONTENT_TYPE  = 0;
-constexpr int STORED_BLOB_DATA          = 1;
+constexpr int STORED_CONTENT_TYPE  = 0;
+constexpr int STORED_BLOB          = 1;
 
 constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
 constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;

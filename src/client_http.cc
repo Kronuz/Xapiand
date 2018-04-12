@@ -1755,10 +1755,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				if (locator.ct_type.empty()) {
 					obj = MsgPack::unserialise(locator.data());
 				} else {
-					ct_type = locator.ct_type;
-					auto blob = document.get_blob(ct_type);
-					response.ct_type = ct_type_t(unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob));
-					response.blob = unserialise_string_at(STORED_BLOB_DATA, blob);
+					response.ct_type = locator.ct_type;
+					response.blob = document.get_blob(response.ct_type);
 					if (type_encoding != Encoding::none) {
 						auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
 						if (!encoded.empty() && encoded.size() <= response.blob.size()) {

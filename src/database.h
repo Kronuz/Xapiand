@@ -309,7 +309,7 @@ public:
 	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_blob(const Xapian::Document& doc, const Data::Locator& locator) const;
+	std::string storage_get_stored(const Xapian::Document& doc, const Data::Locator& locator) const;
 #endif /* XAPIAND_DATA_STORAGE */
 
 	std::string get_uuid() const;

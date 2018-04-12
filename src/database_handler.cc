@@ -101,6 +101,88 @@ to_docid(std::string_view document_id)
 }
 
 
+static void
+inject_blob(Data& data, MsgPack& obj)
+{
+	auto blob_it = obj.find(RESERVED_BLOB);
+	if (blob_it == obj.end()) {
+		THROW(ClientError, "Data inconsistency, objects in '%s' must contain '%s'", RESERVED_DATA, RESERVED_BLOB);
+	}
+	auto& blob_value = blob_it.value();
+	if (!blob_value.is_string()) {
+		THROW(ClientError, "Data inconsistency, '%s' must be a string", RESERVED_BLOB);
+	}
+
+	auto content_type_it = obj.find(RESERVED_CONTENT_TYPE);
+	if (content_type_it == obj.end()) {
+		THROW(ClientError, "Data inconsistency, objects in '%s' must contain '%s'", RESERVED_DATA, RESERVED_CONTENT_TYPE);
+	}
+	auto& content_type_value = content_type_it.value();
+	auto ct_type = ct_type_t(content_type_value.is_string() ? content_type_value.str_view() : "");
+	if (ct_type.empty()) {
+		THROW(ClientError, "Data inconsistency, '%s' must be a valid content type string", RESERVED_CONTENT_TYPE);
+	}
+
+	std::string_view type;
+	auto type_it = obj.find(RESERVED_TYPE);
+	if (type_it == obj.end()) {
+		type = "inplace";
+	} else {
+		auto& type_value = type_it.value();
+		if (!type_value.is_string()) {
+			THROW(ClientError, "Data inconsistency, '%s' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
+		}
+		type = type_value.str_view();
+	}
+
+	if (type == "inplace") {
+		auto blob = blob_value.str_view();
+		if (blob.size() > NON_STORED_SIZE_LIMIT) {
+			THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+		}
+		data.update(ct_type, blob);
+	} else if (type == "stored") {
+		data.update(ct_type, -1, 0, 0, blob_value.str_view());
+	} else {
+		THROW(ClientError, "Data inconsistency, '%s' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
+	}
+}
+
+
+static void
+inject_data(Data& data, MsgPack& obj)
+{
+	auto data_it = obj.find(RESERVED_DATA);
+	if (data_it != obj.end()) {
+		auto& _data = data_it.value();
+		switch (_data.getType()) {
+			case MsgPack::Type::STR: {
+				auto blob = _data.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+				}
+				data.update("application/octet-stream", blob);
+				break;
+			}
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				data.erase("application/octet-stream");
+				break;
+			case MsgPack::Type::MAP:
+				inject_blob(data, _data);
+				break;
+			case MsgPack::Type::ARRAY:
+				for (auto& blob : _data) {
+					inject_blob(data, blob);
+				}
+				break;
+			default:
+				THROW(ClientError, "Data inconsistency, '%s' must be an array or an object", RESERVED_DATA);
+		}
+	}
+}
+
+
 class FilterPrefixesExpandDecider : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
@@ -598,16 +680,22 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 	switch (body.getType()) {
 		case MsgPack::Type::STR:
 			if (stored) {
-				data.update(ct_type, -1, 0, 0, serialise_strings({ ct_type.to_string(), body.str_view() }));
+				data.update(ct_type, -1, 0, 0, body.str_view());
 			} else {
-				data.update(ct_type, serialise_strings({ ct_type.to_string(), body.str_view() }));
+				auto blob = body.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+				}
+				data.update(ct_type, blob);
 			}
 			break;
+		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
 			break;
 		case MsgPack::Type::MAP:
 			obj = body.clone();
+			inject_data(data, obj);
 			break;
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
@@ -669,14 +757,16 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 	switch (body.getType()) {
 		case MsgPack::Type::STR:
 			if (stored) {
-				data.update(ct_type, -1, 0, 0, serialise_strings({ ct_type.to_string(), body.str_view() }));
+				data.update(ct_type, -1, 0, 0, body.str_view());
 			} else {
-				if (body.size() > NON_STORED_SIZE_LIMIT) {
+				auto blob = body.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
 					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
-				data.update(ct_type, serialise_strings({ ct_type.to_string(), body.str_view() }));
+				data.update(ct_type, blob);
 			}
 			break;
+		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
 			break;
@@ -685,6 +775,7 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 				THROW(ClientError, "Objects of this type cannot be put in storage");
 			}
 			obj.update(body);
+			inject_data(data, obj);
 			break;
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
@@ -951,25 +1042,34 @@ DatabaseHandler::restore(int fd)
 		size_t i = 0;
 		do {
 			++i;
-			auto obj_ser = unserialise_string(fd, buffer, off);
-			XXH32_update(xxh_state, obj_ser.data(), obj_ser.size());
-			auto blob = unserialise_string(fd, buffer, off);
-			XXH32_update(xxh_state, blob.data(), blob.size());
-			if (obj_ser.empty() && blob.empty()) { break; }
+
+			Data data;
+			do {
+				auto blob = unserialise_string(fd, buffer, off);
+				XXH32_update(xxh_state, blob.data(), blob.size());
+				if (blob.empty()) { break; }
+				auto content_type = unserialise_string(fd, buffer, off);
+				XXH32_update(xxh_state, content_type.data(), content_type.size());
+				auto type_ser = unserialise_char(fd, buffer, off);
+				XXH32_update(xxh_state, &type_ser, 1);
+				switch (static_cast<Data::Type>(type_ser)) {
+					case Data::Type::inplace:
+						data.update(content_type, blob);
+						break;
+					case Data::Type::stored:
+						data.update(content_type, -1, 0, 0, blob);
+						break;
+				}
+			} while (true);
 
 			Xapian::Document doc;
 			required_spc_t spc_id;
 			std::string term_id;
 			std::string prefixed_term_id;
 
-			std::string_view ct_type_str;
-			if (!blob.empty()) {
-				ct_type_str = unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob);
-			}
-			auto ct_type = ct_type_t(ct_type_str);
-
 			MsgPack document_id;
-			auto obj = MsgPack::unserialise(obj_ser);
+			auto main_locator = data.get("");
+			auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
 
 			// Get term ID.
 			spc_id = schema->get_data_id();
@@ -1022,13 +1122,10 @@ DatabaseHandler::restore(int fd)
 			}
 
 			// Finish document: add data, ID term and ID value.
-			Data data;
 			data.update("", obj.serialise());
-			if (!blob.empty()) {
-				data.update(ct_type, -1, 0, 0, std::move(blob));
-			}
 			data.flush();
 			doc.set_data(data.serialise());
+
 			doc.add_boolean_term(prefixed_term_id);
 			doc.add_value(spc_id.slot, term_id);
 
@@ -1080,22 +1177,14 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	lk_db.lock();
 
 	for (auto obj : docs) {
-		std::string_view blob;
-		std::string_view ct_type_str;
-		auto blob_it = obj.find("_blobs");
-		if (blob_it != obj.end()) {
-			auto _blob = blob_it.value();
-			blob = _blob.at("_data").str_view();
-			ct_type_str = _blob.at("_content_type").str_view();
-		}
+		Data data;
+		inject_data(data, obj);
 
 		Xapian::Document doc;
 		Xapian::docid did = 0;
 		required_spc_t spc_id;
 		std::string term_id;
 		std::string prefixed_term_id;
-
-		auto ct_type = ct_type_t(ct_type_str);
 
 		MsgPack document_id;
 
@@ -1161,13 +1250,10 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 		}
 
 		// Finish document: add data, ID term and ID value.
-		Data data;
 		data.update("", obj.serialise());
-		if (!blob.empty()) {
-			data.update(ct_type, -1, 0, 0, blob);
-		}
 		data.flush();
 		doc.set_data(data.serialise());
+
 		doc.add_boolean_term(prefixed_term_id);
 		doc.add_value(spc_id.slot, term_id);
 
@@ -1981,11 +2067,14 @@ Document::get_blob(const ct_type_t& ct_type, size_t retries)
 			if (!locator->data().empty()) {
 				return std::string(locator->data());
 			}
-#ifdef XAPIAND_DATA_STORAGE
 			if (locator->type == Data::Type::stored) {
- 				return db_handler->database->storage_get_blob(doc, *locator);
-			}
+#ifdef XAPIAND_DATA_STORAGE
+ 				auto stored = db_handler->database->storage_get_stored(doc, *locator);
+ 				return std::string(unserialise_string_at(STORED_BLOB, stored));
+#else
+ 				return "";
 #endif
+			}
 		}
 		return "";
 	} catch (const Xapian::DatabaseModifiedError& exc) {

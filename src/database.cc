@@ -1368,9 +1368,9 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_blob(const Xapian::Document& doc, const Data::Locator& locator) const
+Database::storage_get_stored(const Xapian::Document& doc, const Data::Locator& locator) const
 {
-	L_CALL("Database::storage_get_blob()");
+	L_CALL("Database::storage_get_stored()");
 
 	assert(locator.type == Data::Type::stored);
 	assert(locator.volume != -1);
@@ -1401,7 +1401,8 @@ Database::storage_pull_blobs(Xapian::Document& doc) const
 				assert(locator.volume != -1);
 				storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume));
 				storage->seek(static_cast<uint32_t>(locator.offset));
-				data.update(locator.ct_type, storage->read());
+				auto stored = storage->read();
+				data.update(locator.ct_type, unserialise_string_at(STORED_BLOB, stored));
 			}
 		}
 		data.flush();
@@ -1434,7 +1435,7 @@ Database::storage_push_blobs(Xapian::Document& doc) const
 								storage->volume = storage->highest_volume();
 								storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume));
 							}
-							offset = storage->write(locator.data());
+							offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.data() }));
 							break;
 						} catch (StorageEOF) {
 							++storage->volume;
@@ -1944,16 +1945,34 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 				auto doc = db->get_document(did);
 				auto data = Data(doc.get_data());
 				for (auto& locator : data) {
-					if (locator.type == Data::Type::stored) {
+					switch (locator.type) {
+						case Data::Type::inplace: {
+							auto content_type = locator.ct_type.to_string();
+							auto blob = locator.data();
+							char type = toUType(locator.type);
+							serialise_string(fd, blob);
+							XXH32_update(xxh_state, blob.data(), blob.size());
+							serialise_string(fd, content_type);
+							XXH32_update(xxh_state, content_type.data(), content_type.size());
+							serialise_char(fd, type);
+							XXH32_update(xxh_state, &type, 1);
+							break;
+						}
+						case Data::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-						auto blob = storage_get_blob(doc, locator);
-						serialise_string(fd, blob);
-						XXH32_update(xxh_state, blob.data(), blob.size());
+							auto stored = storage_get_stored(doc, locator);
+							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
+							auto blob = unserialise_string_at(STORED_BLOB, stored);
+							char type = toUType(locator.type);
+							serialise_string(fd, blob);
+							XXH32_update(xxh_state, blob.data(), blob.size());
+							serialise_string(fd, content_type);
+							XXH32_update(xxh_state, content_type.data(), content_type.size());
+							serialise_char(fd, type);
+							XXH32_update(xxh_state, &type, 1);
 #endif
-					} else {
-						auto blob = locator.data();
-						serialise_string(fd, blob);
-						XXH32_update(xxh_state, blob.data(), blob.size());
+							break;
+						}
 					}
 				}
 				serialise_string(fd, "");
@@ -2005,7 +2024,7 @@ Database::dump_documents()
 				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 				for (auto& locator : data) {
 					switch (locator.type) {
-						case Data::Type::inplace:
+						case Data::Type::inplace: {
 							if (!locator.ct_type.empty()) {
 								obj["_data"].push_back(MsgPack({
 									{ "_content_type", locator.ct_type.to_string() },
@@ -2014,16 +2033,18 @@ Database::dump_documents()
 								}));
 							}
 							break;
-						case Data::Type::stored:
+						}
+						case Data::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto blob = storage_get_blob(doc, locator);
+							auto stored = storage_get_stored(doc, locator);
 							obj["_data"].push_back(MsgPack({
-								{ "_content_type", unserialise_string_at(STORED_BLOB_CONTENT_TYPE, blob) },
+								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 								{ "_type", "stored" },
-								{ "_blob", unserialise_string_at(STORED_BLOB_DATA, blob) },
+								{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
 							}));
 #endif
 							break;
+						}
 					}
 				}
 				docs.push_back(obj);

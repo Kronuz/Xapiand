@@ -86,6 +86,8 @@ constexpr const char RESERVED_UUID_DETECTION[]      = "_uuid_detection";
 constexpr const char RESERVED_VALUES[]              = "_values";
 constexpr const char RESERVED_TERMS[]               = "_terms";
 constexpr const char RESERVED_DATA[]                = "_data";
+constexpr const char RESERVED_BLOB[]                = "_blob";
+constexpr const char RESERVED_CONTENT_TYPE[]        = "_content_type";
 // Reserved words used in schema only for TEXT fields.
 constexpr const char RESERVED_STOP_STRATEGY[]       = "_stop_strategy";
 constexpr const char RESERVED_STEM_STRATEGY[]       = "_stem_strategy";
