@@ -708,7 +708,7 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 			return index(document_id, MsgPack(MsgPack::Type::MAP), data, commit_);
 		case MsgPack::Type::MAP:
 			inject_data(data, body);
-			return index(document_id, body, data, commit_);
+			return index(document_id, body.locked() ? body.clone() : body, data, commit_);
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 	}
@@ -786,7 +786,7 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 			}
 			if (obj.empty()) {
 				inject_data(data, body);
-				return index(document_id, body, data, commit_);
+				return index(document_id, body.locked() ? body.clone() : body, data, commit_);
 			} else {
 				obj.update(body);
 				inject_data(data, obj);
