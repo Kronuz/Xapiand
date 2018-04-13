@@ -180,6 +180,7 @@ class DatabaseHandler {
 	enum http_method method;
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
+	int database_locks;
 
 	std::shared_ptr<std::unordered_set<size_t>> context;
 

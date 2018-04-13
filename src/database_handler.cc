@@ -236,9 +236,10 @@ lock_database::lock(F&& f, Args&&... args)
 
 	if (db_handler) {
 		if (db_handler->database) {
-			THROW(Error, "lock_database is already locked: %s", repr(db_handler->database->endpoints.to_string()));
+			++db_handler->database_locks;
 		} else {
 			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags, std::forward<F>(f), std::forward<Args>(args)...);
+			++db_handler->database_locks;
 		}
 	}
 }
@@ -251,9 +252,10 @@ lock_database::lock()
 
 	if (db_handler != nullptr) {
 		if (db_handler->database) {
-			THROW(Error, "lock_database is already locked: %s", repr(db_handler->database->endpoints.to_string()));
+			++db_handler->database_locks;
 		} else {
 			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags);
+			++db_handler->database_locks;
 		}
 	}
 }
@@ -266,7 +268,9 @@ lock_database::unlock()
 
 	if (db_handler != nullptr) {
 		if (db_handler->database) {
-			XapiandManager::manager->database_pool.checkin(db_handler->database);
+			if (--db_handler->database_locks == 0) {
+				XapiandManager::manager->database_pool.checkin(db_handler->database);
+			}
 		} else {
 			THROW(Error, "lock_database is not locked: %s", repr(db_handler->database->endpoints.to_string()));
 		}
@@ -276,13 +280,15 @@ lock_database::unlock()
 
 DatabaseHandler::DatabaseHandler()
 	: flags(0),
-	  method(HTTP_GET) { }
+	  method(HTTP_GET),
+	  database_locks(0) { }
 
 
 DatabaseHandler::DatabaseHandler(Endpoints  endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<size_t>>  context_)
 	: endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  method(method_),
+	  database_locks(0),
 	  context(std::move(context_)) { }
 
 
