@@ -1469,17 +1469,22 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 	L_CALL("DatabaseHandler::update_schema()");
 	bool done = true;
 	bool updated = false;
+	bool created = false;
 
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
 		updated = true;
 		auto old_schema = schema->get_const_schema();
 		done = XapiandManager::manager->schemas.set(this, old_schema, mod_schema);
+		if (done) {
+			created = old_schema->at("schema").empty();
+		}
 	}
 
 	if (done) {
 		auto schema_ends = std::chrono::system_clock::now();
 		if (updated) {
+			L_INFO("Schema for %s %s", repr(endpoints.to_string()), created ? "created" : "updated");
 			Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 		} else {
 			Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
