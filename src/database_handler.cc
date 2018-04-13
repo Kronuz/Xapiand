@@ -1287,6 +1287,19 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 }
 
 
+void
+DatabaseHandler::restore_documents(const MsgPack& docs)
+{
+	L_CALL("DatabaseHandler::restore_documents()");
+
+	lock_database lk_db(this);
+
+	for (auto& obj : docs) {
+		restore_document(obj);
+	}
+}
+
+
 MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {

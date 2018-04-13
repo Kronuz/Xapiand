@@ -1477,9 +1477,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 		io::close(file_descriptor);
 		io::unlink(path);
 	} else if (decoded_body.is_array()) {
-		for (auto& object : decoded_body) {
-			db_handler.restore_document(object);
-		}
+		db_handler.restore_documents(decoded_body);
 	} else {
 		THROW(ClientError, "Expected a binary or list dump");
 	}
