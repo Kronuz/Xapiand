@@ -103,7 +103,7 @@ to_docid(std::string_view document_id)
 
 
 static void
-inject_blob(Data& data, MsgPack& obj)
+inject_blob(Data& data, const MsgPack& obj)
 {
 	auto blob_it = obj.find(RESERVED_BLOB);
 	if (blob_it == obj.end()) {
@@ -151,7 +151,7 @@ inject_blob(Data& data, MsgPack& obj)
 
 
 static void
-inject_data(Data& data, MsgPack& obj)
+inject_data(Data& data, const MsgPack& obj)
 {
 	auto data_it = obj.find(RESERVED_DATA);
 	if (data_it != obj.end()) {
@@ -1172,108 +1172,104 @@ DatabaseHandler::dump_documents()
 
 
 void
-DatabaseHandler::restore_documents(const MsgPack& docs)
+DatabaseHandler::restore_document(MsgPack& obj)
 {
-	L_CALL("DatabaseHandler::restore_documents()");
+	L_CALL("DatabaseHandler::restore_document()");
 
 	static UUIDGenerator generator;
 
-	lock_database lk_db(this);
-
-	lk_db.unlock();
 	schema = get_schema();
-	lk_db.lock();
 
-	for (auto obj : docs) {
-		Data data;
-		inject_data(data, obj);
+	Data data;
+	inject_data(data, obj);
 
-		Xapian::Document doc;
-		Xapian::docid did = 0;
-		required_spc_t spc_id;
-		std::string term_id;
-		std::string prefixed_term_id;
+	Xapian::Document doc;
+	Xapian::docid did = 0;
+	required_spc_t spc_id;
+	std::string term_id;
+	std::string prefixed_term_id;
 
-		MsgPack document_id;
+	MsgPack document_id;
 
-		// Get term ID.
-		spc_id = schema->get_data_id();
-		auto f_it = obj.find(ID_FIELD_NAME);
-		if (f_it != obj.end()) {
-			const auto& field = f_it.value();
-			if (field.is_map()) {
-				auto f_it_end = field.end();
-				if (spc_id.get_type() == FieldType::EMPTY) {
-					auto ft_it = field.find(RESERVED_TYPE);
-					if (ft_it != f_it_end) {
-						const auto& type = ft_it.value();
-						if (!type.is_string()) {
-							THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
-						}
-						spc_id.set_types(type.str_view());
-					}
-				}
-				auto fv_it = field.find(RESERVED_VALUE);
-				if (fv_it != f_it_end) {
-					document_id = fv_it.value();
-				}
-			} else {
-				document_id = field;
-			}
-		}
-
-		obj = schema->index(obj, doc);
-
-		// Ensure term ID.
-		if (prefixed_term_id.empty()) {
-			// Now the schema is full, get specification id.
-			spc_id = schema->get_data_id();
+	// Get term ID.
+	spc_id = schema->get_data_id();
+	auto f_it = obj.find(ID_FIELD_NAME);
+	if (f_it != obj.end()) {
+		const auto& field = f_it.value();
+		if (field.is_map()) {
+			auto f_it_end = field.end();
 			if (spc_id.get_type() == FieldType::EMPTY) {
-				// Index like a namespace.
-				if (document_id.is_undefined()) {
-					document_id = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
-				}
-				const auto type_ser = Serialise::guess_serialise(document_id);
-				spc_id.set_type(type_ser.first);
-				Schema::set_namespace_spc_id(spc_id);
-				term_id = type_ser.second;
-				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-			} else {
-				if (document_id.is_undefined()) {
-					try {
-						// Add a new empty document to get its document ID:
-						did = database->add_document(Xapian::Document(), false, false);
-					} catch (const Xapian::DatabaseError&) {
-						// Try to recover from DatabaseError (i.e when the index is manually deleted)
-						lk_db.unlock();
-						recover_index();
-						lk_db.lock();
-						did = database->add_document(Xapian::Document(), false, false);
+				auto ft_it = field.find(RESERVED_TYPE);
+				if (ft_it != f_it_end) {
+					const auto& type = ft_it.value();
+					if (!type.is_string()) {
+						THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
 					}
-					document_id = Cast::cast(spc_id.get_type(), std::to_string(did));
+					spc_id.set_types(type.str_view());
 				}
-				term_id = Serialise::serialise(spc_id, document_id);
-				prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 			}
+			auto fv_it = field.find(RESERVED_VALUE);
+			if (fv_it != f_it_end) {
+				document_id = fv_it.value();
+			}
+		} else {
+			document_id = field;
 		}
+	}
 
-		// Finish document: add data, ID term and ID value.
-		data.update("", obj.serialise());
-		data.flush();
-		doc.set_data(data.serialise());
+	obj = schema->index(obj, doc);
 
-		doc.add_boolean_term(prefixed_term_id);
-		doc.add_value(spc_id.slot, term_id);
+	// Ensure term ID.
+	if (prefixed_term_id.empty()) {
+		// Now the schema is full, get specification id.
+		spc_id = schema->get_data_id();
+		if (spc_id.get_type() == FieldType::EMPTY) {
+			// Index like a namespace.
+			if (document_id.is_undefined()) {
+				document_id = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
+			}
+			const auto type_ser = Serialise::guess_serialise(document_id);
+			spc_id.set_type(type_ser.first);
+			Schema::set_namespace_spc_id(spc_id);
+			term_id = type_ser.second;
+			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+		} else {
+			if (document_id.is_undefined()) {
+				lock_database lk_db(this);
+				try {
+					// Add a new empty document to get its document ID:
+					did = database->add_document(Xapian::Document(), false, false);
+				} catch (const Xapian::DatabaseError&) {
+					// Try to recover from DatabaseError (i.e when the index is manually deleted)
+					lk_db.unlock();
+					recover_index();
+					lk_db.lock();
+					did = database->add_document(Xapian::Document(), false, false);
+				}
+				document_id = Cast::cast(spc_id.get_type(), std::to_string(did));
+			}
+			term_id = Serialise::serialise(spc_id, document_id);
+			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+		}
+	}
 
-		// Index document.
+	// Finish document: add data, ID term and ID value.
+	data.update("", obj.serialise());
+	data.flush();
+	doc.set_data(data.serialise());
+
+	doc.add_boolean_term(prefixed_term_id);
+	doc.add_value(spc_id.slot, term_id);
+
+	// Index document.
+	{
+		lock_database lk_db(this);
 		if (did != 0u) { database->replace_document(did, doc, false, false);
 		} else { did = database->replace_document_term(prefixed_term_id, doc, false, false); }
-	};
+	}
 
-	lk_db.unlock();
 	auto schema_begins = std::chrono::system_clock::now();
 	while (!update_schema(schema_begins)) { }
-	lk_db.lock();
 }
 
 

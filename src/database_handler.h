@@ -231,7 +231,7 @@ public:
 	void restore(int fd);
 
 	MsgPack dump_documents();
-	void restore_documents(const MsgPack& docs);
+	void restore_document(MsgPack& obj);
 
 	std::string get_prefixed_term_id(std::string_view document_id);
 
