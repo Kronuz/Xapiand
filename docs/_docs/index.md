@@ -78,6 +78,7 @@ For those, you can always copy the equivalent curl code for it by hovering the
 snippet and clicking on the copy to the clipboard button: &nbsp;&nbsp;<i class="fa fa-clipboard"></i>
 
 ---
+
 ## Donate to {{ site.name }}!
 
 ### How will my donation be used?

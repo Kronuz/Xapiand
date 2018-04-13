@@ -49,6 +49,27 @@ header with a _GET_, _PATCH_, _MERGE_, _STORE_, _PUT_, or _DELETE_ method,
 you'll receive an error.
 
 
+## JSON and MsgPack
+
+The Xapiand API can process JSON objects or MsgPack objects, MsgPack being more
+efficient as it is the internal representation of the data.
+
+### Deviations from JSON
+
+#### Comments
+
+JSON can have C-style `/* */` block or single line `//` comments. Comments are
+allowed everywhere in the JSON document.
+
+#### Trailing Commas
+
+JSON can have trailing commas.
+
+#### Hex Codes
+
+JSON Accepts binary codes as escaped `"\xHH"` in strings.
+
+
 ## Multiple Indices
 
 Most APIs that refer to an index parameter support execution across multiple
