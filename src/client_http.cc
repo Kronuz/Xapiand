@@ -1477,7 +1477,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 		io::close(file_descriptor);
 		io::unlink(path);
 	} else if (decoded_body.is_array()) {
-		for (auto object : decoded_body) {
+		for (auto& object : decoded_body) {
 			db_handler.restore_document(object);
 		}
 	} else {
