@@ -1769,9 +1769,7 @@ required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, std::vecto
 	  error(DEFAULT_GEO_ERROR) { }
 
 
-required_spc_t::required_spc_t(const required_spc_t& o)
-	
-	  = default;
+required_spc_t::required_spc_t(const required_spc_t& o) = default;
 
 
 required_spc_t::required_spc_t(required_spc_t&& o) noexcept
@@ -1789,8 +1787,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 
 
 required_spc_t&
-required_spc_t::operator=(const required_spc_t& o)
-= default;
+required_spc_t::operator=(const required_spc_t& o) = default;
 
 
 required_spc_t&
