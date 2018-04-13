@@ -194,7 +194,7 @@ class DatabaseHandler {
 	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(std::string_view document_id, MsgPack& obj, Data& data, bool commit_);
+	DataType index(std::string_view document_id, const MsgPack& obj, Data& data, bool commit_);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 

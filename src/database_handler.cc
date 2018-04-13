@@ -490,7 +490,7 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 
 
 DataType
-DatabaseHandler::index(std::string_view document_id, MsgPack& obj, Data& data, bool commit_)
+DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& data, bool commit_)
 {
 	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id), repr(obj.to_string()), commit_ ? "true" : "false");
 
@@ -574,15 +574,6 @@ DatabaseHandler::index(std::string_view document_id, MsgPack& obj, Data& data, b
 					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
 
-				// Add ID.
-				auto id_value = Cast::cast(id_type, doc_xid);
-				auto& id_field = obj[ID_FIELD_NAME];
-				if (id_field.is_map()) {
-					id_field[RESERVED_VALUE] = id_value;
-				} else {
-					id_field = id_value;
-				}
-
 				// Index object.
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 				data_obj = schema->index(obj, doc, prefixed_term_id, &old_document_pair, this);
@@ -590,11 +581,15 @@ DatabaseHandler::index(std::string_view document_id, MsgPack& obj, Data& data, b
 				data_obj = schema->index(obj, doc);
 #endif
 
+				spc_id = schema->get_data_id();
+				id_type = spc_id.get_type();
+
+				// Add ID.
+				data_obj[ID_FIELD_NAME] = Cast::cast(id_type, doc_xid);
+
 				// Ensure term ID.
 				if (prefixed_term_id.empty()) {
 					// Now the schema is full, get specification id.
-					spc_id = schema->get_data_id();
-					id_type = spc_id.get_type();
 					if (did != 0) {
 						if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
 							doc_xid = doc_uuid;
@@ -689,7 +684,6 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 	}
 
 	Data data;
-	MsgPack obj(MsgPack::Type::MAP);
 	switch (body.getType()) {
 		case MsgPack::Type::STR:
 			if (stored) {
@@ -701,20 +695,17 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 				}
 				data.update(ct_type, blob);
 			}
-			break;
+			return index(document_id, MsgPack(MsgPack::Type::MAP), data, commit_);
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
-			break;
+			return index(document_id, MsgPack(MsgPack::Type::MAP), data, commit_);
 		case MsgPack::Type::MAP:
-			obj = body.clone();
-			inject_data(data, obj);
-			break;
+			inject_data(data, body);
+			return index(document_id, body, data, commit_);
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 	}
-
-	return index(document_id, obj, data, commit_);
 }
 
 
@@ -778,18 +769,23 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 				}
 				data.update(ct_type, blob);
 			}
-			break;
+			return index(document_id, obj, data, commit_);
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
-			break;
+			return index(document_id, obj, data, commit_);
 		case MsgPack::Type::MAP:
 			if (stored) {
 				THROW(ClientError, "Objects of this type cannot be put in storage");
 			}
-			obj.update(body);
-			inject_data(data, obj);
-			break;
+			if (obj.empty()) {
+				inject_data(data, body);
+				return index(document_id, body, data, commit_);
+			} else {
+				obj.update(body);
+				inject_data(data, obj);
+				return index(document_id, obj, data, commit_);
+			}
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 	}
