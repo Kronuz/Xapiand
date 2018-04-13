@@ -300,6 +300,12 @@ private:
 		feed(std::move(new_serialised));
 	}
 
+	void flush(const std::vector<Locator>& ops) {
+		for (auto& op : ops) {
+			flush(op);
+		}
+	}
+
 public:
 	Data() {
 		feed(std::string(DATABASE_DATA_DEFAULT, sizeof(DATABASE_DATA_DEFAULT)));
@@ -317,9 +323,7 @@ public:
 	Data(const Data& other) {
 		serialised = other.serialised;
 		feed(std::move(serialised));
-		for (auto& op : other.pending) {
-			flush(op);
-		}
+		flush(other.pending);
 	}
 
 	Data& operator=(Data&& other) {
@@ -331,9 +335,7 @@ public:
 	Data& operator=(const Data& other) {
 		serialised = other.serialised;
 		feed(std::move(serialised));
-		for (auto& op : other.pending) {
-			flush(op);
-		}
+		flush(other.pending);
 		return *this;
 	}
 
@@ -365,9 +367,7 @@ public:
 	}
 
 	void flush() {
-		for (auto& op : pending) {
-			flush(op);
-		}
+		flush(pending);
 		pending.clear();
 	}
 
