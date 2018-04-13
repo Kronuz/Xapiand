@@ -8128,7 +8128,10 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 		}
 		const auto str_type = Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_type), repr(_str_type.substr(init_pos)), repr(specification.full_meta_name));
+			auto str_concretr_type = _str_type.substr(init_pos);
+			if ((str_concretr_type != "term" || str_type != "keyword") && (str_concretr_type != "keyword" || str_type != "term")) {  // FIXME: remove legacy term
+				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_type), repr(str_concretr_type), repr(specification.full_meta_name));
+			}
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
