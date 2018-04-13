@@ -2499,7 +2499,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 MsgPack
-Schema::index(MsgPack& object, Xapian::Document& doc,
+Schema::index(const MsgPack& object, Xapian::Document& doc,
 	std::string_view term_id,
 	std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair,
 	DatabaseHandler* db_handler)
@@ -2533,21 +2533,23 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		if (specification.script && (db_handler != nullptr)) {
+		if (specification.script && db_handler != nullptr) {
 			assert(old_document_pair);
-			object = db_handler->run_script(object, term_id, *old_document_pair, *specification.script);
-			if (!object.is_map()) {
-				THROW(ClientError, "Script must return an object, it returned %s", object.getStrType());
-			}
-			// Rebuild fields with new values.
-			fields.clear();
-			const auto it_e = object.end();
-			for (auto it = object.begin(); it != it_e; ++it) {
-				auto str_key = it->str_view();
-				auto key = hh(str_key);
-				if (!has_dispatch_process_properties(key)) {
-					if (!has_dispatch_process_concrete_properties(key)) {
-						fields.emplace_back(std::move(str_key), &it.value());
+			auto mut_object = db_handler->run_script(object, term_id, *old_document_pair, *specification.script);
+			if (mut_object != nullptr) {
+				if (!mut_object->is_map()) {
+					THROW(ClientError, "Script must return an object, it returned %s", mut_object->getStrType());
+				}
+				// Rebuild fields with new values.
+				fields.clear();
+				const auto it_e = mut_object->end();
+				for (auto it = mut_object->begin(); it != it_e; ++it) {
+					auto str_key = it->str_view();
+					auto key = hh(str_key);
+					if (!has_dispatch_process_properties(key)) {
+						if (!has_dispatch_process_concrete_properties(key)) {
+							fields.emplace_back(std::move(str_key), &it.value());
+						}
 					}
 				}
 			}

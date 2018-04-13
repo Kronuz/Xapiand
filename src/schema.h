@@ -965,7 +965,7 @@ public:
 	 * Function to index object in doc.
 	 */
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	MsgPack index(MsgPack& object, Xapian::Document& doc, std::string_view term_id = "", std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair = nullptr, DatabaseHandler* db_handler = nullptr);
+	MsgPack index(const MsgPack& object, Xapian::Document& doc, std::string_view term_id = "", std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair = nullptr, DatabaseHandler* db_handler = nullptr);
 #else
 	MsgPack index(const MsgPack& object, Xapian::Document& doc);
 #endif

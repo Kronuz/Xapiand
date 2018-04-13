@@ -190,8 +190,8 @@ class DatabaseHandler {
 	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
 
 	template<typename ProcessorCompile>
-	MsgPack& call_script(MsgPack& data, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
-	MsgPack& run_script(MsgPack& data, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
 #endif
 
 	DataType index(std::string_view document_id, MsgPack& obj, Data& data, bool commit_);
@@ -231,7 +231,7 @@ public:
 	void restore(int fd);
 
 	MsgPack dump_documents();
-	void restore_document(MsgPack& obj);
+	void restore_document(const MsgPack& obj);
 
 	std::string get_prefixed_term_id(std::string_view document_id);
 
