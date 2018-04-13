@@ -2456,14 +2456,17 @@ HttpClient::log_request(Request& request)
 		} else {
 			if (request.raw.size() > 1024 * 10) {
 				request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
-			} else if (request.ct_type == json_type || request.ct_type == msgpack_type) {
-				request_text += request.decoded_body().to_string(4);
 			} else {
-				request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
+				auto& decoded_body = request.decoded_body();
+				if (request.ct_type == json_type || request.ct_type == msgpack_type) {
+					request_text += decoded_body.to_string(4);
+				} else {
+					request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
+				}
 			}
 		}
 	} else if (!request.body.empty()) {
-		if (request.body.size() > 1024 *10) {
+		if (request.body.size() > 1024 * 10) {
 			request_text += "<body " + string::from_bytes(request.body.size()) + ">";
 		} else {
 			request_text += request.body;
@@ -2546,7 +2549,7 @@ HttpClient::log_response(Response& response)
 			}
 		}
 	} else if (!response.body.empty()) {
-		if (response.size > 1024 *10) {
+		if (response.size > 1024 * 10) {
 			response_text += "<body " + string::from_bytes(response.size) + ">";
 		} else {
 			response_text += response.body;
