@@ -160,7 +160,7 @@ public:
 		size_t offset;
 		size_t size;
 
-		template <typename C>
+		template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
 		Locator(C&& ct_type, std::string_view data = "") :
 			type(Type::inplace),
 			ct_type(std::forward<C>(ct_type)),
@@ -170,7 +170,7 @@ public:
 			offset(0),
 			size(_view.size()) { }
 
-		template <typename C>
+		template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
 		Locator(C&& ct_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") :
 			type(Type::stored),
 			ct_type(std::forward<C>(ct_type)),
@@ -241,6 +241,14 @@ public:
 			return result;
 		}
 
+		bool operator==(const Locator& other) const noexcept {
+			return ct_type == other.ct_type;
+		}
+
+		bool operator!=(const Locator& other) const noexcept {
+			return !operator==(other);
+		}
+
 		bool operator<(const Locator& other) const noexcept {
 			return ct_type < other.ct_type;
 		}
@@ -288,30 +296,46 @@ private:
 		trailing = std::string_view(p, p_end - p);
 	}
 
-	void flush(const Locator& new_locator) {
-		std::string new_serialised;
-		new_serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
-		if (new_locator.ct_type.empty()) {
-			new_serialised.append(new_locator.serialise());
-		}
-		for (const auto& locator : locators) {
-			if (locator.ct_type != new_locator.ct_type) {
-				new_serialised.append(locator.serialise());
+	void flush(const std::vector<Locator>& ops) {
+		std::vector<Locator> new_locators;
+
+		// First disable current locators which are inside ops
+		for (auto& op : ops) {
+			for (auto& locator : locators) {
+				if (locator.size && locator == op) {
+					locator.size = 0;
+				}
+			}
+			if (op.ct_type.empty() && op.size) {
+				// and push empty op first (if any)
+				new_locators.push_back(op);
 			}
 		}
-		if (!new_locator.ct_type.empty()) {
-			new_serialised.append(new_locator.serialise());
-		}
-		new_serialised.push_back('\0');
-		new_serialised.push_back(DATABASE_DATA_FOOTER_MAGIC);
-		new_serialised.append(trailing);
-		feed(std::move(new_serialised));
-	}
 
-	void flush(const std::vector<Locator>& ops) {
-		for (auto& op : ops) {
-			flush(op);
+		// Then push the remaining locators
+		for (auto& locator : locators) {
+			if (locator.size) {
+				new_locators.push_back(locator);
+			}
 		}
+		// and afterwards the passed ops (except empty which should go first)
+		for (auto& op : ops) {
+			if (!op.ct_type.empty() && op.size) {
+				new_locators.push_back(op);
+			}
+		}
+
+		// Now replace old locators and serialize
+		locators = new_locators;
+
+		serialised.clear();
+		serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
+		for (auto& locator : locators) {
+			serialised.append(locator.serialise());
+		}
+		serialised.push_back('\0');
+		serialised.push_back(DATABASE_DATA_FOOTER_MAGIC);
+		serialised.append(trailing);
 	}
 
 public:
@@ -381,6 +405,10 @@ public:
 
 	const std::string& serialise() const {
 		return serialised;
+	}
+
+	auto operator[](size_t pos) const {
+		return locators.operator[](pos);
 	}
 
 	auto empty() const {
