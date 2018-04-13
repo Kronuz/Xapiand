@@ -976,10 +976,10 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
-	auto document = request.db_handler.get_document(serialise_node_id(local_node_->id));
+	auto document = db_handler.get_document(serialise_node_id(local_node_->id));
 
 	auto obj = document.get_obj();
 	if (obj.find(ID_FIELD_NAME) == obj.end()) {
@@ -1017,10 +1017,10 @@ HttpClient::document_info_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 
 	MsgPack response_obj;
-	response_obj[RESPONSE_DOCID] = request.db_handler.get_docid(request.path_parser.get_id());
+	response_obj[RESPONSE_DOCID] = db_handler.get_docid(request.path_parser.get_id());
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1042,9 +1042,9 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 
 	enum http_status status_code;
 	MsgPack response_obj;
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
-	request.db_handler.delete_document(doc_id, query_field.commit);
+	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
 	status_code = HTTP_STATUS_OK;
 
@@ -1070,8 +1070,8 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	request.db_handler.delete_schema();
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	db_handler.delete_schema();
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1097,9 +1097,9 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	auto& decoded_body = request.decoded_body();
-	response_obj = request.db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
+	response_obj = db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1125,14 +1125,14 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
-	request.db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	status_code = HTTP_STATUS_OK;
-	response_obj = request.db_handler.get_schema()->get_full(true);
+	response_obj = db_handler.get_schema()->get_full(true);
 
 	write_http_response(request, response, status_code, response_obj);
 }
@@ -1152,14 +1152,14 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	auto& decoded_body = request.decoded_body();
 	if (method == HTTP_PATCH) {
-		response_obj = request.db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
 	} else if (method == HTTP_STORE) {
-		response_obj = request.db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
-		response_obj = request.db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1189,14 +1189,15 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 
 	MsgPack response_obj;
 
+	DatabaseHandler db_handler;
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
-		request.db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
 	std::string selector;
@@ -1217,14 +1218,14 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 
 	if (key.empty()) {
 		response_obj = MsgPack(MsgPack::Type::MAP);
-		for (auto& _key : request.db_handler.get_metadata_keys()) {
-			auto metadata = request.db_handler.get_metadata(_key);
+		for (auto& _key : db_handler.get_metadata_keys()) {
+			auto metadata = db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
 				response_obj[_key] = MsgPack::unserialise(metadata);
 			}
 		}
 	} else {
-		auto metadata = request.db_handler.get_metadata(key);
+		auto metadata = db_handler.get_metadata(key);
 		if (metadata.empty()) {
 			status_code = HTTP_STATUS_NOT_FOUND;
 		} else {
@@ -1279,14 +1280,15 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 	request.processing = std::chrono::system_clock::now();
 
+	DatabaseHandler db_handler;
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
-		request.db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
 	// There's no path, we're at root so we get the server's info
@@ -1294,7 +1296,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 		XapiandManager::manager->server_status(response_obj[RESPONSE_SERVER_INFO]);
 	}
 
-	response_obj[RESPONSE_DATABASE_INFO] = request.db_handler.get_database_info();
+	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
 
 	// Info about a specific document was requested
 	if (request.path_parser.off_pmt != nullptr) {
@@ -1305,7 +1307,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 			id = id.substr(0, needle);
 		}
 
-		response_obj[RESPONSE_DOCUMENT_INFO] = request.db_handler.get_document_info(id, false);
+		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, false);
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1358,9 +1360,9 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
-	request.db_handler.reopen();  // Ensure touch.
+	db_handler.reopen();  // Ensure touch.
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1380,9 +1382,9 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 
-	request.db_handler.commit();  // Ensure touch.
+	db_handler.commit();  // Ensure touch.
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1402,7 +1404,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_NOWAL);
 
 	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 
@@ -1423,7 +1425,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 		char path[] = "/tmp/xapian_dump.XXXXXX";
 		int file_descriptor = mkstemp(path);
 		try {
-			request.db_handler.dump_documents(file_descriptor);
+			db_handler.dump_documents(file_descriptor);
 		} catch (...) {
 			io::close(file_descriptor);
 			io::unlink(path);
@@ -1439,7 +1441,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 		return;
 	}
 
-	auto docs = request.db_handler.dump_documents();
+	auto docs = db_handler.dump_documents();
 
 	request.ready = std::chrono::system_clock::now();
 	write_http_response(request, response, HTTP_STATUS_OK, docs);
@@ -1455,7 +1457,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.processing = std::chrono::system_clock::now();
 
-	request.db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL, method);
 
 	auto& decoded_body = request.decoded_body();
 	if (decoded_body.is_string()) {
@@ -1465,7 +1467,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 			auto body = decoded_body.str_view();
 			io::write(file_descriptor, body.data(), body.size());
 			io::lseek(file_descriptor, 0, SEEK_SET);
-			request.db_handler.restore(file_descriptor);
+			db_handler.restore(file_descriptor);
 		} catch (...) {
 			io::close(file_descriptor);
 			io::unlink(path);
@@ -1476,7 +1478,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 		io::unlink(path);
 	} else if (decoded_body.is_array()) {
 		for (auto object : decoded_body) {
-			request.db_handler.restore_document(object);
+			db_handler.restore_document(object);
 		}
 	} else {
 		THROW(ClientError, "Expected a binary or list dump");
@@ -1511,17 +1513,18 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
+	DatabaseHandler db_handler;
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
-		request.db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
-	auto schema = request.db_handler.get_schema()->get_full(true);
+	auto schema = db_handler.get_schema()->get_full(true);
 	if (!selector.empty()) {
 		schema = schema.select(selector);
 	}
@@ -1542,17 +1545,18 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method meth
 
 	request.processing = std::chrono::system_clock::now();
 
+	DatabaseHandler db_handler;
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 	} else {
-		request.db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
-	auto repr = request.db_handler.repr_wal(0, -1);
+	auto repr = db_handler.repr_wal(0, -1);
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1583,37 +1587,38 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	endpoints_maker(request, 1s);
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 
 	bool single = !id.empty() && !isRange(id);
 
 	MSet mset{};
+	MsgPack aggregations;
 	std::vector<std::string> suggestions;
 
 	request.processing = std::chrono::system_clock::now();
 
-	MsgPack aggregations;
+	DatabaseHandler db_handler;
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 	try {
 		if (query_field.as_volatile) {
 			if (endpoints.size() != 1) {
 				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
-			request.db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
 		} else {
-			request.db_handler.reset(endpoints, DB_OPEN, method);
+			db_handler.reset(endpoints, DB_OPEN, method);
 		}
 
 		if (single) {
 			try {
-				mset = request.db_handler.get_docid(id);
+				mset = db_handler.get_docid(id);
 			} catch (const DocNotFoundError&) { }
 		} else {
 			if (request.raw.empty()) {
-				mset = request.db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
+				mset = db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
 			} else {
 				auto& decoded_body = request.decoded_body();
-				AggregationMatchSpy aggs(decoded_body, request.db_handler.get_schema());
-				mset = request.db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
+				AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 			}
 		}
@@ -1741,7 +1746,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	std::string l_buffer;
 	const auto m_e = mset.end();
 	for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
-		auto document = request.db_handler.get_document(*m);
+		auto document = db_handler.get_document(*m);
 
 		const auto data = Data(document.get_data());
 		if (data.empty()) {

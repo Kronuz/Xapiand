@@ -214,7 +214,6 @@ public:
 
 	PathParser path_parser;
 	QueryParser query_parser;
-	DatabaseHandler db_handler;
 
 	std::shared_ptr<Logging> log;
 
