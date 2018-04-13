@@ -67,7 +67,7 @@
 #include "log.h"                             // for L_CALL, L_DEBUG
 #include "memory_stats.h"                    // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                         // for MsgPack, object::object
-#include "serialise.h"                       // for TERM_STR
+#include "serialise.h"                       // for KEYWORD_STR
 #include "servers/http.h"                    // for Http
 #include "servers/server.h"                  // for XapiandServer, XapiandSe...
 #include "servers/server_http.h"             // for HttpServer
@@ -348,9 +348,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 			db_handler.index(serialise_node_id(local_node_->id), false, {
 				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  TERM_STR } } },
-				{ "name",         { { RESERVED_TYPE,  TERM_STR }, { RESERVED_VALUE, local_node_->name() } } },
-				{ "tagline",      { { RESERVED_TYPE,  TERM_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
+				{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, msgpack_type);
 		} catch (const CheckoutError&) {
 			L_CRIT("Cannot generate cluster database");

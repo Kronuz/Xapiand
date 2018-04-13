@@ -440,8 +440,8 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 			case FieldType::BOOLEAN:
 				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
 				break;
-			case FieldType::UUID:
-			case FieldType::TERM:
+			case FieldType::UUID:  // FIXME: Should UUID be here?
+			case FieldType::KEYWORD:
 			case FieldType::TEXT:
 			case FieldType::STRING: {
 				constexpr static auto _ = phf::make_phf({

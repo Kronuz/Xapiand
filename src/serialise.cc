@@ -34,7 +34,7 @@
 #include "cuuid/uuid.h"                               // for UUID
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
-#include "schema.h"                                   // for FieldType, FieldType::TERM, Fiel...
+#include "schema.h"                                   // for FieldType, FieldType::KEYWORD, Fiel...
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "split.h"                                    // for Split
 #include "utils.h"                                    // for toUType, stox, repr
@@ -153,7 +153,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 				return _float(field_spc.get_type(), Cast::_float(o.at(str_key)));
 			case Cast::Hash::BOOLEAN:
 				return boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
-			case Cast::Hash::TERM:
+			case Cast::Hash::KEYWORD:
 			case Cast::Hash::TEXT:
 			case Cast::Hash::STRING:
 				return string(field_spc, Cast::string(o.at(str_key)));
@@ -208,7 +208,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 			return timedelta(field_value);
 		case FieldType::BOOLEAN:
 			return boolean(field_value.boolean());
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
 			return field_value.str();
@@ -242,7 +242,7 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 			return timedelta(field_value);
 		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
 			return std::string(field_value);
@@ -268,7 +268,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 			return timedelta(field_value);
 		case FieldType::BOOLEAN:
 			return boolean(field_value);
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
 			return std::string(field_value);
@@ -761,9 +761,9 @@ const std::string&
 Serialise::type(FieldType field_type)
 {
 	switch (field_type) {
-		case FieldType::TERM: {
-			static const std::string term_str(TERM_STR);
-			return term_str;
+		case FieldType::KEYWORD: {
+			static const std::string keyword_str(KEYWORD_STR);
+			return keyword_str;
 		}
 		case FieldType::TEXT: {
 			static const std::string text_str(TEXT_STR);
@@ -877,7 +877,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			}
 
 			if (bool_term) {
-				return FieldType::TERM;
+				return FieldType::KEYWORD;
 			}
 
 			if (isText(str_value, bool_term)) {
@@ -899,8 +899,8 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 						return FieldType::FLOAT;
 					case Cast::Hash::BOOLEAN:
 						return FieldType::BOOLEAN;
-					case Cast::Hash::TERM:
-						return FieldType::TERM;
+					case Cast::Hash::KEYWORD:
+						return FieldType::KEYWORD;
 					case Cast::Hash::TEXT:
 						return FieldType::TEXT;
 					case Cast::Hash::STRING:
@@ -937,7 +937,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::UNDEFINED:
 		case MsgPack::Type::NIL:
 			if (bool_term) {
-				return FieldType::TERM;
+				return FieldType::KEYWORD;
 			}
 
 			// Default type STRING.
@@ -994,7 +994,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			} catch (const EWKTError&) { }
 
 			if (bool_term) {
-				return std::make_pair(FieldType::TERM, std::string(str_obj));
+				return std::make_pair(FieldType::KEYWORD, std::string(str_obj));
 			}
 
 			// Like TEXT
@@ -1019,8 +1019,8 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 						return std::make_pair(FieldType::FLOAT, _float(Cast::_float(it.value())));
 					case Cast::Hash::BOOLEAN:
 						return std::make_pair(FieldType::BOOLEAN, boolean(Cast::boolean(it.value())));
-					case Cast::Hash::TERM:
-						return std::make_pair(FieldType::TERM, Cast::string(it.value()));
+					case Cast::Hash::KEYWORD:
+						return std::make_pair(FieldType::KEYWORD, Cast::string(it.value()));
 					case Cast::Hash::TEXT:
 						return std::make_pair(FieldType::TEXT, Cast::string(it.value()));
 					case Cast::Hash::STRING:
@@ -1057,7 +1057,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 		case MsgPack::Type::UNDEFINED:
 		case MsgPack::Type::NIL:
 			if (bool_term) {
-				return std::make_pair(FieldType::TERM, "");
+				return std::make_pair(FieldType::KEYWORD, "");
 			}
 
 			// Default type STRING.
@@ -1095,7 +1095,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 		case FieldType::BOOLEAN:
 			result = boolean(serialised_val);
 			break;
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
 			result = serialised_val;
@@ -1326,11 +1326,11 @@ Unserialise::type(std::string_view str_type)
 		hhl("o"),
 		hhl("p"),
 		hhl("s"),
-		hhl("t"),
+		hhl("k"),
 		hhl("u"),
 		hhl("x"),
 		hhl("date"),
-		hhl("term"),
+		hhl("term"),  // FIXME: remove legacy term
 		hhl("text"),
 		hhl("time"),
 		hhl("array"),
@@ -1342,6 +1342,7 @@ Unserialise::type(std::string_view str_type)
 		hhl("boolean"),
 		hhl("foreign"),
 		hhl("integer"),
+		hhl("keyword"),
 		hhl("positive"),
 		hhl("timedelta"),
 		hhl("geospatial"),
@@ -1379,9 +1380,10 @@ Unserialise::type(std::string_view str_type)
 		case _.fhhl("s"):
 		case _.fhhl("string"):
 			return FieldType::STRING;
-		case _.fhhl("t"):
-		case _.fhhl("term"):
-			return FieldType::TERM;
+		case _.fhhl("term"):  // FIXME: remove legacy term
+		case _.fhhl("k"):
+		case _.fhhl("keyword"):
+			return FieldType::KEYWORD;
 		case _.fhhl("u"):
 			return FieldType::UUID;
 		case _.fhhl("x"):

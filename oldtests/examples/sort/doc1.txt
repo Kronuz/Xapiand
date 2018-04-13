@@ -4,22 +4,22 @@
 		"en": {
 			"_index": "all",
 			"_value": ["cook", "cooked"],
-			"_type": "term"
+			"_type": "keyword"
 		},
 		"es": {
 			"_index": "all",
 			"_value": ["cocinar", "cocido"],
-			"_type": "term"
+			"_type": "keyword"
 		},
 		"fr": {
 			"_index": "all",
 			"_value": ["cuire", "cuit"],
-			"_type": "term"
+			"_type": "keyword"
 		},
 		"de": {
 			"_index": "all",
 			"_value": ["coch", "gecocht"],
-			"_type": "term"
+			"_type": "keyword"
 		}
 	},
 	"location": ["POINT(10 21)", "POINT(10 20)"],

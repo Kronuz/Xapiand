@@ -1,7 +1,7 @@
 curl -XPUT "http://localhost:8880/test/doc?commit" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
 {
 	"_id": {
-		"_type": "term",
+		"_type": "keyword",
 	},
 	"ident": {
 		"_type": "uuid",
@@ -31,7 +31,7 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 		"_value": "valor"
 	},
 	"roles": {
-		"_type": "array/term",
+		"_type": "array/keyword",
 		"_value": [
 			null,  // <- there was an error when extracting _value from here
 		],
@@ -113,7 +113,7 @@ curl -XPUT "http://localhost:8880/test/feed_cache/A" -H "Accept: application/jso
 {
 	"~notmet": {
 		"roles": {
-			"_type": "array/term",
+			"_type": "array/keyword",
 			"_index": "all",
 			"_value": [
 				"myself",
@@ -126,7 +126,7 @@ curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/jso
 {
 	"~3pZyPcFqGq": {
 		"roles": {
-			"_type": "array/term",
+			"_type": "array/keyword",
 			"_index": "all",
 			"_value": [
 				"myself",
@@ -139,7 +139,7 @@ curl -XPUT "http://localhost:8880/test/feed_cache/C" -H "Accept: application/jso
 {
 	"~SsQg3rJrx3P": {
 		"roles": {
-			"_type": "array/term",
+			"_type": "array/keyword",
 			"_index": "all",
 			"_value": [
 				"myself",

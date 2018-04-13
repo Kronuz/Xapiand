@@ -185,7 +185,7 @@ constexpr uint8_t INTEGER_CHAR       = 'I';
 constexpr uint8_t OBJECT_CHAR        = 'O';
 constexpr uint8_t POSITIVE_CHAR      = 'P';
 constexpr uint8_t TEXT_CHAR          = 'S';
-constexpr uint8_t TERM_CHAR          = 'T';
+constexpr uint8_t KEYWORD_CHAR       = 'K';
 constexpr uint8_t UUID_CHAR          = 'U';
 constexpr uint8_t SCRIPT_CHAR        = 'X';
 constexpr uint8_t TIME_CHAR          = 'Z';
@@ -204,7 +204,7 @@ enum class FieldType : uint8_t {
 	OBJECT        = OBJECT_CHAR,
 	POSITIVE      = POSITIVE_CHAR,
 	TEXT          = TEXT_CHAR,
-	TERM          = TERM_CHAR,
+	KEYWORD       = KEYWORD_CHAR,
 	UUID          = UUID_CHAR,
 	SCRIPT        = SCRIPT_CHAR,
 	TIME          = TIME_CHAR,
@@ -416,7 +416,7 @@ struct required_spc_t {
 			case FieldType::SCRIPT:
 				return 'X';
 
-			case FieldType::TERM:
+			case FieldType::KEYWORD:
 			case FieldType::STRING:
 			case FieldType::TEXT:
 				return 'S';

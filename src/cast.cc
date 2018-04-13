@@ -39,7 +39,7 @@ Cast::cast(const MsgPack& obj)
 				return _float(obj.at(str_key));
 			case Hash::BOOLEAN:
 				return boolean(obj.at(str_key));
-			case Hash::TERM:
+			case Hash::KEYWORD:
 			case Hash::TEXT:
 			case Hash::STRING:
 				return string(obj.at(str_key));
@@ -376,7 +376,7 @@ Cast::getType(std::string_view cast_word)
 		case Hash::POSITIVE:          return FieldType::POSITIVE;
 		case Hash::FLOAT:             return FieldType::FLOAT;
 		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
-		case Hash::TERM:              return FieldType::TERM;
+		case Hash::KEYWORD:           return FieldType::KEYWORD;
 		case Hash::TEXT:              return FieldType::TEXT;
 		case Hash::STRING:            return FieldType::STRING;
 		case Hash::UUID:              return FieldType::UUID;

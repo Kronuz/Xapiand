@@ -1,7 +1,7 @@
 curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
 {
 	"_id": {
-		"_type": "term"
+		"_type": "keyword"
 	}
 }'
 
@@ -9,7 +9,7 @@ curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4
 curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
 {
 	"_id": {
-		"_type": "term"
+		"_type": "keyword"
 	},
 	"cnt": {
 		"_type": "integer",

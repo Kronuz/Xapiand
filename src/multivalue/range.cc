@@ -201,7 +201,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return getNumericQuery<uint64_t>(field_spc, *start, *end);
 			case FieldType::UUID:
 			case FieldType::BOOLEAN:
-			case FieldType::TERM:
+			case FieldType::KEYWORD:
 			case FieldType::TEXT:
 			case FieldType::STRING:
 				return getStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));

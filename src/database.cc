@@ -45,7 +45,7 @@
 #include "manager.h"              // for sig_exit
 #include "msgpack.h"              // for MsgPack
 #include "msgpack/unpack.hpp"     // for unpack_error
-#include "schema.h"               // for FieldType, FieldType::TERM
+#include "schema.h"               // for FieldType, FieldType::KEYWORD
 #include "serialise.h"            // for uuid
 #include "string.hh"              // for string::from_delta
 #include "utils.h"                // for repr, to_string, File_ptr, find_fil...

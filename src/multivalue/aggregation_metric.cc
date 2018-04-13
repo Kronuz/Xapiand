@@ -44,7 +44,7 @@ static func_value_handle get_func_value_handle(FieldType type, std::string_view 
 			return &SubAggregation::_aggregate_timedelta;
 		case FieldType::BOOLEAN:
 			return &SubAggregation::_aggregate_boolean;
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
 			return &SubAggregation::_aggregate_string;

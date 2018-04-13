@@ -379,7 +379,8 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					hh(RESERVED_POSITIVE),
 					hh(RESERVED_INTEGER),
 					hh(RESERVED_BOOLEAN),
-					hh(RESERVED_TERM),
+					hh(RESERVED_TERM),  // FIXME: remove legacy term
+					hh(RESERVED_KEYWORD),
 					hh(RESERVED_TEXT),
 					hh(RESERVED_DATE),
 					hh(RESERVED_UUID),
@@ -475,7 +476,8 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					case _.fhh(RESERVED_BOOLEAN):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_TERM):
+					case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
+					case _.fhh(RESERVED_KEYWORD):
 						query = process_cast(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh(RESERVED_TEXT):
@@ -840,7 +842,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			return parser.parse_query("_:" + std::string(serialised_term), q_flags);
 		}
 
-		case FieldType::TERM: {
+		case FieldType::KEYWORD: {
 			std::string lower;
 			if (!field_spc.flags.bool_term) {
 				lower = string::lower(serialised_term);

@@ -66,7 +66,7 @@ constexpr static auto INTEGER    = static_string::string(INTEGER_CHAR);
 constexpr static auto OBJECT     = static_string::string(OBJECT_CHAR);
 constexpr static auto POSITIVE   = static_string::string(POSITIVE_CHAR);
 constexpr static auto TEXT       = static_string::string(TEXT_CHAR);
-constexpr static auto TERM       = static_string::string(TERM_CHAR);
+constexpr static auto KEYWORD    = static_string::string(KEYWORD_CHAR);
 constexpr static auto UUID       = static_string::string(UUID_CHAR);
 constexpr static auto SCRIPT     = static_string::string(SCRIPT_CHAR);
 constexpr static auto TIME       = static_string::string(TIME_CHAR);
@@ -742,7 +742,8 @@ _get_type(std::string_view str_type)
 		hhl("array/integer"),
 		hhl("array/positive"),
 		hhl("array/string"),
-		hhl("array/term"),
+		hhl("array/term"),  // FIXME: remove legacy term
+		hhl("array/keyword"),
 		hhl("array/text"),
 		hhl("array/time"),
 		hhl("array/timedelta"),
@@ -764,7 +765,8 @@ _get_type(std::string_view str_type)
 		hhl("object/array/integer"),
 		hhl("object/array/positive"),
 		hhl("object/array/string"),
-		hhl("object/array/term"),
+		hhl("object/array/term"),  // FIXME: remove legacy term
+		hhl("object/array/keyword"),
 		hhl("object/array/text"),
 		hhl("object/array/time"),
 		hhl("object/array/timedelta"),
@@ -776,7 +778,8 @@ _get_type(std::string_view str_type)
 		hhl("object/integer"),
 		hhl("object/positive"),
 		hhl("object/string"),
-		hhl("object/term"),
+		hhl("object/term"),  // FIXME: remove legacy term
+		hhl("object/keyword"),
 		hhl("object/text"),
 		hhl("object/time"),
 		hhl("object/timedelta"),
@@ -784,7 +787,8 @@ _get_type(std::string_view str_type)
 		hhl("positive"),
 		hhl("script"),
 		hhl("string"),
-		hhl("term"),
+		hhl("term"),  // FIXME: remove legacy term
+		hhl("keyword"),
 		hhl("text"),
 		hhl("time"),
 		hhl("timedelta"),
@@ -824,8 +828,9 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhhl("array/term"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TERM          }};
+		case _.fhhl("array/term"):  // FIXME: remove legacy term
+		case _.fhhl("array/keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::KEYWORD       }};
 			return _;
 		}
 		case _.fhhl("array/text"): {
@@ -912,8 +917,9 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhhl("object/array/term"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TERM          }};
+		case _.fhhl("object/array/term"):  // FIXME: remove legacy term
+		case _.fhhl("object/array/keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::KEYWORD       }};
 			return _;
 		}
 		case _.fhhl("object/array/text"): {
@@ -960,8 +966,9 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhhl("object/term"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TERM          }};
+		case _.fhhl("object/term"):  // FIXME: remove legacy term
+		case _.fhhl("object/keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::KEYWORD       }};
 			return _;
 		}
 		case _.fhhl("object/text"): {
@@ -992,8 +999,9 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }};
 			return _;
 		}
-		case _.fhhl("term"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TERM          }};
+		case _.fhhl("term"):  // FIXME: remove legacy term
+		case _.fhhl("keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::KEYWORD       }};
 			return _;
 		}
 		case _.fhhl("text"): {
@@ -1058,7 +1066,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + ARRAY  + INTEGER),
 		hh(EMPTY   + EMPTY   + ARRAY  + POSITIVE),
 		hh(EMPTY   + EMPTY   + ARRAY  + STRING),
-		hh(EMPTY   + EMPTY   + ARRAY  + TERM),
+		hh(EMPTY   + EMPTY   + ARRAY  + KEYWORD),
 		hh(EMPTY   + EMPTY   + ARRAY  + TEXT),
 		hh(EMPTY   + EMPTY   + ARRAY  + TIME),
 		hh(EMPTY   + EMPTY   + ARRAY  + TIMEDELTA),
@@ -1080,7 +1088,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + ARRAY  + INTEGER),
 		hh(EMPTY   + OBJECT  + ARRAY  + POSITIVE),
 		hh(EMPTY   + OBJECT  + ARRAY  + STRING),
-		hh(EMPTY   + OBJECT  + ARRAY  + TERM),
+		hh(EMPTY   + OBJECT  + ARRAY  + KEYWORD),
 		hh(EMPTY   + OBJECT  + ARRAY  + TEXT),
 		hh(EMPTY   + OBJECT  + ARRAY  + TIME),
 		hh(EMPTY   + OBJECT  + ARRAY  + TIMEDELTA),
@@ -1092,7 +1100,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + EMPTY  + INTEGER),
 		hh(EMPTY   + OBJECT  + EMPTY  + POSITIVE),
 		hh(EMPTY   + OBJECT  + EMPTY  + STRING),
-		hh(EMPTY   + OBJECT  + EMPTY  + TERM),
+		hh(EMPTY   + OBJECT  + EMPTY  + KEYWORD),
 		hh(EMPTY   + OBJECT  + EMPTY  + TEXT),
 		hh(EMPTY   + OBJECT  + EMPTY  + TIME),
 		hh(EMPTY   + OBJECT  + EMPTY  + TIMEDELTA),
@@ -1100,7 +1108,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + EMPTY  + POSITIVE),
 		hh(EMPTY   + EMPTY   + EMPTY  + SCRIPT),
 		hh(EMPTY   + EMPTY   + EMPTY  + STRING),
-		hh(EMPTY   + EMPTY   + EMPTY  + TERM),
+		hh(EMPTY   + EMPTY   + EMPTY  + KEYWORD),
 		hh(EMPTY   + EMPTY   + EMPTY  + TEXT),
 		hh(EMPTY   + EMPTY   + EMPTY  + TIME),
 		hh(EMPTY   + EMPTY   + EMPTY  + TIMEDELTA),
@@ -1140,12 +1148,12 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("array/positive");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + ARRAY  + STRING): {
-			static const std::string str_type("array/string");
+		case _.fhh(EMPTY   + EMPTY   + ARRAY  + KEYWORD): {
+			static const std::string str_type("array/keyword");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + ARRAY  + TERM): {
-			static const std::string str_type("array/term");
+		case _.fhh(EMPTY   + EMPTY   + ARRAY  + STRING): {
+			static const std::string str_type("array/string");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + EMPTY   + ARRAY  + TEXT): {
@@ -1232,8 +1240,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/array/string");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + ARRAY  + TERM): {
-			static const std::string str_type("object/array/term");
+		case _.fhh(EMPTY   + OBJECT  + ARRAY  + KEYWORD): {
+			static const std::string str_type("object/array/keyword");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + ARRAY  + TEXT): {
@@ -1280,8 +1288,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/string");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + EMPTY  + TERM): {
-			static const std::string str_type("object/term");
+		case _.fhh(EMPTY   + OBJECT  + EMPTY  + KEYWORD): {
+			static const std::string str_type("object/keyword");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + EMPTY  + TEXT): {
@@ -1312,8 +1320,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("string");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + EMPTY  + TERM): {
-			static const std::string str_type("term");
+		case _.fhh(EMPTY   + EMPTY   + EMPTY  + KEYWORD): {
+			static const std::string str_type("keyword");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + EMPTY   + EMPTY  + TEXT): {
@@ -1815,7 +1823,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'string', 'term', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -1976,7 +1984,7 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::TIMEDELTA:
 		case FieldType::GEO:
 		case FieldType::UUID:
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 			return field_type;
 
 		case FieldType::TEXT:
@@ -2029,8 +2037,8 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::TERM: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TERM, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::KEYWORD: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::KEYWORD, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		case FieldType::TEXT:
@@ -4437,7 +4445,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 			if (!specification.flags.has_index) {
 				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				specification.flags.has_index = true;
@@ -4624,7 +4632,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::TERM: {
+		case FieldType::KEYWORD: {
 			if (!specification.flags.has_index) {
 				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
 				if (specification.index != index) {
@@ -4776,7 +4784,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			if (specification.flags.term_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
 				return;
 			}
 			if (specification.flags.bool_detection) {
@@ -5177,7 +5185,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			break;
 		}
 
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 			if (!field_spc.flags.bool_term) {
 				string::to_lower(serialise_val);
 			}
@@ -5361,9 +5369,9 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
 			return;
 		}
-		case FieldType::TERM:
-		case FieldType::TEXT:
-		case FieldType::STRING: {
+		case FieldType::KEYWORD:
+		case FieldType::STRING:
+		case FieldType::TEXT: {
 			try {
 				auto ser_value = value.str();
 				if (field_spc != nullptr) {
@@ -5585,7 +5593,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::TERM:
+		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING: {
 			try {
@@ -6192,7 +6200,8 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_POSITIVE),
 		hh(RESERVED_INTEGER),
 		hh(RESERVED_BOOLEAN),
-		hh(RESERVED_TERM),
+		hh(RESERVED_TERM),  // FIXME: remove legacy term
+		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
 		hh(RESERVED_DATE),
@@ -6263,7 +6272,8 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_POSITIVE),
 		hh(RESERVED_INTEGER),
 		hh(RESERVED_BOOLEAN),
-		hh(RESERVED_TERM),
+		hh(RESERVED_TERM),  // FIXME: remove legacy term
+		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
 		hh(RESERVED_DATE),
@@ -6361,7 +6371,8 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_BOOLEAN):
 			Schema::process_cast_object(prop_name, value);
 			return true;
-		case _.fhh(RESERVED_TERM):
+		case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
+		case _.fhh(RESERVED_KEYWORD):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_TEXT):
@@ -8258,13 +8269,13 @@ Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_boo
 	L_CALL("Schema::consistency_bool_term(%s)", repr(doc_bool_term.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TERM) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", repr(specification.full_meta_name));
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in term type fields", repr(prop_name));
+			THROW(ClientError, "%s only is allowed in keyword type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean", repr(prop_name));
@@ -8589,7 +8600,7 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 
 	// ID_FIELD_NAME cannot be text or string.
 	if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
-		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
+		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
 	}
 	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
 	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
@@ -8616,8 +8627,8 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 
 	// ID_FIELD_NAME cannot be TEXT nor STRING.
 	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
-		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
-		L_DEBUG("%s cannot be type text or string, it's type was changed to term", ID_FIELD_NAME);
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
+		L_DEBUG("%s cannot be type string or text, it's type was changed to keyword", ID_FIELD_NAME);
 	}
 
 	// Set default prefix
@@ -8876,7 +8887,7 @@ Schema::get_data_id() const
 			}
 			break;
 		}
-		case FieldType::TERM: {
+		case FieldType::KEYWORD: {
 			auto id_bool_term_it = id_properties.find(RESERVED_BOOL_TERM);
 			if (id_bool_term_it != id_it_e) {
 				res.flags.bool_term = id_bool_term_it.value().boolean();
@@ -9007,7 +9018,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::TERM: {
+				case FieldType::KEYWORD: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
 						res.language = language_it.value().str();
@@ -9061,7 +9072,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::TERM: {
+				case FieldType::KEYWORD: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
 						res.language = language_it.value().str();
@@ -9101,7 +9112,7 @@ Schema::get_slot_field(std::string_view field_name) const
 	}
 
 	if (res.flags.inside_namespace) {
-		res.sep_types[SPC_CONCRETE_TYPE] = FieldType::TERM;
+		res.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
 		res.slot = get_slot(spc.prefix, res.get_ctype());
 	} else {
 		const auto& properties = *spc.properties;
@@ -9160,7 +9171,7 @@ Schema::get_slot_field(std::string_view field_name) const
 				}
 				break;
 			}
-			case FieldType::TERM: {
+			case FieldType::KEYWORD: {
 				auto language_it = properties.find(RESERVED_LANGUAGE);
 				if (language_it != it_e) {
 					res.language = language_it.value().str();

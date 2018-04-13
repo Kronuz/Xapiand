@@ -1758,8 +1758,8 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 			db_handler.get_document(document_id);
 		} catch (const DocNotFoundError&) {
 			static const MsgPack obj = {
-				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
-				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "keyword"          }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "keyword" }, { RESERVED_INDEX, "field_terms"  } } },
 				{ "reference",   { { RESERVED_VALUE, 1                  }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
@@ -1785,8 +1785,8 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() + 1;
 			const MsgPack obj = {
-				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
-				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "keyword"          }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "keyword" }, { RESERVED_INDEX, "field_terms"  } } },
 				{ "reference",   { { RESERVED_VALUE, nref               }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
@@ -1794,8 +1794,8 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
 			static const MsgPack obj = {
-				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
-				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "keyword"          }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "keyword" }, { RESERVED_INDEX, "field_terms"  } } },
 				{ "reference",   { { RESERVED_VALUE, 1                  }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
@@ -1821,8 +1821,8 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 			auto document = db_handler.get_document(document_id);
 			auto nref = document.get_value("reference").i64() - 1;
 			const MsgPack obj = {
-				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "term"             }, { RESERVED_INDEX, "field"   } } },
-				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "term"    }, { RESERVED_INDEX, "field_terms"  } } },
+				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "keyword"          }, { RESERVED_INDEX, "field"   } } },
+				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "keyword" }, { RESERVED_INDEX, "field_terms"  } } },
 				{ "reference",   { { RESERVED_VALUE, nref               }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);

@@ -41,9 +41,9 @@
 constexpr const char FLOAT_STR[]     = "float";
 constexpr const char INTEGER_STR[]   = "integer";
 constexpr const char POSITIVE_STR[]  = "positive";
-constexpr const char TERM_STR[]      = "term";
-constexpr const char TEXT_STR[]      = "text";
+constexpr const char KEYWORD_STR[]   = "keyword";
 constexpr const char STRING_STR[]    = "string";
+constexpr const char TEXT_STR[]      = "text";
 constexpr const char DATE_STR[]      = "date";
 constexpr const char TIME_STR[]      = "time";
 constexpr const char TIMEDELTA_STR[] = "timedelta";

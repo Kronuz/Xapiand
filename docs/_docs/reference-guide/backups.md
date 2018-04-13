@@ -113,7 +113,7 @@ PUT /new_twitter/:schema
       "_type": "integer",
     },
     "user": {
-      "_type": "term"
+      "_type": "keyword"
     },
     "postDate": {
       "_type": "datetime"
