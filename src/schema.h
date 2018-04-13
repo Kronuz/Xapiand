@@ -409,7 +409,43 @@ struct required_spc_t {
 	}
 
 	static char get_ctype(FieldType type) noexcept {
-		return toupper(toUType(type));
+		switch (type) {
+			case FieldType::UUID:
+				return 'U';
+
+			case FieldType::SCRIPT:
+				return 'X';
+
+			case FieldType::TERM:
+			case FieldType::STRING:
+			case FieldType::TEXT:
+				return 'S';
+
+			case FieldType::POSITIVE:
+			case FieldType::INTEGER:
+			case FieldType::FLOAT:
+				return 'N';
+
+			case FieldType::BOOLEAN:
+				return 'B';
+
+			case FieldType::DATE:
+				return 'D';
+
+			case FieldType::TIMEDELTA:
+			case FieldType::TIME:
+				return 'T';
+
+			case FieldType::GEO:
+				return 'G';
+
+			case FieldType::EMPTY:
+			case FieldType::ARRAY:
+			case FieldType::OBJECT:
+			case FieldType::FOREIGN:
+			default:
+				return '\x00';
+		}
 	}
 
 	char get_ctype() const noexcept {
