@@ -88,6 +88,10 @@ struct ct_type_t {
 		return !operator==(other);
 	}
 
+	bool operator<(const ct_type_t& other) const noexcept {
+		return first != other.first ? first < other.first : second < other.second;
+	}
+
 	void clear() noexcept {
 		first.clear();
 		second.clear();
@@ -235,6 +239,10 @@ public:
 			result.append(data());
 			result.insert(0, serialise_length(result.size()));
 			return result;
+		}
+
+		bool operator<(const Locator& other) const noexcept {
+			return ct_type < other.ct_type;
 		}
 	};
 
