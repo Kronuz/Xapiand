@@ -2923,7 +2923,7 @@ Request::_decode()
 	if (!raw.empty() && _decoded_body.is_undefined()) {
 		// Create a decoded MsgPack object from the raw body
 
-		std::string_view ct_type_str = ct_type.to_string();
+		std::string ct_type_str = ct_type.to_string();
 		if (ct_type_str.empty()) {
 			ct_type_str = JSON_CONTENT_TYPE;
 		}
