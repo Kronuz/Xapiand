@@ -203,14 +203,6 @@ public:
 };
 
 
-template<typename F, typename... Args>
-lock_database::lock_database(DatabaseHandler* db_handler_, F&& f, Args&&... args)
-	: db_handler(db_handler_)
-{
-	lock(std::forward<F>(f), std::forward<Args>(args)...);
-}
-
-
 lock_database::lock_database(DatabaseHandler* db_handler_)
 	: db_handler(db_handler_)
 {
@@ -223,23 +215,6 @@ lock_database::~lock_database()
 	if (db_handler != nullptr) {
 		if (db_handler->database) {
 			unlock();
-		}
-	}
-}
-
-
-template<typename F, typename... Args>
-void
-lock_database::lock(F&& f, Args&&... args)
-{
-	L_CALL("lock_database::lock(...)");
-
-	if (db_handler) {
-		if (db_handler->database) {
-			++db_handler->database_locks;
-		} else {
-			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags, std::forward<F>(f), std::forward<Args>(args)...);
-			++db_handler->database_locks;
 		}
 	}
 }

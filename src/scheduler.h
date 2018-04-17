@@ -41,7 +41,7 @@ class Scheduler;
 using TaskType = std::shared_ptr<ScheduledTask>;
 
 
-class ScheduledTask : public Task<>, public std::enable_shared_from_this<ScheduledTask> {
+class ScheduledTask : public std::enable_shared_from_this<ScheduledTask> {
 	friend class Scheduler;
 
 protected:
@@ -52,7 +52,9 @@ protected:
 public:
 	explicit ScheduledTask(const std::chrono::time_point<std::chrono::system_clock>& created_at_ = std::chrono::system_clock::now());
 
-	~ScheduledTask() = default;
+	virtual ~ScheduledTask() = default;
+
+	virtual void run() = 0;
 
 	explicit operator bool() const noexcept {
 		return !cleared_at;
@@ -103,7 +105,7 @@ public:
 class Scheduler {
 	std::mutex mtx;
 
-	std::unique_ptr<ThreadPool<>> thread_pool;
+	std::unique_ptr<ThreadPool> thread_pool;
 
 	std::condition_variable wakeup_signal;
 	std::atomic_ullong atom_next_wakeup_time;
@@ -119,7 +121,7 @@ class Scheduler {
 
 public:
 	explicit Scheduler(std::string  name_);
-	Scheduler(std::string  name_, const std::string& format, size_t num_threads);
+	Scheduler(std::string  name_, const char* format, size_t num_threads);
 	~Scheduler();
 
 	size_t threadpool_capacity();

@@ -623,7 +623,9 @@ XapiandManager::make_servers()
 			Worker::make_shared<RaftServer>(server, server->ev_loop, ev_flags, raft);
 		}
 #endif
-		server_pool.enqueue(std::move(server));
+		server_pool.enqueue([task = std::move(server)]{
+			task->run();
+		});
 	}
 
 	// Make server protocols weak:

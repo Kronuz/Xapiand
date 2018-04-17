@@ -153,13 +153,9 @@ class lock_database {
 	lock_database& operator=(const lock_database&) = delete;
 
 public:
-	template<typename F, typename... Args>
-	lock_database(DatabaseHandler* db_handler_, F&& f, Args&&... args);
 	lock_database(DatabaseHandler* db_handler_);
 	~lock_database();
 
-	template<typename F, typename... Args>
-	void lock(F&& f, Args&&... args);
 	void lock();
 
 	void unlock();

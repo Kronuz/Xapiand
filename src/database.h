@@ -373,8 +373,6 @@ private:
 	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
-	TaskQueue<> checkin_callbacks;
-
 protected:
 	template <typename... Args>
 	DatabaseQueue(Args&&... args);
@@ -445,7 +443,7 @@ class DatabasePool {
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 	template<typename F, typename... Args>
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags) {
 		try {
 			checkout(database, endpoints, flags);
 		} catch (const CheckoutError& e) {
@@ -457,9 +455,6 @@ class DatabasePool {
 			} else {
 				queue = databases.get(endpoints.hash(), flags & DB_VOLATILE);
 			}
-
-			queue->checkin_callbacks.clear();
-			queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
 
 			throw e;
 		}

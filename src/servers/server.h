@@ -43,7 +43,7 @@ class RaftServer;
 class XapiandManager;
 
 
-class XapiandServer : public Task<>, public Worker {
+class XapiandServer : public Worker {
 	friend Worker;
 	friend XapiandManager;
 
@@ -75,5 +75,5 @@ public:
 
 	~XapiandServer();
 
-	void run() override;
+	void run();
 };

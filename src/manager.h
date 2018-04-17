@@ -139,10 +139,10 @@ public:
 	DatabasePool database_pool;
 	SchemasLRU schemas;
 
-	ThreadPool<> thread_pool;
-	ThreadPool<> server_pool;
+	ThreadPool thread_pool;
+	ThreadPool server_pool;
 #ifdef XAPIAND_CLUSTERING
-	ThreadPool<> replicator_pool;
+	ThreadPool replicator_pool;
 #endif
 #ifdef XAPIAND_CLUSTERING
 	EndpointResolver endp_r;

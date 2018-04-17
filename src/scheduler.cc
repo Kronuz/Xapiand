@@ -127,8 +127,8 @@ Scheduler::Scheduler(std::string  name_)
 	  inner_thread(&Scheduler::run, this) { }
 
 
-Scheduler::Scheduler(std::string  name_, const std::string& format, size_t num_threads)
-	: thread_pool(std::make_unique<ThreadPool<>>(format, num_threads)),
+Scheduler::Scheduler(std::string name_, const char* format, size_t num_threads)
+	: thread_pool(std::make_unique<ThreadPool>(format, num_threads)),
 	  atom_next_wakeup_time(0),
 	  name(std::move(name_)),
 	  running(-1),
@@ -260,7 +260,9 @@ Scheduler::run_one(TaskType& task)
 			L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 			if (thread_pool) {
 				try {
-					thread_pool->enqueue(task);
+					thread_pool->enqueue([task]{
+						task->run();
+					});
 				} catch (const std::logic_error&) { }
 			} else {
 				task->run();

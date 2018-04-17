@@ -234,7 +234,7 @@ public:
 
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
-class HttpClient : public Task<>, public BaseClient {
+class HttpClient : public BaseClient {
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
@@ -331,5 +331,5 @@ public:
 	~HttpClient();
 
 	void run_one(Request& request, Response& response);
-	void run() override;
+	void run();
 };

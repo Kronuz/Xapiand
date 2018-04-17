@@ -31,14 +31,14 @@ using namespace queue;
 int test_pool() {
 	INIT_LOG
 	std::string results;
-	ThreadPool<> pool("W%zu", 4);
-	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
+	ThreadPool pool("W%zu", 4);
+	pool.enqueue([task = std::make_shared<TestTask>("1", 0.08, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.02, results));
+	pool.enqueue([task = std::make_shared<TestTask>("2", 0.02, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.04, results));
+	pool.enqueue([task = std::make_shared<TestTask>("3", 0.04, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.01, results));
+	pool.enqueue([task = std::make_shared<TestTask>("4", 0.01, results)]{ task->run(); });
 	pool.end();
 	pool.join();
 
@@ -54,14 +54,14 @@ int test_pool() {
 int test_pool_limit() {
 	INIT_LOG
 	std::string results;
-	ThreadPool<> pool("W%zu", 3);
-	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
+	ThreadPool pool("W%zu", 3);
+	pool.enqueue([task = std::make_shared<TestTask>("1", 0.08, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.02, results));
+	pool.enqueue([task = std::make_shared<TestTask>("2", 0.02, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.04, results));
+	pool.enqueue([task = std::make_shared<TestTask>("3", 0.04, results)]{ task->run(); });
 	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.01, results));
+	pool.enqueue([task = std::make_shared<TestTask>("4", 0.01, results)]{ task->run(); });
 	pool.end();
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
@@ -75,7 +75,7 @@ int test_pool_limit() {
 
 int test_pool_func() {
 	INIT_LOG
-	ThreadPool<> pool("W%zu", 4);
+	ThreadPool pool("W%zu", 4);
 	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 
@@ -122,7 +122,7 @@ int test_pool_func() {
 
 int test_pool_func_shared() {
 	INIT_LOG
-	ThreadPool<> pool("W%zu", 4);
+	ThreadPool pool("W%zu", 4);
 	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 
@@ -170,7 +170,7 @@ int test_pool_func_shared() {
 
 int test_pool_func_unique() {
 	INIT_LOG
-	ThreadPool<> pool("W%zu", 4);
+	ThreadPool pool("W%zu", 4);
 	std::vector<std::shared_future<int>> results;
 	test_pool_class_t obj;
 

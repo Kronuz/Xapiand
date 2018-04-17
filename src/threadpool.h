@@ -24,317 +24,283 @@
 
 #include "xapiand.h"
 
-#include <cassert>       // for assert
-#include <future>        // for future
-#include <stdexcept>     // for logic_error
-#include <string>        // for string
-#include <thread>        // for thread
-#include <tuple>         // for tuple_size, tuple_cat
-#include <vector>        // for vector
+#include <atomic>         // for std::atomic
+#include <cstddef>        // for std::size_t
+#include <future>         // for std::future, std::packaged_task
+#include <mutex>          // for std::mutex
+#include <thread>         // for std::thread
+#include <tuple>          // for std::make_tuple, std::apply
+#include <vector>         // for std::vector
 
-#include "exception.h"   // for Exception
-#include "log.h"         // for L_DEBUG, L_EXC, L_NOTHING
-#include "queue.h"       // for Queue
+#include "blocking_concurrent_queue.h"
+#include "string.hh"     // for string::format
 #include "utils.h"       // for set_thread_name
 
 
-#ifndef L_THREADPOOL
-#define L_THREADPOOL_DEFINED
-#define L_THREADPOOL(args...)
-#endif
-
-#ifndef L_EXC
-#define L_EXC_DEFINED
-#define L_EXC(args...)
-#endif
-
-
-template<typename F, typename Tuple, std::size_t... I>
-static constexpr auto apply_args_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
-	return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
-}
-
-
-template<typename F, typename Tuple>
-static constexpr auto apply_args(F&& f, Tuple&& t) {
-	using Indices = std::make_index_sequence<std::tuple_size<std::decay_t<Tuple>>::value>;
-	return apply_args_impl(std::forward<F>(f), std::forward<Tuple>(t), Indices{});
-}
-
-
-// Custom function wrapper that can handle move-only types like std::packaged_task.
-template<typename F>
-class function_mo : private std::function<F> {
-	template<typename Fun>
-	struct impl_move {
-		Fun f;
-
-		explicit impl_move(Fun f_) : f(std::move(f_)) { }
-		impl_move(impl_move&&) = default;
-		impl_move& operator =(impl_move&&) = default;
-		impl_move(const impl_move&) { assert(false); };
-		impl_move& operator =(const impl_move&) { assert(false); };
-
-		template<typename... Args>
-		auto operator()(Args&&... args) {
-			return f(std::forward<Args>(args)...);
-		}
-	};
-
-public:
-	template<typename Fun, typename = std::enable_if_t<!std::is_copy_constructible<Fun>::value && !std::is_copy_assignable<Fun>::value>>
-	explicit function_mo(Fun fun) : std::function<F>(impl_move<Fun>(std::move(fun))) { }
-
-	function_mo() = default;
-	function_mo(function_mo&&) = default;
-	function_mo& operator =(function_mo&&) = default;
-	function_mo(const function_mo&) = delete;
-	function_mo& operator =(const function_mo&) = delete;
-
-	using std::function<F>::operator();
-
-	virtual void get() { }
-
-	virtual ~function_mo() = default;
-};
-
-
-template<typename F, typename R>
-class packed_function_mo : public function_mo<F> {
-	R r;
-
-public:
-	template<typename Fun, typename = std::enable_if_t<!std::is_copy_constructible<Fun>::value && !std::is_copy_assignable<Fun>::value>>
-	packed_function_mo(Fun fun, R res) : function_mo<F>(std::move(fun)), r(std::move(res)) { }
-
-	packed_function_mo() = default;
-	packed_function_mo(packed_function_mo&&) = default;
-	packed_function_mo& operator =(packed_function_mo&&) = default;
-	packed_function_mo(const packed_function_mo&) = delete;
-	packed_function_mo& operator =(const packed_function_mo&) = delete;
-
-	void get() override {
-		r.get();
-	}
-};
-
-
-template<typename... Params>
-class TaskQueue;
-
-
-/*
- *   Base task for Tasks
- *   run() should be overloaded and expensive calculations done there
+/* Since std::packaged_task cannot be copied, and std::function requires it can,
+ * we add a dummy copy constructor to std::packaged_task. (We need to make sure
+ * we actually really never copy the object though!)
+ * [https://stackoverflow.com/q/39996132/167522]
  */
+template <typename Result>
+class PackagedTask : public std::packaged_task<Result> {
+  public:
+	template <typename F>
+	explicit PackagedTask(F&& f)
+	  : std::packaged_task<Result>(std::forward<F>(f)) {}
 
-template<typename... Params>
-class Task {
-	friend TaskQueue<Params...>;
+	PackagedTask(PackagedTask&& other)
+	  : std::packaged_task<Result>(static_cast<std::packaged_task<Result>&&>(other)) {}
 
-public:
-	virtual void run(Params...) = 0;
-
-	virtual ~Task() = default;
+	PackagedTask(const PackagedTask& /*unused*/) {
+		// Adding this borks the compile
+		assert(false);  // but should never be called!
+	}
 };
 
 
-template<typename... Params>
-class TaskQueue {
-protected:
-	queue::Queue<std::unique_ptr<function_mo<void(Params...)>>> tasks;
+class ThreadPool;
+class Thread {
+	ThreadPool* _pool;
+	size_t _idx;
+	std::thread _thread;
 
 public:
-	// Wait for the threads to finish
-	virtual ~TaskQueue() {
-		finish();
+	Thread() noexcept;
+
+	Thread(size_t idx, ThreadPool* pool) noexcept;
+
+	Thread(const Thread&) = delete;
+
+	Thread& operator=(Thread&& other) {
+		_pool = std::move(other._pool);
+		_idx = std::move(other._idx);
+		_thread = std::move(other._thread);
+		return *this;
 	}
 
-	// Function that retrieves a task from a fifo queue, runs it and deletes it
-	template<typename... Params_>
-	bool call(Params_&&... params) {
-		std::unique_ptr<function_mo<void(Params...)>> task;
-		if (TaskQueue::tasks.pop(task, 0)) {
-			(*task)(std::forward<Params_>(params)...);
-			task->get();
-			return true;
-		} else {
-			return false;
-		}
-	}
+	void start();
 
-	// Enqueues any function to be executed
-	template<typename F, typename... Args>
-	auto enqueue(F&& f, Args&&... args) -> std::shared_future<std::result_of_t<F(Params..., Args...)>> {
-		auto packed_task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
-		(
-			[f = std::forward<F>(f), t = std::make_tuple(std::forward<Args>(args)...)] (Params... params) mutable {
-				return apply_args(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
-			}
-		);
-		auto res = packed_task.get_future().share();
-		if (!tasks.push(std::make_unique<packed_function_mo<void(Params...), std::shared_future<std::result_of_t<F(Params..., Args...)>>>>(std::move(packed_task), res))) {
-			throw std::logic_error("Unable to enqueue task");
-		}
-		return res;
-	}
+	bool joinable() const noexcept;
 
-	// Enqueues a Task object to be executed
-	template<typename... Args>
-	auto enqueue(std::shared_ptr<Task<Params...>> nt, Args&&... args) {
-		return enqueue([nt = std::move(nt)](Params... params, Args... args) mutable {
-			nt->run(std::move(params)..., std::move(args)...);
-			nt.reset();
-		}, std::forward<Args>(args)...);
-	}
+	void join();
 
-	void clear() {
-		tasks.clear();
-	}
+	void operator()();
+};
 
-	// Tell the tasks to finish so all threads exit as soon as possible
-	void finish() {
-		tasks.finish();
-	}
+
+class ThreadPool {
+	friend Thread;
+
+	std::vector<Thread> _threads;
+	moodycamel::BlockingConcurrentQueue<std::pair<bool, std::function<void()>>> _queue;
+
+	const char* _format;
+
+	std::atomic_bool _ending;
+	std::atomic_bool _finished;
+	std::atomic_size_t _enqueued;
+	std::atomic_size_t _running;
+
+public:
+	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 100);
+
+	~ThreadPool();
+
+	void clear();
+	std::size_t size();
+	std::size_t running_size();
+	std::size_t threadpool_capacity();
+	std::size_t threadpool_size();
+
+	void join();
 
 	// Flag the pool as ending, so all threads exit as soon as all queued tasks end
-	void end() {
-		tasks.end();
-	}
+	void end();
 
-	// Return size of the tasks queue
-	size_t size() {
-		return tasks.size();
-	}
+	// Tell the tasks to finish so all threads exit as soon as possible
+	void finish(bool wait = false);
+
+	template <typename Func, typename... Args>
+	auto package(Func&& func, Args&&... args);
+
+	template <typename Result>
+	auto enqueue(PackagedTask<Result>&& packaged_task);
+
+	template <typename Func, typename... Args, typename = std::result_of_t<Func(Args...)>()>
+	auto enqueue(Func&& func, Args&&... args);
 };
 
 
-template<typename... Params>
-class ThreadPool : public TaskQueue<Params...> {
-	std::function<void(size_t)> worker;
-	std::atomic_size_t running_tasks;
-	std::atomic_bool full_pool;
-	std::string format;
-	std::vector<std::thread> threads;
-	std::mutex mtx;
+inline Thread::Thread() noexcept
+	: _pool(nullptr),
+	  _idx(0)
+{}
 
-	// Function that retrieves a task from a fifo queue, runs it and deletes it
-	template<typename... Params_>
-	void _worker(size_t idx, Params_&&... params) {
-		set_thread_name(string::format(format, idx));
-		std::unique_ptr<function_mo<void(Params...)>> task;
+inline Thread::Thread(size_t idx, ThreadPool* pool) noexcept
+	: _pool(pool),
+	  _idx(idx)
+{}
 
-		L_THREADPOOL("Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
-		while (TaskQueue<Params...>::tasks.pop(task)) {
-			++running_tasks;
-			try {
-				(*task)(std::forward<Params_>(params)...);
-				task->get();
-			} catch (const BaseException& exc) {
-				auto exc_context = exc.get_context();
-				if (!*exc_context) {
-					exc_context = "Unkown Exception!";
-				}
-				L_EXC("Task died with an unhandled exception: %s", exc_context);
-			} catch (const Xapian::Error& exc) {
-				L_EXC("Task died with an unhandled exception: %s", exc.get_description());
-			} catch (const std::exception& exc) {
-				auto exc_msg = exc.what();
-				if (!*exc_msg) {
-					exc_msg = "Unkown std::exception!";
-				}
-				L_EXC("Task died with an unhandled exception: %s", exc_msg);
-			} catch (...) {
-				std::exception exc;
-				L_EXC("Task died with an unhandled exception: Unkown!");
-			}
-			--running_tasks;
+inline void
+Thread::start()
+{
+	_thread = std::thread(&Thread::operator(), this);
+}
+
+inline bool
+Thread::joinable() const noexcept
+{
+	return _thread.joinable();
+}
+
+inline void Thread::join()
+{
+	try {
+		if (_thread.joinable()) {
+			_thread.join();
 		}
-		L_THREADPOOL("Worker %s ended.", name);
-	}
+	} catch (const std::system_error&) { }
+}
 
-	bool spawn_workers() {
-		if (full_pool) return false;
-		auto enqueued = TaskQueue<Params...>::size();
-		if (enqueued) {
-			std::lock_guard<std::mutex> lk(mtx);
-			auto threads_capacity = threads.capacity();
-			auto threads_size = threads.size();
-			while (enqueued-- > (threads_size - running_tasks) * 2 / 3 && threads_size < threads_capacity) {
-				threads.emplace_back(worker, threads.size());
-				threads_size = threads.size();
-			}
-			if (threads_size == threads_capacity) {
-				full_pool = true;
-			}
+inline void
+Thread::operator()()
+{
+	set_thread_name(string::format(_pool->_format, _idx));
+
+	while (!_pool->_finished.load(std::memory_order_acquire)) {
+		std::pair<bool, std::function<void()>> task;
+		_pool->_queue.wait_dequeue(task);
+		if likely(task.first) {
+			_pool->_enqueued.fetch_sub(1, std::memory_order_relaxed);
+			_pool->_running.fetch_add(1, std::memory_order_relaxed);
+			task.second();
+			_pool->_running.fetch_sub(1, std::memory_order_relaxed);
+		} else if (_pool->_ending.load(std::memory_order_acquire)) {
+			break;
 		}
-		return false;
 	}
+}
 
-public:
-	// Allocate a thread pool and set them to work trying to get tasks
-	template<typename... Params_>
-	ThreadPool(const std::string& format_, size_t num_threads, Params_&&... params)
-		: worker([&](size_t idx) {
-			ThreadPool::_worker<Params_...>(idx, std::forward<Params_>(params)...);
-		}),
-		/*  OLD BUGGY GCC COMPILERS NEED TO USE std::bind, AS IN:
-		: worker(std::bind([this](size_t idx, Params_&&... params) {
-			ThreadPool::_worker<Params_...>(idx, std::forward<Params_>(params)...);
-		}, format, std::placeholders::_1, std::forward<Params_>(params)...)),*/
-		running_tasks(0),
-		full_pool(false),
-		format(format_) {
-		threads.reserve(num_threads);
+
+inline
+ThreadPool::ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size)
+	: _threads(num_threads),
+	  _queue(queue_size),
+	  _format(format),
+	  _ending(false),
+	  _finished(false),
+	  _enqueued(0),
+	  _running(0)
+{
+	for (std::size_t idx = 0; idx < num_threads; ++idx) {
+		_threads[idx] = Thread(idx, this);
+		_threads[idx].start();
 	}
+}
 
-	// Wait for the threads to finish
-	~ThreadPool() {
-		join();
-	}
+inline
+ThreadPool::~ThreadPool()
+{
+	finish(true);
+}
 
-	template<typename... Args>
-	auto enqueue(Args&&... args) {
-		auto ret = TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
-		spawn_workers();
-		return ret;
-	}
-
-	// Wait for all threads
-	void join() {
-		std::lock_guard<std::mutex> lk(mtx);
-		for (auto& thread : threads) {
-			try {
-				if (thread.joinable()) {
-					thread.join();
-				}
-			} catch (const std::system_error&) { }
+inline void
+ThreadPool::clear() {
+	std::pair<bool, std::function<void()>> task;
+	while (_queue.try_dequeue(task)) {
+		if likely(task.first) {
+			_enqueued.fetch_sub(1, std::memory_order_relaxed);
 		}
-		threads.clear();
 	}
+}
 
-	size_t threadpool_capacity() {
-		std::lock_guard<std::mutex> lk(mtx);
-		return threads.capacity();
+// Return size of the tasks queue
+inline std::size_t
+ThreadPool::size()
+{
+	return _enqueued.load(std::memory_order_relaxed);
+}
+
+inline std::size_t
+ThreadPool::running_size()
+{
+	return _running.load(std::memory_order_relaxed);
+}
+
+inline std::size_t
+ThreadPool::threadpool_capacity()
+{
+	return _threads.capacity();
+}
+
+inline std::size_t
+ThreadPool::threadpool_size()
+{
+	return _threads.size();
+}
+
+inline void
+ThreadPool::end()
+{
+	if (!_ending.exchange(true, std::memory_order_release)) {
+		for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
+			_queue.enqueue(std::make_pair(false, []{}));
+		}
 	}
+}
 
-	size_t threadpool_size() {
-		std::lock_guard<std::mutex> lk(mtx);
-		return threads.size();
+inline void
+ThreadPool::finish(bool wait)
+{
+	if (!_finished.exchange(true, std::memory_order_release)) {
+		for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
+			_queue.enqueue(std::make_pair(false, []{}));
+		}
+		if (wait) {
+			join();
+		}
 	}
+}
 
-	size_t running_size() {
-		return running_tasks.load();
+inline void
+ThreadPool::join()
+{
+	for (auto& _thread : _threads) {
+		if (_thread.joinable()) {
+			_thread.join();
+		}
 	}
-};
+}
 
+template <typename Func, typename... Args>
+inline auto
+ThreadPool::package(Func&& func, Args&&... args)
+{
+	auto packaged_task = PackagedTask<std::result_of_t<Func(Args...)>()>([
+		func = std::forward<Func>(func),
+		args = std::make_tuple(std::forward<Args>(args)...)
+	] {
+		return std::apply(func, args);
+	});
+	return packaged_task;
+}
 
-#ifdef L_THREADPOOL_DEFINED
-#undef L_THREADPOOL_DEFINED
-#undef L_THREADPOOL
-#endif
+template <typename Result>
+inline auto
+ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
+{
+	auto future = packaged_task.get_future();
+	_enqueued.fetch_add(1, std::memory_order_relaxed);
+	_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
+		packaged_task();
+	}));
+	return future;
+}
 
-#ifdef L_EXC_DEFINED
-#undef L_EXC_DEFINED
-#undef L_EXC
-#endif
+template <typename Func, typename... Args, typename>
+inline auto
+ThreadPool::enqueue(Func&& func, Args&&... args)
+{
+	return enqueue(package(std::forward<Func>(func), std::forward<Args>(args)...));
+}

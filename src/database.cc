@@ -2576,10 +2576,6 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	database.reset();
 
 	lk.unlock();
-
-	if (signal_checkins) {
-		while (queue->checkin_callbacks.call()) { }
-	}
 }
 
 

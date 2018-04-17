@@ -35,12 +35,12 @@
 #include "worker.h"
 
 
-class XapiandReplicator : public Task<>, public Worker {
+class XapiandReplicator : public Worker {
 	friend Worker;
 
 	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
-	void run() override;
+	void run();
 
 	void on_commit(const Endpoint &endpoint);
 

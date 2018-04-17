@@ -47,7 +47,7 @@ enum class State {
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class BinaryClient : public Task<>, public BaseClient {
+class BinaryClient : public BaseClient {
 	std::atomic_int running;
 
 	State state;
@@ -97,7 +97,7 @@ public:
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
-	void run() override;
+	void run();
 	void _run();
 };
 

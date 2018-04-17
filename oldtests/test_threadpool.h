@@ -37,12 +37,12 @@ using namespace queue;
 static std::mutex mutex;
 
 
-class TestTask : public Task<> {
+class TestTask {
 	std::string name;
 	double sleep;
 	std::string& results;
 
-	void run() override {
+	void run() {
 		std::unique_lock<std::mutex> lk(mutex);
 		results += "<" + name;
 		lk.unlock();
