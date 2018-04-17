@@ -1202,21 +1202,8 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
-	std::string selector;
+	auto selector = request.path_parser.get_slc();
 	auto key = request.path_parser.get_pmt();
-	if (key.empty()) {
-		auto cmd = request.path_parser.get_cmd();
-		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
-			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
-		}
-	} else {
-		auto needle = key.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
-			selector = key.substr(key[needle] == '|' ? needle + 1 : needle);
-			key = key.substr(0, needle);
-		}
-	}
 
 	if (key.empty()) {
 		response_obj = MsgPack(MsgPack::Type::MAP);
@@ -1276,7 +1263,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	L_CALL("HttpClient::info_view()");
 
 	MsgPack response_obj;
-	std::string selector;
+	auto selector = request.path_parser.get_slc();
 
 	endpoints_maker(request, 1s);
 
@@ -1303,12 +1290,6 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	// Info about a specific document was requested
 	if (request.path_parser.off_pmt != nullptr) {
 		auto id = request.path_parser.get_pmt();
-		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
-			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
-			id = id.substr(0, needle);
-		}
-
 		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, false);
 	}
 
@@ -1502,12 +1483,7 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 {
 	L_CALL("HttpClient::schema_view()");
 
-	std::string selector;
-	auto cmd = request.path_parser.get_cmd();
-	auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-	if (needle != std::string::npos) {
-		selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
-	}
+	auto selector = request.path_parser.get_slc();
 
 	endpoints_maker(request, 1s);
 
@@ -1570,21 +1546,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 {
 	L_CALL("HttpClient::search_view()");
 
-	std::string selector;
+	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
-	if (id.empty()) {
-		auto cmd = request.path_parser.get_cmd();
-		auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
-			selector = cmd.substr(cmd[needle] == '|' ? needle + 1 : needle);
-		}
-	} else {
-		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
-			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
-			id = id.substr(0, needle);
-		}
-	}
 
 	endpoints_maker(request, 1s);
 
@@ -2026,9 +1989,7 @@ HttpClient::url_resolve(Request& request)
 		request.query_parser.rewind();
 
 		if (request.path_parser.off_cmd != nullptr) {
-			auto cmd = request.path_parser.get_cmd();
-			auto needle = cmd.find_first_of("|{", 1);  // to get selector, find first of either | or {
-			return getCommand(cmd.substr(0, needle));
+			return getCommand(request.path_parser.get_cmd());
 		}
 
 		if (request.path_parser.off_id != nullptr) {

@@ -67,9 +67,8 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NOWAL, HTTP_GET, context);
-		// FIXME: Process the subfields instead of ignoring.
-		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		auto doc = _db_handler.get_document(id.substr(0, needle));
+		// FIXME: Process the subfields (selector) instead of ignoring.
+		auto doc = _db_handler.get_document(id);
 		context->erase(hash);
 		return doc.get_obj();
 	} catch (...) {

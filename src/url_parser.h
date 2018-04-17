@@ -71,6 +71,8 @@ class PathParser {
 
 public:
 	enum class State : uint8_t {
+		SLC,
+		SLB,
 		NCM,
 		PMT,
 		CMD,
@@ -96,6 +98,8 @@ public:
 	const char *off_ppmt;
 	size_t len_cmd;
 	const char *off_cmd;
+	size_t len_slc;
+	const char *off_slc;
 	size_t len_id;
 	const char *off_id;
 
@@ -115,4 +119,5 @@ public:
 	std::string_view get_ppmt();
 	std::string_view get_cmd();
 	std::string_view get_id();
+	std::string_view get_slc();
 };
