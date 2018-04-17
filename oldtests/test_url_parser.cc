@@ -31,7 +31,7 @@
 
 static std::string run_url_path(const std::string& path, bool clear_id) {
 	const char* parser_url_path_states_names[] = {
-		"ncm", "pmt", "cmd", "id", "nsp", "pth", "hst", "end", "INVALID_STATE", "INVALID_NSP", "INVALID_HST",
+		"slc", "slb", "ncm", "pmt", "cmd", "id", "nsp", "pth", "hst", "end", "INVALID_STATE", "INVALID_NSP", "INVALID_HST",
 	};
 
 	PathParser::State state;
@@ -42,6 +42,9 @@ static std::string run_url_path(const std::string& path, bool clear_id) {
 		result += "_|";
 		if (clear_id) {
 			p.off_id = nullptr;
+		}
+		if (p.off_slc) {
+			result += "slc=" + std::string(p.off_slc, p.len_slc) + "|";
 		}
 		if (p.off_cmd) {
 			result += "cmd=" + std::string(p.off_cmd, p.len_cmd) + "|";
@@ -123,6 +126,10 @@ int test_url_path() {
 		{ "1,2", true, "_|_|pth=1|_|pth=2|(end)" },
 		{ "1/,2/", true, "_|_|pth=1/|_|pth=2/|(end)" },
 		{ "/1,/2", true, "_|_|pth=/1|_|pth=/2|(end)" },
+		{ "/twitter/tweet/:metadata/_schema", true, "_|cmd=:metadata|pmt=_schema|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/:metadata/_schema|version", true, "_|slc=version|cmd=:metadata|pmt=_schema|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1/|user.name", false, "_|slc=user.name|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1/|{user.name}", false, "_|slc={user.name}|id=1|_|pth=/twitter/tweet|(end)" },
 	};
 
 	int count = 0;
