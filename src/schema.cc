@@ -2503,22 +2503,13 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  * |_____|_____|_____|_____|_____|_____|_____|_____|
  */
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 MsgPack
 Schema::index(const MsgPack& object, Xapian::Document& doc,
 	std::string_view term_id,
-	std::shared_ptr<std::pair<size_t, const MsgPack>>* old_document_pair,
-	DatabaseHandler* db_handler)
-#else
-MsgPack
-Schema::index(const MsgPack& object, Xapian::Document& doc)
-#endif
+	std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair,
+	DatabaseHandler& db_handler)
 {
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	L_CALL("Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()), repr(term_id));
-#else
-	L_CALL("Schema::index(%s, <doc>)", repr(object.to_string()));
-#endif
 
 	try {
 		map_values.clear();
@@ -2539,9 +2530,8 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-		if (specification.script && db_handler != nullptr) {
-			assert(old_document_pair);
-			auto mut_object = db_handler->run_script(object, term_id, *old_document_pair, *specification.script);
+		if (specification.script) {
+			auto mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
 					THROW(ClientError, "Script must return an object, it returned %s", mut_object->getStrType());
@@ -2561,6 +2551,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc)
 			}
 		}
 #endif
+
 		MsgPack data_obj;
 		auto data = &data_obj;
 

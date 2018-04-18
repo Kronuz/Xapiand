@@ -349,24 +349,27 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 }
 
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> DatabaseHandler::documents;
+std::unordered_map<size_t, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
 
 
 template<typename Processor>
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
 	try {
 		auto processor = Processor::compile(script_hash, body_hash, std::string(script_body));
 		switch (method) {
 			case HTTP_PUT: {
 				auto mut_object = std::make_unique<MsgPack>(object);
-				old_document_pair = get_document_change_seq(term_id);
-				if (old_document_pair) {
-					L_INDEX("Script: on_put(%s, %s)", mut_object->to_string(4), old_document_pair->second.to_string(4));
-					*mut_object = (*processor)["on_put"](*mut_object, old_document_pair->second);
+				if (old_document_pair == nullptr && !term_id.empty()) {
+					old_document_pair = get_document_change_seq(term_id);
+				}
+				if (old_document_pair != nullptr) {
+					auto old_object = old_document_pair->second.get_obj();
+					L_INDEX("Script: on_put(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					*mut_object = (*processor)["on_put"](*mut_object, old_object);
 				} else {
 					L_INDEX("Script: on_put(%s)", mut_object->to_string(4));
 					*mut_object = (*processor)["on_put"](*mut_object, MsgPack(MsgPack::Type::MAP));
@@ -377,10 +380,13 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 			case HTTP_PATCH:
 			case HTTP_MERGE: {
 				auto mut_object = std::make_unique<MsgPack>(object);
-				old_document_pair = get_document_change_seq(term_id);
-				if (old_document_pair) {
-					L_INDEX("Script: on_patch(%s, %s)", mut_object->to_string(4), old_document_pair->second.to_string(4));
-					*mut_object = (*processor)["on_patch"](*mut_object, old_document_pair->second);
+				if (old_document_pair == nullptr && !term_id.empty()) {
+					old_document_pair = get_document_change_seq(term_id);
+				}
+				if (old_document_pair != nullptr) {
+					auto old_object = old_document_pair->second.get_obj();
+					L_INDEX("Script: on_patch(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					*mut_object = (*processor)["on_patch"](*mut_object, old_object);
 				} else {
 					L_INDEX("Script: on_patch(%s)", mut_object->to_string(4));
 					*mut_object = (*processor)["on_patch"](*mut_object, MsgPack(MsgPack::Type::MAP));
@@ -390,10 +396,13 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 
 			case HTTP_DELETE: {
 				auto mut_object = std::make_unique<MsgPack>(object);
-				old_document_pair = get_document_change_seq(term_id);
-				if (old_document_pair) {
-					L_INDEX("Script: on_delete(%s, %s)", mut_object->to_string(4), old_document_pair->second.to_string(4));
-					*mut_object = (*processor)["on_delete"](*mut_object, old_document_pair->second);
+				if (old_document_pair == nullptr && !term_id.empty()) {
+					old_document_pair = get_document_change_seq(term_id);
+				}
+				if (old_document_pair != nullptr) {
+					auto old_object = old_document_pair->second.get_obj();
+					L_INDEX("Script: on_delete(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					*mut_object = (*processor)["on_delete"](*mut_object, old_object);
 				} else {
 					L_INDEX("Script: on_delete(%s)", mut_object->to_string(4));
 					*mut_object = (*processor)["on_delete"](*mut_object, MsgPack(MsgPack::Type::MAP));
@@ -436,7 +445,7 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 
 
 std::unique_ptr<MsgPack>
-DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script)
+DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script)
 {
 	L_CALL("DatabaseHandler::run_script(...)");
 
@@ -470,62 +479,39 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 #endif
 
 
-DataType
-DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& data, bool commit_)
+std::tuple<std::string, Xapian::Document, MsgPack>
+DatabaseHandler::prepare(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id), repr(obj.to_string()), commit_ ? "true" : "false");
-
-	static UUIDGenerator generator;
+	L_CALL("DatabaseHandler::prepare(%s, %s, <data>)", repr(document_id), repr(obj.to_string()));
 
 	Xapian::Document doc;
 	required_spc_t spc_id;
+	std::string unprefixed_term_id;
 	std::string term_id;
-	std::string prefixed_term_id;
 
-	Xapian::docid did = 0;
-	std::string doc_uuid;
-	std::string doc_id;
-	std::string doc_xid;
-	if (document_id.empty()) {
-		doc_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
-		// Add a new empty document to get its document ID:
-		lock_database lk_db(this);
-		try {
-			did = database->add_document(Xapian::Document(), false, false);
-		} catch (const Xapian::DatabaseError&) {
-			// Try to recover from DatabaseError (i.e when the index is manually deleted)
-			lk_db.unlock();
-			recover_index();
-			lk_db.lock();
-			did = database->add_document(Xapian::Document(), false, false);
-		}
-		doc_id = std::to_string(did);
-	} else {
-		doc_xid = document_id;
-	}
+	auto new_document = document_id.empty();
+	std::string new_document_uuid;
+	std::string new_document_id;
 
 	MsgPack data_obj;
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	try {
-		std::shared_ptr<std::pair<size_t, const MsgPack>> old_document_pair;
-		do {
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	do {
 #endif
-			auto schema_begins = std::chrono::system_clock::now();
-			do {
-				schema = get_schema(&obj);
-				L_INDEX("Schema: %s", repr(schema->to_string()));
+		auto schema_begins = std::chrono::system_clock::now();
+		do {
+			schema = get_schema(&obj);
 
-				// Get term ID.
+			L_INDEX("Schema: %s", repr(schema->to_string()));
+
+			if (new_document) {
+				// Index object
+				data_obj = schema->index(obj, doc, "", old_document_pair, *this);
+
+			} else {
+				// Try figuring out id_type from passed object
 				spc_id = schema->get_data_id();
 				auto id_type = spc_id.get_type();
-				if (did != 0) {
-					if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
-						doc_xid = doc_uuid;
-					} else {
-						doc_xid = doc_id;
-					}
-				}
 				if (id_type == FieldType::EMPTY) {
 					auto f_it = obj.find(ID_FIELD_NAME);
 					if (f_it != obj.end()) {
@@ -540,118 +526,105 @@ DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& d
 								}
 								spc_id.set_types(type.str_view());
 								id_type = spc_id.get_type();
-								if (did != 0) {
-									if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
-										doc_xid = doc_uuid;
-									} else {
-										doc_xid = doc_id;
-									}
-								}
 							}
 						}
 					}
-				} else {
-					term_id = Serialise::serialise(spc_id, doc_xid);
-					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
 
-				// Index object.
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-				data_obj = schema->index(obj, doc, prefixed_term_id, &old_document_pair, this);
-#else
-				data_obj = schema->index(obj, doc);
-#endif
-
-				spc_id = schema->get_data_id();
-				id_type = spc_id.get_type();
-
-				// Add ID.
-				data_obj[ID_FIELD_NAME] = Cast::cast(id_type, doc_xid);
-
-				// Ensure term ID.
-				if (prefixed_term_id.empty()) {
-					// Now the schema is full, get specification id.
-					if (did != 0) {
-						if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
-							doc_xid = doc_uuid;
-						} else {
-							doc_xid = doc_id;
-						}
-					}
-					if (id_type == FieldType::EMPTY) {
-						// Index like a namespace.
-						const auto type_ser = Serialise::guess_serialise(doc_xid);
-						spc_id.set_type(type_ser.first);
-						Schema::set_namespace_spc_id(spc_id);
-						term_id = type_ser.second;
-						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-					} else {
-						term_id = Serialise::serialise(spc_id, doc_xid);
-						prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
-					}
+				// Get early term ID when possible
+				if (id_type != FieldType::EMPTY) {
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
-			} while (!update_schema(schema_begins));
 
-			// Finish document: add data, ID term and ID value.
-			data.update("", data_obj.serialise());
-			data.flush();
-			doc.set_data(data.serialise());
-
-			doc.add_boolean_term(prefixed_term_id);
-			doc.add_value(spc_id.slot, term_id);
-
-			// Index document.
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-			if (set_document_change_seq(prefixed_term_id, std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(Document(doc).hash(), obj)), old_document_pair)) {
-#endif
-				lock_database lk_db(this);
-				try {
-					try {
-						if (did != 0u) { database->replace_document(did, doc, commit_);
-						} else { did = database->replace_document_term(prefixed_term_id, doc, commit_); }
-						return std::make_pair(std::move(did), std::move(data_obj));
-					} catch (const Xapian::DatabaseError& exc) {
-						// Try to recover from DatabaseError (i.e when the index is manually deleted)
-						L_WARNING("ERROR: %s (try recovery)", exc.get_description());
-						lk_db.unlock();
-						recover_index();
-						lk_db.lock();
-						if (did != 0u) { database->replace_document(did, doc, commit_);
-						} else { did = database->replace_document_term(prefixed_term_id, doc, commit_); }
-						return std::make_pair(std::move(did), std::move(data_obj));
-					}
-				} catch (...) {
-					if (did != 0) {
-						try {
-							database->delete_document(did, false, false);
-						} catch (...) { }
-					}
-					throw;
-				}
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+				// Index object passing current object's id as term ID
+				data_obj = schema->index(obj, doc, term_id, old_document_pair, *this);
 			}
-		} while (true);
-	} catch (const MissingTypeError&) { //FIXME: perhaps others erros must be handlend in here
-		unsigned doccount;
-		{
-			lock_database lk_db(this);
-			doccount = database->db->get_doccount();
+
+			spc_id = schema->get_data_id();
+			auto id_type = spc_id.get_type();
+
+			// Ensure document ID
+			if (new_document) {
+				if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
+					if (new_document_uuid.empty()) {
+						static UUIDGenerator generator;
+						new_document_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
+					}
+					document_id = new_document_uuid;
+				} else {
+					if (new_document_id.empty()) {
+						new_document_id = std::to_string(random_int(1, static_cast<Xapian::docid>(-1)));
+					}
+					document_id = new_document_id;
+				}
+			}
+
+			// Ensure term ID
+			if (term_id.empty()) {
+				// Now the schema is full, get final specification id.
+				if (id_type == FieldType::EMPTY) {
+					// Index like a namespace.
+					const auto type_ser = Serialise::guess_serialise(document_id);
+					id_type = type_ser.first;
+					spc_id.set_type(id_type);
+					Schema::set_namespace_spc_id(spc_id);
+					unprefixed_term_id = type_ser.second;
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+				} else {
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+				}
+			}
+
+			// Add ID.
+			data_obj[ID_FIELD_NAME] = Cast::cast(id_type, document_id);
+
+		} while (!update_schema(schema_begins));
+
+		// Finish document: add data, ID term and ID value.
+		data.set_obj(data_obj);
+		data.flush();
+		doc.set_data(data.serialise());
+
+		doc.add_boolean_term(term_id);
+		doc.add_value(spc_id.slot, unprefixed_term_id);
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));
+		if (set_document_change_seq(current_document_pair, old_document_pair)) {
+			break;
 		}
-		if (doccount == 0 && schema) {
-			auto old_schema = schema->get_const_schema();
-			XapiandManager::manager->schemas.drop(this, old_schema);
-		}
-		if (!prefixed_term_id.empty()) {
-			dec_document_change_cnt(prefixed_term_id);
-		}
-		throw;
-	} catch (...) {
-		if (!prefixed_term_id.empty()) {
-			dec_document_change_cnt(prefixed_term_id);
-		}
-		throw;
-	}
+	} while (true);
 #endif
+
+	return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
+}
+
+
+DataType
+DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_)
+{
+	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id), repr(obj.to_string()), commit_ ? "true" : "false");
+
+	auto prepared = prepare(document_id, obj, data, old_document_pair);
+	auto& term_id = std::get<0>(prepared);
+	auto& doc = std::get<1>(prepared);
+	auto& data_obj = std::get<2>(prepared);
+
+	lock_database lk_db(this);
+	try {
+		auto did = database->replace_document_term(term_id, doc, commit_);
+		return std::make_pair(std::move(did), std::move(data_obj));
+	} catch (const Xapian::DatabaseError& exc) {
+		// Try to recover from DatabaseError (i.e when the index is manually deleted)
+		L_WARNING("ERROR: %s (try recovery)", exc.get_description());
+		lk_db.unlock();
+		recover_index();
+		lk_db.lock();
+		auto did = database->replace_document_term(term_id, doc, commit_);
+		return std::make_pair(std::move(did), std::move(data_obj));
+	}
 }
 
 
@@ -664,28 +637,37 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 		THROW(Error, "Database is read-only");
 	}
 
-	Data data;
-	switch (body.getType()) {
-		case MsgPack::Type::STR:
-			if (stored) {
-				data.update(ct_type, -1, 0, 0, body.str_view());
-			} else {
-				auto blob = body.str_view();
-				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+
+	try {
+		Data data;
+		switch (body.getType()) {
+			case MsgPack::Type::STR:
+				if (stored) {
+					data.update(ct_type, -1, 0, 0, body.str_view());
+				} else {
+					auto blob = body.str_view();
+					if (blob.size() > NON_STORED_SIZE_LIMIT) {
+						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					}
+					data.update(ct_type, blob);
 				}
-				data.update(ct_type, blob);
-			}
-			return index(document_id, MsgPack(MsgPack::Type::MAP), data, commit_);
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
-			data.erase(ct_type);
-			return index(document_id, MsgPack(MsgPack::Type::MAP), data, commit_);
-		case MsgPack::Type::MAP:
-			inject_data(data, body);
-			return index(document_id, body, data, commit_);
-		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit_);
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				data.erase(ct_type);
+				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit_);
+			case MsgPack::Type::MAP:
+				inject_data(data, body);
+				return index(document_id, body, data, old_document_pair, commit_);
+			default:
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+		}
+	} catch (...) {
+		if (old_document_pair != nullptr) {
+			dec_document_change_cnt(old_document_pair);
+		}
+		throw;
 	}
 }
 
@@ -707,14 +689,28 @@ DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, boo
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	auto document = get_document(document_id);
-	auto data = Data(document.get_data());
-	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	const auto term_id = get_prefixed_term_id(document_id);
 
-	apply_patch(patches, obj);
+	try {
+		Data data;
+		if (old_document_pair == nullptr && !term_id.empty()) {
+			old_document_pair = get_document_change_seq(term_id);
+		}
+		if (old_document_pair != nullptr) {
+			data = old_document_pair->second;
+		}
+		auto obj = data.get_obj();
 
-	return index(document_id, obj, data, commit_);
+		apply_patch(patches, obj);
+
+		return index(document_id, obj, data, old_document_pair, commit_);
+	} catch (...) {
+		if (old_document_pair != nullptr) {
+			dec_document_change_cnt(old_document_pair);
+		}
+		throw;
+	}
 }
 
 
@@ -731,47 +727,58 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	Data data;
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	const auto term_id = get_prefixed_term_id(document_id);
+
 	try {
-		auto document = get_document(document_id);
-		data = Data(document.get_data());
-	} catch (const DocNotFoundError&) { }
-	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
+		Data data;
+		if (old_document_pair == nullptr && !term_id.empty()) {
+			old_document_pair = get_document_change_seq(term_id);
+		}
+		if (old_document_pair != nullptr) {
+			data = old_document_pair->second;
+		}
+		auto obj = data.get_obj();
 
-	switch (body.getType()) {
-		case MsgPack::Type::STR:
-			if (stored) {
-				data.update(ct_type, -1, 0, 0, body.str_view());
-			} else {
-				auto blob = body.str_view();
-				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+		switch (body.getType()) {
+			case MsgPack::Type::STR:
+				if (stored) {
+					data.update(ct_type, -1, 0, 0, body.str_view());
+				} else {
+					auto blob = body.str_view();
+					if (blob.size() > NON_STORED_SIZE_LIMIT) {
+						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					}
+					data.update(ct_type, blob);
 				}
-				data.update(ct_type, blob);
-			}
-			return index(document_id, obj, data, commit_);
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
-			data.erase(ct_type);
-			return index(document_id, obj, data, commit_);
-		case MsgPack::Type::MAP:
-			if (stored) {
-				THROW(ClientError, "Objects of this type cannot be put in storage");
-			}
-			if (obj.empty()) {
-				inject_data(data, body);
-				return index(document_id, body, data, commit_);
-			} else {
-				obj.update(body);
-				inject_data(data, obj);
-				return index(document_id, obj, data, commit_);
-			}
-		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
-	}
+				return index(document_id, obj, data, old_document_pair, commit_);
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				data.erase(ct_type);
+				return index(document_id, obj, data, old_document_pair, commit_);
+			case MsgPack::Type::MAP:
+				if (stored) {
+					THROW(ClientError, "Objects of this type cannot be put in storage");
+				}
+				if (obj.empty()) {
+					inject_data(data, body);
+					return index(document_id, body, data, old_document_pair, commit_);
+				} else {
+					obj.update(body);
+					inject_data(data, obj);
+					return index(document_id, obj, data, old_document_pair, commit_);
+				}
+			default:
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+		}
 
-	return index(document_id, obj, data, commit_);
+		return index(document_id, obj, data, old_document_pair, commit_);
+	} catch (...) {
+		if (old_document_pair != nullptr) {
+			dec_document_change_cnt(old_document_pair);
+		}
+		throw;
+	}
 }
 
 
@@ -1063,8 +1070,8 @@ DatabaseHandler::restore(int fd)
 
 			Xapian::Document doc;
 			required_spc_t spc_id;
+			std::string unprefixed_term_id;
 			std::string term_id;
-			std::string prefixed_term_id;
 
 			MsgPack document_id;
 
@@ -1099,10 +1106,11 @@ DatabaseHandler::restore(int fd)
 				continue;
 			}
 
-			auto data_obj = schema->index(obj, doc);
+			std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+			auto data_obj = schema->index(obj, doc, "", old_document_pair, *this);
 
 			// Ensure term ID.
-			if (prefixed_term_id.empty()) {
+			if (term_id.empty()) {
 				// Now the schema is full, get specification id.
 				spc_id = schema->get_data_id();
 				if (spc_id.get_type() == FieldType::EMPTY) {
@@ -1110,25 +1118,25 @@ DatabaseHandler::restore(int fd)
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					spc_id.set_type(type_ser.first);
 					Schema::set_namespace_spc_id(spc_id);
-					term_id = type_ser.second;
-					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+					unprefixed_term_id = type_ser.second;
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 				} else {
-					term_id = Serialise::serialise(spc_id, document_id);
-					prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 				}
 			}
 
 			// Finish document: add data, ID term and ID value.
-			data.update("", data_obj.serialise());
+			data.set_obj(data_obj);
 			data.flush();
 			doc.set_data(data.serialise());
 
-			doc.add_boolean_term(prefixed_term_id);
-			doc.add_value(spc_id.slot, term_id);
+			doc.add_boolean_term(term_id);
+			doc.add_value(spc_id.slot, unprefixed_term_id);
 
 			// Index document.
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring document (%zu): %s", i, document_id.to_string());
-			database->replace_document_term(prefixed_term_id, doc, false, false);
+			database->replace_document_term(term_id, doc, false, false);
 		} while (true);
 
 		lk_db.unlock();
@@ -1175,8 +1183,8 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 	Xapian::Document doc;
 	Xapian::docid did = 0;
 	required_spc_t spc_id;
+	std::string unprefixed_term_id;
 	std::string term_id;
-	std::string prefixed_term_id;
 
 	MsgPack document_id;
 
@@ -1206,10 +1214,11 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 		}
 	}
 
-	auto data_obj = schema->index(obj, doc);
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	auto data_obj = schema->index(obj, doc, "", old_document_pair, *this);
 
 	// Ensure term ID.
-	if (prefixed_term_id.empty()) {
+	if (term_id.empty()) {
 		// Now the schema is full, get specification id.
 		spc_id = schema->get_data_id();
 		if (spc_id.get_type() == FieldType::EMPTY) {
@@ -1220,13 +1229,13 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 			const auto type_ser = Serialise::guess_serialise(document_id);
 			spc_id.set_type(type_ser.first);
 			Schema::set_namespace_spc_id(spc_id);
-			term_id = type_ser.second;
-			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+			unprefixed_term_id = type_ser.second;
+			term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 		} else {
 			if (document_id.is_undefined()) {
+				// Add a new empty document to get its document ID:
 				lock_database lk_db(this);
 				try {
-					// Add a new empty document to get its document ID:
 					did = database->add_document(Xapian::Document(), false, false);
 				} catch (const Xapian::DatabaseError&) {
 					// Try to recover from DatabaseError (i.e when the index is manually deleted)
@@ -1237,24 +1246,24 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 				}
 				document_id = Cast::cast(spc_id.get_type(), std::to_string(did));
 			}
-			term_id = Serialise::serialise(spc_id, document_id);
-			prefixed_term_id = prefixed(term_id, spc_id.prefix(), spc_id.get_ctype());
+			unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+			term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
 	}
 
 	// Finish document: add data, ID term and ID value.
-	data.update("", data_obj.serialise());
+	data.set_obj(data_obj);
 	data.flush();
 	doc.set_data(data.serialise());
 
-	doc.add_boolean_term(prefixed_term_id);
-	doc.add_value(spc_id.slot, term_id);
+	doc.add_boolean_term(term_id);
+	doc.add_value(spc_id.slot, unprefixed_term_id);
 
 	// Index document.
 	{
 		lock_database lk_db(this);
 		if (did != 0u) { database->replace_document(did, doc, false, false);
-		} else { did = database->replace_document_term(prefixed_term_id, doc, false, false); }
+		} else { did = database->replace_document_term(term_id, doc, false, false); }
 	}
 
 	auto schema_begins = std::chrono::system_clock::now();
@@ -1834,8 +1843,8 @@ DatabaseHandler::get_master_count()
 }
 
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-const std::shared_ptr<std::pair<size_t, const MsgPack>>
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+const std::shared_ptr<std::pair<std::string, const Data>>
 DatabaseHandler::get_document_change_seq(std::string_view term_id)
 {
 	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string(), repr(term_id));
@@ -1852,14 +1861,14 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id)
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
+	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
 		lk.unlock();
 
 		// Get document from database
 		try {
 			auto current_document = get_document_term(term_id);
-			current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
+			current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, Data(current_document.get_data())));
 		} catch (const DocNotFoundError&) { }
 
 		lk.lock();
@@ -1877,12 +1886,12 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id)
 
 
 bool
-DatabaseHandler::set_document_change_seq(std::string_view term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair)
+DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
-	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s, %s, %s)", endpoints.to_string(), repr(term_id), std::to_string(new_document_pair->first), old_document_pair ? std::to_string(old_document_pair->first) : "nullptr");
+	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s)", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
 
 	static std::hash<std::string_view> hash_fn_string;
-	auto key = endpoints.hash() ^ hash_fn_string(term_id);
+	auto key = endpoints.hash() ^ hash_fn_string(new_document_pair->first);
 
 	bool is_local = endpoints[0].is_local();
 
@@ -1893,15 +1902,15 @@ DatabaseHandler::set_document_change_seq(std::string_view term_id, const std::sh
 		it = DatabaseHandler::documents.find(key);
 	}
 
-	std::shared_ptr<std::pair<size_t, const MsgPack>> current_document_pair;
+	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
-		if (old_document_pair) {
+		if (old_document_pair != nullptr) {
 			lk.unlock();
 
 			// Get document from database
 			try {
-				auto current_document = get_document_term(term_id);
-				current_document_pair = std::make_shared<std::pair<size_t, const MsgPack>>(std::make_pair(current_document.hash(), current_document.get_obj()));
+				auto current_document = get_document_term(new_document_pair->first);
+				current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(new_document_pair->first, Data(current_document.get_data())));
 			} catch (const DocNotFoundError&) { }
 
 			lk.lock();
@@ -1915,7 +1924,7 @@ DatabaseHandler::set_document_change_seq(std::string_view term_id, const std::sh
 		current_document_pair = it->second;
 	}
 
-	bool accepted = (!old_document_pair || (current_document_pair && old_document_pair->first == current_document_pair->first));
+	bool accepted = (old_document_pair == nullptr || (current_document_pair && old_document_pair->second.hash() == current_document_pair->second.hash()));
 
 	current_document_pair.reset();
 	old_document_pair.reset();
@@ -1933,12 +1942,12 @@ DatabaseHandler::set_document_change_seq(std::string_view term_id, const std::sh
 
 
 void
-DatabaseHandler::dec_document_change_cnt(std::string_view term_id)
+DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
-	L_CALL("DatabaseHandler::dec_document_change_cnt(%s, %s)", endpoints.to_string(), repr(term_id));
+	L_CALL("DatabaseHandler::dec_document_change_cnt(%s)", endpoints.to_string(), repr(old_document_pair->first));
 
 	static std::hash<std::string_view> hash_fn_string;
-	auto key = endpoints.hash() ^ hash_fn_string(term_id);
+	auto key = endpoints.hash() ^ hash_fn_string(old_document_pair->first);
 
 	bool is_local = endpoints[0].is_local();
 
@@ -1948,6 +1957,8 @@ DatabaseHandler::dec_document_change_cnt(std::string_view term_id)
 	if (is_local) {
 		it = DatabaseHandler::documents.find(key);
 	}
+
+	old_document_pair.reset();
 
 	if (it != DatabaseHandler::documents.end()) {
 		if (it->second.use_count() == 1) {
@@ -2184,9 +2195,7 @@ Document::get_obj()
 	L_CALL("Document::get_obj()");
 
 	auto data = Data(get_data());
-	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
-	return obj;
+	return data.get_obj();
 }
 
 

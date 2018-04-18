@@ -184,14 +184,16 @@ class DatabaseHandler {
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
-	static std::unordered_map<size_t, std::shared_ptr<std::pair<size_t, const MsgPack>>> documents;
+	static std::unordered_map<size_t, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
 	template<typename ProcessorCompile>
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
-	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair, const MsgPack& data_script);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
+	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script);
 #endif
 
-	DataType index(std::string_view document_id, const MsgPack& obj, Data& data, bool commit_);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);
+
+	DataType index(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -260,9 +262,9 @@ public:
 	static int get_master_count();
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	void dec_document_change_cnt(std::string_view term_id);
-	const std::shared_ptr<std::pair<size_t, const MsgPack>> get_document_change_seq(std::string_view term_id);
-	bool set_document_change_seq(std::string_view term_id, const std::shared_ptr<std::pair<size_t, const MsgPack>>& new_document_pair, std::shared_ptr<std::pair<size_t, const MsgPack>>& old_document_pair);
+	const std::shared_ptr<std::pair<std::string, const Data>> get_document_change_seq(std::string_view term_id);
+	bool set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
+	void dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 #endif
 };
 

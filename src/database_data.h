@@ -407,6 +407,11 @@ public:
 		return serialised;
 	}
 
+	size_t hash() const {
+		static const std::hash<std::string> hasher;
+		return hasher(serialised);
+	}
+
 	auto operator[](size_t pos) const {
 		return locators.operator[](pos);
 	}
@@ -442,6 +447,15 @@ public:
 			}
 		}
 		return nullptr;
+	}
+
+	MsgPack get_obj() const {
+		auto main_locator = get("");
+		return main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
+	}
+
+	void set_obj(const MsgPack& object) {
+		update("", object.serialise());
 	}
 
 	auto get_accepted(const accept_set_t& accept_set) const {
