@@ -626,7 +626,6 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 	}
 
 	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-
 	try {
 		Data data;
 		switch (body.getType()) {
@@ -677,9 +676,9 @@ DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, boo
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 	const auto term_id = get_prefixed_term_id(document_id);
 
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 	try {
 		Data data;
 		if (old_document_pair == nullptr && !term_id.empty()) {
@@ -715,9 +714,9 @@ DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack&
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 	const auto term_id = get_prefixed_term_id(document_id);
 
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 	try {
 		Data data;
 		if (old_document_pair == nullptr && !term_id.empty()) {
@@ -1078,7 +1077,6 @@ DatabaseHandler::restore(int fd)
 			}
 
 			std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-
 			auto prepared = prepare(document_id, obj, data, old_document_pair);
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
@@ -1117,10 +1115,11 @@ DatabaseHandler::dump_documents()
 }
 
 
-void
-DatabaseHandler::restore_document(const MsgPack& obj)
+
+std::tuple<std::string, Xapian::Document, MsgPack>
+DatabaseHandler::prepare_document(const MsgPack& obj)
 {
-	L_CALL("DatabaseHandler::restore_document()");
+	L_CALL("DatabaseHandler::prepare_document(<obj>)");
 
 	MsgPack document_id;
 
@@ -1142,27 +1141,56 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 	inject_data(data, obj);
 
 	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	return prepare(document_id, obj, data, old_document_pair);
+}
 
-	auto prepared = prepare(document_id, obj, data, old_document_pair);
-	auto& term_id = std::get<0>(prepared);
-	auto& doc = std::get<1>(prepared);
 
-	// Index document.
+std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>>
+DatabaseHandler::prepare_documents(const MsgPack& docs)
+{
+	L_CALL("DatabaseHandler::prepare_documents(<docs>)");
+
+	std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>> prepared_docs;
+	prepared_docs.reserve(docs.size());
+
+	for (auto& obj : docs) {
+		prepared_docs.push_back(XapiandManager::manager->thread_pool.enqueue([&]{
+			DatabaseHandler db_handler(endpoints, flags, method);
+			return db_handler.prepare_document(obj);
+		}));
+	}
+
+	for (auto& prepared_future : prepared_docs) {
+		prepared_future.wait();
+	}
+
+	return prepared_docs;
+}
+
+
+void
+DatabaseHandler::restore_documents(std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>>& prepared_docs)
+{
+	L_CALL("DatabaseHandler::restore_documents(<prepared_docs>)");
+
 	lock_database lk_db(this);
-	database->replace_document_term(term_id, doc, false, false);
+	for (auto& prepared_future : prepared_docs) {
+		auto prepared = prepared_future.get();
+		auto& term_id = std::get<0>(prepared);
+		auto& doc = std::get<1>(prepared);
+		database->replace_document_term(term_id, doc, false, false);
+	}
+	database->commit(false);
 }
 
 
 void
 DatabaseHandler::restore_documents(const MsgPack& docs)
 {
-	L_CALL("DatabaseHandler::restore_documents()");
+	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
-	lock_database lk_db(this);
-
-	for (auto& obj : docs) {
-		restore_document(obj);
-	}
+	auto prepared_docs = prepare_documents(docs);
+	restore_documents(prepared_docs);
 }
 
 
