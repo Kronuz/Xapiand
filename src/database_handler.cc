@@ -284,16 +284,6 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 
 
 void
-DatabaseHandler::recover_index()
-{
-	L_CALL("DatabaseHandler::recover_index()");
-
-	XapiandManager::manager->database_pool.recover_database(endpoints, RECOVER_REMOVE_WRITABLE);
-	reset(endpoints, flags, HTTP_PUT, context);
-}
-
-
-void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
 {
 	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()), flags_);
@@ -613,18 +603,8 @@ DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& d
 	auto& data_obj = std::get<2>(prepared);
 
 	lock_database lk_db(this);
-	try {
-		auto did = database->replace_document_term(term_id, doc, commit_);
-		return std::make_pair(std::move(did), std::move(data_obj));
-	} catch (const Xapian::DatabaseError& exc) {
-		// Try to recover from DatabaseError (i.e when the index is manually deleted)
-		L_WARNING("ERROR: %s (try recovery)", exc.get_description());
-		lk_db.unlock();
-		recover_index();
-		lk_db.lock();
-		auto did = database->replace_document_term(term_id, doc, commit_);
-		return std::make_pair(std::move(did), std::move(data_obj));
-	}
+	auto did = database->replace_document_term(term_id, doc, commit_);
+	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
 
@@ -1235,15 +1215,7 @@ DatabaseHandler::restore_document(const MsgPack& obj)
 			if (document_id.is_undefined()) {
 				// Add a new empty document to get its document ID:
 				lock_database lk_db(this);
-				try {
-					did = database->add_document(Xapian::Document(), false, false);
-				} catch (const Xapian::DatabaseError&) {
-					// Try to recover from DatabaseError (i.e when the index is manually deleted)
-					lk_db.unlock();
-					recover_index();
-					lk_db.lock();
-					did = database->add_document(Xapian::Document(), false, false);
-				}
+				did = database->add_document(Xapian::Document(), false, false);
 				document_id = Cast::cast(spc_id.get_type(), std::to_string(did));
 			}
 			unprefixed_term_id = Serialise::serialise(spc_id, document_id);

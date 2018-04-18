@@ -180,8 +180,6 @@ class DatabaseHandler {
 
 	std::shared_ptr<std::unordered_set<size_t>> context;
 
-	void recover_index();
-
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
 	static std::unordered_map<size_t, std::shared_ptr<std::pair<std::string, const Data>>> documents;

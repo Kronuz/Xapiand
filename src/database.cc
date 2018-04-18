@@ -1225,6 +1225,8 @@ Database::commit(bool wal_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseError& exc) {
 			L_WARNING("ERROR: %s", exc.get_description());
 			throw;
@@ -1262,6 +1264,8 @@ Database::cancel(bool wal_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1302,6 +1306,8 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1346,6 +1352,8 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1493,6 +1501,8 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1540,6 +1550,8 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1589,6 +1601,8 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 			if (t == 0) { THROW(TimeOutError, "Database %s was modified, try again: %s", repr(endpoints.to_string()), exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, "Database %s error: %s", repr(endpoints.to_string()), exc.get_description());
 		}
@@ -1630,6 +1644,8 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1669,6 +1685,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1710,6 +1728,8 @@ Database::find_document(const std::string& term_id)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::InvalidArgumentError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::DocNotFoundError&) {
@@ -1759,6 +1779,8 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::InvalidArgumentError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::DocNotFoundError&) {
@@ -1792,6 +1814,8 @@ Database::get_metadata(const std::string& key)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -1827,6 +1851,8 @@ Database::get_metadata_keys()
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -1861,6 +1887,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1913,6 +1941,8 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -1986,6 +2016,8 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const SerialisationError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const Xapian::Error& exc) {
@@ -2052,6 +2084,8 @@ Database::dump_documents()
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const SerialisationError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const Xapian::Error& exc) {
@@ -2488,15 +2522,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			}
 		}
 		if (reopen) {
-			try {
-				database->reopen();
-			} catch (const Xapian::DatabaseOpeningError& exc) {
-				// Try to recover from DatabaseOpeningError (i.e when the index is manually deleted)
-				recover_database(database->endpoints, RECOVER_REMOVE_ALL | RECOVER_DECREMENT_COUNT);
-				database.reset();
-				L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s (reopen)", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-				THROW(CheckoutError, "Cannot checkout database: %s (reopen)", repr(endpoints.to_string()));
-			}
+			database->reopen();
 			L_DATABASE("== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()));
 		}
 	}
@@ -2631,34 +2657,6 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
-}
-
-
-void
-DatabasePool::recover_database(const Endpoints& endpoints, int flags)
-{
-	L_CALL("DatabasePool::recover_database(%s, %d)", repr(endpoints.to_string()), flags);
-
-	size_t hash = endpoints.hash();
-
-	if (((flags & RECOVER_REMOVE_WRITABLE) != 0) || ((flags & RECOVER_REMOVE_ALL) != 0)) {
-		/* erase from writable queue if exist */
-		std::lock_guard<std::mutex> lk(qmtx);
-		writable_databases.erase(hash);
-	}
-
-	if ((flags & RECOVER_DECREMENT_COUNT) != 0) {
-		/* Delete the count of the database creation */
-		/* Avoid mismatch between queue size and counter */
-		std::lock_guard<std::mutex> lk(qmtx);
-		databases.get(hash, false)->dec_count();
-	}
-
-	if (((flags & RECOVER_REMOVE_DATABASE) != 0) || ((flags & RECOVER_REMOVE_ALL) != 0)) {
-		/* erase from queue if exist */
-		std::lock_guard<std::mutex> lk(qmtx);
-		databases.erase(hash);
-	}
 }
 
 
