@@ -257,7 +257,6 @@ public:
 private:
 	std::string serialised;
 	std::vector<Locator> locators;
-	std::string_view trailing;
 
 	std::vector<Locator> pending;
 
@@ -293,7 +292,10 @@ private:
 			locators.clear();
 			return;
 		}
-		trailing = std::string_view(p, p_end - p);
+		if (p != p_end) {
+			locators.clear();
+			return;
+		}
 	}
 
 	void flush(const std::vector<Locator>& ops) {
@@ -335,7 +337,6 @@ private:
 		}
 		serialised.push_back('\0');
 		serialised.push_back(DATABASE_DATA_FOOTER_MAGIC);
-		serialised.append(trailing);
 	}
 
 public:
