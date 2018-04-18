@@ -181,7 +181,7 @@ DatabaseWAL::open_current(bool commited)
 	uint32_t file_rev, begin_rev, rev;
 	for (rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
 		try {
-			open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
 		} catch (const StorageIOError&) {
 			continue;
 		}
@@ -256,7 +256,7 @@ bool
 DatabaseWAL::create(uint32_t revision)
 {
 	try {
-		return open(WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		return open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	} catch (StorageEmptyFile) {
 		initialize_file(reinterpret_cast<void*>(false));
 		return true;
@@ -389,7 +389,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 	uint32_t file_rev, begin_rev, end_rev;
 	for (auto rev = lowest_revision; rev <= highest_revision && not reach_end; ++rev) {
 		try {
-			open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
 		} catch (const StorageIOError&) {
 			continue;
 		}
@@ -560,8 +560,8 @@ DatabaseWAL::init_database()
 	L_CALL("DatabaseWAL::init_database()");
 
 	static const std::array<std::string, 2> iamglass({{
-		std::to_string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
-		std::to_string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
+		std::string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e"),
+		std::string("\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00\x03\x00"
 			"\x04\x04\x00\x00\x03\x00\x04\x00\x00\x00\x03\x00\x04\x04\x00\x00"
 			"\x03\x00\x04\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 	}});
@@ -574,7 +574,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(std::string(WAL_STORAGE_PATH) + "0", STORAGE_OPEN | STORAGE_COMPRESS);
+		open(string::format(WAL_STORAGE_PATH "%u", 0), STORAGE_OPEN | STORAGE_COMPRESS);
 	} catch (const StorageIOError&) {
 		return true;
 	}
@@ -642,7 +642,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		open(WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		slot = rev - header.head.revision;
 	}
 
@@ -652,7 +652,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 	if (commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			open(WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
+			open(string::format(WAL_STORAGE_PATH "%u", rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
@@ -1386,7 +1386,7 @@ Database::storage_get_stored(const Xapian::Document& doc, const Data::Locator& l
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
-		storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume));
+		storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
 		storage->seek(static_cast<uint32_t>(locator.offset));
 		return storage->read();
 	}
@@ -1407,7 +1407,7 @@ Database::storage_pull_blobs(Xapian::Document& doc) const
 		for (auto& locator : data) {
 			if (locator.type == Data::Type::stored) {
 				assert(locator.volume != -1);
-				storage->open(DATA_STORAGE_PATH + std::to_string(locator.volume));
+				storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
 				storage->seek(static_cast<uint32_t>(locator.offset));
 				auto stored = storage->read();
 				data.update(locator.ct_type, unserialise_string_at(STORED_BLOB, stored));
@@ -1441,13 +1441,13 @@ Database::storage_push_blobs(Xapian::Document& doc) const
 						try {
 							if (storage->closed()) {
 								storage->volume = storage->highest_volume();
-								storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume));
+								storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 							}
 							offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.data() }));
 							break;
 						} catch (StorageEOF) {
 							++storage->volume;
-							storage->open(DATA_STORAGE_PATH + std::to_string(storage->volume));
+							storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 						}
 					}
 					data.update(locator.ct_type, storage->volume, offset, locator.data().size());
