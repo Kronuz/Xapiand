@@ -8842,6 +8842,12 @@ Schema::get_data_id() const
 
 	required_spc_t res;
 
+	// Set default prefix
+	res.prefix.field = DOCUMENT_ID_TERM_PREFIX;
+
+	// Set default RESERVED_SLOT
+	res.slot = DB_SLOT_ID;
+
 	const auto& properties = get_newest_properties();
 	auto it = properties.find(ID_FIELD_NAME);
 	if (it == properties.end()) {
@@ -8858,14 +8864,10 @@ Schema::get_data_id() const
 	auto id_slot_it = id_properties.find(RESERVED_SLOT);
 	if (id_slot_it != id_it_e) {
 		res.slot = static_cast<Xapian::valueno>(id_slot_it.value().u64());
-	} else {
-		res.slot = DB_SLOT_ID;
 	}
 	auto id_prefix_it = id_properties.find(RESERVED_PREFIX);
 	if (id_slot_it != id_it_e) {
 		res.prefix.field.assign(id_prefix_it.value().str_view());
-	} else {
-		res.prefix.field = DOCUMENT_ID_TERM_PREFIX;
 	}
 
 	// Get required specification.

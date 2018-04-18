@@ -481,7 +481,7 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 
 	auto new_document = document_id.is_undefined();
 	std::string new_document_uuid;
-	std::string new_document_id;
+	Xapian::docid new_document_did = 0u;
 
 	MsgPack data_obj;
 
@@ -494,40 +494,40 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 
 			L_INDEX("Schema: %s", repr(schema->to_string()));
 
+			// Try figuring out id_type from passed object
+			spc_id = schema->get_data_id();
+			auto id_type = spc_id.get_type();
+
 			if (new_document) {
+				if (id_type == FieldType::EMPTY) {
+					id_type = FieldType::UUID;
+					if (new_document_uuid.empty()) {
+						static UUIDGenerator generator;
+						new_document_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
+					}
+					document_id = new_document_uuid;
+				} else {
+					if (new_document_did == 0u) {
+						new_document_did = random_int(1, static_cast<Xapian::docid>(-1));
+					}
+					document_id = Cast::cast(id_type, new_document_did);
+				}
+
 				// Index object
 				data_obj = schema->index(obj, doc, "", old_document_pair, *this);
 
 			} else {
-				// Try figuring out id_type from passed object
-				spc_id = schema->get_data_id();
-				auto id_type = spc_id.get_type();
-				if (id_type == FieldType::EMPTY) {
-					auto f_it = obj.find(ID_FIELD_NAME);
-					if (f_it != obj.end()) {
-						const auto& field = f_it.value();
-						if (field.is_map()) {
-							auto f_it_end = field.end();
-							auto ft_it = field.find(RESERVED_TYPE);
-							if (ft_it != f_it_end) {
-								const auto& type = ft_it.value();
-								if (!type.is_string()) {
-									THROW(ClientError, "Data inconsistency, %s must be string", RESERVED_TYPE);
-								}
-								spc_id.set_types(type.str_view());
-								id_type = spc_id.get_type();
-							}
-						}
-					}
-				}
-
 				// Get early term ID when possible
 				if (id_type == FieldType::EMPTY) {
 					const auto type_ser = Serialise::guess_serialise(document_id);
-					spc_id.set_type(type_ser.first);
-					Schema::set_namespace_spc_id(spc_id);
+					id_type = type_ser.first;
+					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
+						id_type = FieldType::KEYWORD;
+					}
+					spc_id.set_type(id_type);
 					unprefixed_term_id = type_ser.second;
 				} else {
+					document_id = Cast::cast(id_type, document_id);
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 				}
 				term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
@@ -536,34 +536,20 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 				data_obj = schema->index(obj, doc, term_id, old_document_pair, *this);
 			}
 
-			spc_id = schema->get_data_id();
-			auto id_type = spc_id.get_type();
-
-			// Ensure document ID
-			if (new_document) {
-				if (id_type == FieldType::UUID || id_type == FieldType::EMPTY) {
-					if (new_document_uuid.empty()) {
-						static UUIDGenerator generator;
-						new_document_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
-					}
-					document_id = new_document_uuid;
-				} else {
-					if (new_document_id.empty()) {
-						new_document_id = std::to_string(random_int(1, static_cast<Xapian::docid>(-1)));
-					}
-					document_id = Cast::cast(id_type, new_document_id);
-				}
-			}
-
 			// Ensure term ID
 			if (term_id.empty()) {
+				spc_id = schema->get_data_id();
+				id_type = spc_id.get_type();
+
 				// Now the schema is full, get final specification id.
 				if (id_type == FieldType::EMPTY) {
 					// Index like a namespace.
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					id_type = type_ser.first;
+					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
+						id_type = FieldType::KEYWORD;
+					}
 					spc_id.set_type(id_type);
-					Schema::set_namespace_spc_id(spc_id);
 					unprefixed_term_id = type_ser.second;
 				} else {
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
@@ -572,11 +558,7 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 			}
 
 			// Add ID.
-			if (document_id.is_string()) {
-				data_obj[ID_FIELD_NAME] = Cast::cast(id_type, document_id.str_view());
-			} else {
-				data_obj[ID_FIELD_NAME] = document_id;
-			}
+			data_obj[ID_FIELD_NAME] = document_id;
 
 		} while (!update_schema(schema_begins));
 
@@ -1408,16 +1390,22 @@ DatabaseHandler::get_prefixed_term_id(std::string_view document_id)
 
 	schema = get_schema();
 
-	auto field_spc = schema->get_data_id();
-	if (field_spc.get_type() == FieldType::EMPTY) {
+	std::string unprefixed_term_id;
+	auto spc_id = schema->get_data_id();
+	auto id_type = spc_id.get_type();
+	if (id_type == FieldType::EMPTY) {
 		// Search like namespace.
 		const auto type_ser = Serialise::guess_serialise(document_id);
-		field_spc.set_type(type_ser.first);
-		Schema::set_namespace_spc_id(field_spc);
-		return prefixed(type_ser.second, field_spc.prefix(), field_spc.get_ctype());
+		id_type = type_ser.first;
+		if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
+			id_type = FieldType::KEYWORD;
+		}
+		spc_id.set_type(id_type);
+		unprefixed_term_id = type_ser.second;
+	} else {
+		unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 	}
-
-	return prefixed(Serialise::serialise(field_spc, document_id), field_spc.prefix(), field_spc.get_ctype());
+	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 }
 
 

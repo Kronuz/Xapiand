@@ -192,22 +192,23 @@ constexpr uint8_t TIME_CHAR          = 'Z';
 
 enum class FieldType : uint8_t {
 	EMPTY         = EMPTY_CHAR,
-	STRING        = STRING_CHAR,
-	TIMEDELTA     = TIMEDELTA_CHAR,
 	ARRAY         = ARRAY_CHAR,
+	FOREIGN       = FOREIGN_CHAR,
+	OBJECT        = OBJECT_CHAR,
+
 	BOOLEAN       = BOOLEAN_CHAR,
 	DATE          = DATE_CHAR,
-	FOREIGN       = FOREIGN_CHAR,
 	FLOAT         = FLOAT_CHAR,
 	GEO           = GEO_CHAR,
 	INTEGER       = INTEGER_CHAR,
-	OBJECT        = OBJECT_CHAR,
-	POSITIVE      = POSITIVE_CHAR,
-	TEXT          = TEXT_CHAR,
 	KEYWORD       = KEYWORD_CHAR,
-	UUID          = UUID_CHAR,
+	POSITIVE      = POSITIVE_CHAR,
 	SCRIPT        = SCRIPT_CHAR,
+	STRING        = STRING_CHAR,
+	TEXT          = TEXT_CHAR,
 	TIME          = TIME_CHAR,
+	TIMEDELTA     = TIMEDELTA_CHAR,
+	UUID          = UUID_CHAR,
 };
 
 
