@@ -78,7 +78,7 @@ namespace Cast {
 	 */
 
 	MsgPack cast(const MsgPack& obj);
-	MsgPack cast(FieldType type, std::string_view field_value);
+	MsgPack cast(FieldType type, const MsgPack& obj);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
 	double _float(const MsgPack& obj);

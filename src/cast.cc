@@ -75,62 +75,70 @@ Cast::cast(const MsgPack& obj)
 
 
 MsgPack
-Cast::cast(FieldType type, std::string_view field_value)
+Cast::cast(FieldType type, const MsgPack& obj)
 {
 	switch (type) {
-		case FieldType::INTEGER: {
-			int errno_save;
-			auto r = strict_stoll(&errno_save, field_value);
-			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to integer", repr(field_value));
+		case FieldType::INTEGER:
+			return integer(obj);
+		case FieldType::POSITIVE:
+			return positive(obj);
+		case FieldType::FLOAT:
+			return _float(obj);
+		case FieldType::BOOLEAN:
+			return boolean(obj);
+		case FieldType::KEYWORD:
+		case FieldType::TEXT:
+		case FieldType::STRING:
+			return string(obj);
+		case FieldType::UUID:
+			return uuid(obj);
+		case FieldType::DATE:
+			return date(obj);
+		case FieldType::TIME:
+			return time(obj);
+		case FieldType::TIMEDELTA:
+			return timedelta(obj);
+		case FieldType::SCRIPT:
+			if (obj.is_map()) {
+				return obj;
 			}
-			return MsgPack(r);
-		}
-		case FieldType::POSITIVE: {
-			int errno_save;
-			auto r = strict_stoull(&errno_save, field_value);
-			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to positive", repr(field_value));
+			THROW(CastError, "Type %s cannot be cast to script", obj.getStrType());
+		case FieldType::GEO:
+			if (obj.is_map() || obj.is_string()) {
+				return obj;
 			}
-			return MsgPack(r);
-		}
-		case FieldType::FLOAT: {
-			int errno_save;
-			auto r = strict_stod(&errno_save, field_value);
-			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to float", repr(field_value));
-			}
-			return MsgPack(r);
-		}
+			THROW(CastError, "Type %s cannot be cast to geo", obj.getStrType());
 		case FieldType::EMPTY:
-			{
-				// Try like INTEGER.
-				int errno_save;
-				auto r = strict_stoll(&errno_save, field_value);
-				if (errno_save == 0) {
-					return MsgPack(r);
+			if (obj.is_string()) {
+				{
+					// Try like INTEGER.
+					int errno_save;
+					auto r = strict_stoll(&errno_save, obj.str_view());
+					if (errno_save == 0) {
+						return MsgPack(r);
+					}
 				}
-			}
-			{
-				// Try like POSITIVE.
-				int errno_save;
-				auto r = strict_stoull(&errno_save, field_value);
-				if (errno_save == 0) {
-					return MsgPack(r);
+				{
+					// Try like POSITIVE.
+					int errno_save;
+					auto r = strict_stoull(&errno_save, obj.str_view());
+					if (errno_save == 0) {
+						return MsgPack(r);
+					}
 				}
-			}
-			{
-				// Try like FLOAT
-				int errno_save;
-				auto r = strict_stod(&errno_save, field_value);
-				if (errno_save == 0) {
-					return MsgPack(r);
+				{
+					// Try like FLOAT
+					int errno_save;
+					auto r = strict_stod(&errno_save, obj.str_view());
+					if (errno_save == 0) {
+						return MsgPack(r);
+					}
 				}
+				return obj;
 			}
 			/* FALLTHROUGH */
 		default:
-			// Default type String.
-			return MsgPack(field_value);
+			THROW(CastError, "Type %s cannot be cast", obj.getStrType());
 	}
 }
 
