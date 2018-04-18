@@ -1189,8 +1189,20 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
-	auto prepared_docs = prepare_documents(docs);
-	restore_documents(prepared_docs);
+	std::vector<std::tuple<std::string, Xapian::Document, MsgPack>> prepared_docs;
+	prepared_docs.reserve(docs.size());
+
+	for (auto& obj : docs) {
+		prepared_docs.push_back(prepare_document(obj));
+	}
+
+	lock_database lk_db(this);
+	for (auto& prepared : prepared_docs) {
+		auto& term_id = std::get<0>(prepared);
+		auto& doc = std::get<1>(prepared);
+		database->replace_document_term(term_id, doc, false, false);
+	}
+	database->commit(false);
 }
 
 
