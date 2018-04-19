@@ -282,8 +282,8 @@ public:
 	Document(const Xapian::Document& doc_);
 	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
 
-	Document(const Document& doc_);
-	Document& operator=(const Document& doc_);
+	Document(const Document& doc_) = default;
+	Document& operator=(const Document& doc_) = default;
 
 	Xapian::docid get_docid();
 

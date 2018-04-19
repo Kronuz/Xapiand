@@ -1897,16 +1897,6 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
 	  db_handler(db_handler_) { }
 
 
-Document::Document(const Document& doc_)
-	
-	  = default;
-
-
-Document&
-Document::operator=(const Document& doc_)
-= default;
-
-
 Xapian::Document
 Document::get_document()
 {
