@@ -1004,7 +1004,6 @@ DatabaseHandler::restore(int fd)
 	if (header == dump_documents_header) {
 		lk_db.unlock();
 		schema = get_schema();
-		lk_db.lock();
 
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		size_t cnt = 0;
@@ -1059,14 +1058,29 @@ DatabaseHandler::restore(int fd)
 			}
 
 			++cnt;
+			XapiandManager::manager->thread_pool.enqueue([
+				&,
+				document_id = std::move(document_id),
+				obj = std::move(obj),
+				data = std::move(data)
+			]() mutable {
+				DatabaseHandler db_handler(endpoints, flags, method);
+				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+				queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
+			});
+		} while (true);
 
-			// Index documents.
-			std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-			auto prepared = prepare(document_id, obj, data, old_document_pair);
+		// Index documents.
+		while (--cnt) {
+			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+			queue.wait_dequeue(prepared);
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
+
+			lk_db.lock();
 			database->replace_document_term(term_id, doc, false, false);
-		} while (true);
+			lk_db.unlock();
+		}
 
 		lk_db.lock();
 	}
