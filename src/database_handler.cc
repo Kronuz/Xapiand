@@ -28,6 +28,7 @@
 #include <stdexcept>                        // for out_of_range
 #include <utility>
 
+#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cast.h"                           // for Cast
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
@@ -1127,53 +1128,25 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 }
 
 
-std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>>
-DatabaseHandler::prepare_documents(const MsgPack& docs)
-{
-	L_CALL("DatabaseHandler::prepare_documents(<docs>)");
-
-	std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>> prepared_docs;
-	prepared_docs.reserve(docs.size());
-
-	for (auto& obj : docs) {
-		prepared_docs.push_back(XapiandManager::manager->thread_pool.enqueue([&]{
-			DatabaseHandler db_handler(endpoints, flags, method);
-			return db_handler.prepare_document(obj);
-		}));
-	}
-
-	for (auto& prepared_future : prepared_docs) {
-		prepared_future.wait();
-	}
-
-	return prepared_docs;
-}
-
-
-void
-DatabaseHandler::restore_documents(std::vector<std::future<std::tuple<std::string, Xapian::Document, MsgPack>>>& prepared_docs)
-{
-	L_CALL("DatabaseHandler::restore_documents(<prepared_docs>)");
-
-	lock_database lk_db(this);
-	for (auto& prepared_future : prepared_docs) {
-		auto prepared = prepared_future.get();
-		auto& term_id = std::get<0>(prepared);
-		auto& doc = std::get<1>(prepared);
-		database->replace_document_term(term_id, doc, false, false);
-	}
-	database->commit(false);
-}
-
-
 void
 DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
-	lock_database lk_db(this);
+	auto cnt = docs.size();
+
+	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 	for (auto& obj : docs) {
-		auto prepared = prepare_document(obj);
+		XapiandManager::manager->thread_pool.enqueue([&]{
+			DatabaseHandler db_handler(endpoints, flags, method);
+			queue.enqueue(db_handler.prepare_document(obj));
+		});
+	}
+
+	lock_database lk_db(this);
+	while (--cnt) {
+		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+		queue.wait_dequeue(prepared);
 		auto& term_id = std::get<0>(prepared);
 		auto& doc = std::get<1>(prepared);
 		database->replace_document_term(term_id, doc, false, false);
