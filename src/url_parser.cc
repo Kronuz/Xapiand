@@ -339,6 +339,14 @@ PathParser::init(std::string_view p)
 						break;
 
 					case State::SLB:
+						length = n0 - n1;
+						if (length != 0u) {
+							off_slc = n1 + 1;
+							len_slc = length;
+							state = state = cmd_found ? State::PMT : State::ID;
+						}
+						n0 = n1 - 1;
+						break;
 					case State::ID:
 						assert(n0 >= n1);
 						length = n0 - n1;
@@ -407,10 +415,9 @@ PathParser::init(std::string_view p)
 						if (length != 0u) {
 							off_slc = n1 + 1;
 							len_slc = length;
-							cn = '\0';
 						}
-						state = State::ID;
-						n0 = n1 - 1;
+						state = state = cmd_found ? State::PMT : State::ID;
+						n0 = n1;
 						break;
 					default:
 						break;
