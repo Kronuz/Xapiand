@@ -181,6 +181,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 XapiandManager::~XapiandManager()
 {
 	destroyer();
+	join();
 
 	L_OBJ("DELETED XAPIAN MANAGER!");
 }
