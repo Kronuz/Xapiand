@@ -1006,10 +1006,9 @@ DatabaseHandler::restore(int fd)
 		schema = get_schema();
 		lk_db.lock();
 
-		size_t i = 0;
+		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
+		size_t cnt = 0;
 		do {
-			++i;
-
 			MsgPack obj(MsgPack::Type::MAP);
 
 			Data data;
@@ -1055,23 +1054,20 @@ DatabaseHandler::restore(int fd)
 			}
 
 			if (document_id.is_undefined()) {
-				L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, i);
+				L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, cnt);
 				continue;
 			}
 
+			++cnt;
+
+			// Index documents.
 			std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 			auto prepared = prepare(document_id, obj, data, old_document_pair);
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
-
-			// Index document.
-			L_INFO_HOOK("DatabaseHandler::restore", "Restoring document (%zu): %s", i, document_id.to_string());
 			database->replace_document_term(term_id, doc, false, false);
 		} while (true);
 
-		lk_db.unlock();
-		auto schema_begins = std::chrono::system_clock::now();
-		while (!update_schema(schema_begins)) { }
 		lk_db.lock();
 	}
 
