@@ -382,7 +382,7 @@ HttpClient::on_info(http_parser* parser)
 				std::lock_guard<std::mutex> lk(requests_mutex);
 				if (requests.empty()) {
 					// There wasn't one, start runner
-					XapiandManager::manager->thread_pool.enqueue([task = share_this<HttpClient>()]{
+					XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
 						task->run();
 					});
 				}

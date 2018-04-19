@@ -55,7 +55,8 @@
 #define NUM_REPLICATORS      10      /* Number of replicators. */
 #define NUM_COMMITTERS       10      /* Number of threads handling the commits. */
 #define NUM_FSYNCHERS        10      /* Number of threads handling the fsyncs. */
-#define THEADPOOL_SIZE       100     /* Threadpool's size. */
+#define THEADPOOL_SIZE       4       /* Threadpool's size (number of CPUs) */
+#define TASKS_SIZE           100     /* Client tasks threadpool's size. */
 #define SERVERS_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE   10      /* Endpoints List's size. */
 #define SCRIPTS_CACHE_SIZE   100     /* Size of each script processor LRU. */

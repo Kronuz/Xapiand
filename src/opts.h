@@ -54,6 +54,7 @@ extern struct opts_t {
 	ssize_t dbpool_size;
 	ssize_t num_replicators;
 	ssize_t threadpool_size;
+	ssize_t tasks_size;
 	ssize_t endpoints_list_size;
 	ssize_t num_committers;
 	ssize_t num_fsynchers;

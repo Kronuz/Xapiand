@@ -488,6 +488,7 @@ void parseOptions(int argc, char** argv) {
 		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
+		opts.tasks_size = TASKS_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
 			if (opts.logfile.empty()) {

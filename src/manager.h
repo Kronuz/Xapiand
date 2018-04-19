@@ -140,6 +140,7 @@ public:
 	SchemasLRU schemas;
 
 	ThreadPool thread_pool;
+	ThreadPool client_pool;
 	ThreadPool server_pool;
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool replicator_pool;

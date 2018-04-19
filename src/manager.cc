@@ -114,6 +114,7 @@ XapiandManager::XapiandManager()
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
 	  thread_pool("W%02zu", opts.threadpool_size),
+	  client_pool("C%02zu", opts.tasks_size),
 	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", opts.num_replicators),
@@ -131,6 +132,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
 	  thread_pool("W%02zu", opts.threadpool_size),
+	  client_pool("C%02zu", opts.tasks_size),
 	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", opts.num_replicators),
@@ -678,7 +680,7 @@ XapiandManager::run()
 
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
-		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
+		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " worker thread" : " worker threads"),
 #ifdef XAPIAND_CLUSTERING
 		opts.solo ? "" : std::to_string(opts.num_replicators) + ((opts.num_replicators == 1) ? " replicator" : " replicators"),
 #endif
@@ -760,11 +762,17 @@ XapiandManager::join()
 	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
 	AsyncFsync::join();
 
-	L_MANAGER("Finishing worker threads pool!");
-	thread_pool.finish();
+	L_MANAGER("Finishing client threads pool!");
+	client_pool.finish();
 
 	L_MANAGER("Finishing database pool!");
 	database_pool.finish();
+
+	L_MANAGER("Finishing thread pool!");
+	thread_pool.finish();
+
+	L_MANAGER("Waiting for %zu client thread%s...", client_pool.running_size(), (client_pool.running_size() == 1) ? "" : "s");
+	client_pool.join();
 
 	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
 	thread_pool.join();
@@ -1004,12 +1012,12 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 void
 XapiandManager::server_status(MsgPack& stats)
 {
-	// worker_tasks:
-	auto& stats_worker_tasks = stats["worker_tasks"];
-	stats_worker_tasks["running"] = thread_pool.running_size();
-	stats_worker_tasks["enqueued"] = thread_pool.size();
-	stats_worker_tasks["capacity"] = thread_pool.threadpool_capacity();
-	stats_worker_tasks["pool_size"] = thread_pool.threadpool_size();
+	// clients_tasks:
+	auto& stats_clients_tasks = stats["clients_tasks"];
+	stats_clients_tasks["running"] = client_pool.running_size();
+	stats_clients_tasks["enqueued"] = client_pool.size();
+	stats_clients_tasks["capacity"] = client_pool.threadpool_capacity();
+	stats_clients_tasks["pool_size"] = client_pool.threadpool_size();
 
 	// servers_threads:
 	auto& stats_servers_threads = stats["servers_threads"];
