@@ -93,7 +93,7 @@ class ThreadPool {
 	friend Thread;
 
 	std::vector<Thread> _threads;
-	moodycamel::BlockingConcurrentQueue<std::pair<bool, std::function<void()>>> _queue;
+	BlockingConcurrentQueue<std::pair<bool, std::function<void()>>> _queue;
 
 	const char* _format;
 

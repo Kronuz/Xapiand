@@ -606,3 +606,4 @@ inline void swap(BlockingConcurrentQueue<T, Traits>& a, BlockingConcurrentQueue<
 
 }	// end namespace moodycamel
 
+using namespace moodycamel;

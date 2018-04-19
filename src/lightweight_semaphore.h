@@ -424,3 +424,5 @@ public:
 };
 
 }   // end namespace moodycamel
+
+using namespace moodycamel;
