@@ -2530,8 +2530,9 @@ Schema::index(const MsgPack& object, Xapian::Document& doc,
 		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
-			auto mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
+			mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
 					THROW(ClientError, "Script must return an object, it returned %s", mut_object->getStrType());
