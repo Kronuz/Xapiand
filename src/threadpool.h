@@ -124,6 +124,9 @@ public:
 	template <typename Func, typename... Args>
 	auto package(Func&& func, Args&&... args);
 
+	template <typename It, typename Result, typename = std::enable_if_t<std::is_same<typename std::iterator_traits<It>::value_type, PackagedTask<Result>>::value>>
+	auto enqueue_bulk(It itemFirst, size_t count);
+
 	template <typename Result>
 	auto enqueue(PackagedTask<Result>&& packaged_task);
 
@@ -286,21 +289,38 @@ ThreadPool::package(Func&& func, Args&&... args)
 	return packaged_task;
 }
 
+template <typename It, typename Result, typename>
+inline auto
+ThreadPool::enqueue_bulk(It itemFirst, size_t count)
+{
+	if likely(_queue.enqueue_bulk(std::forward<It>(itemFirst), count)) {
+		_enqueued.fetch_add(count, std::memory_order_relaxed);
+		return true;
+	}
+	return false;
+}
+
 template <typename Result>
 inline auto
 ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
 {
-	auto future = packaged_task.get_future();
-	_enqueued.fetch_add(1, std::memory_order_relaxed);
-	_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
+	if likely(_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
 		packaged_task();
-	}));
-	return future;
+	}))) {
+		_enqueued.fetch_add(1, std::memory_order_relaxed);
+		return true;
+	}
+	return false;
 }
 
 template <typename Func, typename... Args, typename>
 inline auto
 ThreadPool::enqueue(Func&& func, Args&&... args)
 {
-	return enqueue(package(std::forward<Func>(func), std::forward<Args>(args)...));
+	auto packaged_task = package(std::forward<Func>(func), std::forward<Args>(args)...);
+	auto future = packaged_task.get_future();
+	if unlikely(!enqueue(std::move(packaged_task))) {
+		throw std::runtime_error("Cannot enqueue task to threadpool");
+	}
+	return future;
 }
