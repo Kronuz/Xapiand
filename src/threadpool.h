@@ -113,7 +113,7 @@ class ThreadPool {
 	std::atomic_size_t _running;
 
 public:
-	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 100);
+	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 1000);
 
 	~ThreadPool();
 
