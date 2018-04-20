@@ -34,9 +34,10 @@
 #include <vector>         // for std::vector
 
 #include "blocking_concurrent_queue.h"
-#include "string.hh"     // for string::format
-#include "utils.h"       // for set_thread_name
-
+#include "exception.h"    // for Exception
+#include "log.h"          // for L_DEBUG, L_EXC, L_NOTHING
+#include "string.hh"      // for string::format
+#include "utils.h"        // for set_thread_name
 
 /* Since std::packaged_task cannot be copied, and std::function requires it can,
  * we add a dummy copy constructor to std::packaged_task. (We need to make sure
@@ -186,7 +187,26 @@ Thread::operator()()
 		if likely(task != nullptr) {
 			_pool->_enqueued.fetch_sub(1, std::memory_order_relaxed);
 			_pool->_running.fetch_add(1, std::memory_order_relaxed);
-			task();
+			try {
+				task();
+			} catch (const BaseException& exc) {
+				auto exc_context = exc.get_context();
+				if (!*exc_context) {
+					exc_context = "Unkown Exception!";
+				}
+				L_EXC("Task died with an unhandled exception: %s", exc_context);
+			} catch (const Xapian::Error& exc) {
+				L_EXC("Task died with an unhandled exception: %s", exc.get_description());
+			} catch (const std::exception& exc) {
+				auto exc_msg = exc.what();
+				if (!*exc_msg) {
+					exc_msg = "Unkown std::exception!";
+				}
+				L_EXC("Task died with an unhandled exception: %s", exc_msg);
+			} catch (...) {
+				std::exception exc;
+				L_EXC("Task died with an unhandled exception: Unkown!");
+			}
 			_pool->_running.fetch_sub(1, std::memory_order_relaxed);
 		} else if (_pool->_ending.load(std::memory_order_acquire)) {
 			break;
