@@ -1011,12 +1011,16 @@ DatabaseHandler::restore(int fd)
 		schema = get_schema();
 
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
-		std::atomic_size_t preparing = 0;
 		std::atomic_bool ready = false;
+		std::atomic_size_t indexing = 0;
 
 		// Index documents.
-		auto worker = XapiandManager::manager->client_pool.async([&]{
-			while (!ready || preparing > 0) {
+		auto indexer = XapiandManager::manager->client_pool.async([&]{
+			DatabaseHandler db_handler(endpoints, flags, method);
+			lock_database lk_db(&db_handler);
+			lk_db.unlock();
+
+			while (!ready || indexing > 0) {
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 				queue.wait_dequeue(prepared);
 				auto& term_id = std::get<0>(prepared);
@@ -1025,7 +1029,7 @@ DatabaseHandler::restore(int fd)
 				if (!term_id.empty()) {
 					lk_db.lock();
 					try {
-						database->replace_document_term(term_id, doc, false, false);
+						db_handler.database->replace_document_term(term_id, doc, false, false);
 					} catch (const BaseException& exc) {
 						L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 					} catch (const Xapian::Error& exc) {
@@ -1036,10 +1040,11 @@ DatabaseHandler::restore(int fd)
 						std::exception exc;
 						L_EXC("ERROR: %s", "Unknown exception!");
 					}
-					if (preparing.load(std::memory_order_relaxed) > 0) {
+					if (!ready.load(std::memory_order_relaxed)) {
 						// only unlock when there are still tasks preparing more documents
 						lk_db.unlock();
 					}
+					indexing.fetch_sub(1, std::memory_order_relaxed);
 				}
 			}
 		});
@@ -1095,7 +1100,7 @@ DatabaseHandler::restore(int fd)
 				continue;
 			}
 
-			preparing.fetch_add(1, std::memory_order_relaxed);
+			indexing.fetch_add(1, std::memory_order_relaxed);
 
 			if (bulk_cnt == bulk.size()) {
 				XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
@@ -1111,24 +1116,19 @@ DatabaseHandler::restore(int fd)
 					DatabaseHandler db_handler(endpoints, flags, method);
 					std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 					queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
-					preparing.fetch_sub(1, std::memory_order_relaxed);
 				} catch (const BaseException& exc) {
 					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-					preparing.fetch_sub(1, std::memory_order_relaxed);
 				} catch (const Xapian::Error& exc) {
 					L_EXC("ERROR: %s", exc.get_description());
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-					preparing.fetch_sub(1, std::memory_order_relaxed);
 				} catch (const std::exception& exc) {
 					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-					preparing.fetch_sub(1, std::memory_order_relaxed);
 				} catch (...) {
 					std::exception exc;
 					L_EXC("ERROR: %s", "Unknown exception!");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-					preparing.fetch_sub(1, std::memory_order_relaxed);
 				}
 			};
 		} while (true);
@@ -1137,9 +1137,9 @@ DatabaseHandler::restore(int fd)
 			XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
 		}
 
-		ready.store(true);
+		ready.store(true, std::memory_order_relaxed);
 
-		worker.wait();
+		indexer.wait();
 
 		lk_db.lock();
 	}
@@ -1202,24 +1202,74 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
-	auto cnt = docs.size();
-
 	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
+	std::atomic_size_t indexing = docs.size();
+
+	// Index documents.
+	auto indexer = XapiandManager::manager->client_pool.async([&]{
+		DatabaseHandler db_handler(endpoints, flags, method);
+
+		while (indexing > 0) {
+			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+			queue.wait_dequeue(prepared);
+			auto& term_id = std::get<0>(prepared);
+			auto& doc = std::get<1>(prepared);
+
+			if (!term_id.empty()) {
+				try {
+					lock_database lk_db(&db_handler);
+					db_handler.database->replace_document_term(term_id, doc, false, false);
+				} catch (const BaseException& exc) {
+					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+				} catch (const Xapian::Error& exc) {
+					L_EXC("ERROR: %s", exc.get_description());
+				} catch (const std::exception& exc) {
+					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+				} catch (...) {
+					std::exception exc;
+					L_EXC("ERROR: %s", "Unknown exception!");
+				}
+				indexing.fetch_sub(1, std::memory_order_relaxed);
+			}
+		}
+	});
+
+	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
+	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		XapiandManager::manager->thread_pool.enqueue([&]{
-			DatabaseHandler db_handler(endpoints, flags, method);
-			queue.enqueue(db_handler.prepare_document(obj));
-		});
+		if (bulk_cnt == bulk.size()) {
+			XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
+			bulk_cnt = 0;
+		}
+		bulk[bulk_cnt++] = [&]() {
+			try {
+				DatabaseHandler db_handler(endpoints, flags, method);
+				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+				queue.enqueue(db_handler.prepare_document(obj));
+			} catch (const BaseException& exc) {
+				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+			} catch (const Xapian::Error& exc) {
+				L_EXC("ERROR: %s", exc.get_description());
+				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+			} catch (const std::exception& exc) {
+				L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+			} catch (...) {
+				std::exception exc;
+				L_EXC("ERROR: %s", "Unknown exception!");
+				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+			}
+		};
 	}
+
+	if (bulk_cnt != 0) {
+		XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
+	}
+
+	indexer.wait();
 
 	lock_database lk_db(this);
-	while (--cnt) {
-		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
-		queue.wait_dequeue(prepared);
-		auto& term_id = std::get<0>(prepared);
-		auto& doc = std::get<1>(prepared);
-		database->replace_document_term(term_id, doc, false, false);
-	}
 	database->commit(false);
 }
 
