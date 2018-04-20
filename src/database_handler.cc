@@ -1012,7 +1012,38 @@ DatabaseHandler::restore(int fd)
 
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		std::atomic_size_t preparing = 0;
-		size_t cnt = 0;
+		std::atomic_bool ready = false;
+
+		// Index documents.
+		auto worker = XapiandManager::manager->client_pool.async([&]{
+			while (!ready || preparing > 0) {
+				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+				queue.wait_dequeue(prepared);
+				auto& term_id = std::get<0>(prepared);
+				auto& doc = std::get<1>(prepared);
+
+				if (!term_id.empty()) {
+					lk_db.lock();
+					try {
+						database->replace_document_term(term_id, doc, false, false);
+					} catch (const BaseException& exc) {
+						L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+					} catch (const Xapian::Error& exc) {
+						L_EXC("ERROR: %s", exc.get_description());
+					} catch (const std::exception& exc) {
+						L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+					} catch (...) {
+						std::exception exc;
+						L_EXC("ERROR: %s", "Unknown exception!");
+					}
+					if (preparing.load(std::memory_order_relaxed) > 0) {
+						// only unlock when there are still tasks preparing more documents
+						lk_db.unlock();
+					}
+				}
+			}
+		});
+
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
 		do {
@@ -1061,11 +1092,10 @@ DatabaseHandler::restore(int fd)
 			}
 
 			if (document_id.is_undefined()) {
-				L_WARNING("Document with no '%s' ignored [%zu]", ID_FIELD_NAME, cnt);
 				continue;
 			}
 
-			++cnt;
+			preparing.fetch_add(1, std::memory_order_relaxed);
 
 			if (bulk_cnt == bulk.size()) {
 				XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
@@ -1107,35 +1137,9 @@ DatabaseHandler::restore(int fd)
 			XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
 		}
 
-		preparing.fetch_add(cnt, std::memory_order_relaxed);
+		ready.store(true);
 
-		// Index documents.
-		while (--cnt) {
-			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
-			queue.wait_dequeue(prepared);
-			auto& term_id = std::get<0>(prepared);
-			auto& doc = std::get<1>(prepared);
-
-			if (!term_id.empty()) {
-				lk_db.lock();
-				try {
-					database->replace_document_term(term_id, doc, false, false);
-				} catch (const BaseException& exc) {
-					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-				} catch (const Xapian::Error& exc) {
-					L_EXC("ERROR: %s", exc.get_description());
-				} catch (const std::exception& exc) {
-					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-				} catch (...) {
-					std::exception exc;
-					L_EXC("ERROR: %s", "Unknown exception!");
-				}
-				if (preparing.load(std::memory_order_relaxed) > 0) {
-					// only unlock when there are still tasks preparing more documents
-					lk_db.unlock();
-				}
-			}
-		}
+		worker.wait();
 
 		lk_db.lock();
 	}
