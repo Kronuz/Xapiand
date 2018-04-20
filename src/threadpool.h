@@ -102,7 +102,7 @@ class ThreadPool {
 	friend Thread;
 
 	std::vector<Thread> _threads;
-	BlockingConcurrentQueue<std::pair<bool, std::function<void()>>> _queue;
+	BlockingConcurrentQueue<std::function<void()>> _queue;
 
 	const char* _format;
 
@@ -181,12 +181,12 @@ Thread::operator()()
 	set_thread_name(string::format(_pool->_format, _idx));
 
 	while (!_pool->_finished.load(std::memory_order_acquire)) {
-		std::pair<bool, std::function<void()>> task;
+		std::function<void()> task;
 		_pool->_queue.wait_dequeue(task);
-		if likely(task.first) {
+		if likely(task != nullptr) {
 			_pool->_enqueued.fetch_sub(1, std::memory_order_relaxed);
 			_pool->_running.fetch_add(1, std::memory_order_relaxed);
-			task.second();
+			task();
 			_pool->_running.fetch_sub(1, std::memory_order_relaxed);
 		} else if (_pool->_ending.load(std::memory_order_acquire)) {
 			break;
@@ -219,9 +219,9 @@ ThreadPool::~ThreadPool()
 
 inline void
 ThreadPool::clear() {
-	std::pair<bool, std::function<void()>> task;
+	std::function<void()> task;
 	while (_queue.try_dequeue(task)) {
-		if likely(task.first) {
+		if likely(task != nullptr) {
 			_enqueued.fetch_sub(1, std::memory_order_relaxed);
 		}
 	}
@@ -257,7 +257,7 @@ ThreadPool::end()
 {
 	if (!_ending.exchange(true, std::memory_order_release)) {
 		for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
-			_queue.enqueue(std::make_pair(false, []{}));
+			_queue.enqueue(nullptr);
 		}
 	}
 }
@@ -267,7 +267,7 @@ ThreadPool::finish(bool wait)
 {
 	if (!_finished.exchange(true, std::memory_order_release)) {
 		for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
-			_queue.enqueue(std::make_pair(false, []{}));
+			_queue.enqueue(nullptr);
 		}
 		if (wait) {
 			join();
@@ -315,9 +315,9 @@ inline auto
 ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
 {
 	_enqueued.fetch_add(1, std::memory_order_relaxed);
-	if unlikely(!_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
+	if unlikely(!_queue.enqueue([packaged_task = std::move(packaged_task)]() mutable {
 		packaged_task();
-	}))) {
+	})) {
 		_enqueued.fetch_sub(1, std::memory_order_relaxed);
 		return false;
 	}
