@@ -32,6 +32,7 @@
 #include "length.h"                // for serialise_length()
 #include "utils.h"                 // for toUType
 #include "string.hh"               // for string::*
+#include "msgpack.h"               // for MsgPack
 
 
 constexpr int STORED_CONTENT_TYPE  = 0;
@@ -354,8 +355,8 @@ public:
 	}
 
 	Data(const Data& other) {
-		serialised = other.serialised;
-		feed(std::move(serialised));
+		auto tmp = other.serialised;
+		feed(std::move(tmp));
 		flush(other.pending);
 	}
 
@@ -366,8 +367,8 @@ public:
 	}
 
 	Data& operator=(const Data& other) {
-		serialised = other.serialised;
-		feed(std::move(serialised));
+		auto tmp = other.serialised;
+		feed(std::move(tmp));
 		flush(other.pending);
 		return *this;
 	}
