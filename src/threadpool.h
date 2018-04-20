@@ -136,11 +136,11 @@ public:
 	template <typename It>
 	auto enqueue_bulk(It itemFirst, size_t count);
 
-	template <typename Result>
-	auto enqueue(PackagedTask<Result>&& packaged_task);
+	template <typename Func, typename = std::result_of_t<Func()>()>
+	auto enqueue(Func&& func);
 
 	template <typename Func, typename... Args, typename = std::result_of_t<Func(Args...)>()>
-	auto enqueue(Func&& func, Args&&... args);
+	auto async(Func&& func, Args&&... args);
 };
 
 
@@ -310,14 +310,12 @@ ThreadPool::enqueue_bulk(It itemFirst, size_t count)
 	return true;
 }
 
-template <typename Result>
+template <typename Func, typename>
 inline auto
-ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
+ThreadPool::enqueue(Func&& func)
 {
 	_enqueued.fetch_add(1, std::memory_order_relaxed);
-	if unlikely(!_queue.enqueue([packaged_task = std::move(packaged_task)]() mutable {
-		packaged_task();
-	})) {
+	if unlikely(!_queue.enqueue(std::forward<Func>(func))) {
 		_enqueued.fetch_sub(1, std::memory_order_relaxed);
 		return false;
 	}
@@ -326,11 +324,13 @@ ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
 
 template <typename Func, typename... Args, typename>
 inline auto
-ThreadPool::enqueue(Func&& func, Args&&... args)
+ThreadPool::async(Func&& func, Args&&... args)
 {
 	auto packaged_task = package(std::forward<Func>(func), std::forward<Args>(args)...);
 	auto future = packaged_task.get_future();
-	if unlikely(!enqueue(std::move(packaged_task))) {
+	if unlikely(!enqueue([packaged_task = std::move(packaged_task)]() mutable {
+		packaged_task();
+	})) {
 		throw std::runtime_error("Cannot enqueue task to threadpool");
 	}
 	return future;
