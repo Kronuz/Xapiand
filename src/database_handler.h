@@ -35,7 +35,6 @@
 #include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
-#include "manager.h"                         // for XapiandManager, XapiandM...
 #include "msgpack.h"                         // for MsgPack
 
 

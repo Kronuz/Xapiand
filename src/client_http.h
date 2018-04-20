@@ -45,6 +45,7 @@
 #include "deflate_compressor.h" // for DeflateCompressData
 #include "http_parser.h"        // for http_parser, http_parser_settings
 #include "lru.h"                // for LRU
+#include "phf.hh"               // for phf::make_phf
 #include "msgpack.h"            // for MsgPack
 #include "threadpool.h"         // for Task
 #include "url_parser.h"         // for PathParser, QueryParser
