@@ -293,24 +293,26 @@ template <typename It, typename Result, typename>
 inline auto
 ThreadPool::enqueue_bulk(It itemFirst, size_t count)
 {
-	if likely(_queue.enqueue_bulk(std::forward<It>(itemFirst), count)) {
-		_enqueued.fetch_add(count, std::memory_order_relaxed);
-		return true;
+	_enqueued.fetch_add(count, std::memory_order_relaxed);
+	if unlikely(!_queue.enqueue_bulk(std::forward<It>(itemFirst), count)) {
+		_enqueued.fetch_sub(count, std::memory_order_relaxed);
+		return false;
 	}
-	return false;
+	return true;
 }
 
 template <typename Result>
 inline auto
 ThreadPool::enqueue(PackagedTask<Result>&& packaged_task)
 {
-	if likely(_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
+	_enqueued.fetch_add(1, std::memory_order_relaxed);
+	if unlikely(!_queue.enqueue(std::make_pair(true, [packaged_task = std::move(packaged_task)]() mutable {
 		packaged_task();
 	}))) {
-		_enqueued.fetch_add(1, std::memory_order_relaxed);
-		return true;
+		_enqueued.fetch_sub(1, std::memory_order_relaxed);
+		return false;
 	}
-	return false;
+	return true;
 }
 
 template <typename Func, typename... Args, typename>
