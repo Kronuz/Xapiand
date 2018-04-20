@@ -69,3 +69,15 @@ def serialise_string(s):
 def unserialise_string(data):
     length, data = unserialise_length(data, True)
     return data[:length], data[length:]
+
+
+def serialise_char(c):
+    if len(c) != 1:
+        raise ValueError("Serialisation error: Cannot serialise empty char")
+    return c
+
+
+def unserialise_char(data):
+    if len(data) < 1:
+        raise ValueError("Bad encoded length: insufficient data")
+    return data[:1], data[1:]
