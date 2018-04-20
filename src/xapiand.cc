@@ -1144,7 +1144,7 @@ int dump_documents() {
 int restore() {
 	int exit_code = EX_OK;
 
-	int fd = opts.filename.empty() ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
+	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
 			usedir(opts.database.c_str(), opts.solo);
