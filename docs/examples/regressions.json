@@ -39,3 +39,17 @@ curl -XPOST "http://localhost:8880/test/duplicated_array_field" -H "Accept: appl
 	]
 }'
 curl -XGET "http://localhost:8880/test/duplicated_array_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+
+
+
+curl -XPUT "http://localhost:8880/test/merges/german" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"name": "German M. Bravo",
+	"age": 39,
+	"gender": "M"
+}'
+curl -XMERGE "http://localhost:8880/test/merges/german" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+	"name": "German Mendez Bravo"
+}'
+curl -XGET "http://localhost:8880/test/merges/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
