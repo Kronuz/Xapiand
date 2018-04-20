@@ -1076,10 +1076,29 @@ DatabaseHandler::restore(int fd)
 				obj = std::move(obj),
 				data = std::move(data)
 			]() mutable {
-				DatabaseHandler db_handler(endpoints, flags, method);
-				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-				queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
-				preparing.fetch_sub(1, std::memory_order_relaxed);
+				try {
+					DatabaseHandler db_handler(endpoints, flags, method);
+					std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+					queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
+					preparing.fetch_sub(1, std::memory_order_relaxed);
+				} catch (const BaseException& exc) {
+					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+					preparing.fetch_sub(1, std::memory_order_relaxed);
+				} catch (const Xapian::Error& exc) {
+					L_EXC("ERROR: %s", exc.get_description());
+					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+					preparing.fetch_sub(1, std::memory_order_relaxed);
+				} catch (const std::exception& exc) {
+					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+					preparing.fetch_sub(1, std::memory_order_relaxed);
+				} catch (...) {
+					std::exception exc;
+					L_EXC("ERROR: %s", "Unknown exception!");
+					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+					preparing.fetch_sub(1, std::memory_order_relaxed);
+				}
 			};
 		} while (true);
 
@@ -1096,11 +1115,24 @@ DatabaseHandler::restore(int fd)
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
 
-			lk_db.lock();
-			database->replace_document_term(term_id, doc, false, false);
-			if (preparing.load(std::memory_order_relaxed) > 0) {
-				// only unlock when there are still tasks preparing more documents
-				lk_db.unlock();
+			if (!term_id.empty()) {
+				lk_db.lock();
+				try {
+					database->replace_document_term(term_id, doc, false, false);
+				} catch (const BaseException& exc) {
+					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+				} catch (const Xapian::Error& exc) {
+					L_EXC("ERROR: %s", exc.get_description());
+				} catch (const std::exception& exc) {
+					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+				} catch (...) {
+					std::exception exc;
+					L_EXC("ERROR: %s", "Unknown exception!");
+				}
+				if (preparing.load(std::memory_order_relaxed) > 0) {
+					// only unlock when there are still tasks preparing more documents
+					lk_db.unlock();
+				}
 			}
 		}
 

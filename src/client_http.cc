@@ -661,7 +661,7 @@ HttpClient::run_one(Request& request, Response& response)
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
-		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(exc.get_description());
