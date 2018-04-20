@@ -133,7 +133,7 @@ public:
 	template <typename Func, typename... Args>
 	auto package(Func&& func, Args&&... args);
 
-	template <typename It, typename Result, typename = std::enable_if_t<std::is_same<typename std::iterator_traits<It>::value_type, PackagedTask<Result>>::value>>
+	template <typename It>
 	auto enqueue_bulk(It itemFirst, size_t count);
 
 	template <typename Result>
@@ -298,7 +298,7 @@ ThreadPool::package(Func&& func, Args&&... args)
 	return packaged_task;
 }
 
-template <typename It, typename Result, typename>
+template <typename It>
 inline auto
 ThreadPool::enqueue_bulk(It itemFirst, size_t count)
 {
