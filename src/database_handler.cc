@@ -1881,12 +1881,12 @@ Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
 
 
 Xapian::Document
-Document::get_document()
+Document::_get_document()
 {
-	L_CALL("Document::get_document()");
+	L_CALL("Document::_get_document()");
 
 	Xapian::Document doc;
-	if ((db_handler != nullptr) && db_handler->database) {
+	if (db_handler != nullptr && db_handler->database) {
 		doc = db_handler->database->get_document(did, true);
 	}
 	return doc;
@@ -1907,7 +1907,7 @@ Document::serialise(size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 		return doc.serialise();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries != 0u) {
@@ -1925,7 +1925,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 		return doc.get_value(slot);
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries != 0u) {
@@ -1943,7 +1943,7 @@ Document::get_data(size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 		return doc.get_data();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries != 0u) {
@@ -1961,7 +1961,7 @@ Document::get_blob(const ct_type_t& ct_type, size_t retries)
 
 	try {
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 		auto data = Data(doc.get_data());
 		auto locator = data.get(ct_type);
 		if (locator != nullptr) {
@@ -1996,7 +1996,7 @@ Document::get_terms(size_t retries)
 		MsgPack terms;
 
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 
 		// doc.termlist_count() disassociates the database in doc.
 
@@ -2036,7 +2036,7 @@ Document::get_values(size_t retries)
 		MsgPack values;
 
 		lock_database lk_db(db_handler);
-		auto doc = get_document();
+		auto doc = _get_document();
 
 		values.reserve(doc.values_count());
 		const auto iv_e = doc.values_end();
@@ -2112,7 +2112,7 @@ Document::hash(size_t retries)
 	try {
 		lock_database lk_db(db_handler);
 
-		auto doc = get_document();
+		auto doc = _get_document();
 
 		uint64_t hash = 0;
 

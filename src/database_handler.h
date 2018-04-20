@@ -273,7 +273,7 @@ class Document {
 
 	DatabaseHandler* db_handler;
 
-	Xapian::Document get_document();
+	Xapian::Document _get_document();
 
 public:
 	Document();
