@@ -2544,7 +2544,7 @@ Schema::index(const MsgPack& object, Xapian::Document& doc,
 					auto key = hh(str_key);
 					if (!has_dispatch_process_properties(key)) {
 						if (!has_dispatch_process_concrete_properties(key)) {
-							fields.emplace_back(std::move(str_key), &it.value());
+							fields.emplace_back(str_key, &it.value());
 						}
 					}
 				}
@@ -5750,7 +5750,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		auto key = hh(str_key);
 		auto &value = it.value();
 		if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-			fields.emplace_back(std::move(str_key), &value);
+			fields.emplace_back(str_key, &value);
 		}
 	}
 
@@ -5772,7 +5772,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 		auto& value = it.value();
 		if (!_dispatch_process_properties(key, str_key, value)) {
 			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				fields.emplace_back(std::move(str_key), &value);
+				fields.emplace_back(str_key, &value);
 			}
 		}
 	}
@@ -5806,7 +5806,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 		auto& value = it.value();
 		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				fields.emplace_back(std::move(str_key), &value);
+				fields.emplace_back(str_key, &value);
 			}
 		}
 	}
@@ -6512,7 +6512,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 			if (!_dispatch_process_properties(key, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-					fields.emplace_back(std::move(str_key), &value);
+					fields.emplace_back(str_key, &value);
 				}
 			}
 		}
