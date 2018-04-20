@@ -23,6 +23,7 @@
 #include "database_handler.h"
 
 #include <algorithm>                        // for min, move
+#include <array>                            // for std::array
 #include <cctype>                           // for isupper, tolower
 #include <exception>                        // for exception
 #include <stdexcept>                        // for out_of_range
@@ -1011,6 +1012,8 @@ DatabaseHandler::restore(int fd)
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		std::atomic_size_t preparing = 0;
 		size_t cnt = 0;
+		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
+		size_t bulk_cnt = 0;
 		do {
 			MsgPack obj(MsgPack::Type::MAP);
 
@@ -1062,7 +1065,12 @@ DatabaseHandler::restore(int fd)
 			}
 
 			++cnt;
-			XapiandManager::manager->thread_pool.enqueue([
+
+			if (bulk_cnt == bulk.size()) {
+				XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
+				bulk_cnt = 0;
+			}
+			bulk[bulk_cnt++] = [
 				&,
 				document_id = std::move(document_id),
 				obj = std::move(obj),
@@ -1072,8 +1080,12 @@ DatabaseHandler::restore(int fd)
 				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 				queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
 				preparing.fetch_sub(1, std::memory_order_relaxed);
-			});
+			};
 		} while (true);
+
+		if (bulk_cnt != 0) {
+			XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt);
+		}
 
 		preparing.fetch_add(cnt, std::memory_order_relaxed);
 
