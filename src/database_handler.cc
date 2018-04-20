@@ -1009,6 +1009,7 @@ DatabaseHandler::restore(int fd)
 		schema = get_schema();
 
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
+		std::atomic_size_t preparing = 0;
 		size_t cnt = 0;
 		do {
 			MsgPack obj(MsgPack::Type::MAP);
@@ -1070,8 +1071,11 @@ DatabaseHandler::restore(int fd)
 				DatabaseHandler db_handler(endpoints, flags, method);
 				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 				queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
+				preparing.fetch_sub(1, std::memory_order_relaxed);
 			});
 		} while (true);
+
+		preparing.fetch_add(cnt, std::memory_order_relaxed);
 
 		// Index documents.
 		while (--cnt) {
@@ -1082,7 +1086,10 @@ DatabaseHandler::restore(int fd)
 
 			lk_db.lock();
 			database->replace_document_term(term_id, doc, false, false);
-			lk_db.unlock();
+			if (preparing.load(std::memory_order_relaxed) > 0) {
+				// only unlock when there are still tasks preparing more documents
+				lk_db.unlock();
+			}
 		}
 
 		lk_db.lock();
