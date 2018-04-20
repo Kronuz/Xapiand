@@ -152,13 +152,22 @@ class lock_database {
 	lock_database(const lock_database&) = delete;
 	lock_database& operator=(const lock_database&) = delete;
 
+	template <bool internal>
+	void _lock();
+
+	template <bool internal>
+	void _unlock();
+
 public:
 	lock_database(DatabaseHandler* db_handler_);
 	~lock_database();
 
-	void lock();
-
-	void unlock();
+	void lock() {
+		_lock<false>();
+	}
+	void unlock() {
+		_unlock<false>();
+	}
 };
 
 

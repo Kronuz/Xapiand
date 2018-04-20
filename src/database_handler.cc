@@ -207,47 +207,50 @@ public:
 lock_database::lock_database(DatabaseHandler* db_handler_)
 	: db_handler(db_handler_)
 {
-	lock();
+	_lock<true>();
 }
 
 
 lock_database::~lock_database()
 {
-	if (db_handler != nullptr) {
-		if (db_handler->database) {
-			unlock();
-		}
-	}
+	_unlock<true>();
 }
 
 
+template <bool internal>
 void
-lock_database::lock()
+lock_database::_lock()
 {
 	L_CALL("lock_database::lock()");
 
 	if (db_handler != nullptr) {
 		if (db_handler->database) {
-			++db_handler->database_locks;
+			if constexpr (internal) {
+				// internal always increments number of locks
+				++db_handler->database_locks;
+			}
 		} else {
 			XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags);
+			assert(db_handler->database);
 			++db_handler->database_locks;
 		}
 	}
 }
 
 
+template <bool internal>
 void
-lock_database::unlock()
+lock_database::_unlock()
 {
-	L_CALL("lock_database::unlock(...)");
+	L_CALL("lock_database::unlock()");
 
 	if (db_handler != nullptr) {
-		if (db_handler->database) {
+		if (db_handler->database && db_handler->database_locks > 0) {
 			if (--db_handler->database_locks == 0) {
 				XapiandManager::manager->database_pool.checkin(db_handler->database);
 			}
-		} else {
+		} else if constexpr (!internal) {
+			// internal never throws, just ignores
 			THROW(Error, "lock_database is not locked: %s", repr(db_handler->database->endpoints.to_string()));
 		}
 	}
