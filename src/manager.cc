@@ -652,8 +652,9 @@ XapiandManager::make_replicators()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		for (ssize_t i = 0; i < opts.num_replicators; ++i) {
-			auto obj = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags);
-			replicator_pool.enqueue(std::move(obj));
+			replicator_pool.enqueue([task = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags)]{
+				task->run();
+			});
 		}
 	}
 #endif
