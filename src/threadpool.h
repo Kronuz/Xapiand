@@ -26,6 +26,7 @@
 
 #include <atomic>         // for std::atomic
 #include <cstddef>        // for std::size_t
+#include <functional>     // for std::function
 #include <future>         // for std::future, std::packaged_task
 #include <mutex>          // for std::mutex
 #include <thread>         // for std::thread
@@ -45,16 +46,24 @@
 template <typename Result>
 class PackagedTask : public std::packaged_task<Result> {
   public:
+	PackagedTask() noexcept
+	  : std::packaged_task<Result>() {}
+
 	template <typename F>
 	explicit PackagedTask(F&& f)
 	  : std::packaged_task<Result>(std::forward<F>(f)) {}
 
-	PackagedTask(PackagedTask&& other)
-	  : std::packaged_task<Result>(static_cast<std::packaged_task<Result>&&>(other)) {}
-
-	PackagedTask(const PackagedTask& /*unused*/) {
+	PackagedTask(const PackagedTask& /*unused*/) noexcept {
 		// Adding this borks the compile
 		assert(false);  // but should never be called!
+	}
+
+	PackagedTask(PackagedTask&& other) noexcept
+	  : std::packaged_task<Result>(static_cast<std::packaged_task<Result>&&>(other)) {}
+
+	PackagedTask& operator=(PackagedTask&& other) noexcept {
+		std::packaged_task<Result>::operator=(static_cast<std::packaged_task<Result>&&>(other));
+		return *this;
 	}
 };
 
