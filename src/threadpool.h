@@ -190,22 +190,14 @@ Thread::operator()()
 			try {
 				task();
 			} catch (const BaseException& exc) {
-				auto exc_context = exc.get_context();
-				if (!*exc_context) {
-					exc_context = "Unkown Exception!";
-				}
-				L_EXC("Task died with an unhandled exception: %s", exc_context);
+				L_EXC("Task died with an unhandled exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 			} catch (const Xapian::Error& exc) {
 				L_EXC("Task died with an unhandled exception: %s", exc.get_description());
 			} catch (const std::exception& exc) {
-				auto exc_msg = exc.what();
-				if (!*exc_msg) {
-					exc_msg = "Unkown std::exception!";
-				}
-				L_EXC("Task died with an unhandled exception: %s", exc_msg);
+				L_EXC("Task died with an unhandled exception: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 			} catch (...) {
 				std::exception exc;
-				L_EXC("Task died with an unhandled exception: Unkown!");
+				L_EXC("Task died with an unhandled exception: Unkown exception!");
 			}
 			_pool->_running.fetch_sub(1, std::memory_order_relaxed);
 		} else if (_pool->_ending.load(std::memory_order_acquire)) {
