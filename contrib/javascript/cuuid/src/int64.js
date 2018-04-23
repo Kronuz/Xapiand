@@ -198,7 +198,7 @@ module.exports.shr128 = (n, bits) => { // assumes bits < 32
   const n1 = (n[2] & 0xffffffff) >>> 0;
   const n0 = (n[3] & 0xffffffff) >>> 0;
 
-  let t0 = 0, t1 = 0, t3 = 0, t4 = 0;
+  let t0 = 0, t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
   t0 = ((n1 << (32 - bits)) & 0xffffffff) | n0 >>> bits;
   t1 = ((n2 << (32 - bits)) & 0xffffffff) | n1 >>> bits;
