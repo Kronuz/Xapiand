@@ -2301,7 +2301,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 }
 
 
-Schema::Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, std::string_view o)
+Schema::Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, const std::string& o)
 	: schema(std::move(s)),
 	  mut_schema(std::move(m)),
 	  origin(o)
