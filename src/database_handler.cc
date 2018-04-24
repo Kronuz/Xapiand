@@ -485,8 +485,7 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 	std::string unprefixed_term_id;
 	std::string term_id;
 
-	auto nw_doc = document_id.as_str();
-	auto new_document = nw_doc.empty();
+	auto new_document = document_id.empty();
 	std::string new_document_uuid;
 	Xapian::docid new_document_did = 0u;
 
