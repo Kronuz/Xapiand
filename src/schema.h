@@ -969,7 +969,7 @@ class Schema {
 	dynamic_spc_t get_dynamic_subproperties(const MsgPack& properties, std::string_view full_name) const;
 
 public:
-	Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, const std::string& o);
+	Schema(std::shared_ptr<const MsgPack> s, std::unique_ptr<MsgPack> m, std::string o);
 
 	Schema() = delete;
 	Schema(Schema&& schema) = delete;

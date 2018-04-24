@@ -2301,10 +2301,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 }
 
 
-Schema::Schema(std::shared_ptr<const MsgPack>  s, std::unique_ptr<MsgPack> m, const std::string& o)
+Schema::Schema(std::shared_ptr<const MsgPack> s, std::unique_ptr<MsgPack> m, std::string o)
 	: schema(std::move(s)),
 	  mut_schema(std::move(m)),
-	  origin(o)
+	  origin(std::move(o))
 {
 	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false, false);
 	if (checked.first != nullptr) {
