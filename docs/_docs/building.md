@@ -75,9 +75,10 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
   and **Configure the Build** using the proper library (for ASAN, for example):
 
     ```sh
-~/Xapiand/build $ brew switch xapian ASAN
 ~/Xapiand/build $ cmake -GNinja -DASAN=ON ..
 ```
+
+#### Address Sanitizer (ASAN)
 
 * For developing and debugging, generally you'd want to enable the
   *Address Sanitizer*, tracebacks in exceptions and debugging symbols,
@@ -87,6 +88,16 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 ~/Xapiand/build $ cmake -GNinja -DASAN=ON -DCMAKE_BUILD_TYPE=Debug -DTRACEBACKS=ON ..
 ```
 
+#### Thread Sanitizer (TSAN)
+
+* For debugging multithread issues, enable *Thread Sanitizer* and debugging
+  symbols in release mode, so you'll have to **Configure the Build** using
+  something like:
+
+    ```sh
+~/Xapiand/build $ brew switch xapian TSAN
+~/Xapiand/build $ cmake -GNinja -DTSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+```
 
 #### macOS specifics
 
