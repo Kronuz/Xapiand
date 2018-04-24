@@ -1056,7 +1056,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	};
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::cnt().add("del", took);
+	Stats::add("del", took);
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
@@ -1106,7 +1106,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.ready = std::chrono::system_clock::now();
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::cnt().add("index", took);
+	Stats::add("index", took);
 	L_TIME("Indexing took %s", string::from_delta(took));
 
 	status_code = HTTP_STATUS_OK;
@@ -1167,7 +1167,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.ready = std::chrono::system_clock::now();
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::cnt().add("patch", took);
+	Stats::add("patch", took);
 	L_TIME("Updating took %s", string::from_delta(took));
 
 	status_code = HTTP_STATUS_OK;
@@ -1839,7 +1839,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::cnt().add("search", took);
+	Stats::add("search", took);
 	auto took_milliseconds = took / 1000000.0;
 	auto took_delta = string::Number(took_milliseconds).str();
 	L_TIME("Searching took %s", string::from_delta(took));

@@ -76,16 +76,15 @@ struct Stats {
 
 	static Stats& cnt();
 
+	void _add(Counter& counter, uint64_t duration);
+	void _update_pos_time();
+	void _clear_stats_min(int start, int end);
+	void _clear_stats_sec(int start, int end);
+	void _add_stats_min(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
+	void _add_stats_sec(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
+
 	Stats();
 	Stats(Stats& other);
 
-	void update_pos_time();
-
-	void clear_stats_min(int start, int end);
-	void clear_stats_sec(int start, int end);
-	void add_stats_min(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
-	void add_stats_sec(int start, int end, std::unordered_map<std::string, Counter::Element>& cnt);
-
-	void add(Counter& counter, uint64_t duration);
 	static void add(const std::string& counter, uint64_t duration);
 };

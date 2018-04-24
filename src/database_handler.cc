@@ -800,7 +800,7 @@ DatabaseHandler::delete_schema()
 		L_INDEX("Schema to delete: %s", repr(schema->to_string()));
 	} while (!done);
 	auto schema_ends = std::chrono::system_clock::now();
-	Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+	Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 }
 
 
@@ -1459,9 +1459,9 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 		auto schema_ends = std::chrono::system_clock::now();
 		if (updated) {
 			L_INFO("Schema for %s %s", repr(endpoints.to_string()), created ? "created" : "updated");
-			Stats::cnt().add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 		} else {
-			Stats::cnt().add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
+			Stats::add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 		}
 	}
 

@@ -1182,7 +1182,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			int end_sec = modulus(second - offset, SLOT_TIME_SECOND);
 			int start_sec = modulus(end_sec - increment, SLOT_TIME_SECOND);
 			// L_DEBUG("sec: %d..%d (pos.second:%u, offset:%d, increment:%d)", start_sec, end_sec, second, offset, increment);
-			stats_cnt.add_stats_sec(start_sec, end_sec, added_counters);
+			stats_cnt._add_stats_sec(start_sec, end_sec, added_counters);
 			offset += increment + 1;
 		} else {
 			if (offset + increment > total_inc - 60) {
@@ -1193,7 +1193,7 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			int end_min = modulus(minute - offset / 60, SLOT_TIME_MINUTE);
 			int start_min = modulus(end_min - increment / 60, SLOT_TIME_MINUTE);
 			// L_DEBUG("min: %d..%d (pos.minute:%u, offset:%d, increment:%d)", start_min, end_min, minute, offset, increment);
-			stats_cnt.add_stats_min(start_min, end_min, added_counters);
+			stats_cnt._add_stats_min(start_min, end_min, added_counters);
 			offset += increment + 60;
 		}
 

@@ -161,7 +161,7 @@ Stats::Stats(Stats& other)
 	: current(std::chrono::system_clock::now())
 {
 	std::lock_guard<std::mutex> lk(other.mtx);
-	other.update_pos_time();
+	other._update_pos_time();
 	current = other.current;
 	current_pos = other.current_pos;
 	counters = other.counters;
@@ -169,7 +169,7 @@ Stats::Stats(Stats& other)
 
 
 inline void
-Stats::update_pos_time()
+Stats::_update_pos_time()
 {
 	auto b_time_second = current_pos.second;
 	auto b_time_minute = current_pos.minute;
@@ -181,28 +181,28 @@ Stats::update_pos_time()
 	current_pos.second += t_elapsed;
 
 	if (current_pos.second < SLOT_TIME_SECOND) {
-		clear_stats_sec(b_time_second + 1, current_pos.second);
+		_clear_stats_sec(b_time_second + 1, current_pos.second);
 	} else {
 		current_pos.second %= SLOT_TIME_SECOND;
 		if (t_elapsed < SLOT_TIME_SECOND) {
-			clear_stats_sec(b_time_second + 1, SLOT_TIME_SECOND - 1);
-			clear_stats_sec(0, current_pos.second);
+			_clear_stats_sec(b_time_second + 1, SLOT_TIME_SECOND - 1);
+			_clear_stats_sec(0, current_pos.second);
 		} else {
-			clear_stats_sec(0, SLOT_TIME_SECOND - 1);
+			_clear_stats_sec(0, SLOT_TIME_SECOND - 1);
 		}
 	}
 
 	if (current_pos.minute < SLOT_TIME_MINUTE) {
-		clear_stats_min(b_time_minute + 1, current_pos.minute);
+		_clear_stats_min(b_time_minute + 1, current_pos.minute);
 	} else {
 		auto int_min = static_cast<int>(current_pos.minute);
 		int mod_min = int_min % SLOT_TIME_MINUTE;
 		current_pos.minute = current_pos.minute - int_min + mod_min;
 		if (t_elapsed < SLOT_TIME_MINUTE) {
-			clear_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
-			clear_stats_min(0, mod_min);
+			_clear_stats_min(b_time_minute + 1, SLOT_TIME_MINUTE - 1);
+			_clear_stats_min(0, mod_min);
 		} else {
-			clear_stats_min(0, SLOT_TIME_MINUTE - 1);
+			_clear_stats_min(0, SLOT_TIME_MINUTE - 1);
 		}
 	}
 
@@ -211,7 +211,7 @@ Stats::update_pos_time()
 
 
 inline void
-Stats::clear_stats_min(int start, int end)
+Stats::_clear_stats_min(int start, int end)
 {
 	for (auto& counter : counters) {
 		counter.second.clear_stats_min(start, end);
@@ -220,7 +220,7 @@ Stats::clear_stats_min(int start, int end)
 
 
 inline void
-Stats::clear_stats_sec(int start, int end)
+Stats::_clear_stats_sec(int start, int end)
 {
 	for (auto& counter : counters) {
 		counter.second.clear_stats_sec(start, end);
@@ -229,7 +229,7 @@ Stats::clear_stats_sec(int start, int end)
 
 
 void
-Stats::add_stats_min(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::_add_stats_min(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];
@@ -239,7 +239,7 @@ Stats::add_stats_min(int start, int end, std::unordered_map<std::string, Stats::
 
 
 void
-Stats::add_stats_sec(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
+Stats::_add_stats_sec(int start, int end, std::unordered_map<std::string, Stats::Counter::Element>& cnt)
 {
 	for (auto& counter : counters) {
 		auto& element = cnt[counter.first];
@@ -249,10 +249,9 @@ Stats::add_stats_sec(int start, int end, std::unordered_map<std::string, Stats::
 
 
 inline void
-Stats::add(Counter& counter, uint64_t duration)
+Stats::_add(Counter& counter, uint64_t duration)
 {
-	std::lock_guard<std::mutex> lk(mtx);
-	update_pos_time();
+	_update_pos_time();
 	Counter::Element element(duration);
 	counter.min[static_cast<int>(current_pos.minute)].add(element);
 	counter.sec[current_pos.second].add(element);
@@ -263,5 +262,6 @@ void
 Stats::add(const std::string& counter, uint64_t duration)
 {
 	auto& stats_cnt = cnt();
-	stats_cnt.add(stats_cnt.counters[counter], duration);
+	std::lock_guard<std::mutex> lk(stats_cnt.mtx);
+	stats_cnt._add(stats_cnt.counters[counter], duration);
 }
