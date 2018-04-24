@@ -25,9 +25,6 @@
 #include "utils.h"
 
 
-using namespace queue;
-
-
 int test_pool() {
 	INIT_LOG
 	std::string results;
@@ -82,23 +79,23 @@ int test_pool_func() {
 	int i = 1;
 
 	// Using lambda without parameters
-	results.emplace_back(pool.enqueue([i = i]() {
+	results.emplace_back(pool.async([i = i]() {
 		return i * i;
 	}));
 	++i;
 
 	// Using lambda with parameters
-	results.emplace_back(pool.enqueue([](int i) {
+	results.emplace_back(pool.async([](int i) {
 		return i * i;
 	}, i));
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.enqueue(_test_pool_func_func, i));
+	results.emplace_back(pool.async(_test_pool_func_func, i));
 	++i;
 
 	// Using member function
-	results.emplace_back(pool.enqueue([&obj](int i) {
+	results.emplace_back(pool.async([&obj](int i) {
 		return obj.func(i);
 	}, i));
 	++i;
@@ -109,7 +106,7 @@ int test_pool_func() {
 	}
 
 	if (total != 30) {
-		L_ERR("ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with int is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -130,23 +127,23 @@ int test_pool_func_shared() {
 
 	// shared_ptr
 	// Using lambda without parameters
-	results.emplace_back(pool.enqueue([i = std::make_shared<int>(i)]() {
+	results.emplace_back(pool.async([i = std::make_shared<int>(i)]() {
 		return *i * *i;
 	}));
 	++i;
 
 	// Using lambda with parameters
-	results.emplace_back(pool.enqueue([](std::shared_ptr<int> i) {
+	results.emplace_back(pool.async([](std::shared_ptr<int> i) {
 		return *i * *i;
 	}, std::make_shared<int>(i)));
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.enqueue(_test_pool_func_func_shared, std::make_shared<int>(i)));
+	results.emplace_back(pool.async(_test_pool_func_func_shared, std::make_shared<int>(i)));
 	++i;
 
 	// Using member function
-	results.emplace_back(pool.enqueue([&obj](std::shared_ptr<int> i) {
+	results.emplace_back(pool.async([&obj](std::shared_ptr<int> i) {
 		return obj.func_shared(i);
 	}, std::make_shared<int>(i)));
 	++i;
@@ -157,7 +154,7 @@ int test_pool_func_shared() {
 	}
 
 	if (total != 30) {
-		L_ERR("ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -178,23 +175,23 @@ int test_pool_func_unique() {
 
 	// unique_ptr
 	// Using lambda without parameters
-	results.emplace_back(pool.enqueue([i = std::make_unique<int>(i)]() {
+	results.emplace_back(pool.async([i = std::make_unique<int>(i)]() {
 		return *i * *i;
 	}));
 	++i;
 
 	// Using lambda with parameters
-	results.emplace_back(pool.enqueue([](std::unique_ptr<int> i) {
+	results.emplace_back(pool.async([](std::unique_ptr<int> i) {
 		return *i * *i;
 	}, std::make_unique<int>(i)));
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.enqueue(_test_pool_func_func_unique, std::make_unique<int>(i)));
+	results.emplace_back(pool.async(_test_pool_func_func_unique, std::make_unique<int>(i)));
 	++i;
 
 	// Using member function
-	results.emplace_back(pool.enqueue([&obj](std::unique_ptr<int> i) {
+	results.emplace_back(pool.async([&obj](std::unique_ptr<int> i) {
 		return obj.func_unique(std::move(i));
 	}, std::make_unique<int>(i)));
 	++i;
@@ -205,7 +202,7 @@ int test_pool_func_unique() {
 	}
 
 	if (total != 30)  {
-		L_ERR("ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
 

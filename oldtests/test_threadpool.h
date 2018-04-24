@@ -31,9 +31,6 @@
 #include <string>
 
 
-using namespace queue;
-
-
 static std::mutex mutex;
 
 
@@ -41,6 +38,12 @@ class TestTask {
 	std::string name;
 	double sleep;
 	std::string& results;
+
+public:
+	TestTask(const std::string name_, double sleep_, std::string &results_)
+		: name(name_),
+		  sleep(sleep_),
+		  results(results_) { }
 
 	void run() {
 		std::unique_lock<std::mutex> lk(mutex);
@@ -50,12 +53,6 @@ class TestTask {
 		lk.lock();
 		results += name + ">";
 	}
-
-public:
-	TestTask(const std::string name_, double sleep_, std::string &results_)
-		: name(name_),
-		  sleep(sleep_),
-		  results(results_) { }
 };
 
 
