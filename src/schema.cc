@@ -4685,7 +4685,19 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.acc_prefix.push_back(get_prefix(acc));
 		}
 		specification.accuracy.assign(set_acc.begin(), set_acc.end());
-		mut_properties[RESERVED_ACCURACY]   = specification.accuracy;
+		switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+			case FieldType::DATE:
+			case FieldType::TIME:
+			case FieldType::TIMEDELTA:
+				mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+				for (auto& acc : specification.accuracy) {
+					mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
+				}
+				break;
+			default:
+				mut_properties[RESERVED_ACCURACY] = specification.accuracy;
+				break;
+		}
 		mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 	}
 
@@ -8666,8 +8678,6 @@ Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
 	});
 
 	switch (key) {
-		case _.fhh(RESERVED_TYPE):
-			return Schema::readable_type(value, properties);
 		case _.fhh(RESERVED_PREFIX):
 			return Schema::readable_prefix(value, properties);
 		case _.fhh(RESERVED_SLOT):
@@ -8716,33 +8726,6 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 		}
 		++it;
 	}
-}
-
-
-inline bool
-Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
-{
-	L_CALL("Schema::readable_type(%s, %s)", repr(prop_type.to_string()), repr(properties.to_string()));
-
-	// Readable accuracy.
-	const auto& sep_types = required_spc_t::get_types(prop_type.str_view());
-	switch (sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::DATE:
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA: {
-			auto accuracy_it = properties.find(RESERVED_ACCURACY);
-			if (accuracy_it != properties.end()) {
-				for (auto& _accuracy : accuracy_it.value()) {
-					_accuracy = _get_str_acc_date((UnitTime)_accuracy.u64());
-				}
-			}
-			break;
-		}
-		default:
-			break;
-	}
-
-	return true;
 }
 
 

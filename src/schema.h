@@ -937,7 +937,6 @@ class Schema {
 	 * Tranforms reserved words into a readable form.
 	 */
 
-	static bool readable_type(MsgPack& prop_type, MsgPack& properties);
 	static bool readable_prefix(MsgPack& prop_prefix, MsgPack& properties);
 	static bool readable_slot(MsgPack& prop_prefix, MsgPack& properties);
 	static bool readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties);
