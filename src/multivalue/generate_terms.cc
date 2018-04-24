@@ -133,7 +133,8 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
 		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
-			map_terms[pos].insert(val >> *it);
+			auto acc = HTM_START_POS - (*it * 2);
+			map_terms[pos].insert(val >> acc);
 		}
 	}
 
@@ -276,7 +277,8 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
 		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
-			map_terms[pos].insert(val >> *it);
+			auto acc = HTM_START_POS - (*it * 2);
+			map_terms[pos].insert(val >> acc);
 		}
 	}
 
@@ -629,7 +631,8 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) { }
 		if (pos != size_acc) {
 			++pos;
-			map_terms[pos].insert(val >> accuracy[pos]);
+			auto acc = HTM_START_POS - (accuracy[pos] * 2);
+			map_terms[pos].insert(val >> acc);
 		}
 	}
 
@@ -644,7 +647,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		if (it->first != size_acc && it->first <= last_pos) {
 			size_t pos = it->first + 1;
 			auto& terms = map_terms[pos];
-			uint64_t acc = accuracy[pos] - accuracy[it->first];
+			uint64_t acc = (accuracy[it->first] - accuracy[pos]) * 2;
 			for (const auto& term : it->second) {
 				terms.insert(term >> acc);
 			}
