@@ -4,6 +4,16 @@ read_only: true
 ---
 
 
+## 0.6.1 / 2018-04-25
+{: #v0-6-1}
+
+- Parallel restore commands
+- General optimizations
+- Fixed geospatial terms and accuracy
+- Fixes storage (no longer returns 500)
+- Fixes multithreading bug with collected statistics
+
+
 ## 0.6.0 / 2018-04-11
 {: #v0-6-0}
 
