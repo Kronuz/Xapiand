@@ -39,7 +39,7 @@
 #include <utility>              // for pair
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "utils.h"              // for string::lower
+#include "utils.h"              // for fast_inet_ntop4, string::lower
 
 
 class Node {
