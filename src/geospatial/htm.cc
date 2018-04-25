@@ -602,7 +602,7 @@ std::string
 HTM::getTrixelName(uint64_t id)
 {
 	uint8_t last_pos = std::ceil(std::log2(id));
-	last_pos += (last_pos & 1); // Must be multiple of two.
+	last_pos &= ~1;  // Must be multiple of two.
 	std::string trixel;
 	trixel.reserve(last_pos / 2);
 	last_pos -= 2;
@@ -700,7 +700,7 @@ inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start
 	}
 
 	uint8_t log_inc = std::ceil(std::log2(end - start));
-	log_inc -= (log_inc & 1);
+	log_inc &= ~1;  // Must be multiple of two.
 	uint64_t max_inc = std::pow(2, log_inc);
 
 	uint64_t mod = start % max_inc;
@@ -749,7 +749,7 @@ inline static void get_id_trixels(std::vector<uint64_t>& id_trixels, uint64_t st
 	}
 
 	uint8_t log_inc = std::ceil(std::log2(end - start));
-	log_inc -= (log_inc & 1);
+	log_inc &= ~1;  // Must be multiple of two.
 	uint64_t max_inc = std::pow(2, log_inc);
 
 	uint64_t mod = start % max_inc;

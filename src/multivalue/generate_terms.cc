@@ -128,7 +128,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos & 1); // Must be multiple of two.
+		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
@@ -272,7 +272,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos & 1); // Must be multiple of two.
+		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
@@ -624,7 +624,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
 		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id));
-		last_pos -= (last_pos & 1); // Must be multiple of two.
+		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
 		const auto it_e = accuracy.rend();
