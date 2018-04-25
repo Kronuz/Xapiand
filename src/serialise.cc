@@ -876,6 +876,33 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 				return FieldType::GEO;
 			}
 
+			// Try like INTEGER.
+			{
+				int errno_save;
+				strict_stoll(&errno_save, str_value);
+				if (errno_save == 0) {
+					return FieldType::INTEGER;
+				}
+			}
+
+			// Try like POSITIVE.
+			{
+				int errno_save;
+				strict_stoull(&errno_save, str_value);
+				if (errno_save == 0) {
+					return FieldType::POSITIVE;
+				}
+			}
+
+			// Try like FLOAT
+			{
+				int errno_save;
+				strict_stod(&errno_save, str_value);
+				if (errno_save == 0) {
+					return FieldType::FLOAT;
+				}
+			}
+
 			if (bool_term) {
 				return FieldType::KEYWORD;
 			}
@@ -966,44 +993,60 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.boolean()));
 
 		case MsgPack::Type::STR: {
-			auto str_obj = field_value.str_view();
+			auto str_value = field_value.str_view();
 
 			// Try like UUID
 			try {
-				return std::make_pair(FieldType::UUID, uuid(str_obj));
+				return std::make_pair(FieldType::UUID, uuid(str_value));
 			} catch (const SerialisationError&) { }
 
 			// Try like DATE
 			try {
-				return std::make_pair(FieldType::DATE, date(str_obj));
+				return std::make_pair(FieldType::DATE, date(str_value));
 			} catch (const DatetimeError&) { }
 
 			// Try like TIME
 			try {
-				return std::make_pair(FieldType::TIME, time(str_obj));
+				return std::make_pair(FieldType::TIME, time(str_value));
 			} catch (const TimeError&) { }
 
 			// Try like TIMEDELTA
 			try {
-				return std::make_pair(FieldType::TIMEDELTA, timedelta(str_obj));
+				return std::make_pair(FieldType::TIMEDELTA, timedelta(str_value));
 			} catch (const TimedeltaError&) { }
 
 			// Try like GEO
 			try {
-				return std::make_pair(FieldType::GEO, geospatial(str_obj));
+				return std::make_pair(FieldType::GEO, geospatial(str_value));
 			} catch (const EWKTError&) { }
 
+			// Try like INTEGER.
+			try {
+				return std::make_pair(FieldType::INTEGER, integer(str_value));
+			} catch (const SerialisationError&) { }
+
+			// Try like POSITIVE.
+			try {
+				return std::make_pair(FieldType::POSITIVE, positive(str_value));
+			} catch (const SerialisationError&) { }
+
+			// Try like FLOAT
+			try {
+				return std::make_pair(FieldType::FLOAT, _float(str_value));
+			} catch (const SerialisationError&) { }
+
+			// String bool terms are keywords
 			if (bool_term) {
-				return std::make_pair(FieldType::KEYWORD, std::string(str_obj));
+				return std::make_pair(FieldType::KEYWORD, std::string(str_value));
 			}
 
 			// Like TEXT
-			if (isText(str_obj, bool_term)) {
-				return std::make_pair(FieldType::TEXT, std::string(str_obj));
+			if (isText(str_value, bool_term)) {
+				return std::make_pair(FieldType::TEXT, std::string(str_value));
 			}
 
 			// Default type STRING.
-			return std::make_pair(FieldType::STRING, std::string(str_obj));
+			return std::make_pair(FieldType::STRING, std::string(str_value));
 		}
 
 		case MsgPack::Type::MAP: {
