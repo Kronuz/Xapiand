@@ -514,9 +514,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 
 
 DataType
-DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_)
+DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id), repr(obj.to_string()), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id.to_string()), repr(obj.to_string()), commit_ ? "true" : "false");
 
 	auto prepared = prepare(document_id, obj, data, old_document_pair);
 	auto& term_id = std::get<0>(prepared);
@@ -530,9 +530,9 @@ DatabaseHandler::index(std::string_view document_id, const MsgPack& obj, Data& d
 
 
 DataType
-DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id), stored ? "true" : "false", repr(body.to_string()), commit_ ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit_ ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "Database is read-only");
@@ -573,9 +573,9 @@ DatabaseHandler::index(std::string_view document_id, bool stored, const MsgPack&
 
 
 DataType
-DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& /*ct_type*/)
+DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& /*ct_type*/)
 {
-	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id.to_string()), commit_ ? "true" : "false");
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
@@ -615,9 +615,9 @@ DatabaseHandler::patch(std::string_view document_id, const MsgPack& patches, boo
 
 
 DataType
-DatabaseHandler::merge(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
@@ -1395,9 +1395,9 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 
 
 std::string
-DatabaseHandler::get_prefixed_term_id(std::string_view document_id)
+DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
-	L_CALL("DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id));
+	L_CALL("DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id.to_string()));
 
 	schema = get_schema();
 
@@ -1414,7 +1414,7 @@ DatabaseHandler::get_prefixed_term_id(std::string_view document_id)
 		spc_id.set_type(id_type);
 		unprefixed_term_id = type_ser.second;
 	} else {
-		unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
 	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 }

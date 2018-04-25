@@ -199,7 +199,7 @@ class DatabaseHandler {
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);
 
-	DataType index(std::string_view document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_);
+	DataType index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -220,9 +220,9 @@ public:
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
 #endif
 
-	DataType index(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
-	DataType patch(std::string_view document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
-	DataType merge(std::string_view document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
+	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();
@@ -240,7 +240,7 @@ public:
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(const MsgPack& obj);
 	void restore_documents(const MsgPack& docs);
 
-	std::string get_prefixed_term_id(std::string_view document_id);
+	std::string get_prefixed_term_id(const MsgPack& document_id);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
