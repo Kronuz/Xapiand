@@ -33,25 +33,25 @@ const std::vector<testQuery_t> numeric_tests({
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
 		"1200", "2500", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query((N5I\\x80 AND (N4I\\xc0\\xbd OR N4I\\xc0\\xfd)))"
+		"Query((N5N\\x80 AND (N4N\\xc0\\xbd OR N4N\\xc0\\xfd)))"
 		// "N5:0 AND (N4:1000 OR N4:2000)"
 	},
 	// Do not find a Lower accuracy.
 	{
 		"1200.100", "1200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(N1I\\xc0\\xcb)"
+		"Query(N1N\\xc0\\xcb)"
 		// N1:1200"
 	},
 	// Find lower and upper accuracy, upper accuracy generates two terms.
 	{
 		"10200.100", "100200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((N6I\\x80 AND ((((((((N5I\\xc1\\x8e  OR N5I\\xc1\\xce ) OR N5I\\xc1\\xf50) OR N5I\\xc2\\x0e ) OR N5I\\xc2!\\xa8) OR N5I\\xc250) OR N5I\\xc2D\\x5c) OR N5I\\xc2N ) OR N5I\\xc2W\\xe4)) OR N5I\\xc2a\\xa8))"
+		"Query(((N6N\\x80 AND ((((((((N5N\\xc1\\x8e  OR N5N\\xc1\\xce ) OR N5N\\xc1\\xf50) OR N5N\\xc2\\x0e ) OR N5N\\xc2!\\xa8) OR N5N\\xc250) OR N5N\\xc2D\\x5c) OR N5N\\xc2N ) OR N5N\\xc2W\\xe4)) OR N5N\\xc2a\\xa8))"
 		// (N6:0 AND (N5:10000 OR N5:20000 OR N5:30000 OR N5:40000 OR N5:50000 OR N5:60000 OR N5:70000 OR N5:80000 OR N5:90000) OR N5:100000
 	},
 	// Do not find a upper accuracy.
 	{
 		"10200.100", "1000200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((((((((((N6I\\xc3:\\x12 OR N6I\\x80) OR N6I\\xc2a\\xa8) OR N6I¡\\xa8) OR N6I\\xc2\\xc9>) OR N6I\\xc2\\xe1\\xa8) OR N6I\\xc2\\xfa\\x12) OR N6I\\xc3\\x09>) OR N6I\\xc3\\x15s) OR N6I\\xc3!\\xa8) OR N6I\\xc3-\\xdd))"
+		"Query(((((((((((N6N\\xc3:\\x12 OR N6N\\x80) OR N6N\\xc2a\\xa8) OR N6N¡\\xa8) OR N6N\\xc2\\xc9>) OR N6N\\xc2\\xe1\\xa8) OR N6N\\xc2\\xfa\\x12) OR N6N\\xc3\\x09>) OR N6N\\xc3\\x15s) OR N6N\\xc3!\\xa8) OR N6N\\xc3-\\xdd))"
 		// "N6:0 OR N6:100000 OR N6:200000 OR N6:300000 OR N6:400000 OR N6:500000 OR N6:600000 OR N6:700000 OR N6:800000 OR N6:900000 OR N6:1000000"
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
@@ -74,7 +74,7 @@ const std::vector<testQuery_t> numeric_tests({
 	// Do not find a lower accuracy because it exceeded the number of terms.
 	{
 		"-1200.300", "1200.200", { 10, 10000, 100000 }, { "N1", "N2", "N3" },
-		"Query((N2I\\x80 OR N2I>X\\xf0))"
+		"Query((N2N\\x80 OR N2N>X\\xf0))"
 		// "N2:-10000 OR N2:0"
 	},
 
@@ -82,25 +82,25 @@ const std::vector<testQuery_t> numeric_tests({
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
 		"-2500", "-1200", {1, 10, 100, 1000, 10000, 100000}, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query((N5I>X\\xf0 AND (N4I>\\xd1  OR N4I?\\x01\\x80)))"
+		"Query((N5N>X\\xf0 AND (N4N>\\xd1  OR N4N?\\x01\\x80)))"
 		// "N5:-10000 AND (N4:-3000 OR N4:-2000)"
 	},
 	// Do not find a Lower accuracy.
 	{
 		"-1200.300", "-1200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(N1I?\\x1a\\x80)"
+		"Query(N1N?\\x1a\\x80)"
 		// "N1:-1200"
 	},
 	// Find lower and upper accuracy, upper accuracy generates two terms.
 	{
 		"-100200.200", "-10200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((N6I=O, AND N5I=\\x8aJ) OR (N6I=\\x8f, AND ((((((((N5I=\\x8f, OR N5I=\\x94\\x0e) OR N5I=\\x98\\xf0) OR N5I=\\x9d\\xd2) OR N5I=\\xc5h) OR N5I=\\xcf,) OR N5I=\\xd8\\xf0) OR N5I>\\x05h) OR N5I>\\x18\\xf0))))"
+		"Query(((N6N=O, AND N5N=\\x8aJ) OR (N6N=\\x8f, AND ((((((((N5N=\\x8f, OR N5N=\\x94\\x0e) OR N5N=\\x98\\xf0) OR N5N=\\x9d\\xd2) OR N5N=\\xc5h) OR N5N=\\xcf,) OR N5N=\\xd8\\xf0) OR N5N>\\x05h) OR N5N>\\x18\\xf0))))"
 		// "(N6:-200000 AND (N5:-110000)) OR (N6:-100000 AND (N5:-100000 OR N5:-90000 OR N5:-80000 OR N5:-70000 OR N5:-60000 OR N5:-50000 OR N5:-40000 OR N5:-30000 OR N5:-20000))"
 	},
 	// Do not find a upper accuracy.
 	{
 		"-1000200.200", "-10200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((((((((((N6I=\\x8f, OR N6I<\\x9en@) OR N6I<\\xc2\\xf7) OR N6I<\\xc9\\x11\\x80) OR N6I<\\xcf,) OR N6I<\\xd5F\\x80) OR N6I<\\xdba) OR N6I=\\x02\\xf7) OR N6I=\\x0f,) OR N6I=\\x1ba) OR N6I=O,))"
+		"Query(((((((((((N6N=\\x8f, OR N6N<\\x9en@) OR N6N<\\xc2\\xf7) OR N6N<\\xc9\\x11\\x80) OR N6N<\\xcf,) OR N6N<\\xd5F\\x80) OR N6N<\\xdba) OR N6N=\\x02\\xf7) OR N6N=\\x0f,) OR N6N=\\x1ba) OR N6N=O,))"
 		// "N6:-1100000 OR N6:-1000000 OR N6:-900000 OR N6:-800000 OR N6:-700000 OR N6:-600000 OR N6:-500000 OR N6:-400000 OR N6:-300000 OR N6:-200000 OR N6:-100000"
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
@@ -113,19 +113,19 @@ const std::vector<testQuery_t> numeric_tests({
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
 		"-2500", "1200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((N5I>X\\xf0 AND ((N4I>\\xd1  OR N4I?\\x01\\x80) OR N4I?A\\x80)) OR (N5I\\x80 AND (N4I\\x80 OR N4I\\xc0\\xbd))))"
+		"Query(((N5N>X\\xf0 AND ((N4N>\\xd1  OR N4N?\\x01\\x80) OR N4N?A\\x80)) OR (N5N\\x80 AND (N4N\\x80 OR N4N\\xc0\\xbd))))"
 		// "(N5:-10000 AND (N4:-3000 OR N4:-2000 OR N4:-1000)) OR (N5:0 AND (N4:0 OR N4:1000))"
 	},
 	// Find lower and upper accuracy, upper accuracy generates two terms.
 	{
 		"-100200.200", "10200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((N6I\\x80 OR N6I=O,) OR N6I=\\x8f,))"
+		"Query(((N6N\\x80 OR N6N=O,) OR N6N=\\x8f,))"
 		// "N6:-200000 OR N6:-100000 OR N6:0"
 	},
 	// Do not find a upper accuracy.
 	{
 		"-1000200.200", "100200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" },
-		"Query(((((((((((((N6I\\xc2a\\xa8 OR N6I<\\x9en@) OR N6I<\\xc2\\xf7) OR N6I<\\xc9\\x11\\x80) OR N6I<\\xcf,) OR N6I<\\xd5F\\x80) OR N6I<\\xdba) OR N6I=\\x02\\xf7) OR N6I=\\x0f,) OR N6I=\\x1ba) OR N6I=O,) OR N6I=\\x8f,) OR N6I\\x80))"
+		"Query(((((((((((((N6N\\xc2a\\xa8 OR N6N<\\x9en@) OR N6N<\\xc2\\xf7) OR N6N<\\xc9\\x11\\x80) OR N6N<\\xcf,) OR N6N<\\xd5F\\x80) OR N6N<\\xdba) OR N6N=\\x02\\xf7) OR N6N=\\x0f,) OR N6N=\\x1ba) OR N6N=O,) OR N6N=\\x8f,) OR N6N\\x80))"
 		// "N6:-1100000 OR N6:-1000000 OR N6:-900000 OR N6:-800000 OR N6:-700000 OR N6:-600000 OR N6:-500000 OR N6:-400000 OR N6:-300000 OR N6:-200000 OR N6:-100000 OR N6:0 OR N6:100000"
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
@@ -138,24 +138,24 @@ const std::vector<testQuery_t> numeric_tests({
 	// The maximum accuracy is LLONG_MAX, and this is checked in schema.
 	{
 		"-1000000", "1000000", { 1000000000000000, 1000000000000000000, 9000000000000000000 }, { "N1", "N2", "N3" },
-		"Query((N1I\\x80 OR N1I5G(\\x15\\xb5\\x98))"
+		"Query((N1N\\x80 OR N1N5G(\\x15\\xb5\\x98))"
 		// "N1:-1000000000000000 OR N1:0"
 	},
 	{
 		"-1000000000000000", "1000000000000000", { 1000000000000000, 1000000000000000000, 9000000000000000000 }, {"N1", "N2", "N3"},
-		"Query(((N2I2\\xc8}%3bp AND N1I5G(\\x15\\xb5\\x98) OR (N2I\\x80 AND (N1I\\x80 OR N1Iʱ\\xafԘ\\xd0))))"
+		"Query(((N2N2\\xc8}%3bp AND N1N5G(\\x15\\xb5\\x98) OR (N2N\\x80 AND (N1N\\x80 OR N1Nʱ\\xafԘ\\xd0))))"
 		// "(N2:-1000000000000000000 AND (N1:-1000000000000000)) OR (N2:0 AND (N1:0 OR N1:1000000000000000))"
 	},
 	{
 		"-5000000000000000000", "5000000000000000000", { 1000000000000000, 1000000000000000000, 9000000000000000000 }, { "N1", "N2", "N3" },
-		"Query((N3I\\x80 OR N3I2\\x01\\x8c\\xc9َ\\xbe))"
+		"Query((N3N\\x80 OR N3N2\\x01\\x8c\\xc9َ\\xbe))"
 		// "N3:-9000000000000000000 OR N3:0"
 	},
 
 	// Testing other accuracies.
 	{
 		"-300", "1750", { 250, 2800 }, { "N1", "N2" },
-		"Query(((N2I>\\xd4@ AND (N1I?\\x81\\x80 OR N1I?\\xc1\\x80)) OR (N2I\\x80 AND (((((((N1I\\x80 OR N1I\\xc0=) OR N1I\\xc0}) OR N1I\\xc0\\x9d\\xc0) OR N1I\\xc0\\xbd) OR N1I\\xc0\\xce ) OR N1I\\xc0\\xdd\\xc0) OR N1I\\xc0\\xed`))))"
+		"Query(((N2N>\\xd4@ AND (N1N?\\x81\\x80 OR N1N?\\xc1\\x80)) OR (N2N\\x80 AND (((((((N1N\\x80 OR N1N\\xc0=) OR N1N\\xc0}) OR N1N\\xc0\\x9d\\xc0) OR N1N\\xc0\\xbd) OR N1N\\xc0\\xce ) OR N1N\\xc0\\xdd\\xc0) OR N1N\\xc0\\xed`))))"
 		// "(N2:-2800 AND (N1:-500 OR N1:-250)) OR (N2:0 AND (N1:0 OR N1:250 OR N1:500 OR N1:750 OR N1:1000 OR N1:1250 OR N1:1500 OR N1:1750))"
 	}
 });
