@@ -687,6 +687,10 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 	query_field_t query;
 	query.metric = metric;
 
+	auto schema = db_sort.db_handler.get_schema();
+	auto spc_id = schema->get_data_id();
+	auto id_type = spc_id.get_type();
+
 	for (const auto& test : _tests) {
 		query.query.clear();
 		query.query.push_back(test.query);
@@ -704,7 +708,7 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 				auto m = mset.begin();
 				for (auto it = test.expect_result.begin(); m != mset.end(); ++it, ++m) {
 					auto document = db_sort.db_handler.get_document(*m);
-					auto val = Unserialise::MsgPack(FieldType::INTEGER, document.get_value(0)).to_string();
+					auto val = Unserialise::MsgPack(id_type, document.get_value(0)).to_string();
 					if (it->compare(val) != 0) {
 						++cont;
 						L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val, ID_FIELD_NAME, *it);
