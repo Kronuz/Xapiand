@@ -505,7 +505,7 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 			auto id_type = spc_id.get_type();
 
 			if (new_document) {
-				if (id_type == FieldType::EMPTY) {
+				if (id_type == FieldType::EMPTY || id_type == FieldType::UUID) {
 					id_type = FieldType::UUID;
 					if (new_document_uuid.empty()) {
 						static UUIDGenerator generator;
