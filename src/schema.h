@@ -405,6 +405,10 @@ struct required_spc_t {
 		return sep_types[SPC_CONCRETE_TYPE];
 	}
 
+	const std::string& get_str_type() const {
+		return get_str_type(sep_types);
+	}
+
 	void set_type(FieldType type) {
 		sep_types[SPC_CONCRETE_TYPE] = type;
 	}
@@ -1000,7 +1004,7 @@ public:
 	/*
 	 * Function to index object in doc.
 	 */
-	MsgPack index(const MsgPack& object, Xapian::Document& doc, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, DatabaseHandler& db_handler);
+	std::tuple<std::string, Xapian::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, DatabaseHandler& db_handler);
 
 	/*
 	 * Function to update the schema according to obj_schema.
@@ -1050,7 +1054,7 @@ public:
 			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
 		}
 
-		switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
+		switch (spc.get_type()) {
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
@@ -1071,6 +1075,8 @@ public:
 	 * Returns type, slot and prefix of ID_FIELD_NAME
 	 */
 	required_spc_t get_data_id() const;
+
+	void set_data_id(const required_spc_t& spc_id);
 
 	/*
 	 * Returns data of RESERVED_SCRIPT

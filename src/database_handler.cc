@@ -476,20 +476,11 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
+DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
 {
 	L_CALL("DatabaseHandler::prepare(%s, %s, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
 
-	Xapian::Document doc;
-	required_spc_t spc_id;
-	std::string unprefixed_term_id;
-	std::string term_id;
-
-	auto new_document = document_id.empty();
-	std::string new_document_uuid;
-	Xapian::docid new_document_did = 0u;
-
-	MsgPack data_obj;
+	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	do {
@@ -497,84 +488,18 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 		auto schema_begins = std::chrono::system_clock::now();
 		do {
 			schema = get_schema(&obj);
-
 			L_INDEX("Schema: %s", repr(schema->to_string()));
-
-			// Try figuring out id_type from passed object
-			spc_id = schema->get_data_id();
-			auto id_type = spc_id.get_type();
-
-			if (new_document) {
-				if (id_type == FieldType::EMPTY || id_type == FieldType::UUID) {
-					id_type = FieldType::UUID;
-					if (new_document_uuid.empty()) {
-						static UUIDGenerator generator;
-						new_document_uuid = Unserialise::uuid(generator(opts.uuid_compact).serialise(), static_cast<UUIDRepr>(opts.uuid_repr));
-					}
-					document_id = new_document_uuid;
-				} else {
-					if (new_document_did == 0u) {
-						new_document_did = random_int(1, static_cast<Xapian::docid>(-1));
-					}
-					document_id = Cast::cast(id_type, new_document_did);
-				}
-
-				// Index object
-				data_obj = schema->index(obj, doc, "", old_document_pair, *this);
-
-			} else {
-				// Get early term ID when possible
-				if (id_type == FieldType::EMPTY) {
-					const auto type_ser = Serialise::guess_serialise(document_id);
-					id_type = type_ser.first;
-					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
-						id_type = FieldType::KEYWORD;
-					}
-					spc_id.set_type(id_type);
-					unprefixed_term_id = type_ser.second;
-				} else {
-					document_id = Cast::cast(id_type, document_id);
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-				}
-				term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-
-				// Index object passing current object's id as term ID
-				data_obj = schema->index(obj, doc, term_id, old_document_pair, *this);
-			}
-
-			// Ensure term ID
-			if (term_id.empty()) {
-				spc_id = schema->get_data_id();
-				id_type = spc_id.get_type();
-
-				// Now the schema is full, get final specification id.
-				if (id_type == FieldType::EMPTY) {
-					// Index like a namespace.
-					const auto type_ser = Serialise::guess_serialise(document_id);
-					id_type = type_ser.first;
-					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
-						id_type = FieldType::KEYWORD;
-					}
-					spc_id.set_type(id_type);
-					unprefixed_term_id = type_ser.second;
-				} else {
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-				}
-				term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-			}
-
-			// Add ID.
-			data_obj[ID_FIELD_NAME] = document_id;
-
+			prepared = schema->index(obj, document_id, old_document_pair, *this);
 		} while (!update_schema(schema_begins));
+
+		auto& term_id = std::get<0>(prepared);
+		auto& doc = std::get<1>(prepared);
+		auto& data_obj = std::get<2>(prepared);
 
 		// Finish document: add data, ID term and ID value.
 		data.set_obj(data_obj);
 		data.flush();
 		doc.set_data(data.serialise());
-
-		doc.add_boolean_term(term_id);
-		doc.add_value(spc_id.slot, unprefixed_term_id);
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));
@@ -584,7 +509,7 @@ DatabaseHandler::prepare(MsgPack document_id, const MsgPack& obj, Data& data, st
 	} while (true);
 #endif
 
-	return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
+	return prepared;
 }
 
 

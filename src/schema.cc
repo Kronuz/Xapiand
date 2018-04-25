@@ -2503,13 +2503,14 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  * |_____|_____|_____|_____|_____|_____|_____|_____|
  */
 
-MsgPack
-Schema::index(const MsgPack& object, Xapian::Document& doc,
-	std::string_view term_id,
+std::tuple<std::string, Xapian::Document, MsgPack>
+Schema::index(const MsgPack& object,
+	MsgPack document_id,
 	std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair,
 	DatabaseHandler& db_handler)
 {
-	L_CALL("Schema::index(%s, %s, <old_document_pair>, <db_handler>, <doc>)", repr(object.to_string()), repr(term_id));
+	L_CALL("Schema::index(%s, %s, <old_document_pair>, <db_handler>)", repr(object.to_string()), repr(document_id.to_string()));
+	static UUIDGenerator generator;
 
 	try {
 		map_values.clear();
@@ -2521,13 +2522,50 @@ Schema::index(const MsgPack& object, Xapian::Document& doc,
 
 		if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			auto mut_properties = &get_mutable_properties();
 			dispatch_write_properties(*mut_properties, object, fields);
 			properties = &*mut_properties;
 		} else {
 			dispatch_feed_properties(*properties);
 			dispatch_process_properties(object, fields);
 		}
+
+		auto spc_id = get_data_id();
+		auto id_type = spc_id.get_type();
+		std::string unprefixed_term_id;
+		if (document_id.empty()) {
+			if (id_type == FieldType::EMPTY) {
+				id_type = FieldType::UUID;
+				spc_id.set_type(id_type);
+				set_data_id(spc_id);
+				properties = &get_mutable_properties();
+				unprefixed_term_id = generator(opts.uuid_compact).serialise();
+				document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
+			} else if (id_type == FieldType::UUID) {
+				unprefixed_term_id = generator(opts.uuid_compact).serialise();
+				document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
+			} else {
+				document_id = Cast::cast(id_type, random_int(1, static_cast<Xapian::docid>(-1)));
+				unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+			}
+		} else {
+			// Get early term ID when possible
+			if (id_type == FieldType::EMPTY) {
+				const auto type_ser = Serialise::guess_serialise(document_id);
+				id_type = type_ser.first;
+				if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
+					id_type = FieldType::KEYWORD;
+				}
+				spc_id.set_type(id_type);
+				set_data_id(spc_id);
+				properties = &get_mutable_properties();
+				unprefixed_term_id = type_ser.second;
+			} else {
+				document_id = Cast::cast(id_type, document_id);
+				unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+			}
+		}
+		auto term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 		std::unique_ptr<MsgPack> mut_object;
@@ -2553,10 +2591,11 @@ Schema::index(const MsgPack& object, Xapian::Document& doc,
 		}
 #endif
 
+		Xapian::Document doc;
 		MsgPack data_obj;
-		auto data = &data_obj;
+		auto data_ptr = &data_obj;
 
-		index_item_value(properties, doc, data, fields);
+		index_item_value(properties, doc, data_ptr, fields);
 
 		for (const auto& elem : map_values) {
 			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
@@ -2564,7 +2603,12 @@ Schema::index(const MsgPack& object, Xapian::Document& doc,
 			L_INDEX("Slot: %d  Values: %s", elem.first, repr(val_ser));
 		}
 
-		return data_obj;
+		// Add ID.
+		doc.add_boolean_term(term_id);
+		doc.add_value(spc_id.slot, unprefixed_term_id);
+		data_obj[ID_FIELD_NAME] = document_id;
+
+		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
 		mut_schema.reset();
 		throw;
@@ -3232,7 +3276,7 @@ Schema::update(const MsgPack& object)
 
 			if (properties->empty()) {  // new schemas have empty properties
 				specification.flags.field_found = false;
-				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+				auto mut_properties = &get_mutable_properties();
 				dispatch_write_properties(*mut_properties, schema_obj, fields);
 				properties = &*mut_properties;
 			} else {
@@ -3668,7 +3712,7 @@ Schema::write(const MsgPack& object, bool replace)
 		if (checked.second != nullptr) {
 			const auto& schema_obj = *checked.second;
 
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
+			auto mut_properties = &get_mutable_properties();
 			if (replace) {
 				mut_properties->clear();
 			}
@@ -8815,18 +8859,18 @@ Schema::get_data_id() const
 {
 	L_CALL("Schema::get_data_id()");
 
-	required_spc_t res;
+	required_spc_t spc_id;
 
 	// Set default prefix
-	res.prefix.field = DOCUMENT_ID_TERM_PREFIX;
+	spc_id.prefix.field = DOCUMENT_ID_TERM_PREFIX;
 
 	// Set default RESERVED_SLOT
-	res.slot = DB_SLOT_ID;
+	spc_id.slot = DB_SLOT_ID;
 
 	const auto& properties = get_newest_properties();
 	auto it = properties.find(ID_FIELD_NAME);
 	if (it == properties.end()) {
-		return res;
+		return spc_id;
 	}
 
 	const auto& id_properties = it.value();
@@ -8834,34 +8878,34 @@ Schema::get_data_id() const
 
 	auto id_type_it = id_properties.find(RESERVED_TYPE);
 	if (id_type_it != id_it_e) {
-		res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(id_type_it.value().str_view())[SPC_CONCRETE_TYPE];
+		spc_id.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(id_type_it.value().str_view())[SPC_CONCRETE_TYPE];
 	}
 	auto id_slot_it = id_properties.find(RESERVED_SLOT);
 	if (id_slot_it != id_it_e) {
-		res.slot = static_cast<Xapian::valueno>(id_slot_it.value().u64());
+		spc_id.slot = static_cast<Xapian::valueno>(id_slot_it.value().u64());
 	}
 	auto id_prefix_it = id_properties.find(RESERVED_PREFIX);
 	if (id_slot_it != id_it_e) {
-		res.prefix.field.assign(id_prefix_it.value().str_view());
+		spc_id.prefix.field.assign(id_prefix_it.value().str_view());
 	}
 
 	// Get required specification.
-	switch (res.sep_types[SPC_CONCRETE_TYPE]) {
+	switch (spc_id.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::GEO: {
 			auto id_partials_it = id_properties.find(RESERVED_PARTIALS);
 			if (id_partials_it != id_it_e) {
-				res.flags.partials = id_partials_it.value().boolean();
+				spc_id.flags.partials = id_partials_it.value().boolean();
 			}
 			auto id_error_it = id_properties.find(RESERVED_ERROR);
 			if (id_error_it != id_it_e) {
-				res.error = id_error_it.value().f64();
+				spc_id.error = id_error_it.value().f64();
 			}
 			break;
 		}
 		case FieldType::KEYWORD: {
 			auto id_bool_term_it = id_properties.find(RESERVED_BOOL_TERM);
 			if (id_bool_term_it != id_it_e) {
-				res.flags.bool_term = id_bool_term_it.value().boolean();
+				spc_id.flags.bool_term = id_bool_term_it.value().boolean();
 			}
 			break;
 		}
@@ -8869,7 +8913,34 @@ Schema::get_data_id() const
 			break;
 	}
 
-	return res;
+	return spc_id;
+}
+
+
+void
+Schema::set_data_id(const required_spc_t& spc_id)
+{
+	L_CALL("Schema::set_data_id(<spc_id>)");
+
+	auto& mut_properties = get_mutable_properties(ID_FIELD_NAME);
+
+	mut_properties[RESERVED_TYPE] = spc_id.get_str_type();
+	mut_properties[RESERVED_SLOT] = spc_id.slot;
+	mut_properties[RESERVED_PREFIX] = spc_id.prefix.field;
+
+	switch (spc_id.get_type()) {
+		case FieldType::GEO: {
+			mut_properties[RESERVED_PARTIALS] = spc_id.flags.partials;
+			mut_properties[RESERVED_ERROR] = spc_id.error;
+			break;
+		}
+		case FieldType::KEYWORD: {
+			mut_properties[RESERVED_BOOL_TERM] = spc_id.flags.bool_term;
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 
