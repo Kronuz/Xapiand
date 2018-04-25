@@ -6,11 +6,14 @@ version: 0.6.1
 categories: [release]
 ---
 
-A lot of optimizations. Xapiand is now using a whole new threadpool with
-lock-free queue for improved performance.
+A lot of optimizations and quite a few improvements and bug fixes since last
+release.
 
-*BREAKING CHANGE* A problem with generated terms in geospatial fields will
+**BREAKING CHANGE**: A problem with generated terms in geospatial fields will
 require reindexing documents using such geospatial fields.
+
+Xapiand is now using a whole new threadpool with lock-free queue for improved
+performance.
 
 Restore command is now indexing documents in parallel using multiple threads
 which yields better performance while bulk indexing.
