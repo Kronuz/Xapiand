@@ -2520,7 +2520,9 @@ Schema::index(const MsgPack& object,
 		FieldVector fields;
 		auto properties = &get_newest_properties();
 
-		if (properties->empty()) {  // new schemas have empty properties
+		if (object.empty()) {
+			dispatch_feed_properties(*properties);
+		} else if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties();
 			dispatch_write_properties(*mut_properties, object, fields);
@@ -2593,14 +2595,16 @@ Schema::index(const MsgPack& object,
 
 		Xapian::Document doc;
 		MsgPack data_obj;
-		auto data_ptr = &data_obj;
 
-		index_item_value(properties, doc, data_ptr, fields);
+		if (!fields.empty()) {
+			auto data_ptr = &data_obj;
+			index_item_value(properties, doc, data_ptr, fields);
 
-		for (const auto& elem : map_values) {
-			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
-			doc.add_value(elem.first, val_ser);
-			L_INDEX("Slot: %d  Values: %s", elem.first, repr(val_ser));
+			for (const auto& elem : map_values) {
+				const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
+				doc.add_value(elem.first, val_ser);
+				L_INDEX("Slot: %d  Values: %s", elem.first, repr(val_ser));
+			}
 		}
 
 		// Add ID.
