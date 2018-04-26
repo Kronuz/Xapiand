@@ -595,7 +595,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 	try {
 		Data data;
 		if (old_document_pair == nullptr && !term_id.empty()) {
-			old_document_pair = get_document_change_seq(term_id);
+			old_document_pair = get_document_change_seq(term_id, true);
 		}
 		if (old_document_pair != nullptr) {
 			data = old_document_pair->second;
@@ -633,7 +633,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 	try {
 		Data data;
 		if (old_document_pair == nullptr && !term_id.empty()) {
-			old_document_pair = get_document_change_seq(term_id);
+			old_document_pair = get_document_change_seq(term_id, !stored);
 		}
 		if (old_document_pair != nullptr) {
 			data = old_document_pair->second;
@@ -1766,7 +1766,7 @@ DatabaseHandler::get_master_count()
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 const std::shared_ptr<std::pair<std::string, const Data>>
-DatabaseHandler::get_document_change_seq(std::string_view term_id)
+DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)
 {
 	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string(), repr(term_id));
 
@@ -1790,7 +1790,11 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id)
 		try {
 			auto current_document = get_document_term(term_id);
 			current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, Data(current_document.get_data())));
-		} catch (const DocNotFoundError&) { }
+		} catch (const DocNotFoundError&) {
+			if (validate_exists) {
+				throw;
+			}
+		}
 
 		lk.lock();
 

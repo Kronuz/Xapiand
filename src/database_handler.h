@@ -269,7 +269,7 @@ public:
 	static int get_master_count();
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
-	const std::shared_ptr<std::pair<std::string, const Data>> get_document_change_seq(std::string_view term_id);
+	const std::shared_ptr<std::pair<std::string, const Data>> get_document_change_seq(std::string_view term_id, bool validate_exists = false);
 	bool set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 	void dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 #endif
