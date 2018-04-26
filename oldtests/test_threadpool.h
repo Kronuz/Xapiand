@@ -71,17 +71,17 @@ struct test_pool_class_t {
 };
 
 
-inline int _test_pool_func_func(int i) noexcept {
+inline int test_pool_func_func(int i) noexcept {
 	return i * i;
 }
 
 
-inline int _test_pool_func_func_shared(std::shared_ptr<int> i) noexcept {
+inline int test_pool_func_func_shared(std::shared_ptr<int> i) noexcept {
 	return *i * *i;
 }
 
 
-inline int _test_pool_func_func_unique(std::unique_ptr<int> i) noexcept {
+inline int test_pool_func_func_unique(std::unique_ptr<int> i) noexcept {
 	return *i * *i;
 }
 

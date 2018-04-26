@@ -73,10 +73,10 @@ int test_pool_limit() {
 int test_pool_func() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
+	std::vector<std::future<int>> results;
 
 	// Using lambda without parameters
 	results.emplace_back(pool.async([i = i]() {
@@ -91,10 +91,14 @@ int test_pool_func() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(&_test_pool_func_func, i));
+	results.emplace_back(pool.async(&test_pool_func_func, i));
 	++i;
 
 	// Using member function
+	results.emplace_back(pool.async(&test_pool_class_t::func, &obj, i));
+	++i;
+
+	// Using captured object function
 	results.emplace_back(pool.async([&obj](int i) {
 		return obj.func(i);
 	}, i));
@@ -105,7 +109,7 @@ int test_pool_func() {
 		total += result.get();
 	}
 
-	if (total != 30) {
+	if (total != 55) {
 		L_ERR("ThreadPool::async functions with int is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
@@ -120,12 +124,11 @@ int test_pool_func() {
 int test_pool_func_shared() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
+	std::vector<std::future<int>> results;
 
-	// shared_ptr
 	// Using lambda without parameters
 	results.emplace_back(pool.async([i = std::make_shared<int>(i)]() {
 		return *i * *i;
@@ -139,12 +142,16 @@ int test_pool_func_shared() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(&_test_pool_func_func_shared, std::make_shared<int>(i)));
+	results.emplace_back(pool.async(&test_pool_func_func_shared, std::make_shared<int>(i)));
 	++i;
 
 	// Using member function
+	results.emplace_back(pool.async(&test_pool_class_t::func_shared, &obj, std::make_shared<int>(i)));
+	++i;
+
+	// Using captured object function
 	results.emplace_back(pool.async([&obj](std::shared_ptr<int> i) {
-		return obj.func_shared(i);
+		return obj.func_shared(std::move(i));
 	}, std::make_shared<int>(i)));
 	++i;
 
@@ -153,7 +160,7 @@ int test_pool_func_shared() {
 		total += result.get();
 	}
 
-	if (total != 30) {
+	if (total != 55) {
 		L_ERR("ThreadPool::async functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
@@ -168,12 +175,11 @@ int test_pool_func_shared() {
 int test_pool_func_unique() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
+	std::vector<std::future<int>> results;
 
-	// unique_ptr
 	// Using lambda without parameters
 	results.emplace_back(pool.async([i = std::make_unique<int>(i)]() {
 		return *i * *i;
@@ -187,10 +193,14 @@ int test_pool_func_unique() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(&_test_pool_func_func_unique, std::make_unique<int>(i)));
+	results.emplace_back(pool.async(&test_pool_func_func_unique, std::make_unique<int>(i)));
 	++i;
 
 	// Using member function
+	results.emplace_back(pool.async(&test_pool_class_t::func_unique, &obj, std::make_unique<int>(i)));
+	++i;
+
+	// Using captured object function
 	results.emplace_back(pool.async([&obj](std::unique_ptr<int> i) {
 		return obj.func_unique(std::move(i));
 	}, std::make_unique<int>(i)));
@@ -201,7 +211,7 @@ int test_pool_func_unique() {
 		total += result.get();
 	}
 
-	if (total != 30)  {
+	if (total != 55)  {
 		L_ERR("ThreadPool::async functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
 		RETURN(1);
 	}
