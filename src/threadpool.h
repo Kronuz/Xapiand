@@ -305,7 +305,7 @@ ThreadPool::package(Func&& func, Args&&... args)
 		func = std::forward<Func>(func),
 		args = std::make_tuple(std::forward<Args>(args)...)
 	]() mutable {
-		return std::apply(func, args);
+		return std::apply(std::move(func), std::move(args));
 	});
 	return packaged_task;
 }
