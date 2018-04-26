@@ -137,10 +137,10 @@ public:
 	template <typename It>
 	auto enqueue_bulk(It itemFirst, size_t count);
 
-	template <typename Func, typename = std::result_of_t<Func()>()>
+	template <typename Func>
 	auto enqueue(Func&& func);
 
-	template <typename Func, typename... Args, typename = std::result_of_t<Func(Args...)>()>
+	template <typename Func, typename... Args>
 	auto async(Func&& func, Args&&... args);
 };
 
@@ -322,7 +322,7 @@ ThreadPool::enqueue_bulk(It itemFirst, size_t count)
 	return true;
 }
 
-template <typename Func, typename>
+template <typename Func>
 inline auto
 ThreadPool::enqueue(Func&& func)
 {
@@ -334,7 +334,7 @@ ThreadPool::enqueue(Func&& func)
 	return true;
 }
 
-template <typename Func, typename... Args, typename>
+template <typename Func, typename... Args>
 inline auto
 ThreadPool::async(Func&& func, Args&&... args)
 {
