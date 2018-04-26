@@ -24,6 +24,9 @@
 
 #include "ansi_color.hh"      // for ansi_color
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+
 #define NO_COLOR no_color()
 #define CLEAR_COLOR clear_color()
 
@@ -772,3 +775,5 @@
 #define L_UNINDENTED_YELLOW_GREEN(args...) L_UNINDENTED(LOG_DEBUG, YELLOW_GREEN, args)
 #define L_YELLOW_GREEN(args...) L(LOG_DEBUG, YELLOW_GREEN, args)
 #define L_STACKED_YELLOW_GREEN(args...) L_STACKED(LOG_DEBUG, YELLOW_GREEN, args)
+
+#pragma GCC diagnostic pop

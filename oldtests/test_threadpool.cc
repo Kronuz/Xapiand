@@ -73,7 +73,7 @@ int test_pool_limit() {
 int test_pool_func() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::shared_future<int>> results;
+	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
@@ -91,7 +91,7 @@ int test_pool_func() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(_test_pool_func_func, i));
+	results.emplace_back(pool.async(&_test_pool_func_func, i));
 	++i;
 
 	// Using member function
@@ -120,7 +120,7 @@ int test_pool_func() {
 int test_pool_func_shared() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::shared_future<int>> results;
+	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
@@ -139,7 +139,7 @@ int test_pool_func_shared() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(_test_pool_func_func_shared, std::make_shared<int>(i)));
+	results.emplace_back(pool.async(&_test_pool_func_func_shared, std::make_shared<int>(i)));
 	++i;
 
 	// Using member function
@@ -168,7 +168,7 @@ int test_pool_func_shared() {
 int test_pool_func_unique() {
 	INIT_LOG
 	ThreadPool pool("W%zu", 4);
-	std::vector<std::shared_future<int>> results;
+	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
 	int i = 1;
@@ -187,7 +187,7 @@ int test_pool_func_unique() {
 	++i;
 
 	// Using regular function
-	results.emplace_back(pool.async(_test_pool_func_func_unique, std::make_unique<int>(i)));
+	results.emplace_back(pool.async(&_test_pool_func_func_unique, std::make_unique<int>(i)));
 	++i;
 
 	// Using member function
