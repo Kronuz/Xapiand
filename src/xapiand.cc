@@ -24,24 +24,23 @@
 
 #include <algorithm>                 // for min
 #include <chrono>                    // for system_clock, time_point
-#include <clocale>                   // for setlocale, LC_CTYPE
+#include <clocale>                   // for std::setlocale, LC_CTYPE
+#include <csignal>                   // for sigaction, sigemptyset
+#include <cstdio>                    // for std::fprintf, std::snprintf
+#include <cstdlib>                   // for std::size_t, std::atoi, std::getenv, std::exit, setenv
+#include <cstring>                   // for std::strchr, std::strlen, std::strrchr, std::strcmp, std::strerror
 #include <grp.h>                     // for getgrgid, group, getgrnam, gid_t
 #include <iostream>                  // for operator<<, basic_ostream, ostream
 #include <list>                      // for __list_iterator, list, operator!=
 #include <memory>                    // for unique_ptr, allocator, make_unique
 #include <pwd.h>                     // for passwd, getpwnam, getpwuid
-#include <csignal>                   // for sigaction, sigemptyset
 #include <sstream>                   // for basic_stringbuf<>::int_type, bas...
-#include <cstdio>                    // for snprintf
-#include <cstdlib>                   // for size_t, atoi, setenv, exit, getenv
-#include <cstring>                   // for strcat, strchr, strlen, strrchr
 #include <strings.h>                 // for strcasecmp
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/resource.h>            // for rlimit
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <thread>                    // for thread
-#include <ctime>                     // for tm, localtime, mktime, time_t
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
 #include <vector>                    // for vector
 #include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
@@ -91,7 +90,7 @@ static ssize_t write(int fildes, std::string_view str) {
 }
 
 
-template <size_t N>
+template <std::size_t N>
 class signals_t {
 	static constexpr int signals = N;
 
@@ -100,7 +99,7 @@ class signals_t {
 
 public:
 	signals_t() {
-		for (size_t sig = 0; sig < signals; ++sig) {
+		for (std::size_t sig = 0; sig < signals; ++sig) {
 #if defined(__linux__)
 				const char* sig_str = strsignal(sig);
 #elif defined(__APPLE__) || defined(__FreeBSD__)
@@ -326,7 +325,7 @@ void parseOptions(int argc, char** argv) {
 		CmdOutput output;
 		ZshCompletionOutput zshoutput;
 
-		if (getenv("ZSH_COMPLETE") != nullptr) {
+		if (std::getenv("ZSH_COMPLETE") != nullptr) {
 			cmd.setOutput(&zshoutput);
 		} else {
 			cmd.setOutput(&output);
@@ -371,17 +370,17 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
-		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
+		ValueArg<std::size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 
-		ValueArg<size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
-		ValueArg<size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
+		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
+		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
+		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 
-		ValueArg<size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
-		ValueArg<size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
+		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
+		ValueArg<std::size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
 
-		ValueArg<size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
+		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
+		ValueArg<std::size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
@@ -412,7 +411,7 @@ void parseOptions(int argc, char** argv) {
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
 			if (i == 0) {
-				const char* a = strrchr(argv[i], '/');
+				const char* a = std::strrchr(argv[i], '/');
 				if (a != nullptr) {
 					++a;
 				} else {
@@ -429,7 +428,7 @@ void parseOptions(int argc, char** argv) {
 						arg += 2;
 					}
 				}
-				const char* a = strchr(arg, '=');
+				const char* a = std::strchr(arg, '=');
 				if (a != nullptr) {
 					if ((a - arg) != 0) {
 						std::string tmp(arg, a - arg);
@@ -573,8 +572,8 @@ void parseOptions(int argc, char** argv) {
 		}
 
 	} catch (const ArgException& exc) { // catch any exceptions
-		fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
-		exit(EX_USAGE);
+		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
+		std::exit(EX_USAGE);
 	}
 }
 
@@ -597,12 +596,12 @@ ssize_t get_max_files_per_proc()
 #if defined(KERN_MAXFILESPERPROC)
 #define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
 	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
-	size_t mib_len = sizeof(mib) / sizeof(int);
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
 #endif
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 	}
 #undef _SYSCTL_NAME
 #else
@@ -620,20 +619,20 @@ ssize_t get_open_files()
 #if defined(KERN_OPENFILES)
 #define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
 	int mib[] = {CTL_KERN, KERN_OPENFILES};
-	size_t mib_len = sizeof(mib) / sizeof(int);
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
 #elif defined(__APPLE__)
 #define _SYSCTL_NAME "kern.num_files"  // Apple
 	int mib[CTL_MAXNAME + 2];
-	size_t mib_len = sizeof(mib) / sizeof(int);
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
 #endif
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 	}
 #undef _SYSCTL_NAME
 #else
@@ -707,7 +706,7 @@ void adjustOpenFilesLimit() {
 		if ((limit_cur_files == 0) || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING("Unable to obtain the current NOFILE limit (%s), assuming %zd", strerror(errno), limit_cur_files);
+		L_WARNING("Unable to obtain the current NOFILE limit (%s), assuming %zd", std::strerror(errno), limit_cur_files);
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -729,9 +728,9 @@ void adjustOpenFilesLimit() {
 			limit.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
 				if (increasing) {
-					L_INFO("Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
+					L_INFO("Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (std::size_t)limit_cur_files);
 				} else {
-					L_INFO("Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (size_t)limit_cur_files);
+					L_INFO("Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (std::size_t)limit_cur_files);
 				}
 				break;
 			}
@@ -747,7 +746,7 @@ void adjustOpenFilesLimit() {
 		}
 
 		if (setrlimit_error != 0) {
-			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
+			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, std::strerror(setrlimit_error));
 		}
 		max_files = new_max_files;
 	} else {
@@ -818,7 +817,7 @@ void demote(const char* username, const char* group) {
 		struct group *gr;
 
 		if ((pw = getpwnam(username)) == nullptr) {
-			uid = atoi(username);
+			uid = std::atoi(username);
 			if ((uid == 0u) || (pw = getpwuid(uid)) == nullptr) {
 				L_CRIT("Can't find the user %s to switch to", username);
 				throw Exit(EX_NOUSER);
@@ -830,7 +829,7 @@ void demote(const char* username, const char* group) {
 
 		if ((group != nullptr) && (*group != 0)) {
 			if ((gr = getgrnam(group)) == nullptr) {
-				gid = atoi(group);
+				gid = std::atoi(group);
 				if ((gid == 0u) || (gr = getgrgid(gid)) == nullptr) {
 					L_CRIT("Can't find the group %s to switch to", group);
 					throw Exit(EX_NOUSER);
@@ -857,7 +856,7 @@ void demote(const char* username, const char* group) {
 void detach() {
 	pid_t pid = fork();
 	if (pid != 0) {
-		exit(EX_OK); /* parent exits */
+		std::exit(EX_OK); /* parent exits */
 	}
 	setsid(); /* create a new session */
 
@@ -878,8 +877,8 @@ void writepid(const char* pidfile) {
 		int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
 		if (fd > 0) {
 			char buffer[100];
-			snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
-			io::write(fd, buffer, strlen(buffer));
+			std::snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
+			io::write(fd, buffer, std::strlen(buffer));
 			io::close(fd);
 		}
 	}
@@ -905,9 +904,9 @@ void usedir(const char* path, bool forceup) {
 			}
 			if (ent->d_type == DT_REG) {
 #if defined(__APPLE__) && defined(__MACH__)
-				if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0)
+				if (ent->d_namlen == 9 && std::strcmp(s, "flintlock") == 0)
 #else
-					if (strcmp(s, "flintlock") == 0)
+					if (std::strcmp(s, "flintlock") == 0)
 #endif
 					{
 						empty = true;
@@ -931,7 +930,7 @@ void usedir(const char* path, bool forceup) {
 				throw Exit(EX_OSFILE);
 			}
 		} else {
-			L_ERR("Cannot create working directory: %s (%s)", path, strerror(errno));
+			L_ERR("Cannot create working directory: %s (%s)", path, std::strerror(errno));
 		}
 	}
 
@@ -992,8 +991,8 @@ int server() {
 
 		// Flush threshold increased
 		int flush_threshold = 10000;  // Default is 10000 (if no set)
-		const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-		if (p != nullptr) { flush_threshold = atoi(p); }
+		const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
+		if (p != nullptr) { flush_threshold = std::atoi(p); }
 		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", 0) == 0) {
 			L_INFO("Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 		}
