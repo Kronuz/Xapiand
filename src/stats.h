@@ -24,6 +24,7 @@
 
 #include "xapiand.h"
 
+#include <cstdint>       // for std::uint32_t, std::uint64_t
 #include <chrono>        // for system_clock, time_point, duration_cast, seconds
 #include <mutex>         // for mutex
 #include <string>        // for string
@@ -39,13 +40,13 @@ constexpr int MAX_TIME_SECOND  = SLOT_TIME_MINUTE * 60;
 struct Stats {
 	struct Counter {
 		struct Element {
-			uint32_t cnt;
-			uint64_t total;
-			uint64_t max;
-			uint64_t min;
+			std::uint32_t cnt;
+			std::uint64_t total;
+			std::uint64_t max;
+			std::uint64_t min;
 
 			Element();
-			explicit Element(uint64_t duration);
+			explicit Element(std::uint64_t duration);
 			void clear();
 			void add(const Element& other);
 		};
@@ -76,7 +77,7 @@ struct Stats {
 
 	static Stats& cnt();
 
-	void _add(Counter& counter, uint64_t duration);
+	void _add(Counter& counter, std::uint64_t duration);
 	void _update_pos_time();
 	void _clear_stats_min(int start, int end);
 	void _clear_stats_sec(int start, int end);
@@ -86,5 +87,5 @@ struct Stats {
 	Stats();
 	Stats(Stats& other);
 
-	static void add(const std::string& counter, uint64_t duration);
+	static void add(const std::string& counter, std::uint64_t duration);
 };
