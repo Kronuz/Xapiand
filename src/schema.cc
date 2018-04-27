@@ -134,6 +134,9 @@ static const std::vector<uint64_t> def_accuracy_time({ toUType(UnitTime::MINUTE)
 static const std::vector<uint64_t> def_accuracy_geo({ 20, 15, 10, 5, 0 });
 
 
+required_spc_t _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties);
+
+
 static inline bool
 validate_acc_date(UnitTime unit) noexcept
 {
@@ -2534,6 +2537,7 @@ Schema::index(const MsgPack& object,
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		FieldVector fields;
+		const MsgPack* id_field = nullptr;
 		auto properties = &get_newest_properties();
 
 		if (object.empty()) {
@@ -2541,15 +2545,19 @@ Schema::index(const MsgPack& object,
 		} else if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties();
-			dispatch_write_properties(*mut_properties, object, fields);
+			dispatch_write_properties(*mut_properties, object, fields, &id_field);
 			properties = &*mut_properties;
 		} else {
 			dispatch_feed_properties(*properties);
-			dispatch_process_properties(object, fields);
+			dispatch_process_properties(object, fields, &id_field);
 		}
 
 		auto spc_id = get_data_id();
+		if (id_field != nullptr) {
+			_get_data_id(spc_id, *id_field);
+		}
 		auto id_type = spc_id.get_type();
+
 		std::string unprefixed_term_id;
 		if (document_id.empty()) {
 			if (id_type == FieldType::EMPTY) {
@@ -5817,7 +5825,7 @@ Schema::detect_dynamic(std::string_view field_name)
 
 
 inline void
-Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields)
+Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
 {
 	L_CALL("Schema::dispatch_process_concrete_properties(%s, <fields>)", repr(object.to_string()));
 
@@ -5828,28 +5836,8 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		auto &value = it.value();
 		if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 			fields.emplace_back(str_key, &value);
-		}
-	}
-
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	normalize_script();
-#endif
-}
-
-
-inline void
-Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields)
-{
-	L_CALL("Schema::dispatch_process_all_properties(%s, <fields>)", repr(object.to_string()));
-
-	const auto it_e = object.end();
-	for (auto it = object.begin(); it != it_e; ++it) {
-		auto str_key = it->str_view();
-		auto key = hh(str_key);
-		auto& value = it.value();
-		if (!_dispatch_process_properties(key, str_key, value)) {
-			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				fields.emplace_back(str_key, &value);
+			if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+				*id_field = &value;
 			}
 		}
 	}
@@ -5861,18 +5849,44 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 
 
 inline void
-Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields)
+Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
+{
+	L_CALL("Schema::dispatch_process_all_properties(%s, <fields>)", repr(object.to_string()));
+
+	const auto it_e = object.end();
+	for (auto it = object.begin(); it != it_e; ++it) {
+		auto str_key = it->str_view();
+		auto key = hh(str_key);
+		auto& value = it.value();
+		if (!_dispatch_process_properties(key, str_key, value)) {
+			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+				fields.emplace_back(str_key, &value);
+				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+					*id_field = &value;
+				}
+			}
+		}
+	}
+
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	normalize_script();
+#endif
+}
+
+
+inline void
+Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
 {
 	if (specification.flags.concrete) {
-		dispatch_process_concrete_properties(object, fields);
+		dispatch_process_concrete_properties(object, fields, id_field);
 	} else {
-		dispatch_process_all_properties(object, fields);
+		dispatch_process_all_properties(object, fields, id_field);
 	}
 }
 
 
 inline void
-Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
+Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
 {
 	L_CALL("Schema::dispatch_write_concrete_properties(%s, %s, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -5884,6 +5898,9 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 				fields.emplace_back(str_key, &value);
+				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+					*id_field = &value;
+				}
 			}
 		}
 	}
@@ -6577,7 +6594,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 
 
 void
-Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
+Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
 {
 	L_CALL("Schema::dispatch_write_all_properties(%s, %s, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -6590,6 +6607,9 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 			if (!_dispatch_process_properties(key, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
 					fields.emplace_back(str_key, &value);
+					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+						*id_field = &value;
+					}
 				}
 			}
 		}
@@ -6602,14 +6622,14 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 
 
 inline void
-Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields)
+Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field)
 {
 	L_CALL("Schema::dispatch_write_properties(%s, <object>, <fields>)", repr(mut_properties.to_string()));
 
 	if (specification.flags.concrete) {
-		dispatch_write_concrete_properties(mut_properties, object, fields);
+		dispatch_write_concrete_properties(mut_properties, object, fields, id_field);
 	} else {
-		dispatch_write_all_properties(mut_properties, object, fields);
+		dispatch_write_all_properties(mut_properties, object, fields, id_field);
 	}
 }
 
@@ -8875,25 +8895,8 @@ Schema::to_string(bool prettify) const
 
 
 required_spc_t
-Schema::get_data_id() const
+_get_data_id(required_spc_t& spc_id, const MsgPack& id_properties)
 {
-	L_CALL("Schema::get_data_id()");
-
-	required_spc_t spc_id;
-
-	// Set default prefix
-	spc_id.prefix.field = DOCUMENT_ID_TERM_PREFIX;
-
-	// Set default RESERVED_SLOT
-	spc_id.slot = DB_SLOT_ID;
-
-	const auto& properties = get_newest_properties();
-	auto it = properties.find(ID_FIELD_NAME);
-	if (it == properties.end()) {
-		return spc_id;
-	}
-
-	const auto& id_properties = it.value();
 	auto id_it_e = id_properties.end();
 
 	auto id_type_it = id_properties.find(RESERVED_TYPE);
@@ -8934,6 +8937,30 @@ Schema::get_data_id() const
 	}
 
 	return spc_id;
+}
+
+
+required_spc_t
+Schema::get_data_id() const
+{
+	L_CALL("Schema::get_data_id()");
+
+	required_spc_t spc_id;
+
+	// Set default prefix
+	spc_id.prefix.field = DOCUMENT_ID_TERM_PREFIX;
+
+	// Set default RESERVED_SLOT
+	spc_id.slot = DB_SLOT_ID;
+
+	const auto& properties = get_newest_properties();
+	auto it = properties.find(ID_FIELD_NAME);
+	if (it == properties.end()) {
+		return spc_id;
+	}
+
+	const auto& id_properties = it.value();
+	return _get_data_id(spc_id, id_properties);
 }
 
 
