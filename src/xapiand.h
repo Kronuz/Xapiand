@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#if defined(__cpluplus)
+#if defined(__cplusplus)
 #include <cassert>           // for assert
 #include <cstdio>            // for fprintf
 #else
