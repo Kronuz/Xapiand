@@ -35,7 +35,7 @@ static inline std::string humanize(long double delta, bool colored, const int i,
 	} else if (order > n) { order = n; }
 
 	const char* color = colored ? colors[order] : "";
-	num = roundl(rounding * num / scaling[order]) / rounding;
+	num = std::round(rounding * num / scaling[order]) / rounding;
 	const char* unit = units[order];
 	const char* reset = colored ? colors[n + 1] : "";
 
