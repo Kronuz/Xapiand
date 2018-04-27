@@ -1847,6 +1847,85 @@ required_spc_t::set_types(std::string_view str_type)
 }
 
 
+MsgPack
+required_spc_t::to_obj() const
+{
+	MsgPack obj;
+
+	// required_spc_t
+
+	obj["type"] = _get_str_type(sep_types);
+	obj["prefix"] = prefix.to_string();
+	obj["slot"] = slot;
+
+	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
+	obj_flags["bool_term"] = flags.bool_term;
+	obj_flags["partials"] = flags.partials;
+
+	obj_flags["store"] = flags.store;
+	obj_flags["parent_store"] = flags.parent_store;
+	obj_flags["is_recurse"] = flags.is_recurse;
+	obj_flags["dynamic"] = flags.dynamic;
+	obj_flags["strict"] = flags.strict;
+	obj_flags["date_detection"] = flags.date_detection;
+	obj_flags["time_detection"] = flags.time_detection;
+	obj_flags["timedelta_detection"] = flags.timedelta_detection;
+	obj_flags["numeric_detection"] = flags.numeric_detection;
+	obj_flags["geo_detection"] = flags.geo_detection;
+	obj_flags["bool_detection"] = flags.bool_detection;
+	obj_flags["string_detection"] = flags.string_detection;
+	obj_flags["text_detection"] = flags.text_detection;
+	obj_flags["term_detection"] = flags.term_detection;
+	obj_flags["uuid_detection"] = flags.uuid_detection;
+
+	obj_flags["partial_paths"] = flags.partial_paths;
+	obj_flags["is_namespace"] = flags.is_namespace;
+	obj_flags["optimal"] = flags.optimal;
+
+	obj_flags["field_found"] = flags.field_found;
+	obj_flags["concrete"] = flags.concrete;
+	obj_flags["complete"] = flags.complete;
+	obj_flags["uuid_field"] = flags.uuid_field;
+	obj_flags["uuid_path"] = flags.uuid_path;
+	obj_flags["inside_namespace"] = flags.inside_namespace;
+#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+	obj_flags["normalized_script"] = flags.normalized_script;
+#endif
+	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
+	obj_flags["has_bool_term"] = flags.has_bool_term;
+	obj_flags["has_index"] = flags.has_index;
+	obj_flags["has_namespace"] = flags.has_namespace;
+	obj_flags["has_partial_paths"] = flags.has_partial_paths;
+	obj_flags["static_endpoint"] = flags.static_endpoint;
+
+	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : accuracy) {
+		obj_accuracy.append(a);
+	}
+
+	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
+	for (const auto& a : acc_prefix) {
+		obj_acc_prefix.append(a);
+	}
+
+	obj["language"] = language;
+	obj["stop_strategy"] = _get_str_stop_strategy(stop_strategy);
+	obj["stem_strategy"] = _get_str_stem_strategy(stem_strategy);
+	obj["stem_language"] = stem_language;
+
+	obj["error"] = error;
+
+	return obj;
+}
+
+
+std::string
+required_spc_t::to_string(int indent) const
+{
+	return to_obj().to_string(indent);
+}
+
+
 index_spc_t::index_spc_t(required_spc_t&& spc)
 	: type(std::move(spc.sep_types[SPC_CONCRETE_TYPE])),
 	  prefix(std::move(spc.prefix.field)),
@@ -2077,70 +2156,7 @@ specification_t::update(const index_spc_t& spc)
 MsgPack
 specification_t::to_obj() const
 {
-	MsgPack obj;
-
-	// required_spc_t
-
-	obj["type"] = _get_str_type(sep_types);
-	obj["prefix"] = prefix.to_string();
-	obj["slot"] = slot;
-
-	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
-	obj_flags["bool_term"] = flags.bool_term;
-	obj_flags["partials"] = flags.partials;
-
-	obj_flags["store"] = flags.store;
-	obj_flags["parent_store"] = flags.parent_store;
-	obj_flags["is_recurse"] = flags.is_recurse;
-	obj_flags["dynamic"] = flags.dynamic;
-	obj_flags["strict"] = flags.strict;
-	obj_flags["date_detection"] = flags.date_detection;
-	obj_flags["time_detection"] = flags.time_detection;
-	obj_flags["timedelta_detection"] = flags.timedelta_detection;
-	obj_flags["numeric_detection"] = flags.numeric_detection;
-	obj_flags["geo_detection"] = flags.geo_detection;
-	obj_flags["bool_detection"] = flags.bool_detection;
-	obj_flags["string_detection"] = flags.string_detection;
-	obj_flags["text_detection"] = flags.text_detection;
-	obj_flags["term_detection"] = flags.term_detection;
-	obj_flags["uuid_detection"] = flags.uuid_detection;
-
-	obj_flags["partial_paths"] = flags.partial_paths;
-	obj_flags["is_namespace"] = flags.is_namespace;
-	obj_flags["optimal"] = flags.optimal;
-
-	obj_flags["field_found"] = flags.field_found;
-	obj_flags["concrete"] = flags.concrete;
-	obj_flags["complete"] = flags.complete;
-	obj_flags["uuid_field"] = flags.uuid_field;
-	obj_flags["uuid_path"] = flags.uuid_path;
-	obj_flags["inside_namespace"] = flags.inside_namespace;
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	obj_flags["normalized_script"] = flags.normalized_script;
-#endif
-	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
-	obj_flags["has_bool_term"] = flags.has_bool_term;
-	obj_flags["has_index"] = flags.has_index;
-	obj_flags["has_namespace"] = flags.has_namespace;
-	obj_flags["has_partial_paths"] = flags.has_partial_paths;
-	obj_flags["static_endpoint"] = flags.static_endpoint;
-
-	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
-	for (const auto& a : accuracy) {
-		obj_accuracy.append(a);
-	}
-
-	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
-	for (const auto& a : acc_prefix) {
-		obj_acc_prefix.append(a);
-	}
-
-	obj["language"] = language;
-	obj["stop_strategy"] = _get_str_stop_strategy(stop_strategy);
-	obj["stem_strategy"] = _get_str_stem_strategy(stem_strategy);
-	obj["stem_language"] = stem_language;
-
-	obj["error"] = error;
+	MsgPack obj = required_spc_t::to_obj();
 
 	// specification_t
 

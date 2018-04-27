@@ -401,6 +401,9 @@ struct required_spc_t {
 	required_spc_t& operator=(const required_spc_t& o);
 	required_spc_t& operator=(required_spc_t&& o) noexcept;
 
+	MsgPack to_obj() const;
+	std::string to_string(int indent=-1) const;
+
 	FieldType get_type() const noexcept {
 		return sep_types[SPC_CONCRETE_TYPE];
 	}
