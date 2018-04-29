@@ -1,4 +1,7 @@
-curl -XPOST "http://localhost:8880/test/schemas/duplicated_uuid_field" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/schemas/duplicated_uuid_field
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_schema": {
 		"schema": {
@@ -14,13 +17,17 @@ curl -XPOST "http://localhost:8880/test/schemas/duplicated_uuid_field" -H "Accep
 	"00000000-0000-1000-8000-c97562616c75": "B",
 	"urn:uuid:00000000-0000-1000-8000-c97562616c75": "C",
 	"{00000000-0000-1000-8000-c97562616c75}": "D",
-}'
+}
 ###
-curl -X GET "http://localhost:8880/test/duplicated_uuid_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/duplicated_uuid_field/:schema
+Accept: application/json; indent=4
 ###
 
 
-curl -XPOST "http://localhost:8880/test/duplicated_array_field" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/duplicated_array_field
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_schema": {
 		"schema": {
@@ -38,31 +45,42 @@ curl -XPOST "http://localhost:8880/test/duplicated_array_field" -H "Accept: appl
 		"C",
 		"D"
 	]
-}'
+}
 ###
-curl -X GET "http://localhost:8880/test/duplicated_array_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/duplicated_array_field/:schema
+Accept: application/json; indent=4
 ###
 
 
 
-curl -X PUT "http://localhost:8880/test/merges/german" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/merges/german
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"name": "German M. Bravo",
 	"age": 39,
 	"gender": "M"
-}'
+}
 ###
-curl -XMERGE "http://localhost:8880/test/merges/german" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+MERGE http://localhost:8880/test/merges/german
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"name": "German Mendez Bravo"
-}'
+}
 ###
-curl -X GET "http://localhost:8880/test/merges/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/merges/:schema
+Accept: application/json; indent=4
 ###
 
 
 
-curl -X PUT "http://localhost:8880/test/accuracy/all" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/accuracy/all
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"point": {
 		"_point": {
@@ -78,27 +96,34 @@ curl -X PUT "http://localhost:8880/test/accuracy/all" -H "Accept: application/js
 			"_day": 25,
 		},
 		"_accuracy": [3600, "century"]
-
 	},
-}'
+}
 ###
-curl -X GET "http://localhost:8880/test/accuracy/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/accuracy/:schema
+Accept: application/json; indent=4
 ###
 
 
 
-curl -X PUT "http://localhost:8880/test/keyword_id/1" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/keyword_id/1
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
     "_id": {
         "_type": "keyword"
     },
     "test": "Test 1"
-}'
+}
 ###
-curl -X PUT "http://localhost:8880/test/keyword_id/2" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/keyword_id/2
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
     "test": "Test 2"
-}'
+}
 ###
-curl -X GET "http://localhost:8880/test/keyword_id/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/keyword_id/:schema
+Accept: application/json; indent=4
 ###

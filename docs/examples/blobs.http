@@ -1,2 +1,6 @@
-curl -XPOST "http://localhost:8880/test/blobs" -H "Accept: application/json; indent=4" -H "Content-Type: image/jpeg" --data-binary "@/Users/kronuz/Pictures/Chromatic/2fbd62df.jpg"
+POST http://localhost:8880/test/blobs
+Accept: application/json; indent=4
+Content-Type: image/jpeg
+
+< /Users/kronuz/Pictures/Chromatic/2fbd62df.jpg
 ###

@@ -1,4 +1,7 @@
-curl -XPUT "http://localhost:8880/test/doc?commit" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
+PUT http://localhost:8880/test/doc?commit
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_id": {
 		"_type": "keyword",
@@ -8,20 +11,27 @@ curl -XPUT "http://localhost:8880/test/doc?commit" -H "Accept: application/json;
 		"_index": "global_terms",
 		"_value": "~notmet",
 	},
-}'
+}
 ###
-curl -XGET "http://localhost:8880/test/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/:schema
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/:metadata
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/:info/doc" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/:info/doc
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/:search?q=~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/:search?q=~notmet
+Accept: application/json; indent=4
 ###
 
 
 
-curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/A
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_schema": {
 		"_type": "foreign/object",
@@ -41,12 +51,15 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 			null,  // <- there was an error when extracting _value from here
 		],
 	},
-}'
+}
 ###
 
 
 
-curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/schemas/implicit-_type
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_id": {
 		"_type": "uuid",
@@ -54,11 +67,14 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 	"campo": {
 		"_type": "string",
 	}
-}'
+}
 ###
 
 
-curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/schemas/implicit-_type
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_id": {
 		"_type": "uuid",
@@ -67,11 +83,14 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		"_type": "string",
 		"_value": null,
 	}
-}'
+}
 ###
 
 
-curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/schemas/implicit-_type
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_id": {
 		"_type": "uuid",
@@ -81,11 +100,14 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 			"_type": "string",
 		}
 	}
-}'
+}
 ###
 
 
-curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/schemas/implicit-_type
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_id": {
 		"_type": "uuid",
@@ -96,12 +118,15 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 			"_value": null,
 		}
 	}
-}'
+}
 ###
 
 
 
-curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+POST http://localhost:8880/test/A
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"_recurse": false,
 	"_id": {
@@ -111,18 +136,23 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 	"schema": {
 		"_type": "object",
 	}
-}'
+}
 ###
-curl -XGET "http://localhost:8880/test/A/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/A/:schema
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/A/::1" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/A/::1
+Accept: application/json; indent=4
 ###
 
 
 
 //
 
-curl -XPUT "http://localhost:8880/test/feed_cache/A" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/feed_cache/A
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"~notmet": {
 		"roles": {
@@ -134,9 +164,12 @@ curl -XPUT "http://localhost:8880/test/feed_cache/A" -H "Accept: application/jso
 			],
 		}
 	}
-}'
+}
 ###
-curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/feed_cache/B
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"~3pZyPcFqGq": {
 		"roles": {
@@ -148,9 +181,12 @@ curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/jso
 			],
 		}
 	}
-}'
+}
 ###
-curl -XPUT "http://localhost:8880/test/feed_cache/C" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+PUT http://localhost:8880/test/feed_cache/C
+Accept: application/json; indent=4
+Content-Type: application/json
+
 {
 	"~SsQg3rJrx3P": {
 		"roles": {
@@ -162,11 +198,14 @@ curl -XPUT "http://localhost:8880/test/feed_cache/C" -H "Accept: application/jso
 			],
 		}
 	}
-}'
+}
 ###
-curl -XGET "http://localhost:8880/test/feed_cache/:info/A?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/feed_cache/:info/A?volatile
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/feed_cache/:info/B?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/feed_cache/:info/B?volatile
+Accept: application/json; indent=4
 ###
-curl -XGET "http://localhost:8880/test/feed_cache/:info/C?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+GET http://localhost:8880/test/feed_cache/:info/C?volatile
+Accept: application/json; indent=4
 ###
