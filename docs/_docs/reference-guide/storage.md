@@ -12,7 +12,6 @@ won't be changing often.
 Lets add something to the storage using `STORE`:
 
 {% capture req %}
-
 ```json
 STORE /twitter/images/Kronuz
 Content-Type: image/png
@@ -25,7 +24,6 @@ Content-Type: image/png
 And getting it is just a matter of retreiving it using GET:
 
 {% capture req %}
-
 ```json
 GET /twitter/images/Kronuz
 Accept: image/png
@@ -44,7 +42,6 @@ feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example
 Use `STORE` with a different Content-Type to add new content to the same document:
 
 {% capture req %}
-
 ```json
 STORE /twitter/images/Kronuz
 Content-Type: application/pdf
@@ -55,7 +52,6 @@ Content-Type: application/pdf
 {% include curl.html req=req %}
 
 {% capture req %}
-
 ```json
 STORE /twitter/images/Kronuz
 Content-Type: image/jpeg
@@ -68,7 +64,6 @@ Content-Type: image/jpeg
 Then you can get either of them requesting the appropriate Content-Type:
 
 {% capture req %}
-
 ```json
 GET /twitter/images/Kronuz
 Accept: image/jpeg
@@ -81,7 +76,6 @@ Accept: image/jpeg
 You can get the information about the document as usual:
 
 {% capture req %}
-
 ```json
 GET /twitter/images/:info/Kronuz?pretty
 ```
@@ -117,7 +111,6 @@ The result (partially shown) has the available content types listed inside
 To remove stored content by storing an empty object:
 
 {% capture req %}
-
 ```json
 STORE /twitter/images/Kronuz
 Content-Type: image/jpeg

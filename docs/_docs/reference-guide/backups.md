@@ -53,7 +53,6 @@ documents to and from JSON (or MessagePack) over HTTP.
 ### Dump
 
 {% capture req %}
-
 ```json
 POST /twitter/:dump?pretty
 ```
@@ -63,7 +62,6 @@ POST /twitter/:dump?pretty
 ### Restore
 
 {% capture req %}
-
 ```json
 POST /twitter/:restore?pretty
 
@@ -96,7 +94,6 @@ for the index to be restored; and then restore the documents to that index:
 #### Create a new schema ([foreign]({{ '/docs/reference-guide/schema#foreign' | relative_url }}) in this example) for a new index
 
 {% capture req %}
-
 ```json
 PUT /new_twitter/:schema
 
@@ -130,7 +127,6 @@ PUT /new_twitter/:schema
 #### Restore the index documents to the new index
 
 {% capture req %}
-
 ```json
 POST /twitter/:restore?pretty
 

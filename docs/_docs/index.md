@@ -63,7 +63,6 @@ Throughout this guide there are many examples of API calls that look something
 like this:
 
 {% capture req %}
-
 ```json
 PUT /twitter/user/Kronuz
 

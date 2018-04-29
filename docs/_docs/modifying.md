@@ -14,7 +14,6 @@ We've previously seen how we can index a single document. Let's recall that
 command again:
 
 {% capture req %}
-
 ```json
 PUT /customer/1?pretty
 
@@ -32,7 +31,6 @@ document, Xapiand will replace (i.e. reindex) a new document on top of the
 existing one with the ID of 1:
 
 {% capture req %}
-
 ```json
 PUT /customer/1?pretty
 
@@ -50,7 +48,6 @@ If, on the other hand, we use a different ID, a new document will be indexed
 and the existing document(s) already in the index remains untouched.
 
 {% capture req %}
-
 ```json
 PUT /customer/2?pretty
 
@@ -71,7 +68,6 @@ part of the index API call.
 This example shows how to index a document without an explicit ID:
 
 {% capture req %}
-
 ```json
 POST /customer?pretty
 
@@ -95,7 +91,6 @@ This example shows how to update our previous document (ID of 1) by changing
 the name field to "Jane Doe":
 
 {% capture req %}
-
 ```json
 PUT /customer/1?pretty
 
@@ -111,7 +106,6 @@ This example shows how to update our previous document (ID of 1) by changing
 the name field to "John Doe" and at the same time add a gender field to it:
 
 {% capture req %}
-
 ```json
 MERGE /customer/1?pretty
 
@@ -130,7 +124,6 @@ Updates can also be performed by using simple scripts. This example uses a
 script to increment the age by 5:
 
 {% capture req %}
-
 ```json
 MERGE /customer/1?pretty
 
@@ -149,7 +142,6 @@ Xapiand provides the ability to update multiple documents given a specific
 query condition (like an SQL UPDATE-WHERE statement):
 
 {% capture req %}
-
 ```json
 MERGE /customer/:search?q=*&pretty
 
@@ -169,7 +161,6 @@ Deleting a document is fairly straightforward. This example shows how to delete
 our previous customer with the ID of 2:
 
 {% capture req %}
-
 ```json
 DELETE /customer/2?pretty
 ```
@@ -183,7 +174,6 @@ Xapiand provides the ability to delete multiple documents given a specific
 query condition.
 
 {% capture req %}
-
 ```json
 DELETE /customer/:search?q=gender:male&pretty
 ```
