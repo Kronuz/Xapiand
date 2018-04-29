@@ -4,6 +4,7 @@ curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4
 		"_type": "keyword"
 	}
 }'
+###
 
 
 curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
@@ -21,12 +22,14 @@ curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4
 		"_body": "def on_put(new_obj, old_obj) { if (old_obj) { new_obj[\"cnt\"] = old_obj[\"cnt\"] + 1; } return new_obj; }"
 	}
 }'
+###
 
 
 curl -XPUT "http://localhost:8880/text/J" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d '
 {
 	"_script": "folios.chai"
 }'
+###
 
 
 

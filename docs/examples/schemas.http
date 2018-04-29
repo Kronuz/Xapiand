@@ -16,10 +16,15 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-foreign-_schema" -H "Ac
 		"_value": "valor"
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -30,11 +35,17 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-foreign-_schema" -H "Ac
 	"_schema": "test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000",
 	"campo": "valor"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 curl -XPUT "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
@@ -45,6 +56,7 @@ curl -XPUT "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema
 	},
 	"description": "Descripcion"
 }'
+###
 curl -XPUT "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
 	"schema": {
@@ -60,9 +72,13 @@ curl -XPUT "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema
 		}
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema2/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -81,9 +97,13 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema" 
 	},
 	"campo": "valor"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -111,9 +131,13 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-s
 	},
 	"campo": "valor"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -135,8 +159,11 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_schema-schema" -H "Acc
 	},
 	"campo": "valor"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-_schema-schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-_schema-schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -147,8 +174,11 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit" -H "Accept: applicatio
 {
 	"campo": "valor"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -165,8 +195,11 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		"_value": "valor"
 	}
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-_type/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-_type/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -176,9 +209,13 @@ curl -XGET "http://localhost:8880/test/schemas/implicit-_type/:metadata" -H "Acc
 // curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 // "test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000"
 // '
+// ###
 // curl -XGET "http://localhost:8880/test/schemas/explicit-foreign/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+// ###
 // curl -XGET "http://localhost:8880/test/schemas/explicit-foreign/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+// ###
 // curl -XGET "http://localhost:8880/test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+// ###
 
 
 
@@ -194,9 +231,13 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type/:schema" -
 	},
 	"description": "Descripcion"
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -221,9 +262,13 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:sc
 		}
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-schema/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -242,8 +287,11 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-_type/:schema" -H "Accep
 		}
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-_type/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-_type/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -266,8 +314,11 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit/:schema" -H "Accept: app
 		}
 	}
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -286,6 +337,7 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-ob
 	},
 	"description": "Descripcion"
 }'
+###
 curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
 	"schema": {
@@ -298,9 +350,13 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-ob
 		}
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -326,9 +382,13 @@ curl -XPUT "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-fo
 		},
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/.schemas/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -359,8 +419,11 @@ curl -XPOST "http://localhost:8880/test/schemas/uuid_field" -H "Accept: applicat
 		]
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/uuid_field/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/uuid_field/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 //////
 
@@ -389,11 +452,17 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-foreign-_schema" -H "Ac
 		"_value": "valor",
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/prueba" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -418,8 +487,11 @@ curl -XPUT "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json
 			}
 		},
 }'
+###
 curl -XGET "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/xxx/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -440,5 +512,8 @@ curl -XPUT "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json
 				}
 		},
 }'
+###
 curl -XGET "http://localhost:8880/test/xxx/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/xxx/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###

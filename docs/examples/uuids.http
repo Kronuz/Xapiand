@@ -2,11 +2,17 @@ curl -XPUT "http://localhost:8880/test/uuids/00000000-0000-1000-8000-01000000000
 {
   "campo": "first"
 }'
+###
 curl -XGET "http://localhost:8880/test/uuids/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000|campo" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~notmet|campo" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -14,33 +20,44 @@ curl -XPUT "http://localhost:8880/test/uuids/00000000-0000-1000-8000-01000000000
 {
   "campo": "second"
 }'
+###
 curl -XGET "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000|campo" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~notmet/~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~notmet/~notmet|campo" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~not/me/t/~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/uuids/~not/me/t/~notmet|campo" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 curl -XPUT "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/230c0800-dc3c-11e7-b966-a3ab262e682b" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
   "campo": "third"
 }'
+###
 
 
 curl -XPUT "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/60579016-dec5-11e7-b616-34363bc9ddd6" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
   "campo": "fourth"
 }'
+###
 
 
 curl -XPUT "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/5759b016-10c0-4526-a981-47d6d19f6fb4" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
   "campo": "fifth"
 }'
+###
 
 
 curl -XPOST "http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
   "campo": "sixth"
 }'
+###

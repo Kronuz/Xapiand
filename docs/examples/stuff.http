@@ -9,10 +9,15 @@ curl -XPUT "http://localhost:8880/test/doc?commit" -H "Accept: application/json;
 		"_value": "~notmet",
 	},
 }'
+###
 curl -XGET "http://localhost:8880/test/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/:metadata" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/:info/doc" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/:search?q=~notmet" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -37,6 +42,7 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 		],
 	},
 }'
+###
 
 
 
@@ -49,6 +55,7 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		"_type": "string",
 	}
 }'
+###
 
 
 curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
@@ -61,6 +68,7 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		"_value": null,
 	}
 }'
+###
 
 
 curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
@@ -74,6 +82,7 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		}
 	}
 }'
+###
 
 
 curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
@@ -88,6 +97,7 @@ curl -XPOST "http://localhost:8880/test/schemas/implicit-_type" -H "Accept: appl
 		}
 	}
 }'
+###
 
 
 
@@ -102,8 +112,11 @@ curl -XPOST "http://localhost:8880/test/A" -H "Accept: application/json; indent=
 		"_type": "object",
 	}
 }'
+###
 curl -XGET "http://localhost:8880/test/A/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/A/::1" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 
 
 
@@ -122,6 +135,7 @@ curl -XPUT "http://localhost:8880/test/feed_cache/A" -H "Accept: application/jso
 		}
 	}
 }'
+###
 curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
 	"~3pZyPcFqGq": {
@@ -135,6 +149,7 @@ curl -XPUT "http://localhost:8880/test/feed_cache/B" -H "Accept: application/jso
 		}
 	}
 }'
+###
 curl -XPUT "http://localhost:8880/test/feed_cache/C" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
 {
 	"~SsQg3rJrx3P": {
@@ -148,6 +163,10 @@ curl -XPUT "http://localhost:8880/test/feed_cache/C" -H "Accept: application/jso
 		}
 	}
 }'
+###
 curl -XGET "http://localhost:8880/test/feed_cache/:info/A?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/feed_cache/:info/B?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
 curl -XGET "http://localhost:8880/test/feed_cache/:info/C?volatile" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###

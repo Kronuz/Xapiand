@@ -1,0 +1,42 @@
+curl -XPUT "http://localhost:8880/test/types/numeric" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+    "positive": {
+        "_type": "integer",
+        "_value": 123456
+    },
+    "integer": {
+        "_type": "integer",
+        "_value": 123456
+    },
+    "float": {
+        "_type": "float",
+        "_value": 123456
+    },
+}'
+###
+curl -XGET "http://localhost:8880/test/types/:info/numeric" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
+curl -XGET "http://localhost:8880/test/types/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
+
+
+curl -XPUT "http://localhost:8880/test/types/string" -H "Accept: application/json; indent=4" -H "Content-Type: application/json" -d'
+{
+    "keyword": {
+        "_type": "keyword",
+        "_value": "The quick brown fox jumps over the lazy dog"
+    },
+    "string": {
+        "_type": "string",
+        "_value": "The quick brown fox jumps over the lazy dog"
+    },
+    "text": {
+        "_type": "text",
+        "_value": "The quick brown fox jumps over the lazy dog"
+    },
+}'
+###
+curl -XGET "http://localhost:8880/test/types/:info/string" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
+curl -XGET "http://localhost:8880/test/types/:schema" -H "Accept: application/json; indent=4" -H "Content-Type: application/json"
+###
