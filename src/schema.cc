@@ -2553,7 +2553,7 @@ Schema::index(const MsgPack& object,
 		}
 
 		auto spc_id = get_data_id();
-		if (id_field != nullptr) {
+		if (id_field != nullptr && id_field->is_map()) {
 			_get_data_id(spc_id, *id_field);
 		}
 		auto id_type = spc_id.get_type();
@@ -8960,6 +8960,9 @@ Schema::get_data_id() const
 	}
 
 	const auto& id_properties = it.value();
+	if (!id_properties.is_map()) {
+		return spc_id;
+	}
 	return _get_data_id(spc_id, id_properties);
 }
 
