@@ -225,7 +225,7 @@ error_out_of_range:
 
 
 /*
- * Returnd struct tm according to the date specified by date.
+ * Returns struct tm according to the date specified by date.
  */
 Datetime::tm_t
 Datetime::DateParser(std::string_view date)
