@@ -257,22 +257,21 @@ Accept: application/json; indent=4
 
 
 
-// PUT http://localhost:8880/test/schemas/explicit-foreign/:schema
+PUT http://localhost:8880/test/schemas/explicit-foreign/:schema
 Accept: application/json; indent=4
 Content-Type: application/json
 
-// "test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000"
-// '
-// ###
-// GET http://localhost:8880/test/schemas/explicit-foreign/:schema
+"test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000"
+###
+GET http://localhost:8880/test/schemas/explicit-foreign/:schema
 Accept: application/json; indent=4
-// ###
-// GET http://localhost:8880/test/schemas/explicit-foreign/:metadata
+###
+GET http://localhost:8880/test/schemas/explicit-foreign/:metadata
 Accept: application/json; indent=4
-// ###
-// GET http://localhost:8880/test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000
+###
+GET http://localhost:8880/test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000
 Accept: application/json; indent=4
-// ###
+###
 
 
 
@@ -400,9 +399,6 @@ Accept: application/json; indent=4
 ###
 
 
-
-
-//////
 
 
 
@@ -540,7 +536,7 @@ Content-Type: application/json
 {
 	"_schema": {
 		"_type": "foreign/object",
-		"_endpoint": "test/schemas/implicit-foreign-_schema/.schemas/prueba",
+		"_endpoint": "test/schemas/implicit-foreign-_schema/.schemas/~8NB7DEPmtJ4",
 		"_id": {
 			"_type": "uuid",
 		},
@@ -561,7 +557,7 @@ Accept: application/json; indent=4
 GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/prueba
+GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/~8NB7DEPmtJ4
 Accept: application/json; indent=4
 ###
 GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:schema
