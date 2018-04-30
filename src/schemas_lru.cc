@@ -229,10 +229,15 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 
 	if ((schema_obj != nullptr) && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
+		// Initialize schema (non-foreign, non-recursive, ensure there's "version" and "schema"):
 		o.erase(RESERVED_ENDPOINT);
-		auto sep_types = required_spc_t::get_types(o[RESERVED_TYPE].str_view());
-		sep_types[SPC_FOREIGN_TYPE] = FieldType::EMPTY;
-		o[RESERVED_TYPE] = required_spc_t::get_str_type(sep_types);
+		auto it = o.find(RESERVED_TYPE);
+		if (it != o.end()) {
+			auto &type = it.value();
+			auto sep_types = required_spc_t::get_types(type.str_view());
+			sep_types[SPC_FOREIGN_TYPE] = FieldType::EMPTY;
+			type = required_spc_t::get_str_type(sep_types);
+		}
 		o[RESERVED_RECURSE] = false;
 		if (o.find(ID_FIELD_NAME) == o.end()) {
 			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
