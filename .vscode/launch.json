@@ -1,0 +1,37 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/bin/xapiand",
+            "processId": "${command:pickProcess}",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "cwd": "${workspaceFolder}/build",
+            "program": "${workspaceFolder}/build/bin/xapiand",
+            "args": [
+                "--cluster=Kronuz",
+                "-Ddb",
+                "--use=kqueue",
+                "-vvvvv",
+                "--uuid=encoded",
+                "--optimal",
+            ],
+            "stopAtEntry": false,
+            "filterStdout": false,
+            "externalConsole": true,
+            "environment": [],
+            "MIMode": "lldb"
+        }
+    ]
+}
