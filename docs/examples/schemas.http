@@ -1,4 +1,5 @@
-POST http://localhost:8880/test/schemas/implicit-foreign-_schema
+POST /test/schemas/implicit-foreign-_schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -20,16 +21,20 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema
+GET /test/schemas/implicit-foreign-_schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata
+GET /test/schemas/implicit-foreign-_schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata
+GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -37,7 +42,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-foreign-_schema
+POST /test/schemas/implicit-foreign-_schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -46,23 +52,29 @@ Content-Type: application/json
 	"campo": "valor"
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema
+GET /test/schemas/implicit-foreign-_schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata
+GET /test/schemas/implicit-foreign-_schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:schema
+GET /test/schemas/implicit-foreign-_schema/.schemas/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata
+GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
-PUT http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema
+PUT /test/schemas/implicit-foreign-_schema2/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -75,7 +87,8 @@ Content-Type: application/json
 	"description": "Descripcion"
 }
 ###
-PUT http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema
+PUT /test/schemas/implicit-foreign-_schema2/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -94,13 +107,16 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema2/:schema
+GET /test/schemas/implicit-foreign-_schema2/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema2/:metadata
+GET /test/schemas/implicit-foreign-_schema2/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -109,7 +125,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-foreign-_type-_schema
+POST /test/schemas/implicit-foreign-_type-_schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -125,13 +142,16 @@ Content-Type: application/json
 	"campo": "valor"
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/:schema
+GET /test/schemas/implicit-foreign-_type-_schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/:metadata
+GET /test/schemas/implicit-foreign-_type-_schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/implicit-foreign-_type-_schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -140,7 +160,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema
+POST /test/schemas/implicit-foreign-_type-_schema-schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -165,13 +186,16 @@ Content-Type: application/json
 	"campo": "valor"
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/:schema
+GET /test/schemas/implicit-foreign-_type-_schema-schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/:metadata
+GET /test/schemas/implicit-foreign-_type-_schema-schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_type-_schema-schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/implicit-foreign-_type-_schema-schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -180,7 +204,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-_schema-schema
+POST /test/schemas/implicit-_schema-schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -199,10 +224,12 @@ Content-Type: application/json
 	"campo": "valor"
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-_schema-schema/:schema
+GET /test/schemas/implicit-_schema-schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-_schema-schema/:metadata
+GET /test/schemas/implicit-_schema-schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -211,7 +238,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit
+POST /test/schemas/implicit
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -219,10 +247,12 @@ Content-Type: application/json
 	"campo": "valor"
 }
 ###
-GET http://localhost:8880/test/schemas/implicit/:schema
+GET /test/schemas/implicit/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit/:metadata
+GET /test/schemas/implicit/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -231,7 +261,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-_type
+POST /test/schemas/implicit-_type
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -245,10 +276,12 @@ Content-Type: application/json
 	}
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-_type/:schema
+GET /test/schemas/implicit-_type/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-_type/:metadata
+GET /test/schemas/implicit-_type/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -257,19 +290,23 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-foreign/:schema
+PUT /test/schemas/explicit-foreign/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
 "test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000"
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign/:schema
+GET /test/schemas/explicit-foreign/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign/:metadata
+GET /test/schemas/explicit-foreign/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -278,7 +315,8 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-foreign-_type/:schema
+PUT /test/schemas/explicit-foreign-_type/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -291,13 +329,16 @@ Content-Type: application/json
 	"description": "Descripcion"
 }
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type/:schema
+GET /test/schemas/explicit-foreign-_type/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type/:metadata
+GET /test/schemas/explicit-foreign-_type/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/explicit-foreign-_type/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -306,7 +347,8 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:schema
+PUT /test/schemas/explicit-foreign-_type-schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -328,13 +370,16 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:schema
+GET /test/schemas/explicit-foreign-_type-schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-schema/:metadata
+GET /test/schemas/explicit-foreign-_type-schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-schema/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/explicit-foreign-_type-schema/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -343,7 +388,8 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-_type/:schema
+PUT /test/schemas/explicit-_type/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -359,10 +405,12 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/explicit-_type/:schema
+GET /test/schemas/explicit-_type/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-_type/:metadata
+GET /test/schemas/explicit-_type/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -371,7 +419,8 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit/:schema
+PUT /test/schemas/explicit/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -391,10 +440,12 @@ Content-Type: application/json
 	}
 }
 ###
-GET http://localhost:8880/test/schemas/explicit/:schema
+GET /test/schemas/explicit/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit/:metadata
+GET /test/schemas/explicit/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -403,7 +454,8 @@ Accept: application/json; indent=4
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:schema
+PUT /test/schemas/explicit-foreign-_type-_schama-object/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -416,7 +468,8 @@ Content-Type: application/json
 	"description": "Descripcion"
 }
 ###
-PUT http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:schema
+PUT /test/schemas/explicit-foreign-_type-_schama-object/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -432,20 +485,24 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:schema
+GET /test/schemas/explicit-foreign-_type-_schama-object/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/:metadata
+GET /test/schemas/explicit-foreign-_type-_schama-object/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-object/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/explicit-foreign-_type-_schama-object/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
 
-PUT http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
+PUT /test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -470,20 +527,24 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
+GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/:metadata
+GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/explicit-foreign-_type-_schama-foreign_object/.schemas/00000000-0000-1000-8000-010000000000
+GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/.schemas/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
 
-POST http://localhost:8880/test/schemas/uuid_field
+POST /test/schemas/uuid_field
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -513,10 +574,12 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/uuid_field/:schema
+GET /test/schemas/uuid_field/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/uuid_field/:metadata
+GET /test/schemas/uuid_field/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -529,7 +592,8 @@ Accept: application/json; indent=4
 
 
 
-POST http://localhost:8880/test/schemas/implicit-foreign-_schema
+POST /test/schemas/implicit-foreign-_schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -551,25 +615,31 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:schema
+GET /test/schemas/implicit-foreign-_schema/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/:metadata
+GET /test/schemas/implicit-foreign-_schema/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/~8NB7DEPmtJ4
+GET /test/schemas/implicit-foreign-_schema/.schemas/~8NB7DEPmtJ4
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:schema
+GET /test/schemas/implicit-foreign-_schema/.schemas/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/schemas/implicit-foreign-_schema/.schemas/:metadata
+GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-PUT http://localhost:8880/test/xxx/:schema
+PUT /test/xxx/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -594,17 +664,20 @@ Content-Type: application/json
 		},
 }
 ###
-GET http://localhost:8880/test/xxx/:schema
+GET /test/xxx/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/xxx/:metadata
+GET /test/xxx/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
 
-PUT http://localhost:8880/test/xxx/:schema
+PUT /test/xxx/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -624,9 +697,11 @@ Content-Type: application/json
 		},
 }
 ###
-GET http://localhost:8880/test/xxx/:schema
+GET /test/xxx/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/xxx/:metadata
+GET /test/xxx/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###

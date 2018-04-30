@@ -1,4 +1,5 @@
-PUT http://localhost:8880/test/doc?commit
+PUT /test/doc?commit
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -13,22 +14,27 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/:schema
+GET /test/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/:metadata
+GET /test/:metadata
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/:info/doc
+GET /test/:info/doc
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/:search?q=~notmet
+GET /test/:search?q=~notmet
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-POST http://localhost:8880/test/A
+POST /test/A
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -56,7 +62,8 @@ Content-Type: application/json
 
 
 
-POST http://localhost:8880/test/schemas/implicit-_type
+POST /test/schemas/implicit-_type
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -71,7 +78,8 @@ Content-Type: application/json
 ###
 
 
-POST http://localhost:8880/test/schemas/implicit-_type
+POST /test/schemas/implicit-_type
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -87,7 +95,8 @@ Content-Type: application/json
 ###
 
 
-POST http://localhost:8880/test/schemas/implicit-_type
+POST /test/schemas/implicit-_type
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -104,7 +113,8 @@ Content-Type: application/json
 ###
 
 
-POST http://localhost:8880/test/schemas/implicit-_type
+POST /test/schemas/implicit-_type
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -123,7 +133,8 @@ Content-Type: application/json
 
 
 
-POST http://localhost:8880/test/A
+POST /test/A
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -138,10 +149,12 @@ Content-Type: application/json
 	}
 }
 ###
-GET http://localhost:8880/test/A/:schema
+GET /test/A/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/A/::1
+GET /test/A/::1
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
@@ -149,7 +162,8 @@ Accept: application/json; indent=4
 
 //
 
-PUT http://localhost:8880/test/feed_cache/A
+PUT /test/feed_cache/A
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -166,7 +180,8 @@ Content-Type: application/json
 	}
 }
 ###
-PUT http://localhost:8880/test/feed_cache/B
+PUT /test/feed_cache/B
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -183,7 +198,8 @@ Content-Type: application/json
 	}
 }
 ###
-PUT http://localhost:8880/test/feed_cache/C
+PUT /test/feed_cache/C
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -200,12 +216,15 @@ Content-Type: application/json
 	}
 }
 ###
-GET http://localhost:8880/test/feed_cache/:info/A?volatile
+GET /test/feed_cache/:info/A?volatile
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/feed_cache/:info/B?volatile
+GET /test/feed_cache/:info/B?volatile
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/feed_cache/:info/C?volatile
+GET /test/feed_cache/:info/C?volatile
+Host: localhost:8880
 Accept: application/json; indent=4
 ###

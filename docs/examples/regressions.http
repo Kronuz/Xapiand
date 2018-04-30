@@ -1,4 +1,5 @@
-POST http://localhost:8880/test/schemas/duplicated_uuid_field
+POST /test/schemas/duplicated_uuid_field
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -19,12 +20,14 @@ Content-Type: application/json
 	"{00000000-0000-1000-8000-c97562616c75}": "D",
 }
 ###
-GET http://localhost:8880/test/duplicated_uuid_field/:schema
+GET /test/duplicated_uuid_field/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
-POST http://localhost:8880/test/duplicated_array_field
+POST /test/duplicated_array_field
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -47,13 +50,15 @@ Content-Type: application/json
 	]
 }
 ###
-GET http://localhost:8880/test/duplicated_array_field/:schema
+GET /test/duplicated_array_field/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-PUT http://localhost:8880/test/merges/german
+PUT /test/merges/german
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -63,7 +68,8 @@ Content-Type: application/json
 	"gender": "M"
 }
 ###
-MERGE http://localhost:8880/test/merges/german
+MERGE /test/merges/german
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -71,13 +77,15 @@ Content-Type: application/json
 	"name": "German Mendez Bravo"
 }
 ###
-GET http://localhost:8880/test/merges/:schema
+GET /test/merges/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-PUT http://localhost:8880/test/accuracy/all
+PUT /test/accuracy/all
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -99,13 +107,15 @@ Content-Type: application/json
 	},
 }
 ###
-GET http://localhost:8880/test/accuracy/:schema
+GET /test/accuracy/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-PUT http://localhost:8880/test/keyword_id/1
+PUT /test/keyword_id/1
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -116,7 +126,8 @@ Content-Type: application/json
     "test": "Test 1"
 }
 ###
-PUT http://localhost:8880/test/keyword_id/2
+PUT /test/keyword_id/2
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -124,6 +135,7 @@ Content-Type: application/json
     "test": "Test 2"
 }
 ###
-GET http://localhost:8880/test/keyword_id/:schema
+GET /test/keyword_id/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###

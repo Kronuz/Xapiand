@@ -1,4 +1,5 @@
-PUT http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000
+PUT /test/uuids/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -6,25 +7,31 @@ Content-Type: application/json
   "campo": "first"
 }
 ###
-GET http://localhost:8880/test/uuids/:schema
+GET /test/uuids/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000
+GET /test/uuids/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000|campo
+GET /test/uuids/00000000-0000-1000-8000-010000000000|campo
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~notmet
+GET /test/uuids/~notmet
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~notmet|campo
+GET /test/uuids/~notmet|campo
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
 
-PUT http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
+PUT /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -32,27 +39,34 @@ Content-Type: application/json
   "campo": "second"
 }
 ###
-GET http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
+GET /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000|campo
+GET /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000|campo
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~notmet/~notmet
+GET /test/uuids/~notmet/~notmet
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~notmet/~notmet|campo
+GET /test/uuids/~notmet/~notmet|campo
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~not/me/t/~notmet
+GET /test/uuids/~not/me/t/~notmet
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/uuids/~not/me/t/~notmet|campo
+GET /test/uuids/~not/me/t/~notmet|campo
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
-PUT http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/230c0800-dc3c-11e7-b966-a3ab262e682b
+PUT /test/uuids/00000000-0000-1000-8000-010000000000/230c0800-dc3c-11e7-b966-a3ab262e682b
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -62,7 +76,8 @@ Content-Type: application/json
 ###
 
 
-PUT http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/60579016-dec5-11e7-b616-34363bc9ddd6
+PUT /test/uuids/00000000-0000-1000-8000-010000000000/60579016-dec5-11e7-b616-34363bc9ddd6
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -72,7 +87,8 @@ Content-Type: application/json
 ###
 
 
-PUT http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000/5759b016-10c0-4526-a981-47d6d19f6fb4
+PUT /test/uuids/00000000-0000-1000-8000-010000000000/5759b016-10c0-4526-a981-47d6d19f6fb4
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -82,7 +98,8 @@ Content-Type: application/json
 ###
 
 
-POST http://localhost:8880/test/uuids/00000000-0000-1000-8000-010000000000
+POST /test/uuids/00000000-0000-1000-8000-010000000000
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 

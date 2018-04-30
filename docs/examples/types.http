@@ -1,4 +1,5 @@
-PUT http://localhost:8880/test/types/numeric
+PUT /test/types/numeric
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -17,15 +18,18 @@ Content-Type: application/json
     },
 }
 ###
-GET http://localhost:8880/test/types/:info/numeric
+GET /test/types/:info/numeric
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/types/:schema
+GET /test/types/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
 
 
-PUT http://localhost:8880/test/types/string
+PUT /test/types/string
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -44,9 +48,11 @@ Content-Type: application/json
     },
 }
 ###
-GET http://localhost:8880/test/types/:info/string
+GET /test/types/:info/string
+Host: localhost:8880
 Accept: application/json; indent=4
 ###
-GET http://localhost:8880/test/types/:schema
+GET /test/types/:schema
+Host: localhost:8880
 Accept: application/json; indent=4
 ###

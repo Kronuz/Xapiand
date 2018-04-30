@@ -1,4 +1,5 @@
-PUT http://localhost:8880/text/J
+PUT /text/J
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -10,7 +11,8 @@ Content-Type: application/json
 ###
 
 
-PUT http://localhost:8880/text/J
+PUT /text/J
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
@@ -31,7 +33,8 @@ Content-Type: application/json
 ###
 
 
-PUT http://localhost:8880/text/J
+PUT /text/J
+Host: localhost:8880
 Accept: application/json; indent=4
 Content-Type: application/json
 
