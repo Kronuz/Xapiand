@@ -151,8 +151,12 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
 		response.status = status;
-
-		head += string::format("HTTP/%d.%d %d ", request.parser.http_major, request.parser.http_minor, status);
+		auto http_major = request.parser.http_major;
+		auto http_minor = request.parser.http_minor;
+		if (http_major == 0 && http_minor == 0) {
+			http_major = 1;
+		}
+		head += string::format("HTTP/%d.%d %d ", http_major, http_minor, status);
 		head += http_status_str(status);
 		head_sep += eol;
 		if ((mode & HTTP_HEADER_RESPONSE) == 0) {
