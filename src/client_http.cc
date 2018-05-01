@@ -2637,6 +2637,9 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 {
 	L_CALL("HttpClient::get_acceptable_type()");
 
+	if (request.accept_set.empty()) {
+		return no_type;
+	}
 	for (const auto& accept : request.accept_set) {
 		if (is_acceptable_type(accept.ct_type, ct)) {
 			auto indent = accept.indent;
