@@ -9073,7 +9073,18 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					auto accuracy_it = properties.find(RESERVED_ACCURACY);
 					if (accuracy_it != it_e) {
 						for (const auto& acc : accuracy_it.value()) {
-							res.accuracy.push_back(acc.u64());
+							uint64_t accuracy;
+							if (acc.is_string()) {
+								auto accuracy_date = _get_accuracy_date(acc.str_view());
+								if (accuracy_date != UnitTime::INVALID) {
+									accuracy = toUType(accuracy_date);
+								} else {
+									THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
+								}
+							} else {
+								accuracy = acc.u64();
+							}
+							res.accuracy.push_back(accuracy);
 						}
 					}
 					auto acc_prefix_it = properties.find(RESERVED_ACC_PREFIX);
