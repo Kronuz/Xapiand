@@ -2663,6 +2663,9 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 {
 	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
 
+	if (ct_type == no_type) {
+		return std::make_pair("", "");
+	}
 	if (is_acceptable_type(ct_type, json_type) != nullptr) {
 		return std::make_pair(obj.to_string(indent), json_type.to_string() + "; charset=utf-8");
 	}
