@@ -11,6 +11,7 @@
         "typeinfo": "cpp",
         "algorithm": "cpp",
         "cctype": "cpp",
-        "cstdlib": "cpp"
+        "cstdlib": "cpp",
+        "queue": "cpp"
     }
 }
