@@ -192,11 +192,11 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 			headers += string::format("Matches-Estimated: %lu", matches_estimated) + eol;
 		}
 
-		if ((mode & HTTP_CONTENT_TYPE_RESPONSE) != 0) {
+		if ((mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 && !ct_type.empty()) {
 			headers += "Content-Type: " + ct_type + eol;
 		}
 
-		if ((mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0) {
+		if ((mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0 && !ct_encoding.empty()) {
 			headers += "Content-Encoding: " + ct_encoding + eol;
 		}
 
