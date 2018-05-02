@@ -187,8 +187,8 @@ Thread::operator()()
 		std::function<void()> task;
 		_pool->_queue.wait_dequeue(task);
 		if likely(task != nullptr) {
-			_pool->_enqueued.fetch_sub(1, std::memory_order_relaxed);
 			_pool->_running.fetch_add(1, std::memory_order_relaxed);
+			_pool->_enqueued.fetch_sub(1, std::memory_order_release);
 			try {
 				task();
 			} catch (const BaseException& exc) {
@@ -201,7 +201,7 @@ Thread::operator()()
 				std::exception exc;
 				L_EXC("Task died with an unhandled exception: Unkown exception!");
 			}
-			_pool->_running.fetch_sub(1, std::memory_order_relaxed);
+			_pool->_running.fetch_sub(1, std::memory_order_release);
 		} else if (_pool->_ending.load(std::memory_order_acquire)) {
 			break;
 		}
@@ -316,9 +316,9 @@ template <typename It>
 inline auto
 ThreadPool::enqueue_bulk(It itemFirst, size_t count)
 {
-	_enqueued.fetch_add(count, std::memory_order_relaxed);
+	_enqueued.fetch_add(count, std::memory_order_release);
 	if unlikely(!_queue.enqueue_bulk(std::forward<It>(itemFirst), count)) {
-		_enqueued.fetch_sub(count, std::memory_order_relaxed);
+		_enqueued.fetch_sub(count, std::memory_order_release);
 		return false;
 	}
 	return true;
@@ -328,9 +328,9 @@ template <typename Func>
 inline auto
 ThreadPool::enqueue(Func&& func)
 {
-	_enqueued.fetch_add(1, std::memory_order_relaxed);
+	_enqueued.fetch_add(1, std::memory_order_release);
 	if unlikely(!_queue.enqueue(std::forward<Func>(func))) {
-		_enqueued.fetch_sub(1, std::memory_order_relaxed);
+		_enqueued.fetch_sub(1, std::memory_order_release);
 		return false;
 	}
 	return true;
