@@ -1069,7 +1069,7 @@ int dump_metadata() {
 			L_NOTICE("Dumping metadata database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_metadata(fd);
-			L_NOTICE("Dump is ready!");
+			L_NOTICE("Dump finished!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1101,7 +1101,7 @@ int dump_schema() {
 			L_NOTICE("Dumping schema database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_schema(fd);
-			L_NOTICE("Dump is ready!");
+			L_NOTICE("Dump finished!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1133,7 +1133,7 @@ int dump_documents() {
 			L_NOTICE("Dumping database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_documents(fd);
-			L_NOTICE("Dump is ready!");
+			L_NOTICE("Dump finished!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1165,7 +1165,7 @@ int restore() {
 			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			db_handler.restore(fd);
-			L_NOTICE("Restore is done!");
+			L_NOTICE("Restore finished!");
 		} catch (...) {
 			if (fd != STDIN_FILENO) {
 				io::close(fd);
