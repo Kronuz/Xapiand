@@ -582,7 +582,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 		THROW(Error, "database is read-only");
 	}
 
-	if (document_id.empty()) {
+	if (!document_id) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -624,7 +624,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 		THROW(Error, "database is read-only");
 	}
 
-	if (document_id.empty()) {
+	if (!document_id) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -1056,7 +1056,7 @@ DatabaseHandler::restore(int fd)
 				}
 			}
 
-			if (document_id.is_undefined()) {
+			if (!document_id) {
 				L_WARNING("Skipping document with no valid '%s'", ID_FIELD_NAME);
 				continue;
 			}

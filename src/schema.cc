@@ -2559,7 +2559,7 @@ Schema::index(const MsgPack& object,
 		auto id_type = spc_id.get_type();
 
 		std::string unprefixed_term_id;
-		if (document_id.empty()) {
+		if (!document_id) {
 			if (id_type == FieldType::EMPTY) {
 				id_type = FieldType::UUID;
 				spc_id.set_type(id_type);
