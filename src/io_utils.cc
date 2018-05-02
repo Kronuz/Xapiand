@@ -231,13 +231,14 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 				return -1;
 			}
 			return read;
+		} else if unlikely(c == 0) {
+			break;
 		}
 		p += c;
-		break; // read() doesn't have to read the whole nbytes
-		// if likely(c == static_cast<ssize_t>(nbyte)) {
-		// 	break;
-		// }
-		// nbyte -= c;
+		if likely(c == static_cast<ssize_t>(nbyte)) {
+			break;
+		}
+		nbyte -= c;
 	}
 	return p - static_cast<const char*>(buf);
 }
