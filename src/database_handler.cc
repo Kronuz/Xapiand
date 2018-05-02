@@ -939,8 +939,8 @@ DatabaseHandler::restore(int fd)
 		LightweightSemaphore limit(100);
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		std::atomic_bool ready = false;
-		std::atomic_size_t indexed = 0;
-		std::size_t indexing = 0;
+		std::atomic_size_t processed = 0;
+		std::size_t total = 0;
 
 		// Index documents.
 		auto indexer = XapiandManager::manager->client_pool.async([&]{
@@ -948,7 +948,7 @@ DatabaseHandler::restore(int fd)
 			lock_database lk_db(&db_handler);
 			lk_db.unlock();
 
-			size_t _indexed;
+			size_t _processed;
 			bool _ready = false;
 			while (true) {
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
@@ -956,7 +956,7 @@ DatabaseHandler::restore(int fd)
 				if (!_ready) {
 					_ready = ready.load(std::memory_order_relaxed);
 				}
-				_indexed = indexed.fetch_add(1, std::memory_order_acquire) + 1;
+				_processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
 
 				auto& term_id = std::get<0>(prepared);
 				auto& doc = std::get<1>(prepared);
@@ -982,13 +982,17 @@ DatabaseHandler::restore(int fd)
 				}
 
 				if (_ready) {
-					if (_indexed >= indexing) {
+					if (_processed >= total) {
 						queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 						break;
 					}
+					if (_processed % (80 * 32) == 0) {
+						L_INFO("%zu of %zu documents processed.", _processed, total);
+					}
 				} else {
-					if (_indexed % (80 * 32) == 0) {
+					if (_processed % (80 * 32) == 0) {
 						limit.signal(80);
+						L_INFO("%zu documents processed.", _processed);
 					}
 				}
 			}
@@ -1061,7 +1065,7 @@ DatabaseHandler::restore(int fd)
 				continue;
 			}
 
-			++indexing;
+			++total;
 
 			if (bulk_cnt == bulk.size()) {
 				if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
@@ -1106,6 +1110,8 @@ DatabaseHandler::restore(int fd)
 		ready.store(true, std::memory_order_release);
 
 		indexer.wait();
+
+		L_INFO("%zu of %zu documents processed.", processed.load(std::memory_order_relaxed), total);
 
 		lk_db.lock();
 	}
@@ -1171,14 +1177,14 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	LightweightSemaphore limit(100);
 	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 	std::atomic_bool ready = false;
-	std::atomic_size_t indexed = 0;
-	std::size_t indexing = docs.size();
+	std::atomic_size_t processed = 0;
+	std::size_t total = docs.size();
 
 	// Index documents.
 	auto indexer = XapiandManager::manager->client_pool.async([&]{
 		DatabaseHandler db_handler(endpoints, flags, method);
 
-		size_t _indexed;
+		size_t _processed;
 		bool _ready = false;
 		while (true) {
 			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
@@ -1186,7 +1192,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			if (!_ready) {
 				_ready = ready.load(std::memory_order_relaxed);
 			}
-			_indexed = indexed.fetch_add(1, std::memory_order_acquire) + 1;
+			_processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
 
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
@@ -1208,12 +1214,12 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			}
 
 			if (_ready) {
-				if (_indexed >= indexing) {
+				if (_processed >= total) {
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 					break;
 				}
 			} else {
-				if (_indexed % (80 * 32) == 0) {
+				if (_processed % (80 * 32) == 0) {
 					limit.signal(80);
 				}
 			}
