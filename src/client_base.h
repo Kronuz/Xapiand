@@ -58,9 +58,9 @@ class Buffer {
 
 	void feed() {
 		if (!_path.empty() && _data_view.empty() && pos < _max_pos) {
-			_data.resize(_max_pos);
+			_data.resize(4096);
 			io::lseek(_fd, pos, SEEK_SET);
-			auto _read = io::read(_fd, &_data[0], _max_pos);
+			auto _read = io::read(_fd, &_data[0], 4096UL);
 			if (_read > 0) {
 				_data.resize(_read);
 			}
