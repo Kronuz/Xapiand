@@ -34,6 +34,7 @@
 #include "database.h"                       // for DatabasePool, Database
 #include "exception.h"                      // for CheckoutError, ClientError
 #include "length.h"                         // for unserialise_length, seria...
+#include "lightweight_semaphore.h"          // for LightweightSemaphore
 #include "log.h"                            // for L_CALL
 #include "manager.h"                        // for XapiandManager, XapiandM...
 #include "msgpack.h"                        // for MsgPack, object::object, ...
@@ -935,9 +936,11 @@ DatabaseHandler::restore(int fd)
 		lk_db.unlock();
 		schema = get_schema();
 
+		LightweightSemaphore limit(100);
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		std::atomic_bool ready = false;
-		std::atomic_size_t indexing = 0;
+		std::atomic_size_t indexed = 0;
+		std::size_t indexing = 0;
 
 		// Index documents.
 		auto indexer = XapiandManager::manager->client_pool.async([&]{
@@ -945,9 +948,16 @@ DatabaseHandler::restore(int fd)
 			lock_database lk_db(&db_handler);
 			lk_db.unlock();
 
-			while (!ready || indexing > 0) {
+			size_t _indexed;
+			bool _ready = false;
+			while (true) {
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 				queue.wait_dequeue(prepared);
+				if (!_ready) {
+					_ready = ready.load(std::memory_order_relaxed);
+				}
+				_indexed = indexed.fetch_add(1, std::memory_order_acquire) + 1;
+
 				auto& term_id = std::get<0>(prepared);
 				auto& doc = std::get<1>(prepared);
 
@@ -965,11 +975,21 @@ DatabaseHandler::restore(int fd)
 						std::exception exc;
 						L_EXC("ERROR: %s", "Unknown exception!");
 					}
-					if (!ready.load(std::memory_order_relaxed)) {
+					if (!_ready) {
 						// only unlock when there are still tasks preparing more documents
 						lk_db.unlock();
 					}
-					indexing.fetch_sub(1, std::memory_order_relaxed);
+				}
+
+				if (_ready) {
+					if (_indexed >= indexing) {
+						queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+						break;
+					}
+				} else {
+					if (_indexed % (80 * 32) == 0) {
+						limit.signal(80);
+					}
 				}
 			}
 		});
@@ -980,30 +1000,45 @@ DatabaseHandler::restore(int fd)
 			MsgPack obj(MsgPack::Type::MAP);
 
 			Data data;
-			bool eof = true;
-			do {
-				auto blob = unserialise_string(fd, buffer, off);
-				XXH32_update(xxh_state, blob.data(), blob.size());
-				if (blob.empty()) { break; }
-				auto content_type = unserialise_string(fd, buffer, off);
-				XXH32_update(xxh_state, content_type.data(), content_type.size());
-				auto type_ser = unserialise_char(fd, buffer, off);
-				XXH32_update(xxh_state, &type_ser, 1);
-				if (content_type.empty()) {
-					obj = MsgPack::unserialise(blob);
-				} else {
-					switch (static_cast<Data::Type>(type_ser)) {
-						case Data::Type::inplace:
-							data.update(content_type, blob);
-							break;
-						case Data::Type::stored:
-							data.update(content_type, -1, 0, 0, blob);
-							break;
+			try {
+				bool eof = true;
+				do {
+					auto blob = unserialise_string(fd, buffer, off);
+					XXH32_update(xxh_state, blob.data(), blob.size());
+					if (blob.empty()) { break; }
+					auto content_type = unserialise_string(fd, buffer, off);
+					XXH32_update(xxh_state, content_type.data(), content_type.size());
+					auto type_ser = unserialise_char(fd, buffer, off);
+					XXH32_update(xxh_state, &type_ser, 1);
+					if (content_type.empty()) {
+						obj = MsgPack::unserialise(blob);
+					} else {
+						switch (static_cast<Data::Type>(type_ser)) {
+							case Data::Type::inplace:
+								data.update(content_type, blob);
+								break;
+							case Data::Type::stored:
+								data.update(content_type, -1, 0, 0, blob);
+								break;
+						}
 					}
-				}
-				eof = false;
-			} while (true);
-			if (eof) { break; }
+					eof = false;
+				} while (true);
+				if (eof) { break; }
+			} catch (const BaseException& exc) {
+				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+				break;
+			} catch (const Xapian::Error& exc) {
+				L_EXC("ERROR: %s", exc.get_description());
+				break;
+			} catch (const std::exception& exc) {
+				L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+				break;
+			} catch (...) {
+				std::exception exc;
+				L_EXC("ERROR: %s", "Unknown exception!");
+				break;
+			}
 
 			MsgPack document_id;
 
@@ -1022,16 +1057,18 @@ DatabaseHandler::restore(int fd)
 			}
 
 			if (document_id.is_undefined()) {
+				L_WARNING("Skipping document with no valid '%s'", ID_FIELD_NAME);
 				continue;
 			}
 
-			indexing.fetch_add(1, std::memory_order_relaxed);
+			++indexing;
 
 			if (bulk_cnt == bulk.size()) {
 				if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
 					L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 				}
 				bulk_cnt = 0;
+				limit.wait();
 			}
 			bulk[bulk_cnt++] = [
 				&,
@@ -1066,12 +1103,14 @@ DatabaseHandler::restore(int fd)
 			}
 		}
 
-		ready.store(true, std::memory_order_relaxed);
+		ready.store(true, std::memory_order_release);
 
 		indexer.wait();
 
 		lk_db.lock();
 	}
+
+	database->commit(false);
 
 	uint32_t saved_hash = unserialise_length(fd, buffer, off);
 	uint32_t current_hash = XXH32_digest(xxh_state);
@@ -1080,8 +1119,6 @@ DatabaseHandler::restore(int fd)
 	if (saved_hash != current_hash) {
 		L_WARNING("Invalid dump hash. Should be 0x%08x, but instead is 0x%08x", saved_hash, current_hash);
 	}
-
-	database->commit(false);
 }
 
 
@@ -1131,16 +1168,26 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
+	LightweightSemaphore limit(100);
 	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
-	std::atomic_size_t indexing = docs.size();
+	std::atomic_bool ready = false;
+	std::atomic_size_t indexed = 0;
+	std::size_t indexing = docs.size();
 
 	// Index documents.
 	auto indexer = XapiandManager::manager->client_pool.async([&]{
 		DatabaseHandler db_handler(endpoints, flags, method);
 
-		while (indexing > 0) {
+		size_t _indexed;
+		bool _ready = false;
+		while (true) {
 			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 			queue.wait_dequeue(prepared);
+			if (!_ready) {
+				_ready = ready.load(std::memory_order_relaxed);
+			}
+			_indexed = indexed.fetch_add(1, std::memory_order_acquire) + 1;
+
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
 
@@ -1158,7 +1205,17 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 					std::exception exc;
 					L_EXC("ERROR: %s", "Unknown exception!");
 				}
-				indexing.fetch_sub(1, std::memory_order_relaxed);
+			}
+
+			if (_ready) {
+				if (_indexed >= indexing) {
+					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+					break;
+				}
+			} else {
+				if (_indexed % (80 * 32) == 0) {
+					limit.signal(80);
+				}
 			}
 		}
 	});
@@ -1171,6 +1228,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 			}
 			bulk_cnt = 0;
+			limit.wait();
 		}
 		bulk[bulk_cnt++] = [&]() {
 			try {
@@ -1199,6 +1257,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 		}
 	}
+
+	ready.store(true, std::memory_order_release);
 
 	indexer.wait();
 
