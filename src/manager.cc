@@ -682,7 +682,8 @@ XapiandManager::run()
 
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
-		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " worker thread" : " worker threads"),
+		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
+		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
 #ifdef XAPIAND_CLUSTERING
 		opts.solo ? "" : std::to_string(opts.num_replicators) + ((opts.num_replicators == 1) ? " replicator" : " replicators"),
 #endif

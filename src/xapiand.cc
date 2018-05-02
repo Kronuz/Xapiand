@@ -315,7 +315,7 @@ std::vector<std::string> ev_supported() {
 
 
 void parseOptions(int argc, char** argv) {
-	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
+	const unsigned int nthreads = std::thread::hardware_concurrency() * CONCURRENCY_MULTIPLIER;
 
 	using namespace TCLAP;
 
@@ -379,8 +379,10 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
 		ValueArg<std::size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
 
+		ValueArg<std::size_t> threadpool_size("", "threads", "Worker threads.", false, nthreads, "threads", cmd);
+		ValueArg<std::size_t> tasks_size("", "tasks", "Number of async tasks.", false, TASKS_SIZE, "tasks", cmd);
 		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-		ValueArg<std::size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
+		ValueArg<std::size_t> num_servers("", "servers", "Number of servers.", false, NUM_SERVERS, "servers", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
@@ -486,8 +488,8 @@ void parseOptions(int argc, char** argv) {
 		opts.max_clients = max_clients.getValue();
 		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
-		opts.threadpool_size = THEADPOOL_SIZE;
-		opts.tasks_size = TASKS_SIZE;
+		opts.threadpool_size = threadpool_size.getValue();
+		opts.tasks_size = tasks_size.getValue();
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
 			if (opts.logfile.empty()) {
