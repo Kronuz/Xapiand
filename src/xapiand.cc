@@ -980,6 +980,49 @@ void banner() {
 	}
 }
 
+void setup(bool forceup) {
+	// Flush threshold:
+	int flush_threshold = 10000;  // Default is 10000 (if no set)
+	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
+	if (p != nullptr) {
+		flush_threshold = std::atoi(p);
+		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", flush_threshold);
+	} else {
+		if (setenv("XAPIAN_FLUSH_THRESHOLD", "100000", 0) == 0) {
+			L_INFO("Flush threshold is now 100000. (it was originally set to %d)", flush_threshold);
+		} else {
+			L_INFO("Flush threshold is now %d.", flush_threshold);
+		}
+	}
+
+	if (opts.chert) {
+		L_INFO("Using Chert databases by default.");
+	} else {
+		L_INFO("Using Glass databases by default.");
+	}
+
+	std::vector<std::string> modes;
+	if (opts.strict) {
+		modes.emplace_back("strict");
+	}
+	if (opts.optimal) {
+		modes.emplace_back("optimal");
+	}
+	if (!modes.empty()) {
+		L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
+	}
+
+	adjustOpenFilesLimit();
+
+	L_INFO("With a maximum of " + string::join(std::vector<std::string>{
+		string::format("%zu %s", opts.max_files, opts.max_files == 1 ? "file" : "files"),
+		string::format("%zu %s", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
+		string::format("%zu %s", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
+	}, ", ", " and ", [](const auto& s) { return s.empty(); }));
+
+	usedir(opts.database.c_str(), forceup);
+}
+
 
 int server() {
 	int exit_code = EX_OK;
@@ -991,43 +1034,11 @@ int server() {
 
 		usleep(100000ULL);
 
-		// Flush threshold increased
-		int flush_threshold = 10000;  // Default is 10000 (if no set)
-		const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
-		if (p != nullptr) { flush_threshold = std::atoi(p); }
-		if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", 0) == 0) {
-			L_INFO("Increased database flush threshold to 100000 (it was originally set to %d).", flush_threshold);
-		}
-
-		if (opts.chert) {
-			L_INFO("Using Chert databases by default.");
-		} else {
-			L_INFO("Using Glass databases by default.");
-		}
-
-		std::vector<std::string> modes;
-		if (opts.strict) {
-			modes.emplace_back("strict");
-		}
-		if (opts.optimal) {
-			modes.emplace_back("optimal");
-		}
-		if (!modes.empty()) {
-			L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
-		}
-
-		adjustOpenFilesLimit();
-
-		L_INFO("With a maximum of " + string::join(std::vector<std::string>{
-			string::format("%zu %s", opts.max_files, opts.max_files == 1 ? "file" : "files"),
-			string::format("%zu %s", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
-			string::format("%zu %s", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
-		}, ", ", " and ", [](const auto& s) { return s.empty(); }));
+		setup(opts.forceup);
 
 		ev::default_loop default_loop(opts.ev_flags);
 		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
-		usedir(opts.database.c_str(), opts.forceup);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
 		XapiandManager::manager->run();
 
@@ -1037,7 +1048,6 @@ int server() {
 		} else {
 			L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
 		}
-
 	} catch (const Exit& exc) {
 		exit_code = exc.code;
 	}
@@ -1052,7 +1062,7 @@ int dump_metadata() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			usedir(opts.database.c_str(), opts.solo);
+			setup(opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
@@ -1084,7 +1094,7 @@ int dump_schema() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			usedir(opts.database.c_str(), opts.solo);
+			setup(opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
@@ -1116,7 +1126,7 @@ int dump_documents() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			usedir(opts.database.c_str(), opts.solo);
+			setup(opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
@@ -1148,7 +1158,7 @@ int restore() {
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
-			usedir(opts.database.c_str(), opts.solo);
+			setup(opts.solo);
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
