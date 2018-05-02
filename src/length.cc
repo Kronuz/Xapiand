@@ -369,7 +369,9 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 		str.resize(length);
 		ssize_t r = io::read(fd, &str[available], length - available);
 		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
-		if (r != length - available) { THROW(SerialisationError, "Invalid input: insufficient data"); }
+		if (r != length - available) {
+			THROW(SerialisationError, "Invalid input: insufficient data (needed %zd, read %zd)", length - available, r);
+		}
 		buffer.clear();
 		off = 0;
 	}
