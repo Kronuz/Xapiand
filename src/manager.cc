@@ -720,16 +720,13 @@ XapiandManager::finish()
 	L_MANAGER("Finishing servers pool!");
 	server_pool.finish();
 
+	L_MANAGER("Finishing client threads pool!");
+	client_pool.finish();
+
 #ifdef XAPIAND_CLUSTERING
 	L_MANAGER("Finishing replicators pool!");
 	replicator_pool.finish();
 #endif
-
-	L_MANAGER("Finishing commiters pool!");
-	DatabaseAutocommit::finish();
-
-	L_MANAGER("Finishing async fsync pool!");
-	AsyncFsync::finish();
 }
 
 
@@ -745,12 +742,24 @@ XapiandManager::join()
 	L_MANAGER("Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
 	server_pool.join();
 
+	L_MANAGER("Waiting for %zu client thread%s...", client_pool.running_size(), (client_pool.running_size() == 1) ? "" : "s");
+	client_pool.join();
+
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		L_MANAGER("Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
 #endif
+
+	L_MANAGER("Finishing thread pool!");
+	thread_pool.finish();
+
+	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
+	thread_pool.join();
+
+	L_MANAGER("Finishing database pool!");
+	database_pool.finish();
 
 	L_MANAGER("Finishing autocommitter scheduler!");
 	DatabaseAutocommit::finish();
@@ -763,21 +772,6 @@ XapiandManager::join()
 
 	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
 	AsyncFsync::join();
-
-	L_MANAGER("Finishing client threads pool!");
-	client_pool.finish();
-
-	L_MANAGER("Finishing database pool!");
-	database_pool.finish();
-
-	L_MANAGER("Finishing thread pool!");
-	thread_pool.finish();
-
-	L_MANAGER("Waiting for %zu client thread%s...", client_pool.running_size(), (client_pool.running_size() == 1) ? "" : "s");
-	client_pool.join();
-
-	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
-	thread_pool.join();
 
 	L_MANAGER("Server ended!");
 }
