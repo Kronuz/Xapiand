@@ -484,7 +484,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
-	do {
+	while (true) {
 #endif
 		auto schema_begins = std::chrono::system_clock::now();
 		do {
@@ -507,7 +507,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 		if (set_document_change_seq(current_document_pair, old_document_pair)) {
 			break;
 		}
-	} while (true);
+	}
 #endif
 
 	return prepared;
@@ -898,7 +898,7 @@ DatabaseHandler::restore(int fd)
 	// restore metadata (key, value)
 	if (header == dump_metadata_header) {
 		size_t i = 0;
-		do {
+		while (true) {
 			++i;
 			auto key = unserialise_string(fd, buffer, off);
 			XXH32_update(xxh_state, key.data(), key.size());
@@ -913,7 +913,7 @@ DatabaseHandler::restore(int fd)
 			}
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata %s = %s", key, value);
 			database->set_metadata(key, value, false, false);
-		} while (true);
+		}
 	}
 
 	// restore schema
@@ -1000,13 +1000,13 @@ DatabaseHandler::restore(int fd)
 
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
-		do {
+		while (true) {
 			MsgPack obj(MsgPack::Type::MAP);
 
 			Data data;
 			try {
 				bool eof = true;
-				do {
+				while (true) {
 					auto blob = unserialise_string(fd, buffer, off);
 					XXH32_update(xxh_state, blob.data(), blob.size());
 					if (blob.empty()) { break; }
@@ -1027,7 +1027,7 @@ DatabaseHandler::restore(int fd)
 						}
 					}
 					eof = false;
-				} while (true);
+				}
 				if (eof) { break; }
 			} catch (const BaseException& exc) {
 				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
@@ -1099,7 +1099,7 @@ DatabaseHandler::restore(int fd)
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 				}
 			};
-		} while (true);
+		}
 
 		if (bulk_cnt != 0) {
 			if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
