@@ -950,7 +950,7 @@ DatabaseHandler::restore(int fd)
 
 			size_t _processed;
 			bool _ready = false;
-			while (true) {
+			while (!XapiandManager::manager->detaching()) {
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 				queue.wait_dequeue(prepared);
 				if (!_ready) {
@@ -1000,7 +1000,7 @@ DatabaseHandler::restore(int fd)
 
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
-		while (true) {
+		while (!XapiandManager::manager->client_pool.finished()) {
 			MsgPack obj(MsgPack::Type::MAP);
 
 			Data data;
@@ -1186,7 +1186,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 
 		size_t _processed;
 		bool _ready = false;
-		while (true) {
+		while (!XapiandManager::manager->detaching()) {
 			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 			queue.wait_dequeue(prepared);
 			if (!_ready) {
@@ -1256,6 +1256,9 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 			}
 		};
+		if (XapiandManager::manager->client_pool.finished()) {
+			break;
+		}
 	}
 
 	if (bulk_cnt != 0) {
