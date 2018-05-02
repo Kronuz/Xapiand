@@ -142,6 +142,8 @@ public:
 
 	template <typename Func, typename... Args>
 	auto async(Func&& func, Args&&... args);
+
+	auto finished();
 };
 
 
@@ -346,4 +348,9 @@ ThreadPool::async(Func&& func, Args&&... args)
 		throw std::runtime_error("Cannot enqueue task to threadpool");
 	}
 	return future;
+}
+
+inline auto ThreadPool::finished()
+{
+	return _finished.load(std::memory_order_relaxed);
 }
