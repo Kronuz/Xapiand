@@ -987,12 +987,12 @@ DatabaseHandler::restore(int fd)
 						break;
 					}
 					if (_processed % (80 * 32) == 0) {
-						L_INFO("%zu of %zu documents processed.", _processed, total);
+						L_INFO("%zu of %zu documents processed", _processed, total);
 					}
 				} else {
 					if (_processed % (80 * 32) == 0) {
 						limit.signal(80);
-						L_INFO("%zu documents processed.", _processed);
+						L_INFO("%zu documents processed", _processed);
 					}
 				}
 			}
@@ -1111,7 +1111,7 @@ DatabaseHandler::restore(int fd)
 
 		indexer.wait();
 
-		L_INFO("%zu of %zu documents processed.", processed.load(std::memory_order_relaxed), total);
+		L_INFO("%zu of %zu documents processed", processed.load(std::memory_order_relaxed), total);
 
 		lk_db.lock();
 	}
