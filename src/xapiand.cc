@@ -1056,10 +1056,10 @@ int dump_metadata() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
-			L_INFO("Dumping metadata database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping metadata database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_metadata(fd);
-			L_INFO("Dump is ready!");
+			L_NOTICE("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1088,10 +1088,10 @@ int dump_schema() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
-			L_INFO("Dumping schema database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping schema database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_schema(fd);
-			L_INFO("Dump is ready!");
+			L_NOTICE("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1120,10 +1120,10 @@ int dump_documents() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
-			L_INFO("Dumping database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_documents(fd);
-			L_INFO("Dump is ready!");
+			L_NOTICE("Dump is ready!");
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1152,10 +1152,10 @@ int restore() {
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
-			L_INFO("Restoring into: %s", repr(endpoints.to_string()));
+			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			db_handler.restore(fd);
-			L_INFO("Restore is done!");
+			L_NOTICE("Restore is done!");
 		} catch (...) {
 			if (fd != STDIN_FILENO) {
 				io::close(fd);
