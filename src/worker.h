@@ -143,6 +143,10 @@ public:
 	void detach(int retries = 3);
 	void redetach(int retries = 3);
 
+	auto detaching() {
+		return _detaching.load(std::memory_order_relaxed);
+	}
+
 	void run_loop();
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
