@@ -59,15 +59,15 @@ std::string_view unserialise_string(const char** p, const char* end);
 
 void serialise_length(int fd, unsigned long long len);
 
-unsigned long long unserialise_length(int fd, std::string &buffer, std::size_t& off);
+unsigned long long unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
 void serialise_string(int fd, std::string_view input);
 
-std::string unserialise_string(int fd, std::string &buffer, std::size_t& off);
+std::string unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
 void serialise_char(int fd, char ch);
 
-char unserialise_char(int fd, std::string &buffer, std::size_t& off);
+char unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
 std::string serialise_strings(const std::vector<std::string_view>& strings);
 

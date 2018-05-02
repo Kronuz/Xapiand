@@ -880,19 +880,20 @@ DatabaseHandler::restore(int fd)
 
 	std::string buffer;
 	std::size_t off = 0;
+	std::size_t acc = 0;
 
 	lock_database lk_db(this);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
 	XXH32_reset(xxh_state, 0);
 
-	auto header = unserialise_string(fd, buffer, off);
+	auto header = unserialise_string(fd, buffer, off, acc);
 	XXH32_update(xxh_state, header.data(), header.size());
 	if (header != dump_documents_header && header != dump_schema_header && header != dump_metadata_header) {
 		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
 	}
 
-	auto db_endpoints = unserialise_string(fd, buffer, off);
+	auto db_endpoints = unserialise_string(fd, buffer, off, acc);
 	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
 	// restore metadata (key, value)
@@ -900,9 +901,9 @@ DatabaseHandler::restore(int fd)
 		size_t i = 0;
 		while (true) {
 			++i;
-			auto key = unserialise_string(fd, buffer, off);
+			auto key = unserialise_string(fd, buffer, off, acc);
 			XXH32_update(xxh_state, key.data(), key.size());
-			auto value = unserialise_string(fd, buffer, off);
+			auto value = unserialise_string(fd, buffer, off, acc);
 			XXH32_update(xxh_state, value.data(), value.size());
 			if (key.empty() && value.empty()) {
 				break;
@@ -918,7 +919,7 @@ DatabaseHandler::restore(int fd)
 
 	// restore schema
 	if (header == dump_schema_header) {
-		auto saved_schema_ser = unserialise_string(fd, buffer, off);
+		auto saved_schema_ser = unserialise_string(fd, buffer, off, acc);
 		XXH32_update(xxh_state, saved_schema_ser.data(), saved_schema_ser.size());
 
 		lk_db.unlock();
@@ -939,6 +940,7 @@ DatabaseHandler::restore(int fd)
 		LightweightSemaphore limit(100);
 		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 		std::atomic_bool ready = false;
+		std::atomic_size_t accumulated = 0;
 		std::atomic_size_t processed = 0;
 		std::size_t total = 0;
 
@@ -987,12 +989,12 @@ DatabaseHandler::restore(int fd)
 						break;
 					}
 					if (_processed % (80 * 32) == 0) {
-						L_INFO("%zu of %zu documents processed", _processed, total);
+						L_INFO("%zu of %zu documents processed (%s)", _processed, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				} else {
 					if (_processed % (80 * 32) == 0) {
 						limit.signal(80);
-						L_INFO("%zu documents processed", _processed);
+						L_INFO("%zu documents processed (%s)", _processed, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				}
 			}
@@ -1007,12 +1009,12 @@ DatabaseHandler::restore(int fd)
 			try {
 				bool eof = true;
 				while (true) {
-					auto blob = unserialise_string(fd, buffer, off);
+					auto blob = unserialise_string(fd, buffer, off, acc);
 					XXH32_update(xxh_state, blob.data(), blob.size());
 					if (blob.empty()) { break; }
-					auto content_type = unserialise_string(fd, buffer, off);
+					auto content_type = unserialise_string(fd, buffer, off, acc);
 					XXH32_update(xxh_state, content_type.data(), content_type.size());
-					auto type_ser = unserialise_char(fd, buffer, off);
+					auto type_ser = unserialise_char(fd, buffer, off, acc);
 					XXH32_update(xxh_state, &type_ser, 1);
 					if (content_type.empty()) {
 						obj = MsgPack::unserialise(blob);
@@ -1029,6 +1031,7 @@ DatabaseHandler::restore(int fd)
 					eof = false;
 				}
 				if (eof) { break; }
+				accumulated.store(acc, std::memory_order_relaxed);
 			} catch (const BaseException& exc) {
 				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 				break;
@@ -1111,14 +1114,14 @@ DatabaseHandler::restore(int fd)
 
 		indexer.wait();
 
-		L_INFO("%zu of %zu documents processed", processed.load(std::memory_order_relaxed), total);
+		L_INFO("%zu of %zu documents processed (%s)", processed.load(std::memory_order_relaxed), total, string::from_bytes(acc));
 
 		lk_db.lock();
 	}
 
 	database->commit(false);
 
-	uint32_t saved_hash = unserialise_length(fd, buffer, off);
+	uint32_t saved_hash = unserialise_length(fd, buffer, off, acc);
 	uint32_t current_hash = XXH32_digest(xxh_state);
 	XXH32_freeState(xxh_state);
 

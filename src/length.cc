@@ -317,13 +317,14 @@ serialise_length(int fd, unsigned long long len)
 
 
 unsigned long long
-unserialise_length(int fd, std::string &buffer, std::size_t& off)
+unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
 	ssize_t r;
 	if (buffer.size() - off < 10) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
 		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		acc += r;
 		buffer.append(buf, r);
 	}
 
@@ -349,9 +350,9 @@ serialise_string(int fd, std::string_view input)
 
 
 std::string
-unserialise_string(int fd, std::string &buffer, std::size_t& off)
+unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
-	ssize_t length = unserialise_length(fd, buffer, off);
+	ssize_t length = unserialise_length(fd, buffer, off, acc);
 
 	auto pos = buffer.data();
 	auto end = pos + buffer.size();
@@ -369,6 +370,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off)
 		str.resize(length);
 		ssize_t r = io::read(fd, &str[available], length - available);
 		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		acc += r;
 		if (r != length - available) {
 			THROW(SerialisationError, "Invalid input: insufficient data (needed %zd, read %zd)", length - available, r);
 		}
@@ -395,13 +397,14 @@ serialise_char(int fd, char ch)
 
 
 char
-unserialise_char(int fd, std::string &buffer, std::size_t& off)
+unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
 	ssize_t r;
 	if (buffer.size() - off < 1) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
 		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		acc += r;
 		buffer.append(buf, r);
 	}
 
