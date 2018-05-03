@@ -124,7 +124,14 @@ XapiandManager::XapiandManager()
 	  shutdown_now(0),
 	  state(State::RESET),
 	  node_name(opts.node_name),
-	  atom_sig(0) { }
+	  atom_sig(0)
+{
+	std::vector<std::string> values({
+		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
+		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
+	});
+	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
+}
 
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
@@ -690,7 +697,6 @@ XapiandManager::run()
 		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
 		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
 	});
-
 	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 	if (opts.solo) {
