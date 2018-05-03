@@ -1,7 +1,4 @@
 POST /test/schemas/implicit-foreign-_schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -22,20 +19,12 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -43,9 +32,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-foreign-_schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": "test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000",
@@ -53,30 +39,17 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 PUT /test/schemas/implicit-foreign-_schema2/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_type": "foreign/object",
@@ -88,9 +61,6 @@ Content-Type: application/json
 }
 ###
 PUT /test/schemas/implicit-foreign-_schema2/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"schema": {
@@ -108,16 +78,10 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_schema2/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema2/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -126,9 +90,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-foreign-_type-_schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -143,16 +104,10 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_type-_schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_type-_schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_type-_schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -161,9 +116,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-foreign-_type-_schema-schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -187,16 +139,10 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_type-_schema-schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_type-_schema-schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_type-_schema-schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -205,9 +151,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-_schema-schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -225,12 +168,8 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-_schema-schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-_schema-schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -239,21 +178,14 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"campo": "valor"
 }
 ###
 GET /test/schemas/implicit/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -262,9 +194,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-_type
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_id": {
@@ -277,12 +206,8 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-_type/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-_type/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -291,23 +216,14 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit-foreign/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 "test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000"
 ###
 GET /test/schemas/explicit-foreign/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -316,9 +232,6 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit-foreign-_type/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_type": "foreign/object",
@@ -330,16 +243,10 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit-foreign-_type/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -348,9 +255,6 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit-foreign-_type-schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_type": "foreign/object",
@@ -371,16 +275,10 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit-foreign-_type-schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-schema/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -389,9 +287,6 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit-_type/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"schema": {
@@ -406,12 +301,8 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit-_type/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-_type/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -420,9 +311,6 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"version": 2.0,
@@ -441,12 +329,8 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
@@ -455,9 +339,6 @@ Accept: application/json; indent=4
 
 
 PUT /test/schemas/explicit-foreign-_type-_schama-object/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_type": "foreign/object",
@@ -469,9 +350,6 @@ Content-Type: application/json
 }
 ###
 PUT /test/schemas/explicit-foreign-_type-_schama-object/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"schema": {
@@ -486,25 +364,16 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-object/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-object/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-object/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 
 PUT /test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_type": "foreign/object",
@@ -528,25 +397,16 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/explicit-foreign-_type-_schama-foreign_object/.schemas/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 
 POST /test/schemas/uuid_field
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -575,12 +435,8 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/uuid_field/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/uuid_field/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 //////
@@ -593,9 +449,6 @@ Accept: application/json; indent=4
 
 
 POST /test/schemas/implicit-foreign-_schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -616,32 +469,19 @@ Content-Type: application/json
 }
 ###
 GET /test/schemas/implicit-foreign-_schema/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/~8NB7DEPmtJ4
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 PUT /test/xxx/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 		"version": 2.0,
@@ -665,21 +505,14 @@ Content-Type: application/json
 }
 ###
 GET /test/xxx/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/xxx/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 
 PUT /test/xxx/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 		"version": 2.0,
@@ -698,10 +531,6 @@ Content-Type: application/json
 }
 ###
 GET /test/xxx/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/xxx/:metadata
-Host: localhost:8880
-Accept: application/json; indent=4
 ###

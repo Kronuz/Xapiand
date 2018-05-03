@@ -1,7 +1,4 @@
 PUT /text/J
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_id": {
@@ -12,9 +9,6 @@ Content-Type: application/json
 
 
 PUT /text/J
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_id": {
@@ -34,9 +28,6 @@ Content-Type: application/json
 
 
 PUT /text/J
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_script": "folios.chai"

@@ -1,6 +1,4 @@
 POST /test/blobs
-Host: localhost:8880
-Accept: application/json; indent=4
 Content-Type: image/jpeg
 
 < /Users/kronuz/Pictures/Chromatic/2fbd62df.jpg

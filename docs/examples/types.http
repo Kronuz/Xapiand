@@ -1,7 +1,4 @@
 PUT /test/types/numeric
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
     "positive": {
@@ -19,19 +16,12 @@ Content-Type: application/json
 }
 ###
 GET /test/types/:info/numeric
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/types/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 PUT /test/types/string
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
     "keyword": {
@@ -49,10 +39,6 @@ Content-Type: application/json
 }
 ###
 GET /test/types/:info/string
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/types/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###

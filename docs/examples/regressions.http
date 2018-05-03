@@ -1,7 +1,4 @@
 POST /test/schemas/duplicated_uuid_field
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -21,15 +18,10 @@ Content-Type: application/json
 }
 ###
 GET /test/duplicated_uuid_field/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 POST /test/duplicated_array_field
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"_schema": {
@@ -51,16 +43,11 @@ Content-Type: application/json
 }
 ###
 GET /test/duplicated_array_field/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 PUT /test/merges/german
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"name": "German M. Bravo",
@@ -69,25 +56,17 @@ Content-Type: application/json
 }
 ###
 MERGE /test/merges/german
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"name": "German Mendez Bravo"
 }
 ###
 GET /test/merges/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 PUT /test/accuracy/all
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
 	"point": {
@@ -108,16 +87,11 @@ Content-Type: application/json
 }
 ###
 GET /test/accuracy/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 PUT /test/keyword_id/1
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
     "_id": {
@@ -127,15 +101,10 @@ Content-Type: application/json
 }
 ###
 PUT /test/keyword_id/2
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
     "test": "Test 2"
 }
 ###
 GET /test/keyword_id/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###

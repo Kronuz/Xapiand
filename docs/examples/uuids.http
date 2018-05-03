@@ -1,74 +1,43 @@
 PUT /test/uuids/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "first"
 }
 ###
 GET /test/uuids/:schema
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/00000000-0000-1000-8000-010000000000|campo
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~notmet
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~notmet|campo
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 
 PUT /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "second"
 }
 ###
 GET /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/00000000-0000-1000-8000-010000000000/00000000-0000-1000-8000-010000000000|campo
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~notmet/~notmet
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~notmet/~notmet|campo
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~not/me/t/~notmet
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 GET /test/uuids/~not/me/t/~notmet|campo
-Host: localhost:8880
-Accept: application/json; indent=4
 ###
 
 
 PUT /test/uuids/00000000-0000-1000-8000-010000000000/230c0800-dc3c-11e7-b966-a3ab262e682b
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "third"
@@ -77,9 +46,6 @@ Content-Type: application/json
 
 
 PUT /test/uuids/00000000-0000-1000-8000-010000000000/60579016-dec5-11e7-b616-34363bc9ddd6
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "fourth"
@@ -88,9 +54,6 @@ Content-Type: application/json
 
 
 PUT /test/uuids/00000000-0000-1000-8000-010000000000/5759b016-10c0-4526-a981-47d6d19f6fb4
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "fifth"
@@ -99,9 +62,6 @@ Content-Type: application/json
 
 
 POST /test/uuids/00000000-0000-1000-8000-010000000000
-Host: localhost:8880
-Accept: application/json; indent=4
-Content-Type: application/json
 
 {
   "campo": "sixth"
