@@ -1175,7 +1175,9 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
-	LightweightSemaphore limit(100);
+	constexpr size_t limit_max = 16;
+	constexpr size_t limit_signal = 8;
+	LightweightSemaphore limit(limit_max);
 	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 	std::atomic_bool ready = false;
 	std::atomic_size_t processed = 0;
@@ -1184,8 +1186,6 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	// Index documents.
 	auto indexer = XapiandManager::manager->client_pool.async([&]{
 		DatabaseHandler db_handler(endpoints, flags, method);
-
-		size_t _processed;
 		bool _ready = false;
 		while (!XapiandManager::manager->detaching()) {
 			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
@@ -1193,7 +1193,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			if (!_ready) {
 				_ready = ready.load(std::memory_order_relaxed);
 			}
-			_processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
+			auto _processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
 
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
@@ -1220,8 +1220,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 					break;
 				}
 			} else {
-				if (_processed % (80 * 32) == 0) {
-					limit.signal(80);
+				if (_processed % (limit_signal * 32) == 0) {
+					limit.signal(limit_signal);
 				}
 			}
 		}
@@ -1230,12 +1230,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		if (bulk_cnt == bulk.size()) {
-			if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
-				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
-			}
-			bulk_cnt = 0;
-			limit.wait();
+		if (XapiandManager::manager->client_pool.finished()) {
+			break;
 		}
 		bulk[bulk_cnt++] = [&]() {
 			try {
@@ -1257,8 +1253,12 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 			}
 		};
-		if (XapiandManager::manager->client_pool.finished()) {
-			break;
+		if (bulk_cnt == bulk.size()) {
+			if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
+				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+			}
+			bulk_cnt = 0;
+			limit.wait();
 		}
 	}
 
