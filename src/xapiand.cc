@@ -36,6 +36,7 @@
 #include <pwd.h>                     // for passwd, getpwnam, getpwuid
 #include <sstream>                   // for basic_stringbuf<>::int_type, bas...
 #include <strings.h>                 // for strcasecmp
+#include <sys/errno.h>               // for errno
 #include <sys/fcntl.h>               // for O_RDWR, O_CREAT
 #include <sys/resource.h>            // for rlimit
 #include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
@@ -58,7 +59,7 @@
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
 #include "ignore_unused.h"           // for ignore_unused
-#include "io_utils.h"                // for close, open, write
+#include "io_utils.h"                // for io::close, io::open, io::write, io::strerrno
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for XapiandManager, XapiandM...
 #include "opts.h"                    // for opts_t
@@ -378,6 +379,7 @@ void parseOptions(int argc, char** argv) {
 
 		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
 		ValueArg<std::size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
+		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
 
 		ValueArg<std::size_t> threadpool_size("", "threads", "Worker threads.", false, nthreads, "threads", cmd);
 		ValueArg<std::size_t> tasks_size("", "tasks", "Number of async tasks.", false, TASKS_SIZE, "tasks", cmd);
@@ -488,6 +490,7 @@ void parseOptions(int argc, char** argv) {
 		opts.max_clients = max_clients.getValue();
 		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
+		opts.flush_threshold = flush_threshold.getValue();
 		opts.threadpool_size = threadpool_size.getValue();
 		opts.tasks_size = tasks_size.getValue();
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
@@ -982,16 +985,14 @@ void banner() {
 
 void setup(bool forceup) {
 	// Flush threshold:
-	int flush_threshold = 10000;  // Default is 10000 (if no set)
 	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p != nullptr) {
-		flush_threshold = std::atoi(p);
-		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", flush_threshold);
+		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
 	} else {
-		if (setenv("XAPIAN_FLUSH_THRESHOLD", "100000", 0) == 0) {
-			L_INFO("Flush threshold is now 100000. (it was originally set to %d)", flush_threshold);
+		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::Number(opts.flush_threshold).c_str(), 0) == -1) {
+			L_INFO("Flush threshold is now 10000. (%s)", io::strerrno(errno));
 		} else {
-			L_INFO("Flush threshold is now %d.", flush_threshold);
+			L_INFO("Flush threshold is now %d. (it was originally 10000)", opts.flush_threshold);
 		}
 	}
 

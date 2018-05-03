@@ -56,6 +56,7 @@
 #define NUM_REPLICATORS          10      /* Number of replicators. */
 #define NUM_COMMITTERS           10      /* Number of threads handling the commits. */
 #define NUM_FSYNCHERS            10      /* Number of threads handling the fsyncs. */
+#define FLUSH_THRESHOLD          100000  /* Database flush threshold (default for xapian is 10000) */
 #define TASKS_SIZE               100     /* Client tasks threadpool's size. */
 #define CONCURRENCY_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE       10      /* Endpoints List's size. */

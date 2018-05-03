@@ -61,6 +61,7 @@ extern struct opts_t {
 	ssize_t max_clients;
 	ssize_t max_databases;
 	ssize_t max_files;
+	int flush_threshold;
 	unsigned int ev_flags;
 	bool uuid_compact;
 	uint32_t uuid_repr;

@@ -64,6 +64,7 @@ Initializer::Initializer()
 			/* ssize_t max_clients = */ 100,
 			/* ssize_t max_databases = */ MAX_DATABASES,
 			/* ssize_t max_files = */ 1000,
+			/* int flush_threshold = */ FLUSH_THRESHOLD,
 			/* unsigned int ev_flags = */ 0,
 			/* bool uuid_compact = */ true,
 			/* UUIDRepr uuid_repr = */ fnv1ah32::hash("simple"),
