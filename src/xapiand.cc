@@ -409,7 +409,7 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
-		SwitchArg forceup("", "force-up", "Force to up xapiand on any directory.", cmd, false);
+		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 
 		std::vector<std::string> args;
@@ -464,7 +464,7 @@ void parseOptions(int argc, char** argv) {
 		opts.strict = strict.getValue();
 		opts.optimal = optimal.getValue();
 		opts.foreign = foreign.getValue();
-		opts.forceup = forceup.getValue();
+		opts.force = force.getValue();
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
@@ -890,9 +890,9 @@ void writepid(const char* pidfile) {
 }
 
 
-void usedir(const char* path, bool forceup) {
+void usedir(const char* path, bool force) {
 
-	if (!forceup) {
+	if (!force) {
 		DIR *dirp;
 		dirp = opendir(path, true);
 		if (!dirp) {
@@ -983,7 +983,7 @@ void banner() {
 	}
 }
 
-void setup(bool forceup) {
+void setup() {
 	// Flush threshold:
 	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p != nullptr) {
@@ -1021,7 +1021,7 @@ void setup(bool forceup) {
 		string::format("%zu %s", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
 	}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
-	usedir(opts.database.c_str(), forceup);
+	usedir(opts.database.c_str(), opts.force);
 }
 
 
@@ -1035,7 +1035,7 @@ int server() {
 
 		usleep(100000ULL);
 
-		setup(opts.forceup);
+		setup();
 
 		ev::default_loop default_loop(opts.ev_flags);
 		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
@@ -1063,7 +1063,7 @@ int dump_metadata() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			setup(opts.solo);
+			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
@@ -1095,7 +1095,7 @@ int dump_schema() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			setup(opts.solo);
+			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
@@ -1127,7 +1127,7 @@ int dump_documents() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
-			setup(opts.solo);
+			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
@@ -1159,7 +1159,7 @@ int restore() {
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
-			setup(opts.solo);
+			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));

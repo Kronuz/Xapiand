@@ -32,7 +32,7 @@ extern struct opts_t {
 	bool chert;
 	bool solo;
 	bool strict;
-	bool forceup;
+	bool force;
 	bool optimal;
 	bool foreign;
 	bool colors;
