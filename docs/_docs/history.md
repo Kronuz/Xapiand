@@ -4,6 +4,20 @@ read_only: true
 ---
 
 
+## 0.6.2 / 2018-05-03
+{: #v0-6-2}
+
+- Fix restore command memory usage
+- MERGE and PATCH now require the document already exists
+- Fix HTTP protocol on malformed messages
+- Added --flush-threshold command line option
+- Renamed command line option --force-up to simply --force
+- Fix HTTP returning of large object bodies
+- Fix indexing documents with integer IDs
+- Fix io::read() to always return requested size when available
+- Fix date accuracies
+
+
 ## 0.6.1 / 2018-04-25
 {: #v0-6-1}
 
