@@ -335,7 +335,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 
 	lock_database lk_db(this);
 	auto did = database->find_document(term_id);
-	return Document(this, database->get_document(did, (database->flags & DB_WRITABLE) != 0));
+	return Document(did, this);
 }
 
 
@@ -1555,7 +1555,7 @@ DatabaseHandler::get_document(const Xapian::docid& did)
 	L_CALL("DatabaseHandler::get_document((Xapian::docid)%d)", did);
 
 	lock_database lk_db(this);
-	return Document(this, database->get_document(did));
+	return Document(did, this);
 }
 
 
@@ -1573,7 +1573,7 @@ DatabaseHandler::get_document(std::string_view document_id)
 
 	lock_database lk_db(this);
 	did = database->find_document(term_id);
-	return Document(this, database->get_document(did, (database->flags & DB_WRITABLE) != 0));
+	return Document(did, this);
 }
 
 
@@ -1991,8 +1991,8 @@ Document::Document(const Xapian::Document& doc_)
 	  db_handler(nullptr) { }
 
 
-Document::Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_)
-	: did(doc_.get_docid()),
+Document::Document(const Xapian::docid& did_, DatabaseHandler* db_handler_)
+	: did(did_),
 	  db_handler(db_handler_) { }
 
 
@@ -2086,7 +2086,7 @@ Document::get_blob(const ct_type_t& ct_type, size_t retries)
 			}
 			if (locator->type == Data::Type::stored) {
 #ifdef XAPIAND_DATA_STORAGE
- 				auto stored = db_handler->database->storage_get_stored(doc, *locator);
+				auto stored = db_handler->database->storage_get_stored(did, *locator);
  				return std::string(unserialise_string_at(STORED_BLOB, stored));
 #else
  				return "";

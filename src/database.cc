@@ -1376,14 +1376,14 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(const Xapian::Document& doc, const Data::Locator& locator) const
+Database::storage_get_stored(const Xapian::docid& did, const Data::Locator& locator) const
 {
 	L_CALL("Database::storage_get_stored()");
 
 	assert(locator.type == Data::Type::stored);
 	assert(locator.volume != -1);
 
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
 		storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
@@ -1396,11 +1396,11 @@ Database::storage_get_stored(const Xapian::Document& doc, const Data::Locator& l
 
 
 void
-Database::storage_pull_blobs(Xapian::Document& doc) const
+Database::storage_pull_blobs(Xapian::Document& doc, const Xapian::docid& did) const
 {
 	L_CALL("Database::storage_pull_blobs()");
 
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
 		auto data = Data(doc.get_data());
@@ -1420,13 +1420,13 @@ Database::storage_pull_blobs(Xapian::Document& doc) const
 
 
 void
-Database::storage_push_blobs(Xapian::Document& doc) const
+Database::storage_push_blobs(Xapian::Document& doc, const Xapian::docid& did) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
 	assert((flags & DB_WRITABLE) != 0);
 
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = writable_storages[subdatabase];
 	if (storage) {
 		auto data = Data(doc.get_data());
@@ -1483,7 +1483,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_);
+	storage_push_blobs(doc_, doc_.get_docid()); // Only writable database get_docid is enough
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1532,7 +1532,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_);
+	storage_push_blobs(doc_, did);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1583,7 +1583,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_);
+	storage_push_blobs(doc_, doc_.get_docid()); // Only writable database get_docid is enough
 #endif /* XAPIAND_DATA_STORAGE */
 
 	L_DATABASE_WRAP_INIT();
@@ -1769,7 +1769,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			}
 #ifdef XAPIAND_DATA_STORAGE
 			if (pull_) {
-				storage_pull_blobs(doc);
+				storage_pull_blobs(doc, did);
 			}
 #else
 	ignore_unused(pull_);
@@ -1990,7 +1990,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 						}
 						case Data::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(doc, locator);
+							auto stored = storage_get_stored(did, locator);
 							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
 							auto blob = unserialise_string_at(STORED_BLOB, stored);
 							char type = toUType(locator.type);
@@ -2066,7 +2066,7 @@ Database::dump_documents()
 						}
 						case Data::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(doc, locator);
+							auto stored = storage_get_stored(did, locator);
 							obj["_data"].push_back(MsgPack({
 								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 								{ "_type", "stored" },

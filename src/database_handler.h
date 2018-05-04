@@ -286,7 +286,7 @@ class Document {
 public:
 	Document();
 	Document(const Xapian::Document& doc_);
-	Document(DatabaseHandler* db_handler_, const Xapian::Document& doc_);
+	Document(const Xapian::docid& did_, DatabaseHandler* db_handler_);
 
 	Document(const Document& doc_) = default;
 	Document& operator=(const Document& doc_) = default;
