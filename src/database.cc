@@ -2496,7 +2496,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			// Database is just too old, reopen
 			reopen = true;
 		} else {
-			for (size_t i = 0; i < endpoints.size(); ++i) {
+			for (size_t i = 0; i < database->dbs.size(); ++i) {
 				const auto& db_pair = database->dbs[i];
 				auto hash = endpoints[i].hash();
 				std::lock_guard<std::mutex> lk(qmtx);
