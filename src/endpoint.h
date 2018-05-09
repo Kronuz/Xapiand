@@ -260,6 +260,8 @@ public:
 	using std::vector<Endpoint>::end;
 	using std::vector<Endpoint>::cbegin;
 	using std::vector<Endpoint>::cend;
+	using std::vector<Endpoint>::front;
+	using std::vector<Endpoint>::back;
 
 	Endpoints() = default;
 
