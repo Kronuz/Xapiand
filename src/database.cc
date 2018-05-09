@@ -1062,7 +1062,6 @@ Database::reopen_readable()
 
 	db = std::make_unique<Xapian::Database>();
 
-	auto size_endp = endpoints_size;
 	for (auto i = endpoints.cbegin(); i != endpoints.cend(); ++i) {
 		const auto& e = *i;
 		Xapian::Database rdb;
@@ -1107,24 +1106,22 @@ Database::reopen_readable()
 						db.reset();
 						throw;
 					}
-
-					--size_endp;
-					continue;
-				}
-				{
-					build_path_index(e.path);
-					try {
-						Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
-					} catch (const Xapian::DatabaseOpeningError&) {
-						if (!exists(e.path + "/iamglass")) {
-							Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OVERWRITE);
-						} else { throw; }
+				} else {
+					{
+						build_path_index(e.path);
+						try {
+							Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
+						} catch (const Xapian::DatabaseOpeningError&) {
+							if (!exists(e.path + "/iamglass")) {
+								Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OVERWRITE);
+							} else { throw; }
+						}
 					}
-				}
 
-				rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
-				local = true;
-				if (endpoints_size == 1) { read_mastery(e); }
+					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
+					local = true;
+					if (endpoints_size == 1) { read_mastery(e); }
+				}
 			}
 		}
 
@@ -1140,10 +1137,7 @@ Database::reopen_readable()
 		}
 #endif /* XAPIAND_DATA_STORAGE */
 	}
-
-	if (size_endp == 0u) {
-		throw Xapian::DatabaseOpeningError("Empty set of databases");
-	}
+	assert(dbs.size() == endpoints_size);
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 }
