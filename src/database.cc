@@ -1129,7 +1129,7 @@ Database::reopen_readable()
 		dbs.emplace_back(rdb, local);
 
 #ifdef XAPIAND_DATA_STORAGE
-		if (local && endpoints_size == 1) {
+		if (local) {
 			// WAL required on a local database, open it.
 			storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
 		} else {
