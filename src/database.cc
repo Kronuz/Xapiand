@@ -872,7 +872,8 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  hash(endpoints.hash()),
 	  mastery_level(-1),
 	  reopen_time(std::chrono::system_clock::now()),
-	  reopen_revision(0)
+	  reopen_revision(0),
+	  incomplete(false)
 {
 	reopen();
 
@@ -919,6 +920,7 @@ Database::reopen_writable()
 	//    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
 	//
 
+	incomplete = false;
 	dbs.clear();
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
@@ -1051,6 +1053,7 @@ Database::reopen_readable()
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
 
+	incomplete = false;
 	dbs.clear();
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
@@ -1106,6 +1109,7 @@ Database::reopen_readable()
 						db.reset();
 						throw;
 					}
+					incomplete = true;
 				} else {
 					{
 						build_path_index(e.path);
@@ -1150,15 +1154,17 @@ Database::reopen()
 	reopen_time = std::chrono::system_clock::now();
 
 	if (db) {
-		// Try to reopen
-		try {
-			bool ret = db->reopen();
-			L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
-			return ret;
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			L_EXC("ERROR: %s", exc.get_description());
-		} catch (const Xapian::Error& exc) {
-			L_EXC("ERROR: %s", exc.get_description());
+		if (!incomplete) {
+			// Try to reopen
+			try {
+				bool ret = db->reopen();
+				L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
+				return ret;
+			} catch (const Xapian::DatabaseOpeningError& exc) {
+				L_EXC("ERROR: %s", exc.get_description());
+			} catch (const Xapian::Error& exc) {
+				L_EXC("ERROR: %s", exc.get_description());
+			}
 		}
 
 		db->close();

@@ -290,6 +290,7 @@ public:
 	long long mastery_level;
 	std::chrono::system_clock::time_point reopen_time;
 	uint32_t reopen_revision;
+	bool incomplete;
 
 	std::unique_ptr<Xapian::Database> db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;
