@@ -53,6 +53,13 @@
 .Op Fl v | Fl Fl verbose
 .Op Fl d | Fl Fl detach
 .Op Fl Fl | Fl Fl ignore_rest
+.Op Fl Fl colors
+.Op Fl Fl no-colors
+.Op Fl Fl foreign
+.Op Fl Fl strict
+.Op Fl Fl optimal
+.Op Fl Fl force
+.Op Fl Fl uuid Ar simple | compact | partition | encoded
 .Op Fl Fl version
 .Op Fl h | Fl Fl help
 .Sh DESCRIPTION
@@ -116,6 +123,20 @@ Maximum number of databases in database pool.
 Number of replicators.
 .It Fl Fl committers Ar committers
 Number of committers.
+.It Fl Fl colors
+Enables colors on the console.
+.It Fl Fl no-colors
+Disables colors on the console.
+.It Fl Fl foreign
+Force foreign (shared) schemas for all indexes.
+.It Fl Fl strict
+Force the user to define the type for each field.
+.It Fl Fl optimal
+Minimal optimal indexing configuration.
+.It Fl Fl force
+Force using path as the root of the node.
+.It Fl Fl uuid Ar simple | compact | partition | encoded
+Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.
 .Sh FILES
 .Sh EXIT STATUS
 Exit status is 0 on success, or 1 if the command fails.
