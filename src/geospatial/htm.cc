@@ -602,6 +602,7 @@ std::string
 HTM::getTrixelName(uint64_t id)
 {
 	uint8_t last_pos = std::ceil(std::log2(id));
+	++last_pos;
 	last_pos &= ~1;  // Must be multiple of two.
 	std::string trixel;
 	trixel.reserve(last_pos / 2);
