@@ -48,6 +48,13 @@
 #endif
 
 
+constexpr const char RESERVED_OR[] = "_or";
+constexpr const char RESERVED_AND[] = "_and";
+constexpr const char RESERVED_XOR[] = "_xor";
+constexpr const char RESERVED_NOT[] = "_not";
+constexpr const char RESERVED_AND_MAYBE[] = "_and_maybe";
+
+
 /* A domain-specific language (DSL) for query */
 
 
@@ -358,15 +365,15 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					hh(QUERYDSL_RANGE),
 					hh(QUERYDSL_RAW),
 					hh(RESERVED_VALUE),
-					hh("_and"),
-					hh("_and_maybe"),
+					hh(RESERVED_AND),
+					hh(RESERVED_AND_MAYBE),
 					hh("_and_not"),
 					hh("_elite_set"),
 					hh("_filter"),
 					hh("_max"),
 					hh("_near"),
-					hh("_not"),
-					hh("_or"),
+					hh(RESERVED_NOT),
+					hh(RESERVED_OR),
 					hh("_phrase"),
 					hh("_scale_weight"),
 					hh("_synonym"),
@@ -374,7 +381,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					hh("_value_le"),
 					hh("_value_range"),
 					hh("_wildcard"),
-					hh("_xor"),
+					hh(RESERVED_XOR),
 					hh(RESERVED_FLOAT),
 					hh(RESERVED_POSITIVE),
 					hh(RESERVED_INTEGER),
@@ -412,10 +419,10 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 						query = process_value(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					// Compound query clauses
-					case _.fhh("_and"):
+					case _.fhh(RESERVED_AND):
 						query = process_and(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh("_and_maybe"):
+					case _.fhh(RESERVED_AND_MAYBE):
 						query = process_and_maybe(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh("_and_not"):
@@ -433,10 +440,10 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					case _.fhh("_near"):
 						query = process_near(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh("_not"):
+					case _.fhh(RESERVED_NOT):
 						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh("_or"):
+					case _.fhh(RESERVED_OR):
 						query = process_or(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh("_phrase"):
@@ -460,7 +467,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					case _.fhh("_wildcard"):
 						query = process_wildcard(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh("_xor"):
+					case _.fhh(RESERVED_XOR):
 						query = process_xor(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					// Reserved cast words
@@ -928,6 +935,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 		return "*";
 	}
 
+	TokenType last_op(TokenType::EndOfFile);
 	try {
 		BooleanTree booltree(query);
 		std::vector<MsgPack> stack_msgpack;
@@ -940,9 +948,10 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.empty()) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object = {{ "_not", stack_msgpack.back() }}; // expression.
+					MsgPack object = {{ RESERVED_NOT, stack_msgpack.back() }}; // expression.
 					stack_msgpack.pop_back();
 					stack_msgpack.push_back(std::move(object));
+					last_op = TokenType::Not;
 					break;
 				}
 
@@ -950,12 +959,40 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object;
-					auto& _or = object["_or"] = { nullptr, stack_msgpack.back() };  // right expression
-					stack_msgpack.pop_back();
-					_or[0] = stack_msgpack.back();  // left expression
-					stack_msgpack.pop_back();
-					stack_msgpack.push_back(std::move(object));
+					if (last_op == token.get_type()) {
+						auto ob = stack_msgpack.back();
+						auto ob_it = ob.find(RESERVED_OR);
+						auto it_end = ob.end();
+						if (ob_it != it_end) {
+							auto last_op_object = ob_it.value();
+							stack_msgpack.pop_back();
+							last_op_object.push_back(stack_msgpack.back());
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_OR] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						} else {
+							stack_msgpack.pop_back();
+							auto or_obj = stack_msgpack.back();
+							auto or_ob_it = or_obj.find(RESERVED_OR);
+							auto or_it_end = or_obj.end();
+							ASSERT(or_ob_it != or_it_end);
+							auto last_op_object = or_ob_it.value();
+							last_op_object.push_back(ob);
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_OR] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						}
+					} else {
+						MsgPack object;
+						auto& _or = object[RESERVED_OR] = { nullptr, stack_msgpack.back() };  // right expression
+						stack_msgpack.pop_back();
+						_or[0] = stack_msgpack.back();  // left expression
+						stack_msgpack.pop_back();
+						stack_msgpack.push_back(std::move(object));
+					}
+					last_op = TokenType::Or;
 					break;
 				}
 
@@ -963,12 +1000,40 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object;
-					auto& _and = object["_and"] = { nullptr, stack_msgpack.back() };  // right expression
-					stack_msgpack.pop_back();
-					_and[0] = stack_msgpack.back();  // left expression
-					stack_msgpack.pop_back();
-					stack_msgpack.push_back(std::move(object));
+					if (last_op == token.get_type()) {
+						auto ob = stack_msgpack.back();
+						auto ob_it = ob.find(RESERVED_AND);
+						auto it_end = ob.end();
+						if (ob_it != it_end) {
+							auto last_op_object = ob_it.value();
+							stack_msgpack.pop_back();
+							last_op_object.push_back(stack_msgpack.back());
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_AND] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						} else {
+							stack_msgpack.pop_back();
+							auto and_obj = stack_msgpack.back();
+							auto and_ob_it = and_obj.find(RESERVED_AND);
+							auto and_it_end = and_obj.end();
+							ASSERT(and_ob_it != and_it_end);
+							auto last_op_object = and_ob_it.value();
+							last_op_object.push_back(ob);
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_AND] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						}
+					} else {
+						MsgPack object;
+						auto& _and = object[RESERVED_AND] = { nullptr, stack_msgpack.back() };  // right expression
+						stack_msgpack.pop_back();
+						_and[0] = stack_msgpack.back();  // left expression
+						stack_msgpack.pop_back();
+						stack_msgpack.push_back(std::move(object));
+						last_op = TokenType::And;
+					}
 					break;
 				}
 
@@ -976,12 +1041,40 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object;
-					auto& _and_maybe = object["_and_maybe"] = { nullptr, stack_msgpack.back() };  // right expression
-					stack_msgpack.pop_back();
-					_and_maybe[0] = stack_msgpack.back();  // left expression
-					stack_msgpack.pop_back();
-					stack_msgpack.push_back(std::move(object));
+					if (last_op == token.get_type()) {
+						auto ob = stack_msgpack.back();
+						auto ob_it = ob.find(RESERVED_AND_MAYBE);
+						auto it_end = ob.end();
+						if (ob_it != it_end) {
+							auto last_op_object = ob_it.value();
+							stack_msgpack.pop_back();
+							last_op_object.push_back(stack_msgpack.back());
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_AND_MAYBE] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						} else {
+							stack_msgpack.pop_back();
+							auto maybe_obj = stack_msgpack.back();
+							auto maybe_ob_it = maybe_obj.find(RESERVED_AND_MAYBE);
+							auto maybe_it_end = maybe_obj.end();
+							ASSERT(maybe_ob_it != maybe_it_end);
+							auto last_op_object = maybe_ob_it.value();
+							last_op_object.push_back(ob);
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_AND_MAYBE] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						}
+					} else {
+						MsgPack object;
+						auto& _and_maybe = object[RESERVED_AND_MAYBE] = { nullptr, stack_msgpack.back() };  // right expression
+						stack_msgpack.pop_back();
+						_and_maybe[0] = stack_msgpack.back();  // left expression
+						stack_msgpack.pop_back();
+						stack_msgpack.push_back(std::move(object));
+					}
+					last_op = TokenType::Maybe;
 					break;
 				}
 
@@ -989,12 +1082,40 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.size() < 2) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object;
-					auto& _xor = object["_xor"] = { nullptr, stack_msgpack.back() };  // right expression
-					stack_msgpack.pop_back();
-					_xor[0] = stack_msgpack.back();  // left expression
-					stack_msgpack.pop_back();
-					stack_msgpack.push_back(std::move(object));
+					if (last_op == token.get_type()) {
+						auto ob = stack_msgpack.back();
+						auto ob_it = ob.find(RESERVED_XOR);
+						auto it_end = ob.end();
+						if (ob_it != it_end) {
+							auto last_op_object = ob_it.value();
+							stack_msgpack.pop_back();
+							last_op_object.push_back(stack_msgpack.back());
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_XOR] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						} else {
+							stack_msgpack.pop_back();
+							auto xor_obj = stack_msgpack.back();
+							auto xor_ob_it = xor_obj.find(RESERVED_XOR);
+							auto xor_it_end = xor_obj.end();
+							ASSERT(xor_ob_it != xor_it_end);
+							auto last_op_object = xor_ob_it.value();
+							last_op_object.push_back(ob);
+							stack_msgpack.pop_back();
+							MsgPack object;
+							object[RESERVED_XOR] = last_op_object;
+							stack_msgpack.push_back(std::move(object));
+						}
+					} else {
+						MsgPack object;
+						auto& _xor = object[RESERVED_XOR] = { nullptr, stack_msgpack.back() };  // right expression
+						stack_msgpack.pop_back();
+						_xor[0] = stack_msgpack.back();  // left expression
+						stack_msgpack.pop_back();
+						stack_msgpack.push_back(std::move(object));
+					}
+					last_op = TokenType::Xor;
 					break;
 				}
 
