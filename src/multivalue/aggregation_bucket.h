@@ -186,10 +186,8 @@ public:
 		switch (interval_value.getType()) {
 			case MsgPack::Type::POSITIVE_INTEGER:
 				interval_u64 = interval_value.u64();
-				break;
 			case MsgPack::Type::NEGATIVE_INTEGER:
 				interval_i64 = interval_value.i64();
-				break;
 			case MsgPack::Type::FLOAT:
 				interval_f64 = interval_value.f64();
 				break;
