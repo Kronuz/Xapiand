@@ -1104,8 +1104,10 @@ Database::reopen_readable()
 				local = true;
 				if (endpoints_size == 1) { read_mastery(e); }
 			} catch (const Xapian::DatabaseOpeningError& exc) {
+				fail_db.insert(std::hash<std::string>{}(e.path));
 				if ((flags & DB_SPAWN) == 0)  {
-					if (endpoints.size() == 1) {
+					if (endpoints.size() == 1 || endpoints.size() == fail_db.size()) {
+						fail_db.clear();
 						db.reset();
 						throw;
 					}
