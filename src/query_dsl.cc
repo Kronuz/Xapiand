@@ -1032,8 +1032,8 @@ QueryDSL::make_dsl_query(std::string_view query)
 						_and[0] = stack_msgpack.back();  // left expression
 						stack_msgpack.pop_back();
 						stack_msgpack.push_back(std::move(object));
-						last_op = TokenType::And;
 					}
+					last_op = TokenType::And;
 					break;
 				}
 
