@@ -948,9 +948,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.empty()) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					MsgPack object = {{ RESERVED_NOT, stack_msgpack.back() }}; // expression.
-					stack_msgpack.pop_back();
-					stack_msgpack.push_back(std::move(object));
+					create_exp_op_dsl(stack_msgpack, RESERVED_NOT);
 					last_op = TokenType::Not;
 					break;
 				}
@@ -961,36 +959,39 @@ QueryDSL::make_dsl_query(std::string_view query)
 					}
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
+						stack_msgpack.pop_back();
 						auto ob_it = ob.find(RESERVED_OR);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
-							stack_msgpack.pop_back();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
 							object[RESERVED_OR] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
+							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto or_obj = stack_msgpack.back();
-							auto or_ob_it = or_obj.find(RESERVED_OR);
-							auto or_it_end = or_obj.end();
-							ASSERT(or_ob_it != or_it_end);
-							auto last_op_object = or_ob_it.value();
-							last_op_object.push_back(ob);
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_OR] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
+							auto ob2_it = ob2.find(RESERVED_OR);
+							auto ob2_it_end = ob2.end();
+							if (ob2_it != ob2_it_end) {
+								auto last_op_object = ob2_it.value();
+								last_op_object.push_back(ob);
+								MsgPack object;
+								object[RESERVED_OR] = last_op_object;
+								stack_msgpack.push_back(std::move(object));
+							} else {
+								/* parentheses case Ej: ... a or (b or c) ...
+								   parentheses force to create a new expression
+								*/
+								ASSERT(stack_msgpack.size());
+								stack_msgpack.push_back(ob2);
+								stack_msgpack.push_back(ob);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_OR);
+							}
 						}
 					} else {
-						MsgPack object;
-						auto& _or = object[RESERVED_OR] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_or[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
+						create_2exp_op_dsl(stack_msgpack, RESERVED_OR);
 					}
 					last_op = TokenType::Or;
 					break;
@@ -1002,36 +1003,40 @@ QueryDSL::make_dsl_query(std::string_view query)
 					}
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
+						stack_msgpack.pop_back();
 						auto ob_it = ob.find(RESERVED_AND);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
-							stack_msgpack.pop_back();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
 							object[RESERVED_AND] = last_op_object;
+							L_GREEN("%s", object.to_string());
 							stack_msgpack.push_back(std::move(object));
 						} else {
+							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto and_obj = stack_msgpack.back();
-							auto and_ob_it = and_obj.find(RESERVED_AND);
-							auto and_it_end = and_obj.end();
-							ASSERT(and_ob_it != and_it_end);
-							auto last_op_object = and_ob_it.value();
-							last_op_object.push_back(ob);
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_AND] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
+							auto ob2_it = ob2.find(RESERVED_AND);
+							auto ob2_it_end = ob2.end();
+							if (ob2_it != ob2_it_end) {
+								auto last_op_object = ob2_it.value();
+								last_op_object.push_back(ob);
+								MsgPack object;
+								object[RESERVED_AND] = last_op_object;
+								stack_msgpack.push_back(std::move(object));
+							} else {
+								/* parentheses case Ej: ... a and (b and c) ...
+								   parentheses force to create a new expression
+								*/
+								ASSERT(stack_msgpack.size());
+								stack_msgpack.push_back(ob2);
+								stack_msgpack.push_back(ob);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_AND);
+							}
 						}
 					} else {
-						MsgPack object;
-						auto& _and = object[RESERVED_AND] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_and[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
+						create_2exp_op_dsl(stack_msgpack, RESERVED_AND);
 					}
 					last_op = TokenType::And;
 					break;
@@ -1043,36 +1048,39 @@ QueryDSL::make_dsl_query(std::string_view query)
 					}
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
+						stack_msgpack.pop_back();
 						auto ob_it = ob.find(RESERVED_AND_MAYBE);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
-							stack_msgpack.pop_back();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
 							object[RESERVED_AND_MAYBE] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
+							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto maybe_obj = stack_msgpack.back();
-							auto maybe_ob_it = maybe_obj.find(RESERVED_AND_MAYBE);
-							auto maybe_it_end = maybe_obj.end();
-							ASSERT(maybe_ob_it != maybe_it_end);
-							auto last_op_object = maybe_ob_it.value();
-							last_op_object.push_back(ob);
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_AND_MAYBE] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
+							auto ob2_it = ob2.find(RESERVED_AND_MAYBE);
+							auto ob2_it_end = ob2.end();
+							if (ob2_it != ob2_it_end) {
+								auto last_op_object = ob2_it.value();
+								last_op_object.push_back(ob);
+								MsgPack object;
+								object[RESERVED_AND_MAYBE] = last_op_object;
+								stack_msgpack.push_back(std::move(object));
+							} else {
+								/* parentheses case Ej: ... a maybe (b maybe c) ...
+								   parentheses force to create a new expression
+								*/
+								ASSERT(stack_msgpack.size());
+								stack_msgpack.push_back(ob2);
+								stack_msgpack.push_back(ob);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_AND_MAYBE);
+							}
 						}
 					} else {
-						MsgPack object;
-						auto& _and_maybe = object[RESERVED_AND_MAYBE] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_and_maybe[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
+						create_2exp_op_dsl(stack_msgpack, RESERVED_AND_MAYBE);
 					}
 					last_op = TokenType::Maybe;
 					break;
@@ -1084,36 +1092,39 @@ QueryDSL::make_dsl_query(std::string_view query)
 					}
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
+						stack_msgpack.pop_back();
 						auto ob_it = ob.find(RESERVED_XOR);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
-							stack_msgpack.pop_back();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
 							object[RESERVED_XOR] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
+							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto xor_obj = stack_msgpack.back();
-							auto xor_ob_it = xor_obj.find(RESERVED_XOR);
-							auto xor_it_end = xor_obj.end();
-							ASSERT(xor_ob_it != xor_it_end);
-							auto last_op_object = xor_ob_it.value();
-							last_op_object.push_back(ob);
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_XOR] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
+							auto ob2_it = ob2.find(RESERVED_XOR);
+							auto ob2_it_end = ob2.end();
+							if (ob2_it != ob2_it_end) {
+								auto last_op_object = ob2_it.value();
+								last_op_object.push_back(ob);
+								MsgPack object;
+								object[RESERVED_XOR] = last_op_object;
+								stack_msgpack.push_back(std::move(object));
+							} else {
+								/* parentheses case Ej: ... a xor (b xor c) ...
+								   parentheses force to create a new expression
+								*/
+								ASSERT(stack_msgpack.size());
+								stack_msgpack.push_back(ob2);
+								stack_msgpack.push_back(ob);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_XOR);
+							}
 						}
 					} else {
-						MsgPack object;
-						auto& _xor = object[RESERVED_XOR] = { nullptr, stack_msgpack.back() };  // right expression
-						stack_msgpack.pop_back();
-						_xor[0] = stack_msgpack.back();  // left expression
-						stack_msgpack.pop_back();
-						stack_msgpack.push_back(std::move(object));
+						create_2exp_op_dsl(stack_msgpack, RESERVED_XOR);
 					}
 					last_op = TokenType::Xor;
 					break;
@@ -1158,6 +1169,31 @@ QueryDSL::make_dsl_query(std::string_view query)
 	} catch (const SyntacticException& err) {
 		THROW(QueryDslError, err.what());
 	}
+}
+
+
+void
+QueryDSL::create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl)
+{
+	L_CALL("QueryDSL::create_exp_op_dsl(%s)", repr(operator_dsl));
+
+	MsgPack object = {{ operator_dsl, stack_msgpack.back() }}; // expression.
+	stack_msgpack.pop_back();
+	stack_msgpack.push_back(std::move(object));
+}
+
+
+void
+QueryDSL::create_2exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl)
+{
+	L_CALL("QueryDSL::create_2exp_op_dsl(%s)", repr(operator_dsl));
+
+	MsgPack object;
+	auto& _op = object[operator_dsl] = { nullptr, stack_msgpack.back() };  // right expression
+	stack_msgpack.pop_back();
+	_op[0] = stack_msgpack.back();  // left expression
+	stack_msgpack.pop_back();
+	stack_msgpack.push_back(std::move(object));
 }
 
 

@@ -105,6 +105,9 @@ class QueryDSL {
 	Xapian::Query get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard);
 	Xapian::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj);
 
+	void create_2exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl);
+	void create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl);
+
 public:
 	QueryDSL(std::shared_ptr<Schema>  schema_);
 
