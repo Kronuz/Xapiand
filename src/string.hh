@@ -409,6 +409,7 @@ private:
 		}
 		if (value < 10) {
 			*--ptr = static_cast<char>('0' + value);
+			size_ = fmt::internal::to_unsigned(buffer_ - ptr + BUFFER_SIZE - 1);
 			return ptr;
 		}
 		unsigned index = static_cast<unsigned>(value * 2);
