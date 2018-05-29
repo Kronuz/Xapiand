@@ -61,12 +61,27 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 			case '%': {
 				auto dec = hexdec(&q);
 				if (dec != -1) {
-					c = dec;
+					c = dec; /* Reset c, try the special characters again */
 				}
 			}
 			/* FALLTHROUGH */
 			default:
-				buf.push_back(c);
+				switch(c) {
+					case '+':
+						buf.push_back(plus);
+						break;
+					case '&':
+						buf.push_back(amp);
+						break;
+					case ';':
+						buf.push_back(colon);
+						break;
+					case '=':
+						buf.push_back(eq);
+						break;
+					default:
+						buf.push_back(c);
+				}
 		}
 	}
 	return buf;
