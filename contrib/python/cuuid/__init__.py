@@ -220,7 +220,7 @@ class UUID(six.binary_type, _uuid.UUID):
             fields = (time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node)
         elif hex is not None:
             if isinstance(hex, six.string_types):
-                hex = cls.unserialise(cls._decode(hex, 1))
+                hex = cls._decode_uuid(hex, 1)
             if isinstance(hex, _uuid.UUID):
                 int, hex = hex.int, None
         return _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
@@ -258,6 +258,15 @@ class UUID(six.binary_type, _uuid.UUID):
                 return serialised
         u = cls(_uuid.UUID(encoded))
         return u.serialise()
+
+    @classmethod
+    def _decode_uuid(cls, encoded, count=None):
+        if len(encoded) >= 7 and encoded[0] == '~':
+            serialised = cls.ENCODER.decode(encoded)
+            if cls._is_serialised(serialised, count):
+                return cls.unserialise(serialised)
+        u = _uuid.UUID(encoded)
+        return u
 
     @classmethod
     def _unserialise_condensed(cls, serialised):
