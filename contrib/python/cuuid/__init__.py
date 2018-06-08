@@ -241,7 +241,7 @@ class UUID(six.binary_type, _uuid.UUID):
             else:
                 length = size
                 q = bool(byte0 & 0xf0)
-                for i in range(13):
+                for i in six.moves.range(13):
                     if cls.VL[i][q][0] == (byte0 & cls.VL[i][q][1]):
                         length = i + 4
                         break
@@ -274,7 +274,7 @@ class UUID(six.binary_type, _uuid.UUID):
         length = size
         byte0 = ord(serialised[0])
         q = bool(byte0 & 0xf0)
-        for i in range(13):
+        for i in six.moves.range(13):
             if cls.VL[i][q][0] == (byte0 & cls.VL[i][q][1]):
                 length = i + 4
                 break
