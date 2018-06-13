@@ -1,0 +1,25 @@
+%clang
+%c -std=c11
+%cpp -std=c++17
+
+-I/usr/local/opt/llvm@5/include
+-I/usr/local/opt/llvm@5/include/c++/v1
+-I/usr/local/include
+-Ibuild/src
+-Isrc
+
+-pthread
+-fdiagnostics-color=always
+-Wall
+-Wextra
+-Wshadow
+-Wnon-virtual-dtor
+-Wno-unknown-pragmas
+-Wno-variadic-macros
+-pedantic
+-pedantic-errors
+-Wstrict-aliasing
+-Wno-gnu-zero-variadic-macro-arguments
+-O2
+-g
+-DNDEBUG
