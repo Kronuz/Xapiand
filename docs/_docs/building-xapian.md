@@ -43,15 +43,15 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
 #### Prepare the Build
 
 ```sh
-~/ $ cd xapian
-~/xapian $ ./preautoreconf
-~/xapian $ autoreconf --force --install -Im4 -I/usr/local/share/aclocal
+~/ $ cd xapian/xapian-core
+~/xapian/xapian-core $ ./preautoreconf
+~/xapian/xapian-core $ autoreconf --force --install -Im4 -I/usr/local/share/aclocal
 ```
 
 #### Configure the Build
 
 ```sh
-~/xapian $ ./configure \
+~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
@@ -62,9 +62,9 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
 #### Build, Test and Install
 
 ```sh
-~/xapian $ make
-~/xapian $ make check
-~/xapian $ make install
+~/xapian/xapian-core $ make
+~/xapian/xapian-core $ make check
+~/xapian/xapian-core $ make install
 ```
 
 
@@ -77,7 +77,7 @@ step above and replace accordingly with:
 ### Address Sanitizer (ASAN)
 
 ```sh
-~/xapian $ ./configure \
+~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
@@ -90,7 +90,7 @@ step above and replace accordingly with:
 ### Thread Sanitizer (TSAN)
 
 ```sh
-~/xapian $ ./configure \
+~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
@@ -103,7 +103,7 @@ step above and replace accordingly with:
 ### Memory Sanitizer (MSAN)
 
 ```sh
-~/xapian $ ./configure \
+~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
@@ -116,7 +116,7 @@ step above and replace accordingly with:
 ### Undefined Behavior Sanitizer (UBSAN)
 
 ```sh
-~/xapian $ ./configure \
+~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
