@@ -347,7 +347,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
-		final_query = Xapian::Query::MatchAll;
+		final_query = Xapian::Query(std::string());
 	}
 
 	switch (obj.getType()) {
@@ -745,7 +745,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 		if (obj.is_string()) {
 			auto parsed = parse_guess_range(field_spc, obj.str_view());
 			if (parsed.first == FieldType::EMPTY) {
-				return Xapian::Query::MatchAll;
+				return Xapian::Query(std::string());
 			}
 			if (field_spc.prefix().empty()) {
 				return get_in_query(specification_t::get_global(parsed.first), parsed.second);
@@ -754,7 +754,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 		}
 		auto field_type = get_in_type(obj);
 		if (field_type == FieldType::EMPTY) {
-			return Xapian::Query::MatchAll;
+			return Xapian::Query(std::string());
 		}
 		if (field_spc.prefix().empty()) {
 			return get_in_query(specification_t::get_global(field_type), obj);
@@ -1205,7 +1205,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	Xapian::Query query;
 
 	if (obj.is_string() && obj.str_view().compare("*") == 0) {
-		query = Xapian::Query::MatchAll;
+		query = Xapian::Query(std::string());
 	} else {
 		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
 	}

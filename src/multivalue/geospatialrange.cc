@@ -38,7 +38,7 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 	auto ranges = geo.getGeometry()->getRanges(field_spc.flags.partials, field_spc.error);
 
 	if (ranges.empty()) {
-		return Xapian::Query::MatchNothing;
+		return Xapian::Query();
 	}
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);

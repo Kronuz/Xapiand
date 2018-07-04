@@ -48,7 +48,7 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			double val_s = start.is_map() ? Cast::cast(start).f64() : Cast::_float(start);
 			double val_e = end.is_map() ? Cast::cast(end).f64() : Cast::_float(end);
 			if (val_s > val_e) {
-				return Xapian::Query::MatchNothing;
+				return Xapian::Query();
 			}
 
 			ser_start = Serialise::_float(val_s);
@@ -61,7 +61,7 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			int64_t val_s = start.is_map() ? Cast::cast(start).i64() : Cast::integer(start);
 			int64_t val_e = end.is_map() ? Cast::cast(end).i64() : Cast::integer(end);
 			if (val_s > val_e) {
-				return Xapian::Query::MatchNothing;
+				return Xapian::Query();
 			}
 
 			ser_start = Serialise::integer(val_s);
@@ -74,7 +74,7 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			uint64_t val_s = start.is_map() ? Cast::cast(start).u64() : Cast::positive(start);
 			uint64_t val_e = end.is_map() ? Cast::cast(end).u64() : Cast::positive(end);
 			if (val_s > val_e) {
-				return Xapian::Query::MatchNothing;
+				return Xapian::Query();
 			}
 
 			ser_start = Serialise::positive(val_s);
@@ -98,7 +98,7 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 
 Xapian::Query getStringQuery(const required_spc_t& field_spc, std::string&& start_s, std::string&& end_s) {
 	if (start_s > end_s) {
-		return Xapian::Query::MatchNothing;
+		return Xapian::Query();
 	}
 
 	auto mvr = new MultipleValueRange(field_spc.slot, std::move(start_s), std::move(end_s));
@@ -111,7 +111,7 @@ Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start
 	auto timestamp_e = Datetime::timestamp(Datetime::DateParser(end));
 
 	if (timestamp_s > timestamp_e) {
-		return Xapian::Query::MatchNothing;
+		return Xapian::Query();
 	}
 
 	auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
@@ -128,7 +128,7 @@ Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start
 	auto time_e = Datetime::time_to_double(end);
 
 	if (time_s > time_e) {
-		return Xapian::Query::MatchNothing;
+		return Xapian::Query();
 	}
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
@@ -145,7 +145,7 @@ Xapian::Query getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack& 
 	auto timedelta_e = Datetime::timedelta_to_double(end);
 
 	if (timedelta_s > timedelta_e) {
-		return Xapian::Query::MatchNothing;
+		return Xapian::Query();
 	}
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
@@ -214,7 +214,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			case FieldType::GEO:
 				THROW(QueryParserError, "The format for Geo Spatial range is: <field>: [\"EWKT\"]");
 			default:
-				return Xapian::Query::MatchNothing;
+				return Xapian::Query();
 		}
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start ? start->to_string() : "", end ? end->to_string() : "",
