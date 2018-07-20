@@ -2646,10 +2646,6 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 	}
 	for (const auto& accept : request.accept_set) {
 		if (is_acceptable_type(accept.ct_type, ct)) {
-			auto indent = accept.indent;
-			if (indent != -1) {
-				request.indented = indent;
-			}
 			return accept.ct_type;
 		}
 	}
