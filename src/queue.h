@@ -255,7 +255,7 @@ namespace queue {
 		template<typename E>
 		bool push(E&& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
-			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk);
+			bool pushed = _push_back_impl(std::forward<E>(element), timeout, lk);
 			lk.unlock();
 
 			if (pushed) {
@@ -273,7 +273,7 @@ namespace queue {
 
 		bool pop(T& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
-			bool popped = _pop_back_impl(element, timeout, lk);
+			bool popped = _pop_front_impl(element, timeout, lk);
 			auto size = _items_queue.size();
 			lk.unlock();
 
