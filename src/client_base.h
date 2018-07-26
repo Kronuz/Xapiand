@@ -138,8 +138,6 @@ class ClientDecompressor;
 class BaseClient : public Worker {
 	friend LZ4CompressFile;
 
-	WR _write(int fd);
-
 	void destroyer();
 	void stop();
 
@@ -199,7 +197,8 @@ protected:
 	// Socket is writable
 	void io_cb_write(ev::io &watcher, int revents);
 
-	WR write_directly(int fd);
+	WR write_from_queue(int fd);
+	WR write_from_queue(int fd, int max);
 
 	void read_file();
 	bool send_file(int fd, size_t offset=0);

@@ -61,10 +61,9 @@ constexpr int WRITE_QUEUE_THRESHOLD = WRITE_QUEUE_LIMIT * 2 / 3;
 
 enum class WR {
 	OK,
-	ERR,
+	ERROR,
 	RETRY,
-	PENDING,
-	CLOSED
+	PENDING
 };
 
 enum class MODE {
@@ -385,15 +384,16 @@ BaseClient::close()
 }
 
 
-WR
-BaseClient::write_directly(int fd)
+inline WR
+BaseClient::write_from_queue(int fd)
 {
-	L_CALL("BaseClient::write_directly(%d)", fd);
+	L_CALL("BaseClient::write_from_queue(%d)", fd);
 
 	if (fd == -1) {
 		L_ERR("ERROR: write error {fd:%d}: Socket already closed!", fd);
 		L_CONN("WR:ERR.1: {fd:%d}", fd);
-		return WR::ERR;
+		close();
+		return WR::ERROR;
 	}
 
 	std::lock_guard<std::mutex> lk(_mutex);
@@ -417,7 +417,8 @@ BaseClient::write_directly(int fd)
 
 			L_ERR("ERROR: write error {fd:%d} - %d: %s", fd, errno, strerror(errno));
 			L_CONN("WR:ERR.2: {fd:%d}", fd);
-			return WR::ERR;
+			close();
+			return WR::ERROR;
 		}
 
 		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500), _written);
@@ -441,27 +442,18 @@ BaseClient::write_directly(int fd)
 
 
 WR
-BaseClient::_write(int fd)
+BaseClient::write_from_queue(int fd, int max)
 {
-	L_CALL("BaseClient::_write(%d)", fd);
+	L_CALL("BaseClient::write_from_queue(%d)", fd);
 
-	WR status;
+	WR status = WR::PENDING;
 
-	do {
-		status = write_directly(fd);
-
-		switch (status) {
-			case WR::ERR:
-			case WR::CLOSED:
-				close();
-				return status;
-			case WR::RETRY:
-			case WR::PENDING:
-				return status;
-			default:
-				break;
+	for (int i = 0; max < 0 || i < max; ++i) {
+		status = write_from_queue(fd);
+		if (status != WR::PENDING) {
+			return status;
 		}
-	} while (status != WR::OK);
+	}
 
 	return status;
 }
@@ -486,7 +478,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 
 	written += 1;
 
-	switch (_write(fd)) {
+	switch (write_from_queue(fd, -1)) {
 		case WR::RETRY:
 		case WR::PENDING:
 			write_start_async.send();
@@ -516,7 +508,7 @@ BaseClient::write_file(std::string_view path, bool unlink)
 
 	written += 1;
 
-	switch (_write(fd)) {
+	switch (write_from_queue(fd, -1)) {
 		case WR::RETRY:
 		case WR::PENDING:
 			write_start_async.send();
@@ -548,14 +540,21 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 		return;
 	}
 
-	_write(fd);
+	switch (write_from_queue(fd)) {
+		case WR::RETRY:
+		case WR::PENDING:
+			break;
+		case WR::ERROR:
+		case WR::OK:
+			write_queue.empty([&](bool empty) {
+				if (empty) {
+					io_write.stop();
+					L_EV("Disable write event");
+				}
+			});
+			break;
+	}
 
-	write_queue.empty([&](bool empty) {
-		if (empty) {
-			io_write.stop();
-			L_EV("Disable write event");
-		}
-	});
 
 	if (closed) {
 		destroy();
