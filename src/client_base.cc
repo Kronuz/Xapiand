@@ -540,7 +540,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 		return;
 	}
 
-	switch (write_from_queue(fd)) {
+	switch (write_from_queue(fd, 10)) {
 		case WR::RETRY:
 		case WR::PENDING:
 			break;
