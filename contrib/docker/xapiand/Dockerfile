@@ -2,8 +2,9 @@
 FROM kronuz/xapian
 
 # Build xapiand
-RUN apk add --no-cache --virtual .build-deps \
-    make \
+RUN apk add libuuid \
+  && apk add --no-cache --virtual .build-deps \
+    ninja \
     cmake \
     git \
     zlib-dev \
@@ -12,8 +13,8 @@ RUN apk add --no-cache --virtual .build-deps \
   && git clone --single-branch --depth=1 "https://github.com/Kronuz/Xapiand" /usr/src/Xapiand \
   && mkdir /usr/src/Xapiand/build \
   && cd /usr/src/Xapiand/build \
-  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. \
-  && make install \
+  && cmake -GNinja -DCMAKE_INSTALL_PREFIX:PATH=/usr .. \
+  && ninja install \
   && rm -rf /usr/src/Xapiand \
   && apk del .build-deps
 
