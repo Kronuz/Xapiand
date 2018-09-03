@@ -3,6 +3,7 @@ FROM kronuz/xapian
 
 # Build xapiand
 RUN apk add --no-cache --virtual .build-deps \
+    make \
     cmake \
     git \
     zlib-dev \
