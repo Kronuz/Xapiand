@@ -593,13 +593,10 @@ check_function_exists("pread" HAVE_PREAD)
 check_function_exists("pwrite" HAVE_PWRITE)
 check_function_exists("socket" HAVE_SOCKET)
 
-check_library_exists(pthread "pthread_getname_np" "" HAVE_PTHREAD_GETNAME_NP_3)
-check_library_exists(pthread "pthread_get_name_np" "" HAVE_PTHREAD_GET_NAME_NP_1)
-# check_library_exists(pthread "pthread_get_name_np" "" HAVE_PTHREAD_GET_NAME_NP_3)
-check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP_1)
-# check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP_2)
-# check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP_3)
-check_library_exists(pthread "pthread_set_name_np" "" HAVE_PTHREAD_SET_NAME_NP_2)
+check_library_exists(pthread "pthread_getname_np" "" HAVE_PTHREAD_GETNAME_NP)
+check_library_exists(pthread "pthread_get_name_np" "" HAVE_PTHREAD_GET_NAME_NP)
+check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP)
+check_library_exists(pthread "pthread_set_name_np" "" HAVE_PTHREAD_SET_NAME_NP)
 
 check_cxx_source_compiles("
 	int main() {

@@ -124,25 +124,16 @@
 
 
 /* 3-arg pthread_getname_np */
-#cmakedefine HAVE_PTHREAD_GETNAME_NP_3 @HAVE_PTHREAD_GETNAME_NP_3@
+#cmakedefine HAVE_PTHREAD_GETNAME_NP @HAVE_PTHREAD_GETNAME_NP@
 
-/* 1-arg pthread_get_name_np */
-#cmakedefine HAVE_PTHREAD_GET_NAME_NP_1 @HAVE_PTHREAD_GET_NAME_NP_1@
+/* 1-arg and 3-arg pthread_get_name_np */
+#cmakedefine HAVE_PTHREAD_GET_NAME_NP @HAVE_PTHREAD_GET_NAME_NP@
 
-/* 3-arg pthread_get_name_np */
-#cmakedefine HAVE_PTHREAD_GET_NAME_NP_3 @HAVE_PTHREAD_GET_NAME_NP_3@
-
-/* 1-arg pthread_setname_np */
-#cmakedefine HAVE_PTHREAD_SETNAME_NP_1 @HAVE_PTHREAD_SETNAME_NP_1@
-
-/* 2-arg pthread_setname_np */
-#cmakedefine HAVE_PTHREAD_SETNAME_NP_2 @HAVE_PTHREAD_SETNAME_NP_2@
-
-/* 3-arg pthread_setname_np */
-#cmakedefine HAVE_PTHREAD_SETNAME_NP_3 @HAVE_PTHREAD_SETNAME_NP_3@
+/* 1-arg, 2-arg and 3-arg pthread_setname_np */
+#cmakedefine HAVE_PTHREAD_SETNAME_NP @HAVE_PTHREAD_SETNAME_NP@
 
 /* 2-arg pthread_set_name_np */
-#cmakedefine HAVE_PTHREAD_SET_NAME_NP_2 @HAVE_PTHREAD_SET_NAME_NP_2@
+#cmakedefine HAVE_PTHREAD_SET_NAME_NP @HAVE_PTHREAD_SET_NAME_NP@
 
 
 /* Define to 1 if you have the `epoll_ctl' function. */

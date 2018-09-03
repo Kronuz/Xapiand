@@ -43,7 +43,7 @@
 #include <unistd.h>              // for close, rmdir, write, ssize_t
 #include <unordered_map>         // for std::unordered_map
 
-#include "config.h"              // for HAVE_PTHREAD_GETNAME_NP_3, HAVE_PTHR...
+#include "config.h"              // for HAVE_PTHREAD_GETNAME_NP, HAVE_PTHR...
 #include "exception.h"           // for Exit
 #include "field_parser.h"        // for FieldParser, FieldParserError
 #include "io_utils.h"            // for open, read
@@ -88,13 +88,12 @@ static std::mutex thread_names_mutex;
 
 
 void set_thread_name(const std::string& name) {
-#if defined(HAVE_PTHREAD_SETNAME_NP_1)
-	pthread_setname_np(stringified(name).c_str());
-#elif defined(HAVE_PTHREAD_SETNAME_NP_2)
+#if defined(HAVE_PTHREAD_SETNAME_NP) && defined(__linux__)
 	pthread_setname_np(pthread_self(), stringified(name).c_str());
-#elif defined(HAVE_PTHREAD_SETNAME_NP_3)
-	pthread_setname_np(pthread_self(), stringified(name).c_str(), nullptr);
-#elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
+	// pthread_setname_np(pthread_self(), stringified(name).c_str(), nullptr);
+#elif defined(HAVE_PTHREAD_SETNAME_NP)
+	pthread_setname_np(stringified(name).c_str());
+#elif defined(HAVE_PTHREAD_SET_NAME_NP)
 	pthread_set_name_np(pthread_self(), stringified(name).c_str());
 #endif
 	std::lock_guard<std::mutex> lk(thread_names_mutex);
