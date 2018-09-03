@@ -113,6 +113,12 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@
 
+/* Define to 1 if you have the <execinfo.h> header file. */
+#cmakedefine HAVE_EXECINFO_H @HAVE_EXECINFO_H@
+
+/* Define to 1 if you have the <libunwind.h> header file. */
+#cmakedefine HAVE_LIBUNWIND_H @HAVE_LIBUNWIND_H@
+
 
 /* 3-arg pthread_getname_np */
 #cmakedefine HAVE_PTHREAD_GETNAME_NP_3 @HAVE_PTHREAD_GETNAME_NP_3@

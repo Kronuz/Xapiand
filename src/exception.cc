@@ -26,7 +26,12 @@
 #include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
 #include <dlfcn.h>            // for dladdr
-#include <execinfo.h>         // for backtrace, backtrace_symbols
+
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>         // for backtrace
+#else
+static inline int backtrace(void**, int) { return 0; }
+#endif
 
 #define BUFFER_SIZE 1024
 
