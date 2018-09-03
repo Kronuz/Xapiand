@@ -147,8 +147,6 @@ BaseTCP::bind(int tries)
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
-		int optval = 1;
-
 		if (setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
 			L_ERR("ERROR: setsockopt TCP_DEFER_ACCEPT (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
