@@ -36,10 +36,10 @@
 #include <pwd.h>                     // for passwd, getpwnam, getpwuid
 #include <sstream>                   // for basic_stringbuf<>::int_type, bas...
 #include <strings.h>                 // for strcasecmp
-#include <sys/errno.h>               // for errno
-#include <sys/fcntl.h>               // for O_RDWR, O_CREAT
+#include <errno.h>                   // for errno
+#include <fcntl.h>                   // for O_RDWR, O_CREAT
 #include <sys/resource.h>            // for rlimit
-#include <sys/signal.h>              // for sigaction, signal, SIG_IGN, SIGHUP
+#include <signal.h>                  // for sigaction, signal, SIG_IGN, SIGHUP
 #include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
 #include <thread>                    // for thread
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir

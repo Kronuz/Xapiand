@@ -28,8 +28,8 @@
 #include <netinet/tcp.h>            // for TCP_NODELAY
 #include <cstring>                  // for strerror, memset
 #include <utility>
-#include <sys/errno.h>              // for __error, errno
-#include <sys/fcntl.h>              // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
+#include <errno.h>                  // for __error, errno
+#include <fcntl.h>                  // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
 #include <sys/sysctl.h>             // for sysctl, CTL_KERN, KIPC_SOMAXCONN
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR

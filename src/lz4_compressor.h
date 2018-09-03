@@ -34,7 +34,7 @@
 #include <string.h>
 #include <string>           // for string
 #include "string_view.hh"   // for std::string_view
-#include <sys/fcntl.h>      // for O_RDONLY
+#include <fcntl.h>          // for O_RDONLY
 #include <sys/stat.h>
 #include <sys/types.h>      // for off_t, uint16_t, ssize_t, uint32_t
 #include <type_traits>      // for forward

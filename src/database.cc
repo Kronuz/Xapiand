@@ -30,8 +30,8 @@
 #include <ratio>                  // for ratio
 #include <utility>
 #include <strings.h>              // for strncasecmp
-#include <sys/errno.h>            // for __error, errno
-#include <sys/fcntl.h>            // for O_CREAT, O_WRONLY, O_EXCL
+#include <errno.h>                // for __error, errno
+#include <fcntl.h>                // for O_CREAT, O_WRONLY, O_EXCL
 #include <sysexits.h>             // for EX_SOFTWARE
 
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr

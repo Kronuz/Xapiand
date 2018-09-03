@@ -28,7 +28,7 @@
 #include <memory>                // for shared_ptr, unique_ptr, default_delete
 #include <ratio>                 // for ratio
 #include <cstdio>                // for SEEK_SET
-#include <sys/errno.h>           // for __error, errno, ECONNRESET
+#include <errno.h>               // for __error, errno, ECONNRESET
 #include <sys/socket.h>          // for shutdown, SHUT_RDWR
 #include <sysexits.h>            // for EX_SOFTWARE
 #include <type_traits>           // for remove_reference<>::type

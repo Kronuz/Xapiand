@@ -23,7 +23,7 @@
 #include "server_http.h"
 
 #include <cstring>               // for strerror
-#include <sys/errno.h>            // for __error, errno
+#include <errno.h>                // for __error, errno
 #include <chrono>                 // for operator""ms
 #include <ratio>                  // for ratio
 #include <utility>

@@ -27,7 +27,7 @@
 #include <ratio>                                     // for ratio
 #include <cstdio>                                    // for snprintf, size_t
 #include <cstring>                                   // for strlen
-#include <sys/fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RDONLY
+#include <fcntl.h>                                   // for O_CLOEXEC, O_CREAT, O_RDONLY
 #include <sys/stat.h>                                // for stat
 
 #include "base_x.hh"                                 // for base62

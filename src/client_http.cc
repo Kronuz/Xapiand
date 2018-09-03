@@ -29,7 +29,7 @@
 #include <stdexcept>                        // for invalid_argument, range_e...
 #include <cstdlib>                          // for mkstemp
 #include <cstring>                          // for strerror, strcpy
-#include <sys/errno.h>                      // for __error, errno
+#include <errno.h>                          // for __error, errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <type_traits>                      // for enable_if<>::type

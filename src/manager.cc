@@ -40,9 +40,9 @@
 #include <cstdlib>                           // for size_t, exit
 #include <cstring>                           // for strerror
 #include <string>                            // for string, basic_string
-#include <sys/errno.h>                       // for __error, errno
-#include <sys/fcntl.h>                       // for O_CLOEXEC, O_CREAT, O_RD...
-#include <sys/signal.h>                      // for SIGTERM, SIGINT
+#include <errno.h>                           // for __error, errno
+#include <fcntl.h>                           // for O_CLOEXEC, O_CREAT, O_RD...
+#include <signal.h>                          // for SIGTERM, SIGINT
 #include <sys/socket.h>                      // for AF_INET, sockaddr
 #include <sys/types.h>                       // for uint64_t
 #include <sysexits.h>                        // for EX_IOERR, EX_NOINPUT
