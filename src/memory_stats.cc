@@ -25,10 +25,11 @@
 #include "log.h"                 // for L_ERR
 
 #include <errno.h>               // for errno, strerror
-#include <sys/param.h>           // for statfs, sysctl
-#include <sys/mount.h>           // for statfs, sysctl
+#include <sys/param.h>           // for statfs
+#include <sys/mount.h>           // for statfs
+#ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>          // for xsw_usage, sysctlnametomib, sysctl
-
+#endif
 #if defined(__APPLE__)
 #include <mach/vm_statistics.h>
 #include <mach/mach_types.h>
@@ -69,10 +70,12 @@ uint64_t get_total_virtual_used()
 {
 	uint64_t total_virtual_used = 0;
 
+#ifdef HAVE_SYS_SYSCTL_H
 #if defined(VM_SWAPUSAGE)
 #define _SYSCTL_NAME "vm.swapusage"  // Apple
 	int mib[] = {CTL_VM, VM_SWAPUSAGE};
 	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	xsw_usage vmusage = {0, 0, 0, 0, 0u};
@@ -95,6 +98,7 @@ uint64_t get_total_ram()
 {
 	uint64_t total_ram = 0;
 
+#ifdef HAVE_SYS_SYSCTL_H
 #if defined(HW_REALMEM)
 #define _SYSCTL_NAME "hw.realmem"  // FreeBSD
 	int mib[] = {CTL_HW, HW_REALMEM};
@@ -103,6 +107,7 @@ uint64_t get_total_ram()
 #define _SYSCTL_NAME "hw.memsize"  // Apple
 	int mib[] = {CTL_HW, HW_MEMSIZE};
 	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	auto total_ram_len = sizeof(total_ram);
@@ -121,9 +126,7 @@ uint64_t get_total_ram()
 uint64_t get_current_memory_by_process(bool resident)
 {
 	uint64_t current_memory_by_process = 0;
-#if defined(__FreeBSD__)
-	L_WARNING("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
 	struct task_basic_info t_info;
 	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
 
@@ -135,6 +138,8 @@ uint64_t get_current_memory_by_process(bool resident)
 	} else {
 		current_memory_by_process = t_info.virtual_size;
 	}
+#else
+	L_WARNING("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
 #endif
 	return current_memory_by_process;
 }
@@ -150,6 +155,7 @@ uint64_t get_total_virtual_memory()
 		total_virtual_memory = (uint64_t)stats.f_bsize * stats.f_bfree;
 	}
 #elif defined(__FreeBSD__)
+#ifdef HAVE_SYS_SYSCTL_H
 #define _SYSCTL_NAME "vm.stats.vm.v_page_count"  // FreeBSD
 	int mib[CTL_MAXNAME + 2];
 	size_t mib_len = sizeof(mib) / sizeof(int);
@@ -157,6 +163,7 @@ uint64_t get_total_virtual_memory()
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 		return 0;
 	}
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	int64_t total_pages;

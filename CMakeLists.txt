@@ -577,6 +577,7 @@ check_include_files("sys/time.h" HAVE_SYS_TIME_H)
 check_include_files("unistd.h" HAVE_UNISTD_H)
 check_include_files("execinfo.h" HAVE_EXECINFO_H)
 check_include_files("libunwind.h" HAVE_LIBUNWIND_H)
+check_include_files("sys/sysctl.h" HAVE_SYS_SYSCTL_H)
 
 check_include_file_cxx("sstream" HAVE_SSTREAM)
 check_include_file_cxx("strstream" HAVE_STRSTREAM)

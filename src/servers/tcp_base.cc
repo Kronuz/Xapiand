@@ -31,7 +31,9 @@
 #include <errno.h>                  // for __error, errno
 #include <fcntl.h>                  // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
+#ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>             // for sysctl, CTL_KERN, KIPC_SOMAXCONN
+#endif
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
 #include "io_utils.h"               // for close
@@ -232,6 +234,7 @@ BaseTCP::accept()
 void
 BaseTCP::check_backlog(int tcp_backlog)
 {
+#ifdef HAVE_SYS_SYSCTL_H
 #if defined(NCORE_SOMAXCONN)
 #define _SYSCTL_NAME "net.core.somaxconn"  // Linux?
 	int mib[] = {CTL_NET, NET_CORE, NCORE_SOMAXCONN};
@@ -240,6 +243,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 #define _SYSCTL_NAME "kern.ipc.somaxconn"  // FreeBSD, Apple
 	int mib[] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
 	size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	int somaxconn;
@@ -255,7 +259,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 	}
 #undef _SYSCTL_NAME
 #else
-	L_WARNING("WARNING: No way of getting TCP backlog setting.");
+	L_WARNING("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
 #endif
 }
 

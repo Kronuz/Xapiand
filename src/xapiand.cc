@@ -68,8 +68,9 @@
 #include "worker.h"                  // for Worker
 #include "hashes.hh"                 // for fnv1ah32
 
+#ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
-
+#endif
 
 #define FDS_RESERVED     50          // Is there a better approach?
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
@@ -598,10 +599,12 @@ ssize_t get_max_files_per_proc()
 {
 	int32_t max_files_per_proc = 0;
 
+#ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_MAXFILESPERPROC)
 #define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
 	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
 	std::size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
@@ -621,6 +624,7 @@ ssize_t get_open_files()
 {
 	int32_t max_files_per_proc = 0;
 
+#ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_OPENFILES)
 #define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
 	int mib[] = {CTL_KERN, KERN_OPENFILES};
@@ -633,6 +637,7 @@ ssize_t get_open_files()
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
+#endif
 #endif
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
