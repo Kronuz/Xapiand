@@ -820,7 +820,6 @@ void demote(const char* username, const char* group) {
 		if (username == nullptr || *username == '\0') {
 			L_CRIT("Can't run as root without the --uid switch");
 			throw Exit(EX_USAGE);
-
 		}
 
 		struct passwd *pw;
@@ -1030,41 +1029,31 @@ void setup() {
 }
 
 
-int server() {
-	int exit_code = EX_OK;
-
-	try {
-		if (opts.detach) {
-			L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
-		}
-
-		usleep(100000ULL);
-
-		setup();
-
-		ev::default_loop default_loop(opts.ev_flags);
-		L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
-
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
-		XapiandManager::manager->run();
-
-		long managers = XapiandManager::manager.use_count() - 1;
-		if (managers == 0) {
-			L_NOTICE("Xapiand is cleanly done with all work!");
-		} else {
-			L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
-		}
-	} catch (const Exit& exc) {
-		exit_code = exc.code;
+void server() {
+	if (opts.detach) {
+		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
 	}
 
-	return exit_code;
+	usleep(100000ULL);
+
+	setup();
+
+	ev::default_loop default_loop(opts.ev_flags);
+	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
+
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
+	XapiandManager::manager->run();
+
+	long managers = XapiandManager::manager.use_count() - 1;
+	if (managers == 0) {
+		L_NOTICE("Xapiand is cleanly done with all work!");
+	} else {
+		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
+	}
 }
 
 
-int dump_metadata() {
-	int exit_code = EX_OK;
-
+void dump_metadata() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
@@ -1086,17 +1075,13 @@ int dump_metadata() {
 			io::close(fd);
 		}
 	} else {
-		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: %s", opts.filename);
+		throw Exit(EX_OSFILE);
 	}
-
-	return exit_code;
 }
 
 
-int dump_schema() {
-	int exit_code = EX_OK;
-
+void dump_schema() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
@@ -1118,17 +1103,13 @@ int dump_schema() {
 			io::close(fd);
 		}
 	} else {
-		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: %s", opts.filename);
+		throw Exit(EX_OSFILE);
 	}
-
-	return exit_code;
 }
 
 
-int dump_documents() {
-	int exit_code = EX_OK;
-
+void dump_documents() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		try {
@@ -1150,17 +1131,13 @@ int dump_documents() {
 			io::close(fd);
 		}
 	} else {
-		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: %s", opts.filename);
+		throw Exit(EX_OSFILE);
 	}
-
-	return exit_code;
 }
 
 
-int restore() {
-	int exit_code = EX_OK;
-
+void restore() {
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd >= 0) {
 		try {
@@ -1182,99 +1159,103 @@ int restore() {
 			io::close(fd);
 		}
 	} else {
-		exit_code = EX_OSFILE;
-		L_ERR("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: %s", opts.filename);
+		throw Exit(EX_OSFILE);
 	}
-
-	return exit_code;
 }
 
 
 int main(int argc, char **argv) {
 	int exit_code = EX_OK;
 
-	parseOptions(argc, argv);
+	try {
+		parseOptions(argc, argv);
 
-	if (opts.detach) {
-		detach();
-		writepid(opts.pidfile.c_str());
-	}
+		if (opts.detach) {
+			detach();
+			writepid(opts.pidfile.c_str());
+		}
 
-	// Initialize options:
-	setup_signal_handlers();
-	std::setlocale(LC_CTYPE, "");
-	demote(opts.uid.c_str(), opts.gid.c_str());
+		// Initialize options:
+		setup_signal_handlers();
+		std::setlocale(LC_CTYPE, "");
+		demote(opts.uid.c_str(), opts.gid.c_str());
 
-	// Logging thread must be created after fork the parent process
-	auto& handlers = Logging::handlers;
-	if (opts.logfile.compare("syslog") == 0) {
-		handlers.push_back(std::make_unique<SysLog>());
-	} else if (!opts.logfile.empty()) {
-		handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
-	}
-	if (!opts.detach || handlers.empty()) {
-		handlers.push_back(std::make_unique<StderrLogger>());
-	}
+		// Logging thread must be created after fork the parent process
+		auto& handlers = Logging::handlers;
+		if (opts.logfile.compare("syslog") == 0) {
+			handlers.push_back(std::make_unique<SysLog>());
+		} else if (!opts.logfile.empty()) {
+			handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
+		}
+		if (!opts.detach || handlers.empty()) {
+			handlers.push_back(std::make_unique<StderrLogger>());
+		}
 
-	Logging::log_level += opts.verbosity;
-	Logging::colors = opts.colors;
-	Logging::no_colors = opts.no_colors;
+		Logging::log_level += opts.verbosity;
+		Logging::colors = opts.colors;
+		Logging::no_colors = opts.no_colors;
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-	if (!opts.chert) {
-		// Prefer glass database
-		if (setenv("XAPIAN_PREFER_GLASS", "1", 0) != 0) {
-			opts.chert = true;
+		if (!opts.chert) {
+			// Prefer glass database
+			if (setenv("XAPIAN_PREFER_GLASS", "1", 0) != 0) {
+				opts.chert = true;
+			}
 		}
-	}
 #endif
 
-	if (opts.strict) {
-		default_spc.flags.strict = true;
-	}
-
-	if (opts.optimal) {
-		default_spc.flags.optimal = true;
-		default_spc.index = TypeIndex::FIELD_ALL;
-		default_spc.flags.text_detection = false;
-		default_spc.index_uuid_field = UUIDFieldIndex::UUID;
-	}
-
-	banner();
-
-	try {
-		if (!opts.dump_metadata.empty()) {
-			exit_code = dump_metadata();
-		} else if (!opts.dump_schema.empty()) {
-			exit_code = dump_schema();
-		} else if (!opts.dump_documents.empty()) {
-			exit_code = dump_documents();
-		} else if (!opts.restore.empty()) {
-			exit_code = restore();
-		} else {
-			exit_code = server();
+		if (opts.strict) {
+			default_spc.flags.strict = true;
 		}
-	} catch (const BaseException& exc) {
-		exit_code = EX_SOFTWARE;
-		L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-	} catch (const Xapian::Error& exc) {
-		exit_code = EX_SOFTWARE;
-		L_CRIT(exc.get_description());
-	} catch (const std::exception& exc) {
-		exit_code = EX_SOFTWARE;
-		L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
-	} catch (...) {
-		exit_code = EX_SOFTWARE;
-		L_CRIT("Uncaught exception!");
-	}
 
-	XapiandManager::manager.reset();
+		if (opts.optimal) {
+			default_spc.flags.optimal = true;
+			default_spc.index = TypeIndex::FIELD_ALL;
+			default_spc.flags.text_detection = false;
+			default_spc.index_uuid_field = UUIDFieldIndex::UUID;
+		}
 
-	if (opts.detach && !opts.pidfile.empty()) {
-		L_INFO("Removing the pid file.");
-		unlink(opts.pidfile.c_str());
+		banner();
+
+		try {
+			if (!opts.dump_metadata.empty()) {
+				dump_metadata();
+			} else if (!opts.dump_schema.empty()) {
+				dump_schema();
+			} else if (!opts.dump_documents.empty()) {
+				dump_documents();
+			} else if (!opts.restore.empty()) {
+				restore();
+			} else {
+				server();
+			}
+		} catch (const BaseException& exc) {
+			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+			throw Exit(EX_SOFTWARE);
+		} catch (const Xapian::Error& exc) {
+			L_CRIT(exc.get_description());
+			throw Exit(EX_SOFTWARE);
+		} catch (const std::exception& exc) {
+			L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+			throw Exit(EX_SOFTWARE);
+		} catch (...) {
+			L_CRIT("Uncaught exception!");
+			throw Exit(EX_SOFTWARE);
+		}
+
+		XapiandManager::manager.reset();
+
+		if (opts.detach && !opts.pidfile.empty()) {
+			L_INFO("Removing the pid file.");
+			unlink(opts.pidfile.c_str());
+		}
+
+	} catch (const Exit& exc) {
+		exit_code = exc.code;
 	}
 
 	Logging::finish();
+
 	return exit_code;
 }
