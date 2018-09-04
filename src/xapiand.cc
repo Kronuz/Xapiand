@@ -1179,7 +1179,6 @@ int main(int argc, char **argv) {
 		// Initialize options:
 		setup_signal_handlers();
 		std::setlocale(LC_CTYPE, "");
-		demote(opts.uid.c_str(), opts.gid.c_str());
 
 		// Logging thread must be created after fork the parent process
 		auto& handlers = Logging::handlers;
@@ -1195,6 +1194,8 @@ int main(int argc, char **argv) {
 		Logging::log_level += opts.verbosity;
 		Logging::colors = opts.colors;
 		Logging::no_colors = opts.no_colors;
+
+		demote(opts.uid.c_str(), opts.gid.c_str());
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		if (!opts.chert) {
