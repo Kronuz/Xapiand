@@ -1,15 +1,10 @@
 # docker build -t kronuz/xapiand contrib/docker/xapiand && docker push kronuz/xapiand
-FROM kronuz/xapian
+FROM kronuz/xapian as builder
 
-MAINTAINER Kronuz
-
-# Build xapiand
+# Build Xapiand
 RUN CONFIG="\
     -DCMAKE_INSTALL_PREFIX:PATH=/usr \
   " \
-  && mkdir -p /var/db/xapiand \
-  && addgroup -S xapiand \
-  && adduser -D -S -h /var/db/xapiand -s /sbin/nologin -G xapiand xapiand \
   && apk add libuuid \
   && apk add --no-cache --virtual .build-deps \
     ninja \
@@ -24,12 +19,21 @@ RUN CONFIG="\
   && cmake -GNinja $CONFIG .. \
   && ninja install \
   && rm -rf /usr/src/Xapiand \
-  && apk del .build-deps
+  && apk del .build-deps \
+  && apk del build-clang
 
-# Remove clang
-RUN apk del build-clang
+# Xapiand image
+FROM alpine:3.8
 
+MAINTAINER Kronuz
+
+COPY --from=builder /usr /usr
 COPY ./entrypoint.sh /
+
+RUN mkdir -p /var/db \
+  && addgroup -S xapiand \
+  && adduser -D -S -h /var/db/xapiand -s /sbin/nologin -G xapiand xapiand \
+  && chmod +x /entrypoint.sh
 
 EXPOSE 8880
 
