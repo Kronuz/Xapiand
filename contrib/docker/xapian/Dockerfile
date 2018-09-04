@@ -1,6 +1,8 @@
 # docker build -t kronuz/xapian contrib/docker/xapian && docker push kronuz/xapian
 FROM kronuz/clang
 
+MAINTAINER Kronuz
+
 # Build xapian (using clang)
 RUN apk add --no-cache --virtual .build-deps \
     make \

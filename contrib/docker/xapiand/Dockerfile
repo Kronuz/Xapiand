@@ -1,8 +1,16 @@
 # docker build -t kronuz/xapiand contrib/docker/xapiand && docker push kronuz/xapiand
 FROM kronuz/xapian
 
+MAINTAINER Kronuz
+
 # Build xapiand
-RUN apk add libuuid \
+RUN CONFIG="\
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+  " \
+  && mkdir -p /var/db/xapiand \
+  && addgroup -S xapiand \
+  && adduser -D -S -h /var/db/xapiand -s /sbin/nologin -G xapiand xapiand \
+  && apk add libuuid \
   && apk add --no-cache --virtual .build-deps \
     ninja \
     cmake \
@@ -13,7 +21,7 @@ RUN apk add libuuid \
   && git clone --single-branch --depth=1 "https://github.com/Kronuz/Xapiand" /usr/src/Xapiand \
   && mkdir /usr/src/Xapiand/build \
   && cd /usr/src/Xapiand/build \
-  && cmake -GNinja -DCMAKE_INSTALL_PREFIX:PATH=/usr .. \
+  && cmake -GNinja $CONFIG .. \
   && ninja install \
   && rm -rf /usr/src/Xapiand \
   && apk del .build-deps
@@ -21,6 +29,9 @@ RUN apk add libuuid \
 # Remove clang
 RUN apk del build-clang
 
+COPY ./entrypoint.sh /
+
 EXPOSE 8880
 
-CMD ["xapiand"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["-v"]
