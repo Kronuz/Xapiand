@@ -30,7 +30,8 @@ MAINTAINER Kronuz
 COPY --from=builder /usr /usr
 COPY ./entrypoint.sh /
 
-RUN mkdir -p /var/db \
+RUN apk add libuuid \
+  && mkdir -p /var/db \
   && addgroup -S xapiand \
   && adduser -D -S -h /var/db/xapiand -s /sbin/nologin -G xapiand xapiand \
   && chmod +x /entrypoint.sh
