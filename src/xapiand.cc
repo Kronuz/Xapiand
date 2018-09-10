@@ -72,6 +72,11 @@
 #include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
 #endif
 
+#if defined(__linux__) && !defined(__GLIBC__)
+#include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np
+#endif
+
+
 #define FDS_RESERVED     50          // Is there a better approach?
 #define FDS_PER_CLIENT    2          // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7          // Writable~=7, Readable~=5
@@ -1167,6 +1172,15 @@ void restore() {
 
 int main(int argc, char **argv) {
 	int exit_code = EX_OK;
+
+
+#if defined(__linux__) && !defined(__GLIBC__)
+	pthread_attr_t a;
+	memset(&a, 0, sizeof(pthread_attr_t));
+	pthread_attr_setstacksize(&a, 8*1024*1024);  // 8MB as GLIBC
+	pthread_attr_setguardsize(&a, 4096);  // one page
+	pthread_setattr_default_np(&a);
+#endif
 
 	try {
 		parseOptions(argc, argv);
