@@ -125,8 +125,8 @@ class Forward(object):
         try:
             self.forward.connect((host, port))
             return self.forward
-        except Exception, e:
-            print(e)
+        except Exception as exc:
+            print(exc)
             return False
 
 
@@ -238,12 +238,12 @@ class RawProxyServer(ProxyServer):
     def on_send(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
         msg = lightyellow("%s <-- %s" % (from_peer, to_peer)), yellow(repr(data))
-        return msg
+        self.print(from_client, msg)
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
         msg = lightgreen("%s --> %s" % (from_peer, to_peer)), green(repr(data))
-        return msg
+        self.print(from_client, msg)
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         sent = self.reads.setdefault(from_client, [0, 0])[RECEIVING]
