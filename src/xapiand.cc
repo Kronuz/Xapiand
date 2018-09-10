@@ -217,9 +217,9 @@ void sig_handler(int sig) {
 	}
 
 // #if defined(__APPLE__) || defined(__FreeBSD__)
-// 	if (sig == SIGINFO) {
-// 		toggle_hooks(sig);
-// 	}
+//  if (sig == SIGINFO) {
+//      toggle_hooks(sig);
+//  }
 // #endif
 
 	if (XapiandManager::manager) {
