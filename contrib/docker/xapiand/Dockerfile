@@ -1,6 +1,9 @@
 # docker build -t kronuz/xapiand contrib/docker/xapiand && docker push kronuz/xapiand
 FROM kronuz/xapian as builder
 
+# Bust cache
+ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master version.json
+
 # Build Xapiand
 RUN CONFIG="\
     -DCMAKE_INSTALL_PREFIX:PATH=/usr \
