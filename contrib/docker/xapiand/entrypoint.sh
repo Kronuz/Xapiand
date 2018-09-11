@@ -14,7 +14,7 @@ if [ "$GID" == 'root' ]; then
 fi
 
 # if the first argument starts with '-', prepend xapiand
-if [ "${1:0:1}" = '-' ]; then
+if [ "${1:0:1}" = '-' ] || [ -z "$1" ]; then
 	set -- xapiand "$@"
 fi
 
