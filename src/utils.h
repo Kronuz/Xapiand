@@ -145,6 +145,10 @@ void _tcp_nopush(int sock, int optval);
 
 unsigned long long file_descriptors_cnt();
 
+std::string check_compiler();
+std::string check_OS();
+std::string check_architecture();
+
 inline void tcp_nopush(int sock) {
 	_tcp_nopush(sock, 1);
 }
