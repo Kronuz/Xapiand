@@ -35,6 +35,7 @@
 #include "ev/ev++.h"
 #include "length.h"
 #include "opts.h"
+#include "prometheus/registry.h"
 #include "schemas_lru.h"
 #include "stats.h"
 #include "threadpool.h"
@@ -68,6 +69,178 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 	const char *p_end = p + serialized.size();
 	return unserialise_length(&p, p_end);
 }
+
+enum class RequestType {
+	INDEX,
+	SEARCH,
+	DELETE,
+	PATCH,
+	MERGE,
+	AGGREGATIONS,
+	COMMIT
+};
+
+class Requestinfo {
+public:
+	Requestinfo(const std::string& nodename);
+	~Requestinfo() = default;
+
+	std::shared_ptr<prometheus::Registry> registry;
+
+	prometheus::Family<prometheus::Summary>& index_summary;
+	prometheus::Summary& xapiand_index_summary;
+
+	prometheus::Family<prometheus::Summary>& search_summary;
+	prometheus::Summary& xapiand_search_summary;
+
+	prometheus::Family<prometheus::Summary>& delete_summary;
+	prometheus::Summary& xapiand_delete_summary;
+
+	prometheus::Family<prometheus::Summary>& patch_summary;
+	prometheus::Summary& xapiand_patch_summary;
+
+	prometheus::Family<prometheus::Summary>& merge_summary;
+	prometheus::Summary& xapiand_merge_summary;
+
+	prometheus::Family<prometheus::Summary>& aggregation_summary;
+	prometheus::Summary& xapiand_aggregation_summary;
+
+	// clients_tasks:
+	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_run;
+	prometheus::Gauge& xapiand_http_clients_run_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_queue;
+	prometheus::Gauge& xapiand_http_clients_queue_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_capacity;
+	prometheus::Gauge& xapiand_http_clients_capacity_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_pool_size;
+	prometheus::Gauge& xapiand_http_clients_pool_size_met;
+
+	// server_tasks:
+	prometheus::Family<prometheus::Gauge>& xapiand_servers_run;
+	prometheus::Gauge& xapiand_servers_run_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_servers_pool_size;
+	prometheus::Gauge& xapiand_servers_pool_size_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_servers_queue;
+	prometheus::Gauge& xapiand_servers_queue_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_servers_capacity;
+	prometheus::Gauge& 	xapiand_servers_capacity_met;
+
+	// committers_threads:
+	prometheus::Family<prometheus::Gauge>& xapiand_committers_running;
+	prometheus::Gauge& xapiand_committers_running_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_committers_queue;
+	prometheus::Gauge& xapiand_committers_queue_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_committers_capacity;
+	prometheus::Gauge& xapiand_committers_capacity_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_committers_pool_size;
+	prometheus::Gauge& xapiand_committers_pool_size_met;
+
+	// fsync_threads:
+	prometheus::Family<prometheus::Gauge>& xapiand_fsync_running;
+	prometheus::Gauge& xapiand_fsync_running_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_fsync_queue;
+	prometheus::Gauge& xapiand_fsync_queue_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_fsync_capacity;
+	prometheus::Gauge& xapiand_fsync_capacity_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_fsync_pool_size;
+	prometheus::Gauge& xapiand_fsync_pool_size_met;
+
+	// connections:
+	prometheus::Family<prometheus::Gauge>& xapiand_http_current_connections;
+	prometheus::Gauge& xapiand_http_current_connections_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_http_peak_connections;
+	prometheus::Gauge& xapiand_http_peak_connections_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_file_descriptors;
+	prometheus::Gauge& xapiand_file_descriptors_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_resident_memory_bytes;
+	prometheus::Gauge& xapiand_resident_memory_bytes_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_virtual_memory_bytes;
+	prometheus::Gauge& xapiand_virtual_memory_bytes_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_used_memory_bytes;
+	prometheus::Gauge& xapiand_used_memory_bytes_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_memory_system;
+	prometheus::Gauge& xapiand_total_memory_system_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_virtual_memory_used;
+	prometheus::Gauge& xapiand_total_virtual_memory_used_met;
+
+	// databases:
+	prometheus::Family<prometheus::Gauge>& xapiand_readable_db;
+	prometheus::Gauge& xapiand_readable_db_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_readable_db;
+	prometheus::Gauge& xapiand_total_readable_db_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_writable_db;
+	prometheus::Gauge& xapiand_writable_db_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_writable_db;
+	prometheus::Gauge& xapiand_total_writable_db_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_db;
+	prometheus::Gauge& xapiand_total_db_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_total_peak_db;
+	prometheus::Gauge& xapiand_total_peak_db_met;
+
+	// request:
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_index;
+	prometheus::Gauge& xapiand_max_time_index_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_search;
+	prometheus::Gauge& xapiand_max_time_search_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_delete;
+	prometheus::Gauge& xapiand_max_time_delete_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_patch;
+	prometheus::Gauge& xapiand_max_time_patch_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_merge;
+	prometheus::Gauge& xapiand_max_time_merge_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_max_time_aggregation;
+	prometheus::Gauge& xapiand_max_time_aggregation_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_index_total;
+	prometheus::Gauge& xapiand_index_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_search_total;
+	prometheus::Gauge& xapiand_search_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_delete_total;
+	prometheus::Gauge& xapiand_delete_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_patch_total;
+	prometheus::Gauge& xapiand_patch_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_merge_total;
+	prometheus::Gauge& xapiand_merge_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_aggregation_total;
+	prometheus::Gauge& xapiand_aggregation_total_met;
+
+	prometheus::Family<prometheus::Gauge>& xapiand_commit_total;
+	prometheus::Gauge& xapiand_commit_total_met;
+};
 
 
 class XapiandManager : public Worker  {
@@ -107,6 +280,8 @@ protected:
 
 	void make_servers();
 	void make_replicators();
+
+	std::unique_ptr<Requestinfo> req_info;
 
 public:
 	std::string __repr__() const override {
@@ -173,6 +348,10 @@ public:
 
 	bool is_single_node();
 
+	void update_req_info(std::uint64_t duration, RequestType typ);
+
+	void set_request_info();
+
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();
 
@@ -194,6 +373,7 @@ public:
 	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, std::chrono::duration<double, std::milli> timeout=1s);
 
 	void server_status(MsgPack& stats);
+	std::string server_metrics();
 	void get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req);
 
 	inline decltype(auto) get_lock() noexcept {

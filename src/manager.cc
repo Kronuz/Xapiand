@@ -22,67 +22,81 @@
 
 #include "manager.h"
 
-#include <algorithm>                         // for move
-#include <atomic>                            // for atomic, atomic_int
-#include <chrono>                            // for duration, system_clock
-#include <cstdint>                           // for uint64_t, UINT64_MAX
-#include <ctime>                             // for time_t, ctime, NULL
-#include <cctype>                            // for isspace
-#include <exception>                         // for exception
-#include <functional>                        // for __base
-#include <ifaddrs.h>                         // for ifaddrs, freeifaddrs
-#include <memory>                            // for allocator, shared_ptr
-#include <mutex>                             // for mutex, lock_guard, uniqu...
-#include <net/if.h>                          // for IFF_LOOPBACK
-#include <netinet/in.h>                      // for sockaddr_in, INET_ADDRST...
-#include <ratio>                             // for milli
-#include <regex>                             // for smatch, regex, operator|
-#include <cstdlib>                           // for size_t, exit
-#include <cstring>                           // for strerror
-#include <string>                            // for string, basic_string
-#include <errno.h>                           // for __error, errno
-#include <fcntl.h>                           // for O_CLOEXEC, O_CREAT, O_RD...
-#include <signal.h>                          // for SIGTERM, SIGINT
-#include <sys/socket.h>                      // for AF_INET, sockaddr
-#include <sys/types.h>                       // for uint64_t
-#include <sysexits.h>                        // for EX_IOERR, EX_NOINPUT
-#include <unistd.h>                          // for ssize_t, getpid
-#include <unordered_map>                     // for __hash_map_const_iterator
-#include <utility>                           // for pair
-#include <vector>                            // for vector
-#include <xapian.h>                          // for Error
+#include <algorithm>                          // for move
+#include <atomic>                             // for atomic, atomic_int
+#include <chrono>                             // for duration, system_clock
+#include <cstdint>                            // for uint64_t, UINT64_MAX
+#include <ctime>                              // for time_t, ctime, NULL
+#include <cctype>                             // for isspace
+#include <exception>                          // for exception
+#include <functional>                         // for __base
+#include <ifaddrs.h>                          // for ifaddrs, freeifaddrs
+#include <memory>                             // for allocator, shared_ptr
+#include <mutex>                              // for mutex, lock_guard, uniqu...
+#include <net/if.h>                           // for IFF_LOOPBACK
+#include <netinet/in.h>                       // for sockaddr_in, INET_ADDRST...
+#include <ratio>                              // for milli
+#include <regex>                              // for smatch, regex, operator|
+#include <cstdlib>                            // for size_t, exit
+#include <cstring>                            // for strerror
+#include <string>                             // for string, basic_string
+#include <errno.h>                            // for __error, errno
+#include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
+#include <signal.h>                           // for SIGTERM, SIGINT
+#include <sys/socket.h>                       // for AF_INET, sockaddr
+#include <sys/types.h>                        // for uint64_t
+#include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT
+#include <unistd.h>                           // for ssize_t, getpid
+#include <unordered_map>                      // for __hash_map_const_iterator
+#include <utility>                            // for pair
+#include <vector>                             // for vector
+#include <xapian.h>                           // for Error
 
-#include "async_fsync.h"                     // for AsyncFsync
-#include "atomic_shared_ptr.h"               // for atomic_shared_ptr
-#include "database.h"                        // for DatabasePool
-#include "database_autocommit.h"             // for DatabaseAutocommit
-#include "database_handler.h"                // for DatabaseHandler
-#include "database_utils.h"                  // for RESERVED_TYPE, DB_NOWAL
-#include "endpoint.h"                        // for Node, Endpoint, local_node
-#include "ev/ev++.h"                         // for async, loop_ref (ptr only)
-#include "exception.h"                       // for Exit, ClientError, Excep...
-#include "http_parser.h"                     // for http_method
-#include "ignore_unused.h"                   // for ignore_unused
-#include "io_utils.h"                        // for close, open, read, write
-#include "log.h"                             // for L_CALL, L_DEBUG
-#include "memory_stats.h"                    // for get_total_ram, get_total_virtual_memor...
-#include "msgpack.h"                         // for MsgPack, object::object
-#include "serialise.h"                       // for KEYWORD_STR
-#include "servers/http.h"                    // for Http
-#include "servers/server.h"                  // for XapiandServer, XapiandSe...
-#include "servers/server_http.h"             // for HttpServer
-#include "threadpool.h"                      // for ThreadPool
-#include "utils.h"                           // for Stats::Pos, SLOT_TIME_SE...
-#include "worker.h"                          // for Worker, enable_make_shared
+#if defined(XAPIAND_V8)
+#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#endif
+
+#include "async_fsync.h"                      // for AsyncFsync
+#include "atomic_shared_ptr.h"                // for atomic_shared_ptr
+#include "package.h"                          // for Package::FULLVERSION Package::HASH
+#include "database.h"                         // for DatabasePool
+#include "database_autocommit.h"              // for DatabaseAutocommit
+#include "database_handler.h"                 // for DatabaseHandler
+#include "database_utils.h"                   // for RESERVED_TYPE, DB_NOWAL
+#include "endpoint.h"                         // for Node, Endpoint, local_node
+#include "ev/ev++.h"                          // for async, loop_ref (ptr only)
+#include "exception.h"                        // for Exit, ClientError, Excep...
+#include "http_parser.h"                      // for http_method
+#include "ignore_unused.h"                    // for ignore_unused
+#include "io_utils.h"                         // for close, open, read, write
+#include "log.h"                              // for L_CALL, L_DEBUG
+#include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
+#include "msgpack.h"                          // for MsgPack, object::object
+#include "serialise.h"                        // for KEYWORD_STR
+#include "servers/http.h"                     // for Http
+#include "servers/server.h"                   // for XapiandServer, XapiandSe...
+#include "servers/server_http.h"              // for HttpServer
+#include "threadpool.h"                       // for ThreadPool
+#include "utils.h"                            // for Stats::Pos, SLOT_TIME_SE...
+#include "worker.h"                           // for Worker, enable_make_shared
+
+
+#include "prometheus/serializer.h"            // for Serializer
+#include "prometheus/text_serializer.h"       // for text_serializer
+#include "prometheus/handler.h"               // for SerializeGet
+
 
 #ifdef XAPIAND_CLUSTERING
-#include "replicator.h"                      // for XapiandReplicator
-#include "servers/binary.h"                  // for Binary
-#include "servers/discovery.h"               // for Discovery
-#include "servers/raft.h"                    // for Raft
-#include "servers/server_binary.h"           // for RaftBinary
-#include "servers/server_discovery.h"        // for DicoveryServer
-#include "servers/server_raft.h"             // for RaftServer
+#include "replicator.h"                       // for XapiandReplicator
+#include "servers/binary.h"                   // for Binary
+#include "servers/discovery.h"                // for Discovery
+#include "servers/raft.h"                     // for Raft
+#include "servers/server_binary.h"            // for RaftBinary
+#include "servers/server_discovery.h"         // for DicoveryServer
+#include "servers/server_raft.h"              // for RaftServer
 #endif
 
 
@@ -91,6 +105,7 @@
 #define L_MANAGER L_NOTHING
 #endif
 
+#define NODE_LABEL "node"
 
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
@@ -108,6 +123,305 @@ void sig_exit(int sig) {
 		XapiandManager::manager->signal_sig(sig);
 	}
 }
+
+
+Requestinfo::Requestinfo(const std::string& nodename)
+	: registry(std::make_shared<prometheus::Registry>()),
+	  index_summary(prometheus::BuildSummary()
+					.Name("xapiand_index_summary")
+					.Help("Index requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_index_summary(index_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  search_summary(prometheus::BuildSummary()
+					.Name("xapiand_search_summary")
+					.Help("Search requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_search_summary(search_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  delete_summary(prometheus::BuildSummary()
+					.Name("xapiand_delete_summary")
+					.Help("Delete requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  patch_summary(prometheus::BuildSummary()
+					.Name("xapiand_patch_summary")
+					.Help("Path requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  merge_summary(prometheus::BuildSummary()
+					.Name("xapiand_merge_summary")
+					.Help("Merge requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_merge_summary(merge_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  aggregation_summary(prometheus::BuildSummary()
+					.Name("xapiand_aggretation_summary")
+					.Help("Aggregation requests time serie")
+					.Labels({{NODE_LABEL, nodename}})
+					.Register(*registry)),
+	  xapiand_aggregation_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  xapiand_http_clients_run(prometheus::BuildGauge()
+					.Name("xapiand_http_clients_run")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Amount of clients running")
+					.Register(*registry)),
+	  xapiand_http_clients_run_met(xapiand_http_clients_run.Add(std::map<std::string, std::string>())),
+	  xapiand_http_clients_queue(prometheus::BuildGauge()
+					.Name("xapiand_http_clients_queue")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Clients in the queue")
+					.Register(*registry)),
+	  xapiand_http_clients_queue_met(xapiand_http_clients_queue.Add(std::map<std::string, std::string>())),
+	  xapiand_http_clients_capacity(prometheus::BuildGauge()
+					.Name("xapiand_http_clients_capacity")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Client queue capacity")
+					.Register(*registry)),
+	  xapiand_http_clients_capacity_met(xapiand_http_clients_capacity.Add(std::map<std::string, std::string>())),
+	  xapiand_http_clients_pool_size(prometheus::BuildGauge()
+					.Name("xapiand_http_clients_pool_size")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Client total pool size")
+					.Register(*registry)),
+	  xapiand_http_clients_pool_size_met(xapiand_http_clients_pool_size.Add(std::map<std::string, std::string>())),
+	  xapiand_servers_run(prometheus::BuildGauge()
+					.Name("xapiand_servers_run")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Amount of servers running")
+					.Register(*registry)),
+	  xapiand_servers_run_met(xapiand_servers_run.Add(std::map<std::string, std::string>())),
+	  xapiand_servers_pool_size(prometheus::BuildGauge()
+					.Name("xapiand_servers_pool_size")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Server pool size")
+					.Register(*registry)),
+	  xapiand_servers_pool_size_met(xapiand_servers_pool_size.Add(std::map<std::string, std::string>())),
+	  xapiand_servers_queue(prometheus::BuildGauge()
+					.Name("xapiand_servers_queue")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Servers in the queue")
+					.Register(*registry)),
+	  xapiand_servers_queue_met(xapiand_servers_queue.Add(std::map<std::string, std::string>())),
+	  xapiand_servers_capacity(prometheus::BuildGauge()
+					.Name("xapiand_servers_capacity")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Server queue capacity")
+					.Register(*registry)),
+	  xapiand_servers_capacity_met(xapiand_servers_capacity.Add(std::map<std::string, std::string>())),
+	  xapiand_committers_running(prometheus::BuildGauge()
+					.Name("xapiand_committers_running")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Amount of committers running")
+					.Register(*registry)),
+	  xapiand_committers_running_met(xapiand_committers_running.Add(std::map<std::string, std::string>())),
+	  xapiand_committers_queue(prometheus::BuildGauge()
+					.Name("xapiand_committers_queue")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Committers in the queue")
+					.Register(*registry)),
+	  xapiand_committers_queue_met(xapiand_committers_queue.Add(std::map<std::string, std::string>())),
+	  xapiand_committers_capacity(prometheus::BuildGauge()
+					.Name("xapiand_committers_capacity")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Committers queue capacity")
+					.Register(*registry)),
+	  xapiand_committers_capacity_met(xapiand_committers_capacity.Add(std::map<std::string, std::string>())),
+	  xapiand_committers_pool_size(prometheus::BuildGauge()
+					.Name("xapiand_committers_pool_size")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Server pool size")
+					.Register(*registry)),
+	  xapiand_committers_pool_size_met(xapiand_committers_pool_size.Add(std::map<std::string, std::string>())),
+	  xapiand_fsync_running(prometheus::BuildGauge()
+					.Name("xapiand_fsync_running")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Amount of fsync running")
+					.Register(*registry)),
+	  xapiand_fsync_running_met(xapiand_fsync_running.Add(std::map<std::string, std::string>())),
+	  xapiand_fsync_queue(prometheus::BuildGauge()
+					.Name("xapiand_fsync_queue")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Fsync in the queue")
+					.Register(*registry)),
+	  xapiand_fsync_queue_met(xapiand_fsync_queue.Add(std::map<std::string, std::string>())),
+	  xapiand_fsync_capacity(prometheus::BuildGauge()
+					.Name("xapiand_fsync_capacity")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Fsync queue capacity")
+					.Register(*registry)),
+	  xapiand_fsync_capacity_met(xapiand_fsync_capacity.Add(std::map<std::string, std::string>())),
+	  xapiand_fsync_pool_size(prometheus::BuildGauge()
+					.Name("xapiand_fsync_pool_size")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Fsync pool size")
+					.Register(*registry)),
+	  xapiand_fsync_pool_size_met(xapiand_fsync_pool_size.Add(std::map<std::string, std::string>())),
+	  xapiand_http_current_connections(prometheus::BuildGauge()
+					.Name("xapiand_http_current_connections")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Current http connections")
+					.Register(*registry)),
+	  xapiand_http_current_connections_met(xapiand_http_current_connections.Add(std::map<std::string, std::string>())),
+	  xapiand_http_peak_connections(prometheus::BuildGauge()
+					.Name("xapiand_http_peak_connections")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Max http connections")
+					.Register(*registry)),
+	  xapiand_http_peak_connections_met(xapiand_http_peak_connections.Add(std::map<std::string, std::string>())),
+	  xapiand_file_descriptors(prometheus::BuildGauge()
+					.Name("xapiand_file_descriptors")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Amount of file descriptors in use")
+					.Register(*registry)),
+	  xapiand_file_descriptors_met(xapiand_file_descriptors.Add(std::map<std::string, std::string>())),
+	  xapiand_resident_memory_bytes(prometheus::BuildGauge()
+					.Name("xapiand_resident_memory_bytes")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Memory in use")
+					.Register(*registry)),
+	  xapiand_resident_memory_bytes_met(xapiand_resident_memory_bytes.Add(std::map<std::string, std::string>())),
+	  xapiand_virtual_memory_bytes(prometheus::BuildGauge()
+					.Name("xapiand_virtual_memory_bytes")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Virtual memory in use")
+					.Register(*registry)),
+	  xapiand_virtual_memory_bytes_met(xapiand_virtual_memory_bytes.Add(std::map<std::string, std::string>())),
+	  xapiand_used_memory_bytes(prometheus::BuildGauge()
+					.Name("xapiand_used_memory_bytes")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total memory currently allocated")
+					.Register(*registry)),
+	  xapiand_used_memory_bytes_met(xapiand_used_memory_bytes.Add(std::map<std::string, std::string>())),
+	  xapiand_total_memory_system(prometheus::BuildGauge()
+					.Name("xapiand_total_memory_system")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total memory used")
+					.Register(*registry)),
+	  xapiand_total_memory_system_met(xapiand_total_memory_system.Add(std::map<std::string, std::string>())),
+	  xapiand_total_virtual_memory_used(prometheus::BuildGauge()
+					.Name("xapiand_total_virtual_memory_used")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total virtual memory used")
+					.Register(*registry)),
+	  xapiand_total_virtual_memory_used_met(xapiand_total_virtual_memory_used.Add(std::map<std::string, std::string>())),
+	  xapiand_readable_db(prometheus::BuildGauge()
+					.Name("xapiand_readable_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Readable databases in use")
+					.Register(*registry)),
+	  xapiand_readable_db_met(xapiand_readable_db.Add(std::map<std::string, std::string>())),
+	  xapiand_total_readable_db(prometheus::BuildGauge()
+					.Name("xapiand_total_readable_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total readable databases used")
+					.Register(*registry)),
+	  xapiand_total_readable_db_met(xapiand_total_readable_db.Add(std::map<std::string, std::string>())),
+	  xapiand_writable_db(prometheus::BuildGauge()
+					.Name("xapiand_writable_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Writable databases in use")
+					.Register(*registry)),
+	  xapiand_writable_db_met(xapiand_writable_db.Add(std::map<std::string, std::string>())),
+	  xapiand_total_writable_db(prometheus::BuildGauge()
+					.Name("xapiand_total_writable_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total writable databases used")
+					.Register(*registry)),
+	  xapiand_total_writable_db_met(xapiand_total_writable_db.Add(std::map<std::string, std::string>())),
+	  xapiand_total_db(prometheus::BuildGauge()
+					.Name("xapiand_total_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total databases in use")
+					.Register(*registry)),
+	  xapiand_total_db_met(xapiand_total_db.Add(std::map<std::string, std::string>())),
+	  xapiand_total_peak_db(prometheus::BuildGauge()
+					.Name("xapiand_total_peak_db")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Total databases used")
+					.Register(*registry)),
+	  xapiand_total_peak_db_met(xapiand_total_peak_db.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_index(prometheus::BuildGauge()
+					.Name("xapiand_max_time_index")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by index (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_index_met(xapiand_max_time_index.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_search(prometheus::BuildGauge()
+					.Name("xapiand_max_time_search")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by search (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_search_met(xapiand_max_time_search.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_delete(prometheus::BuildGauge()
+					.Name("time_delete")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by delete (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_delete_met(xapiand_max_time_delete.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_patch(prometheus::BuildGauge()
+					.Name("xapiand_max_time_patch")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by patch (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_patch_met(xapiand_max_time_patch.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_merge(prometheus::BuildGauge()
+					.Name("xapiand_max_time_merge")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by merge (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_merge_met(xapiand_max_time_merge.Add(std::map<std::string, std::string>())),
+	  xapiand_max_time_aggregation(prometheus::BuildGauge()
+					.Name("xapiand_max_time_aggregation")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum time tooked by aggregation (ms)")
+					.Register(*registry)),
+	  xapiand_max_time_aggregation_met(xapiand_max_time_aggregation.Add(std::map<std::string, std::string>())),
+	  xapiand_index_total(prometheus::BuildGauge()
+					.Name("xapiand_index_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of indexing")
+					.Register(*registry)),
+	  xapiand_index_total_met(xapiand_index_total.Add(std::map<std::string, std::string>())),
+	  xapiand_search_total(prometheus::BuildGauge()
+					.Name("xapiand_search_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of searching")
+					.Register(*registry)),
+	  xapiand_search_total_met(xapiand_search_total.Add(std::map<std::string, std::string>())),
+	  xapiand_delete_total(prometheus::BuildGauge()
+					.Name("xapiand_delete_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of deleting")
+					.Register(*registry)),
+	  xapiand_delete_total_met(xapiand_delete_total.Add(std::map<std::string, std::string>())),
+	  xapiand_patch_total(prometheus::BuildGauge()
+					.Name("xapiand_patch_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of patching")
+					.Register(*registry)),
+	  xapiand_patch_total_met(xapiand_patch_total.Add(std::map<std::string, std::string>())),
+	  xapiand_merge_total(prometheus::BuildGauge()
+					.Name("xapiand_merge_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of merging")
+					.Register(*registry)),
+	  xapiand_merge_total_met(xapiand_merge_total.Add(std::map<std::string, std::string>())),
+	  xapiand_aggregation_total(prometheus::BuildGauge()
+					.Name("xapiand_aggregation_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of search with aggregations")
+					.Register(*registry)),
+	  xapiand_aggregation_total_met(xapiand_aggregation_total.Add(std::map<std::string, std::string>())),
+	  xapiand_commit_total(prometheus::BuildGauge()
+					.Name("xapiand_commit_total")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Number of commits")
+					.Register(*registry)),
+	  xapiand_commit_total_met(xapiand_commit_total.Add(std::map<std::string, std::string>())) { }
+
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
@@ -444,6 +758,16 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 }
 
 
+void
+XapiandManager::set_request_info()
+{
+	L_CALL("XapiandManager::set_request_info()");
+	if (!req_info) {
+		req_info = std::make_unique<Requestinfo>(node_name);
+	}
+}
+
+
 struct sockaddr_in
 XapiandManager::host_address()
 {
@@ -702,6 +1026,7 @@ XapiandManager::run()
 	if (opts.solo) {
 		setup_node();
 	}
+	set_request_info();
 
 	try {
 		L_EV("Entered manager loop...");
@@ -1111,6 +1436,84 @@ XapiandManager::server_status(MsgPack& stats)
 }
 
 
+std::string
+XapiandManager::server_metrics()
+{
+	L_CALL("XapiandManager::server_metrics()");
+
+	std::vector<std::string> values({
+			string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+#if defined(XAPIAND_V8)
+			string::format("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+			string::format("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+#endif
+	});
+
+	auto short_version = "(" + Package::HASH + ") " + Package::FULLVERSION;
+	auto full_version = short_version + " on " + check_architecture() + ", compiled by " + check_compiler() + " (" + check_OS() + ")";
+
+	auto& gauge_xapiand_version = prometheus::BuildGauge()
+							.Name("xapiand_info")
+							.Labels({{NODE_LABEL, node_name}})
+							.Help("Version string as reported by Xapiand")
+							.Register(*req_info->registry);
+	auto& version_gauge = gauge_xapiand_version.Add({{"short_version", short_version}, {"version", full_version}});
+	version_gauge.Set(1);
+
+	// clients_tasks:
+	req_info->xapiand_http_clients_run_met.Set(client_pool.running_size());
+	req_info->xapiand_http_clients_queue_met.Set(client_pool.size());
+	req_info->xapiand_http_clients_capacity_met.Set(client_pool.threadpool_capacity());
+	req_info->xapiand_http_clients_pool_size_met.Set(client_pool.threadpool_size());
+
+	// servers_threads:
+	req_info->xapiand_servers_run_met.Set(server_pool.running_size());
+	req_info->xapiand_servers_run_met.Set(server_pool.threadpool_size());
+	req_info->xapiand_servers_queue_met.Set(server_pool.size());
+	req_info->xapiand_servers_capacity_met.Set(server_pool.size());
+
+	// committers_threads:
+	req_info->xapiand_committers_running_met.Set(DatabaseAutocommit::running_size());
+	req_info->xapiand_committers_queue_met.Set(DatabaseAutocommit::running_size());
+	req_info->xapiand_committers_capacity_met.Set(DatabaseAutocommit::threadpool_capacity());
+	req_info->xapiand_committers_pool_size_met.Set(DatabaseAutocommit::threadpool_capacity());
+
+	// fsync_threads:
+	req_info->xapiand_fsync_running_met.Set(AsyncFsync::running_size());
+	req_info->xapiand_fsync_queue_met.Set(AsyncFsync::size());
+	req_info->xapiand_fsync_capacity_met.Set(AsyncFsync::threadpool_capacity());
+	req_info->xapiand_fsync_pool_size_met.Set(AsyncFsync::threadpool_size());
+
+	// connections:
+	req_info->xapiand_http_current_connections_met.Set(XapiandServer::http_clients.load());
+	req_info->xapiand_http_peak_connections_met.Set(XapiandServer::max_http_clients.load());
+
+	// file_descriptors:
+	req_info->xapiand_file_descriptors_met.Set(file_descriptors_cnt());
+
+	// memory:
+	req_info->xapiand_resident_memory_bytes_met.Set(get_current_memory_by_process());
+	req_info->xapiand_virtual_memory_bytes_met.Set(get_current_memory_by_process(false));
+	//req_info->xapiand_total_writable_db_met.Set(allocator::total_allocated());
+	req_info->xapiand_total_memory_system_met.Set(get_total_ram());
+	req_info->xapiand_total_virtual_memory_used_met.Set(get_total_virtual_memory());
+
+	// databases:
+	auto wdb = database_pool.total_writable_databases();
+	auto rdb = database_pool.total_readable_databases();
+	req_info->xapiand_readable_db_met.Set(rdb.first);
+	req_info->xapiand_total_readable_db_met.Set(rdb.second);
+	req_info->xapiand_writable_db_met.Set(wdb.first);
+	req_info->xapiand_total_writable_db_met.Set(wdb.second);
+	req_info->xapiand_total_db_met.Set(rdb.first + wdb.first);
+	req_info->xapiand_total_peak_db_met.Set(rdb.second + wdb.second);
+
+	return prometheus::detail::SerializeGet(*req_info->registry);
+}
+
+
 void
 XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req)
 {
@@ -1208,6 +1611,52 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 			}
 		}
 		stats.push_back(std::move(stat));
+	}
+}
+
+
+void
+XapiandManager::update_req_info(std::uint64_t duration, RequestType typ)
+{
+	switch (typ) {
+		case RequestType::INDEX:
+			req_info->xapiand_index_total_met.Increment();
+			if (req_info->xapiand_max_time_index_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_index_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::SEARCH:
+			req_info->xapiand_search_total_met.Increment();
+			if (req_info->xapiand_max_time_search_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_search_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::DELETE:
+			req_info->xapiand_delete_total_met.Increment();
+			if (req_info->xapiand_max_time_delete_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_delete_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::PATCH:
+			req_info->xapiand_patch_total_met.Increment();
+			if (req_info->xapiand_max_time_patch_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_patch_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::MERGE:
+			req_info->xapiand_merge_total_met.Increment();
+			if (req_info->xapiand_max_time_merge_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_merge_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::AGGREGATIONS:
+			req_info->xapiand_aggregation_total_met.Increment();
+			if (req_info->xapiand_max_time_aggregation_met.Value() < (duration / 1e6)) {
+				req_info->xapiand_max_time_aggregation_met.Set(duration / 1e6);
+			}
+			break;
+		case RequestType::COMMIT:
+			req_info->xapiand_commit_total_met.Increment();
 	}
 }
 

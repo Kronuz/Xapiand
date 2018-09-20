@@ -135,6 +135,7 @@ constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
 constexpr const char COMMAND_DUMP[]        = COMMAND_PREFIX "dump";
 constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
 constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
+constexpr const char COMMAND_METRICS[]     = COMMAND_PREFIX "metrics";
 constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
 constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
 constexpr const char COMMAND_RESTORE[]     = COMMAND_PREFIX "restore";
@@ -149,6 +150,7 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 	OPTION(DUMP) \
 	OPTION(INFO) \
 	OPTION(METADATA) \
+	OPTION(METRICS) \
 	OPTION(NODES) \
 	OPTION(QUIT) \
 	OPTION(RESTORE) \
@@ -263,6 +265,7 @@ class HttpClient : public BaseClient {
 	int on_data(http_parser* parser, const char* at, size_t length);
 
 	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void metrics_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void info_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void write_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);

@@ -798,6 +798,10 @@ HttpClient::_get(Request& request, Response& response, enum http_method method)
 			request.path_parser.skip_id();  // Command has no ID
 			info_view(request, response, method, cmd);
 			break;
+		case Command::CMD_METRICS:
+			request.path_parser.skip_id();  // Command has no ID
+			metrics_view(request, response, method, cmd);
+			break;
 		case Command::CMD_STATS:
 			request.path_parser.skip_id();  // Command has no ID
 			stats_view(request, response, method, cmd);
@@ -1015,6 +1019,20 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 
 void
+HttpClient::metrics_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+{
+	L_CALL("HttpClient::metrics_view()");
+
+	endpoints_maker(request, 1s);
+
+	request.processing = std::chrono::system_clock::now();
+
+	auto server_info =  XapiandManager::manager->server_metrics();
+	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, server_info, "text/plain", "", server_info.size()));
+}
+
+
+void
 HttpClient::document_info_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
 {
 	L_CALL("HttpClient::document_info_view()");
@@ -1064,6 +1082,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
+	XapiandManager::manager->update_req_info(took, RequestType::DELETE);
 }
 
 
@@ -1117,6 +1136,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
+	XapiandManager::manager->update_req_info(took, RequestType::INDEX);
 }
 
 
@@ -1157,15 +1177,19 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 	request.processing = std::chrono::system_clock::now();
 
+	auto rt = RequestType::MERGE;
+
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
 	auto& decoded_body = request.decoded_body();
 	if (method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
+		rt = RequestType::PATCH;
 	} else if (method == HTTP_STORE) {
 		response_obj = db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
 		response_obj = db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
+		rt = RequestType::MERGE;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1181,6 +1205,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
+	XapiandManager::manager->update_req_info(took, rt);
 }
 
 
@@ -1285,8 +1310,8 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	}
 
 	// There's no path, we're at root so we get the server's info
-	if (request.path_parser.off_pth == nullptr) {
-		XapiandManager::manager->server_status(response_obj[RESPONSE_SERVER_INFO]);
+	if (request.path_parser.off_pth == nullptr || request.path_parser.len_pth == 0) {
+		XapiandManager::manager->server_status(response_obj);
 	}
 
 	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
@@ -1561,6 +1586,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	MsgPack aggregations;
 	std::vector<std::string> suggestions;
 
+	auto rt = RequestType::SEARCH;
+
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
@@ -1587,6 +1614,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
 				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
+				rt = RequestType::AGGREGATIONS;
 			}
 		}
 	} catch (const CheckoutError&) {
@@ -1912,6 +1940,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 	}
 
+	XapiandManager::manager->update_req_info(took, rt);
 	L_SEARCH("FINISH SEARCH");
 }
 
