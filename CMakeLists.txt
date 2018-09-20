@@ -251,6 +251,17 @@ add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 
 ########################################################################
+# Prometheus library target
+########################################################################
+
+
+file(GLOB PROMETHEUS_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h"
+)
+add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
+
+
+########################################################################
 # Xapiand package configuration target
 ########################################################################
 
@@ -299,6 +310,7 @@ add_executable(${PROJECT_NAME}
 	"$<TARGET_OBJECTS:LIBEV_OBJ>"
 	"$<TARGET_OBJECTS:LZ4_OBJ>"
 	"$<TARGET_OBJECTS:UUID_OBJ>"
+	"$<TARGET_OBJECTS:PROMETHEUS_OBJ>"
 )
 
 
