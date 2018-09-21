@@ -106,143 +106,143 @@ public:
 	prometheus::Summary& xapiand_aggregation_summary;
 
 	// clients_tasks:
-	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_run;
-	prometheus::Gauge& xapiand_http_clients_run_met;
+	prometheus::Family<prometheus::Gauge>& http_clients_run;
+	prometheus::Gauge& xapiand_http_clients_run;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_queue;
-	prometheus::Gauge& xapiand_http_clients_queue_met;
+	prometheus::Family<prometheus::Gauge>& http_clients_queue;
+	prometheus::Gauge& xapiand_http_clients_queue;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_capacity;
-	prometheus::Gauge& xapiand_http_clients_capacity_met;
+	prometheus::Family<prometheus::Gauge>& http_clients_capacity;
+	prometheus::Gauge& xapiand_http_clients_capacity;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_http_clients_pool_size;
-	prometheus::Gauge& xapiand_http_clients_pool_size_met;
+	prometheus::Family<prometheus::Gauge>& http_clients_pool_size;
+	prometheus::Gauge& xapiand_http_clients_pool_size;
 
 	// server_tasks:
-	prometheus::Family<prometheus::Gauge>& xapiand_servers_run;
-	prometheus::Gauge& xapiand_servers_run_met;
+	prometheus::Family<prometheus::Gauge>& servers_run;
+	prometheus::Gauge& xapiand_servers_run;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_servers_pool_size;
-	prometheus::Gauge& xapiand_servers_pool_size_met;
+	prometheus::Family<prometheus::Gauge>& servers_pool_size;
+	prometheus::Gauge& xapiand_servers_pool_size;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_servers_queue;
-	prometheus::Gauge& xapiand_servers_queue_met;
+	prometheus::Family<prometheus::Gauge>& servers_queue;
+	prometheus::Gauge& xapiand_servers_queue;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_servers_capacity;
-	prometheus::Gauge& 	xapiand_servers_capacity_met;
+	prometheus::Family<prometheus::Gauge>& servers_capacity;
+	prometheus::Gauge& 	xapiand_servers_capacity;
 
 	// committers_threads:
-	prometheus::Family<prometheus::Gauge>& xapiand_committers_running;
-	prometheus::Gauge& xapiand_committers_running_met;
+	prometheus::Family<prometheus::Gauge>& committers_running;
+	prometheus::Gauge& xapiand_committers_running;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_committers_queue;
-	prometheus::Gauge& xapiand_committers_queue_met;
+	prometheus::Family<prometheus::Gauge>& committers_queue;
+	prometheus::Gauge& xapiand_committers_queue;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_committers_capacity;
-	prometheus::Gauge& xapiand_committers_capacity_met;
+	prometheus::Family<prometheus::Gauge>& committers_capacity;
+	prometheus::Gauge& xapiand_committers_capacity;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_committers_pool_size;
-	prometheus::Gauge& xapiand_committers_pool_size_met;
+	prometheus::Family<prometheus::Gauge>& committers_pool_size;
+	prometheus::Gauge& xapiand_committers_pool_size;
 
 	// fsync_threads:
-	prometheus::Family<prometheus::Gauge>& xapiand_fsync_running;
-	prometheus::Gauge& xapiand_fsync_running_met;
+	prometheus::Family<prometheus::Gauge>& fsync_running;
+	prometheus::Gauge& xapiand_fsync_running;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_fsync_queue;
-	prometheus::Gauge& xapiand_fsync_queue_met;
+	prometheus::Family<prometheus::Gauge>& fsync_queue;
+	prometheus::Gauge& xapiand_fsync_queue;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_fsync_capacity;
-	prometheus::Gauge& xapiand_fsync_capacity_met;
+	prometheus::Family<prometheus::Gauge>& fsync_capacity;
+	prometheus::Gauge& xapiand_fsync_capacity;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_fsync_pool_size;
-	prometheus::Gauge& xapiand_fsync_pool_size_met;
+	prometheus::Family<prometheus::Gauge>& fsync_pool_size;
+	prometheus::Gauge& xapiand_fsync_pool_size;
 
 	// connections:
-	prometheus::Family<prometheus::Gauge>& xapiand_http_current_connections;
-	prometheus::Gauge& xapiand_http_current_connections_met;
+	prometheus::Family<prometheus::Gauge>& http_current_connections;
+	prometheus::Gauge& xapiand_http_current_connections;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_http_peak_connections;
-	prometheus::Gauge& xapiand_http_peak_connections_met;
+	prometheus::Family<prometheus::Gauge>& http_peak_connections;
+	prometheus::Gauge& xapiand_http_peak_connections;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_file_descriptors;
-	prometheus::Gauge& xapiand_file_descriptors_met;
+	prometheus::Family<prometheus::Gauge>& file_descriptors;
+	prometheus::Gauge& xapiand_file_descriptors;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_file_descriptors;
-	prometheus::Gauge& xapiand_max_file_descriptors_met;
+	prometheus::Family<prometheus::Gauge>& max_file_descriptors;
+	prometheus::Gauge& xapiand_max_file_descriptors;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_resident_memory_bytes;
-	prometheus::Gauge& xapiand_resident_memory_bytes_met;
+	prometheus::Family<prometheus::Gauge>& resident_memory_bytes;
+	prometheus::Gauge& xapiand_resident_memory_bytes;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_virtual_memory_bytes;
-	prometheus::Gauge& xapiand_virtual_memory_bytes_met;
+	prometheus::Family<prometheus::Gauge>& virtual_memory_bytes;
+	prometheus::Gauge& xapiand_virtual_memory_bytes;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_used_memory_bytes;
-	prometheus::Gauge& xapiand_used_memory_bytes_met;
+	prometheus::Family<prometheus::Gauge>& used_memory_bytes;
+	prometheus::Gauge& xapiand_used_memory_bytes;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_memory_system_bytes;
-	prometheus::Gauge& xapiand_total_memory_system_bytes_met;
+	prometheus::Family<prometheus::Gauge>& total_memory_system_bytes;
+	prometheus::Gauge& xapiand_total_memory_system_bytes;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_virtual_memory_used;
-	prometheus::Gauge& xapiand_total_virtual_memory_used_met;
+	prometheus::Family<prometheus::Gauge>& total_virtual_memory_used;
+	prometheus::Gauge& xapiand_total_virtual_memory_used;
 
 	// databases:
-	prometheus::Family<prometheus::Gauge>& xapiand_readable_db;
-	prometheus::Gauge& xapiand_readable_db_met;
+	prometheus::Family<prometheus::Gauge>& readable_db;
+	prometheus::Gauge& xapiand_readable_db;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_readable_db;
-	prometheus::Gauge& xapiand_total_readable_db_met;
+	prometheus::Family<prometheus::Gauge>& total_readable_db;
+	prometheus::Gauge& xapiand_total_readable_db;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_writable_db;
-	prometheus::Gauge& xapiand_writable_db_met;
+	prometheus::Family<prometheus::Gauge>& writable_db;
+	prometheus::Gauge& xapiand_writable_db;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_writable_db;
-	prometheus::Gauge& xapiand_total_writable_db_met;
+	prometheus::Family<prometheus::Gauge>& total_writable_db;
+	prometheus::Gauge& xapiand_total_writable_db;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_db;
-	prometheus::Gauge& xapiand_total_db_met;
+	prometheus::Family<prometheus::Gauge>& total_db;
+	prometheus::Gauge& xapiand_total_db;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_peak_db;
-	prometheus::Gauge& xapiand_total_peak_db_met;
+	prometheus::Family<prometheus::Gauge>& total_peak_db;
+	prometheus::Gauge& xapiand_total_peak_db;
 
 	// request:
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_index;
-	prometheus::Gauge& xapiand_max_time_index_met;
+	prometheus::Family<prometheus::Gauge>& max_time_index;
+	prometheus::Gauge& xapiand_max_time_index;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_search;
-	prometheus::Gauge& xapiand_max_time_search_met;
+	prometheus::Family<prometheus::Gauge>& max_time_search;
+	prometheus::Gauge& xapiand_max_time_search;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_delete;
-	prometheus::Gauge& xapiand_max_time_delete_met;
+	prometheus::Family<prometheus::Gauge>& max_time_delete;
+	prometheus::Gauge& xapiand_max_time_delete;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_patch;
-	prometheus::Gauge& xapiand_max_time_patch_met;
+	prometheus::Family<prometheus::Gauge>& max_time_patch;
+	prometheus::Gauge& xapiand_max_time_patch;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_merge;
-	prometheus::Gauge& xapiand_max_time_merge_met;
+	prometheus::Family<prometheus::Gauge>& max_time_merge;
+	prometheus::Gauge& xapiand_max_time_merge;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_max_time_aggregation;
-	prometheus::Gauge& xapiand_max_time_aggregation_met;
+	prometheus::Family<prometheus::Gauge>& max_time_aggregation;
+	prometheus::Gauge& xapiand_max_time_aggregation;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_index_total;
-	prometheus::Gauge& xapiand_index_total_met;
+	prometheus::Family<prometheus::Gauge>& index_total;
+	prometheus::Gauge& xapiand_index_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_search_total;
-	prometheus::Gauge& xapiand_search_total_met;
+	prometheus::Family<prometheus::Gauge>& search_total;
+	prometheus::Gauge& xapiand_search_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_delete_total;
-	prometheus::Gauge& xapiand_delete_total_met;
+	prometheus::Family<prometheus::Gauge>& delete_total;
+	prometheus::Gauge& xapiand_delete_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_patch_total;
-	prometheus::Gauge& xapiand_patch_total_met;
+	prometheus::Family<prometheus::Gauge>& patch_total;
+	prometheus::Gauge& xapiand_patch_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_merge_total;
-	prometheus::Gauge& xapiand_merge_total_met;
+	prometheus::Family<prometheus::Gauge>& merge_total;
+	prometheus::Gauge& xapiand_merge_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_aggregation_total;
-	prometheus::Gauge& xapiand_aggregation_total_met;
+	prometheus::Family<prometheus::Gauge>& aggregation_total;
+	prometheus::Gauge& xapiand_aggregation_total;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_commit_total;
-	prometheus::Gauge& xapiand_commit_total_met;
+	prometheus::Family<prometheus::Gauge>& commit_total;
+	prometheus::Gauge& xapiand_commit_total;
 };
 
 
