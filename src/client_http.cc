@@ -98,6 +98,7 @@ constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
+constexpr const char RESPONSE_SERVER_INFO[]         = "#server_info";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 
@@ -1310,7 +1311,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 	// There's no path, we're at root so we get the server's info
 	if (request.path_parser.off_pth == nullptr || request.path_parser.len_pth == 0) {
-		XapiandManager::manager->server_status(response_obj);
+		XapiandManager::manager->server_status(response_obj[RESPONSE_SERVER_INFO]);
 	}
 
 	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
