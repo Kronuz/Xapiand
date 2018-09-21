@@ -1,8 +1,23 @@
+################################################################################
+#   ____ _
+#  / ___| | __ _ _ __   __ _
+# | |   | |/ _` | '_ \ / _` |
+# | |___| | (_| | | | | (_| |
+#  \____|_|\__,_|_| |_|\__, |
+#                      |___/
+#
+# Build using:
+# docker build -t dubalu/clang:latest contrib/docker/clang
+# docker push dubalu/clang
+#
+# Or using a cloud container with 64 CPUs:
 # gcloud container --project=dubalu-io-cloud clusters create clang-builder --enable-ip-alias --enable-autoupgrade --cluster-version=latest --num-nodes=1 --machine-type=n1-highcpu-64
 # kubectl run -it clang-builder --image=alpine:3.8 -- sh
+
 # Temporary workaround for there not being an llvm6 apk yet
 # Open PR for llvm6 package: https://github.com/alpinelinux/aports/pull/3583
 # See https://stackoverflow.com/questions/50258121/building-llvm-6-under-linux-alpine
+
 FROM alpine:3.8
 
 RUN apk update \

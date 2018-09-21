@@ -1,5 +1,17 @@
-# docker build -t kronuz/xapiand contrib/docker/xapiand && docker push kronuz/xapiand
-FROM kronuz/xapian as builder
+################################################################################
+# __  __           _                 _
+# \ \/ /__ _ _ __ (_) __ _ _ __   __| |
+#  \  // _` | '_ \| |/ _` | '_ \ / _` |
+#  /  \ (_| | |_) | | (_| | | | | (_| |
+# /_/\_\__,_| .__/|_|\__,_|_| |_|\__,_|
+#           |_|
+#
+# Build using:
+# docker build -t dubalu/xapiand:latest contrib/docker/xapiand
+# docker tag dubalu/xapiand:latest dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version | cut -d' ' -f2)
+# docker push dubalu/xapiand
+
+FROM dubalu/xapian as builder
 
 # Bust cache
 ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master version.json

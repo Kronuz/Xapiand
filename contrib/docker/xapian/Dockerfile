@@ -1,4 +1,15 @@
-# docker build -t kronuz/xapian contrib/docker/xapian && docker push kronuz/xapian
+################################################################################
+# __  __           _
+# \ \/ /__ _ _ __ (_) __ _ _ __
+#  \  // _` | '_ \| |/ _` | '_ \
+#  /  \ (_| | |_) | | (_| | | | |
+# /_/\_\__,_| .__/|_|\__,_|_| |_|
+#           |_|
+#
+# Build using:
+# docker build -t dubalu/xapian:latest contrib/docker/xapian
+# docker push dubalu/xapian
+
 FROM kronuz/clang
 
 MAINTAINER Kronuz

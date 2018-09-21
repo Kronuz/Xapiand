@@ -34,5 +34,4 @@ if [ "$1" = 'xapiand' ]; then
 		--database="$XAPIAND_DATABASE"
 fi
 
-echo "$@"
 exec "$@"
