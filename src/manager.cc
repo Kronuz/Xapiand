@@ -1390,13 +1390,13 @@ XapiandManager::server_metrics()
 	auto short_version = "(" + Package::HASH + ") " + Package::FULLVERSION;
 	auto full_version = short_version + " on " + check_architecture() + ", compiled by " + check_compiler() + " (" + check_OS() + ")";
 
-	auto& gauge_xapiand_version = prometheus::BuildGauge()
+	auto& info = prometheus::BuildGauge()
 							.Name("xapiand_info")
-							.Labels({{NODE_LABEL, node_name}})
+							.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}})
 							.Help("Version string as reported by Xapiand")
 							.Register(*req_info->registry);
-	auto& version_gauge = gauge_xapiand_version.Add({{"short_version", short_version}, {"version", full_version}});
-	version_gauge.Set(1);
+	auto& xapiand_info = info.Add({{"short_version", short_version}, {"version", full_version}});
+	xapiand_info.Set(1);
 
 	// clients_tasks:
 	req_info->xapiand_http_clients_run.Set(client_pool.running_size());
