@@ -98,7 +98,6 @@ constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
-constexpr const char RESPONSE_SERVER_INFO[]         = "#server_info";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 
