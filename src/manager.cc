@@ -148,7 +148,7 @@ Requestinfo::Requestinfo(const std::string& nodename)
 	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  patch_summary(prometheus::BuildSummary()
 					.Name("xapiand_patch_summary")
-					.Help("Path requests time serie")
+					.Help("Patch requests time serie")
 					.Labels({{NODE_LABEL, nodename}})
 					.Register(*registry)),
 	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
