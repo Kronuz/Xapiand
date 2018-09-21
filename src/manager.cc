@@ -59,6 +59,7 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
+#include "allocator.h"
 #include "async_fsync.h"                      // for AsyncFsync
 #include "atomic_shared_ptr.h"                // for atomic_shared_ptr
 #include "package.h"                          // for Package::FULLVERSION Package::HASH
@@ -1496,7 +1497,7 @@ XapiandManager::server_metrics()
 	// memory:
 	req_info->xapiand_resident_memory_bytes_met.Set(get_current_memory_by_process());
 	req_info->xapiand_virtual_memory_bytes_met.Set(get_current_memory_by_process(false));
-	//req_info->xapiand_total_writable_db_met.Set(allocator::total_allocated());
+	req_info->xapiand_used_memory_bytes_met.Set(allocator::total_allocated());
 	req_info->xapiand_total_memory_system_met.Set(get_total_ram());
 	req_info->xapiand_total_virtual_memory_used_met.Set(get_total_virtual_memory());
 
