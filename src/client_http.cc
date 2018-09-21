@@ -1400,10 +1400,15 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	Stats::add("commit", took);
+	L_TIME("Commit took %s", string::from_delta(took));
+
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+	XapiandManager::manager->update_req_info(took, RequestType::COMMIT);
 }
 
 

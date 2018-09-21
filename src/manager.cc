@@ -131,40 +131,46 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 	: registry(std::make_shared<prometheus::Registry>()),
 	  index_summary(prometheus::BuildSummary()
 					.Name("xapiand_index_summary")
-					.Help("Index requests time serie")
+					.Help("Index requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_index_summary(index_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  search_summary(prometheus::BuildSummary()
 					.Name("xapiand_search_summary")
-					.Help("Search requests time serie")
+					.Help("Search requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_search_summary(search_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  delete_summary(prometheus::BuildSummary()
 					.Name("xapiand_delete_summary")
-					.Help("Delete requests time serie")
+					.Help("Delete requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  patch_summary(prometheus::BuildSummary()
 					.Name("xapiand_patch_summary")
-					.Help("Patch requests time serie")
+					.Help("Patch requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  merge_summary(prometheus::BuildSummary()
 					.Name("xapiand_merge_summary")
-					.Help("Merge requests time serie")
+					.Help("Merge requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_merge_summary(merge_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  aggregation_summary(prometheus::BuildSummary()
-					.Name("xapiand_aggretation_summary")
-					.Help("Aggregation requests time serie")
+					.Name("xapiand_aggregation_summary")
+					.Help("Aggregation requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_aggregation_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
+	  commit_summary(prometheus::BuildSummary()
+					.Name("xapiand_commit_summary")
+					.Help("Commit requests summary")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Register(*registry)),
+	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  http_clients_run(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_run")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -350,85 +356,7 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total databases used")
 					.Register(*registry)),
-	  xapiand_total_peak_db(total_peak_db.Add(std::map<std::string, std::string>())),
-	  max_time_index(prometheus::BuildGauge()
-					.Name("xapiand_max_time_index")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by index (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_index(max_time_index.Add(std::map<std::string, std::string>())),
-	  max_time_search(prometheus::BuildGauge()
-					.Name("xapiand_max_time_search")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by search (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_search(max_time_search.Add(std::map<std::string, std::string>())),
-	  max_time_delete(prometheus::BuildGauge()
-					.Name("xapiand_max_time_delete")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by delete (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_delete(max_time_delete.Add(std::map<std::string, std::string>())),
-	  max_time_patch(prometheus::BuildGauge()
-					.Name("xapiand_max_time_patch")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by patch (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_patch(max_time_patch.Add(std::map<std::string, std::string>())),
-	  max_time_merge(prometheus::BuildGauge()
-					.Name("xapiand_max_time_merge")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by merge (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_merge(max_time_merge.Add(std::map<std::string, std::string>())),
-	  max_time_aggregation(prometheus::BuildGauge()
-					.Name("xapiand_max_time_aggregation")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Maximum time tooked by aggregation (ms)")
-					.Register(*registry)),
-	  xapiand_max_time_aggregation(max_time_aggregation.Add(std::map<std::string, std::string>())),
-	  index_total(prometheus::BuildGauge()
-					.Name("xapiand_index_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of indexing")
-					.Register(*registry)),
-	  xapiand_index_total(index_total.Add(std::map<std::string, std::string>())),
-	  search_total(prometheus::BuildGauge()
-					.Name("xapiand_search_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of searching")
-					.Register(*registry)),
-	  xapiand_search_total(search_total.Add(std::map<std::string, std::string>())),
-	  delete_total(prometheus::BuildGauge()
-					.Name("xapiand_delete_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of deleting")
-					.Register(*registry)),
-	  xapiand_delete_total(delete_total.Add(std::map<std::string, std::string>())),
-	  patch_total(prometheus::BuildGauge()
-					.Name("xapiand_patch_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of patching")
-					.Register(*registry)),
-	  xapiand_patch_total(patch_total.Add(std::map<std::string, std::string>())),
-	  merge_total(prometheus::BuildGauge()
-					.Name("xapiand_merge_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of merging")
-					.Register(*registry)),
-	  xapiand_merge_total(merge_total.Add(std::map<std::string, std::string>())),
-	  aggregation_total(prometheus::BuildGauge()
-					.Name("xapiand_aggregation_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of search with aggregations")
-					.Register(*registry)),
-	  xapiand_aggregation_total(aggregation_total.Add(std::map<std::string, std::string>())),
-	  commit_total(prometheus::BuildGauge()
-					.Name("xapiand_commit_total")
-					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
-					.Help("Number of commits")
-					.Register(*registry)),
-	  xapiand_commit_total(commit_total.Add(std::map<std::string, std::string>())) { }
+	  xapiand_total_peak_db(total_peak_db.Add(std::map<std::string, std::string>())) { }
 
 
 XapiandManager::XapiandManager()
@@ -1629,49 +1557,25 @@ XapiandManager::update_req_info(std::uint64_t duration, RequestType typ)
 {
 	switch (typ) {
 		case RequestType::INDEX:
-			req_info->xapiand_index_total.Increment();
-			if (req_info->xapiand_max_time_index.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_index.Set(duration / 1e6);
-			}
 			req_info->xapiand_index_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::SEARCH:
-			req_info->xapiand_search_total.Increment();
-			if (req_info->xapiand_max_time_search.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_search.Set(duration / 1e6);
-			}
 			req_info->xapiand_search_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::DELETE:
-			req_info->xapiand_delete_total.Increment();
-			if (req_info->xapiand_max_time_delete.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_delete.Set(duration / 1e6);
-			}
 			req_info->xapiand_delete_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::PATCH:
-			req_info->xapiand_patch_total.Increment();
-			if (req_info->xapiand_max_time_patch.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_patch.Set(duration / 1e6);
-			}
 			req_info->xapiand_patch_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::MERGE:
-			req_info->xapiand_merge_total.Increment();
-			if (req_info->xapiand_max_time_merge.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_merge.Set(duration / 1e6);
-			}
 			req_info->xapiand_merge_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::AGGREGATIONS:
-			req_info->xapiand_aggregation_total.Increment();
-			if (req_info->xapiand_max_time_aggregation.Value() < (duration / 1e6)) {
-				req_info->xapiand_max_time_aggregation.Set(duration / 1e6);
-			}
 			req_info->xapiand_aggregation_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::COMMIT:
-			req_info->xapiand_commit_total.Increment();
+			req_info->xapiand_commit_summary.Observe(duration / 1e6);
 	}
 }
 

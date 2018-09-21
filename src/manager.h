@@ -105,6 +105,9 @@ public:
 	prometheus::Family<prometheus::Summary>& aggregation_summary;
 	prometheus::Summary& xapiand_aggregation_summary;
 
+	prometheus::Family<prometheus::Summary>& commit_summary;
+	prometheus::Summary& xapiand_commit_summary;
+
 	// clients_tasks:
 	prometheus::Family<prometheus::Gauge>& http_clients_run;
 	prometheus::Gauge& xapiand_http_clients_run;
@@ -203,46 +206,6 @@ public:
 
 	prometheus::Family<prometheus::Gauge>& total_peak_db;
 	prometheus::Gauge& xapiand_total_peak_db;
-
-	// request:
-	prometheus::Family<prometheus::Gauge>& max_time_index;
-	prometheus::Gauge& xapiand_max_time_index;
-
-	prometheus::Family<prometheus::Gauge>& max_time_search;
-	prometheus::Gauge& xapiand_max_time_search;
-
-	prometheus::Family<prometheus::Gauge>& max_time_delete;
-	prometheus::Gauge& xapiand_max_time_delete;
-
-	prometheus::Family<prometheus::Gauge>& max_time_patch;
-	prometheus::Gauge& xapiand_max_time_patch;
-
-	prometheus::Family<prometheus::Gauge>& max_time_merge;
-	prometheus::Gauge& xapiand_max_time_merge;
-
-	prometheus::Family<prometheus::Gauge>& max_time_aggregation;
-	prometheus::Gauge& xapiand_max_time_aggregation;
-
-	prometheus::Family<prometheus::Gauge>& index_total;
-	prometheus::Gauge& xapiand_index_total;
-
-	prometheus::Family<prometheus::Gauge>& search_total;
-	prometheus::Gauge& xapiand_search_total;
-
-	prometheus::Family<prometheus::Gauge>& delete_total;
-	prometheus::Gauge& xapiand_delete_total;
-
-	prometheus::Family<prometheus::Gauge>& patch_total;
-	prometheus::Gauge& xapiand_patch_total;
-
-	prometheus::Family<prometheus::Gauge>& merge_total;
-	prometheus::Gauge& xapiand_merge_total;
-
-	prometheus::Family<prometheus::Gauge>& aggregation_total;
-	prometheus::Gauge& xapiand_aggregation_total;
-
-	prometheus::Family<prometheus::Gauge>& commit_total;
-	prometheus::Gauge& xapiand_commit_total;
 };
 
 
