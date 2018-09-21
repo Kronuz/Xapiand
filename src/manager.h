@@ -176,8 +176,8 @@ public:
 	prometheus::Family<prometheus::Gauge>& xapiand_used_memory_bytes;
 	prometheus::Gauge& xapiand_used_memory_bytes_met;
 
-	prometheus::Family<prometheus::Gauge>& xapiand_total_memory_system;
-	prometheus::Gauge& xapiand_total_memory_system_met;
+	prometheus::Family<prometheus::Gauge>& xapiand_total_memory_system_bytes;
+	prometheus::Gauge& xapiand_total_memory_system_bytes_met;
 
 	prometheus::Family<prometheus::Gauge>& xapiand_total_virtual_memory_used;
 	prometheus::Gauge& xapiand_total_virtual_memory_used_met;

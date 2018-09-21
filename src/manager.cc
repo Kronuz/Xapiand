@@ -296,12 +296,12 @@ Requestinfo::Requestinfo(const std::string& nodename)
 					.Help("Total memory currently allocated")
 					.Register(*registry)),
 	  xapiand_used_memory_bytes_met(xapiand_used_memory_bytes.Add(std::map<std::string, std::string>())),
-	  xapiand_total_memory_system(prometheus::BuildGauge()
-					.Name("xapiand_total_memory_system")
+	  xapiand_total_memory_system_bytes(prometheus::BuildGauge()
+					.Name("xapiand_total_memory_system_bytes")
 					.Labels({{NODE_LABEL, nodename}})
 					.Help("Total memory used")
 					.Register(*registry)),
-	  xapiand_total_memory_system_met(xapiand_total_memory_system.Add(std::map<std::string, std::string>())),
+	  xapiand_total_memory_system_bytes_met(xapiand_total_memory_system_bytes.Add(std::map<std::string, std::string>())),
 	  xapiand_total_virtual_memory_used(prometheus::BuildGauge()
 					.Name("xapiand_total_virtual_memory_used")
 					.Labels({{NODE_LABEL, nodename}})
@@ -1498,7 +1498,7 @@ XapiandManager::server_metrics()
 	req_info->xapiand_resident_memory_bytes_met.Set(get_current_memory_by_process());
 	req_info->xapiand_virtual_memory_bytes_met.Set(get_current_memory_by_process(false));
 	req_info->xapiand_used_memory_bytes_met.Set(allocator::total_allocated());
-	req_info->xapiand_total_memory_system_met.Set(get_total_ram());
+	req_info->xapiand_total_memory_system_bytes_met.Set(get_total_ram());
 	req_info->xapiand_total_virtual_memory_used_met.Set(get_total_virtual_memory());
 
 	// databases:
