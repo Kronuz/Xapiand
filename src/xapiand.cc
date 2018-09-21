@@ -327,7 +327,7 @@ void parseOptions(int argc, char** argv) {
 	using namespace TCLAP;
 
 	try {
-		CmdLine cmd("", ' ', Package::STRING);
+		CmdLine cmd("", ' ', Package::VERSION);
 
 		CmdOutput output;
 		ZshCompletionOutput zshoutput;

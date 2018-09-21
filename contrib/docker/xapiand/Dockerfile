@@ -8,7 +8,7 @@
 #
 # Build using:
 # docker build -t dubalu/xapiand:latest contrib/docker/xapiand
-# docker tag dubalu/xapiand:latest dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version | cut -d' ' -f2)
+# docker tag dubalu/xapiand:latest dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version)
 # docker push dubalu/xapiand
 
 FROM dubalu/xapian as builder
