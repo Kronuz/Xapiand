@@ -364,7 +364,7 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Register(*registry)),
 	  xapiand_max_time_search_met(xapiand_max_time_search.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_delete(prometheus::BuildGauge()
-					.Name("time_delete")
+					.Name("xapiand_max_time_delete")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by delete (ms)")
 					.Register(*registry)),
