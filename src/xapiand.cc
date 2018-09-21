@@ -68,10 +68,6 @@
 #include "worker.h"                  // for Worker
 #include "hashes.hh"                 // for fnv1ah32
 
-#ifdef HAVE_SYS_SYSCTL_H
-#include <sys/sysctl.h>              // for sysctl, sysctlnametomib...
-#endif
-
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np
 #endif
@@ -586,75 +582,6 @@ void parseOptions(int argc, char** argv) {
 		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
 		std::exit(EX_USAGE);
 	}
-}
-
-
-/*
- * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
- *
- * This function will try to raise the max number of open files accordingly to
- * the configured max number of clients. It also reserves a number of file
- * descriptors for extra operations of persistence, listening sockets, log files and so forth.
- *
- * If it will not be possible to set the limit accordingly to the configured
- * max number of clients, the function will do the reverse setting
- * to the value that we can actually handle.
- */
-ssize_t get_max_files_per_proc()
-{
-	int32_t max_files_per_proc = 0;
-
-#ifdef HAVE_SYS_SYSCTL_H
-#if defined(KERN_MAXFILESPERPROC)
-#define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
-	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
-	std::size_t mib_len = sizeof(mib) / sizeof(int);
-#endif
-#endif
-#ifdef _SYSCTL_NAME
-	auto max_files_per_proc_len = sizeof(max_files_per_proc);
-	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
-	}
-#undef _SYSCTL_NAME
-#else
-	L_WARNING("WARNING: No way of getting max files per process.");
-#endif
-
-	return max_files_per_proc;
-}
-
-
-ssize_t get_open_files()
-{
-	int32_t max_files_per_proc = 0;
-
-#ifdef HAVE_SYS_SYSCTL_H
-#if defined(KERN_OPENFILES)
-#define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
-	int mib[] = {CTL_KERN, KERN_OPENFILES};
-	std::size_t mib_len = sizeof(mib) / sizeof(int);
-#elif defined(__APPLE__)
-#define _SYSCTL_NAME "kern.num_files"  // Apple
-	int mib[CTL_MAXNAME + 2];
-	std::size_t mib_len = sizeof(mib) / sizeof(int);
-	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
-		return 0;
-	}
-#endif
-#endif
-#ifdef _SYSCTL_NAME
-	auto max_files_per_proc_len = sizeof(max_files_per_proc);
-	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
-	}
-#undef _SYSCTL_NAME
-#else
-	L_WARNING("WARNING: No way of getting number of open files.");
-#endif
-
-	return max_files_per_proc;
 }
 
 

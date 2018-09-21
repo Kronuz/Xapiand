@@ -25,15 +25,15 @@
 #include <algorithm>             // for equal, uniform_int_distribution
 #include <cstdint>               // for uint64_t
 #include <functional>            // for function, __base
-#include <cmath>                // for powl, logl, floorl, roundl
+#include <cmath>                 // for powl, logl, floorl, roundl
 #include <memory>                // for allocator
 #include <mutex>                 // for std::mutex
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <random>                // for mt19937_64, random_device, uniform_r...
 #include <ratio>                 // for ratio
-#include <cstdio>               // for size_t, sprintf, remove, rename, snp...
-#include <cstring>              // for strerror, strcmp
+#include <cstdio>                // for size_t, sprintf, remove, rename, snp...
+#include <cstring>               // for strerror, strcmp
 #include <string>                // for string, operator+, char_traits, basi...
 #include <fcntl.h>               // for O_CREAT, O_RDONLY, O_WRONLY
 #include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
@@ -51,12 +51,15 @@
 #include "namegen.h"             // for Generator
 #include "stringified.hh"        // for stringified
 
-
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>          // for pthread_getname_np
 #endif
+#endif
+
+#ifdef HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>          // for sysctl, sysctlnametomib...
 #endif
 
 #define STATE_ERR_UNEXPECTED_SLASH_UPL -10
@@ -489,6 +492,104 @@ unsigned long long file_descriptors_cnt() {
 	}
 	return n;
 }
+
+
+#ifdef __linux__
+int get_num_fds()
+{
+	int fd_count;
+	char buf[64];
+	struct dirent *dp;
+
+	snprintf(buf, 64, "/proc/%i/fd/", getpid());
+
+	fd_count = 0;
+	DIR *dir = opendir(buf);
+	while ((dp = readdir(dir)) != NULL) {
+		fd_count++;
+	}
+	closedir(dir);
+	return fd_count;
+}
+#endif /*__linux__*/
+
+
+/*
+ * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
+ *
+ * This function will try to raise the max number of open files accordingly to
+ * the configured max number of clients. It also reserves a number of file
+ * descriptors for extra operations of persistence, listening sockets, log files and so forth.
+ *
+ * If it will not be possible to set the limit accordingly to the configured
+ * max number of clients, the function will do the reverse setting
+ * to the value that we can actually handle.
+ */
+ssize_t get_max_files_per_proc()
+{
+	int32_t max_files_per_proc = 0;
+
+#ifdef HAVE_SYS_SYSCTL_H
+#if defined(KERN_MAXFILESPERPROC)
+#define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
+	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
+#endif
+#endif
+#ifdef _SYSCTL_NAME
+	auto max_files_per_proc_len = sizeof(max_files_per_proc);
+	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
+		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
+	}
+#undef _SYSCTL_NAME
+#elif defined(__linux__)
+	struct rlimit limit;
+	if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
+		L_ERR("ERROR: Unable to get max files per process: getrlimit(RLIMIT_NOFILE): [%d] %s", errno, std::strerror(errno));
+	}
+	max_files_per_proc = stacklim.rlim_cur;
+#else
+	L_WARNING("WARNING: No way of getting max files per process.");
+#endif
+
+	return max_files_per_proc;
+}
+
+
+ssize_t get_open_files()
+{
+	int32_t max_files_per_proc = 0;
+
+#ifdef HAVE_SYS_SYSCTL_H
+#if defined(KERN_OPENFILES)
+#define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
+	int mib[] = {CTL_KERN, KERN_OPENFILES};
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
+#elif defined(__APPLE__)
+#define _SYSCTL_NAME "kern.num_files"  // Apple
+	int mib[CTL_MAXNAME + 2];
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
+	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
+		return 0;
+	}
+#endif
+#endif
+#ifdef _SYSCTL_NAME
+	auto max_files_per_proc_len = sizeof(max_files_per_proc);
+	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
+		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
+	}
+#undef _SYSCTL_NAME
+#elif defined(__linux__)
+	max_files_per_proc = get_num_fds();
+#else
+	L_WARNING("WARNING: No way of getting number of open files.");
+#endif
+
+	return max_files_per_proc;
+}
+
 
 std::string check_compiler() {
 #ifdef _MSC_VER
