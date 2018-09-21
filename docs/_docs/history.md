@@ -4,6 +4,12 @@ read_only: true
 ---
 
 
+## 0.7.0 / 2018-09-21
+{: #v0-7-0}
+
+- Prometheus metrics exposed at /:metrics
+
+
 ## 0.6.2 / 2018-05-03
 {: #v0-6-2}
 
