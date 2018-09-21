@@ -107,6 +107,7 @@
 #endif
 
 #define NODE_LABEL "node"
+#define CLUSTER_LABEL "cluster"
 
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
@@ -126,305 +127,305 @@ void sig_exit(int sig) {
 }
 
 
-Requestinfo::Requestinfo(const std::string& nodename)
+Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster)
 	: registry(std::make_shared<prometheus::Registry>()),
 	  index_summary(prometheus::BuildSummary()
 					.Name("xapiand_index_summary")
 					.Help("Index requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_index_summary(index_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  search_summary(prometheus::BuildSummary()
 					.Name("xapiand_search_summary")
 					.Help("Search requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_search_summary(search_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  delete_summary(prometheus::BuildSummary()
 					.Name("xapiand_delete_summary")
 					.Help("Delete requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  patch_summary(prometheus::BuildSummary()
 					.Name("xapiand_patch_summary")
 					.Help("Patch requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  merge_summary(prometheus::BuildSummary()
 					.Name("xapiand_merge_summary")
 					.Help("Merge requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_merge_summary(merge_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  aggregation_summary(prometheus::BuildSummary()
 					.Name("xapiand_aggretation_summary")
 					.Help("Aggregation requests time serie")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_aggregation_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0, 0.05}, {0.25, 0.05}, {0.5, 0.05}, {0.75, 0.05}, {1, 0.05}})),
 	  xapiand_http_clients_run(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_run")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Amount of clients running")
 					.Register(*registry)),
 	  xapiand_http_clients_run_met(xapiand_http_clients_run.Add(std::map<std::string, std::string>())),
 	  xapiand_http_clients_queue(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_queue")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Clients in the queue")
 					.Register(*registry)),
 	  xapiand_http_clients_queue_met(xapiand_http_clients_queue.Add(std::map<std::string, std::string>())),
 	  xapiand_http_clients_capacity(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_capacity")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Client queue capacity")
 					.Register(*registry)),
 	  xapiand_http_clients_capacity_met(xapiand_http_clients_capacity.Add(std::map<std::string, std::string>())),
 	  xapiand_http_clients_pool_size(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_pool_size")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Client total pool size")
 					.Register(*registry)),
 	  xapiand_http_clients_pool_size_met(xapiand_http_clients_pool_size.Add(std::map<std::string, std::string>())),
 	  xapiand_servers_run(prometheus::BuildGauge()
 					.Name("xapiand_servers_run")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Amount of servers running")
 					.Register(*registry)),
 	  xapiand_servers_run_met(xapiand_servers_run.Add(std::map<std::string, std::string>())),
 	  xapiand_servers_pool_size(prometheus::BuildGauge()
 					.Name("xapiand_servers_pool_size")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Server pool size")
 					.Register(*registry)),
 	  xapiand_servers_pool_size_met(xapiand_servers_pool_size.Add(std::map<std::string, std::string>())),
 	  xapiand_servers_queue(prometheus::BuildGauge()
 					.Name("xapiand_servers_queue")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Servers in the queue")
 					.Register(*registry)),
 	  xapiand_servers_queue_met(xapiand_servers_queue.Add(std::map<std::string, std::string>())),
 	  xapiand_servers_capacity(prometheus::BuildGauge()
 					.Name("xapiand_servers_capacity")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Server queue capacity")
 					.Register(*registry)),
 	  xapiand_servers_capacity_met(xapiand_servers_capacity.Add(std::map<std::string, std::string>())),
 	  xapiand_committers_running(prometheus::BuildGauge()
 					.Name("xapiand_committers_running")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Amount of committers running")
 					.Register(*registry)),
 	  xapiand_committers_running_met(xapiand_committers_running.Add(std::map<std::string, std::string>())),
 	  xapiand_committers_queue(prometheus::BuildGauge()
 					.Name("xapiand_committers_queue")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Committers in the queue")
 					.Register(*registry)),
 	  xapiand_committers_queue_met(xapiand_committers_queue.Add(std::map<std::string, std::string>())),
 	  xapiand_committers_capacity(prometheus::BuildGauge()
 					.Name("xapiand_committers_capacity")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Committers queue capacity")
 					.Register(*registry)),
 	  xapiand_committers_capacity_met(xapiand_committers_capacity.Add(std::map<std::string, std::string>())),
 	  xapiand_committers_pool_size(prometheus::BuildGauge()
 					.Name("xapiand_committers_pool_size")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Server pool size")
 					.Register(*registry)),
 	  xapiand_committers_pool_size_met(xapiand_committers_pool_size.Add(std::map<std::string, std::string>())),
 	  xapiand_fsync_running(prometheus::BuildGauge()
 					.Name("xapiand_fsync_running")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Amount of fsync running")
 					.Register(*registry)),
 	  xapiand_fsync_running_met(xapiand_fsync_running.Add(std::map<std::string, std::string>())),
 	  xapiand_fsync_queue(prometheus::BuildGauge()
 					.Name("xapiand_fsync_queue")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Fsync in the queue")
 					.Register(*registry)),
 	  xapiand_fsync_queue_met(xapiand_fsync_queue.Add(std::map<std::string, std::string>())),
 	  xapiand_fsync_capacity(prometheus::BuildGauge()
 					.Name("xapiand_fsync_capacity")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Fsync queue capacity")
 					.Register(*registry)),
 	  xapiand_fsync_capacity_met(xapiand_fsync_capacity.Add(std::map<std::string, std::string>())),
 	  xapiand_fsync_pool_size(prometheus::BuildGauge()
 					.Name("xapiand_fsync_pool_size")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Fsync pool size")
 					.Register(*registry)),
 	  xapiand_fsync_pool_size_met(xapiand_fsync_pool_size.Add(std::map<std::string, std::string>())),
 	  xapiand_http_current_connections(prometheus::BuildGauge()
 					.Name("xapiand_http_current_connections")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Current http connections")
 					.Register(*registry)),
 	  xapiand_http_current_connections_met(xapiand_http_current_connections.Add(std::map<std::string, std::string>())),
 	  xapiand_http_peak_connections(prometheus::BuildGauge()
 					.Name("xapiand_http_peak_connections")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Max http connections")
 					.Register(*registry)),
 	  xapiand_http_peak_connections_met(xapiand_http_peak_connections.Add(std::map<std::string, std::string>())),
 	  xapiand_file_descriptors(prometheus::BuildGauge()
 					.Name("xapiand_file_descriptors")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Amount of file descriptors in use")
 					.Register(*registry)),
 	  xapiand_file_descriptors_met(xapiand_file_descriptors.Add(std::map<std::string, std::string>())),
 	  xapiand_max_file_descriptors(prometheus::BuildGauge()
 					.Name("xapiand_max_file_descriptors")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum number of file descriptors")
 					.Register(*registry)),
 	  xapiand_max_file_descriptors_met(xapiand_max_file_descriptors.Add(std::map<std::string, std::string>())),
 	  xapiand_resident_memory_bytes(prometheus::BuildGauge()
 					.Name("xapiand_resident_memory_bytes")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Memory in use")
 					.Register(*registry)),
 	  xapiand_resident_memory_bytes_met(xapiand_resident_memory_bytes.Add(std::map<std::string, std::string>())),
 	  xapiand_virtual_memory_bytes(prometheus::BuildGauge()
 					.Name("xapiand_virtual_memory_bytes")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Virtual memory in use")
 					.Register(*registry)),
 	  xapiand_virtual_memory_bytes_met(xapiand_virtual_memory_bytes.Add(std::map<std::string, std::string>())),
 	  xapiand_used_memory_bytes(prometheus::BuildGauge()
 					.Name("xapiand_used_memory_bytes")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total memory currently allocated")
 					.Register(*registry)),
 	  xapiand_used_memory_bytes_met(xapiand_used_memory_bytes.Add(std::map<std::string, std::string>())),
 	  xapiand_total_memory_system_bytes(prometheus::BuildGauge()
 					.Name("xapiand_total_memory_system_bytes")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total memory used")
 					.Register(*registry)),
 	  xapiand_total_memory_system_bytes_met(xapiand_total_memory_system_bytes.Add(std::map<std::string, std::string>())),
 	  xapiand_total_virtual_memory_used(prometheus::BuildGauge()
 					.Name("xapiand_total_virtual_memory_used")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total virtual memory used")
 					.Register(*registry)),
 	  xapiand_total_virtual_memory_used_met(xapiand_total_virtual_memory_used.Add(std::map<std::string, std::string>())),
 	  xapiand_readable_db(prometheus::BuildGauge()
 					.Name("xapiand_readable_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Readable databases in use")
 					.Register(*registry)),
 	  xapiand_readable_db_met(xapiand_readable_db.Add(std::map<std::string, std::string>())),
 	  xapiand_total_readable_db(prometheus::BuildGauge()
 					.Name("xapiand_total_readable_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total readable databases used")
 					.Register(*registry)),
 	  xapiand_total_readable_db_met(xapiand_total_readable_db.Add(std::map<std::string, std::string>())),
 	  xapiand_writable_db(prometheus::BuildGauge()
 					.Name("xapiand_writable_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Writable databases in use")
 					.Register(*registry)),
 	  xapiand_writable_db_met(xapiand_writable_db.Add(std::map<std::string, std::string>())),
 	  xapiand_total_writable_db(prometheus::BuildGauge()
 					.Name("xapiand_total_writable_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total writable databases used")
 					.Register(*registry)),
 	  xapiand_total_writable_db_met(xapiand_total_writable_db.Add(std::map<std::string, std::string>())),
 	  xapiand_total_db(prometheus::BuildGauge()
 					.Name("xapiand_total_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total databases in use")
 					.Register(*registry)),
 	  xapiand_total_db_met(xapiand_total_db.Add(std::map<std::string, std::string>())),
 	  xapiand_total_peak_db(prometheus::BuildGauge()
 					.Name("xapiand_total_peak_db")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total databases used")
 					.Register(*registry)),
 	  xapiand_total_peak_db_met(xapiand_total_peak_db.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_index(prometheus::BuildGauge()
 					.Name("xapiand_max_time_index")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by index (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_index_met(xapiand_max_time_index.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_search(prometheus::BuildGauge()
 					.Name("xapiand_max_time_search")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by search (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_search_met(xapiand_max_time_search.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_delete(prometheus::BuildGauge()
 					.Name("time_delete")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by delete (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_delete_met(xapiand_max_time_delete.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_patch(prometheus::BuildGauge()
 					.Name("xapiand_max_time_patch")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by patch (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_patch_met(xapiand_max_time_patch.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_merge(prometheus::BuildGauge()
 					.Name("xapiand_max_time_merge")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by merge (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_merge_met(xapiand_max_time_merge.Add(std::map<std::string, std::string>())),
 	  xapiand_max_time_aggregation(prometheus::BuildGauge()
 					.Name("xapiand_max_time_aggregation")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Maximum time tooked by aggregation (ms)")
 					.Register(*registry)),
 	  xapiand_max_time_aggregation_met(xapiand_max_time_aggregation.Add(std::map<std::string, std::string>())),
 	  xapiand_index_total(prometheus::BuildGauge()
 					.Name("xapiand_index_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of indexing")
 					.Register(*registry)),
 	  xapiand_index_total_met(xapiand_index_total.Add(std::map<std::string, std::string>())),
 	  xapiand_search_total(prometheus::BuildGauge()
 					.Name("xapiand_search_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of searching")
 					.Register(*registry)),
 	  xapiand_search_total_met(xapiand_search_total.Add(std::map<std::string, std::string>())),
 	  xapiand_delete_total(prometheus::BuildGauge()
 					.Name("xapiand_delete_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of deleting")
 					.Register(*registry)),
 	  xapiand_delete_total_met(xapiand_delete_total.Add(std::map<std::string, std::string>())),
 	  xapiand_patch_total(prometheus::BuildGauge()
 					.Name("xapiand_patch_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of patching")
 					.Register(*registry)),
 	  xapiand_patch_total_met(xapiand_patch_total.Add(std::map<std::string, std::string>())),
 	  xapiand_merge_total(prometheus::BuildGauge()
 					.Name("xapiand_merge_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of merging")
 					.Register(*registry)),
 	  xapiand_merge_total_met(xapiand_merge_total.Add(std::map<std::string, std::string>())),
 	  xapiand_aggregation_total(prometheus::BuildGauge()
 					.Name("xapiand_aggregation_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of search with aggregations")
 					.Register(*registry)),
 	  xapiand_aggregation_total_met(xapiand_aggregation_total.Add(std::map<std::string, std::string>())),
 	  xapiand_commit_total(prometheus::BuildGauge()
 					.Name("xapiand_commit_total")
-					.Labels({{NODE_LABEL, nodename}})
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Number of commits")
 					.Register(*registry)),
 	  xapiand_commit_total_met(xapiand_commit_total.Add(std::map<std::string, std::string>())) { }
@@ -770,7 +771,7 @@ XapiandManager::set_request_info()
 {
 	L_CALL("XapiandManager::set_request_info()");
 	if (!req_info) {
-		req_info = std::make_unique<Requestinfo>(node_name);
+		req_info = std::make_unique<Requestinfo>(node_name, opts.cluster_name);
 	}
 }
 

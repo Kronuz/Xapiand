@@ -82,7 +82,7 @@ enum class RequestType {
 
 class Requestinfo {
 public:
-	Requestinfo(const std::string& nodename);
+	Requestinfo(const std::string& nodename, const std::string& cluster);
 	~Requestinfo() = default;
 
 	std::shared_ptr<prometheus::Registry> registry;
