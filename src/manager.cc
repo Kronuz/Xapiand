@@ -1633,36 +1633,42 @@ XapiandManager::update_req_info(std::uint64_t duration, RequestType typ)
 			if (req_info->xapiand_max_time_index.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_index.Set(duration / 1e6);
 			}
+			req_info->xapiand_index_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::SEARCH:
 			req_info->xapiand_search_total.Increment();
 			if (req_info->xapiand_max_time_search.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_search.Set(duration / 1e6);
 			}
+			req_info->xapiand_search_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::DELETE:
 			req_info->xapiand_delete_total.Increment();
 			if (req_info->xapiand_max_time_delete.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_delete.Set(duration / 1e6);
 			}
+			req_info->xapiand_delete_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::PATCH:
 			req_info->xapiand_patch_total.Increment();
 			if (req_info->xapiand_max_time_patch.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_patch.Set(duration / 1e6);
 			}
+			req_info->xapiand_patch_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::MERGE:
 			req_info->xapiand_merge_total.Increment();
 			if (req_info->xapiand_max_time_merge.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_merge.Set(duration / 1e6);
 			}
+			req_info->xapiand_merge_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::AGGREGATIONS:
 			req_info->xapiand_aggregation_total.Increment();
 			if (req_info->xapiand_max_time_aggregation.Value() < (duration / 1e6)) {
 				req_info->xapiand_max_time_aggregation.Set(duration / 1e6);
 			}
+			req_info->xapiand_aggregation_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::COMMIT:
 			req_info->xapiand_commit_total.Increment();
