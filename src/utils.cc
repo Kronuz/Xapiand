@@ -547,7 +547,7 @@ ssize_t get_max_files_per_proc()
 	if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
 		L_ERR("ERROR: Unable to get max files per process: getrlimit(RLIMIT_NOFILE): [%d] %s", errno, std::strerror(errno));
 	}
-	max_files_per_proc = stacklim.rlim_cur;
+	max_files_per_proc = limit.rlim_cur;
 #else
 	L_WARNING("WARNING: No way of getting max files per process.");
 #endif
