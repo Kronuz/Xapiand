@@ -21,7 +21,7 @@ fi
 # Add defaults to command
 if [ "$1" = 'xapiand' ]; then
 	XAPIAND_DATABASE="${XAPIAND_DATABASE:-/var/db/xapiand}"
-	XAPIAND_CLUSTER="${XAPIAND_CLUSTER:$HOSTNAME}"
+	XAPIAND_CLUSTER="${XAPIAND_CLUSTER:-${HOSTNAME:-Xapiand}}"
 
 	if [ ! -d "$XAPIAND_DATABASE" ]; then
 		mkdir -p "$XAPIAND_DATABASE"
