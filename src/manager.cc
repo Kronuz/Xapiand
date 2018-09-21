@@ -278,6 +278,12 @@ Requestinfo::Requestinfo(const std::string& nodename)
 					.Help("Amount of file descriptors in use")
 					.Register(*registry)),
 	  xapiand_file_descriptors_met(xapiand_file_descriptors.Add(std::map<std::string, std::string>())),
+	  xapiand_max_file_descriptors(prometheus::BuildGauge()
+					.Name("xapiand_max_file_descriptors")
+					.Labels({{NODE_LABEL, nodename}})
+					.Help("Maximum number of file descriptors")
+					.Register(*registry)),
+	  xapiand_max_file_descriptors_met(xapiand_max_file_descriptors.Add(std::map<std::string, std::string>())),
 	  xapiand_resident_memory_bytes(prometheus::BuildGauge()
 					.Name("xapiand_resident_memory_bytes")
 					.Labels({{NODE_LABEL, nodename}})
@@ -1493,6 +1499,7 @@ XapiandManager::server_metrics()
 
 	// file_descriptors:
 	req_info->xapiand_file_descriptors_met.Set(file_descriptors_cnt());
+	req_info->xapiand_max_file_descriptors_met.Set(get_max_files_per_proc());
 
 	// memory:
 	req_info->xapiand_resident_memory_bytes_met.Set(get_current_memory_by_process());

@@ -167,6 +167,9 @@ public:
 	prometheus::Family<prometheus::Gauge>& xapiand_file_descriptors;
 	prometheus::Gauge& xapiand_file_descriptors_met;
 
+	prometheus::Family<prometheus::Gauge>& xapiand_max_file_descriptors;
+	prometheus::Gauge& xapiand_max_file_descriptors_met;
+
 	prometheus::Family<prometheus::Gauge>& xapiand_resident_memory_bytes;
 	prometheus::Gauge& xapiand_resident_memory_bytes_met;
 
