@@ -1019,7 +1019,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 
 void
-HttpClient::metrics_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::metrics_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
 {
 	L_CALL("HttpClient::metrics_view()");
 
