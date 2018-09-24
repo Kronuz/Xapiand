@@ -276,3 +276,34 @@ uint64_t get_free_inodes()
 #endif
 	return free_inodes;
 }
+
+
+uint64_t get_total_disk_size()
+{
+	uint64_t total_disk_size = 0;
+#if defined(__APPLE__)|| defined(__linux__)
+	struct statfs statf;
+	if (statfs(".", &statf) < 0) {
+		L_ERR("ERROR: Unable to get total disk size (): [%d] %s", errno, strerror(errno));
+	}
+	total_disk_size = statf.f_blocks * statf.f_bsize;
+#else
+	L_WARNING("WARNING: No way of getting total disk size");
+#endif
+	return total_disk_size;
+}
+
+uint64_t get_free_disk_size()
+{
+	uint64_t free_disk_size = 0;
+#if defined(__APPLE__)|| defined(__linux__)
+	struct statfs statf;
+	if (statfs(".", &statf) < 0) {
+		L_ERR("ERROR: Unable to get free disk size (): [%d] %s", errno, strerror(errno));
+	}
+	free_disk_size = statf.f_bfree * statf.f_bsize;
+#else
+	L_WARNING("WARNING: No way of getting free disk size");
+#endif
+	return free_disk_size;
+}
