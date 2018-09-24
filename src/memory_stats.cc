@@ -36,6 +36,8 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 #include <mach/mach.h>           // for task_basic_info
+#include <sys/param.h>
+#include <sys/mount.h>
 #elif defined(__FreeBSD__)
 #include <fcntl.h>
 #include <unistd.h>              // for getpagesize
@@ -236,7 +238,11 @@ uint64_t get_total_inodes()
 {
 	uint64_t total_inodes = 0;
 #if defined(__APPLE__)
-	L_WARNING("WARNING: No way of getting total inodes");
+	struct statfs statf;
+	if (statfs(".", &statf) < 0) {
+		L_ERR("ERROR: Unable to get total inodes statfs(): [%d] %s", errno, strerror(errno));
+	}
+	total_inodes = statf.f_files;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs("./nodename", &info) < 0) {
@@ -254,7 +260,11 @@ uint64_t get_free_inodes()
 {
 	uint64_t free_inodes = 0;
 #if defined(__APPLE__)
-	L_WARNING("WARNING: No way of getting free inodes");
+	struct statfs statf;
+	if (statfs(".", &statf) < 0) {
+		L_ERR("ERROR: Unable to get free inodes statfs(): [%d] %s", errno, strerror(errno));
+	}
+	free_inodes = statf.f_ffree;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs("./nodename", &info) < 0) {
