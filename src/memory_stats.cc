@@ -46,6 +46,7 @@
 #include <fstream>
 #include <string>
 #include <sys/sysinfo.h>         // for sysinfo
+#include <sys/statvfs.h>         // for statvfs
 #endif
 
 
@@ -220,7 +221,7 @@ uint64_t get_total_virtual_memory()
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
-		L_ERR("ERROR: Unable to get total memory size: sysinfo(): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: Unable to get total virtual memory size: sysinfo(): [%d] %s", errno, strerror(errno));
 	}
 	total_virtual_memory = info.totalswap;
 #else
@@ -228,4 +229,40 @@ uint64_t get_total_virtual_memory()
 #endif
 
 	return total_virtual_memory;
+}
+
+
+uint64_t get_total_inodes()
+{
+	uint64_t total_inodes = 0;
+#if defined(__APPLE__)
+	L_WARNING("WARNING: No way of getting total inodes");
+#elif defined(__linux__)
+	struct statvfs info;
+	if (statvfs("./nodename", &info) < 0) {
+		L_ERR("ERROR: Unable to get total inodes statvfs(): [%d] %s", errno, strerror(errno));
+	}
+	total_inodes = info.f_files;
+#else
+	L_WARNING("WARNING: No way of getting total inodes");
+#endif
+	return total_inodes;
+}
+
+
+uint64_t get_free_inodes()
+{
+	uint64_t free_inodes = 0;
+#if defined(__APPLE__)
+	L_WARNING("WARNING: No way of getting free inodes");
+#elif defined(__linux__)
+	struct statvfs info;
+	if (statvfs("./nodename", &info) < 0) {
+		L_ERR("ERROR: Unable to get free inodes statvfs(): [%d] %s", errno, strerror(errno));
+	}
+	free_inodes = info.f_ffree;
+#else
+	L_WARNING("WARNING: No way of getting free inodes");
+#endif
+	return free_inodes;
 }

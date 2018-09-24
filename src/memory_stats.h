@@ -36,3 +36,5 @@ uint64_t get_total_virtual_used();
 uint64_t get_total_ram();
 uint64_t get_current_memory_by_process(bool resident=true);
 uint64_t get_total_virtual_memory();
+uint64_t get_total_inodes();
+uint64_t get_free_inodes();
