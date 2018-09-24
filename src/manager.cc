@@ -333,6 +333,18 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Help("Total virtual memory used")
 					.Register(*registry)),
 	  xapiand_total_virtual_memory_used(total_virtual_memory_used.Add(std::map<std::string, std::string>())),
+	  total_disk_bytes(prometheus::BuildGauge()
+					.Name("xapiand_total_disk_bytes")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Total disk size")
+					.Register(*registry)),
+	  xapiand_total_disk_bytes(total_disk_bytes.Add(std::map<std::string, std::string>())),
+	  free_disk_bytes(prometheus::BuildGauge()
+					.Name("xapiand_free_disk_bytes")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Free disk size")
+					.Register(*registry)),
+	  xapiand_free_disk_bytes(free_disk_bytes.Add(std::map<std::string, std::string>())),
 	  readable_db(prometheus::BuildGauge()
 					.Name("xapiand_readable_db")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -1452,6 +1464,8 @@ XapiandManager::server_metrics()
 	req_info->xapiand_used_memory_bytes.Set(allocator::total_allocated());
 	req_info->xapiand_total_memory_system_bytes.Set(get_total_ram());
 	req_info->xapiand_total_virtual_memory_used.Set(get_total_virtual_memory());
+	req_info->xapiand_total_disk_bytes.Set(get_total_disk_size());
+	req_info->xapiand_free_disk_bytes.Set(get_free_disk_size());
 
 	// databases:
 	auto wdb = database_pool.total_writable_databases();

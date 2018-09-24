@@ -197,6 +197,12 @@ public:
 	prometheus::Family<prometheus::Gauge>& total_virtual_memory_used;
 	prometheus::Gauge& xapiand_total_virtual_memory_used;
 
+	prometheus::Family<prometheus::Gauge>& total_disk_bytes;
+	prometheus::Gauge& xapiand_total_disk_bytes;
+
+	prometheus::Family<prometheus::Gauge>& free_disk_bytes;
+	prometheus::Gauge& xapiand_free_disk_bytes;
+
 	// databases:
 	prometheus::Family<prometheus::Gauge>& readable_db;
 	prometheus::Gauge& xapiand_readable_db;
