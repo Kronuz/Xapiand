@@ -245,7 +245,7 @@ uint64_t get_total_inodes()
 	total_inodes = statf.f_files;
 #elif defined(__linux__)
 	struct statvfs info;
-	if (statvfs("./nodename", &info) < 0) {
+	if (statvfs(".", &info) < 0) {
 		L_ERR("ERROR: Unable to get total inodes statvfs(): [%d] %s", errno, strerror(errno));
 	}
 	total_inodes = info.f_files;
@@ -267,7 +267,7 @@ uint64_t get_free_inodes()
 	free_inodes = statf.f_ffree;
 #elif defined(__linux__)
 	struct statvfs info;
-	if (statvfs("./nodename", &info) < 0) {
+	if (statvfs(".", &info) < 0) {
 		L_ERR("ERROR: Unable to get free inodes statvfs(): [%d] %s", errno, strerror(errno));
 	}
 	free_inodes = info.f_ffree;
