@@ -961,7 +961,7 @@ void setup() {
 }
 
 
-void server() {
+void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	if (opts.detach) {
 		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
 	}
@@ -973,7 +973,7 @@ void server() {
 	ev::default_loop default_loop(opts.ev_flags);
 	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, process_start);
 	XapiandManager::manager->run();
 
 	long managers = XapiandManager::manager.use_count() - 1;
@@ -1100,6 +1100,7 @@ void restore() {
 int main(int argc, char **argv) {
 	int exit_code = EX_OK;
 
+	auto process_start = std::chrono::system_clock::now();
 
 #if defined(__linux__) && !defined(__GLIBC__)
 	pthread_attr_t a;
@@ -1170,7 +1171,7 @@ int main(int argc, char **argv) {
 			} else if (!opts.restore.empty()) {
 				restore();
 			} else {
-				server();
+				server(process_start);
 			}
 		} catch (const BaseException& exc) {
 			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
