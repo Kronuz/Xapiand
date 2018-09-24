@@ -36,8 +36,6 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 #include <mach/mach.h>           // for task_basic_info
-#include <sys/param.h>
-#include <sys/mount.h>
 #elif defined(__FreeBSD__)
 #include <fcntl.h>
 #include <unistd.h>              // for getpagesize
@@ -49,6 +47,7 @@
 #include <string>
 #include <sys/sysinfo.h>         // for sysinfo
 #include <sys/statvfs.h>         // for statvfs
+#include <sys/vfs.h>             // for statfs
 #endif
 
 
