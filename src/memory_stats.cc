@@ -39,6 +39,13 @@
 #elif defined(__FreeBSD__)
 #include <fcntl.h>
 #include <unistd.h>              // for getpagesize
+#elif defined(__linux__)
+#include <unistd.h>
+#include <ios>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sys/sysinfo.h>         // for sysinfo
 #endif
 
 
@@ -115,6 +122,12 @@ uint64_t get_total_ram()
 		L_ERR("ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 	}
 #undef _SYSCTL_NAME
+#elif defined(__linux__)
+	struct sysinfo info;
+	if (sysinfo(&info) < 0) {
+		L_ERR("ERROR: Unable to get total memory size: sysinfo(): [%d] %s", errno, strerror(errno));
+	}
+	total_ram = info.totalram;
 #else
 	L_WARNING("WARNING: No way of getting total memory size.");
 #endif
@@ -137,6 +150,36 @@ uint64_t get_current_memory_by_process(bool resident)
 		current_memory_by_process = t_info.resident_size;
 	} else {
 		current_memory_by_process = t_info.virtual_size;
+	}
+#elif defined(__linux__)
+	using std::ios_base;
+	using std::ifstream;
+	using std::string;
+
+	// 'file' stat seems to give the most reliable results
+	ifstream stat_stream("/proc/self/stat",ios_base::in);
+
+	// dummy vars for leading entries in stat that we don't care about
+	string pid, comm, state, ppid, pgrp, session, tty_nr;
+	string tpgid, flags, minflt, cminflt, majflt, cmajflt;
+	string utime, stime, cutime, cstime, priority, nice;
+	string O, itrealvalue, starttime;
+
+	// the two fields we want
+	unsigned long vsize;
+	long rss;
+
+	stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+				>> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+				>> utime >> stime >> cutime >> cstime >> priority >> nice
+				>> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
+
+	stat_stream.close();
+	long page_size_kb = sysconf(_SC_PAGE_SIZE); // in case x86-64 is configured to use 2MB pages
+	if (resident) {
+		current_memory_by_process = rss * page_size_kb;
+	} else {
+		current_memory_by_process = vsize;
 	}
 #else
 	L_WARNING("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
@@ -174,6 +217,12 @@ uint64_t get_total_virtual_memory()
 		total_virtual_memory = total_pages * getpagesize();
 	}
 #undef _SYSCTL_NAME
+#elif defined(__linux__)
+	struct sysinfo info;
+	if (sysinfo(&info) < 0) {
+		L_ERR("ERROR: Unable to get total memory size: sysinfo(): [%d] %s", errno, strerror(errno));
+	}
+	total_virtual_memory = info.totalswap;
 #else
 	L_WARNING("WARNING: No way of getting total virtual memory size.");
 #endif
