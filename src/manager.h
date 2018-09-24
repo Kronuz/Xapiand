@@ -108,6 +108,12 @@ public:
 	prometheus::Family<prometheus::Summary>& commit_summary;
 	prometheus::Summary& xapiand_commit_summary;
 
+	prometheus::Family<prometheus::Gauge>& node_up;
+	prometheus::Gauge& xapiand_node_up;
+
+	prometheus::Family<prometheus::Gauge>& process_start_time_seconds;
+	prometheus::Gauge& xapiand_process_start_time_seconds;
+
 	// clients_tasks:
 	prometheus::Family<prometheus::Gauge>& http_clients_run;
 	prometheus::Gauge& xapiand_http_clients_run;
@@ -232,7 +238,7 @@ class XapiandManager : public Worker  {
 	std::mutex qmtx;
 
 	XapiandManager();
-	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_);
+	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_);
 
 	struct sockaddr_in host_address();
 
@@ -314,6 +320,8 @@ public:
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
 	ev::async shutdown_sig_async;
+	std::chrono::time_point<std::chrono::system_clock> process_start;
+
 	void signal_sig(int sig);
 	void signal_sig_async_cb(ev::async&, int);
 

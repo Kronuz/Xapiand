@@ -171,6 +171,18 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+      node_up(prometheus::BuildGauge()
+					.Name("xapiand_node_up")
+					.Help("If the node is actually running")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Register(*registry)),
+	  xapiand_node_up(node_up.Add(std::map<std::string, std::string>())),
+	  process_start_time_seconds(prometheus::BuildGauge()
+					.Name("xapiand_process_start_time_seconds")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Start time of the process since unix epoch in seconds")
+					.Register(*registry)),
+	  xapiand_process_start_time_seconds(process_start_time_seconds.Add(std::map<std::string, std::string>())),
 	  http_clients_run(prometheus::BuildGauge()
 					.Name("xapiand_http_clients_run")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -408,7 +420,7 @@ XapiandManager::XapiandManager()
 }
 
 
-XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
@@ -424,7 +436,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	  state(State::RESET),
 	  node_name(opts.node_name),
 	  atom_sig(0),
-	  signal_sig_async(*ev_loop)
+	  signal_sig_async(*ev_loop),
+	  process_start(process_start_)
 {
 	// Set the id in local node.
 	auto local_node_ = local_node.load();
@@ -1421,6 +1434,9 @@ XapiandManager::server_metrics()
 							.Register(*req_info->registry);
 	auto& xapiand_info = info.Add({{"short_version", short_version}, {"version", full_version}});
 	xapiand_info.Set(1);
+
+	req_info->xapiand_node_up.Set(1);
+	req_info->xapiand_process_start_time_seconds.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
 	// clients_tasks:
 	req_info->xapiand_http_clients_run.Set(client_pool.running_size());
