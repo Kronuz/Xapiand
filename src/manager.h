@@ -167,12 +167,21 @@ public:
 	prometheus::Family<prometheus::Gauge>& http_peak_connections;
 	prometheus::Gauge& xapiand_http_peak_connections;
 
+	// file_descriptors:
 	prometheus::Family<prometheus::Gauge>& file_descriptors;
 	prometheus::Gauge& xapiand_file_descriptors;
 
 	prometheus::Family<prometheus::Gauge>& max_file_descriptors;
 	prometheus::Gauge& xapiand_max_file_descriptors;
 
+	// inodes:
+	prometheus::Family<prometheus::Gauge>& free_inodes;
+	prometheus::Gauge& xapiand_free_inodes;
+
+	prometheus::Family<prometheus::Gauge>& max_inodes;
+	prometheus::Gauge& xapiand_max_inodes;
+
+	// memory:
 	prometheus::Family<prometheus::Gauge>& resident_memory_bytes;
 	prometheus::Gauge& xapiand_resident_memory_bytes;
 

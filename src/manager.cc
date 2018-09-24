@@ -291,6 +291,18 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Help("Maximum number of file descriptors")
 					.Register(*registry)),
 	  xapiand_max_file_descriptors(max_file_descriptors.Add(std::map<std::string, std::string>())),
+	  free_inodes(prometheus::BuildGauge()
+					.Name("xapiand_free_inodes")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Free inodes")
+					.Register(*registry)),
+	  xapiand_free_inodes(free_inodes.Add(std::map<std::string, std::string>())),
+	  max_inodes(prometheus::BuildGauge()
+					.Name("xapiand_max_inodes")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Maximum inodes")
+					.Register(*registry)),
+	  xapiand_max_inodes(max_inodes.Add(std::map<std::string, std::string>())),
 	  resident_memory_bytes(prometheus::BuildGauge()
 					.Name("xapiand_resident_memory_bytes")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -1429,6 +1441,10 @@ XapiandManager::server_metrics()
 	// file_descriptors:
 	req_info->xapiand_file_descriptors.Set(file_descriptors_cnt());
 	req_info->xapiand_max_file_descriptors.Set(get_max_files_per_proc());
+
+	// inodes:
+	req_info->xapiand_free_inodes.Set(get_free_inodes());
+	req_info->xapiand_max_inodes.Set(get_total_inodes());
 
 	// memory:
 	req_info->xapiand_resident_memory_bytes.Set(get_current_memory_by_process());
