@@ -134,43 +134,43 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Help("Index requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_index_summary(index_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_index_summary(index_summary.Add(std::map<std::string, std::string>())),
 	  search_summary(prometheus::BuildSummary()
 					.Name("xapiand_search_summary")
 					.Help("Search requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_search_summary(search_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_search_summary(search_summary.Add(std::map<std::string, std::string>())),
 	  delete_summary(prometheus::BuildSummary()
 					.Name("xapiand_delete_summary")
 					.Help("Delete requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_delete_summary(delete_summary.Add(std::map<std::string, std::string>())),
 	  patch_summary(prometheus::BuildSummary()
 					.Name("xapiand_patch_summary")
 					.Help("Patch requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_patch_summary(patch_summary.Add(std::map<std::string, std::string>())),
 	  merge_summary(prometheus::BuildSummary()
 					.Name("xapiand_merge_summary")
 					.Help("Merge requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_merge_summary(merge_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_merge_summary(merge_summary.Add(std::map<std::string, std::string>())),
 	  aggregation_summary(prometheus::BuildSummary()
 					.Name("xapiand_aggregation_summary")
 					.Help("Aggregation requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_aggregation_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_aggregation_summary(aggregation_summary.Add(std::map<std::string, std::string>())),
 	  commit_summary(prometheus::BuildSummary()
 					.Name("xapiand_commit_summary")
 					.Help("Commit requests summary")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
+	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>())),
 	  node_up(prometheus::BuildGauge()
 					.Name("xapiand_node_up")
 					.Help("If the node is actually running")
