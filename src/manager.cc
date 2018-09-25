@@ -171,7 +171,7 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
 	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>(), prometheus::Summary::Quantiles{{0.5, 0.05}, {0.9, 0.05}, {0.99, 0.05}})),
-      node_up(prometheus::BuildGauge()
+	  node_up(prometheus::BuildGauge()
 					.Name("xapiand_node_up")
 					.Help("If the node is actually running")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -392,7 +392,29 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Help("Total databases used")
 					.Register(*registry)),
-	  xapiand_total_peak_db(total_peak_db.Add(std::map<std::string, std::string>())) { }
+	  xapiand_total_peak_db(total_peak_db.Add(std::map<std::string, std::string>()))
+{
+	std::vector<std::string> values({
+	string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+#if defined(XAPIAND_V8)
+	string::format("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
+#endif
+#if defined(XAPIAND_CHAISCRIPT)
+	string::format("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+#endif
+	});
+
+	auto short_version = "(" + Package::HASH + ") " + Package::FULLVERSION;
+	auto full_version = short_version + " on " + check_architecture() + ", compiled by " + check_compiler() + " (" + check_OS() + ")";
+	auto& info = prometheus::BuildGauge()
+					.Name("xapiand_info")
+					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
+					.Help("Version string as reported by Xapiand")
+					.Register(*registry);
+	auto& xapiand_info = info.Add({{"short_version", short_version}, {"version", full_version}});
+	xapiand_info.Set(1);
+	xapiand_node_up.Set(1);
+}
 
 
 XapiandManager::XapiandManager()
@@ -1414,28 +1436,6 @@ XapiandManager::server_metrics()
 {
 	L_CALL("XapiandManager::server_metrics()");
 
-	std::vector<std::string> values({
-			string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
-#if defined(XAPIAND_V8)
-			string::format("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
-			string::format("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
-#endif
-	});
-
-	auto short_version = "(" + Package::HASH + ") " + Package::FULLVERSION;
-	auto full_version = short_version + " on " + check_architecture() + ", compiled by " + check_compiler() + " (" + check_OS() + ")";
-
-	auto& info = prometheus::BuildGauge()
-							.Name("xapiand_info")
-							.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}})
-							.Help("Version string as reported by Xapiand")
-							.Register(*req_info->registry);
-	auto& xapiand_info = info.Add({{"short_version", short_version}, {"version", full_version}});
-	xapiand_info.Set(1);
-
-	req_info->xapiand_node_up.Set(1);
 	req_info->xapiand_process_start_time_seconds.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
 	// clients_tasks:
