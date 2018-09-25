@@ -83,8 +83,8 @@ class Summary {
 
   static const MetricType metric_type = MetricType::Summary;
 
-  Summary(const Quantiles& quantiles,
-          std::chrono::milliseconds max_age_seconds = std::chrono::seconds(60),
+  Summary(const Quantiles& quantiles = Quantiles{{0.5, 0.05}, {0.9, 0.01}, {0.99, 0.001}},
+          std::chrono::milliseconds max_age_seconds = std::chrono::minutes(10),
           int age_buckets = 5);
 
   void Observe(double value);
