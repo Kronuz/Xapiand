@@ -105,19 +105,19 @@ struct StashContext {
 	const char* _col() const noexcept {
 		switch (op) {
 			case Operation::walk: {
-				constexpr auto clear_color = CLEAR_COLOR;
+				static constexpr auto clear_color = CLEAR_COLOR;
 				return clear_color.c_str();
 			}
 			case Operation::peep: {
-				constexpr auto dim_grey = DIM_GREY;
+				static constexpr auto dim_grey = DIM_GREY;
 				return dim_grey.c_str();
 			}
 			case Operation::clean: {
-				constexpr auto purple = PURPLE;
+				static constexpr auto purple = PURPLE;
 				return purple.c_str();
 			}
 			default: {
-				constexpr auto clear_color = CLEAR_COLOR;
+				static constexpr auto clear_color = CLEAR_COLOR;
 				return clear_color.c_str();
 			}
 		}
