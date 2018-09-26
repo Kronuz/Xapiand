@@ -108,8 +108,8 @@ public:
 	prometheus::Family<prometheus::Summary>& commit_summary;
 	prometheus::Summary& xapiand_commit_summary;
 
-	prometheus::Family<prometheus::Gauge>& node_up;
-	prometheus::Gauge& xapiand_node_up;
+	prometheus::Family<prometheus::Gauge>& running;
+	prometheus::Gauge& xapiand_running;
 
 	prometheus::Family<prometheus::Gauge>& process_start_time_seconds;
 	prometheus::Gauge& xapiand_process_start_time_seconds;

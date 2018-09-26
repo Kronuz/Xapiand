@@ -172,11 +172,11 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 					.Register(*registry)),
 	  xapiand_commit_summary(aggregation_summary.Add(std::map<std::string, std::string>())),
 	  node_up(prometheus::BuildGauge()
-					.Name("xapiand_node_up")
+					.Name("xapiand_running")
 					.Help("If the node is actually running")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
 					.Register(*registry)),
-	  xapiand_node_up(node_up.Add(std::map<std::string, std::string>())),
+	  xapiand_running(node_up.Add(std::map<std::string, std::string>())),
 	  process_start_time_seconds(prometheus::BuildGauge()
 					.Name("xapiand_process_start_time_seconds")
 					.Labels({{NODE_LABEL, nodename}, {CLUSTER_LABEL, cluster}})
@@ -413,7 +413,7 @@ Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster
 		{"arch", check_architecture()},
 	});
 	xapiand_info.Set(1);
-	xapiand_node_up.Set(1);
+	xapiand_running.Set(1);
 }
 
 
