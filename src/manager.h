@@ -82,7 +82,7 @@ enum class RequestType {
 
 class Metrics {
 public:
-	Metrics(const std::string& nodename, const std::string& cluster);
+	Metrics(const std::string& node_name, const std::string& cluster_name);
 	~Metrics() = default;
 
 	std::shared_ptr<prometheus::Registry> registry;
