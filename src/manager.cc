@@ -547,7 +547,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  node_name(opts.node_name),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop),
-	  process_start(process_start_)
+	  process_start(process_start_),
+	  cleanup(*ev_loop)
 {
 	// Set the id in local node.
 	auto local_node_ = local_node.load();
@@ -577,6 +578,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
+
+	cleanup.set<XapiandManager, &XapiandManager::cleanup_cb>(this);
+	cleanup.repeat = 120.0;
+	cleanup.again();
 
 	L_OBJ("CREATED XAPIAN MANAGER!");
 }
@@ -863,6 +868,17 @@ XapiandManager::host_address()
 		freeifaddrs(if_addr_struct);
 	}
 	return addr;
+}
+
+
+void
+XapiandManager::cleanup_cb(ev::timer& /*unused*/, int revents)
+{
+	L_CALL("XapiandManager::cleanup_cb(<timer>, 0x%x (%s))", revents, readable_revents(revents));
+
+	ignore_unused(revents);
+
+	database_pool.cleanup();
 }
 
 

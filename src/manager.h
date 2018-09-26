@@ -244,6 +244,9 @@ public:
 	ev::async shutdown_sig_async;
 	std::chrono::time_point<std::chrono::system_clock> process_start;
 
+	ev::timer cleanup;
+	void cleanup_cb(ev::timer& watcher, int revents);
+
 	void signal_sig(int sig);
 	void signal_sig_async_cb(ev::async&, int);
 
