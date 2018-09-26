@@ -416,7 +416,7 @@ public:
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
 	std::shared_ptr<DatabaseQueue> get(size_t hash, bool db_volatile);
 
-	void cleanup();
+	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
 	void finish();
 };
@@ -440,6 +440,9 @@ class DatabasePool {
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
+
+	std::chrono::time_point<std::chrono::system_clock> cleanup_readable_time;
+	std::chrono::time_point<std::chrono::system_clock> cleanup_writable_time;
 
 	std::condition_variable checkin_cond;
 
@@ -469,6 +472,7 @@ class DatabasePool {
 	void checkin(std::shared_ptr<Database>& database);
 
 	bool _switch_db(const Endpoint& endpoint);
+	void _cleanup(bool writable, bool readable);
 
 public:
 	queue::QueueSet<Endpoint> updated_databases;
@@ -482,6 +486,7 @@ public:
 
 	void finish();
 	bool switch_db(const Endpoint& endpoint);
+	void cleanup();
 
 	std::pair<size_t, size_t> total_writable_databases();
 	std::pair<size_t, size_t> total_readable_databases();

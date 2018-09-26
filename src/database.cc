@@ -2279,9 +2279,8 @@ DatabasesLRU::get(size_t hash, bool db_volatile)
 
 
 void
-DatabasesLRU::cleanup()
+DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& now)
 {
-	const auto now = std::chrono::system_clock::now();
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
 			val->size() < val->count ||
@@ -2408,14 +2407,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		std::shared_ptr<DatabaseQueue> queue;
 		if (db_writable) {
 			queue = writable_databases.get(hash, db_volatile);
-			databases.cleanup();
+			_cleanup(false, true);
 			if (db_commit && !queue->modified) {
 				L_DATABASE_END("!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()));
 			}
 		} else {
 			queue = databases.get(hash, db_volatile);
-			writable_databases.cleanup();
+			_cleanup(true, false);
 		}
 
 		auto old_state = queue->state;
@@ -2595,8 +2594,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	}
 
 	if (!queue->push(database)) {
-		writable_databases.cleanup();
-		databases.cleanup();
+		_cleanup(true, true);
 		queue->push(database);
 	}
 
@@ -2684,6 +2682,39 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
+}
+
+
+void
+DatabasePool::_cleanup(bool writable, bool readable)
+{
+	L_CALL("DatabasePool::_cleanup(%s, %s)", writable ? "true" : "false", readable ? "true" : "false");
+
+	const auto now = std::chrono::system_clock::now();
+
+	if (writable) {
+		if (cleanup_writable_time < now - 5min) {
+			writable_databases.cleanup(now);
+			cleanup_writable_time = now;
+		}
+	}
+
+	if (readable) {
+		if (cleanup_readable_time < now - 5min) {
+			databases.cleanup(now);
+			cleanup_readable_time = now;
+		}
+	}
+}
+
+
+void
+DatabasePool::cleanup()
+{
+	L_CALL("DatabasePool::cleanup()");
+
+	std::unique_lock<std::mutex> lk(qmtx);
+	_cleanup(true, true);
 }
 
 
