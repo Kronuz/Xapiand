@@ -1082,7 +1082,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_req_info(took, RequestType::DELETE);
+	XapiandManager::manager->update_metrics(took, RequestType::DELETE);
 }
 
 
@@ -1136,7 +1136,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_req_info(took, RequestType::INDEX);
+	XapiandManager::manager->update_metrics(took, RequestType::INDEX);
 }
 
 
@@ -1205,7 +1205,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_req_info(took, rt);
+	XapiandManager::manager->update_metrics(took, rt);
 }
 
 
@@ -1408,7 +1408,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
-	XapiandManager::manager->update_req_info(took, RequestType::COMMIT);
+	XapiandManager::manager->update_metrics(took, RequestType::COMMIT);
 }
 
 
@@ -1945,7 +1945,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 	}
 
-	XapiandManager::manager->update_req_info(took, rt);
+	XapiandManager::manager->update_metrics(took, rt);
 	L_SEARCH("FINISH SEARCH");
 }
 

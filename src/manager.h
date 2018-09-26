@@ -85,147 +85,69 @@ public:
 	Metrics(const std::string& node_name, const std::string& cluster_name);
 	~Metrics() = default;
 
-	std::shared_ptr<prometheus::Registry> registry;
-
-	prometheus::Family<prometheus::Summary>& index_summary;
+	prometheus::Registry registry;
 	prometheus::Summary& xapiand_index_summary;
-
-	prometheus::Family<prometheus::Summary>& search_summary;
 	prometheus::Summary& xapiand_search_summary;
-
-	prometheus::Family<prometheus::Summary>& delete_summary;
 	prometheus::Summary& xapiand_delete_summary;
-
-	prometheus::Family<prometheus::Summary>& patch_summary;
 	prometheus::Summary& xapiand_patch_summary;
-
-	prometheus::Family<prometheus::Summary>& merge_summary;
 	prometheus::Summary& xapiand_merge_summary;
-
-	prometheus::Family<prometheus::Summary>& aggregation_summary;
 	prometheus::Summary& xapiand_aggregation_summary;
-
-	prometheus::Family<prometheus::Summary>& commit_summary;
 	prometheus::Summary& xapiand_commit_summary;
-
-	prometheus::Family<prometheus::Gauge>& running;
-	prometheus::Gauge& xapiand_running;
-
-	prometheus::Family<prometheus::Gauge>& process_start_time_seconds;
 	prometheus::Gauge& xapiand_process_start_time_seconds;
+	prometheus::Gauge& xapiand_running;
+	prometheus::Gauge& xapiand_info;
 
 	// clients_tasks:
-	prometheus::Family<prometheus::Gauge>& http_clients_run;
 	prometheus::Gauge& xapiand_http_clients_run;
-
-	prometheus::Family<prometheus::Gauge>& http_clients_queue;
 	prometheus::Gauge& xapiand_http_clients_queue;
-
-	prometheus::Family<prometheus::Gauge>& http_clients_capacity;
 	prometheus::Gauge& xapiand_http_clients_capacity;
-
-	prometheus::Family<prometheus::Gauge>& http_clients_pool_size;
 	prometheus::Gauge& xapiand_http_clients_pool_size;
 
 	// server_tasks:
-	prometheus::Family<prometheus::Gauge>& servers_run;
 	prometheus::Gauge& xapiand_servers_run;
-
-	prometheus::Family<prometheus::Gauge>& servers_pool_size;
 	prometheus::Gauge& xapiand_servers_pool_size;
-
-	prometheus::Family<prometheus::Gauge>& servers_queue;
 	prometheus::Gauge& xapiand_servers_queue;
-
-	prometheus::Family<prometheus::Gauge>& servers_capacity;
-	prometheus::Gauge& 	xapiand_servers_capacity;
+	prometheus::Gauge& xapiand_servers_capacity;
 
 	// committers_threads:
-	prometheus::Family<prometheus::Gauge>& committers_running;
 	prometheus::Gauge& xapiand_committers_running;
-
-	prometheus::Family<prometheus::Gauge>& committers_queue;
 	prometheus::Gauge& xapiand_committers_queue;
-
-	prometheus::Family<prometheus::Gauge>& committers_capacity;
 	prometheus::Gauge& xapiand_committers_capacity;
-
-	prometheus::Family<prometheus::Gauge>& committers_pool_size;
 	prometheus::Gauge& xapiand_committers_pool_size;
 
 	// fsync_threads:
-	prometheus::Family<prometheus::Gauge>& fsync_running;
 	prometheus::Gauge& xapiand_fsync_running;
-
-	prometheus::Family<prometheus::Gauge>& fsync_queue;
 	prometheus::Gauge& xapiand_fsync_queue;
-
-	prometheus::Family<prometheus::Gauge>& fsync_capacity;
 	prometheus::Gauge& xapiand_fsync_capacity;
-
-	prometheus::Family<prometheus::Gauge>& fsync_pool_size;
 	prometheus::Gauge& xapiand_fsync_pool_size;
 
 	// connections:
-	prometheus::Family<prometheus::Gauge>& http_current_connections;
 	prometheus::Gauge& xapiand_http_current_connections;
-
-	prometheus::Family<prometheus::Gauge>& http_peak_connections;
 	prometheus::Gauge& xapiand_http_peak_connections;
 
 	// file_descriptors:
-	prometheus::Family<prometheus::Gauge>& file_descriptors;
 	prometheus::Gauge& xapiand_file_descriptors;
-
-	prometheus::Family<prometheus::Gauge>& max_file_descriptors;
 	prometheus::Gauge& xapiand_max_file_descriptors;
 
 	// inodes:
-	prometheus::Family<prometheus::Gauge>& free_inodes;
 	prometheus::Gauge& xapiand_free_inodes;
-
-	prometheus::Family<prometheus::Gauge>& max_inodes;
 	prometheus::Gauge& xapiand_max_inodes;
 
 	// memory:
-	prometheus::Family<prometheus::Gauge>& resident_memory_bytes;
 	prometheus::Gauge& xapiand_resident_memory_bytes;
-
-	prometheus::Family<prometheus::Gauge>& virtual_memory_bytes;
 	prometheus::Gauge& xapiand_virtual_memory_bytes;
-
-	prometheus::Family<prometheus::Gauge>& used_memory_bytes;
 	prometheus::Gauge& xapiand_used_memory_bytes;
-
-	prometheus::Family<prometheus::Gauge>& total_memory_system_bytes;
 	prometheus::Gauge& xapiand_total_memory_system_bytes;
-
-	prometheus::Family<prometheus::Gauge>& total_virtual_memory_used;
 	prometheus::Gauge& xapiand_total_virtual_memory_used;
-
-	prometheus::Family<prometheus::Gauge>& total_disk_bytes;
 	prometheus::Gauge& xapiand_total_disk_bytes;
-
-	prometheus::Family<prometheus::Gauge>& free_disk_bytes;
 	prometheus::Gauge& xapiand_free_disk_bytes;
 
 	// databases:
-	prometheus::Family<prometheus::Gauge>& readable_db;
 	prometheus::Gauge& xapiand_readable_db;
-
-	prometheus::Family<prometheus::Gauge>& total_readable_db;
 	prometheus::Gauge& xapiand_total_readable_db;
-
-	prometheus::Family<prometheus::Gauge>& writable_db;
 	prometheus::Gauge& xapiand_writable_db;
-
-	prometheus::Family<prometheus::Gauge>& total_writable_db;
 	prometheus::Gauge& xapiand_total_writable_db;
-
-	prometheus::Family<prometheus::Gauge>& total_db;
 	prometheus::Gauge& xapiand_total_db;
-
-	prometheus::Family<prometheus::Gauge>& total_peak_db;
 	prometheus::Gauge& xapiand_total_peak_db;
 };
 
@@ -268,7 +190,7 @@ protected:
 	void make_servers();
 	void make_replicators();
 
-	std::unique_ptr<Metrics> req_info;
+	Metrics metrics;
 
 public:
 	std::string __repr__() const override {
@@ -337,9 +259,7 @@ public:
 
 	bool is_single_node();
 
-	void update_req_info(std::uint64_t duration, RequestType typ);
-
-	void set_request_info();
+	void update_metrics(std::uint64_t duration, RequestType typ);
 
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();

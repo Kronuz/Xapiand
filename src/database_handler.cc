@@ -1694,7 +1694,7 @@ DatabaseHandler::commit(bool _wal)
 {
 	L_CALL("DatabaseHandler::commit(%s)", _wal ? "true" : "false");
 
-	XapiandManager::manager->update_req_info(0, RequestType::COMMIT);
+	XapiandManager::manager->update_metrics(0, RequestType::COMMIT);
 
 	lock_database lk_db(this);
 	return database->commit(_wal);
