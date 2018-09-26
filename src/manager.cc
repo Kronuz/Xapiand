@@ -127,7 +127,7 @@ void sig_exit(int sig) {
 }
 
 
-Requestinfo::Requestinfo(const std::string& nodename, const std::string& cluster)
+Metrics::Metrics(const std::string& nodename, const std::string& cluster)
 	: registry(std::make_shared<prometheus::Registry>()),
 	  index_summary(prometheus::BuildSummary()
 					.Name("xapiand_index_summary")
@@ -758,7 +758,7 @@ XapiandManager::set_request_info()
 {
 	L_CALL("XapiandManager::set_request_info()");
 	if (!req_info) {
-		req_info = std::make_unique<Requestinfo>(node_name, opts.cluster_name);
+		req_info = std::make_unique<Metrics>(node_name, opts.cluster_name);
 	}
 }
 

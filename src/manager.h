@@ -80,10 +80,10 @@ enum class RequestType {
 	COMMIT
 };
 
-class Requestinfo {
+class Metrics {
 public:
-	Requestinfo(const std::string& nodename, const std::string& cluster);
-	~Requestinfo() = default;
+	Metrics(const std::string& nodename, const std::string& cluster);
+	~Metrics() = default;
 
 	std::shared_ptr<prometheus::Registry> registry;
 
@@ -268,7 +268,7 @@ protected:
 	void make_servers();
 	void make_replicators();
 
-	std::unique_ptr<Requestinfo> req_info;
+	std::unique_ptr<Metrics> req_info;
 
 public:
 	std::string __repr__() const override {
