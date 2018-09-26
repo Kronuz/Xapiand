@@ -507,7 +507,6 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
-	  metrics(opts.node_name, opts.cluster_name),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
 	  thread_pool("W%02zu", opts.threadpool_size),
@@ -533,7 +532,6 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
-	  metrics(opts.node_name, opts.cluster_name),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
 	  thread_pool("W%02zu", opts.threadpool_size),
@@ -780,7 +778,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		local_node_copy->name(node_name);
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	}
+
 	L_INFO("Node %s accepted to the party!", node_name);
+	metrics = std::make_unique<Metrics>(node_name, opts.cluster_name);
 
 	{
 		// Get a node (any node)
@@ -1515,64 +1515,66 @@ XapiandManager::server_metrics()
 {
 	L_CALL("XapiandManager::server_metrics()");
 
-	metrics.xapiand_process_start_time_seconds.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
+	assert(metrics);
+
+	metrics->xapiand_process_start_time_seconds.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
 	// clients_tasks:
-	metrics.xapiand_http_clients_run.Set(client_pool.running_size());
-	metrics.xapiand_http_clients_queue.Set(client_pool.size());
-	metrics.xapiand_http_clients_capacity.Set(client_pool.threadpool_capacity());
-	metrics.xapiand_http_clients_pool_size.Set(client_pool.threadpool_size());
+	metrics->xapiand_http_clients_run.Set(client_pool.running_size());
+	metrics->xapiand_http_clients_queue.Set(client_pool.size());
+	metrics->xapiand_http_clients_capacity.Set(client_pool.threadpool_capacity());
+	metrics->xapiand_http_clients_pool_size.Set(client_pool.threadpool_size());
 
 	// servers_threads:
-	metrics.xapiand_servers_run.Set(server_pool.running_size());
-	metrics.xapiand_servers_run.Set(server_pool.threadpool_size());
-	metrics.xapiand_servers_queue.Set(server_pool.size());
-	metrics.xapiand_servers_capacity.Set(server_pool.size());
+	metrics->xapiand_servers_run.Set(server_pool.running_size());
+	metrics->xapiand_servers_run.Set(server_pool.threadpool_size());
+	metrics->xapiand_servers_queue.Set(server_pool.size());
+	metrics->xapiand_servers_capacity.Set(server_pool.size());
 
 	// committers_threads:
-	metrics.xapiand_committers_running.Set(DatabaseAutocommit::running_size());
-	metrics.xapiand_committers_queue.Set(DatabaseAutocommit::running_size());
-	metrics.xapiand_committers_capacity.Set(DatabaseAutocommit::threadpool_capacity());
-	metrics.xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_capacity());
+	metrics->xapiand_committers_running.Set(DatabaseAutocommit::running_size());
+	metrics->xapiand_committers_queue.Set(DatabaseAutocommit::running_size());
+	metrics->xapiand_committers_capacity.Set(DatabaseAutocommit::threadpool_capacity());
+	metrics->xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_capacity());
 
 	// fsync_threads:
-	metrics.xapiand_fsync_running.Set(AsyncFsync::running_size());
-	metrics.xapiand_fsync_queue.Set(AsyncFsync::size());
-	metrics.xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
-	metrics.xapiand_fsync_pool_size.Set(AsyncFsync::threadpool_size());
+	metrics->xapiand_fsync_running.Set(AsyncFsync::running_size());
+	metrics->xapiand_fsync_queue.Set(AsyncFsync::size());
+	metrics->xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
+	metrics->xapiand_fsync_pool_size.Set(AsyncFsync::threadpool_size());
 
 	// connections:
-	metrics.xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
-	metrics.xapiand_http_peak_connections.Set(XapiandServer::max_http_clients.load());
+	metrics->xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
+	metrics->xapiand_http_peak_connections.Set(XapiandServer::max_http_clients.load());
 
 	// file_descriptors:
-	metrics.xapiand_file_descriptors.Set(file_descriptors_cnt());
-	metrics.xapiand_max_file_descriptors.Set(get_max_files_per_proc());
+	metrics->xapiand_file_descriptors.Set(file_descriptors_cnt());
+	metrics->xapiand_max_file_descriptors.Set(get_max_files_per_proc());
 
 	// inodes:
-	metrics.xapiand_free_inodes.Set(get_free_inodes());
-	metrics.xapiand_max_inodes.Set(get_total_inodes());
+	metrics->xapiand_free_inodes.Set(get_free_inodes());
+	metrics->xapiand_max_inodes.Set(get_total_inodes());
 
 	// memory:
-	metrics.xapiand_resident_memory_bytes.Set(get_current_memory_by_process());
-	metrics.xapiand_virtual_memory_bytes.Set(get_current_memory_by_process(false));
-	metrics.xapiand_used_memory_bytes.Set(allocator::total_allocated());
-	metrics.xapiand_total_memory_system_bytes.Set(get_total_ram());
-	metrics.xapiand_total_virtual_memory_used.Set(get_total_virtual_memory());
-	metrics.xapiand_total_disk_bytes.Set(get_total_disk_size());
-	metrics.xapiand_free_disk_bytes.Set(get_free_disk_size());
+	metrics->xapiand_resident_memory_bytes.Set(get_current_memory_by_process());
+	metrics->xapiand_virtual_memory_bytes.Set(get_current_memory_by_process(false));
+	metrics->xapiand_used_memory_bytes.Set(allocator::total_allocated());
+	metrics->xapiand_total_memory_system_bytes.Set(get_total_ram());
+	metrics->xapiand_total_virtual_memory_used.Set(get_total_virtual_memory());
+	metrics->xapiand_total_disk_bytes.Set(get_total_disk_size());
+	metrics->xapiand_free_disk_bytes.Set(get_free_disk_size());
 
 	// databases:
 	auto wdb = database_pool.total_writable_databases();
 	auto rdb = database_pool.total_readable_databases();
-	metrics.xapiand_readable_db.Set(rdb.first);
-	metrics.xapiand_total_readable_db.Set(rdb.second);
-	metrics.xapiand_writable_db.Set(wdb.first);
-	metrics.xapiand_total_writable_db.Set(wdb.second);
-	metrics.xapiand_total_db.Set(rdb.first + wdb.first);
-	metrics.xapiand_total_peak_db.Set(rdb.second + wdb.second);
+	metrics->xapiand_readable_db.Set(rdb.first);
+	metrics->xapiand_total_readable_db.Set(rdb.second);
+	metrics->xapiand_writable_db.Set(wdb.first);
+	metrics->xapiand_total_writable_db.Set(wdb.second);
+	metrics->xapiand_total_db.Set(rdb.first + wdb.first);
+	metrics->xapiand_total_peak_db.Set(rdb.second + wdb.second);
 
-	return prometheus::detail::SerializeGet(metrics.registry);
+	return prometheus::detail::SerializeGet(metrics->registry);
 }
 
 
@@ -1680,27 +1682,29 @@ XapiandManager::_get_stats_time(MsgPack& stats, int start, int end, int incremen
 void
 XapiandManager::update_metrics(std::uint64_t duration, RequestType typ)
 {
+	assert(metrics);
+
 	switch (typ) {
 		case RequestType::INDEX:
-			metrics.xapiand_index_summary.Observe(duration / 1e6);
+			metrics->xapiand_index_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::SEARCH:
-			metrics.xapiand_search_summary.Observe(duration / 1e6);
+			metrics->xapiand_search_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::DELETE:
-			metrics.xapiand_delete_summary.Observe(duration / 1e6);
+			metrics->xapiand_delete_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::PATCH:
-			metrics.xapiand_patch_summary.Observe(duration / 1e6);
+			metrics->xapiand_patch_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::MERGE:
-			metrics.xapiand_merge_summary.Observe(duration / 1e6);
+			metrics->xapiand_merge_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::AGGREGATIONS:
-			metrics.xapiand_aggregation_summary.Observe(duration / 1e6);
+			metrics->xapiand_aggregation_summary.Observe(duration / 1e6);
 			break;
 		case RequestType::COMMIT:
-			metrics.xapiand_commit_summary.Observe(duration / 1e6);
+			metrics->xapiand_commit_summary.Observe(duration / 1e6);
 	}
 }
 

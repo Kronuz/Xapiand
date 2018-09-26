@@ -190,7 +190,7 @@ protected:
 	void make_servers();
 	void make_replicators();
 
-	Metrics metrics;
+	std::unique_ptr<Metrics> metrics;
 
 public:
 	std::string __repr__() const override {
