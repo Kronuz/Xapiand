@@ -265,7 +265,62 @@ DatabaseWAL::create(uint32_t revision)
 
 
 MsgPack
-DatabaseWAL::repr_line(std::string_view line)
+DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialised)
+{
+	L_CALL("DatabaseWAL::repr_document(<serialised_document>)");
+
+	if (!unserialised) {
+		return MsgPack(serialised_document);
+	}
+
+	auto doc = Xapian::Document::unserialise(std::string(serialised_document));
+
+	auto data = Data(doc.get_data());
+	auto main_locator = data.get("");
+	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
+	for (auto& locator : data) {
+		switch (locator.type) {
+			case Data::Type::inplace: {
+				if (!locator.ct_type.empty()) {
+					obj["_data"].push_back(MsgPack({
+						{ "_content_type", locator.ct_type.to_string() },
+						{ "_type", "inplace" },
+						{ "_blob", locator.data() },
+					}));
+				}
+				break;
+			}
+			case Data::Type::stored: {
+#ifdef XAPIAND_DATA_STORAGE
+				obj["_data"].push_back(MsgPack({
+					{ "_content_type", locator.ct_type.to_string() },
+					{ "_type", "stored" },
+				}));
+#endif
+				break;
+			}
+		}
+	}
+	return obj;
+}
+
+
+MsgPack
+DatabaseWAL::repr_metadata(std::string_view serialised_metadata, bool unserialised)
+{
+	L_CALL("DatabaseWAL::repr_metadata(<serialised_document>)");
+
+	if (!unserialised) {
+		return MsgPack(serialised_metadata);
+	}
+
+	return MsgPack::unserialise(serialised_metadata);
+}
+
+
+
+MsgPack
+DatabaseWAL::repr_line(std::string_view line, bool unserialised)
 {
 	L_CALL("DatabaseWAL::repr_line(<line>)");
 
@@ -288,7 +343,7 @@ DatabaseWAL::repr_line(std::string_view line)
 	switch (type) {
 		case Type::ADD_DOCUMENT:
 			repr["op"] = "ADD_DOCUMENT";
-			repr["document"] = data;
+			repr["document"] = repr_document(data, unserialised);
 			break;
 		case Type::CANCEL:
 			repr["op"] = "CANCEL";
@@ -304,13 +359,13 @@ DatabaseWAL::repr_line(std::string_view line)
 		case Type::REPLACE_DOCUMENT:
 			repr["op"] = "REPLACE_DOCUMENT";
 			repr["docid"] = unserialise_length(&p, p_end);
-			repr["document"] = std::string(p, p_end - p);
+			repr["document"] = repr_document(std::string_view(p, p_end - p), unserialised);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			repr["op"] = "REPLACE_DOCUMENT_TERM";
 			size = unserialise_length(&p, p_end, true);
 			repr["term"] = std::string(p, size);
-			repr["document"] = std::string(p + size, p_end - p - size);
+			repr["document"] = repr_document(std::string_view(p + size, p_end - p - size), unserialised);
 			break;
 		case Type::DELETE_DOCUMENT:
 			repr["op"] = "DELETE_DOCUMENT";
@@ -320,7 +375,7 @@ DatabaseWAL::repr_line(std::string_view line)
 			repr["op"] = "SET_METADATA";
 			size = unserialise_length(&p, p_end, true);
 			repr["key"] = std::string(p, size);
-			repr["data"] = std::string(p + size, p_end - p - size);
+			repr["data"] = repr_metadata(std::string_view(p + size, p_end - p - size), unserialised);
 			break;
 		case Type::ADD_SPELLING:
 			repr["op"] = "ADD_SPELLING";
@@ -341,7 +396,7 @@ DatabaseWAL::repr_line(std::string_view line)
 
 
 MsgPack
-DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
+DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/, bool unserialised)
 {
 	L_CALL("DatabaseWAL::repr(%u, ...)", start_revision);
 
@@ -437,7 +492,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/)
 		try {
 			while (true) {
 				std::string line = read(end_off);
-				repr.push_back(repr_line(line));
+				repr.push_back(repr_line(line, unserialised));
 			}
 		} catch (const StorageEOF& exc) { }
 

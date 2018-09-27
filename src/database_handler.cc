@@ -312,7 +312,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 
 #if XAPIAND_DATABASE_WAL
 MsgPack
-DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
+DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised)
 {
 	L_CALL("DatabaseHandler::repr_wal(%u, %u)", start_revision, end_revision);
 
@@ -322,7 +322,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 
 	// WAL required on a local writable database, open it.
 	auto wal = std::make_unique<DatabaseWAL>(endpoints[0].path, nullptr);
-	return wal->repr(start_revision, end_revision);
+	return wal->repr(start_revision, end_revision, unserialised);
 }
 #endif
 

@@ -150,7 +150,9 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	bool modified;
 	bool validate_uuid;
 
-	MsgPack repr_line(std::string_view line);
+	MsgPack repr_document(std::string_view document, bool unserialised);
+	MsgPack repr_metadata(std::string_view document, bool unserialised);
+	MsgPack repr_line(std::string_view line, bool unserialised);
 	bool execute(std::string_view line);
 	uint32_t highest_valid_slot();
 
@@ -180,7 +182,7 @@ public:
 
 	bool create(uint32_t revision);
 	bool open_current(bool commited);
-	MsgPack repr(uint32_t start_revision, uint32_t end_revision);
+	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 
 	bool init_database();
 	void write_line(Type type, std::string_view data, bool commit_=false);

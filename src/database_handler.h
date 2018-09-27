@@ -217,7 +217,7 @@ public:
 	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<size_t>>& context_=nullptr);
 
 #if XAPIAND_DATABASE_WAL
-	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision);
+	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 #endif
 
 	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
