@@ -367,6 +367,7 @@ public:
 				if (flags & STORAGE_CREATE) {
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
 					if unlikely(fd == -1) {
+						close();
 						THROW(StorageIOError, "IO error: open: %s", strerror(errno));
 					}
 					created = true;
