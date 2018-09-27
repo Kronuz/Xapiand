@@ -583,13 +583,13 @@ public:
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write == -1) {
 				close();
-				THROW(LZ4IOError, "Cannot open file: %s", filename);
+				THROW(StorageIOError, "Cannot open file: %s", filename);
 			}
 			_bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 			if unlikely(it_size < 0) {
 				close();
-				THROW(LZ4IOError, "Cannot read file: %s", filename);
+				THROW(StorageIOError, "Cannot read file: %s", filename);
 			}
 			data = buf_read;
 			file_size += it_size;
@@ -624,7 +624,7 @@ public:
 					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 					if unlikely(it_size < 0) {
 						close();
-						THROW(LZ4IOError, "Cannot read from file: %s", filename);
+						THROW(StorageIOError, "Cannot read from file: %s", filename);
 					}
 					data = buf_read;
 					file_size += it_size;
