@@ -209,7 +209,6 @@ uint64_t get_total_virtual_memory()
 		return 0;
 	}
 #endif
-#endif
 #ifdef _SYSCTL_NAME
 	int64_t total_pages;
 	auto total_pages_len = sizeof(total_pages);
@@ -219,6 +218,7 @@ uint64_t get_total_virtual_memory()
 		total_virtual_memory = total_pages * getpagesize();
 	}
 #undef _SYSCTL_NAME
+#endif
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
