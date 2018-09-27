@@ -293,13 +293,21 @@ protected:
 	std::function<size_t()> get_read_size;
 
 	LZ4File(size_t block_size_, std::string_view filename)
-		: block_size(block_size_)
+		: fd(-1),
+		  fd_offset(0),
+		  fd_nbytes(-1),
+		  fd_internal(false),
+		  block_size(block_size_)
 	{
 		open(filename);
 	}
 
 	LZ4File(size_t block_size_, int fd_, off_t fd_offset_, off_t fd_nbytes_)
-		: block_size(block_size_)
+		: fd(-1),
+		  fd_offset(0),
+		  fd_nbytes(-1),
+		  fd_internal(false),
+		  block_size(block_size_)
 	{
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
@@ -314,7 +322,7 @@ public:
 	inline void open(std::string_view filename) {
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
-		if unlikely(fd < 0) {
+		if unlikely(fd == -1) {
 			THROW(LZ4IOError, "Cannot open file: %s", filename_string);
 		}
 		fd_offset = 0;

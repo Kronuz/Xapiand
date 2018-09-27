@@ -816,7 +816,7 @@ void writepid(const char* pidfile) {
 	if (pidfile != nullptr && *pidfile != '\0') {
 		/* Try to write the pid file in a best-effort way. */
 		int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
-		if (fd > 0) {
+		if (fd != -1) {
 			char buffer[100];
 			std::snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
 			io::write(fd, buffer, std::strlen(buffer));
@@ -987,7 +987,7 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 
 void dump_metadata() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd >= 0) {
+	if (fd != -1) {
 		try {
 			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
@@ -1015,7 +1015,7 @@ void dump_metadata() {
 
 void dump_schema() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd >= 0) {
+	if (fd != -1) {
 		try {
 			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
@@ -1043,7 +1043,7 @@ void dump_schema() {
 
 void dump_documents() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd >= 0) {
+	if (fd != -1) {
 		try {
 			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();
@@ -1071,7 +1071,7 @@ void dump_documents() {
 
 void restore() {
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
-	if (fd >= 0) {
+	if (fd != -1) {
 		try {
 			setup();
 			XapiandManager::manager = Worker::make_shared<XapiandManager>();

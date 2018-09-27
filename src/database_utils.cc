@@ -52,7 +52,7 @@ inline static long long save_mastery(std::string_view dir)
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
 	int fd = io::open((std::string(dir) + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd >= 0) {
+	if (fd != -1) {
 		snprintf(buf, sizeof(buf), "%llx", mastery_level);
 		io::write(fd, buf, strlen(buf));
 		io::close(fd);
@@ -130,7 +130,7 @@ long long read_mastery(std::string_view dir, bool force)
 	long long mastery_level = -1;
 
 	int fd = io::open((sdir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd < 0) {
+	if (fd == -1) {
 		if (force) {
 			mastery_level = save_mastery(dir);
 		}

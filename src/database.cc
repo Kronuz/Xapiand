@@ -639,7 +639,7 @@ DatabaseWAL::init_database()
 	std::string uuid_str(bytes.begin(), bytes.end());
 
 	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
-	if (unlikely(fd < 0)) {
+	if unlikely(fd == -1) {
 		L_ERR("ERROR: opening file. %s\n", filename);
 		return false;
 	}
@@ -662,7 +662,7 @@ DatabaseWAL::init_database()
 
 	filename = base_path + "postlist.glass";
 	fd = io::open(filename.c_str(), O_WRONLY | O_CREAT);
-	if (unlikely(fd < 0)) {
+	if unlikely(fd == -1) {
 		L_ERR("ERROR: opening file. %s\n", filename);
 		return false;
 	}

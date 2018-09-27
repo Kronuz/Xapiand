@@ -620,7 +620,7 @@ XapiandManager::load_node_name()
 	ssize_t length = 0;
 	char buf[512];
 	int fd = io::open("nodename", O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
+	if (fd != -1) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
 		if (length < 0) { length = 0; }
@@ -637,7 +637,7 @@ XapiandManager::save_node_name(std::string_view _node_name)
 	L_CALL("XapiandManager::save_node_name(%s)", _node_name);
 
 	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
-	if (fd >= 0) {
+	if (fd != -1) {
 		if (io::write(fd, _node_name.data(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
 			L_CRIT("Cannot write in nodename file");
 			sig_exit(-EX_IOERR);
@@ -678,7 +678,7 @@ XapiandManager::load_node_id()
 	ssize_t length = 0;
 	char buf[512];
 	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
+	if (fd != -1) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
 		if (length < 0) { length = 0; }
@@ -701,7 +701,7 @@ XapiandManager::save_node_id(uint64_t node_id)
 	L_CALL("XapiandManager::save_node_id(%llu)", node_id);
 
 	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
-	if (fd >= 0) {
+	if (fd != -1) {
 		auto node_id_str = serialise_node_id(node_id);
 		if (io::write(fd, node_id_str.data(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
 			L_CRIT("Cannot write in node file");

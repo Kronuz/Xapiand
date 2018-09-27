@@ -261,14 +261,22 @@ protected:
 	size_t size_file;
 
 	explicit DeflateFile(std::string_view filename)
-		: bytes_readed(0),
+		: fd(-1),
+		  fd_offset(0),
+		  fd_nbytes(-1),
+		  fd_internal(false),
+		  bytes_readed(0),
 		  size_file(0)
 	{
 		open(filename);
 	}
 
 	DeflateFile(int fd_, off_t fd_offset_, off_t fd_nbytes_)
-		: bytes_readed(0),
+		: fd(-1),
+		  fd_offset(0),
+		  fd_nbytes(-1),
+		  fd_internal(false),
+		  bytes_readed(0),
 		  size_file(0)
 	{
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
@@ -284,7 +292,7 @@ public:
 	inline void open(std::string_view filename) {
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
-		if unlikely(fd < 0) {
+		if unlikely(fd == -1) {
 			THROW(DeflateIOError, "Cannot open file: %s", filename_string);
 		}
 		fd_offset = 0;

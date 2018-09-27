@@ -241,7 +241,7 @@ Replication::reply_db_filedata(const std::string &)
 	// std::string path_filename = path + repl_db_filename;
 
 	// int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-	// if (fd >= 0) {
+	// if (fd != -1) {
 	// 	L_REPLICATION("path_filename %s", path_filename);
 	// 	if (io::write(fd, p, p_end - p) != p_end - p) {
 	// 		L_ERR("Cannot write to %s", repl_db_filename);
