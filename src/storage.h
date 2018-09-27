@@ -423,6 +423,9 @@ public:
 			fd = -1;
 		}
 
+		cmpFile.close();
+		decFile.close();
+
 		free_blocks = 0;
 		bin_offset = 0;
 		bin_size = 0;

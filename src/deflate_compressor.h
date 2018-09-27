@@ -68,11 +68,11 @@ protected:
 
 	DeflateState state;
 
-	inline std::string _init() {
+	std::string _init() {
 		return static_cast<Impl*>(this)->init();
 	}
 
-	inline std::string _next() {
+	std::string _next() {
 		return static_cast<Impl*>(this)->next();
 	}
 
@@ -128,15 +128,15 @@ public:
 			return *this;
 		}
 
-		inline std::string operator*() const noexcept {
+		std::string operator*() const noexcept {
 			return current_str;
 		}
 
-		inline const std::string* operator->() const noexcept {
+		const std::string* operator->() const noexcept {
 			return &current_str;
 		}
 
-		inline size_t size() const noexcept {
+		size_t size() const noexcept {
 			return current_str.size();
 		}
 
@@ -148,11 +148,11 @@ public:
 			return !operator==(other);
 		}
 
-		inline explicit operator bool() const noexcept {
+		explicit operator bool() const noexcept {
 			return obj->state != DeflateState::END;
 		}
 
-		inline size_t read(char* buf, size_t buf_size) {
+		size_t read(char* buf, size_t buf_size) {
 			size_t res_size = current_str.size() - offset;
 			if (!res_size) {
 				current_str = obj->_next();
@@ -193,7 +193,7 @@ protected:
 	~DeflateData() = default;
 
 public:
-	inline void add_data(const char* data_, size_t data_size_) {
+	void add_data(const char* data_, size_t data_size_) {
 		data = data_;
 		data_size = data_size_;
 	}
@@ -218,7 +218,7 @@ public:
 
 	static int FINISH_COMPRESS;
 
-	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
+	void reset(const char* data_, size_t data_size_, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		data_offset = 0;
@@ -241,7 +241,7 @@ public:
 
 	~DeflateDecompressData();
 
-	inline void reset(const char* data_, size_t data_size_, bool gzip_=false) {
+	void reset(const char* data_, size_t data_size_, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		data_offset = 0;
@@ -282,14 +282,19 @@ protected:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	~DeflateFile() {
-		if (fd_internal) {
-			io::close(fd);
-		}
+	virtual ~DeflateFile() {
+		close();
 	}
 
 public:
-	inline void open(std::string_view filename) {
+	int close() {
+		if (fd_internal && fd != -1) {
+			return io::close(fd);
+		}
+		return 0;
+	}
+
+	void open(std::string_view filename) {
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd == -1) {
@@ -300,14 +305,14 @@ public:
 		fd_internal = true;
 	}
 
-	inline void add_fildes(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
+	void add_fildes(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
 		fd = fd_;
 		fd_offset = fd_offset_;
 		fd_nbytes = fd_nbytes_;
 		fd_internal = false;
 	}
 
-	inline void add_file(std::string_view filename) {
+	void add_file(std::string_view filename) {
 		open(filename);
 	}
 };
@@ -329,13 +334,13 @@ public:
 
 	~DeflateCompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
+	void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(std::string_view filename, bool gzip_=false) {
+	void reset(std::string_view filename, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		open(filename);
@@ -359,13 +364,13 @@ public:
 
 	~DeflateDecompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
+	void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	 }
 
-	inline void reset(std::string_view filename, bool gzip_=false) {
+	void reset(std::string_view filename, bool gzip_=false) {
 		gzip = gzip_;
 		stream = 0;
 		open(filename);

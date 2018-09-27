@@ -86,15 +86,15 @@ protected:
 
 	XXH32_state_t xxh_state;
 
-	inline std::string _init() {
+	std::string _init() {
 		return static_cast<Impl*>(this)->init();
 	}
 
-	inline std::string _next() {
+	std::string _next() {
 		return static_cast<Impl*>(this)->next();
 	}
 
-	inline void _reset(int seed) {
+	void _reset(int seed) {
 		_size = 0;
 		_offset = 0;
 		XXH32_reset(&xxh_state, seed);
@@ -154,15 +154,15 @@ public:
 			return *this;
 		}
 
-		inline std::string operator*() const noexcept {
+		std::string operator*() const noexcept {
 			return current_str;
 		}
 
-		inline const std::string* operator->() const noexcept {
+		const std::string* operator->() const noexcept {
 			return &current_str;
 		}
 
-		inline size_t size() const noexcept {
+		size_t size() const noexcept {
 			return current_str.size();
 		}
 
@@ -174,11 +174,11 @@ public:
 			return !operator==(other);
 		}
 
-		inline explicit operator bool() const noexcept {
+		explicit operator bool() const noexcept {
 			return !current_str.empty();
 		}
 
-		inline size_t read(char* buf, size_t buf_size) {
+		size_t read(char* buf, size_t buf_size) {
 			size_t res_size = current_str.size() - offset;
 			if (!res_size) {
 				current_str = obj->_next();
@@ -203,11 +203,11 @@ public:
 		return iterator(this, std::string());
 	}
 
-	inline size_t size() const noexcept {
+	size_t size() const noexcept {
 		return _size;
 	}
 
-	inline uint32_t get_digest() {
+	uint32_t get_digest() {
 		return XXH32_digest(&xxh_state);
 	}
 };
@@ -227,7 +227,7 @@ protected:
 	~LZ4Data() = default;
 
 public:
-	inline void add_data(const char* data_, size_t data_size_) {
+	void add_data(const char* data_, size_t data_size_) {
 		data = data_;
 		data_size = data_size_;
 	}
@@ -250,7 +250,7 @@ public:
 
 	~LZ4CompressData();
 
-	inline void reset(const char* data_, size_t data_size_, int seed=0) {
+	void reset(const char* data_, size_t data_size_, int seed=0) {
 		_reset(seed);
 		add_data(data_, data_size_);
 		LZ4_resetStream(lz4Stream);
@@ -274,7 +274,7 @@ public:
 
 	~LZ4DecompressData();
 
-	inline void reset(const char* data_, size_t data_size_, int seed=0) {
+	void reset(const char* data_, size_t data_size_, int seed=0) {
 		_reset(seed);
 		add_data(data_, data_size_);
 	}
@@ -312,14 +312,19 @@ protected:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	~LZ4File() {
-		if (fd_internal) {
-			io::close(fd);
-		}
+	virtual ~LZ4File() {
+		close();
 	}
 
 public:
-	inline void open(std::string_view filename) {
+	int close() {
+		if (fd_internal && fd != -1) {
+			return io::close(fd);
+		}
+		return 0;
+	}
+
+	void open(std::string_view filename) {
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd == -1) {
@@ -331,7 +336,7 @@ public:
 		get_read_size = [this]() { return block_size; };
 	}
 
-	inline void add_fildes(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
+	void add_fildes(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
 		fd = fd_;
 		fd_offset = fd_offset_;
 		fd_nbytes = fd_nbytes_;
@@ -347,7 +352,7 @@ public:
 		}
 	}
 
-	inline void add_file(std::string_view filename) {
+	void add_file(std::string_view filename) {
 		open(filename);
 	}
 };
@@ -371,13 +376,13 @@ public:
 
 	~LZ4CompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
+	void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
 		_reset(seed);
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 		LZ4_resetStream(lz4Stream);
 	}
 
-	inline void reset(std::string_view filename, int seed=0) {
+	void reset(std::string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 		LZ4_resetStream(lz4Stream);
@@ -407,12 +412,12 @@ public:
 
 	~LZ4DecompressFile();
 
-	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
+	void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
 		_reset(seed);
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	inline void reset(std::string_view filename, int seed=0) {
+	void reset(std::string_view filename, int seed=0) {
 		_reset(seed);
 		open(filename);
 	}
