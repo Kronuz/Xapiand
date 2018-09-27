@@ -321,8 +321,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision)
 	}
 
 	// WAL required on a local writable database, open it.
-	lock_database lk_db(this);
-	auto wal = std::make_unique<DatabaseWAL>(endpoints[0].path, database.get());
+	auto wal = std::make_unique<DatabaseWAL>(endpoints[0].path, nullptr);
 	return wal->repr(start_revision, end_revision);
 }
 #endif

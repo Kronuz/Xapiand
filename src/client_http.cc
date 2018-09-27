@@ -1547,7 +1547,7 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 
 #if XAPIAND_DATABASE_WAL
 void
-HttpClient::wal_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::wal_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -1555,16 +1555,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method meth
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler;
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (query_field.as_volatile) {
-		if (endpoints.size() != 1) {
-			THROW(ClientError, "Expecting exactly one index with volatile");
-		}
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
-	} else {
-		db_handler.reset(endpoints, DB_OPEN, method);
-	}
+	DatabaseHandler db_handler{endpoints};
 
 	auto repr = db_handler.repr_wal(0, -1);
 

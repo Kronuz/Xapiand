@@ -108,7 +108,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 	}
 
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
-	if (wal->validate_uuid && (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0)) {
+	if (wal->validate_uuid && wal->database && (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0)) {
 		THROW(StorageCorruptVolume, "WAL UUID mismatch");
 	}
 }
