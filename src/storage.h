@@ -234,7 +234,7 @@ class Storage {
 	void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
-			if unlikely(file_size < 0) {
+			if unlikely(file_size == -1) {
 				close();
 				THROW(StorageIOError, "IO error: lseek: %s", strerror(errno));
 			}
@@ -247,7 +247,10 @@ class Storage {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}
 				if (new_size > file_size) {
-					io::fallocate(fd, 0, file_size, new_size - file_size);
+					if unlikely(io::fallocate(fd, 0, file_size, new_size - file_size)) {
+						close();
+						THROW(StorageIOError, "IO error: fallocate: %s", strerror(errno));
+					}
 				}
 			}
 		}
@@ -263,7 +266,7 @@ class Storage {
 		}
 
 	do_write:
-		if (io::pwrite(fd, *buffer_, STORAGE_BLOCK_SIZE, block_offset_) != STORAGE_BLOCK_SIZE) {
+		if unlikely(io::pwrite(fd, *buffer_, STORAGE_BLOCK_SIZE, block_offset_) != STORAGE_BLOCK_SIZE) {
 			close();
 			THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 		}
@@ -299,7 +302,7 @@ public:
 	Storage(std::string_view base_path_, void* param_)
 		: param(param_),
 		  flags(0),
-		  fd(0),
+		  fd(-1),
 		  free_blocks(0),
 		  buffer_curr(buffer0),
 		  buffer_offset(0),
@@ -324,7 +327,7 @@ public:
 	void initialize_file(void* args) {
 		L_CALL("Storage::initialize_file()");
 
-		if unlikely(fd < 0) {
+		if unlikely(fd == -1) {
 			close();
 			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
 		}
@@ -332,7 +335,7 @@ public:
 		memset(&header, 0, sizeof(header));
 		header.init(param, args);
 
-		if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
+		if unlikely(io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 			close();
 			THROW(StorageIOError, "IO error: write: %s", strerror(errno));
 		}
@@ -360,9 +363,12 @@ public:
 #endif
 
 			fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR : O_RDONLY, 0644);
-			if unlikely(fd < 0) {
+			if unlikely(fd == -1) {
 				if (flags & STORAGE_CREATE) {
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
+					if unlikely(fd == -1) {
+						THROW(StorageIOError, "IO error: open: %s", strerror(errno));
+					}
 					created = true;
 				}
 				initialize_file(args);
@@ -377,13 +383,13 @@ public:
 	void reopen(void* args=nullptr) {
 		L_CALL("Storage::reopen()");
 
-		if unlikely(fd <= 0) {
+		if unlikely(fd == -1) {
 			close();
 			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
 		}
 
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
-		if unlikely(r < 0) {
+		if unlikely(r == -1) {
 			close();
 			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
 		} else if unlikely(r == 0) {
@@ -397,7 +403,7 @@ public:
 			buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 			size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 			buffer_offset -= offset;
-			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) < 0) {
+			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) == -1) {
 				close();
 				THROW(StorageIOError, "IO error: pread: %s", strerror(errno));
 			}
@@ -409,14 +415,14 @@ public:
 	void close() {
 		L_CALL("Storage::close()");
 
-		if (fd) {
+		if (fd != -1) {
 			if (flags & STORAGE_WRITABLE) {
 				commit();
 			}
 			io::close(fd);
+			fd = -1;
 		}
 
-		fd = 0;
 		free_blocks = 0;
 		bin_offset = 0;
 		bin_size = 0;
@@ -513,7 +519,7 @@ public:
 				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			}
-			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+			if unlikely(io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
@@ -522,7 +528,7 @@ public:
 
 		// Write the first used buffer.
 		if (buffer != buffer_curr) {
-			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+			if unlikely(io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
@@ -557,7 +563,7 @@ public:
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
 		size_t it_size, file_size = 0;
-		int fd_write = 0;
+		int fd_write = -1;
 		char buf_read[STORAGE_BLOCK_SIZE];
 		const char* data;
 
@@ -571,11 +577,16 @@ public:
 		} else {
 			stringified filename_string(filename);
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
-			if unlikely(fd_write < 0) {
-				THROW(LZ4IOError, "Cannot open file: %s", filename_string);
+			if unlikely(fd_write == -1) {
+				close();
+				THROW(LZ4IOError, "Cannot open file: %s", filename);
 			}
 			_bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
+			if unlikely(it_size < 0) {
+				close();
+				THROW(LZ4IOError, "Cannot read file: %s", filename);
+			}
 			data = buf_read;
 			file_size += it_size;
 			XXH32_reset(xxh_state, STORAGE_MAGIC);
@@ -607,6 +618,10 @@ public:
 					data = cmpFile_it->data();
 				} else {
 					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
+					if unlikely(it_size < 0) {
+						close();
+						THROW(LZ4IOError, "Cannot read from file: %s", filename);
+					}
 					data = buf_read;
 					file_size += it_size;
 					XXH32_update(xxh_state, data, it_size);
@@ -626,6 +641,7 @@ public:
 				buffer_header->size = static_cast<uint32_t>(file_size);
 				_bin_footer.init(param, args, XXH32_digest(xxh_state));
 				io::close(fd_write);
+				fd_write = -1;
 			}
 
 			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
@@ -636,7 +652,7 @@ public:
 				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			} else {
-				if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+				if unlikely(io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 					close();
 					THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 				}
@@ -646,7 +662,7 @@ public:
 
 		// Write the first used buffer.
 		if (buffer != buffer_curr) {
-			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+			if unlikely(io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
 			}
@@ -764,24 +780,24 @@ public:
 		if (!(flags & STORAGE_NO_SYNC)) {
 			if (flags & STORAGE_ASYNC_SYNC) {
 				if (flags & STORAGE_FULL_SYNC) {
-					if unlikely(AsyncFsync::full_fsync(fd) < 0) {
+					if unlikely(AsyncFsync::full_fsync(fd) == -1) {
 						close();
 						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
 					}
 				} else {
-					if unlikely(AsyncFsync::fsync(fd) < 0) {
+					if unlikely(AsyncFsync::fsync(fd) == -1) {
 						close();
 						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
 					}
 				}
 			} else {
 				if (flags & STORAGE_FULL_SYNC) {
-					if unlikely(io::full_fsync(fd) < 0) {
+					if unlikely(io::full_fsync(fd) == -1) {
 						close();
 						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
 					}
 				} else {
-					if unlikely(io::fsync(fd) < 0) {
+					if unlikely(io::fsync(fd) == -1) {
 						close();
 						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
 					}
@@ -823,7 +839,7 @@ public:
 	}
 
 	bool closed() noexcept {
-		return fd == 0;
+		return fd == -1;
 	}
 };
 
