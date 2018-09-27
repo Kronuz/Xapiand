@@ -636,6 +636,11 @@ public:
 			}
 		}
 
+		if (!compress) {
+			io::close(fd_write);
+			fd_write = -1;
+		}
+
 		while (bin_footer_data_size) {
 			// Update header size in buffer.
 			if (compress) {
@@ -644,8 +649,6 @@ public:
 			} else {
 				buffer_header->size = static_cast<uint32_t>(file_size);
 				_bin_footer.init(param, args, XXH32_digest(xxh_state));
-				io::close(fd_write);
-				fd_write = -1;
 			}
 
 			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
