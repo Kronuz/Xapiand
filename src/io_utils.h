@@ -40,12 +40,19 @@ inline int unlink(const char *path) {
 
 
 inline int close(int fd) {
-	return ::close(fd);
+	// Make sure we don't ever close 0, 1 or 2 file descriptors
+	assert(fd >= STDERR_FILENO);
+	if (fd >= STDERR_FILENO) {
+		return ::close(fd);
+	}
+	return -1;
 }
 
 
 inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
-	return ::open(path, oflag, mode);
+	int fd = ::open(path, oflag, mode);
+	assert(fd >= STDERR_FILENO);
+	return fd;
 }
 
 
