@@ -184,11 +184,11 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_process_start_time_seconds(
+	  xapiand_uptime(
 		prometheus::BuildGauge()
-			.Name("xapiand_process_start_time_seconds")
+			.Name("xapiand_uptime")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Start time of the process since unix epoch in seconds")
+			.Help("Server uptime in seconds")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
@@ -219,57 +219,49 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 				{"arch", check_architecture()},
 			})
 	  ),
-	  xapiand_http_clients_run(
+	  xapiand_clients_running(
 		prometheus::BuildGauge()
-			.Name("xapiand_http_clients_run")
+			.Name("xapiand_clients_running")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Amount of clients running")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_http_clients_queue(
+	  xapiand_clients_queue_size(
 		prometheus::BuildGauge()
-			.Name("xapiand_http_clients_queue")
+			.Name("xapiand_clients_queue_size")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Clients in the queue")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_http_clients_capacity(
+	  xapiand_clients_capacity(
 		prometheus::BuildGauge()
-			.Name("xapiand_http_clients_capacity")
+			.Name("xapiand_clients_capacity")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Client queue capacity")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_http_clients_pool_size(
+	  xapiand_clients_pool_size(
 		prometheus::BuildGauge()
-			.Name("xapiand_http_clients_pool_size")
+			.Name("xapiand_clients_pool_size")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Client total pool size")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_servers_run(
+	  xapiand_servers_running(
 		prometheus::BuildGauge()
-			.Name("xapiand_servers_run")
+			.Name("xapiand_servers_running")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Amount of servers running")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_servers_pool_size(
+	  xapiand_servers_queue_size(
 		prometheus::BuildGauge()
-			.Name("xapiand_servers_pool_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Server pool size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
-	  ),
-	  xapiand_servers_queue(
-		prometheus::BuildGauge()
-			.Name("xapiand_servers_queue")
+			.Name("xapiand_servers_queue_size")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Servers in the queue")
 			.Register(registry)
@@ -283,6 +275,14 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
+	  xapiand_servers_pool_size(
+		prometheus::BuildGauge()
+			.Name("xapiand_servers_pool_size")
+			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
+			.Help("Server pool size")
+			.Register(registry)
+			.Add(std::map<std::string, std::string>())
+	  ),
 	  xapiand_committers_running(
 		prometheus::BuildGauge()
 			.Name("xapiand_committers_running")
@@ -291,9 +291,9 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_committers_queue(
+	  xapiand_committers_queue_size(
 		prometheus::BuildGauge()
-			.Name("xapiand_committers_queue")
+			.Name("xapiand_committers_queue_size")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Committers in the queue")
 			.Register(registry)
@@ -323,7 +323,7 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_fsync_queue(
+	  xapiand_fsync_queue_size(
 		prometheus::BuildGauge()
 			.Name("xapiand_fsync_queue")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
@@ -360,6 +360,22 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Name("xapiand_http_peak_connections")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
 			.Help("Max http connections")
+			.Register(registry)
+			.Add(std::map<std::string, std::string>())
+	  ),
+	  xapiand_binary_current_connections(
+		prometheus::BuildGauge()
+			.Name("xapiand_binary_current_connections")
+			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
+			.Help("Current binary connections")
+			.Register(registry)
+			.Add(std::map<std::string, std::string>())
+	  ),
+	  xapiand_binary_peak_connections(
+		prometheus::BuildGauge()
+			.Name("xapiand_binary_peak_connections")
+			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
+			.Help("Max binary connections")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
@@ -1533,35 +1549,38 @@ XapiandManager::server_metrics()
 
 	assert(metrics);
 
-	metrics->xapiand_process_start_time_seconds.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
+	metrics->xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
 	// clients_tasks:
-	metrics->xapiand_http_clients_run.Set(client_pool.running_size());
-	metrics->xapiand_http_clients_queue.Set(client_pool.size());
-	metrics->xapiand_http_clients_capacity.Set(client_pool.threadpool_capacity());
-	metrics->xapiand_http_clients_pool_size.Set(client_pool.threadpool_size());
+	metrics->xapiand_clients_running.Set(client_pool.running_size());
+	metrics->xapiand_clients_queue_size.Set(client_pool.size());
+	metrics->xapiand_clients_pool_size.Set(client_pool.threadpool_size());
+	metrics->xapiand_clients_capacity.Set(client_pool.threadpool_capacity());
 
 	// servers_threads:
-	metrics->xapiand_servers_run.Set(server_pool.running_size());
-	metrics->xapiand_servers_run.Set(server_pool.threadpool_size());
-	metrics->xapiand_servers_queue.Set(server_pool.size());
-	metrics->xapiand_servers_capacity.Set(server_pool.size());
+	metrics->xapiand_servers_running.Set(server_pool.running_size());
+	metrics->xapiand_servers_queue_size.Set(server_pool.size());
+	metrics->xapiand_servers_pool_size.Set(server_pool.threadpool_size());
+	metrics->xapiand_servers_capacity.Set(server_pool.threadpool_capacity());
 
 	// committers_threads:
 	metrics->xapiand_committers_running.Set(DatabaseAutocommit::running_size());
-	metrics->xapiand_committers_queue.Set(DatabaseAutocommit::running_size());
+	metrics->xapiand_committers_queue_size.Set(DatabaseAutocommit::size());
+	metrics->xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_size());
 	metrics->xapiand_committers_capacity.Set(DatabaseAutocommit::threadpool_capacity());
-	metrics->xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_capacity());
 
 	// fsync_threads:
 	metrics->xapiand_fsync_running.Set(AsyncFsync::running_size());
-	metrics->xapiand_fsync_queue.Set(AsyncFsync::size());
-	metrics->xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
+	metrics->xapiand_fsync_queue_size.Set(AsyncFsync::size());
 	metrics->xapiand_fsync_pool_size.Set(AsyncFsync::threadpool_size());
+	metrics->xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
 
 	// connections:
 	metrics->xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
 	metrics->xapiand_http_peak_connections.Set(XapiandServer::max_http_clients.load());
+
+	metrics->xapiand_binary_current_connections.Set(XapiandServer::binary_clients.load());
+	metrics->xapiand_binary_peak_connections.Set(XapiandServer::max_binary_clients.load());
 
 	// file_descriptors:
 	metrics->xapiand_file_descriptors.Set(file_descriptors_cnt());

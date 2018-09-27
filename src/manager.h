@@ -93,37 +93,41 @@ public:
 	prometheus::Summary& xapiand_merge_summary;
 	prometheus::Summary& xapiand_aggregation_summary;
 	prometheus::Summary& xapiand_commit_summary;
-	prometheus::Gauge& xapiand_process_start_time_seconds;
+
+	prometheus::Gauge& xapiand_uptime;
 	prometheus::Gauge& xapiand_running;
 	prometheus::Gauge& xapiand_info;
 
 	// clients_tasks:
-	prometheus::Gauge& xapiand_http_clients_run;
-	prometheus::Gauge& xapiand_http_clients_queue;
-	prometheus::Gauge& xapiand_http_clients_capacity;
-	prometheus::Gauge& xapiand_http_clients_pool_size;
+	prometheus::Gauge& xapiand_clients_running;
+	prometheus::Gauge& xapiand_clients_queue_size;
+	prometheus::Gauge& xapiand_clients_capacity;
+	prometheus::Gauge& xapiand_clients_pool_size;
 
 	// server_tasks:
-	prometheus::Gauge& xapiand_servers_run;
-	prometheus::Gauge& xapiand_servers_pool_size;
-	prometheus::Gauge& xapiand_servers_queue;
+	prometheus::Gauge& xapiand_servers_running;
+	prometheus::Gauge& xapiand_servers_queue_size;
 	prometheus::Gauge& xapiand_servers_capacity;
+	prometheus::Gauge& xapiand_servers_pool_size;
 
 	// committers_threads:
 	prometheus::Gauge& xapiand_committers_running;
-	prometheus::Gauge& xapiand_committers_queue;
+	prometheus::Gauge& xapiand_committers_queue_size;
 	prometheus::Gauge& xapiand_committers_capacity;
 	prometheus::Gauge& xapiand_committers_pool_size;
 
 	// fsync_threads:
 	prometheus::Gauge& xapiand_fsync_running;
-	prometheus::Gauge& xapiand_fsync_queue;
+	prometheus::Gauge& xapiand_fsync_queue_size;
 	prometheus::Gauge& xapiand_fsync_capacity;
 	prometheus::Gauge& xapiand_fsync_pool_size;
 
 	// connections:
 	prometheus::Gauge& xapiand_http_current_connections;
 	prometheus::Gauge& xapiand_http_peak_connections;
+
+	prometheus::Gauge& xapiand_binary_current_connections;
+	prometheus::Gauge& xapiand_binary_peak_connections;
 
 	// file_descriptors:
 	prometheus::Gauge& xapiand_file_descriptors;
