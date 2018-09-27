@@ -91,9 +91,9 @@ uint64_t get_total_virtual_used()
 	size_t vmusage_len = sizeof(vmusage);
 	if (sysctl(mib, mib_len, &vmusage, &vmusage_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
-	} else {
-		total_virtual_used = vmusage.xsu_used;
+		return 0;
 	}
+	total_virtual_used = vmusage.xsu_used;
 #undef _SYSCTL_NAME
 #else
 	L_WARNING("WARNING: No way of getting swap usage.");
@@ -122,12 +122,14 @@ uint64_t get_total_ram()
 	auto total_ram_len = sizeof(total_ram);
 	if (sysctl(mib, mib_len, &total_ram, &total_ram_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
 		L_ERR("ERROR: Unable to get total memory size: sysinfo(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	total_ram = info.totalram;
 #else
@@ -194,12 +196,7 @@ uint64_t get_total_virtual_memory()
 {
 	uint64_t total_virtual_memory = 0;
 
-#if defined(__APPLE__)
-	struct statfs stats;
-	if (0 == statfs("/", &stats)) {
-		total_virtual_memory = (uint64_t)stats.f_bsize * stats.f_bfree;
-	}
-#elif defined(__FreeBSD__)
+#if defined(__FreeBSD__)
 #ifdef HAVE_SYS_SYSCTL_H
 #define _SYSCTL_NAME "vm.stats.vm.v_page_count"  // FreeBSD
 	int mib[CTL_MAXNAME + 2];
@@ -215,14 +212,22 @@ uint64_t get_total_virtual_memory()
 	auto total_pages_len = sizeof(total_pages);
 	if (sysctl(mib, mib_len, &total_pages, &total_pages_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
-	} else {
-		total_virtual_memory = total_pages * getpagesize();
+		return 0;
 	}
+	total_virtual_memory = total_pages * getpagesize();
 #undef _SYSCTL_NAME
+#elif defined(__APPLE__)
+	struct statfs stats;
+	if (0 != statfs("/", &stats)) {
+		L_ERR("ERROR: Unable to get total virtual memory size: statfs(): [%d] %s", errno, strerror(errno));
+		return 0;
+	}
+	total_virtual_memory = (uint64_t)stats.f_bsize * stats.f_bfree;
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
 		L_ERR("ERROR: Unable to get total virtual memory size: sysinfo(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	total_virtual_memory = info.totalswap;
 #else
@@ -240,12 +245,14 @@ uint64_t get_total_inodes()
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
 		L_ERR("ERROR: Unable to get total inodes statfs(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	total_inodes = statf.f_files;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs(".", &info) < 0) {
 		L_ERR("ERROR: Unable to get total inodes statvfs(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	total_inodes = info.f_files;
 #else
@@ -262,12 +269,14 @@ uint64_t get_free_inodes()
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
 		L_ERR("ERROR: Unable to get free inodes statfs(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	free_inodes = statf.f_ffree;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs(".", &info) < 0) {
 		L_ERR("ERROR: Unable to get free inodes statvfs(): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	free_inodes = info.f_ffree;
 #else
@@ -284,6 +293,7 @@ uint64_t get_total_disk_size()
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
 		L_ERR("ERROR: Unable to get total disk size (): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	total_disk_size = statf.f_blocks * statf.f_bsize;
 #else
@@ -299,6 +309,7 @@ uint64_t get_free_disk_size()
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
 		L_ERR("ERROR: Unable to get free disk size (): [%d] %s", errno, strerror(errno));
+		return 0;
 	}
 	free_disk_size = statf.f_bfree * statf.f_bsize;
 #else

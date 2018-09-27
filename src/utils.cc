@@ -540,12 +540,14 @@ ssize_t get_max_files_per_proc()
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
+		return 0;
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
 	struct rlimit limit;
 	if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
 		L_ERR("ERROR: Unable to get max files per process: getrlimit(RLIMIT_NOFILE): [%d] %s", errno, std::strerror(errno));
+		return 0;
 	}
 	max_files_per_proc = limit.rlim_cur;
 #else
@@ -579,6 +581,7 @@ ssize_t get_open_files()
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
+		return 0;
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
