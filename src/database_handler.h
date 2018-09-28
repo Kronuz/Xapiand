@@ -220,6 +220,8 @@ public:
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 #endif
 
+	MsgPack check();
+
 	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
 	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);

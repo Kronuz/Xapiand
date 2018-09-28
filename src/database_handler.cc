@@ -327,6 +327,22 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool u
 #endif
 
 
+MsgPack
+DatabaseHandler::check()
+{
+	L_CALL("DatabaseHandler::check()");
+
+	if (endpoints.size() != 1) {
+		THROW(ClientError, "It is expected one single endpoint");
+	}
+
+	size_t errors = Xapian::Database::check(endpoints[0].path);
+	return {
+		{"errors", errors},
+	};
+}
+
+
 Document
 DatabaseHandler::get_document_term(const std::string& term_id)
 {

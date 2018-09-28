@@ -794,6 +794,10 @@ HttpClient::_get(Request& request, Response& response, enum http_method method)
 			wal_view(request, response, method, cmd);
 			break;
 #endif
+		case Command::CMD_CHECK:
+			request.path_parser.skip_id();  // Command has no ID
+			check_view(request, response, method, cmd);
+			break;
 		case Command::CMD_INFO:
 			request.path_parser.skip_id();  // Command has no ID
 			info_view(request, response, method, cmd);
@@ -1565,6 +1569,25 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 	write_http_response(request, response, HTTP_STATUS_OK, repr);
 }
 #endif
+
+
+void
+HttpClient::check_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+{
+	L_CALL("HttpClient::wal_view()");
+
+	endpoints_maker(request, 1s);
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler{endpoints};
+
+	auto status = db_handler.check();
+
+	request.ready = std::chrono::system_clock::now();
+
+	write_http_response(request, response, HTTP_STATUS_OK, status);
+}
 
 
 void

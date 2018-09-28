@@ -144,6 +144,7 @@ constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
 constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
 constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
+constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
 
 #define COMMAND_OPTIONS() \
 	OPTION(COMMIT) \
@@ -158,7 +159,8 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 	OPTION(SEARCH) \
 	OPTION(STATS) \
 	OPTION(TOUCH) \
-	OPTION(WAL)
+	OPTION(WAL) \
+	OPTION(CHECK)
 
 constexpr static auto http_commands = phf::make_phf({
 	#define OPTION(name) hhl(COMMAND_##name),
@@ -286,6 +288,7 @@ class HttpClient : public BaseClient {
 #if XAPIAND_DATABASE_WAL
 	void wal_view(Request& request, Response& response, enum http_method method, Command cmd);
 #endif
+	void check_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void nodes_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void stats_view(Request& request, Response& response, enum http_method method, Command cmd);
 
