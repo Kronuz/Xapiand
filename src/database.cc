@@ -109,14 +109,20 @@ WalHeader::validate(void* param, void* /*unused*/)
 
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	if (wal->validate_uuid) {
-		std::string uuid;
 		if (wal->database) {
-			uuid = wal->database->get_uuid();
+			if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0) {
+				THROW(StorageCorruptVolume, "WAL UUID mismatch");
+			}
 		} else {
-			uuid = ::read_uuid(wal->path());
-		}
-		if (strncasecmp(head.uuid, uuid.c_str(), sizeof(head.uuid)) != 0) {
-			THROW(StorageCorruptVolume, "WAL UUID mismatch");
+			std::array<unsigned char, 16> uuid;
+			if (::read_uuid(wal->path(), uuid) == 0) {
+				if (strncasecmp(head.uuid, UUID(uuid).to_string().c_str(), sizeof(head.uuid)) != 0) {
+					// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
+					if (strncasecmp(head.uuid, UUID(uuid, true).to_string().c_str(), sizeof(head.uuid)) != 0) {
+						THROW(StorageCorruptVolume, "WAL UUID mismatch");
+					}
+				}
+			}
 		}
 	}
 }

@@ -48,7 +48,7 @@ class UUID {
 
 public:
 	// create a UUID from vector of bytes
-	explicit UUID(const std::array<unsigned char, 16>& bytes);
+	explicit UUID(const std::array<unsigned char, 16>& bytes, bool little_endian=false);
 
 	// create a UUID from string
 	explicit UUID(const char* str, size_t size);

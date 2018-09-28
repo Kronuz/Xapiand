@@ -116,7 +116,7 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 }
 
 
-std::string read_uuid(std::string_view dir)
+int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 {
 	auto sdir = std::string(dir);
 	L_DATABASE("+ READING UUID OF INDEX '%s'...", sdir);
@@ -124,47 +124,24 @@ std::string read_uuid(std::string_view dir)
 	struct stat info;
 	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
 		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
-		return "";
+		return -1;
 	}
 
 	int fd = io::open((sdir + "/iamglass").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd == -1) {
-		return "";
+		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
+		return -1;
 	}
-
-	std::string uuid;
 
 	char bytes[32];
 	size_t length = io::read(fd, bytes, 32);
-	if (length == 32) {
-		uuid.resize(36);
-		char *ptr = &uuid[0];
-		char_repr(bytes[16], &ptr);
-		char_repr(bytes[17], &ptr);
-		char_repr(bytes[18], &ptr);
-		char_repr(bytes[19], &ptr);
-		*ptr++ = '-';
-		char_repr(bytes[20], &ptr);
-		char_repr(bytes[21], &ptr);
-		*ptr++ = '-';
-		char_repr(bytes[22], &ptr);
-		char_repr(bytes[23], &ptr);
-		*ptr++ = '-';
-		char_repr(bytes[24], &ptr);
-		char_repr(bytes[25], &ptr);
-		*ptr++ = '-';
-		char_repr(bytes[26], &ptr);
-		char_repr(bytes[27], &ptr);
-		char_repr(bytes[28], &ptr);
-		char_repr(bytes[29], &ptr);
-		char_repr(bytes[30], &ptr);
-		char_repr(bytes[31], &ptr);
-	}
 	io::close(fd);
+	if (length == 32) {
+		std::copy(bytes + 16, bytes + 32, uuid.begin());
+		return 0;
+	}
 
-	L_DATABASE("- UUID OF INDEX '%s' is %s", sdir, uuid);
-
-	return uuid;
+	return -1;
 }
 
 

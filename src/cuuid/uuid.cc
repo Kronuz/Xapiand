@@ -333,8 +333,16 @@ uuid_to_bytes(const char* pos, size_t size)
 
 
 // create a UUID from vector of bytes
-UUID::UUID(const std::array<unsigned char, 16>& bytes)
-	: _bytes(bytes) { }
+UUID::UUID(const std::array<unsigned char, 16>& bytes, bool little_endian)
+	: _bytes(bytes)
+{
+	if (little_endian) {
+		 std::swap(_bytes[0], _bytes[3]);
+		 std::swap(_bytes[1], _bytes[2]);
+		 std::swap(_bytes[4], _bytes[5]);
+		 std::swap(_bytes[6], _bytes[7]);
+	}
+}
 
 
 // create a UUID from string
