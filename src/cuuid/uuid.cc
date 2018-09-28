@@ -29,6 +29,7 @@
 #include <sstream>        // for std::ostringstream
 #include <stdexcept>      // for std::bad_alloc
 
+#include "escape.h"       // for char_repr
 #include "endian.hh"      // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
 #include "utils.h"        // for hexdigit, hexdec
@@ -275,29 +276,7 @@ UUIDCondenser::unserialise(const char** ptr, const char* end)
 
 // overload << so that it's easy to convert to a string
 std::ostream& operator<<(std::ostream& os, const UUID& uuid) {
-	std::ios::fmtflags flags(os.flags());
-	os << std::hex << std::setfill('0')
-		<< std::setw(2) << (int)uuid._bytes[0]
-		<< std::setw(2) << (int)uuid._bytes[1]
-		<< std::setw(2) << (int)uuid._bytes[2]
-		<< std::setw(2) << (int)uuid._bytes[3]
-		<< "-"
-		<< std::setw(2) << (int)uuid._bytes[4]
-		<< std::setw(2) << (int)uuid._bytes[5]
-		<< "-"
-		<< std::setw(2) << (int)uuid._bytes[6]
-		<< std::setw(2) << (int)uuid._bytes[7]
-		<< "-"
-		<< std::setw(2) << (int)uuid._bytes[8]
-		<< std::setw(2) << (int)uuid._bytes[9]
-		<< "-"
-		<< std::setw(2) << (int)uuid._bytes[10]
-		<< std::setw(2) << (int)uuid._bytes[11]
-		<< std::setw(2) << (int)uuid._bytes[12]
-		<< std::setw(2) << (int)uuid._bytes[13]
-		<< std::setw(2) << (int)uuid._bytes[14]
-		<< std::setw(2) << (int)uuid._bytes[15];
-	os.flags(flags);
+	os << uuid.to_string();
 	return os;
 }
 
@@ -406,9 +385,30 @@ UUID::operator!=(const UUID& other) const
 std::string
 UUID::to_string() const
 {
-	std::ostringstream stream;
-	stream << *this;
-	return stream.str();
+	std::string uuid;
+	uuid.resize(36);
+	char *ptr = &uuid[0];
+	char_repr(_bytes[0], &ptr);
+	char_repr(_bytes[1], &ptr);
+	char_repr(_bytes[2], &ptr);
+	char_repr(_bytes[3], &ptr);
+	*ptr++ = '-';
+	char_repr(_bytes[4], &ptr);
+	char_repr(_bytes[5], &ptr);
+	*ptr++ = '-';
+	char_repr(_bytes[6], &ptr);
+	char_repr(_bytes[7], &ptr);
+	*ptr++ = '-';
+	char_repr(_bytes[8], &ptr);
+	char_repr(_bytes[9], &ptr);
+	*ptr++ = '-';
+	char_repr(_bytes[10], &ptr);
+	char_repr(_bytes[11], &ptr);
+	char_repr(_bytes[12], &ptr);
+	char_repr(_bytes[13], &ptr);
+	char_repr(_bytes[14], &ptr);
+	char_repr(_bytes[15], &ptr);
+	return uuid;
 }
 
 
