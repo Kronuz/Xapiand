@@ -22,8 +22,6 @@
 
 #include "exception.h"
 
-#include "io_utils.h"
-
 #include <cstdlib>            // for free
 #include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
@@ -106,7 +104,7 @@ atos(const void* address)
 	while (c != '\n' && nread < MAXLINE) {
 		if unlikely(read(fd, &c, 1) <= 0) {
 			perror("Lost `atos` connection.");
-			io::close(fd);
+			close(fd);
 			fd = -1;
 			return "";
 		}
