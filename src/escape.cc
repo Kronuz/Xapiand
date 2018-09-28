@@ -86,16 +86,18 @@ std::string repr(const void* p, size_t size, bool friendly, char quote, size_t m
 						*d++ = '\\';
 						*d++ = quote;
 					} else if (c < ' ' || c >= 0x7f) {
-						sprintf(d, "\\x%02x", c);
-						d += 4;
+						*d++ = '\\';
+						*d++ = 'x';
+						char_repr(c, &d);
 					} else {
 						*d++ = c;
 					}
 					break;
 			}
 		} else {
-			sprintf(d, "\\x%02x", c);
-			d += 4;
+			*d++ = '\\';
+			*d++ = 'x';
+			char_repr(c, &d);
 		}
 		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
 	}
@@ -156,8 +158,9 @@ std::string escape(const void* p, size_t size, char quote) {
 					*d++ = '\\';
 					*d++ = quote;
 				} else if (c < ' ' || c >= 0x7f) {
-					sprintf(d, "\\x%02x", c);
-					d += 4;
+					*d++ = '\\';
+					*d++ = 'x';
+					char_repr(c, &d);
 				} else {
 					*d++ = c;
 				}
