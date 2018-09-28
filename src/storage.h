@@ -812,7 +812,7 @@ public:
 			}
 		}
 
-		growfile();
+		// growfile();
 	}
 
 	uint32_t write(std::string_view data, void* args=nullptr) {
