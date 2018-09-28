@@ -184,6 +184,10 @@ public:
 	bool open_current(bool commited);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 
+	const std::string& path() const {
+		return base_path;
+	}
+
 	bool init_database();
 	void write_line(Type type, std::string_view data, bool commit_=false);
 	void write_add_document(const Xapian::Document& doc);

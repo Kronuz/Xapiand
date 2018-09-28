@@ -116,6 +116,37 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 }
 
 
+std::string read_uuid(std::string_view dir)
+{
+	auto sdir = std::string(dir);
+	L_DATABASE("+ READING UUID OF INDEX '%s'...", sdir);
+
+	struct stat info;
+	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
+		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
+		return "";
+	}
+
+	int fd = io::open((sdir + "/iamglass").c_str(), O_RDONLY | O_CLOEXEC);
+	if (fd == -1) {
+		return "";
+	}
+
+	std::string uuid;
+
+	char buf[32];
+	size_t length = io::read(fd, buf, 32);
+	if (length == 32) {
+		uuid = std::string(buf + 16, buf + 32);
+	}
+	io::close(fd);
+
+	L_DATABASE("- UUID OF INDEX '%s' is %s", sdir, uuid);
+
+	return uuid;
+}
+
+
 long long read_mastery(std::string_view dir, bool force)
 {
 	auto sdir = std::string(dir);
@@ -123,7 +154,7 @@ long long read_mastery(std::string_view dir, bool force)
 
 	struct stat info;
 	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
-		L_DATABASE("- NO MASTERY OF INDEX '%s'", sdir);
+		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
 		return -1;
 	}
 
