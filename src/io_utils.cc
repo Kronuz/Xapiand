@@ -187,7 +187,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 
 	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
-	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
+	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
 		return -1;
 	}
 #endif
@@ -248,7 +248,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pread(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
 
 #ifndef HAVE_PWRITE
-	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
+	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
 		return -1;
 	}
 #endif
@@ -358,7 +358,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	off_t iWrite = ((buf.st_size + 2 * nBlk - 1) / nBlk) * nBlk - 1; // Next offset to write to
 	do {
 		nWrite = 0;
-		if (io::lseek(fd, iWrite, SEEK_SET) == iWrite) {
+		if (::lseek(fd, iWrite, SEEK_SET) == iWrite) {
 			nWrite = ::write(fd, "", 1);
 		}
 		iWrite += nBlk;
