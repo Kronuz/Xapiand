@@ -320,16 +320,22 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	return posix_fallocate(fd, offset, len);
 #elif defined(F_PREALLOCATE)
 	// Try to get a continous chunk of disk space
-	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, offset, len, 0};
-	int ret = fcntl(fd, F_PREALLOCATE, &store);
-	if (ret < 0) {
-		// OK, perhaps we are too fragmented, allocate non-continuous
-		store.fst_flags = F_ALLOCATEALL;
-		ret = fcntl(fd, F_PREALLOCATE, &store);
+	// {fst_flags, fst_posmode, fst_offset, fst_length, fst_bytesalloc}
+	auto eof = ::lseek(fd, 0, SEEK_END);
+	if (eof == -1) {
+		return -1;
 	}
-
-	ftruncate(fd, offset + len);
-	return ret;
+	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len - eof, 0};
+	int res = fcntl(fd, F_PREALLOCATE, &store);
+	if (res == -1) {
+		// Try and allocate space with fragments
+		store.fst_flags = F_ALLOCATEALL;
+		res = fcntl(fd, F_PREALLOCATE, &store);
+	}
+	if (res != -1) {
+		ftruncate(fd, offset + len);
+	}
+	return res;
 #else
 	// The following is copied from fcntlSizeHint in sqlite
 	/* If the OS does not have posix_fallocate(), fake it. First use
