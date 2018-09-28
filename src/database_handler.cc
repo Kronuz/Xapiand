@@ -336,10 +336,19 @@ DatabaseHandler::check()
 		THROW(ClientError, "It is expected one single endpoint");
 	}
 
-	size_t errors = Xapian::Database::check(endpoints[0].path);
-	return {
-		{"errors", errors},
-	};
+	try {
+		return {
+			{"errors", Xapian::Database::check(endpoints[0].path)},
+		};
+	} catch (const Xapian::Error &error) {
+		return {
+			{"error", error.get_description()},
+		};
+	} catch (...) {
+		return {
+			{"error", "Unknown error"},
+		};
+	}
 }
 
 
