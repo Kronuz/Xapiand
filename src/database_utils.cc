@@ -134,10 +134,31 @@ std::string read_uuid(std::string_view dir)
 
 	std::string uuid;
 
-	char buf[32];
-	size_t length = io::read(fd, buf, 32);
+	char bytes[32];
+	size_t length = io::read(fd, bytes, 32);
 	if (length == 32) {
-		uuid = std::string(buf + 16, buf + 32);
+		uuid.resize(36);
+		char *ptr = &uuid[0];
+		char_repr(bytes[16], &ptr);
+		char_repr(bytes[17], &ptr);
+		char_repr(bytes[18], &ptr);
+		char_repr(bytes[19], &ptr);
+		*ptr++ = '-';
+		char_repr(bytes[20], &ptr);
+		char_repr(bytes[21], &ptr);
+		*ptr++ = '-';
+		char_repr(bytes[22], &ptr);
+		char_repr(bytes[23], &ptr);
+		*ptr++ = '-';
+		char_repr(bytes[24], &ptr);
+		char_repr(bytes[25], &ptr);
+		*ptr++ = '-';
+		char_repr(bytes[26], &ptr);
+		char_repr(bytes[27], &ptr);
+		char_repr(bytes[28], &ptr);
+		char_repr(bytes[29], &ptr);
+		char_repr(bytes[30], &ptr);
+		char_repr(bytes[31], &ptr);
 	}
 	io::close(fd);
 
