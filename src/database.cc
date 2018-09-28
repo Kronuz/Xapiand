@@ -248,6 +248,7 @@ DatabaseWAL::open_current(bool commited)
 				}
 			}
 		} catch (const StorageEOF& exc) { }
+		close();
 	}
 
 	if (rev < revision) {
