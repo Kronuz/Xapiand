@@ -248,7 +248,6 @@ DatabaseWAL::open_current(bool commited)
 				}
 			}
 		} catch (const StorageEOF& exc) { }
-		close();
 	}
 
 	if (rev < revision) {
@@ -705,7 +704,6 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 	uint32_t slot = rev - header.head.revision;
 
 	if (slot >= WAL_SLOTS) {
-		close();
 		open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		slot = rev - header.head.revision;
 	}
@@ -715,7 +713,6 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 
 	if (commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
-			close();
 			open(string::format(WAL_STORAGE_PATH "%u", rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
