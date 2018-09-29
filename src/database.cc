@@ -2212,7 +2212,7 @@ DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	  persistent(false),
 	  count(0),
 	  endpoints(endpoints_) {
-	L_OBJ("CREATED DATABASE QUEUE!");
+	L_OBJ("CREATED DATABASE QUEUE FOR %s!", repr(endpoints.to_string()));
 }
 
 
@@ -2295,6 +2295,8 @@ DatabasesLRU::DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState
 std::shared_ptr<DatabaseQueue>
 DatabasesLRU::get(size_t hash)
 {
+	L_CALL("DatabasesLRU::get(%zx)", hash);
+
 	auto it = find(hash);
 	if (it != end()) {
 		return it->second;
@@ -2306,6 +2308,8 @@ DatabasesLRU::get(size_t hash)
 std::shared_ptr<DatabaseQueue>
 DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 {
+	L_CALL("DatabasesLRU::get(%zx, %s, %s)", hash, db_volatile ? "true" : "false", repr(endpoints.to_string()));
+
 	const auto now = std::chrono::system_clock::now();
 
 	const auto on_get = [now](std::shared_ptr<DatabaseQueue>& val) {
@@ -2323,17 +2327,22 @@ DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 			val->size() < val->count ||
 			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 			val->renew_time = now;
+			L_DATABASE("Renew %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->state != DatabaseQueue::replica_state::REPLICA_FREE ? "replicating" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
 			if (val->renew_time < now - 500ms) {
+				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
+			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (val->renew_time < now - 60s) {
+			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
+		L_DATABASE("Stop at queue: %s", repr(val->endpoints.to_string()));
 		return lru::DropAction::stop;
 	};
 
@@ -2350,21 +2359,28 @@ DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 void
 DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& now)
 {
+	L_CALL("DatabasesLRU::cleanup()");
+
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
 			val->size() < val->count ||
 			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+			L_DATABASE("Leave %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->state != DatabaseQueue::replica_state::REPLICA_FREE ? "replicating" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
 			if (val->renew_time < now - 500ms) {
+				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
+			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (val->renew_time < now - 60s) {
+			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
+		L_DATABASE("Stop at queue: %s", repr(val->endpoints.to_string()));
 		return lru::DropAction::stop;
 	};
 	trim(on_drop);
@@ -2773,14 +2789,16 @@ DatabasePool::_cleanup(bool writable, bool readable)
 	const auto now = std::chrono::system_clock::now();
 
 	if (writable) {
-		if (cleanup_writable_time < now - 5min) {
+		if (cleanup_writable_time < now - 60s) {
+			L_DATABASE("Cleanup writable databases...");
 			writable_databases.cleanup(now);
 			cleanup_writable_time = now;
 		}
 	}
 
 	if (readable) {
-		if (cleanup_readable_time < now - 5min) {
+		if (cleanup_readable_time < now - 60s) {
+			L_DATABASE("Cleanup readable databases...");
 			databases.cleanup(now);
 			cleanup_readable_time = now;
 		}
