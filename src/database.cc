@@ -2786,29 +2786,43 @@ DatabasePool::cleanup()
 }
 
 
-std::pair<size_t, size_t>
+DatabaseCount
 DatabasePool::total_writable_databases()
 {
 	L_CALL("DatabasePool::total_wdatabases()");
 
 	size_t db_count = 0;
+	size_t db_queues = writable_databases.size();
+	size_t db_enqueued = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
 	for (auto & writable_database : writable_databases) {
-		db_count += writable_database.second->size();
+		db_count += writable_database.second->count;
+		db_enqueued += writable_database.second->size();
 	}
-	return std::make_pair(writable_databases.size(), db_count);
+	return {
+		db_count,
+		db_queues,
+		db_enqueued,
+	};
 }
 
 
-std::pair<size_t, size_t>
+DatabaseCount
 DatabasePool::total_readable_databases()
 {
 	L_CALL("DatabasePool::total_rdatabases()");
 
 	size_t db_count = 0;
+	size_t db_queues = databases.size();
+	size_t db_enqueued = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
 	for (auto & database : databases) {
 		db_count += database.second->size();
+		db_enqueued += database.second->size();
 	}
-	return std::make_pair(databases.size(), db_count);
+	return {
+		db_count,
+		db_queues,
+		db_enqueued,
+	};
 }

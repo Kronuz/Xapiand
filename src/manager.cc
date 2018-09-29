@@ -467,19 +467,27 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
+	  xapiand_readable_db_queues(
+		prometheus::BuildGauge()
+			.Name("xapiand_readable_db_queues")
+			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
+			.Help("Readable database queues")
+			.Register(registry)
+			.Add(std::map<std::string, std::string>())
+	  ),
 	  xapiand_readable_db(
 		prometheus::BuildGauge()
 			.Name("xapiand_readable_db")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Readable databases in use")
+			.Help("Readable databases enqueued")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_total_readable_db(
+	  xapiand_writable_db_queues(
 		prometheus::BuildGauge()
-			.Name("xapiand_total_readable_db")
+			.Name("xapiand_writable_db_queues")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total readable databases used")
+			.Help("Writable database queues")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
@@ -487,31 +495,23 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 		prometheus::BuildGauge()
 			.Name("xapiand_writable_db")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Writable databases in use")
+			.Help("Total writable databases enqueued")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_total_writable_db(
+	  xapiand_db_queues(
 		prometheus::BuildGauge()
-			.Name("xapiand_total_writable_db")
+			.Name("xapiand_db_queues")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total writable databases used")
+			.Help("Total database queues")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  ),
-	  xapiand_total_db(
+	  xapiand_db(
 		prometheus::BuildGauge()
-			.Name("xapiand_total_db")
+			.Name("xapiand_db")
 			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total databases in use")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
-	  ),
-	  xapiand_total_peak_db(
-		prometheus::BuildGauge()
-			.Name("xapiand_total_peak_db")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total databases used")
+			.Help("Total databases enqueued")
 			.Register(registry)
 			.Add(std::map<std::string, std::string>())
 	  )
@@ -1529,16 +1529,16 @@ XapiandManager::server_status(MsgPack& stats)
 	auto& stats_databases = stats["databases"];
 
 	auto& stats_databases_readable = stats_databases["readable"];
-	stats_databases_readable["endpoints"] = rdb.first;
-	stats_databases_readable["total"] = rdb.second;
+	stats_databases_readable["endpoints"] = rdb.queues;
+	stats_databases_readable["total"] = rdb.count;
 
 	auto& stats_databases_writable = stats_databases["writable"];
-	stats_databases_writable["endpoints"] = wdb.first;
-	stats_databases_writable["total"] = wdb.second;
+	stats_databases_writable["endpoints"] = wdb.queues;
+	stats_databases_writable["total"] = wdb.count;
 
 	auto& stats_databases_total = stats_databases["total"];
-	stats_databases_total["endpoints"] = rdb.first + wdb.first;
-	stats_databases_total["total"] = rdb.second + wdb.second;
+	stats_databases_total["endpoints"] = rdb.queues + wdb.queues;
+	stats_databases_total["total"] = rdb.count + wdb.count;
 }
 
 
@@ -1602,12 +1602,12 @@ XapiandManager::server_metrics()
 	// databases:
 	auto wdb = database_pool.total_writable_databases();
 	auto rdb = database_pool.total_readable_databases();
-	metrics->xapiand_readable_db.Set(rdb.first);
-	metrics->xapiand_total_readable_db.Set(rdb.second);
-	metrics->xapiand_writable_db.Set(wdb.first);
-	metrics->xapiand_total_writable_db.Set(wdb.second);
-	metrics->xapiand_total_db.Set(rdb.first + wdb.first);
-	metrics->xapiand_total_peak_db.Set(rdb.second + wdb.second);
+	metrics->xapiand_readable_db_queues.Set(rdb.queues);
+	metrics->xapiand_readable_db.Set(rdb.count);
+	metrics->xapiand_writable_db_queues.Set(wdb.queues);
+	metrics->xapiand_writable_db.Set(wdb.count);
+	metrics->xapiand_db_queues.Set(rdb.queues + wdb.queues);
+	metrics->xapiand_db.Set(rdb.count + wdb.count);
 
 	return prometheus::detail::SerializeGet(metrics->registry);
 }

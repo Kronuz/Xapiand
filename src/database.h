@@ -69,6 +69,11 @@ constexpr int RECOVER_DECREMENT_COUNT         = 0x08; // Decrement count queue
 
 #define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
 
+struct DatabaseCount {
+	size_t count;
+	size_t queues;
+	size_t enqueued;
+};
 
 #if XAPIAND_DATABASE_WAL
 struct WalHeader {
@@ -494,6 +499,6 @@ public:
 	bool switch_db(const Endpoint& endpoint);
 	void cleanup();
 
-	std::pair<size_t, size_t> total_writable_databases();
-	std::pair<size_t, size_t> total_readable_databases();
+	DatabaseCount total_writable_databases();
+	DatabaseCount total_readable_databases();
 };
