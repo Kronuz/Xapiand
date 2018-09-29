@@ -185,12 +185,12 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define L(level, color, ...) LOG(true, level, color, __VA_ARGS__)
 #define L_LOG(...) L(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L_STACKED(...) auto UNIQUE_NAME = L(args)
+#define L_STACKED(...) auto UNIQUE_NAME = L(__VA_ARGS__)
 #define L_STACKED_LOG(...) L_STACKED(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L_COLLECT(...) ::collect(args)
+#define L_COLLECT(...) ::collect(__VA_ARGS__)
 
-#define L_PRINT(...) ::print(args)
+#define L_PRINT(...) ::print(__VA_ARGS__)
 
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
