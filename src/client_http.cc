@@ -642,7 +642,7 @@ HttpClient::run_one(Request& request, Response& response)
 				request.parser.http_errno = HPE_INVALID_METHOD;
 				break;
 		}
-	} catch (const DocNotFoundError& exc) {
+	} catch (const NotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
 		// L_EXC("ERROR: %s", error);
@@ -1625,7 +1625,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		if (single) {
 			try {
 				mset = db_handler.get_docid(id);
-			} catch (const DocNotFoundError&) { }
+			} catch (const NotFoundError&) { }
 		} else {
 			if (request.raw.empty()) {
 				mset = db_handler.get_mset(query_field, nullptr, nullptr, suggestions);

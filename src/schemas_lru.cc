@@ -216,9 +216,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 				}
 			} catch (const ForeignSchemaError&) {
 				schema_ptr = Schema::get_initial_schema();
-			} catch (const CheckoutError&) {
+			} catch (const NotFoundError&) {
 				schema_ptr = Schema::get_initial_schema();
-			} catch (const DocNotFoundError&) {
+			} catch (const CheckoutError&) {
 				schema_ptr = Schema::get_initial_schema();
 			}
 			if (!atom_shared_schema->compare_exchange_strong(foreign_schema_ptr, schema_ptr)) {

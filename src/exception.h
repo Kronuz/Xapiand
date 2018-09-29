@@ -220,10 +220,17 @@ public:
 };
 
 
-class DocNotFoundError : public ClientError, public Xapian::DocNotFoundError {
+class NotFoundError : public ClientError {
 public:
 	template<typename... Args>
-	DocNotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocNotFoundError(message) { }
+	NotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+class DocNotFoundError : public NotFoundError, public Xapian::DocNotFoundError {
+public:
+	template<typename... Args>
+	DocNotFoundError(Args&&... args) : NotFoundError(std::forward<Args>(args)...), Xapian::DocNotFoundError(message) { }
 };
 
 

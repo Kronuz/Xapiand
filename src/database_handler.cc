@@ -1765,7 +1765,7 @@ DatabaseHandler::init_ref(const Endpoint& endpoint)
 		}
 		try {
 			db_handler.get_document(document_id);
-		} catch (const DocNotFoundError&) {
+		} catch (const NotFoundError&) {
 			static const MsgPack obj = {
 				{ ID_FIELD_NAME, { { RESERVED_TYPE,  "keyword"          }, { RESERVED_INDEX, "field"   } } },
 				{ "master",      { { RESERVED_VALUE, DOCUMENT_DB_MASTER }, { RESERVED_TYPE,  "keyword" }, { RESERVED_INDEX, "field_terms"  } } },
@@ -1799,7 +1799,7 @@ DatabaseHandler::inc_ref(const Endpoint& endpoint)
 				{ "reference",   { { RESERVED_VALUE, nref               }, { RESERVED_TYPE,  "integer" }, { RESERVED_INDEX, "field_values" } } },
 			};
 			db_handler.index(document_id, false, obj, true, msgpack_type);
-		} catch (const DocNotFoundError&) {
+		} catch (const NotFoundError&) {
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
 			static const MsgPack obj = {
@@ -1839,7 +1839,7 @@ DatabaseHandler::dec_ref(const Endpoint& endpoint)
 				// qmtx need a lock
 				delete_files(endpoint.path);
 			}
-		} catch (const DocNotFoundError&) { }
+		} catch (const NotFoundError&) { }
 	} catch (const CheckoutError&) {
 		L_CRIT("Cannot open %s database", repr(db_handler.endpoints.to_string()));
 		return;
@@ -1894,7 +1894,7 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 		try {
 			auto current_document = get_document_term(term_id);
 			current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, Data(current_document.get_data())));
-		} catch (const DocNotFoundError&) {
+		} catch (const NotFoundError&) {
 			if (validate_exists) {
 				throw;
 			}
@@ -1940,7 +1940,7 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 			try {
 				auto current_document = get_document_term(new_document_pair->first);
 				current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(new_document_pair->first, Data(current_document.get_data())));
-			} catch (const DocNotFoundError&) { }
+			} catch (const NotFoundError&) { }
 
 			lk.lock();
 

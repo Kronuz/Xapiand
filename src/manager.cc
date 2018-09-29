@@ -784,7 +784,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			L_CRIT("Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
-	} catch (const DocNotFoundError&) {
+	} catch (const NotFoundError&) {
 		L_CRIT("Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
 	} catch (const Exception& e) {
