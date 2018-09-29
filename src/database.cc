@@ -2547,7 +2547,18 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 #endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					L_DATABASE("ERROR: %s", exc.get_description());
-				} catch (const Xapian::Error& exc) {
+				} catch (...) {
+					lk.lock();
+					database.reset();
+					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
+					if (queue->count == 0) {
+						// There is a error, the queue ended up being empty, remove it
+						if (db_writable) {
+							writable_databases.erase(hash);
+						} else {
+							databases.erase(hash);
+						}
+					}
 					throw;
 				}
 				lk.lock();
@@ -2563,17 +2574,17 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			}
 		}
 		if (!database || !database->db) {
+			database.reset();
 			queue->state = old_state;
 			queue->persistent = old_persistent;
 			if (queue->count == 0) {
-				//L_DEBUG("There is a error, the queue ended up being empty, remove it");
+				// There is a error, the queue ended up being empty, remove it
 				if (db_writable) {
 					writable_databases.erase(hash);
 				} else {
 					databases.erase(hash);
 				}
 			}
-			database.reset();
 		}
 	}
 
