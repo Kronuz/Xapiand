@@ -654,10 +654,6 @@ HttpClient::run_one(Request& request, Response& response)
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
 		// L_EXC("ERROR: %s", error);
-	} catch (const CheckoutError& exc) {
-		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC("ERROR: %s", error);
 	} catch (const TimeOutError& exc) {
 		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());

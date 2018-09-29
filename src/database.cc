@@ -1233,6 +1233,7 @@ Database::reopen()
 				L_EXC("ERROR: %s", exc.get_description());
 			} catch (const Xapian::Error& exc) {
 				L_EXC("ERROR: %s", exc.get_description());
+				throw;
 			}
 		}
 
@@ -2531,7 +2532,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 									checkout(d, Endpoints(endpoint), DB_WRITABLE);
 									reopen = true;
 									checkin(d);
-								} catch (const CheckoutError&) {
+								} catch (const NotFoundError&) {
 								} catch (...) {
 									database.reset();
 									reopen = false;
@@ -2547,7 +2548,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					L_DATABASE("ERROR: %s", exc.get_description());
 				} catch (const Xapian::Error& exc) {
-					L_EXC("ERROR: %s", exc.get_description());
+					throw;
 				}
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
@@ -2578,7 +2579,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!database) {
 		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-		THROW(CheckoutError, "Cannot checkout database: %s", repr(endpoints.to_string()));
+		THROW(NotFoundError, "Database not found: %s", repr(endpoints.to_string()));
 	}
 
 	// Reopening of old/outdated databases:
