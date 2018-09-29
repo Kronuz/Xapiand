@@ -390,7 +390,7 @@ private:
 
 protected:
 	template <typename... Args>
-	DatabaseQueue(Args&&... args);
+	DatabaseQueue(const Endpoints& endpoints, Args&&... args);
 
 public:
 	DatabaseQueue(const DatabaseQueue&) = delete;
@@ -425,7 +425,7 @@ public:
 	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
-	std::shared_ptr<DatabaseQueue> get(size_t hash, bool db_volatile);
+	std::shared_ptr<DatabaseQueue> get(size_t hash, bool db_volatile, const Endpoints& endpoints);
 
 	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
@@ -469,9 +469,9 @@ class DatabasePool {
 
 			std::shared_ptr<DatabaseQueue> queue;
 			if (flags & DB_WRITABLE) {
-				queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE);
+				queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE, endpoints);
 			} else {
-				queue = databases.get(endpoints.hash(), flags & DB_VOLATILE);
+				queue = databases.get(endpoints.hash(), flags & DB_VOLATILE, endpoints);
 			}
 
 			throw e;

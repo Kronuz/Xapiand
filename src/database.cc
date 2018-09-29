@@ -2205,12 +2205,13 @@ Database::dump_documents()
  */
 
 template <typename... Args>
-DatabaseQueue::DatabaseQueue(Args&&... args)
+DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	: Queue(std::forward<Args>(args)...),
 	  state(replica_state::REPLICA_FREE),
 	  modified(false),
 	  persistent(false),
-	  count(0) {
+	  count(0),
+	  endpoints(endpoints_) {
 	L_OBJ("CREATED DATABASE QUEUE!");
 }
 
@@ -2303,7 +2304,7 @@ DatabasesLRU::get(size_t hash)
 
 
 std::shared_ptr<DatabaseQueue>
-DatabasesLRU::get(size_t hash, bool db_volatile)
+DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 {
 	const auto now = std::chrono::system_clock::now();
 
@@ -2338,11 +2339,11 @@ DatabasesLRU::get(size_t hash, bool db_volatile)
 
 	if (db_volatile) {
 		// Volatile, insert default on the back
-		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(_queue_state)).first->second;
+		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state)).first->second;
 	}
 
 	// Non-volatile, insert default on the front
-	return emplace_and(on_drop, hash, DatabaseQueue::make_shared(_queue_state)).first->second;
+	return emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state)).first->second;
 }
 
 
@@ -2474,14 +2475,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		std::shared_ptr<DatabaseQueue> queue;
 		if (db_writable) {
-			queue = writable_databases.get(hash, db_volatile);
+			queue = writable_databases.get(hash, db_volatile, endpoints);
 			_cleanup(false, true);
 			if (db_commit && !queue->modified) {
 				L_DATABASE_END("!! ABORTED CHECKOUT DB COMMIT NOT NEEDED [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 				THROW(CheckoutErrorCommited, "Cannot checkout database: %s (commit)", repr(endpoints.to_string()));
 			}
 		} else {
-			queue = databases.get(hash, db_volatile);
+			queue = databases.get(hash, db_volatile, endpoints);
 			_cleanup(true, false);
 		}
 
@@ -2661,9 +2662,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				}
 			}
 		}
-		queue = writable_databases.get(database->hash, false);
+		queue = writable_databases.get(database->hash, false, database->endpoints);
 	} else {
-		queue = databases.get(database->hash, false);
+		queue = databases.get(database->hash, false, database->endpoints);
 	}
 
 	assert(database->weak_queue.lock() == queue);
