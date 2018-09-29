@@ -2546,6 +2546,13 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 								std::shared_ptr<Database> d;
 								try {
 									// Checkout executes any commands from the WAL
+									// TODO: To avoid opening a writable database
+									// when it's not needed, the following should
+									// be checked:
+									// 1. If a writable database for the endpoint is already
+									//    opened, don't do this.
+									// 2. If the database's current revision is current
+									//    with the WAL, don't do this.
 									checkout(d, Endpoints(endpoint), DB_WRITABLE | DB_VOLATILE);
 									reopen = true;
 									checkin(d);
