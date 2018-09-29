@@ -129,7 +129,6 @@ public:
 				--size;
 				_items_map.erase(it->first);
 				_items_list.erase(it);
-				last = _items_list.rbegin();
 			}
 		}
 	}
@@ -269,7 +268,6 @@ public:
 					case DropAction::stop:
 						return;
 				}
-				last = _items_list.rbegin();
 			}
 		}
 	}
