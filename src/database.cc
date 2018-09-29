@@ -416,9 +416,9 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t /*end_revision*/, bool unser
 
 	MsgPack repr(MsgPack::Type::ARRAY);
 
-	DIR *dir = opendir(base_path.c_str(), true);
+	DIR *dir = opendir(base_path.c_str(), false);
 	if (dir == nullptr) {
-		THROW(Error, "Could not open the dir (%s)", strerror(errno));
+		THROW(NotFoundError, "Could not open the dir (%s)", strerror(errno));
 	}
 
 	uint32_t highest_revision = 0;
