@@ -321,12 +321,12 @@ namespace queue {
 			return _items_queue.empty();
 		}
 
-		size_t size() {
+		size_t size() const {
 			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.size();
 		}
 
-		size_t count() {
+		size_t count() const {
 			return _state->_cnt;
 		}
 
