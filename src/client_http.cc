@@ -1633,7 +1633,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				rt = RequestType::AGGREGATIONS;
 			}
 		}
-	} catch (const CheckoutError&) {
+	} catch (const NotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 		if (single) {
