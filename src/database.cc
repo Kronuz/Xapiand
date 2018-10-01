@@ -228,7 +228,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		}
 
 		if (start_off < end_off) {
-			L_INFO("Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, rev);
+			L_INFO("Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
 		}
 
 		seek(start_off);
