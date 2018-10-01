@@ -1344,6 +1344,8 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DocNotFoundError&) {
+			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1390,6 +1392,8 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DocNotFoundError&) {
+			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
