@@ -153,11 +153,6 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH);
 
-	if (volumes.first > revision) {
-		THROW(StorageCorruptVolume, "Dangling WAL volumes");
-		return false;
-	}
-
 	modified = false;
 	bool reach_end = false;
 	uint32_t start_off, end_off;
