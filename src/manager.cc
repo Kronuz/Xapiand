@@ -768,7 +768,10 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			THROW(CheckoutError);
 		}
 		db_handler.get_document(serialise_node_id(local_node_->id));
-	} catch (const CheckoutError&) {
+	} catch (const Xapian::DocNotFoundError&) {
+		L_CRIT("Cluster database is corrupt");
+		sig_exit(-EX_DATAERR);
+	} catch (const NotFoundError&) {
 		new_cluster = 1;
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		try {
@@ -784,9 +787,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			L_CRIT("Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
-	} catch (const NotFoundError&) {
-		L_CRIT("Cluster database is corrupt");
-		sig_exit(-EX_DATAERR);
 	} catch (const Exception& e) {
 		L_CRIT("Exception: %s", e.what());
 		sig_exit(-EX_SOFTWARE);
