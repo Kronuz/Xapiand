@@ -145,7 +145,7 @@ DatabaseWAL::~DatabaseWAL()
 
 
 bool
-DatabaseWAL::open_current(bool commited)
+DatabaseWAL::open_current(bool commited, bool unsafe)
 {
 	L_CALL("DatabaseWAL::open_current(%s)", commited ? "true" : "false");
 
@@ -166,19 +166,35 @@ DatabaseWAL::open_current(bool commited)
 	for (auto rev = volumes.first; rev <= volumes.second && not reach_end; ++rev) {
 		try {
 			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
-		} catch (const StorageIOError&) {
+		} catch (const StorageIOError& exc) {
+			if (unsafe) {
+				L_WARNING("Cannot open WAL volume: %s", exc.get_context());
+				continue;
+			}
 			throw;
 		} catch (const StorageCorruptVolume& exc) {
+			if (unsafe) {
+				L_WARNING("Corrupt WAL volume: %s", exc.get_context());
+				continue;
+			}
 			throw;
 		}
 
 		file_rev = begin_rev = rev;
 		if (header.head.revision != begin_rev) {
+			if (unsafe) {
+				L_WARNING("Incorrect WAL revision");
+				continue;
+			}
 			THROW(StorageCorruptVolume, "Incorrect WAL revision");
 		}
 
 		auto high_slot = highest_valid_slot();
 		if (high_slot == 0 || high_slot == static_cast<uint32_t>(-1)) {
+			if (unsafe) {
+				L_WARNING("Missing WAL slots");
+				continue;
+			}
 			THROW(StorageCorruptVolume, "Missing WAL slots");
 		}
 
@@ -203,6 +219,10 @@ DatabaseWAL::open_current(bool commited)
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			} else {
 				if (header.head.revision > revision || slot > high_slot) {
+					if (unsafe) {
+						L_WARNING("Corrupt WAL revision");
+						continue;
+					}
 					THROW(StorageCorruptVolume, "Corrupt WAL revision");
 				}
 				begin_rev = header.head.revision + slot;
@@ -220,9 +240,7 @@ DatabaseWAL::open_current(bool commited)
 		try {
 			while (true) {
 				std::string line = read(end_off);
-				if (!execute(line)) {
-					THROW(StorageCorruptVolume, "WAL revision mismatch!");
-				}
+				execute(line, unsafe);
 				modified = true;
 			}
 		} catch (const StorageEOF& exc) { }
@@ -231,7 +249,10 @@ DatabaseWAL::open_current(bool commited)
 	}
 
 	if (end_rev + 1 < revision) {
-		THROW(StorageCorruptVolume, "WAL revision not reached");
+		if (!unsafe) {
+			THROW(StorageCorruptVolume, "WAL revision not reached");
+		}
+		L_WARNING("WAL revision not reached");
 	}
 
 	create(volumes.second);
@@ -484,10 +505,10 @@ DatabaseWAL::highest_valid_slot()
 }
 
 
-bool
-DatabaseWAL::execute(std::string_view line)
+void
+DatabaseWAL::execute(std::string_view line, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute(<line>)");
+	L_CALL("DatabaseWAL::execute(<line>, %s)", unsafe ? "true" : "false");
 
 	const char *p = line.data();
 	const char *p_end = p + line.size();
@@ -504,7 +525,10 @@ DatabaseWAL::execute(std::string_view line)
 	auto db_revision = database->get_revision();
 
 	if (revision != db_revision) {
-		return false;
+		if (!unsafe) {
+			THROW(StorageCorruptVolume, "WAL revision mismatch!");
+		}
+		L_WARNING("WAL revision mismatch!");
 	}
 
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
@@ -569,8 +593,6 @@ DatabaseWAL::execute(std::string_view line)
 		default:
 			THROW(Error, "Invalid WAL message!");
 	}
-
-	return true;
 }
 
 

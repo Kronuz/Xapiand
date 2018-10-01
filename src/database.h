@@ -158,7 +158,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	MsgPack repr_document(std::string_view document, bool unserialised);
 	MsgPack repr_metadata(std::string_view document, bool unserialised);
 	MsgPack repr_line(std::string_view line, bool unserialised);
-	bool execute(std::string_view line);
+	void execute(std::string_view line, bool unsafe = false);
 	uint32_t highest_valid_slot();
 
 	inline bool open(std::string_view path, int flags, bool commit_eof=false) {
@@ -186,7 +186,7 @@ public:
 	~DatabaseWAL();
 
 	bool create(uint32_t revision);
-	bool open_current(bool commited);
+	bool open_current(bool commited, bool unsafe = false);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 
 	const std::string& path() const {
