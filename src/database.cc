@@ -241,7 +241,6 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			while (true) {
 				std::string line = read(end_off);
 				execute(line, unsafe);
-				modified = true;
 			}
 		} catch (const StorageEOF& exc) { }
 
@@ -553,6 +552,7 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 			break;
 		case Type::CANCEL:
 			database->cancel(false);
+			modified = false;
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
