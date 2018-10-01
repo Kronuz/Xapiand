@@ -575,8 +575,15 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 			database->replace_document_term(term, doc, false, false);
 			break;
 		case Type::DELETE_DOCUMENT:
-			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-			database->delete_document(did, false, false);
+			try {
+				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+				database->delete_document(did, false, false);
+			} catch (const NotFoundError& exc) {
+				if (!unsafe) {
+					throw;
+				}
+				L_WARNING("Error during DELETE_DOCUMENT: %s", exc.get_message());
+			}
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length(&p, p_end, true);
