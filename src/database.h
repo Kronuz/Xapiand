@@ -278,8 +278,6 @@ public:
 	~DataStorage();
 
 	bool open(std::string_view relative_path);
-
-	uint32_t highest_volume();
 };
 #endif /* XAPIAND_DATA_STORAGE */
 

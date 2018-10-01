@@ -835,14 +835,45 @@ public:
 		return ret;
 	}
 
-	uint32_t get_volume(std::string_view filename) {
-		L_CALL("Storage::get_volume()");
+	std::pair<uint32_t, uint32_t>
+	get_volumes_range(std::string_view pattern, uint32_t min=0, uint32_t max=std::numeric_limits<uint32_t>::max()) {
+		// Figure out highest and lowest volume files available for a given file pattern
+		L_CALL("Storage::get_volumes_range()");
 
-		auto found = filename.find_last_of(".");
-		if (found == std::string_view::npos) {
-			throw std::invalid_argument("Volume not found in " + std::string(filename));
+		DIR *dir = opendir(base_path.c_str(), false);
+		if (dir == nullptr) {
+			THROW(NotFoundError, "Could not open the dir (%s)", strerror(errno));
 		}
-		return static_cast<uint32_t>(strict_stoul(filename.substr(found + 1)));
+
+		uint32_t first_volume = std::numeric_limits<uint32_t>::max();
+		uint32_t last_volume = 0;
+
+		File_ptr fptr;
+		find_file_dir(dir, fptr, pattern, true);
+
+		while (fptr.ent != nullptr) {
+			std::string_view filename(fptr.ent->d_name);
+			auto found = filename.find_last_of(".");
+			if (found != std::string_view::npos) {
+				int errno_save;
+				uint32_t file_volume = static_cast<uint32_t>(strict_stoul(&errno_save, filename.substr(found + 1)));
+				if (errno_save == 0) {
+					if (file_volume < first_volume && first_volume >= min) {
+						first_volume = file_volume;
+					}
+
+					if (file_volume > last_volume && file_volume <= max) {
+						last_volume = file_volume;
+					}
+				}
+			}
+
+			find_file_dir(dir, fptr, pattern, true);
+		}
+
+		closedir(dir);
+
+		return {first_volume, last_volume};
 	}
 
 	bool closed() noexcept {
