@@ -416,6 +416,9 @@ public:
 	void close() {
 		L_CALL("Storage::close()");
 
+		cmpFile.close();
+		decFile.close();
+
 		if (fd != -1) {
 			if (flags & STORAGE_WRITABLE) {
 				commit();
@@ -423,9 +426,6 @@ public:
 			io::close(fd);
 			fd = -1;
 		}
-
-		cmpFile.close();
-		decFile.close();
 
 		free_blocks = 0;
 		bin_offset = 0;
