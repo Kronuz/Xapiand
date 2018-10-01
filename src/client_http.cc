@@ -1558,7 +1558,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 	DatabaseHandler db_handler{endpoints};
 
 	bool unserialised = request.query_parser.next("raw") == -1;
-	auto repr = db_handler.repr_wal(0, -1, unserialised);
+	auto repr = db_handler.repr_wal(0, std::numeric_limits<uint32_t>::max(), unserialised);
 
 	request.ready = std::chrono::system_clock::now();
 
