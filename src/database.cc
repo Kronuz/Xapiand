@@ -527,7 +527,7 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 		if (!unsafe) {
 			THROW(StorageCorruptVolume, "WAL revision mismatch!");
 		}
-		L_WARNING("WAL revision mismatch!");
+		// L_WARNING("WAL revision mismatch!");
 	}
 
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
