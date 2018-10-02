@@ -25,6 +25,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "ignore_unused.h"        // for ignore_unused
 #include "length.h"
 #include "manager.h"
 #include "server.h"
@@ -267,7 +268,12 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	int fd = watcher.fd;
+	int fd = raft->get_socket();
+	if (fd == -1) {
+		return;
+	}
+	ignore_unused(watcher);
+	assert(fd == watcher.fd || fd == -1);
 
 	L_CALL("RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("RaftServer::io_accept_cb", "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
@@ -276,8 +282,6 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 		L_EV("ERROR: got invalid raft event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
-
-	assert(raft->get_socket() == fd || raft->get_socket() == -1);
 
 	L_EV_BEGIN("RaftServer::io_accept_cb:BEGIN");
 

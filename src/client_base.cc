@@ -524,8 +524,12 @@ BaseClient::write_file(std::string_view path, bool unlink)
 void
 BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
-	int fd = watcher.fd;
-	assert(sock == fd || sock == -1);
+	int fd = sock;
+	if (fd == -1) {
+		return;
+	}
+	ignore_unused(watcher);
+	assert(fd == watcher.fd || fd == -1);
 
 	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
@@ -568,8 +572,12 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 void
 BaseClient::io_cb_read(ev::io &watcher, int revents)
 {
-	int fd = watcher.fd;
-	assert(sock == fd || sock == -1);
+	int fd = sock;
+	if (fd == -1) {
+		return;
+	}
+	ignore_unused(watcher);
+	assert(fd == watcher.fd || fd == -1);
 
 	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);

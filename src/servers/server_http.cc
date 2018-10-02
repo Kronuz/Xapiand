@@ -33,6 +33,7 @@
 #include "client_http.h"          // for HttpClient
 #include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                 // for Http
+#include "ignore_unused.h"        // for ignore_unused
 #include "log.h"                  // for L_EV, L_OBJ, L_CALL, L_ERR
 #include "utils.h"                // for ignored_errorno, readable_revents
 #include "worker.h"               // for Worker
@@ -58,7 +59,12 @@ HttpServer::~HttpServer()
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	int fd = watcher.fd;
+	int fd = http->sock;
+	if (fd == -1) {
+		return;
+	}
+	ignore_unused(watcher);
+	assert(fd == watcher.fd || fd == -1);
 
 	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
@@ -67,8 +73,6 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 		L_EV("ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
 		return;
 	}
-
-	assert(http->sock == fd || http->sock == -1);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 
