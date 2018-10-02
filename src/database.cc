@@ -113,14 +113,11 @@ WalHeader::validate(void* param, void* /*unused*/)
 			if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0) {
 				THROW(StorageCorruptVolume, "WAL UUID mismatch");
 			}
-		} else {
-			std::array<unsigned char, 16> uuid;
-			if (::read_uuid(wal->path(), uuid) == 0) {
-				if (strncasecmp(head.uuid, UUID(uuid).to_string().c_str(), sizeof(head.uuid)) != 0) {
-					// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
-					if (strncasecmp(head.uuid, UUID(uuid, true).to_string().c_str(), sizeof(head.uuid)) != 0) {
-						THROW(StorageCorruptVolume, "WAL UUID mismatch");
-					}
+		} else if (wal->uuid().empty()) {
+			if (strncasecmp(head.uuid, wal->uuid().c_str(), sizeof(head.uuid)) != 0) {
+				// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
+				if (strncasecmp(head.uuid, wal->uuid_le().c_str(), sizeof(head.uuid)) != 0) {
+					THROW(StorageCorruptVolume, "WAL UUID mismatch");
 				}
 			}
 		}
@@ -135,6 +132,30 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_, Database* database_)
 	  database(database_)
 {
 	L_OBJ("CREATED DATABASE WAL!");
+}
+
+
+const std::string&
+DatabaseWAL::uuid() const
+{
+	if (_uuid.empty()) {
+		std::array<unsigned char, 16> uuid_data;
+		if (::read_uuid(base_path, uuid_data) != -1) {
+			_uuid = UUID(uuid_data).to_string();
+			_uuid_le = UUID(uuid_data, true).to_string();
+		}
+	}
+	return _uuid;
+}
+
+
+const std::string&
+DatabaseWAL::uuid_le() const
+{
+	if (_uuid_le.empty()) {
+		uuid();
+	}
+	return _uuid_le;
 }
 
 
@@ -623,8 +644,8 @@ DatabaseWAL::init_database()
 		return true;
 	}
 
-	UUID uuid(header.head.uuid, UUID_LENGTH);
-	const auto& bytes = uuid.get_bytes();
+	UUID header_uuid(header.head.uuid, UUID_LENGTH);
+	const auto& bytes = header_uuid.get_bytes();
 	std::string uuid_str(bytes.begin(), bytes.end());
 
 	int fd = io::open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL);
@@ -673,7 +694,6 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 	assert(endpoint.is_local());
 
 	std::string revision_encode = database->get_revision_str();
-	std::string uuid = database->get_uuid();
 	std::string line = revision_encode;
 	line.append(serialise_length(toUType(type)));
 	line.append(data);

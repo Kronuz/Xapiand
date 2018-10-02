@@ -180,6 +180,8 @@ public:
 		MAX,
 	};
 
+	mutable std::string _uuid;
+	mutable std::string _uuid_le;
 	Database* database;
 
 	DatabaseWAL(std::string_view base_path_, Database* database_);
@@ -189,9 +191,8 @@ public:
 	bool open_current(bool commited, bool unsafe = false);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 
-	const std::string& path() const {
-		return base_path;
-	}
+	const std::string& uuid() const;
+	const std::string& uuid_le() const;
 
 	bool init_database();
 	void write_line(Type type, std::string_view data, bool commit_=false);
