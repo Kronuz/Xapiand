@@ -209,7 +209,7 @@ void sig_handler(int sig) {
 	signals.write(STDERR_FILENO, sig);
 
 	if (sig == SIGTERM || sig == SIGINT) {
-		close(STDIN_FILENO);
+		::close(STDIN_FILENO);
 	}
 
 // #if defined(__APPLE__) || defined(__FreeBSD__)
