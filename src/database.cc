@@ -60,7 +60,7 @@
 
 #define WAL_STORAGE_PATH "wal."
 
-#define MAGIC 0xC0DE
+#define MAGIC "X-WAL-00"  // 8 bytes only
 
 #define WAL_SYNC_MODE     STORAGE_ASYNC_SYNC
 #define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
@@ -87,9 +87,9 @@ WalHeader::init(void* param, void* args)
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	auto commit_eof = static_cast<bool>(args);
 
-	head.magic = MAGIC;
+	memcpy(head.magic, MAGIC, sizeof(head.magic));
+	memcpy(&head.uuid[0], wal->database->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-	strncpy(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid));
 
 	auto revision = wal->database->get_revision();
 	if (commit_eof) {
@@ -103,20 +103,21 @@ WalHeader::init(void* param, void* args)
 void
 WalHeader::validate(void* param, void* /*unused*/)
 {
-	if (head.magic != MAGIC) {
+	if (strncmp(head.magic, MAGIC, sizeof(head.magic)) != 0) {
 		THROW(StorageCorruptVolume, "Bad WAL header magic number");
 	}
 
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	if (wal->validate_uuid) {
+		UUID uuid(head.uuid);
 		if (wal->database) {
-			if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid)) != 0) {
+			if (uuid != wal->database->get_uuid()) {
 				THROW(StorageCorruptVolume, "WAL UUID mismatch");
 			}
 		} else if (wal->uuid().empty()) {
-			if (strncasecmp(head.uuid, wal->uuid().c_str(), sizeof(head.uuid)) != 0) {
+			if (uuid != wal->uuid()) {
 				// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
-				if (strncasecmp(head.uuid, wal->uuid_le().c_str(), sizeof(head.uuid)) != 0) {
+				if (uuid != wal->uuid_le()) {
 					THROW(StorageCorruptVolume, "WAL UUID mismatch");
 				}
 			}
@@ -134,21 +135,21 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_, Database* database_)
 }
 
 
-const std::string&
+const UUID&
 DatabaseWAL::uuid() const
 {
 	if (_uuid.empty()) {
 		std::array<unsigned char, 16> uuid_data;
 		if (::read_uuid(base_path, uuid_data) != -1) {
-			_uuid = UUID(uuid_data).to_string();
-			_uuid_le = UUID(uuid_data, true).to_string();
+			_uuid = UUID(uuid_data);
+			_uuid_le = UUID(uuid_data, true);
 		}
 	}
 	return _uuid;
 }
 
 
-const std::string&
+const UUID&
 DatabaseWAL::uuid_le() const
 {
 	if (_uuid_le.empty()) {
@@ -840,9 +841,9 @@ DataHeader::init(void* param, void* /*unused*/)
 {
 	const auto* database = static_cast<const Database*>(param);
 
-	head.offset = STORAGE_START_BLOCK_OFFSET;
 	head.magic = STORAGE_MAGIC;
-	strncpy(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, database->get_uuid().to_string().c_str(), sizeof(head.uuid));
+	head.offset = STORAGE_START_BLOCK_OFFSET;
 }
 
 
@@ -854,7 +855,7 @@ DataHeader::validate(void* param, void* /*unused*/)
 	}
 
 	const auto* database = static_cast<const Database*>(param);
-	if (strncasecmp(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid)) != 0) {
+	if (UUID(head.uuid) != database->get_uuid()) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
@@ -1186,12 +1187,12 @@ Database::reopen()
 }
 
 
-std::string
+UUID
 Database::get_uuid() const
 {
 	L_CALL("Database::get_uuid");
 
-	return db->get_uuid();
+	return UUID(db->get_uuid());
 }
 
 

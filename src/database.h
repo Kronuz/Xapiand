@@ -78,10 +78,10 @@ struct DatabaseCount {
 #if XAPIAND_DATABASE_WAL
 struct WalHeader {
 	struct StorageHeaderHead {
-		uint32_t magic;
+		char magic[8];
 		uint32_t offset;
-		char uuid[UUID_LENGTH];
 		uint32_t revision;
+		std::array<unsigned char, 16> uuid;
 	} head;
 
 	uint32_t slot[WAL_SLOTS];
@@ -179,8 +179,8 @@ public:
 		MAX,
 	};
 
-	mutable std::string _uuid;
-	mutable std::string _uuid_le;
+	mutable UUID _uuid;
+	mutable UUID _uuid_le;
 	Database* database;
 
 	DatabaseWAL(std::string_view base_path_, Database* database_);
@@ -189,8 +189,8 @@ public:
 	bool open_current(bool commited, bool unsafe = false);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 
-	const std::string& uuid() const;
-	const std::string& uuid_le() const;
+	const UUID& uuid() const;
+	const UUID& uuid_le() const;
 
 	bool init_database();
 	void write_line(Type type, std::string_view data, bool commit_=false);
@@ -324,7 +324,7 @@ public:
 	std::string storage_get_stored(const Xapian::docid& did, const Data::Locator& locator) const;
 #endif /* XAPIAND_DATA_STORAGE */
 
-	std::string get_uuid() const;
+	UUID get_uuid() const;
 	uint32_t get_revision() const;
 	std::string get_revision_str() const;
 

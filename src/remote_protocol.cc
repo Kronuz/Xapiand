@@ -341,7 +341,7 @@ RemoteProtocol::msg_update(const std::string &)
 #else
 		message += serialise_length(db->get_total_length());
 #endif
-		std::string uuid = db->get_uuid();
+		std::string uuid = db->get_uuid().to_string();
 		message += uuid;
 
 		client->checkin_database();

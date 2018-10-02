@@ -116,7 +116,7 @@ Replication::msg_get_changesets(const std::string &)
 	// 		L_ERR("Cannot write to %s (1)", path);
 	// 		return;
 	// 	}
-	// 	// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
+	// 	// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid().to_string());  // FIXME: Implement Replication
 	// } catch (...) {
 	// 	release_db(db_);
 	// 	io::close(fd);

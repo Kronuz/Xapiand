@@ -1701,7 +1701,7 @@ DatabaseHandler::get_database_info()
 	unsigned doccount = database->db->get_doccount();
 	unsigned lastdocid = database->db->get_lastdocid();
 	MsgPack info;
-	info[RESPONSE_UUID] = database->db->get_uuid();
+	info[RESPONSE_UUID] = database->get_uuid().to_string();
 	info[RESPONSE_DOC_COUNT] = doccount;
 	info[RESPONSE_LAST_ID] = lastdocid;
 	info[RESPONSE_DOC_DEL] = lastdocid - doccount;
