@@ -186,13 +186,18 @@ protected:
 	size_t data_offset;
 
 	DeflateData(const char* data_, size_t data_size_)
-		: data(data_),
-		  data_size(data_size_),
-		  data_offset(0) { }
+		: data{data_},
+		  data_size{data_size_},
+		  data_offset{0} { }
 
 	~DeflateData() = default;
 
 public:
+	int close() {
+		data_offset = 0;
+		return 0;
+	}
+
 	void add_data(const char* data_, size_t data_size_) {
 		data = data_;
 		data_size = data_size_;
@@ -261,23 +266,23 @@ protected:
 	size_t size_file;
 
 	explicit DeflateFile(std::string_view filename)
-		: fd(-1),
-		  fd_offset(0),
-		  fd_nbytes(-1),
-		  fd_internal(false),
-		  bytes_readed(0),
-		  size_file(0)
+		: fd{-1},
+		  fd_offset{0},
+		  fd_nbytes{-1},
+		  fd_internal{false},
+		  bytes_readed{0},
+		  size_file{0}
 	{
 		open(filename);
 	}
 
 	DeflateFile(int fd_, off_t fd_offset_, off_t fd_nbytes_)
-		: fd(-1),
-		  fd_offset(0),
-		  fd_nbytes(-1),
-		  fd_internal(false),
-		  bytes_readed(0),
-		  size_file(0)
+		: fd{-1},
+		  fd_offset{0},
+		  fd_nbytes{-1},
+		  fd_internal{false},
+		  bytes_readed{0},
+		  size_file{0}
 	{
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
@@ -288,10 +293,17 @@ protected:
 
 public:
 	int close() {
+		int ret = 0;
 		if (fd_internal && fd != -1) {
-			return io::close(fd);
+			ret = io::close(fd);
 		}
-		return 0;
+		fd = -1;
+		fd_offset = 0;
+		fd_nbytes = -1;
+		fd_internal = false;
+		bytes_readed = 0;
+		size_file = 0;
+		return ret;
 	}
 
 	void open(std::string_view filename) {

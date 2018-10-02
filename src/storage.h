@@ -416,6 +416,7 @@ public:
 	void close() {
 		L_CALL("Storage::close()");
 
+		cmpData.close();
 		cmpFile.close();
 		decFile.close();
 
