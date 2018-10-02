@@ -76,8 +76,8 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 
-	int client_sock;
-	if ((client_sock = http->accept()) < 0) {
+	int client_sock = http->accept();
+	if (client_sock == -1) {
 		if (!ignored_errorno(errno, true, false)) {
 			L_ERR("ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
 		}

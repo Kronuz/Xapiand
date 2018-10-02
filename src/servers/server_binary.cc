@@ -88,7 +88,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
 
 	int client_sock = binary->accept();
-	if (client_sock < 0) {
+	if (client_sock == -1) {
 		if (!ignored_errorno(errno, true, false)) {
 			L_ERR("ERROR: accept binary error {fd:%d}: %s", fd, strerror(errno));
 		}
