@@ -321,11 +321,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 #elif defined(F_PREALLOCATE)
 	// Try to get a continous chunk of disk space
 	// {fst_flags, fst_posmode, fst_offset, fst_length, fst_bytesalloc}
-	auto eof = ::lseek(fd, 0, SEEK_END);
-	if (eof == -1) {
-		return -1;
-	}
-	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len - eof, 0};
+	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len, 0};
 	int res = fcntl(fd, F_PREALLOCATE, &store);
 	if (res == -1) {
 		// Try and allocate space with fragments
