@@ -2472,48 +2472,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
 			if (queue->inc_count(db_writable ? 1 : -1)) {
-#ifdef XAPIAND_DATABASE_WAL
-				size_t count = queue->count;
-#endif
 				lk.unlock();
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
-
 					if (db_writable && db_init_ref) {
 						DatabaseHandler::init_ref(endpoints[0]);
 					}
-
-#ifdef XAPIAND_DATABASE_WAL
-					if (!db_writable && count == 1 && ((flags & DB_NOWAL) == 0)) {
-						bool reopen = false;
-						for (const auto& endpoint : database->endpoints) {
-							if (endpoint.is_local()) {
-								std::shared_ptr<Database> d;
-								try {
-									// Checkout executes any commands from the WAL
-									// TODO: To avoid opening a writable database
-									// when it's not needed, the following should
-									// be checked:
-									// 1. If a writable database for the endpoint is already
-									//    opened, don't do this.
-									// 2. If the database's current revision is current
-									//    with the WAL, don't do this.
-									checkout(d, Endpoints(endpoint), DB_WRITABLE | DB_VOLATILE);
-									reopen = true;
-									checkin(d);
-								} catch (const NotFoundError&) {
-								} catch (...) {
-									database.reset();
-									reopen = false;
-									break;
-								}
-							}
-						}
-						if (reopen) {
-							database->reopen();
-						}
-					}
-#endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					L_DATABASE("ERROR: %s", exc.get_description());
 				} catch (...) {
