@@ -176,12 +176,11 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 	bool modified = false;
 	bool reach_end = false;
-	uint32_t start_off, end_off;
-	uint32_t file_rev, begin_rev, end_rev, rev;
 
-	for (rev = volumes.first; rev <= volumes.second && not reach_end; ++rev) {
+	uint32_t end_rev;
+	for (end_rev = volumes.first; end_rev <= volumes.second && !reach_end; ++end_rev) {
 		try {
-			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
 		} catch (const StorageIOError& exc) {
 			if (unsafe) {
 				L_WARNING("Cannot open WAL volume: %s", exc.get_context());
@@ -196,7 +195,8 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			throw;
 		}
 
-		file_rev = begin_rev = rev;
+		uint32_t file_rev, begin_rev;
+		file_rev = begin_rev = end_rev;
 		if (header.head.revision != begin_rev) {
 			if (unsafe) {
 				L_WARNING("Incorrect WAL revision");
@@ -214,7 +214,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			THROW(StorageCorruptVolume, "Missing WAL slots");
 		}
 
-		if (rev == volumes.second) {
+		if (end_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 			if (!commited) {
 				// last slot is uncommitedcontain offset at the end of file
@@ -224,11 +224,12 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		}
 
 		end_rev = header.head.revision + high_slot;
-		end_off = header.slot[high_slot];
-
 		if (end_rev < revision) {
 			continue;
-		} if (rev == volumes.first) {
+		}
+
+		uint32_t start_off;
+		if (end_rev == volumes.first) {
 			auto slot = revision - header.head.revision - 1;
 			if (slot == static_cast<uint32_t>(-1)) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
@@ -243,6 +244,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			start_off = STORAGE_START_BLOCK_OFFSET;
 		}
 
+		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
 			L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
 		}
@@ -254,11 +256,9 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 				modified = execute(line, unsafe);
 			}
 		} catch (const StorageEOF& exc) { }
-
-		rev = end_rev;
 	}
 
-	if (volumes.first <= volumes.second && rev < revision) {
+	if (volumes.first <= volumes.second && end_rev < revision) {
 		if (!unsafe) {
 			THROW(StorageCorruptVolume, "WAL revision not reached");
 		}
@@ -416,21 +416,21 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 	MsgPack repr{MsgPack::Type::ARRAY};
 
 	bool reach_end = false;
-	uint32_t start_off, end_off;
-	uint32_t file_rev, begin_rev, end_rev;
 
-	for (auto rev = volumes.first; rev <= volumes.second && not reach_end; ++rev) {
+	uint32_t end_rev;
+	for (end_rev = volumes.first; end_rev <= volumes.second && !reach_end; ++end_rev) {
 		try {
-			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
 		} catch (const StorageIOError& exc) {
-			L_WARNING("wal.%u cannot be opened: %s", rev, exc.get_context());
+			L_WARNING("wal.%u cannot be opened: %s", end_rev, exc.get_context());
 			continue;
 		} catch (const StorageCorruptVolume& exc) {
-			L_WARNING("wal.%u is corrupt: %s", rev, exc.get_context());
+			L_WARNING("wal.%u is corrupt: %s", end_rev, exc.get_context());
 			continue;
 		}
 
-		file_rev = begin_rev = rev;
+		uint32_t file_rev, begin_rev;
+		file_rev = begin_rev = end_rev;
 		if (header.head.revision != begin_rev) {
 			L_WARNING("wal.%u has incorrect revision!", file_rev);
 			continue;
@@ -442,14 +442,17 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			continue;
 		}
 
-		if (rev == volumes.second) {
+		if (end_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 		}
 
 		end_rev = header.head.revision + high_slot;
-		end_off = header.slot[high_slot];
+		if (end_rev < start_revision) {
+			continue;
+		}
 
-		if (rev == volumes.first) {
+		uint32_t start_off;
+		if (end_rev == volumes.first) {
 			auto slot = start_revision - header.head.revision - 1;
 			if (slot == static_cast<uint32_t>(-1)) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
@@ -457,10 +460,6 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 				begin_rev = header.head.revision;
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			} else {
-				if (header.head.revision > start_revision || slot > high_slot) {
-					L_WARNING("wal.%u has a corrupt revision!", file_rev);
-					continue;
-				}
 				begin_rev = header.head.revision + slot;
 				start_off = header.slot[slot];
 			}
@@ -468,6 +467,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			start_off = STORAGE_START_BLOCK_OFFSET;
 		}
 
+		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
 			L_INFO("Read and repr operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
 		}
@@ -479,8 +479,6 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 				repr.push_back(repr_line(line, unserialised));
 			}
 		} catch (const StorageEOF& exc) { }
-
-		rev = end_rev;
 	}
 
 	return repr;
