@@ -187,7 +187,6 @@ public:
 	DatabaseWAL(std::string_view base_path_, Database* database_);
 	~DatabaseWAL();
 
-	bool create(uint32_t revision);
 	bool open_current(bool commited, bool unsafe = false);
 	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
 

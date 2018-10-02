@@ -119,13 +119,6 @@ public:
 };
 
 
-class StorageEmptyFile : public StorageCorruptVolume {
-public:
-	template<typename... Args>
-	StorageEmptyFile(Args&&... args) : StorageCorruptVolume(std::forward<Args>(args)...) { }
-};
-
-
 struct StorageHeader {
 	struct StorageHeaderHead {
 		// uint32_t magic;
@@ -363,7 +356,11 @@ public:
 #endif
 
 			fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR : O_RDONLY, 0644);
-			if unlikely(fd == -1) {
+			if unlikely(fd == -1 || io::lseek(fd, 0, SEEK_END) == 0) {
+				if (fd != -1) {
+					io::close(fd);
+					fd = -1;
+				}
 				if (flags & STORAGE_CREATE) {
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
 					if unlikely(fd == -1) {
@@ -377,11 +374,10 @@ public:
 			}
 		}
 
-		reopen();
-		return created;
+		return reopen();
 	}
 
-	void reopen(void* args=nullptr) {
+	bool reopen(void* args=nullptr) {
 		L_CALL("Storage::reopen()");
 
 		if unlikely(fd == -1) {
@@ -393,8 +389,6 @@ public:
 		if unlikely(r == -1) {
 			close();
 			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
-		} else if unlikely(r == 0) {
-			THROW(StorageEmptyFile, "Empty file %s", path);
 		} else if unlikely(r != sizeof(header)) {
 			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
@@ -411,6 +405,8 @@ public:
 		}
 
 		seek(STORAGE_START_BLOCK_OFFSET);
+
+		return false;
 	}
 
 	void close() {

@@ -270,21 +270,9 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		L_WARNING("WAL revision not reached");
 	}
 
-	create(volumes.second);
+	open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 
 	return modified;
-}
-
-
-bool
-DatabaseWAL::create(uint32_t revision)
-{
-	try {
-		return open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-	} catch (StorageEmptyFile) {
-		initialize_file(reinterpret_cast<void*>(false));
-		return true;
-	}
 }
 
 
@@ -1046,20 +1034,9 @@ Database::reopen_writable()
 		if (local && ((flags & DB_NOWAL) == 0)) {
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(e.path, this);
-			try {
-				if (wal->open_current(true)) {
-					if (auto queue = weak_queue.lock()) {
-						queue->modified = true;
-					}
-				}
-			} catch (const StorageCorruptVolume& exc) {
-				if (wal->create(reopen_revision)) {
-					L_WARNING("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
-					if (auto queue = weak_queue.lock()) {
-						queue->modified = true;
-					}
-				} else {
-					L_ERR("Revision not found in wal for endpoint %s! (%u)", repr(e.to_string()), reopen_revision);
+			if (wal->open_current(true)) {
+				if (auto queue = weak_queue.lock()) {
+					queue->modified = true;
 				}
 			}
 		}
