@@ -251,9 +251,9 @@ public:
 	template<typename OnDrop>
 	void trim(const OnDrop& on_drop, size_t size) {
 		if (_max_size != SIZE_MAX) {
-			auto last = _items_list.rbegin();
-			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend(); --i) {
-				auto it = (++last).base();
+			auto last = --_items_list.end();
+			for (size_t i = _items_list.size(); i != 0; --i) {
+				auto it = last--;
 				switch (on_drop(it->second, size, _max_size)) {
 					case DropAction::evict:
 						--size;
