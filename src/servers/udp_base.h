@@ -57,10 +57,6 @@ public:
 	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
 	~BaseUDP();
 
-	inline int get_socket() {
-		return sock;
-	}
-
 	void send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);
 

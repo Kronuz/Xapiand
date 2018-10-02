@@ -38,8 +38,8 @@ RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	: BaseServer(server_, ev_loop_, ev_flags_),
 	  raft(raft_)
 {
-	io.start(raft->get_socket(), ev::READ);
-	L_EV("Start raft's server accept event (sock=%d)", raft->get_socket());
+	io.start(raft->sock, ev::READ);
+	L_EV("Start raft's server accept event (sock=%d)", raft->sock);
 
 	L_OBJ("CREATED RAFT SERVER!");
 }
@@ -268,7 +268,7 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	int fd = raft->get_socket();
+	int fd = raft->sock;
 	if (fd == -1) {
 		return;
 	}

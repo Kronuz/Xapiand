@@ -43,8 +43,8 @@ DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, 
 	: BaseServer(server_, ev_loop_, ev_flags_),
 	  discovery(discovery_)
 {
-	io.start(discovery->get_socket(), ev::READ);
-	L_EV("Start discovery's server accept event (sock=%d)", discovery->get_socket());
+	io.start(discovery->sock, ev::READ);
+	L_EV("Start discovery's server accept event (sock=%d)", discovery->sock);
 
 	L_OBJ("CREATED DISCOVERY SERVER!");
 }
@@ -382,7 +382,7 @@ DiscoveryServer::db_updated(const std::string& message)
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	int fd = binary->get_socket();
+	int fd = binary->sock;
 	if (fd == -1) {
 		return;
 	}

@@ -66,10 +66,6 @@ public:
 	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_);
 	~BaseTCP();
 
-	inline int get_socket() {
-		return sock;
-	}
-
 	virtual std::string getDescription() const noexcept = 0;
 
 	int accept();
