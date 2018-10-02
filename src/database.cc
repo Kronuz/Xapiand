@@ -231,9 +231,11 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 				begin_rev = header.head.revision;
 				start_off = STORAGE_START_BLOCK_OFFSET;
-			} else {
+			} else if (slot <= high_slot) {
 				begin_rev = header.head.revision + slot;
 				start_off = header.slot[slot];
+			} else {
+				continue;
 			}
 		} else {
 			start_off = STORAGE_START_BLOCK_OFFSET;
@@ -453,9 +455,11 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 				begin_rev = header.head.revision;
 				start_off = STORAGE_START_BLOCK_OFFSET;
-			} else {
+			} else if (slot <= high_slot) {
 				begin_rev = header.head.revision + slot;
 				start_off = header.slot[slot];
+			} else {
+				continue;
 			}
 		} else {
 			start_off = STORAGE_START_BLOCK_OFFSET;
