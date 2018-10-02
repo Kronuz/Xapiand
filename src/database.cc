@@ -993,13 +993,8 @@ Database::reopen_writable()
 #endif /* XAPIAND_CLUSTERING */
 	{
 #ifdef XAPIAND_DATABASE_WAL
-		try {
-			DatabaseWAL tmp_wal(e.path, this);
-			tmp_wal.init_database();
-		} catch (const Exception& exc) {
-			L_EXC("WAL ERROR: %s", exc.get_message());
-			throw;
-		}
+		DatabaseWAL tmp_wal(e.path, this);
+		tmp_wal.init_database();
 #endif
 		build_path_index(e.path);
 		try {
@@ -1037,20 +1032,15 @@ Database::reopen_writable()
 #endif /* XAPIAND_DATA_STORAGE */
 
 #ifdef XAPIAND_DATABASE_WAL
-	try {
-		/* If reopen_revision is not available Wal work as a log for the operations */
-		if (local && ((flags & DB_NOWAL) == 0)) {
-			// WAL required on a local writable database, open it.
-			wal = std::make_unique<DatabaseWAL>(e.path, this);
-			if (wal->open_current(true)) {
-				if (auto queue = weak_queue.lock()) {
-					queue->modified = true;
-				}
+	/* If reopen_revision is not available Wal work as a log for the operations */
+	if (local && ((flags & DB_NOWAL) == 0)) {
+		// WAL required on a local writable database, open it.
+		wal = std::make_unique<DatabaseWAL>(e.path, this);
+		if (wal->open_current(true)) {
+			if (auto queue = weak_queue.lock()) {
+				queue->modified = true;
 			}
 		}
-	} catch (const Exception& exc) {
-		L_EXC("WAL ERROR: %s", exc.get_message());
-		throw;
 	}
 #endif /* XAPIAND_DATABASE_WAL */
 	// Ends Writable DB
@@ -1106,13 +1096,8 @@ Database::reopen_readable()
 #endif /* XAPIAND_CLUSTERING */
 		{
 #ifdef XAPIAND_DATABASE_WAL
-			try {
-				DatabaseWAL tmp_wal(e.path, this);
-				tmp_wal.init_database();
-			} catch (const Exception& exc) {
-				L_EXC("WAL ERROR: %s", exc.get_message());
-				throw;
-			}
+			DatabaseWAL tmp_wal(e.path, this);
+			tmp_wal.init_database();
 #endif
 			try {
 				rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
