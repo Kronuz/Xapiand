@@ -176,9 +176,9 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 	bool modified = false;
 	bool reach_end = false;
 	uint32_t start_off, end_off;
-	uint32_t file_rev, begin_rev, end_rev;
+	uint32_t file_rev, begin_rev, end_rev, rev;
 
-	for (auto rev = volumes.first; rev <= volumes.second && not reach_end; ++rev) {
+	for (rev = volumes.first; rev <= volumes.second && not reach_end; ++rev) {
 		try {
 			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN);
 		} catch (const StorageIOError& exc) {
@@ -262,7 +262,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		rev = end_rev - 1;
 	}
 
-	if (end_rev + 1 < revision) {
+	if (volumes.first <= volumes.second && rev < revision) {
 		if (!unsafe) {
 			THROW(StorageCorruptVolume, "WAL revision not reached");
 		}
@@ -698,7 +698,14 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 		slot = rev - header.head.revision;
 	}
 
-	write(line.data(), line.size());
+	try {
+		write(line.data(), line.size());
+	} catch (const StorageClosedError&) {
+		auto volumes = get_volumes_range(WAL_STORAGE_PATH, rev, rev);
+		open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+		write(line.data(), line.size());
+	}
+
 	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
 	if (commit_) {
