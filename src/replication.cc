@@ -112,7 +112,7 @@ Replication::msg_get_changesets(const std::string &)
 	// 	std::string to_revision = databases[db_]->checkout_revision;
 	// 	L_REPLICATION("Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string(), uuid, repr(from_revision, false), repr(to_revision, false), need_whole_db);
 
-	// 	if (fd < 0) {
+	// 	if (fd == -1) {
 	// 		L_ERR("Cannot write to %s (1)", path);
 	// 		return;
 	// 	}
@@ -294,7 +294,7 @@ Replication::reply_changeset(const std::string &)
 
 	// char path[] = "/tmp/xapian_changes.XXXXXX";
 	// int fd = mkstemp(path);
-	// if (fd < 0) {
+	// if (fd == -1) {
 	// 	L_ERR("Cannot write to %s (1)", path);
 	// 	return;
 	// }
