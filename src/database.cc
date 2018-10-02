@@ -248,7 +248,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		}
 
 		if (start_off < end_off) {
-			L_INFO("Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
+			L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
 		}
 
 		seek(start_off);
@@ -259,7 +259,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			}
 		} catch (const StorageEOF& exc) { }
 
-		rev = end_rev - 1;
+		rev = end_rev;
 	}
 
 	if (volumes.first <= volumes.second && rev < revision) {
@@ -473,7 +473,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 		}
 
 		if (start_off < end_off) {
-			L_INFO("Read and repr operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
+			L_INFO("Read and repr operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
 		}
 
 		seek(start_off);
@@ -484,7 +484,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			}
 		} catch (const StorageEOF& exc) { }
 
-		rev = end_rev - 1;
+		rev = end_rev;
 	}
 
 	return repr;
