@@ -223,11 +223,6 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			}
 		}
 
-		end_rev = header.head.revision + high_slot;
-		if (end_rev < revision) {
-			continue;
-		}
-
 		uint32_t start_off;
 		if (end_rev == volumes.first) {
 			auto slot = revision - header.head.revision - 1;
@@ -244,6 +239,10 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			start_off = STORAGE_START_BLOCK_OFFSET;
 		}
 
+		end_rev = header.head.revision + high_slot;
+		if (end_rev < revision) {
+			continue;
+		}
 		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
 			L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
@@ -446,11 +445,6 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 		}
 
-		end_rev = header.head.revision + high_slot;
-		if (end_rev < start_revision) {
-			continue;
-		}
-
 		uint32_t start_off;
 		if (end_rev == volumes.first) {
 			auto slot = start_revision - header.head.revision - 1;
@@ -465,6 +459,11 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			}
 		} else {
 			start_off = STORAGE_START_BLOCK_OFFSET;
+		}
+
+		end_rev = header.head.revision + high_slot;
+		if (end_rev < start_revision) {
+			continue;
 		}
 
 		auto end_off = header.slot[high_slot];
