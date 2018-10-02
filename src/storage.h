@@ -240,9 +240,8 @@ class Storage {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}
 				if (new_size > file_size) {
-					if unlikely(io::fallocate(fd, 0, file_size, new_size - file_size)) {
-						close();
-						THROW(StorageIOError, "IO error: fallocate: %s", strerror(errno));
+					if unlikely(io::fallocate(fd, 0, file_size, new_size - file_size) == -1) {
+						L_WARNING("Cannot grow storage file: %s", strerror(errno));
 					}
 				}
 			}
