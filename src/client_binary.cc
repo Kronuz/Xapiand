@@ -149,7 +149,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		checkin_database();
 		return false;
 	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock.load());
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
 
 	XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 		task->run();

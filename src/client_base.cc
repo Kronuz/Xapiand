@@ -375,7 +375,7 @@ BaseClient::close()
 		return;
 	}
 
-	int fd = sock.load();
+	int fd = sock;
 	if (fd != -1) {
 		::shutdown(fd, SHUT_RDWR);
 	}
@@ -471,7 +471,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 	}
 	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
 
-	int fd = sock.load();
+	int fd = sock;
 	if (fd == -1) {
 		return false;
 	}
@@ -501,7 +501,7 @@ BaseClient::write_file(std::string_view path, bool unlink)
 	}
 	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
 
-	int fd = sock.load();
+	int fd = sock;
 	if (fd == -1) {
 		return false;
 	}
