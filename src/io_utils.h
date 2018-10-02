@@ -25,11 +25,19 @@
 
 #include "xapiand.h"
 
-#include <errno.h>
-#include <fcntl.h>
+#include <errno.h>      // for errno
+#include <fcntl.h>      // for fchmod, open, O_RDONLY
 #include <stddef.h>     // for size_t
-#include <fcntl.h>      // for open, O_RDONLY
+#include <sys/stat.h>   // for fstat
 #include <unistd.h>     // for off_t, ssize_t, close, lseek, unlink
+
+
+// Do not accept any file descriptor less than this value, in order to avoid
+// opening database file using file descriptors that are commonly used for
+// standard input, output, and error.
+#ifndef XAPIAND_MINIMUM_FILE_DESCRIPTOR
+#define XAPIAND_MINIMUM_FILE_DESCRIPTOR STDERR_FILENO + 1
+#endif
 
 
 namespace io {
@@ -41,8 +49,8 @@ inline int unlink(const char *path) {
 
 inline int close(int fd) {
 	// Make sure we don't ever close 0, 1 or 2 file descriptors
-	assert(fd != -1 && fd >= STDERR_FILENO);
-	if (fd >= STDERR_FILENO) {
+	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
+	if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
 		return ::close(fd);
 	}
 	return -1;
@@ -50,8 +58,39 @@ inline int close(int fd) {
 
 
 inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
-	int fd = ::open(path, oflag, mode);
-	assert(fd < 0 || fd >= STDERR_FILENO);
+	int fd;
+	while (true) {
+#ifdef O_CLOEXEC
+		fd = ::open(path, oflag | O_CLOEXEC, mode);
+#else
+		fd = ::open(path, oflag, mode);
+#endif
+		if (fd == -1) {
+			if (errno == EINTR) {
+				continue;
+			}
+			break;
+		}
+		if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+			break;
+		}
+		::close(fd);
+		fd = -1;
+		if (::open("/dev/null", oflag, mode) == -1) {
+			break;
+		}
+	}
+	if (fd != -1) {
+		if (mode != 0) {
+			struct stat statbuf;
+			if (::fstat(fd, &statbuf) == 0 && statbuf.st_size == 0 && (statbuf.st_mode & 0777) != mode) {
+				::fchmod(fd, mode);
+			}
+		}
+#if defined(FD_CLOEXEC) && (!defined(O_CLOEXEC) || O_CLOEXEC == 0)
+		::fcntl(fd, F_SETFD, ::fcntl(fd, F_GETFD, 0) | FD_CLOEXEC);
+#endif
+	}
 	return fd;
 }
 
