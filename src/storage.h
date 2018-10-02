@@ -91,6 +91,13 @@ public:
 };
 
 
+class StorageClosedError : public StorageIOError {
+public:
+	template<typename... Args>
+	StorageClosedError(Args&&... args) : StorageIOError(std::forward<Args>(args)...) { }
+};
+
+
 class StorageNotFound : public StorageException {
 public:
 	template<typename... Args>
@@ -321,7 +328,7 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
+			THROW(StorageClosedError, "IO error: closed storage");
 		}
 
 		memset(&header, 0, sizeof(header));
@@ -769,7 +776,12 @@ public:
 			return;
 		}
 
-		if ((flags & STORAGE_WRITABLE) == 0) {
+		if unlikely(fd == -1) {
+			close();
+			THROW(StorageClosedError, "IO error: closed storage");
+		}
+
+		if unlikely((flags & STORAGE_WRITABLE) == 0) {
 			THROW(StorageIOError, "IO error: read-only storage");
 		}
 
