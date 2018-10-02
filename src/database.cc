@@ -172,7 +172,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 	uint32_t revision = database->reopen_revision;
 
-	auto volumes = get_volumes_range(WAL_STORAGE_PATH);
+	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
 	bool modified = false;
 	bool reach_end = false;
