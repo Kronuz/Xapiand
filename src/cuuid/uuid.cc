@@ -517,6 +517,12 @@ UUID::uuid_version() const
 	return _bytes[6] >> 4;
 }
 
+bool
+UUID::empty() const
+{
+	return memcmp(_bytes.data(), "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0;
+}
+
 
 void
 UUID::compact_crush()

@@ -126,6 +126,8 @@ public:
 	uint8_t uuid_variant() const;
 	uint8_t uuid_version() const;
 
+	bool empty() const;
+
 private:
 	// make the << operator a friend so it can access _bytes
 	friend std::ostream &operator<<(std::ostream& os, const UUID& uuid);
