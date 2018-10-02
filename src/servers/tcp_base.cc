@@ -179,6 +179,7 @@ BaseTCP::bind(int tries)
 
 	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	io::close(sock);
+	sock = -1;
 	sig_exit(-EX_CONFIG);
 }
 
