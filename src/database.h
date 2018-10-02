@@ -152,13 +152,12 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"MAX",
 	};
 
-	bool modified;
 	bool validate_uuid;
 
 	MsgPack repr_document(std::string_view document, bool unserialised);
 	MsgPack repr_metadata(std::string_view document, bool unserialised);
 	MsgPack repr_line(std::string_view line, bool unserialised);
-	void execute(std::string_view line, bool unsafe = false);
+	bool execute(std::string_view line, bool unsafe = false);
 	uint32_t highest_valid_slot();
 
 	inline bool open(std::string_view path, int flags, bool commit_eof=false) {

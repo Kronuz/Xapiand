@@ -127,7 +127,6 @@ WalHeader::validate(void* param, void* /*unused*/)
 
 DatabaseWAL::DatabaseWAL(std::string_view base_path_, Database* database_)
 	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
-	  modified(false),
 	  validate_uuid(true),
 	  database(database_)
 {
@@ -174,7 +173,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH);
 
-	modified = false;
+	bool modified = false;
 	bool reach_end = false;
 	uint32_t start_off, end_off;
 	uint32_t file_rev, begin_rev, end_rev;
@@ -256,7 +255,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		try {
 			while (true) {
 				std::string line = read(end_off);
-				execute(line, unsafe);
+				modified = execute(line, unsafe);
 			}
 		} catch (const StorageEOF& exc) { }
 
@@ -508,7 +507,7 @@ DatabaseWAL::highest_valid_slot()
 }
 
 
-void
+bool
 DatabaseWAL::execute(std::string_view line, bool unsafe)
 {
 	L_CALL("DatabaseWAL::execute(<line>, %s)", unsafe ? "true" : "false");
@@ -547,7 +546,7 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 	p = data.data();
 	p_end = p + data.size();
 
-	modified = true;
+	bool modified = true;
 
 	switch (type) {
 		case Type::ADD_DOCUMENT:
@@ -604,6 +603,8 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 		default:
 			THROW(Error, "Invalid WAL message!");
 	}
+
+	return modified;
 }
 
 
