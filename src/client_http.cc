@@ -1095,7 +1095,7 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	db_handler.delete_schema();
 
 	request.ready = std::chrono::system_clock::now();
@@ -1122,7 +1122,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	auto& decoded_body = request.decoded_body();
 	response_obj = db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 
@@ -1151,7 +1151,7 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
@@ -1180,7 +1180,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	auto rt = RequestType::MERGE;
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	auto& decoded_body = request.decoded_body();
 	if (method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;

@@ -2405,7 +2405,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
 		if ((flags & DB_PERSISTENT) == DB_PERSISTENT) values.push_back("DB_PERSISTENT");
-		if ((flags & DB_INIT_REF) == DB_INIT_REF) values.push_back("DB_INIT_REF");
 		if ((flags & DB_VOLATILE) == DB_VOLATILE) values.push_back("DB_VOLATILE");
 		if ((flags & DB_REPLICATION) == DB_REPLICATION) values.push_back("DB_REPLICATION");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
@@ -2416,7 +2415,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool db_writable = (flags & DB_WRITABLE) != 0;
 	bool db_commit = (flags & DB_COMMIT) == DB_COMMIT;
 	bool db_persistent = (flags & DB_PERSISTENT) != 0;
-	bool db_init_ref = (flags & DB_INIT_REF) != 0;
 	bool db_replication = (flags & DB_REPLICATION) != 0;
 	bool db_volatile = (flags & DB_VOLATILE) != 0;
 
@@ -2475,9 +2473,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				lk.unlock();
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
-					if (db_writable && db_init_ref) {
-						DatabaseHandler::init_ref(endpoints[0]);
-					}
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					L_DATABASE("ERROR: %s", exc.get_description());
 				} catch (...) {
