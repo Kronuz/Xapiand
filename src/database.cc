@@ -226,7 +226,9 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		end_rev = header.head.revision + high_slot;
 		end_off = header.slot[high_slot];
 
-		if (rev == volumes.first) {
+		if (end_rev < revision) {
+			continue;
+		} if (rev == volumes.first) {
 			auto slot = revision - header.head.revision - 1;
 			if (slot == static_cast<uint32_t>(-1)) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
@@ -234,13 +236,6 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 				begin_rev = header.head.revision;
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			} else {
-				if (header.head.revision > revision || slot > high_slot) {
-					if (unsafe) {
-						L_WARNING("Corrupt WAL revision");
-						continue;
-					}
-					THROW(StorageCorruptVolume, "Corrupt WAL revision");
-				}
 				begin_rev = header.head.revision + slot;
 				start_off = header.slot[slot];
 			}
