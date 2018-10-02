@@ -279,7 +279,7 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 		return -1;
 	}
 
-	if (::connect(sock_, result->ai_addr, result->ai_addrlen) < 0) {
+	if (::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname, servname, sock_, errno, strerror(errno));
 			freeaddrinfo(result);

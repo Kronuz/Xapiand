@@ -144,7 +144,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
-	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
+	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) == -1) {
 		L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
 		checkin_database();
 		return false;
