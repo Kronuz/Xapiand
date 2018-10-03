@@ -110,15 +110,15 @@ BaseUDP::bind(int tries, const std::string& group)
 	}
 
 	// use io::setsockopt() to allow multiple listeners connected to the same port
-	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
@@ -126,7 +126,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 		io::close(sock);
 		sock = -1;
@@ -140,7 +140,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	for (int i = 0; i < tries; ++i, ++port) {
 		addr.sin_port = htons(port);
 
-		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
@@ -148,7 +148,7 @@ BaseUDP::bind(int tries, const std::string& group)
 			}
 		}
 
-		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
