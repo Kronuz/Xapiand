@@ -207,11 +207,14 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 
 		auto high_slot = highest_valid_slot();
 		if (high_slot == static_cast<uint32_t>(-1)) {
-			if (unsafe) {
-				L_WARNING("No WAL slots");
-				continue;
+			if (revision != file_rev) {
+				if (unsafe) {
+					L_WARNING("No WAL slots");
+					continue;
+				}
+				THROW(StorageCorruptVolume, "No WAL slots");
 			}
-			THROW(StorageCorruptVolume, "No WAL slots");
+			continue;
 		}
 		if (high_slot == 0) {
 			if (only_committed) {
@@ -443,7 +446,9 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 
 		auto high_slot = highest_valid_slot();
 		if (high_slot == static_cast<uint32_t>(-1)) {
-			L_WARNING("wal.%u has no valid slots!", file_rev);
+			if (start_revision != file_rev) {
+				L_WARNING("wal.%u has no valid slots!", file_rev);
+			}
 			continue;
 		}
 
