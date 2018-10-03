@@ -51,12 +51,14 @@ namespace io {
 int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line);
 #define CHECK_OPEN(fd) io::check("while opening as file", fd, 0, OPENED | CLOSED, OPENED, __func__, __FILE__, __LINE__)
 #define CHECK_OPEN_SOCKET(fd) io::check("while opening as socket", fd, 0, OPENED | SOCKET | CLOSED, OPENED | SOCKET, __func__, __FILE__, __LINE__)
-#define CHECK_CLOSE(fd) io::check("while closing", fd, OPENED, CLOSED, CLOSED, __func__, __FILE__, __LINE__)
+#define CHECK_CLOSING(fd) io::check("while closing", fd, OPENED, 0, 0, __func__, __FILE__, __LINE__)
+#define CHECK_CLOSE(fd) io::check("while closing", fd, 0, CLOSED, CLOSED, __func__, __FILE__, __LINE__)
 #define CHECK_OPENED(msg, fd) io::check(msg, fd, OPENED, CLOSED, 0, __func__, __FILE__, __LINE__)
 #define CHECK_OPENED_SOCKET(msg, fd) io::check(msg, fd, OPENED | SOCKET, CLOSED, 0, __func__, __FILE__, __LINE__)
 #else
 #define CHECK_OPEN(fd)
 #define CHECK_OPEN_SOCKET(fd)
+#define CHECK_CLOSING(fd)
 #define CHECK_CLOSE(fd)
 #define CHECK_OPENED(msg, fd)
 #define CHECK_OPENED_SOCKET(msg, fd)
@@ -111,7 +113,7 @@ inline int close(int fd) {
 	// Make sure we don't ever close 0, 1 or 2 file descriptors
 	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
 	if (fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
-		// CHECK_CLOSE is done inside the custom close() implementation
+		CHECK_CLOSING(fd);
 		return ::close(fd);
 	}
 	return -1;
