@@ -81,7 +81,7 @@ BaseTCP::destroyer()
 		return;
 	}
 
-	::shutdown(sock, SHUT_RDWR);
+	io::shutdown(sock, SHUT_RDWR);
 }
 
 
@@ -112,23 +112,23 @@ BaseTCP::bind(int tries)
 		sig_exit(-EX_IOERR);
 	}
 
-	// use setsockopt() to allow multiple listeners connected to the same address
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+	// use io::setsockopt() to allow multiple listeners connected to the same address
+	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
 #ifdef SO_NOSIGPIPE
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 #endif
 
-	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
 	// struct linger ling = {0, 0};
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
 	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	// }
 
@@ -141,13 +141,13 @@ BaseTCP::bind(int tries)
 #ifdef SO_ACCEPTFILTER
 		struct accept_filter_arg af = {"dataready", ""};
 
-		if (setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
+		if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
 			L_ERR("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
-		if (setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
+		if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
 			L_ERR("ERROR: setsockopt TCP_DEFER_ACCEPT (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 #endif
@@ -160,7 +160,7 @@ BaseTCP::bind(int tries)
 	for (int i = 0; i < tries; ++i, ++port) {
 		addr.sin_port = htons(port);
 
-		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
@@ -168,12 +168,12 @@ BaseTCP::bind(int tries)
 			}
 		}
 
-		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
 			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
 		check_backlog(tcp_backlog);
-		listen(sock, tcp_backlog);
+		io::listen(sock, tcp_backlog);
 		return;
 	}
 
@@ -194,7 +194,7 @@ BaseTCP::accept()
 	struct sockaddr_in addr;
 	socklen_t addrlen = sizeof(addr);
 
-	if ((client_sock = ::accept(sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
+	if ((client_sock = io::accept(sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR("ERROR: accept error (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
@@ -202,22 +202,22 @@ BaseTCP::accept()
 	}
 
 #ifdef SO_NOSIGPIPE
-	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	}
 #endif
 
-	// if (setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	// if (io::setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
 	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
-	// if (setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
 	// 	L_ERR("ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
 	if ((flags & CONN_TCP_NODELAY) != 0) {
-		if (setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
 			L_ERR("ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 		}
 	}
@@ -280,7 +280,7 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 		return -1;
 	}
 
-	if (::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
+	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname, servname, sock_, errno, strerror(errno));
 			freeaddrinfo(result);
@@ -291,7 +291,7 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 
 	freeaddrinfo(result);
 
-	if (fcntl(sock_, F_SETFL, fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) < 0) {
+	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) < 0) {
 		L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock_, errno, strerror(errno));
 	}
 

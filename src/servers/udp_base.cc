@@ -78,7 +78,7 @@ BaseUDP::destroyer()
 		return;
 	}
 
-	::shutdown(sock, SHUT_RDWR);
+	io::shutdown(sock, SHUT_RDWR);
 }
 
 
@@ -109,24 +109,24 @@ BaseUDP::bind(int tries, const std::string& group)
 		sig_exit(-EX_CONFIG);
 	}
 
-	// use setsockopt() to allow multiple listeners connected to the same port
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
+	// use io::setsockopt() to allow multiple listeners connected to the same port
+	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	// use setsockopt() to request that the kernel join a multicast group
+	// use io::setsockopt() to request that the kernel join a multicast group
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
 		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 		io::close(sock);
 		sock = -1;
@@ -140,7 +140,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	for (int i = 0; i < tries; ++i, ++port) {
 		addr.sin_port = htons(port);
 
-		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true, true)) {
 				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
@@ -148,7 +148,7 @@ BaseUDP::bind(int tries, const std::string& group)
 			}
 		}
 
-		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
 			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
@@ -170,9 +170,9 @@ BaseUDP::sending_message(const std::string& message)
 		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = ::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
 #else
-		ssize_t written = ::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
 #endif
 
 		if (written < 0) {
@@ -204,7 +204,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	char buf[1024];
 	struct sockaddr_in _addr;
 	socklen_t addrlen = sizeof(_addr);
-	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&_addr, &addrlen);
+	ssize_t received = io::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&_addr, &addrlen);
 	if (received < 0) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR("ERROR: read error (sock=%d): %s", sock, strerror(errno));

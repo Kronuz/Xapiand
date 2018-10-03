@@ -804,9 +804,9 @@ void detach() {
 	/* Every output goes to /dev/null */
 	int fd;
 	if ((fd = io::open("/dev/null", O_RDWR, 0)) != -1) {
-		dup2(fd, STDIN_FILENO);
-		dup2(fd, STDOUT_FILENO);
-		dup2(fd, STDERR_FILENO);
+		io::dup2(fd, STDIN_FILENO);
+		io::dup2(fd, STDOUT_FILENO);
+		io::dup2(fd, STDERR_FILENO);
 		if (fd > STDERR_FILENO) { io::close(fd); }
 	}
 }

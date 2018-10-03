@@ -377,7 +377,7 @@ BaseClient::close()
 
 	int fd = sock;
 	if (fd != -1) {
-		::shutdown(fd, SHUT_RDWR);
+		io::shutdown(fd, SHUT_RDWR);
 	}
 
 	L_OBJ("CLOSED BASE CLIENT!");
@@ -404,7 +404,7 @@ BaseClient::write_from_queue(int fd)
 		const char *buf_data = buffer->data();
 
 #ifdef MSG_NOSIGNAL
-		ssize_t _written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
+		ssize_t _written = io::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
 #else
 		ssize_t _written = io::write(fd, buf_data, buf_size);
 #endif

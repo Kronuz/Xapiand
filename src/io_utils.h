@@ -29,6 +29,7 @@
 #include <fcntl.h>      // for fchmod, open, O_RDONLY
 #include <stddef.h>     // for size_t
 #include <sys/stat.h>   // for fstat
+#include <sys/socket.h> // for send
 #include <unistd.h>     // for off_t, ssize_t, close, lseek, unlink
 
 
@@ -42,22 +43,12 @@
 
 namespace io {
 
-inline int unlink(const char *path) {
+inline int unlink(const char* path) {
 	return ::unlink(path);
 }
 
 
-inline int close(int fd) {
-	// Make sure we don't ever close 0, 1 or 2 file descriptors
-	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
-	if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
-		return ::close(fd);
-	}
-	return -1;
-}
-
-
-inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
+inline int open(const char* path, int oflag=O_RDONLY, int mode=0644) {
 	int fd;
 	while (true) {
 #ifdef O_CLOEXEC
@@ -95,8 +86,93 @@ inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
 }
 
 
+inline int close(int fd) {
+	// Make sure we don't ever close 0, 1 or 2 file descriptors
+	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
+	if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+		return ::close(fd);
+	}
+	return -1;
+}
+
+
 inline off_t lseek(int fd, off_t offset, int whence) {
 	return ::lseek(fd, offset, whence);
+}
+
+
+inline int fcntl(int fd, int cmd, int arg) {
+	return ::fcntl(fd, cmd, arg);
+}
+
+
+inline int fstat(int fd, struct stat* buf) {
+	return ::fstat(fd, buf);
+}
+
+
+inline int dup(int fd) {
+	return ::dup(fd);
+}
+
+
+inline int dup2(int fd, int fildes2) {
+	return ::dup2(fd, fildes2);
+}
+
+
+inline int shutdown(int socket, int how) {
+	return ::shutdown(socket, how);
+}
+
+
+inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
+	return ::send(socket, buffer, length, flags);
+}
+
+
+inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
+	return ::sendto(socket, buffer, length, flags, dest_addr, dest_len);
+}
+
+
+inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
+	return ::recv(socket, buffer, length, flags);
+}
+
+
+inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
+	return ::recvfrom(socket, buffer, length, flags, address, address_len);
+}
+
+
+inline int getsockopt(int socket, int level, int option_name, void* option_value, socklen_t* option_len){
+	return ::getsockopt(socket, level, option_name, option_value, option_len);
+}
+
+
+inline int setsockopt(int socket, int level, int option_name, const void* option_value, socklen_t option_len){
+	return ::setsockopt(socket, level, option_name, option_value, option_len);
+}
+
+
+inline int listen(int socket, int backlog) {
+	return ::listen(socket, backlog);
+}
+
+
+inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
+	return ::accept(socket, address, address_len);
+}
+
+
+inline int bind(int socket, const struct sockaddr *address, socklen_t address_len) {
+	return ::bind(socket, address, address_len);
+}
+
+
+inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
+	return ::connect(socket, address, address_len);
 }
 
 

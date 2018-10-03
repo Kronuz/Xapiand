@@ -68,22 +68,22 @@ Binary::connection_socket()
 	}
 
 #ifdef SO_NOSIGPIPE
-	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
 
-	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
 	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
 	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
 	// }
 
 	if (flags & CONN_TCP_NODELAY) {
-		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		if (io::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
 			L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
 		}
 	}

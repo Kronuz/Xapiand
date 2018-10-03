@@ -300,7 +300,7 @@ int full_fsync(int fd) {
 	L_CALL("io::full_fsync(%d)", fd);
 
 	while (true) {
-		int r = fcntl(fd, F_FULLFSYNC, 0);
+		int r = ::fcntl(fd, F_FULLFSYNC, 0);
 		if unlikely(r < 0) {
 			L_ERRNO("io::full_fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) { continue; }
@@ -322,14 +322,14 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	// Try to get a continous chunk of disk space
 	// {fst_flags, fst_posmode, fst_offset, fst_length, fst_bytesalloc}
 	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len, 0};
-	int res = fcntl(fd, F_PREALLOCATE, &store);
+	int res = ::fcntl(fd, F_PREALLOCATE, &store);
 	if (res == -1) {
 		// Try and allocate space with fragments
 		store.fst_flags = F_ALLOCATEALL;
-		res = fcntl(fd, F_PREALLOCATE, &store);
+		res = ::fcntl(fd, F_PREALLOCATE, &store);
 	}
 	if (res != -1) {
-		ftruncate(fd, offset + len);
+		::ftruncate(fd, offset + len);
 	}
 	return res;
 #else
@@ -342,7 +342,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	 */
 
 	struct stat buf;
-	if (fstat(fd, &buf))
+	if (::fstat(fd, &buf))
 		return -1;
 
 	if (buf.st_size >= len)
@@ -353,7 +353,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	if (!nBlk)
 		return -1;
 
-	if (ftruncate(fd, len))
+	if (::ftruncate(fd, len))
 		return -1;
 
 	int nWrite;

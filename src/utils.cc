@@ -452,13 +452,13 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 void _tcp_nopush(int sock, int optval) {
 #ifdef TCP_NOPUSH
-	if (setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
-	if (setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
+	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
 		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 	}
 #endif
@@ -479,14 +479,14 @@ unsigned long long file_descriptors_cnt() {
 	unsigned long long n = 0;
 	for (unsigned long long fd = 0; fd < fdmax; ++fd) {
 		struct stat buf;
-		if (fstat(fd, &buf) != 0) {
+		if (io::fstat(fd, &buf) != 0) {
 			// errno should be EBADF (not a valid open file descriptor)
 			// or other error. In either case, don't count.
 			continue;
 		}
 		++n;
 		// char filePath[PATH_MAX];
-		// if (fcntl(fd, F_GETPATH, filePath) != -1) {
+		// if (io::fcntl(fd, F_GETPATH, filePath) != -1) {
 		// 	fprintf(stderr, "%llu - %s\n", fd, filePath);
 		// }
 	}
