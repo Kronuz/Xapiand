@@ -449,7 +449,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #ifdef XAPIAND_CHECK_IO_FDES
 #include <sysexits.h>                       // for EX_SOFTWARE
 int close(int fd) {
-	static int honeypot = ::open("/tmp/xapiand.honeypot", O_RDWR | O_CREAT, 0);
+	static int honeypot = ::open("/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if (honeypot == -1) {
 		L_ERR("honeypot -> %s", io::strerrno(errno));
 		exit(EX_SOFTWARE);
