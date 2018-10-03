@@ -812,6 +812,7 @@ if (BUILD_TESTS)
 				"$<TARGET_OBJECTS:LIBEV_OBJ>"
 				"$<TARGET_OBJECTS:LZ4_OBJ>"
 				"$<TARGET_OBJECTS:UUID_OBJ>"
+				"$<TARGET_OBJECTS:PROMETHEUS_OBJ>"
 			)
 			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
