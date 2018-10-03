@@ -104,7 +104,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	unsigned char ttl = 3;
 	struct ip_mreq mreq;
 
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
+	if ((sock = io::socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
 		L_CRIT("ERROR: %s socket: [%d] %s", description, errno, strerror(errno));
 		sig_exit(-EX_CONFIG);
 	}

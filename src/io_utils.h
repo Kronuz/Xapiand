@@ -171,6 +171,11 @@ inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
 	return ::recv(socket, buffer, length, flags);
 }
 
+inline int socket(int domain, int type, int protocol) {
+	int socket = ::socket(domain, type, protocol);
+	CHECK_OPEN_SOCKET(socket);
+	return socket;
+}
 
 inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during recvfrom()", socket);

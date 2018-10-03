@@ -62,7 +62,7 @@ Binary::connection_socket()
 	int client_sock;
 	int optval = 1;
 
-	if ((client_sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((client_sock = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		L_ERR("ERROR: cannot create binary connection: [%d] %s", errno, strerror(errno));
 		return -1;
 	}

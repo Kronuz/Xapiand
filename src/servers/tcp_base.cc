@@ -107,7 +107,7 @@ BaseTCP::bind(int tries)
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
 
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((sock = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		L_CRIT("ERROR: %s socket: [%d] %s", description, errno, strerror(errno));
 		sig_exit(-EX_IOERR);
 	}
