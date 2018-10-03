@@ -197,7 +197,7 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 		uint32_t file_rev, begin_rev;
 		file_rev = begin_rev = end_rev;
-		if (header.head.revision != begin_rev) {
+		if (file_rev != header.head.revision) {
 			if (unsafe) {
 				L_WARNING("Incorrect WAL revision");
 				continue;
@@ -214,7 +214,12 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 			THROW(StorageCorruptVolume, "Missing WAL slots");
 		}
 
-		if (end_rev == volumes.second) {
+		end_rev = file_rev + high_slot;
+		if (end_rev < revision) {
+			continue;
+		}
+
+		if (file_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 			if (!commited) {
 				// last slot is uncommitedcontain offset at the end of file
@@ -224,27 +229,21 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		}
 
 		uint32_t start_off;
-		if (end_rev == volumes.first) {
-			auto slot = revision - header.head.revision - 1;
+		if (file_rev == volumes.first) {
+			auto slot = revision - file_rev - 1;
 			if (slot == static_cast<uint32_t>(-1)) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-				begin_rev = header.head.revision;
+				begin_rev = file_rev;
 				start_off = STORAGE_START_BLOCK_OFFSET;
-			} else if (slot <= high_slot) {
-				begin_rev = header.head.revision + slot;
-				start_off = header.slot[slot];
 			} else {
-				continue;
+				begin_rev = file_rev + slot;
+				start_off = header.slot[slot];
 			}
 		} else {
 			start_off = STORAGE_START_BLOCK_OFFSET;
 		}
 
-		end_rev = header.head.revision + high_slot;
-		if (end_rev < revision) {
-			continue;
-		}
 		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
 			L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
@@ -432,7 +431,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 
 		uint32_t file_rev, begin_rev;
 		file_rev = begin_rev = end_rev;
-		if (header.head.revision != begin_rev) {
+		if (file_rev != header.head.revision) {
 			L_WARNING("wal.%u has incorrect revision!", file_rev);
 			continue;
 		}
@@ -443,31 +442,29 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			continue;
 		}
 
-		if (end_rev == volumes.second) {
+		end_rev = file_rev + high_slot;
+		if (end_rev < start_revision) {
+			continue;
+		}
+
+		if (file_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 		}
 
 		uint32_t start_off;
-		if (end_rev == volumes.first) {
-			auto slot = start_revision - header.head.revision - 1;
+		if (file_rev == volumes.first) {
+			auto slot = start_revision - file_rev - 1;
 			if (slot == static_cast<uint32_t>(-1)) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-				begin_rev = header.head.revision;
+				begin_rev = file_rev;
 				start_off = STORAGE_START_BLOCK_OFFSET;
-			} else if (slot <= high_slot) {
-				begin_rev = header.head.revision + slot;
-				start_off = header.slot[slot];
 			} else {
-				continue;
+				begin_rev = file_rev + slot;
+				start_off = header.slot[slot];
 			}
 		} else {
 			start_off = STORAGE_START_BLOCK_OFFSET;
-		}
-
-		end_rev = header.head.revision + high_slot;
-		if (end_rev < start_revision) {
-			continue;
 		}
 
 		auto end_off = header.slot[high_slot];
