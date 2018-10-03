@@ -569,7 +569,8 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&_bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		size_t it_size, file_size = 0;
+		ssize_t it_size = 0;
+		off_t file_size = 0;
 		int fd_write = -1;
 		char buf_read[STORAGE_BLOCK_SIZE];
 		const char* data;
