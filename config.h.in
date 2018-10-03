@@ -245,6 +245,9 @@
 /* Enable tracked memory allocator for memory usage. */
 #cmakedefine XAPIAND_TRACKED_MEM @XAPIAND_TRACKED_MEM@
 
+/* Enable checks for file descriptors usage in 'io' namespace */
+#cmakedefine XAPIAND_CHECK_IO_FDES @XAPIAND_CHECK_IO_FDES@
+
 /* Path for fixtures files */
 #cmakedefine FIXTURES_PATH "@FIXTURES_PATH@"
 

@@ -159,6 +159,7 @@ const char* strerrno(int errnum) {
 
 ssize_t write(int fd, const void* buf, size_t nbyte) {
 	L_CALL("io::write(%d, <buf>, %lu)", fd, nbyte);
+	CHECK_OPENED("during write()", fd);
 
 	const auto* p = static_cast<const char*>(buf);
 	while (nbyte != 0u) {
@@ -184,6 +185,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pwrite(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
+	CHECK_OPENED("during pwrite()", fd);
 
 	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
@@ -219,6 +221,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 
 ssize_t read(int fd, void* buf, size_t nbyte) {
 	L_CALL("io::read(%d, <buf>, %lu)", fd, nbyte);
+	CHECK_OPENED("during read()", fd);
 
 	auto* p = static_cast<char*>(buf);
 	while (nbyte != 0u) {
@@ -246,6 +249,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pread(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
+	CHECK_OPENED("during pread()", fd);
 
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
@@ -282,6 +286,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 
 int fsync(int fd) {
 	L_CALL("io::fsync(%d)", fd);
+	CHECK_OPENED("during fsync()", fd);
 
 	while (true) {
 		int r = __FSYNC(fd);
@@ -296,9 +301,9 @@ int fsync(int fd) {
 
 
 int full_fsync(int fd) {
-#ifdef F_FULLFSYNC
 	L_CALL("io::full_fsync(%d)", fd);
-
+	CHECK_OPENED("during full_fsync()", fd);
+#ifdef F_FULLFSYNC
 	while (true) {
 		int r = ::fcntl(fd, F_FULLFSYNC, 0);
 		if unlikely(r < 0) {
@@ -316,6 +321,7 @@ int full_fsync(int fd) {
 
 #ifndef HAVE_FALLOCATE
 int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
+	CHECK_OPENED("during fallocate()", fd);
 #if defined(HAVE_POSIX_FALLOCATE)
 	return posix_fallocate(fd, offset, len);
 #elif defined(F_PREALLOCATE)
@@ -370,5 +376,81 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 }
 #endif
 
+#ifdef XAPIAND_CHECK_IO_FDES
+#include <mutex>
+#include <bitset>
+int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line) {
+	static std::mutex mtx;
+	static std::bitset<1024*1024> socket;
+	static std::bitset<1024*1024> opened;
+	static std::bitset<1024*1024> closed;
+
+	if (fd == -1) {
+		return -1;
+	}
+
+	if (fd >= 1024*1024) {
+		L_ERR("fd (%d) is too big to track %s", fd, msg);
+		return -1;
+	}
+
+	std::lock_guard<std::mutex> lk(mtx);
+
+	int currently = (
+		(socket.test(fd) ? SOCKET : 0) |
+		(opened.test(fd) ? OPENED : 0) |
+		(closed.test(fd) ? CLOSED : 0)
+	);
+
+	if (currently & SOCKET) {
+		if (check_unset & SOCKET) {
+			L_ERR("fd (%d) is a socket %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	} else {
+		if (check_set & SOCKET) {
+			L_ERR("fd (%d) is not a socket %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	}
+	if (currently & OPENED) {
+		if (check_unset & OPENED) {
+			L_ERR("fd (%d) is opened %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	} else {
+		if (check_set & OPENED) {
+			L_ERR("fd (%d) is not opened %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	}
+	if (currently & CLOSED) {
+		if (check_unset & CLOSED) {
+			L_ERR("fd (%d) is closed %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	} else {
+		if (check_set & CLOSED) {
+			L_ERR("fd (%d) is not closed %s%s", fd, msg, ::traceback(function, filename, line));
+		}
+	}
+
+	if (set & SOCKET) {
+		socket.set(fd);
+	}
+	if (set & OPENED) {
+		opened.set(fd);
+	}
+	if (set & CLOSED) {
+		closed.set(fd);
+	}
+
+	return currently;
+}
+#endif
 
 } /* namespace io */
+
+#ifdef XAPIAND_CHECK_IO_FDES
+int close(int fd) {
+	static int honeypot = ::open("/tmp/xapiand.honeypot", O_RDWR, 0);
+	assert(honeypot != -1);
+	CHECK_CLOSE(fd);
+	return ::dup2(honeypot, fd);
+}
+#endif
