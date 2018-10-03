@@ -524,7 +524,7 @@ Metrics::Metrics(const std::string& node_name, const std::string& cluster_name)
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
 	  database_pool(opts.dbpool_size, opts.max_databases),
-	  schemas(opts.dbpool_size),
+	  schemas(opts.dbpool_size * 3),
 	  thread_pool("W%02zu", opts.threadpool_size),
 	  client_pool("C%02zu", opts.tasks_size),
 	  server_pool("S%02zu", opts.num_servers),
