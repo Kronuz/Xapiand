@@ -231,8 +231,20 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
 ssize_t read(int fd, void* buf, size_t nbyte);
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 
-int fsync(int fd);
-int full_fsync(int fd);
+int _fsync(int fd);
+int _full_fsync(int fd);
+
+
+inline int fsync(int fd) {
+	CHECK_OPENED("during fsync()", fd);
+	return io::_fsync(fd);
+}
+
+
+inline int full_fsync(int fd) {
+	CHECK_OPENED("during full_fsync()", fd);
+	return io::_full_fsync(fd);
+}
 
 
 #ifdef HAVE_FALLOCATE

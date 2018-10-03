@@ -100,10 +100,10 @@ AsyncFsync::run()
 	auto start = std::chrono::system_clock::now();
 	switch (mode) {
 		case 1:
-			successful = (io::full_fsync(fd) == 0);
+			successful = (io::_full_fsync(fd) == 0);
 			break;
 		case 2:
-			successful = (io::fsync(fd) == 0);
+			successful = (io::_fsync(fd) == 0);
 			break;
 	}
 	auto end = std::chrono::system_clock::now();

@@ -284,9 +284,8 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 }
 
 
-int fsync(int fd) {
+int _fsync(int fd) {
 	L_CALL("io::fsync(%d)", fd);
-	CHECK_OPENED("during fsync()", fd);
 
 	while (true) {
 		int r = __FSYNC(fd);
@@ -300,9 +299,9 @@ int fsync(int fd) {
 }
 
 
-int full_fsync(int fd) {
+int _full_fsync(int fd) {
 	L_CALL("io::full_fsync(%d)", fd);
-	CHECK_OPENED("during full_fsync()", fd);
+
 #ifdef F_FULLFSYNC
 	while (true) {
 		int r = ::fcntl(fd, F_FULLFSYNC, 0);
