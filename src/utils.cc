@@ -478,8 +478,7 @@ unsigned long long file_descriptors_cnt() {
 	}
 	unsigned long long n = 0;
 	for (unsigned long long fd = 0; fd < fdmax; ++fd) {
-		struct stat buf;
-		if (io::fstat(fd, &buf) != 0) {
+		if (::fcntl(fd, F_GETFD, 0) == -1) {
 			// errno should be EBADF (not a valid open file descriptor)
 			// or other error. In either case, don't count.
 			continue;
