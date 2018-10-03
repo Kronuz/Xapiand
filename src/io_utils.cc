@@ -404,29 +404,29 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 
 	if (currently & SOCKET) {
 		if (check_unset & SOCKET) {
-			L_ERR("fd (%d) is a socket %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is a socket %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & SOCKET) {
-			L_ERR("fd (%d) is not a socket %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is not a socket %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 	if (currently & OPENED) {
 		if (check_unset & OPENED) {
-			L_ERR("fd (%d) is opened %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is opened %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & OPENED) {
-			L_ERR("fd (%d) is not opened %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is not opened %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 	if (currently & CLOSED) {
 		if (check_unset & CLOSED) {
-			L_ERR("fd (%d) is closed %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is closed %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & CLOSED) {
-			L_ERR("fd (%d) is not closed %s%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd (%d) is not closed %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 
