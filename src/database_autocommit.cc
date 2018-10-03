@@ -106,11 +106,11 @@ DatabaseAutocommit::run()
 		bool successful = false;
 		auto start = std::chrono::system_clock::now();
 
-		DatabaseHandler db_handler(endpoints, DB_WRITABLE);
 		try {
+			DatabaseHandler db_handler(endpoints, DB_WRITABLE);
 			db_handler.commit();
 			successful = true;
-		} catch (const Error& e) { }
+		} catch (const Exception& e) { }
 
 		auto end = std::chrono::system_clock::now();
 
