@@ -166,9 +166,9 @@ DatabaseWAL::~DatabaseWAL()
 
 
 bool
-DatabaseWAL::open_current(bool commited, bool unsafe)
+DatabaseWAL::open_current(bool only_committed, bool unsafe)
 {
-	L_CALL("DatabaseWAL::open_current(%s)", commited ? "true" : "false");
+	L_CALL("DatabaseWAL::open_current(%s)", only_committed ? "true" : "false");
 
 	uint32_t revision = database->reopen_revision;
 
@@ -206,12 +206,17 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 		}
 
 		auto high_slot = highest_valid_slot();
-		if (high_slot == 0 || high_slot == static_cast<uint32_t>(-1)) {
+		if (high_slot == static_cast<uint32_t>(-1)) {
 			if (unsafe) {
-				L_WARNING("Missing WAL slots");
+				L_WARNING("No WAL slots");
 				continue;
 			}
-			THROW(StorageCorruptVolume, "Missing WAL slots");
+			THROW(StorageCorruptVolume, "No WAL slots");
+		}
+		if (high_slot == 0) {
+			if (only_committed) {
+				continue;
+			}
 		}
 
 		end_rev = file_rev + high_slot;
@@ -221,9 +226,9 @@ DatabaseWAL::open_current(bool commited, bool unsafe)
 
 		if (file_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
-			if (!commited) {
-				// last slot is uncommitedcontain offset at the end of file
-				// In case not "commited" not execute the high slot avaible because are operations without commit
+			if (only_committed) {
+				// last slot is uncommitted contain offset at the end of file
+				// In case not "committed" not execute the high slot avaible because are operations without commit
 				--high_slot;
 			}
 		}
@@ -437,7 +442,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 		}
 
 		auto high_slot = highest_valid_slot();
-		if (high_slot == 0 || high_slot == static_cast<uint32_t>(-1)) {
+		if (high_slot == static_cast<uint32_t>(-1)) {
 			L_WARNING("wal.%u has no valid slots!", file_rev);
 			continue;
 		}
