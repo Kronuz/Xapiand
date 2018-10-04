@@ -22,6 +22,7 @@
 
 #include "utils.h"
 
+#include <array>                 // for std::array
 #include <algorithm>             // for equal, uniform_int_distribution
 #include <cstdint>               // for uint64_t
 #include <functional>            // for function, __base
@@ -36,6 +37,7 @@
 #include <cstring>               // for strerror, strcmp
 #include <string>                // for string, operator+, char_traits, basi...
 #include <fcntl.h>               // for O_CREAT, O_RDONLY, O_WRONLY
+#include <poll.h>                // for poll, pollfd, POLLNVAL
 #include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
 #include <sys/socket.h>          // for setsockopt
 #include <sys/stat.h>            // for mkdir, stat
@@ -488,24 +490,38 @@ size_t get_open_max_fd()
 }
 
 
-/*
- * From http://stackoverflow.com/questions/17088204/number-of-open-file-in-a-c-program
- */
 size_t file_descriptors_cnt()
 {
+	std::array<struct pollfd, OPEN_MAX> fds;
+	size_t open_max_fd = get_open_max_fd();
+	off_t off = 0;
 	size_t cnt = 0;
-	size_t nfds = get_open_max_fd();
-	for (size_t fd = 0; fd < nfds; ++fd) {
-		if unlikely(io::unchecked_fcntl(fd, F_GETFD, 0) == -1) {
-			// errno should be EBADF (not a valid open file descriptor)
-			// or other error. In either case, don't count.
-			continue;
+	while (open_max_fd) {
+		size_t nfds = (open_max_fd > OPEN_MAX) ? OPEN_MAX : open_max_fd;
+		for (size_t idx = 0; idx < nfds; ++idx) {
+			fds[idx].events = POLLSTANDARD;
+			fds[idx].revents = 0;
+			fds[idx].fd = idx + off;
 		}
-		++cnt;
-		// char filePath[PATH_MAX];
-		// if (io::fcntl(fd, F_GETPATH, filePath) != -1) {
-		// 	fprintf(stderr, "%llu - %s\n", fd, filePath);
-		// }
+		int err;
+		do {
+			err = ::poll(fds.data(), nfds, 0);
+		} while unlikely(err == -1 && errno == EINTR);
+		if likely(err != -1) {
+			for (size_t idx = 0; idx < nfds; ++idx) {
+				if likely((fds[idx].revents & POLLNVAL) == 0) {
+					++cnt;
+					// char filePath[PATH_MAX];
+					// if unlikely(io::unchecked_fcntl(fds[idx].fd, F_GETPATH, filePath) == -1) {
+					// 	L_RED("%d -> %s (%d): %s", fds[idx].fd, io::strerrno(errno), errno, strerror(errno));
+					// } else {
+					// 	L_GREEN("%d -> %s", fds[idx].fd, filePath);
+					// }
+				}
+			}
+		}
+		open_max_fd -= nfds;
+		off += OPEN_MAX;
 	}
 	return cnt;
 }
