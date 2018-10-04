@@ -1505,7 +1505,7 @@ XapiandManager::server_status(MsgPack& stats)
 	stats_connections_total["peak"] = XapiandServer::max_total_clients.load();
 
 	// file_descriptors:
-	stats["file_descriptors"] = file_descriptors_cnt();
+	stats["file_descriptors"] = get_open_files_per_proc();
 
 	// memory:
 	auto& stats_memory = stats["memory"];
@@ -1583,7 +1583,7 @@ XapiandManager::server_metrics()
 	metrics->xapiand_binary_peak_connections.Set(XapiandServer::max_binary_clients.load());
 
 	// file_descriptors:
-	metrics->xapiand_file_descriptors.Set(file_descriptors_cnt());
+	metrics->xapiand_file_descriptors.Set(get_open_files_per_proc());
 	metrics->xapiand_max_file_descriptors.Set(get_max_files_per_proc());
 
 	// inodes:

@@ -585,10 +585,21 @@ void parseOptions(int argc, char** argv) {
 }
 
 
+/*
+ * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
+ *
+ * This function will try to raise the max number of open files accordingly to
+ * the configured max number of clients. It also reserves a number of file
+ * descriptors for extra operations of persistence, listening sockets, log files and so forth.
+ *
+ * If it will not be possible to set the limit accordingly to the configured
+ * max number of clients, the function will do the reverse setting
+ * to the value that we can actually handle.
+ */
 void adjustOpenFilesLimit() {
 
 	// Try getting the currently available number of files (-10%):
-	ssize_t available_files = get_max_files_per_proc() - get_open_files();
+	ssize_t available_files = get_max_files_per_proc() - get_open_files_system_wide();
 	ssize_t aprox_available_files = (available_files * 8) / 10;
 
 

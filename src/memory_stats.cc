@@ -196,18 +196,18 @@ uint64_t get_total_virtual_memory()
 {
 	uint64_t total_virtual_memory = 0;
 
-#if defined(__FreeBSD__)
 #ifdef HAVE_SYS_SYSCTL_H
+#if defined(__FreeBSD__)
 #define _SYSCTL_NAME "vm.stats.vm.v_page_count"  // FreeBSD
+#endif
+#endif
+#ifdef _SYSCTL_NAME
 	int mib[CTL_MAXNAME + 2];
 	size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
 		return 0;
 	}
-#endif
-#endif
-#ifdef _SYSCTL_NAME
 	int64_t total_pages;
 	auto total_pages_len = sizeof(total_pages);
 	if (sysctl(mib, mib_len, &total_pages, &total_pages_len, nullptr, 0) < 0) {

@@ -467,6 +467,23 @@ void _tcp_nopush(int sock, int optval) {
 }
 
 
+size_t get_max_files_per_proc()
+{
+	size_t rlimit_max_files;
+	struct rlimit rl;
+    if (getrlimit(RLIMIT_NOFILE, &rl) == -1) {
+        rlimit_max_files = 2;
+    } else {
+        rlimit_max_files = static_cast<size_t>(rl.rlim_cur);
+    }
+	long sysconf_max_files = sysconf(_SC_OPEN_MAX);
+	if (sysconf_max_files == -1 || static_cast<size_t>(sysconf_max_files) < rlimit_max_files) {
+		return rlimit_max_files;
+	}
+	return sysconf_max_files;
+}
+
+
 size_t get_open_max_fd()
 {
 #ifdef F_MAXFD
@@ -475,22 +492,11 @@ size_t get_open_max_fd()
 		return fcntl_open_max;
 	}
 #endif
-	size_t rlimit_open_max;
-	struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) == -1) {
-        rlimit_open_max = 2;
-    } else {
-        rlimit_open_max = static_cast<size_t>(rl.rlim_max);
-    }
-	long sysconf_open_max = sysconf(_SC_OPEN_MAX);
-	if (sysconf_open_max == -1 || static_cast<size_t>(sysconf_open_max) < rlimit_open_max) {
-		return rlimit_open_max;
-	}
-	return sysconf_open_max;
+	return get_max_files_per_proc();
 }
 
 
-size_t file_descriptors_cnt()
+size_t get_open_files_per_proc()
 {
 	std::array<struct pollfd, OPEN_MAX> fds;
 	size_t open_max_fd = get_open_max_fd();
@@ -547,70 +553,24 @@ size_t get_num_fds()
 #endif /*__linux__*/
 
 
-/*
- * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
- *
- * This function will try to raise the max number of open files accordingly to
- * the configured max number of clients. It also reserves a number of file
- * descriptors for extra operations of persistence, listening sockets, log files and so forth.
- *
- * If it will not be possible to set the limit accordingly to the configured
- * max number of clients, the function will do the reverse setting
- * to the value that we can actually handle.
- */
-size_t get_max_files_per_proc()
+size_t get_open_files_system_wide()
 {
 	size_t max_files_per_proc = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
-#if defined(KERN_MAXFILESPERPROC)
-#define _SYSCTL_NAME "kern.maxfilesperproc"  // FreeBSD, Apple
-	int mib[] = {CTL_KERN, KERN_MAXFILESPERPROC};
-	std::size_t mib_len = sizeof(mib) / sizeof(int);
+#if defined(__FreeBSD__)
+#define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
+#elif defined(__APPLE__)
+#define _SYSCTL_NAME "kern.num_files"  // Apple
 #endif
 #endif
 #ifdef _SYSCTL_NAME
-	auto max_files_per_proc_len = sizeof(max_files_per_proc);
-	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get max files per process: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
-		return 0;
-	}
-#undef _SYSCTL_NAME
-#elif defined(__linux__)
-	struct rlimit limit;
-	if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
-		L_ERR("ERROR: Unable to get max files per process: getrlimit(RLIMIT_NOFILE): [%d] %s", errno, std::strerror(errno));
-		return 0;
-	}
-	max_files_per_proc = limit.rlim_cur;
-#else
-	L_WARNING("WARNING: No way of getting max files per process.");
-#endif
-
-	return max_files_per_proc;
-}
-
-
-size_t get_open_files()
-{
-	size_t max_files_per_proc = 0;
-
-#ifdef HAVE_SYS_SYSCTL_H
-#if defined(KERN_OPENFILES)
-#define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
-	int mib[] = {CTL_KERN, KERN_OPENFILES};
-	std::size_t mib_len = sizeof(mib) / sizeof(int);
-#elif defined(__APPLE__)
-#define _SYSCTL_NAME "kern.num_files"  // Apple
 	int mib[CTL_MAXNAME + 2];
 	std::size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
-#endif
-#endif
-#ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));

@@ -143,14 +143,9 @@ int copy_file(std::string_view src, std::string_view dst, bool create=true, std:
 
 void _tcp_nopush(int sock, int optval);
 
-size_t file_descriptors_cnt();
-
-#ifdef __linux__
-size_t get_num_fds();
-#endif
-
+size_t get_open_files_per_proc();
 size_t get_max_files_per_proc();
-size_t get_open_files();
+size_t get_open_files_system_wide();
 
 std::string check_compiler();
 std::string check_OS();
