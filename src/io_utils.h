@@ -112,9 +112,21 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 }
 
 
+inline int unchecked_fcntl(int fd, int cmd) {
+	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd));
+}
+
+
 inline int unchecked_fcntl(int fd, int cmd, int arg) {
 	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd, arg));
 }
+
+
+inline int fcntl(int fd, int cmd) {
+	CHECK_OPENED("during fcntl()", fd);
+	return io::unchecked_fcntl(fd, cmd);
+}
+
 
 inline int fcntl(int fd, int cmd, int arg) {
 	CHECK_OPENED("during fcntl()", fd);
