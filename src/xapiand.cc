@@ -230,20 +230,20 @@ void setup_signal_handlers() {
 	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
 	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
 
-	struct sigaction act;
+	struct sigaction sa;
 
 	/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
 	 * Otherwise, sa_handler is used. */
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = 0;
-	act.sa_handler = sig_handler;
-	sigaction(SIGTERM, &act, nullptr);  // On software termination signal
-	sigaction(SIGINT, &act, nullptr);   // On interrupt program (Ctrl-C)
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;          // If restarting works we save iterations
+	sa.sa_handler = sig_handler;
+	sigaction(SIGTERM, &sa, nullptr);  // On software termination signal
+	sigaction(SIGINT, &sa, nullptr);   // On interrupt program (Ctrl-C)
 #if defined(__APPLE__) || defined(__FreeBSD__)
-	sigaction(SIGINFO, &act, nullptr);  // On status request from keyboard (Ctrl-T)
+	sigaction(SIGINFO, &sa, nullptr);  // On status request from keyboard (Ctrl-T)
 #endif
-	sigaction(SIGUSR1, &act, nullptr);
-	sigaction(SIGUSR1, &act, nullptr);
+	sigaction(SIGUSR1, &sa, nullptr);
+	sigaction(SIGUSR1, &sa, nullptr);
 }
 
 
