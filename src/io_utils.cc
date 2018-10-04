@@ -23,22 +23,14 @@
 #include "io_utils.h"
 
 #include <cstring>     // for strerror, size_t
-#include <errno.h>      // for __error, errno, EINTR
 
 #include "config.h"     // for HAVE_PWRITE, HAVE_FSYNC
 #include "log.h"        // for L_CALL, L_ERRNO
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
+
 namespace io {
-
-#if defined HAVE_FDATASYNC
-#define __FSYNC ::fdatasync
-#elif defined HAVE_FSYNC
-#define __FSYNC ::fsync
-#else
-inline int __fsync(int /*unused*/) { return 0; }
-#define __FSYNC __fsync
-#endif
-
 
 // From /usr/include/sys/errno.h:
 const char* sys_errnolist[] {
@@ -157,6 +149,57 @@ const char* strerrno(int errnum) {
 }
 
 
+int open(const char* path, int oflag, int mode) {
+	int fd;
+	while (true) {
+#ifdef O_CLOEXEC
+		fd = ::open(path, oflag | O_CLOEXEC, mode);
+#else
+		fd = ::open(path, oflag, mode);
+#endif
+		if unlikely(fd == -1) {
+			if unlikely(errno == EINTR) {
+				continue;
+			}
+			break;
+		}
+		if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+			break;
+		}
+		::close(fd);
+		fd = -1;
+		if unlikely(TEMP_FAILURE_RETRY(::open("/dev/null", oflag, mode)) == -1) {
+			break;
+		}
+	}
+	if (fd != -1) {
+		if (mode != 0) {
+			struct stat statbuf;
+			if (::fstat(fd, &statbuf) == 0 && statbuf.st_size == 0 && (statbuf.st_mode & 0777) != mode) {
+				TEMP_FAILURE_RETRY(::fchmod(fd, mode));
+			}
+		}
+#if defined(FD_CLOEXEC) && (!defined(O_CLOEXEC) || O_CLOEXEC == 0)
+		TEMP_FAILURE_RETRY(::fcntl(fd, F_SETFD, TEMP_FAILURE_RETRY(::fcntl(fd, F_GETFD, 0)) | FD_CLOEXEC));
+#endif
+	}
+	CHECK_OPEN(fd);
+	return fd;
+}
+
+
+int close(int fd) {
+	// Make sure we don't ever close 0, 1 or 2 file descriptors
+	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
+	if unlikely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+		CHECK_CLOSING(fd);
+		return ::close(fd);  // IMPORTANT: don't check EINTR (do not use TEMP_FAILURE_RETRY here)
+	}
+	errno = EBADF;
+	return -1;
+}
+
+
 ssize_t write(int fd, const void* buf, size_t nbyte) {
 	L_CALL("io::write(%d, <buf>, %lu)", fd, nbyte);
 	CHECK_OPENED("during write()", fd);
@@ -166,7 +209,9 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c == -1) {
 			L_ERRNO("io::write() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if (errno == EINTR) { continue; }
+			if unlikely(errno == EINTR) {
+				continue;
+			}
 			size_t written = p - static_cast<const char*>(buf);
 			if (written == 0) {
 				return -1;
@@ -201,7 +246,9 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 #endif
 		if unlikely(c == -1) {
 			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if (errno == EINTR) { continue; }
+			if unlikely(errno == EINTR) {
+				continue;
+			}
 			size_t written = p - static_cast<const char*>(buf);
 			if (written == 0) {
 				return -1;
@@ -228,7 +275,9 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c == -1) {
 			L_ERRNO("io::read() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if (errno == EINTR) { continue; }
+			if unlikely(errno == EINTR) {
+				continue;
+			}
 			size_t read = p - static_cast<const char*>(buf);
 			if (read == 0) {
 				return -1;
@@ -265,7 +314,9 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 #endif
 		if unlikely(c == -1) {
 			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if (errno == EINTR) { continue; }
+			if unlikely(errno == EINTR) {
+				continue;
+			}
 			size_t read = p - static_cast<const char*>(buf);
 			if (read == 0) {
 				return -1;
@@ -284,40 +335,6 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 }
 
 
-int unchecked_fsync(int fd) {
-	L_CALL("io::fsync(%d)", fd);
-
-	while (true) {
-		int r = __FSYNC(fd);
-		if unlikely(r == -1) {
-			L_ERRNO("io::fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
-			if (errno == EINTR) { continue; }
-			return -1;
-		}
-		return r;
-	}
-}
-
-
-int unchecked_full_fsync(int fd) {
-	L_CALL("io::full_fsync(%d)", fd);
-
-#ifdef F_FULLFSYNC
-	while (true) {
-		int r = ::fcntl(fd, F_FULLFSYNC, 0);
-		if unlikely(r == -1) {
-			L_ERRNO("io::full_fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
-			if (errno == EINTR) { continue; }
-			return -1;
-		}
-		return r;
-	}
-#else
-	return fsync(fd);
-#endif
-}
-
-
 #ifndef HAVE_FALLOCATE
 int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	CHECK_OPENED("during fallocate()", fd);
@@ -327,16 +344,16 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	// Try to get a continous chunk of disk space
 	// {fst_flags, fst_posmode, fst_offset, fst_length, fst_bytesalloc}
 	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len, 0};
-	int res = ::fcntl(fd, F_PREALLOCATE, &store);
-	if (res == -1) {
+	int err = TEMP_FAILURE_RETRY(::fcntl(fd, F_PREALLOCATE, &store));
+	if unlikely(err == -1) {
 		// Try and allocate space with fragments
 		store.fst_flags = F_ALLOCATEALL;
-		res = ::fcntl(fd, F_PREALLOCATE, &store);
+		err = TEMP_FAILURE_RETRY(::fcntl(fd, F_PREALLOCATE, &store));
 	}
-	if (res != -1) {
-		::ftruncate(fd, offset + len);
+	if likely(err != -1) {
+		TEMP_FAILURE_RETRY(::ftruncate(fd, offset + len));
 	}
-	return res;
+	return err;
 #else
 	// The following is copied from fcntlSizeHint in sqlite
 	/* If the OS does not have posix_fallocate(), fake it. First use
@@ -347,29 +364,31 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	 */
 
 	struct stat buf;
-	if (::fstat(fd, &buf))
+	if (::fstat(fd, &buf)) {
+		return -1;
+	}
+
+	if (buf.st_size >= offset + len) {
+		return -1;
+	}
+
+	const int st_blksize = buf.st_blksize;
+	if (!st_blksize) {
+		return -1;
+	}
+
+	if (TEMP_FAILURE_RETRY(::ftruncate(fd, offset + len)))
 		return -1;
 
-	if (buf.st_size >= len)
-		return -1;
-
-	const int nBlk = buf.st_blksize;
-
-	if (!nBlk)
-		return -1;
-
-	if (::ftruncate(fd, len))
-		return -1;
-
-	int nWrite;
-	off_t iWrite = ((buf.st_size + 2 * nBlk - 1) / nBlk) * nBlk - 1; // Next offset to write to
+	off_t next_offset = ((buf.st_size + 2 * st_blksize - 1) / st_blksize) * st_blksize - 1;  // Next offset to write to
+	int written;
 	do {
-		nWrite = 0;
-		if (::lseek(fd, iWrite, SEEK_SET) == iWrite) {
-			nWrite = ::write(fd, "", 1);
+		written = 0;
+		if (::lseek(fd, next_offset, SEEK_SET) == next_offset) {
+			written = TEMP_FAILURE_RETRY(::write(fd, "", 1));
 		}
-		iWrite += nBlk;
-	} while (nWrite == 1 && iWrite < len);
+		next_offset += st_blksize;
+	} while (written == 1 && next_offset < offset + len);
 	return 0;
 #endif
 }
@@ -384,11 +403,11 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 	static std::bitset<1024*1024> opened;
 	static std::bitset<1024*1024> closed;
 
-	if (fd == -1) {
+	if unlikely(fd == -1) {
 		return -1;
 	}
 
-	if (fd >= 1024*1024) {
+	if unlikely(fd >= 1024*1024) {
 		L_ERR("fd (%d) is too big to track %s", fd, msg);
 		return -1;
 	}
@@ -448,12 +467,14 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #ifdef XAPIAND_CHECK_IO_FDES
 #include <sysexits.h>                       // for EX_SOFTWARE
 int close(int fd) {
-	static int honeypot = ::open("/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
-	if (honeypot == -1) {
+	static int honeypot = TEMP_FAILURE_RETRY(::open("/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644));
+	if unlikely(honeypot == -1) {
 		L_ERR("honeypot -> %s", io::strerrno(errno));
 		exit(EX_SOFTWARE);
 	}
 	CHECK_CLOSE(fd);
-	return ::dup2(honeypot, fd);
+	return TEMP_FAILURE_RETRY(::dup2(honeypot, fd));
 }
 #endif
+
+#pragma GCC diagnostic pop

@@ -19,6 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
 
 #ifndef IO_UTILS_H
 #define IO_UTILS_H
@@ -26,7 +28,7 @@
 #include "xapiand.h"
 #include "ignore_unused.h"       // for ignore_unused
 
-#include <errno.h>               // for errno
+#include <errno.h>               // for errno, EINTR
 #include <fcntl.h>               // for fchmod, open, O_RDONLY
 #include <stddef.h>              // for size_t
 #include <sys/stat.h>            // for fstat
@@ -39,6 +41,18 @@
 // standard input, output, and error.
 #ifndef XAPIAND_MINIMUM_FILE_DESCRIPTOR
 #define XAPIAND_MINIMUM_FILE_DESCRIPTOR STDERR_FILENO + 1
+#endif
+
+
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(exp) \
+	({ \
+		decltype(exp) _err; \
+		do { \
+			_err = (exp); \
+		} while unlikely(_err == -1 && errno == EINTR); \
+		_err; \
+	})
 #endif
 
 
@@ -65,58 +79,30 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #endif
 
 
+#if defined HAVE_FDATASYNC
+#define __io_fsync ::fdatasync
+#elif defined HAVE_FSYNC
+#define __io_fsync ::fsync
+#else
+inline int __noop(int /*unused*/) { return 0; }
+#define __io_fsync io::__noop
+#endif
+
+
+const char* strerrno(int errnum);
+
+int open(const char* path, int oflag=O_RDONLY, int mode=0644);
+int close(int fd);
+
+ssize_t write(int fd, const void* buf, size_t nbyte);
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
+
+ssize_t read(int fd, void* buf, size_t nbyte);
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
+
+
 inline int unlink(const char* path) {
 	return ::unlink(path);
-}
-
-
-inline int open(const char* path, int oflag=O_RDONLY, int mode=0644) {
-	int fd;
-	while (true) {
-#ifdef O_CLOEXEC
-		fd = ::open(path, oflag | O_CLOEXEC, mode);
-#else
-		fd = ::open(path, oflag, mode);
-#endif
-		if (fd == -1) {
-			if (errno == EINTR) {
-				continue;
-			}
-			break;
-		}
-		if (fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
-			break;
-		}
-		::close(fd);
-		fd = -1;
-		if (::open("/dev/null", oflag, mode) == -1) {
-			break;
-		}
-	}
-	if (fd != -1) {
-		if (mode != 0) {
-			struct stat statbuf;
-			if (::fstat(fd, &statbuf) == 0 && statbuf.st_size == 0 && (statbuf.st_mode & 0777) != mode) {
-				::fchmod(fd, mode);
-			}
-		}
-#if defined(FD_CLOEXEC) && (!defined(O_CLOEXEC) || O_CLOEXEC == 0)
-		::fcntl(fd, F_SETFD, ::fcntl(fd, F_GETFD, 0) | FD_CLOEXEC);
-#endif
-	}
-	CHECK_OPEN(fd);
-	return fd;
-}
-
-
-inline int close(int fd) {
-	// Make sure we don't ever close 0, 1 or 2 file descriptors
-	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
-	if (fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
-		CHECK_CLOSING(fd);
-		return ::close(fd);
-	}
-	return -1;
 }
 
 
@@ -125,8 +111,9 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 	return ::lseek(fd, offset, whence);
 }
 
+
 inline int unchecked_fcntl(int fd, int cmd, int arg) {
-	return ::fcntl(fd, cmd, arg);
+	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd, arg));
 }
 
 inline int fcntl(int fd, int cmd, int arg) {
@@ -149,7 +136,7 @@ inline int dup(int fd) {
 
 inline int dup2(int fd, int fd2) {
 	CHECK_OPENED("during dup2()", fd);
-	return ::dup2(fd, fd2);
+	return ::dup2(fd, fd2);  // TEMP_FAILURE_RETRY?
 }
 
 
@@ -161,19 +148,19 @@ inline int shutdown(int socket, int how) {
 
 inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during send()", socket);
-	return ::send(socket, buffer, length, flags);
+	return TEMP_FAILURE_RETRY(::send(socket, buffer, length, flags));
 }
 
 
 inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
 	CHECK_OPENED_SOCKET("during sendto()", socket);
-	return ::sendto(socket, buffer, length, flags, dest_addr, dest_len);
+	return TEMP_FAILURE_RETRY(::sendto(socket, buffer, length, flags, dest_addr, dest_len));
 }
 
 
 inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during recv()", socket);
-	return ::recv(socket, buffer, length, flags);
+	return TEMP_FAILURE_RETRY(::recv(socket, buffer, length, flags));
 }
 
 inline int socket(int domain, int type, int protocol) {
@@ -184,7 +171,7 @@ inline int socket(int domain, int type, int protocol) {
 
 inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during recvfrom()", socket);
-	return ::recvfrom(socket, buffer, length, flags, address, address_len);
+	return TEMP_FAILURE_RETRY(::recvfrom(socket, buffer, length, flags, address, address_len));
 }
 
 
@@ -208,7 +195,7 @@ inline int listen(int socket, int backlog) {
 
 inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during accept()", socket);
-	int new_socket = ::accept(socket, address, address_len);
+	int new_socket = TEMP_FAILURE_RETRY(::accept(socket, address, address_len));
 	CHECK_OPEN_SOCKET(new_socket);
 	return new_socket;
 }
@@ -222,25 +209,27 @@ inline int bind(int socket, const struct sockaddr *address, socklen_t address_le
 
 inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
 	CHECK_OPENED_SOCKET("during connect()", socket);
-	return ::connect(socket, address, address_len);
+	return TEMP_FAILURE_RETRY(::connect(socket, address, address_len));
 }
 
 
-const char* strerrno(int errnum);
-
-ssize_t write(int fd, const void* buf, size_t nbyte);
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
-
-ssize_t read(int fd, void* buf, size_t nbyte);
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
-
-int unchecked_fsync(int fd);
-int unchecked_full_fsync(int fd);
+inline int unchecked_fsync(int fd) {
+	return TEMP_FAILURE_RETRY(__io_fsync(fd));
+}
 
 
 inline int fsync(int fd) {
 	CHECK_OPENED("during fsync()", fd);
 	return io::unchecked_fsync(fd);
+}
+
+
+inline int unchecked_full_fsync(int fd) {
+#ifdef F_FULLFSYNC
+	return TEMP_FAILURE_RETRY(::fcntl(fd, F_FULLFSYNC, 0));
+#else
+	return TEMP_FAILURE_RETRY(__io_fsync(fd));
+#endif
 }
 
 
@@ -253,7 +242,7 @@ inline int full_fsync(int fd) {
 #ifdef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {
 	CHECK_OPENED("during fallocate()", fd);
-	return ::fallocate(fd, mode, offset, len);
+	return TEMP_FAILURE_RETRY(::fallocate(fd, mode, offset, len));
 }
 #else
 int fallocate(int fd, int mode, off_t offset, off_t len);
@@ -263,7 +252,7 @@ int fallocate(int fd, int mode, off_t offset, off_t len);
 #ifdef HAVE_POSIX_FADVISE
 inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 	CHECK_OPENED("during fadvise()", fd);
-	return posix_fadvise(fd, offset, len, advice) == 0;
+	return ::posix_fadvise(fd, offset, len, advice) == 0;
 }
 #else
 #define POSIX_FADV_NORMAL     0
@@ -272,7 +261,6 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 #define POSIX_FADV_WILLNEED   3
 #define POSIX_FADV_DONTNEED   4
 #define POSIX_FADV_NOREUSE    5
-
 
 inline int fadvise(int fd, off_t, off_t, int) {
 	CHECK_OPENED("during fadvise()", fd);
@@ -284,3 +272,4 @@ inline int fadvise(int fd, off_t, off_t, int) {
 } /* namespace io */
 
 #endif // IO_UTILS_H
+#pragma GCC diagnostic pop
