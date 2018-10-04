@@ -64,6 +64,13 @@
 #include <sys/sysctl.h>          // for sysctl, sysctlnametomib...
 #endif
 
+#ifndef OPEN_MAX
+#define OPEN_MAX 10240
+#endif
+#ifndef POLLSTANDARD
+#define POLLSTANDARD (POLLIN|POLLPRI|POLLOUT|POLLRDNORM|POLLRDBAND|POLLWRBAND|POLLERR|POLLHUP|POLLNVAL)
+#endif
+
 #define STATE_ERR_UNEXPECTED_SLASH_UPL -10
 #define STATE_ERR_UNEXPECTED_SLASH_CMD -9
 #define STATE_ERR_UNEXPECTED_AT -8
