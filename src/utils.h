@@ -146,11 +146,11 @@ void _tcp_nopush(int sock, int optval);
 unsigned long long file_descriptors_cnt();
 
 #ifdef __linux__
-int get_num_fds();
+size_t get_num_fds();
 #endif
 
-ssize_t get_max_files_per_proc();
-ssize_t get_open_files();
+size_t get_max_files_per_proc();
+size_t get_open_files();
 
 std::string check_compiler();
 std::string check_OS();

@@ -465,7 +465,8 @@ void _tcp_nopush(int sock, int optval) {
 }
 
 
-unsigned long long get_open_max_fd() {
+unsigned long long get_open_max_fd()
+{
 #ifdef F_MAXFD
 	int fcntl_open_max = io::unchecked_fcntl(0, F_MAXFD);
 	if likely(fcntl_open_max != -1) {
@@ -510,9 +511,9 @@ unsigned long long file_descriptors_cnt() {
 
 
 #ifdef __linux__
-int get_num_fds()
+size_t get_num_fds()
 {
-	int fd_count;
+	size_t fd_count;
 	char buf[64];
 	struct dirent *dp;
 
@@ -521,7 +522,7 @@ int get_num_fds()
 	fd_count = 0;
 	DIR *dir = opendir(buf);
 	while ((dp = readdir(dir)) != NULL) {
-		fd_count++;
+		++fd_count;
 	}
 	closedir(dir);
 	return fd_count;
@@ -540,9 +541,9 @@ int get_num_fds()
  * max number of clients, the function will do the reverse setting
  * to the value that we can actually handle.
  */
-ssize_t get_max_files_per_proc()
+inline size_t _get_max_files_per_proc()
 {
-	int32_t max_files_per_proc = 0;
+	size_t max_files_per_proc = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_MAXFILESPERPROC)
@@ -572,10 +573,16 @@ ssize_t get_max_files_per_proc()
 	return max_files_per_proc;
 }
 
-
-ssize_t get_open_files()
+size_t get_max_files_per_proc()
 {
-	int32_t max_files_per_proc = 0;
+	static auto max_files_per_proc = _get_max_files_per_proc();
+	return max_files_per_proc;
+}
+
+
+size_t get_open_files()
+{
+	size_t max_files_per_proc = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_OPENFILES)
