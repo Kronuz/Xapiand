@@ -98,12 +98,16 @@ normalize_and_partition(const void *p, size_t size)
 			if (serialised_uuid.front() != 1 && (((serialised_uuid.back() & 1) != 0) || (serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0)))) {
 				auto cit = normalized.cbegin();
 				auto cit_e = normalized.cend();
-				result.reserve(2 + normalized.size());
+				result.reserve(4 + normalized.size());
 				if (cit == cit_e) { return result; }
+				result.push_back(*cit++);
+				if (cit == cit_e) { return result; }
+				result.push_back('/');
 				result.push_back(*cit++);
 				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
 				if (cit == cit_e) { return result; }
+				result.push_back('/');
 				result.push_back(*cit++);
 				if (cit == cit_e) { return result; }
 				result.push_back(*cit++);
