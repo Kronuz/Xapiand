@@ -34,6 +34,7 @@
 #include <sys/stat.h>            // for fstat
 #include <sys/socket.h>          // for send
 #include <unistd.h>              // for off_t, ssize_t, close, lseek, unlink
+#include <type_traits>           // for std::forward
 
 
 // Do not accept any file descriptor less than this value, in order to avoid
@@ -112,25 +113,16 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 }
 
 
-inline int unchecked_fcntl(int fd, int cmd) {
-	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd));
+template <typename... Args>
+inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
+	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd, std::forward<Args>(args)...));
 }
 
 
-inline int unchecked_fcntl(int fd, int cmd, int arg) {
-	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd, arg));
-}
-
-
-inline int fcntl(int fd, int cmd) {
+template <typename... Args>
+inline int fcntl(int fd, int cmd, Args&&... args) {
 	CHECK_OPENED("during fcntl()", fd);
-	return io::unchecked_fcntl(fd, cmd);
-}
-
-
-inline int fcntl(int fd, int cmd, int arg) {
-	CHECK_OPENED("during fcntl()", fd);
-	return io::unchecked_fcntl(fd, cmd, arg);
+	return io::unchecked_fcntl(fd, cmd, std::forward<Args>(args)...);
 }
 
 
