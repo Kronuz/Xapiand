@@ -164,7 +164,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	const auto* p = static_cast<const char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
-		if unlikely(c < 0) {
+		if unlikely(c == -1) {
 			L_ERRNO("io::write() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) { continue; }
 			size_t written = p - static_cast<const char*>(buf);
@@ -199,7 +199,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 #else
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
-		if unlikely(c < 0) {
+		if unlikely(c == -1) {
 			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) { continue; }
 			size_t written = p - static_cast<const char*>(buf);
@@ -226,7 +226,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	auto* p = static_cast<char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
-		if unlikely(c < 0) {
+		if unlikely(c == -1) {
 			L_ERRNO("io::read() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) { continue; }
 			size_t read = p - static_cast<const char*>(buf);
@@ -263,7 +263,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 #else
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
-		if unlikely(c < 0) {
+		if unlikely(c == -1) {
 			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
 			if (errno == EINTR) { continue; }
 			size_t read = p - static_cast<const char*>(buf);
@@ -289,7 +289,7 @@ int unchecked_fsync(int fd) {
 
 	while (true) {
 		int r = __FSYNC(fd);
-		if unlikely(r < 0) {
+		if unlikely(r == -1) {
 			L_ERRNO("io::fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) { continue; }
 			return -1;
@@ -305,7 +305,7 @@ int unchecked_full_fsync(int fd) {
 #ifdef F_FULLFSYNC
 	while (true) {
 		int r = ::fcntl(fd, F_FULLFSYNC, 0);
-		if unlikely(r < 0) {
+		if unlikely(r == -1) {
 			L_ERRNO("io::full_fsync() -> %s (%d): %s", strerrno(errno), errno, strerror(errno));
 			if (errno == EINTR) { continue; }
 			return -1;
