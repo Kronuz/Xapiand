@@ -542,7 +542,7 @@ size_t get_num_fds()
  * max number of clients, the function will do the reverse setting
  * to the value that we can actually handle.
  */
-inline size_t _get_max_files_per_proc()
+size_t get_max_files_per_proc()
 {
 	size_t max_files_per_proc = 0;
 
@@ -571,12 +571,6 @@ inline size_t _get_max_files_per_proc()
 	L_WARNING("WARNING: No way of getting max files per process.");
 #endif
 
-	return max_files_per_proc;
-}
-
-size_t get_max_files_per_proc()
-{
-	static auto max_files_per_proc = _get_max_files_per_proc();
 	return max_files_per_proc;
 }
 
