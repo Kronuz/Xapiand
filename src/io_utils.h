@@ -125,10 +125,13 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 	return ::lseek(fd, offset, whence);
 }
 
+inline int unchecked_fcntl(int fd, int cmd, int arg) {
+	return ::fcntl(fd, cmd, arg);
+}
 
 inline int fcntl(int fd, int cmd, int arg) {
 	CHECK_OPENED("during fcntl()", fd);
-	return ::fcntl(fd, cmd, arg);
+	return io::unchecked_fcntl(fd, cmd, arg);
 }
 
 
@@ -231,19 +234,19 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
 ssize_t read(int fd, void* buf, size_t nbyte);
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 
-int _fsync(int fd);
-int _full_fsync(int fd);
+int unchecked_fsync(int fd);
+int unchecked_full_fsync(int fd);
 
 
 inline int fsync(int fd) {
 	CHECK_OPENED("during fsync()", fd);
-	return io::_fsync(fd);
+	return io::unchecked_fsync(fd);
 }
 
 
 inline int full_fsync(int fd) {
 	CHECK_OPENED("during full_fsync()", fd);
-	return io::_full_fsync(fd);
+	return io::unchecked_full_fsync(fd);
 }
 
 

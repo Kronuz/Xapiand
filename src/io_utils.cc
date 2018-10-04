@@ -284,7 +284,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 }
 
 
-int _fsync(int fd) {
+int unchecked_fsync(int fd) {
 	L_CALL("io::fsync(%d)", fd);
 
 	while (true) {
@@ -299,7 +299,7 @@ int _fsync(int fd) {
 }
 
 
-int _full_fsync(int fd) {
+int unchecked_full_fsync(int fd) {
 	L_CALL("io::full_fsync(%d)", fd);
 
 #ifdef F_FULLFSYNC
