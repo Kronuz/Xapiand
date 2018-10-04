@@ -533,26 +533,6 @@ size_t get_open_files_per_proc()
 }
 
 
-#ifdef __linux__
-size_t get_num_fds()
-{
-	size_t fd_count;
-	char buf[64];
-	struct dirent *dp;
-
-	snprintf(buf, 64, "/proc/%i/fd/", getpid());
-
-	fd_count = 0;
-	DIR *dir = opendir(buf);
-	while ((dp = readdir(dir)) != NULL) {
-		++fd_count;
-	}
-	closedir(dir);
-	return fd_count;
-}
-#endif /*__linux__*/
-
-
 size_t get_open_files_system_wide()
 {
 	size_t max_files_per_proc = 0;
@@ -578,7 +558,18 @@ size_t get_open_files_system_wide()
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
-	max_files_per_proc = get_num_fds();
+	int fd = io::open("/proc/sys/fs/file-nr", O_RDONLY);
+	if unlikely(fd == -1) {
+		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
+		return 0;
+	}
+	char line[100];
+	ssize_t n = io::read(fd, line, sizeof(line));
+	if unlikely(n == -1) {
+		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
+		return 0;
+	}
+	max_files_per_proc = atoi(line);
 #else
 	L_WARNING("WARNING: No way of getting number of open files.");
 #endif
