@@ -234,11 +234,7 @@ void
 BaseTCP::check_backlog(int tcp_backlog)
 {
 #ifdef HAVE_SYS_SYSCTL_H
-#if defined(NCORE_SOMAXCONN)
-#define _SYSCTL_NAME "net.core.somaxconn"  // Linux?
-	int mib[] = {CTL_NET, NET_CORE, NCORE_SOMAXCONN};
-	size_t mib_len = sizeof(mib) / sizeof(int);
-#elif defined(KIPC_SOMAXCONN)
+#if defined(KIPC_SOMAXCONN)
 #define _SYSCTL_NAME "kern.ipc.somaxconn"  // FreeBSD, Apple
 	int mib[] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
 	size_t mib_len = sizeof(mib) / sizeof(int);
@@ -257,6 +253,24 @@ BaseTCP::check_backlog(int tcp_backlog)
 				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
 	}
 #undef _SYSCTL_NAME
+#elif defined(__linux__)
+	int fd = io::open("/proc/sys/net/core/somaxconn", O_RDONLY);
+	if unlikely(fd == -1) {
+		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		return 0;
+	}
+	char line[100];
+	ssize_t n = io::read(fd, line, sizeof(line));
+	if unlikely(n == -1) {
+		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		return 0;
+	}
+	int somaxconn = atoi(line);
+	if (somaxconn > 0 && somaxconn < tcp_backlog) {
+		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
+				_SYSCTL_NAME
+				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+	}
 #else
 	L_WARNING("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
 #endif

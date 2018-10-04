@@ -538,19 +538,21 @@ size_t get_open_files_system_wide()
 	size_t max_files_per_proc = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
-#if defined(__FreeBSD__)
+#if defined(KERN_OPENFILES)
 #define _SYSCTL_NAME "kern.openfiles"  // FreeBSD
+	int mib[] = {CTL_KERN, KERN_OPENFILES};
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
 #elif defined(__APPLE__)
 #define _SYSCTL_NAME "kern.num_files"  // Apple
-#endif
-#endif
-#ifdef _SYSCTL_NAME
 	int mib[CTL_MAXNAME + 2];
 	std::size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
+#endif
+#endif
+#ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, std::strerror(errno));
