@@ -569,13 +569,13 @@ size_t get_open_files_system_wide()
 #elif defined(__linux__)
 	int fd = io::open("/proc/sys/fs/file-nr", O_RDONLY);
 	if unlikely(fd == -1) {
-		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
+		L_ERR("ERROR: Unable to open /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
-		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
+		L_ERR("ERROR: Unable to read from /proc/sys/fs/file-nr: [%d] %s", errno, std::strerror(errno));
 		return 0;
 	}
 	max_files_per_proc = atoi(line);

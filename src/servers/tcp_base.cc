@@ -256,19 +256,19 @@ BaseTCP::check_backlog(int tcp_backlog)
 #elif defined(__linux__)
 	int fd = io::open("/proc/sys/net/core/somaxconn", O_RDONLY);
 	if unlikely(fd == -1) {
-		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
-		return 0;
+		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		return;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
-		L_ERR("ERROR: Unable to get number of open files: from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
-		return 0;
+		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		return;
 	}
 	int somaxconn = atoi(line);
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
 		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
-				_SYSCTL_NAME
+				"/proc/sys/net/core/somaxconn"
 				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
 	}
 #else
