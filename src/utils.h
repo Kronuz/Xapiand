@@ -143,7 +143,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create=true, std:
 
 void _tcp_nopush(int sock, int optval);
 
-unsigned long long file_descriptors_cnt();
+size_t file_descriptors_cnt();
 
 #ifdef __linux__
 size_t get_num_fds();

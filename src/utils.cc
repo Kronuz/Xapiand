@@ -465,7 +465,7 @@ void _tcp_nopush(int sock, int optval) {
 }
 
 
-unsigned long long get_open_max_fd()
+size_t get_open_max_fd()
 {
 #ifdef F_MAXFD
 	int fcntl_open_max = io::unchecked_fcntl(0, F_MAXFD);
@@ -473,15 +473,15 @@ unsigned long long get_open_max_fd()
 		return fcntl_open_max;
 	}
 #endif
-	unsigned long long rlimit_open_max;
+	size_t rlimit_open_max;
 	struct rlimit rl;
     if (getrlimit(RLIMIT_NOFILE, &rl) == -1) {
         rlimit_open_max = 2;
     } else {
-        rlimit_open_max = static_cast<unsigned long long>(rl.rlim_max);
+        rlimit_open_max = static_cast<size_t>(rl.rlim_max);
     }
 	long sysconf_open_max = sysconf(_SC_OPEN_MAX);
-	if (sysconf_open_max == -1 || static_cast<unsigned long long>(sysconf_open_max) < rlimit_open_max) {
+	if (sysconf_open_max == -1 || static_cast<size_t>(sysconf_open_max) < rlimit_open_max) {
 		return rlimit_open_max;
 	}
 	return sysconf_open_max;
@@ -491,22 +491,23 @@ unsigned long long get_open_max_fd()
 /*
  * From http://stackoverflow.com/questions/17088204/number-of-open-file-in-a-c-program
  */
-unsigned long long file_descriptors_cnt() {
-	unsigned long long fdmax = get_open_max_fd();
-	unsigned long long n = 0;
-	for (unsigned long long fd = 0; fd < fdmax; ++fd) {
+size_t file_descriptors_cnt()
+{
+	size_t cnt = 0;
+	size_t nfds = get_open_max_fd();
+	for (size_t fd = 0; fd < nfds; ++fd) {
 		if unlikely(io::unchecked_fcntl(fd, F_GETFD, 0) == -1) {
 			// errno should be EBADF (not a valid open file descriptor)
 			// or other error. In either case, don't count.
 			continue;
 		}
-		++n;
+		++cnt;
 		// char filePath[PATH_MAX];
 		// if (io::fcntl(fd, F_GETPATH, filePath) != -1) {
 		// 	fprintf(stderr, "%llu - %s\n", fd, filePath);
 		// }
 	}
-	return n;
+	return cnt;
 }
 
 
