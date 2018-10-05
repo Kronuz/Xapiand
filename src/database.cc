@@ -919,6 +919,10 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 
 Database::~Database()
 {
+	if ((flags & DB_WRITABLE) != 0) {
+		commit();
+	}
+
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
 	}
@@ -1227,6 +1231,10 @@ bool
 Database::commit(bool wal_)
 {
 	L_CALL("Database::commit(%s)", wal_ ? "true" : "false");
+
+	if ((flags & DB_WRITABLE) == 0) {
+		THROW(Error, "database is read-only");
+	}
 
 	auto queue = weak_queue.lock();
 	if (queue && !queue->modified) {
