@@ -69,6 +69,11 @@ STATE_TO_BLOCK_ACCURACY = [
     LEVEL_15_TERM,
 ]
 
+AREA_TO_BLOCK_ACCURACY = [
+    LEVEL_10_TERM,
+    LEVEL_15_TERM,
+]
+
 
 #     _   __                          _
 #    / | / /_  ______ ___  ___  _____(_)____
@@ -76,6 +81,7 @@ STATE_TO_BLOCK_ACCURACY = [
 #  / /|  / /_/ / / / / / /  __/ /  / / /__
 # /_/ |_/\__,_/_/ /_/ /_/\___/_/  /_/\___/
 
+LEVEL_10_TERM = 10
 LEVEL_100_TERM = 100
 LEVEL_1000_TERM = 1000
 LEVEL_10000_TERM = 10000
@@ -84,6 +90,17 @@ LEVEL_1000000_TERM = 1000000
 LEVEL_10000000_TERM = 10000000
 
 # Typical ranges
+TENS_TO_TEN_THOUSANDS_ACCURACY = [
+    LEVEL_10_TERM,
+    LEVEL_100_TERM,
+    LEVEL_1000_TERM,
+    LEVEL_10000_TERM,
+]
+
+TENS_ACCURACY = [
+    LEVEL_10_TERM,
+]
+
 HUDREDS_TO_MILLIONS_ACCURACY = [
     LEVEL_100_TERM,
     LEVEL_1000_TERM,

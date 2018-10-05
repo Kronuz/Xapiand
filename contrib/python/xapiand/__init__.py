@@ -63,19 +63,17 @@ RESPONSE_AGGREGATIONS = '#aggregations'
 RESPONSE_TOOK = '#took'
 COMMAND_PREFIX = ':'
 
-XAPIAND_SANDBOX_PREFIX = os.environ.get('XAPIAND_SANDBOX_PREFIX', 'sandbox')
-XAPIAND_LIVE_PREFIX = os.environ.get('XAPIAND_LIVE_PREFIX', 'live')
 XAPIAND_HOST = os.environ.get('XAPIAND_HOST', '127.0.0.1')
 XAPIAND_PORT = os.environ.get('XAPIAND_PORT', 8880)
 XAPIAND_COMMIT = os.environ.get('XAPIAND_COMMIT', False)
+XAPIAND_PREFIX = os.environ.get('XAPIAND_PREFIX', 'default')
 
 try:
     from django.conf import settings
-    XAPIAND_SANDBOX_PREFIX = getattr(settings, 'XAPIAND_SANDBOX_PREFIX', XAPIAND_SANDBOX_PREFIX)
-    XAPIAND_LIVE_PREFIX = getattr(settings, 'XAPIAND_LIVE_PREFIX', XAPIAND_LIVE_PREFIX)
     XAPIAND_HOST = getattr(settings, 'XAPIAND_HOST', XAPIAND_HOST)
     XAPIAND_PORT = getattr(settings, 'XAPIAND_PORT', XAPIAND_PORT)
     XAPIAND_COMMIT = getattr(settings, 'XAPIAND_COMMIT', XAPIAND_COMMIT)
+    XAPIAND_PREFIX = getattr(settings, 'XAPIAND_PREFIX', getattr(settings, 'PROJECT_SUFFIX', XAPIAND_PREFIX))
 except Exception:
     settings = None
 
@@ -289,6 +287,7 @@ class Xapiand(object):
 
         if stream:
             meta = {}
+
             def results(chunks, size=100):
                 def fetch():
                     fetch.cache = []
@@ -297,9 +296,10 @@ class Xapiand(object):
                 total = None
 
                 if is_msgpack:
+                    processHeader = True
                     while fetch.cache:
                         for num, chunk in enumerate(fetch.cache):
-                            if num == 0:
+                            if num == 0 and processHeader:
                                 for o, m, v in ((-1, 0xf0, 0x90), (-3, 0xff, 0xdc), (-5, 0xff, 0xdd)):
                                     if ord(chunk[o]) & m == v:
                                         try:
@@ -310,6 +310,7 @@ class Xapiand(object):
                                             else:
                                                 total = msgpack.loads(chr(ord(chunk[o]) & 0x0f)) + 1
                                             chunk = chunk[:o] + '\x90' + msgpack.dumps({RESPONSE_TOOK: 0.0})[1:]
+                                            processHeader = False
                                             break
                                         except Exception:
                                             pass
@@ -360,7 +361,7 @@ class Xapiand(object):
             elif is_json:
                 content = json.loads(res.content)
             else:
-                content = res.content
+                content = {'content': res.content}
             results = [content]
 
         results = Results(meta, results)
@@ -372,7 +373,7 @@ class Xapiand(object):
 
         return results
 
-    def search(self, index, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
+    def search(self, index, query=None, partial=None, terms=None, offset=None, check_at_least=None, limit=None, sort=None, language=None, pretty=False, volatile=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
@@ -389,6 +390,8 @@ class Xapiand(object):
             kwargs['params']['offset'] = offset
         if limit is not None:
             kwargs['params']['limit'] = limit
+        if check_at_least is not None:
+            kwargs['params']['check_at_least'] = check_at_least
         if sort is not None:
             kwargs['params']['sort'] = sort
         if language is not None:
@@ -484,9 +487,8 @@ class Xapiand(object):
         return self._send_request('store', index, **kwargs)
 
 
-live = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_LIVE_PREFIX)
-sandbox = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_SANDBOX_PREFIX)
-
-
 def client():
-    return live if settings and settings.IS_LIVE else sandbox
+    return default
+
+
+default = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_PREFIX)
