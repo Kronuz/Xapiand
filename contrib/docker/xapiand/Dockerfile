@@ -11,30 +11,54 @@
 # docker tag dubalu/xapiand:latest dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version)
 # docker push dubalu/xapiand
 
-FROM dubalu/xapian as builder
+FROM dubalu/clang as builder
 
-# Bust cache
-ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master version.json
+RUN apk add libuuid \
+  && apk add --no-cache --virtual .build-deps \
+    git \
+    zlib-dev \
+    # Xapian specific:
+    make \
+    autoconf \
+    automake \
+    libtool \
+    perl \
+    tcl \
+    # Xapiand specific:
+    ninja \
+    cmake \
+    util-linux-dev
 
-# Build Xapiand
+# Build xapian using clang (from Kronuz git repo using layer cache buster)
+ADD https://api.github.com/repos/Kronuz/xapian/git/refs/heads/RELEASE/1.4 xapian-version.json
+RUN mkdir -p /usr/src \
+  && git clone -b RELEASE/1.4 --single-branch --depth 1 "https://github.com/Kronuz/xapian.git" /usr/src/xapian \
+  && cd /usr/src/xapian/xapian-core \
+  && ./preautoreconf \
+  && autoreconf --force --install -Im4 \
+  && CC=clang CXX=clang++ ./configure \
+    --disable-dependency-tracking \
+    --disable-documentation \
+    --enable-maintainer-mode \
+    --prefix=/usr \
+  && make install \
+  && cp bin/xapian-inspect /usr/bin \
+  && rm -rf /usr/src/xapian
+
+# Build Xapiand using clang (from Kronuz git repo using layer cache buster)
+ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master xapiand-version.json
 RUN CONFIG="\
     -DCMAKE_INSTALL_PREFIX:PATH=/usr \
   " \
-  && apk add libuuid \
-  && apk add --no-cache --virtual .build-deps \
-    ninja \
-    cmake \
-    git \
-    zlib-dev \
-    util-linux-dev \
   && mkdir -p /usr/src \
   && git clone --single-branch --depth=1 "https://github.com/Kronuz/Xapiand" /usr/src/Xapiand \
   && mkdir /usr/src/Xapiand/build \
   && cd /usr/src/Xapiand/build \
   && cmake -GNinja $CONFIG .. \
   && ninja install \
-  && rm -rf /usr/src/Xapiand \
-  && apk del .build-deps \
+  && rm -rf /usr/src/Xapiand
+
+RUN apk del .build-deps \
   && apk del build-clang
 
 # Xapiand image
