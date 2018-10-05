@@ -842,22 +842,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Using solo cluster: %s.", opts.cluster_name);
+				L_NOTICE("Using solo cluster: %s", opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Using new solo cluster: %s.", opts.cluster_name);
+				L_NOTICE("Using new solo cluster: %s", opts.cluster_name);
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Joined cluster: %s. It is now online!", opts.cluster_name);
+				L_NOTICE("Joined cluster: %s (it is now online!)", opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Joined new cluster: %s. It is now online!", opts.cluster_name);
+				L_NOTICE("Joined new cluster: %s (it is now online!)", opts.cluster_name);
 				break;
 			case 2:
-				L_NOTICE("Joined cluster: %s. It was already online!", opts.cluster_name);
+				L_NOTICE("Joined cluster: %s (it was already online!)", opts.cluster_name);
 				break;
 		}
 	}
