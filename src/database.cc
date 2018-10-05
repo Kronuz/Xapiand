@@ -112,7 +112,9 @@ WalHeader::validate(void* param, void* /*unused*/)
 		UUID uuid(head.uuid);
 		if (wal->database) {
 			if (uuid != wal->database->get_uuid()) {
-				THROW(StorageCorruptVolume, "WAL UUID mismatch");
+				if (uuid != wal->uuid_le()) {
+					THROW(StorageCorruptVolume, "WAL UUID mismatch");
+				}
 			}
 		} else if (wal->uuid().empty()) {
 			if (uuid != wal->uuid()) {
