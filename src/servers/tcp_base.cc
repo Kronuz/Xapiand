@@ -250,7 +250,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
 		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
 				_SYSCTL_NAME
-				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+				" is set to the lower value of %d.", tcp_backlog, somaxconn);
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
@@ -269,7 +269,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
 		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
 				"/proc/sys/net/core/somaxconn"
-				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+				" is set to the lower value of %d.", tcp_backlog, somaxconn);
 	}
 #else
 	L_WARNING("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
