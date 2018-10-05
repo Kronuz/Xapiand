@@ -60,7 +60,7 @@
 
 #define WAL_STORAGE_PATH "wal."
 
-#define MAGIC 0xc0de
+#define MAGIC "X-WAL-00"  // 8 bytes only
 
 #define WAL_SYNC_MODE     STORAGE_ASYNC_SYNC
 #define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
@@ -87,8 +87,8 @@ WalHeader::init(void* param, void* args)
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	auto commit_eof = static_cast<bool>(args);
 
-	head.magic = MAGIC;
-	strncpy(head.uuid, wal->database->get_uuid().to_string().c_str(), sizeof(head.uuid));
+	memcpy(head.magic, MAGIC, sizeof(head.magic));
+	memcpy(&head.uuid[0], wal->database->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 
 	auto revision = wal->database->get_revision();
@@ -103,13 +103,13 @@ WalHeader::init(void* param, void* args)
 void
 WalHeader::validate(void* param, void* /*unused*/)
 {
-	if (head.magic != MAGIC) {
+	if (strncmp(head.magic, MAGIC, sizeof(head.magic)) != 0) {
 		THROW(StorageCorruptVolume, "Bad WAL header magic number");
 	}
 
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	if (wal->validate_uuid) {
-		UUID uuid(std::string_view(head.uuid, UUID_LENGTH));
+		UUID uuid(head.uuid);
 		if (wal->database) {
 			if (uuid != wal->database->get_uuid()) {
 				THROW(StorageCorruptVolume, "WAL UUID mismatch");
@@ -858,8 +858,7 @@ DataHeader::validate(void* param, void* /*unused*/)
 	}
 
 	const auto* database = static_cast<const Database*>(param);
-	UUID uuid(std::string_view(head.uuid, UUID_LENGTH));
-	if (uuid != database->get_uuid()) {
+	if (UUID(head.uuid) != database->get_uuid()) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
 }
