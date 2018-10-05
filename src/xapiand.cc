@@ -243,7 +243,7 @@ void setup_signal_handlers() {
 	sigaction(SIGINFO, &sa, nullptr);  // On status request from keyboard (Ctrl-T)
 #endif
 	sigaction(SIGUSR1, &sa, nullptr);
-	sigaction(SIGUSR1, &sa, nullptr);
+	sigaction(SIGUSR2, &sa, nullptr);
 }
 
 

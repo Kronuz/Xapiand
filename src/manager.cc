@@ -919,11 +919,13 @@ XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, int revents)
 		case SIGINT:
 			shutdown_sig(sig);
 			break;
+		case SIGUSR1:
+		case SIGUSR2:
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
+#endif
 			print(STEEL_BLUE + "Workers: %s", dump_tree());
 			break;
-#endif
 	}
 }
 
