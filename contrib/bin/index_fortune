@@ -1,12 +1,13 @@
 #!/bin/sh
-endpoint=$1
-start=${2:-1}
-end=${3:-100}
+endpoint="${1%%\?*}"
+query="${1:${#endpoint}}"
+start="${2:-1}"
+end="${3:-100}"
 shift 3
 
 if [ -z "$endpoint" ]; then
 	echo "usage: $0 <endpoint> [start] [end]"
-	echo "example: $0 http://127.0.0.1:8880/fortune.db 1 10"
+	echo "example: $0 'http://127.0.0.1:8880/fortune.db?commit' 1 10"
 	exit 64
 fi
 
@@ -17,21 +18,22 @@ json_escape() {
 for id in $(seq "$start" "$end"); do
 	message="$(fortune | json_escape)"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
-	curl -s -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" "$@"
+	curl -s -H "Content-Type: application/json" -XPUT "$endpoint/$id$query" -d "$data" "$@"
 done
 
 
 # Usage Example:
 # index_and_get_fortune() {
-# 	endpoint=$1
-# 	start=${2:-1}
-# 	end=${3:-100}
+# 	endpoint="${1%%\?*}"
+# 	query="${1:${#endpoint}}"
+# 	start="${2:-1}"
+# 	end="${3:-100}"
 # 	contrib/bin/index_fortune "$endpoint" "$start" "$end" "$@"
 #   echo -n "." >&2
 # 	sleep 3
 #   echo "." >&2
 # 	for id in $(seq "$start" "$end"); do
-# 		curl -s "$endpoint/$id" "$@"
+# 		curl -s "$endpoint/$id$query" "$@"
 # 	done
 # }
 # index_and_get_fortune "http://127.0.0.1:8880/test/fortune" 1 10 -H "Accept: application/json; indent=4"
