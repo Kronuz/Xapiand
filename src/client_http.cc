@@ -61,7 +61,6 @@
 #include "serialise.h"                      // for boolean
 #include "servers/server.h"                 // for XapiandServer, XapiandSer...
 #include "servers/server_http.h"            // for HttpServer
-#include "stats.h"                          // for Stats
 #include "threadpool.h"                     // for ThreadPool
 #include "string.hh"                        // for string::from_delta
 #include "package.h"                        // for Package
@@ -98,7 +97,6 @@ constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
-constexpr const char RESPONSE_SERVER_INFO[]         = "#server_info";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 
@@ -802,10 +800,6 @@ HttpClient::_get(Request& request, Response& response, enum http_method method)
 			request.path_parser.skip_id();  // Command has no ID
 			metrics_view(request, response, method, cmd);
 			break;
-		case Command::CMD_STATS:
-			request.path_parser.skip_id();  // Command has no ID
-			stats_view(request, response, method, cmd);
-			break;
 		case Command::CMD_NODES:
 			request.path_parser.skip_id();  // Command has no ID
 			nodes_view(request, response, method, cmd);
@@ -1078,7 +1072,6 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	};
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::add("del", took);
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
@@ -1129,7 +1122,6 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.ready = std::chrono::system_clock::now();
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::add("index", took);
 	L_TIME("Indexing took %s", string::from_delta(took));
 
 	status_code = HTTP_STATUS_OK;
@@ -1195,7 +1187,6 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.ready = std::chrono::system_clock::now();
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::add("patch", took);
 	L_TIME("Updating took %s", string::from_delta(took));
 
 	status_code = HTTP_STATUS_OK;
@@ -1309,11 +1300,6 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 		db_handler.reset(endpoints, DB_OPEN, method);
 	}
 
-	// There's no path, we're at root so we get the server's info
-	if (request.path_parser.off_pth == nullptr || request.path_parser.len_pth == 0) {
-		XapiandManager::manager->server_status(response_obj[RESPONSE_SERVER_INFO]);
-	}
-
 	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
 
 	// Info about a specific document was requested
@@ -1401,7 +1387,6 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	request.ready = std::chrono::system_clock::now();
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::add("commit", took);
 	L_TIME("Commit took %s", string::from_delta(took));
 
 	MsgPack response_obj;
@@ -1887,7 +1872,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	Stats::add("search", took);
 	auto took_milliseconds = took / 1000000.0;
 	auto took_delta = string::Number(took_milliseconds).str();
 	L_TIME("Searching took %s", string::from_delta(took));
@@ -1970,18 +1954,6 @@ HttpClient::write_status_response(Request& request, Response& response, enum htt
 		{ RESPONSE_STATUS, (int)status },
 		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
-}
-
-
-void
-HttpClient::stats_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
-{
-	L_CALL("HttpClient::stats_view()");
-
-	MsgPack response_obj(MsgPack::Type::ARRAY);
-	auto query_field = query_field_maker(request, QUERY_FIELD_TIME | QUERY_FIELD_PERIOD);
-	XapiandManager::manager->get_stats_time(response_obj, query_field.time, query_field.period);
-	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
 }
 
 

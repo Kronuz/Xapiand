@@ -35,9 +35,8 @@
 #include "ev/ev++.h"
 #include "length.h"
 #include "opts.h"
-#include "prometheus/registry.h"
 #include "schemas_lru.h"
-#include "stats.h"
+#include "metrics.h"
 #include "threadpool.h"
 #include "worker.h"
 #include "serialise.h"
@@ -80,81 +79,6 @@ enum class RequestType {
 	COMMIT
 };
 
-class Metrics {
-public:
-	Metrics(const std::string& node_name, const std::string& cluster_name);
-	~Metrics() = default;
-
-	prometheus::Registry registry;
-	prometheus::Summary& xapiand_index_summary;
-	prometheus::Summary& xapiand_search_summary;
-	prometheus::Summary& xapiand_delete_summary;
-	prometheus::Summary& xapiand_patch_summary;
-	prometheus::Summary& xapiand_merge_summary;
-	prometheus::Summary& xapiand_aggregation_summary;
-	prometheus::Summary& xapiand_commit_summary;
-
-	prometheus::Gauge& xapiand_uptime;
-	prometheus::Gauge& xapiand_running;
-	prometheus::Gauge& xapiand_info;
-
-	// clients_tasks:
-	prometheus::Gauge& xapiand_clients_running;
-	prometheus::Gauge& xapiand_clients_queue_size;
-	prometheus::Gauge& xapiand_clients_capacity;
-	prometheus::Gauge& xapiand_clients_pool_size;
-
-	// server_tasks:
-	prometheus::Gauge& xapiand_servers_running;
-	prometheus::Gauge& xapiand_servers_queue_size;
-	prometheus::Gauge& xapiand_servers_capacity;
-	prometheus::Gauge& xapiand_servers_pool_size;
-
-	// committers_threads:
-	prometheus::Gauge& xapiand_committers_running;
-	prometheus::Gauge& xapiand_committers_queue_size;
-	prometheus::Gauge& xapiand_committers_capacity;
-	prometheus::Gauge& xapiand_committers_pool_size;
-
-	// fsync_threads:
-	prometheus::Gauge& xapiand_fsync_running;
-	prometheus::Gauge& xapiand_fsync_queue_size;
-	prometheus::Gauge& xapiand_fsync_capacity;
-	prometheus::Gauge& xapiand_fsync_pool_size;
-
-	// connections:
-	prometheus::Gauge& xapiand_http_current_connections;
-	prometheus::Gauge& xapiand_http_peak_connections;
-
-	prometheus::Gauge& xapiand_binary_current_connections;
-	prometheus::Gauge& xapiand_binary_peak_connections;
-
-	// file_descriptors:
-	prometheus::Gauge& xapiand_file_descriptors;
-	prometheus::Gauge& xapiand_max_file_descriptors;
-
-	// inodes:
-	prometheus::Gauge& xapiand_free_inodes;
-	prometheus::Gauge& xapiand_max_inodes;
-
-	// memory:
-	prometheus::Gauge& xapiand_resident_memory_bytes;
-	prometheus::Gauge& xapiand_virtual_memory_bytes;
-	prometheus::Gauge& xapiand_used_memory_bytes;
-	prometheus::Gauge& xapiand_total_memory_system_bytes;
-	prometheus::Gauge& xapiand_total_virtual_memory_used;
-	prometheus::Gauge& xapiand_total_disk_bytes;
-	prometheus::Gauge& xapiand_free_disk_bytes;
-
-	// databases:
-	prometheus::Gauge& xapiand_readable_db_queues;
-	prometheus::Gauge& xapiand_readable_db;
-	prometheus::Gauge& xapiand_writable_db_queues;
-	prometheus::Gauge& xapiand_writable_db;
-	prometheus::Gauge& xapiand_db_queues;
-	prometheus::Gauge& xapiand_db;
-};
-
 
 class XapiandManager : public Worker  {
 	friend Worker;
@@ -193,8 +117,6 @@ protected:
 
 	void make_servers();
 	void make_replicators();
-
-	std::unique_ptr<Metrics> metrics;
 
 public:
 	std::string __repr__() const override {
@@ -288,9 +210,7 @@ public:
 
 	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, std::chrono::duration<double, std::milli> timeout=1s);
 
-	void server_status(MsgPack& stats);
 	std::string server_metrics();
-	void get_stats_time(MsgPack& stats, const std::string& time_req, const std::string& gran_req);
 
 	inline decltype(auto) get_lock() noexcept {
 		return std::unique_lock<std::mutex>(qmtx);

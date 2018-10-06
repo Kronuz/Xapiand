@@ -290,7 +290,6 @@ class HttpClient : public BaseClient {
 #endif
 	void check_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void nodes_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void stats_view(Request& request, Response& response, enum http_method method, Command cmd);
 
 	void _options(Request& request, Response& response, enum http_method method);
 	void _head(Request& request, Response& response, enum http_method method);
