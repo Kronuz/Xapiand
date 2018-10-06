@@ -248,7 +248,7 @@ class Storage {
 				}
 				if (new_size > file_size) {
 					if unlikely(io::fallocate(fd, 0, file_size, new_size - file_size) == -1) {
-						L_WARNING("Cannot grow storage file: %s", strerror(errno));
+						L_WARNING_ONCE("Cannot grow storage file: %s", strerror(errno));
 					}
 				}
 			}

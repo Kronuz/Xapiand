@@ -580,7 +580,7 @@ size_t get_open_files_system_wide()
 	}
 	max_files_per_proc = atoi(line);
 #else
-	L_WARNING("WARNING: No way of getting number of open files.");
+	L_WARNING_ONCE("WARNING: No way of getting number of open files.");
 #endif
 
 	return max_files_per_proc;

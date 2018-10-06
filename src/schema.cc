@@ -1694,7 +1694,7 @@ const std::unique_ptr<SimpleStopper<>>& getStopper(std::string_view language) {
 	if (words.is_open()) {
 		stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
 	} else {
-		L_WARNING("Cannot open stop words file: %s", path);
+		L_WARNING_ONCE("Cannot open stop words file: %s", path);
 	}
 	return stopper;
 }

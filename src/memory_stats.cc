@@ -96,7 +96,7 @@ uint64_t get_total_virtual_used()
 	total_virtual_used = vmusage.xsu_used;
 #undef _SYSCTL_NAME
 #else
-	L_WARNING("WARNING: No way of getting swap usage.");
+	L_WARNING_ONCE("WARNING: No way of getting swap usage.");
 #endif
 
 	return total_virtual_used;
@@ -133,7 +133,7 @@ uint64_t get_total_ram()
 	}
 	total_ram = info.totalram;
 #else
-	L_WARNING("WARNING: No way of getting total memory size.");
+	L_WARNING_ONCE("WARNING: No way of getting total memory size.");
 #endif
 
 	return total_ram;
@@ -186,7 +186,7 @@ uint64_t get_current_memory_by_process(bool resident)
 		current_memory_by_process = vsize;
 	}
 #else
-	L_WARNING("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
+	L_WARNING_ONCE("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
 #endif
 	return current_memory_by_process;
 }
@@ -231,7 +231,7 @@ uint64_t get_total_virtual_memory()
 	}
 	total_virtual_memory = info.totalswap;
 #else
-	L_WARNING("WARNING: No way of getting total virtual memory size.");
+	L_WARNING_ONCE("WARNING: No way of getting total virtual memory size.");
 #endif
 
 	return total_virtual_memory;
@@ -256,7 +256,7 @@ uint64_t get_total_inodes()
 	}
 	total_inodes = info.f_files;
 #else
-	L_WARNING("WARNING: No way of getting total inodes");
+	L_WARNING_ONCE("WARNING: No way of getting total inodes");
 #endif
 	return total_inodes;
 }
@@ -280,7 +280,7 @@ uint64_t get_free_inodes()
 	}
 	free_inodes = info.f_ffree;
 #else
-	L_WARNING("WARNING: No way of getting free inodes");
+	L_WARNING_ONCE("WARNING: No way of getting free inodes");
 #endif
 	return free_inodes;
 }
@@ -297,7 +297,7 @@ uint64_t get_total_disk_size()
 	}
 	total_disk_size = statf.f_blocks * statf.f_bsize;
 #else
-	L_WARNING("WARNING: No way of getting total disk size");
+	L_WARNING_ONCE("WARNING: No way of getting total disk size");
 #endif
 	return total_disk_size;
 }
@@ -313,7 +313,7 @@ uint64_t get_free_disk_size()
 	}
 	free_disk_size = statf.f_bfree * statf.f_bsize;
 #else
-	L_WARNING("WARNING: No way of getting free disk size");
+	L_WARNING_ONCE("WARNING: No way of getting free disk size");
 #endif
 	return free_disk_size;
 }

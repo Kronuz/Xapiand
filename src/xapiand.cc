@@ -641,12 +641,12 @@ void adjustOpenFilesLimit() {
 	ssize_t max_files = opts.max_files;
 	if (max_files != 0) {
 		if (max_files > aprox_available_files) {
-			L_WARNING("The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING_ONCE("The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	} else {
 		max_files = recommended_files;
 		if (max_files > aprox_available_files) {
-			L_WARNING("The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING_ONCE("The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	}
 
@@ -659,7 +659,7 @@ void adjustOpenFilesLimit() {
 		if ((limit_cur_files == 0) || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING("Unable to obtain the current NOFILE limit (%s), assuming %zd", std::strerror(errno), limit_cur_files);
+		L_WARNING_ONCE("Unable to obtain the current NOFILE limit (%s), assuming %zd", std::strerror(errno), limit_cur_files);
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -725,12 +725,12 @@ void adjustOpenFilesLimit() {
 
 	// Warn about changes to the configured dbpool_size or max_clients:
 	if (new_dbpool_size > 0 && new_dbpool_size < opts.dbpool_size) {
-		L_WARNING("You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
-		L_WARNING("Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
+		L_WARNING_ONCE("You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
+		L_WARNING_ONCE("Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
 	}
 	if (new_max_clients > 0 && new_max_clients < opts.max_clients) {
-		L_WARNING("You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
-		L_WARNING("Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
+		L_WARNING_ONCE("You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
+		L_WARNING_ONCE("Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
 	}
 
 
@@ -739,13 +739,13 @@ void adjustOpenFilesLimit() {
 		L_CRIT("Your open files limit of %zd is not enough for the server to start. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			minimum_files);
-		L_WARNING("If you need to increase your system-wide open files limit use 'ulimit -n'");
+		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
 		throw Exit(EX_OSFILE);
 	} else if (max_files < recommended_files) {
-		L_WARNING("Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
+		L_WARNING_ONCE("Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
 			max_files,
 			recommended_files);
-		L_WARNING("If you need to increase your system-wide open files limit use 'ulimit -n'");
+		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
 	}
 
 

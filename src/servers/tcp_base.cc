@@ -248,7 +248,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
+		L_WARNING_ONCE("WARNING: The TCP backlog setting of %d cannot be enforced because "
 				_SYSCTL_NAME
 				" is set to the lower value of %d.", tcp_backlog, somaxconn);
 	}
@@ -267,12 +267,12 @@ BaseTCP::check_backlog(int tcp_backlog)
 	}
 	int somaxconn = atoi(line);
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_WARNING("WARNING: The TCP backlog setting of %d cannot be enforced because "
+		L_WARNING_ONCE("WARNING: The TCP backlog setting of %d cannot be enforced because "
 				"/proc/sys/net/core/somaxconn"
 				" is set to the lower value of %d.", tcp_backlog, somaxconn);
 	}
 #else
-	L_WARNING("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
+	L_WARNING_ONCE("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
 #endif
 }
 
