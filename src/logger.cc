@@ -36,6 +36,7 @@
 #include <utility>
 #include <vector>             // for vector
 
+#include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
 #include "ignore_unused.h"    // for ignore_unused
@@ -131,9 +132,9 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args
 
 
 Log
-vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
-	return Logging::do_log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, args);
+	return Logging::do_log(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, format, args);
 }
 
 
@@ -240,7 +241,7 @@ SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_
 }
 
 
-Logging::Logging(const char *function, const char *filename, int line, std::string  str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
+Logging::Logging(const char *function, const char *filename, int line, std::string  str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, bool once, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
 	: ScheduledTask(created_at),
 	  thread_id(std::this_thread::get_id()),
 	  function(function),
@@ -253,6 +254,7 @@ Logging::Logging(const char *function, const char *filename, int line, std::stri
 	  async(async),
 	  info(info),
 	  stacked(stacked),
+	  once(once),
 	  priority(priority),
 	  cleaned(false)
 {
@@ -345,6 +347,14 @@ Logging::run()
 {
 	L_DEBUG_HOOK("Logging::run", "Logging::run()");
 
+	if (once) {
+		static BloomFilter<1000> bloom;
+		if (bloom.contains(str.data(), str.size())) {
+			return;
+		}
+		bloom.add(str.data(), str.size());
+	}
+
 	std::string msg;
 
 	if (info && priority <= LOG_DEBUG) {
@@ -404,7 +414,7 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
-			add(_function, _filename, _line, fmt::vsprintf(format, args), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, _priority, time_point_from_ullong(created_at));
+			add(_function, _filename, _line, fmt::vsprintf(format, args), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, once, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
 	}
@@ -426,20 +436,20 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
 		auto str = fmt::vsprintf(format, args);
-		return add(function, filename, line, str, exc, clean, wakeup, async, info, stacked, priority);
+		return add(function, filename, line, str, exc, clean, wakeup, async, info, stacked, once, priority);
 	}
 	return Log();
 }
 
 
 Log
-Logging::add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
+Logging::add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at)
 {
-	auto l_ptr = std::make_shared<Logging>(function, filename, line, str, exc, clean, async, info, stacked, priority, created_at);
+	auto l_ptr = std::make_shared<Logging>(function, filename, line, str, exc, clean, async, info, stacked, once, priority, created_at);
 
 	if (async || wakeup > std::chrono::system_clock::now()) {
 		// asynchronous logs

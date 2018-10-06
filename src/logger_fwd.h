@@ -86,30 +86,30 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+	return vlog(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, int priority, const void*, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(cleanup, wakeup, async, info, stacked, priority, nullptr, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const void*, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+	return vlog(cleanup, wakeup, async, info, stacked, once, priority, nullptr, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename T, typename R, typename... Args>
-inline Log log(bool cleanup, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, int priority, Args&&... args) {
-	return log(cleanup, std::chrono::system_clock::now() + timeout, async, info, stacked, priority, std::forward<Args>(args)...);
+inline Log log(bool cleanup, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
+	return log(cleanup, std::chrono::system_clock::now() + timeout, async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, int priority, Args&&... args) {
-	return log(cleanup, std::chrono::milliseconds(timeout), async, info, stacked, priority, std::forward<Args>(args)...);
+inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
+	return log(cleanup, std::chrono::milliseconds(timeout), async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
 #pragma GCC diagnostic push
@@ -139,8 +139,8 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define LOG_ARGS_APPLY_ALL_H2(t, n, ...) LOG_ARGS_APPLY_ALL_H3(t, n, __VA_ARGS__)
 #define LOG_ARGS_APPLY_ALL(t, ...) LOG_ARGS_APPLY_ALL_H2(t, LOG_ARGS_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-#define LAZY_LOG(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, ...) \
-	::log(cleanup, wakeup, async, info, stacked, priority, exc, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+#define LAZY_LOG(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, ...) \
+	::log(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
 #define LAZY_UNLOG(priority, function, filename, line, ...) \
 	unlog(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
@@ -149,7 +149,7 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, format, ...) LAZY_LOG(cleanup, delay, true, true, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_DELAYED(cleanup, delay, priority, color, format, ...) LAZY_LOG(cleanup, delay, true, true, false, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
@@ -161,28 +161,31 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, i
 
 #define L_NOTHING(...)
 
-#define LOG(stacked, level, color, format, ...) LAZY_LOG(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define LOG(stacked, once, level, color, format, ...) LAZY_LOG(false, 0ms, level >= ASYNC_LOG_LEVEL, true, stacked, once, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 
-#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { LAZY_LOG(false, 0ms, true, true, stacked, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__); }
+#define HOOK_LOG(hook, stacked, level, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { LAZY_LOG(false, 0ms, true, true, stacked, false, level, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__); }
 
-#define L_INFO(...) LOG(true, LOG_INFO, INFO_COL, __VA_ARGS__)
-#define L_NOTICE(...) LOG(true, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
-#define L_WARNING(...) LOG(true, LOG_WARNING, WARNING_COL, __VA_ARGS__)
-#define L_ERR(...) LOG(true, LOG_ERR, ERR_COL, __VA_ARGS__)
-#define L_CRIT(...) LOG(true, LOG_CRIT, CRIT_COL, __VA_ARGS__)
-#define L_ALERT(...) LOG(true, LOG_ALERT, ALERT_COL, __VA_ARGS__)
-#define L_EMERG(...) LOG(true, LOG_EMERG, EMERG_COL, __VA_ARGS__)
-#define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, (ERR_COL + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_INFO(...) LOG(true, false, LOG_INFO, INFO_COL, __VA_ARGS__)
+#define L_NOTICE(...) LOG(true, false, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
+#define L_NOTICE_ONCE(...) LOG(true, true, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
+#define L_WARNING(...) LOG(true, false, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_WARNING_ONCE(...) LOG(true, true, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR(...) LOG(true, false, LOG_ERR, ERR_COL, __VA_ARGS__)
+#define L_ERR_ONCE(...) LOG(true, true, LOG_ERR, ERR_COL, __VA_ARGS__)
+#define L_CRIT(...) LOG(true, false, LOG_CRIT, CRIT_COL, __VA_ARGS__)
+#define L_ALERT(...) LOG(true, false, LOG_ALERT, ALERT_COL, __VA_ARGS__)
+#define L_EMERG(...) LOG(true, false, LOG_EMERG, EMERG_COL, __VA_ARGS__)
+#define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, false, LOG_CRIT, &exc, __func__, __FILE__, __LINE__, (ERR_COL + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 
 #define L_INFO_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
 #define L_WARNING_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_WARNING, WARNING_COL, __VA_ARGS__)
 #define L_ERR_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_ERR, ERR_COL, __VA_ARGS__)
 
-#define L_UNINDENTED(level, color, ...) LOG(false, level, color, __VA_ARGS__)
+#define L_UNINDENTED(level, color, ...) LOG(false, false, level, color, __VA_ARGS__)
 #define L_UNINDENTED_LOG(...) L_UNINDENTED(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
-#define L(level, color, ...) LOG(true, level, color, __VA_ARGS__)
+#define L(level, color, ...) LOG(true, false, level, color, __VA_ARGS__)
 #define L_LOG(...) L(LOG_DEBUG, LOG_COL, __VA_ARGS__)
 
 #define L_STACKED(...) auto UNIQUE_NAME = L(__VA_ARGS__)
