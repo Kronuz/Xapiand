@@ -96,21 +96,26 @@ AsyncFsync::run()
 		AsyncFsync::statuses.erase(fd);
 	}
 
-	bool successful = false;
 	auto start = std::chrono::system_clock::now();
+
+	int err = -1;
 	switch (mode) {
 		case 1:
-			successful = (io::unchecked_full_fsync(fd) == 0);
+			err = io::unchecked_full_fsync(fd);
 			break;
 		case 2:
-			successful = (io::unchecked_fsync(fd) == 0);
+			err = io::unchecked_fsync(fd);
 			break;
 	}
 	auto end = std::chrono::system_clock::now();
 
-	if (successful) {
-		L_DEBUG("Async %s: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end));
+	if (err == -1) {
+		if (errno == EBADF || errno == EINVAL) {
+			L_DEBUG("Async %s%s falied in %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+		} else {
+			L_WARNING("Async %s%s falied in %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+		}
 	} else {
-		L_WARNING("Async %s falied: %d%s (took %s)", mode == 1 ? "Full Fsync" : "Fsync", fd, forced ? " (forced)" : "", string::from_delta(start, end));
+		L_DEBUG("Async %s%s succeeded in %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end));
 	}
 }
