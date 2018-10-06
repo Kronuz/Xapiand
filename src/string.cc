@@ -22,6 +22,8 @@
 
 #include "string.hh"
 
+#include "colors.h"
+
 #include <cmath>              // for std::log, std::floorl, std::pow
 
 
@@ -53,7 +55,7 @@ static inline std::string _from_bytes(size_t bytes, bool colored) {
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 8), std::pow(base, 7), std::pow(base, 6), std::pow(base, 5), std::pow(base, 4), std::pow(base, 3), std::pow(base, 2), std::pow(base, 1), 1 };
 	static const char* const units[] = { "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" };
-	static const char* const colors[] = { "\033[1;31m", "\033[1;31m", "\033[1;31m", "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0;32m", "\033[0;32m", "\033[0m" };
+	static const char* const colors[] = { BROWN, BROWN, BROWN, BROWN, DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
@@ -70,7 +72,7 @@ static inline std::string _from_small_time(long double seconds, bool colored) {
 	static const long double div = std::log(base);
 	static const long double scaling[] = { 1, std::pow(base, -1), std::pow(base, -2), std::pow(base, -3), std::pow(base, -4) };
 	static const char* const units[] = { "s", "ms", R"(µs)", "ns", "ps" };
-	static const char* const colors[] = { "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0;32m", "\033[0m" };
+	static const char* const colors[] = { BROWN, DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
@@ -87,7 +89,7 @@ static inline std::string _from_time(long double seconds, bool colored) {
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 2), std::pow(base, 1), 1 };
 	static const char* const units[] = { "hrs", "min", "s" };
-	static const char* const colors[] = { "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0m" };
+	static const char* const colors[] = { DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
