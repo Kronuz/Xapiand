@@ -1075,7 +1075,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_metrics(took, RequestType::DELETE);
+	Metrics::metrics().xapiand_delete_summary.Observe(took / 1e6);
 }
 
 
@@ -1128,7 +1128,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_metrics(took, RequestType::INDEX);
+	Metrics::metrics().xapiand_index_summary.Observe(took / 1e6);
 }
 
 
@@ -1169,19 +1169,15 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 	request.processing = std::chrono::system_clock::now();
 
-	auto rt = RequestType::MERGE;
-
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
 	auto& decoded_body = request.decoded_body();
 	if (method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
-		rt = RequestType::PATCH;
 	} else if (method == HTTP_STORE) {
 		response_obj = db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
 		response_obj = db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
-		rt = RequestType::MERGE;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1196,7 +1192,14 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
-	XapiandManager::manager->update_metrics(took, rt);
+
+	if (method == HTTP_PATCH) {
+		Metrics::metrics().xapiand_patch_summary.Observe(took / 1e6);
+	} else if (method == HTTP_STORE) {
+		// Metrics::metrics().xapiand_store_summary.Observe(took / 1e6);
+	} else {
+		Metrics::metrics().xapiand_merge_summary.Observe(took / 1e6);
+	}
 }
 
 
@@ -1393,7 +1396,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
-	XapiandManager::manager->update_metrics(took, RequestType::COMMIT);
+	Metrics::metrics().xapiand_commit_summary.Observe(took / 1e6);
 }
 
 
@@ -1587,8 +1590,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	MsgPack aggregations;
 	std::vector<std::string> suggestions;
 
-	auto rt = RequestType::SEARCH;
-
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
@@ -1615,7 +1616,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
 				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
-				rt = RequestType::AGGREGATIONS;
 			}
 		}
 	} catch (const NotFoundError&) {
@@ -1940,7 +1940,12 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 	}
 
-	XapiandManager::manager->update_metrics(took, rt);
+	if (aggregations) {
+		Metrics::metrics().xapiand_aggregation_summary.Observe(took / 1e6);
+	} else {
+		Metrics::metrics().xapiand_search_summary.Observe(took / 1e6);
+	}
+
 	L_SEARCH("FINISH SEARCH");
 }
 

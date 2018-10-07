@@ -69,16 +69,6 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 	return unserialise_length(&p, p_end);
 }
 
-enum class RequestType {
-	INDEX,
-	SEARCH,
-	DELETE,
-	PATCH,
-	MERGE,
-	AGGREGATIONS,
-	COMMIT
-};
-
 
 class XapiandManager : public Worker  {
 	friend Worker;
@@ -187,8 +177,6 @@ public:
 	void run();
 
 	bool is_single_node();
-
-	void update_metrics(std::uint64_t duration, RequestType typ);
 
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();

@@ -1116,37 +1116,6 @@ XapiandManager::server_metrics()
 }
 
 
-void
-XapiandManager::update_metrics(std::uint64_t duration, RequestType typ)
-{
-	assert(metrics);
-
-	auto& metrics = Metrics::metrics();
-
-	switch (typ) {
-		case RequestType::INDEX:
-			metrics.xapiand_index_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::SEARCH:
-			metrics.xapiand_search_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::DELETE:
-			metrics.xapiand_delete_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::PATCH:
-			metrics.xapiand_patch_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::MERGE:
-			metrics.xapiand_merge_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::AGGREGATIONS:
-			metrics.xapiand_aggregation_summary.Observe(duration / 1e6);
-			break;
-		case RequestType::COMMIT:
-			metrics.xapiand_commit_summary.Observe(duration / 1e6);
-	}
-}
-
 
 #ifdef L_MANAGER_DEFINED
 #undef L_MANAGER_DEFINED
