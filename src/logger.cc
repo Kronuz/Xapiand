@@ -348,7 +348,7 @@ Logging::run()
 	L_DEBUG_HOOK("Logging::run", "Logging::run()");
 
 	if (once) {
-		static BloomFilter<1000> bloom;
+		static BloomFilter<> bloom;
 		if (bloom.contains(str.data(), str.size())) {
 			return;
 		}

@@ -28,21 +28,23 @@
 #include "hashes.hh"
 
 
-template <size_t N>
+template <size_t N=8192>
 class BloomFilter {
 	// [http://blog.michaelschmatz.com/2016/04/11/how-to-write-a-bloom-filter-cpp/]
 	// [http://citeseer.ist.psu.edu/viewdoc/download;jsessionid=4060353E67A356EF9528D2C57C064F5A?doi=10.1.1.152.579&rep=rep1&type=pdf]
-	// P = 0.00001
+	// P = 0.000001
 	// k = -ln(P) / ln(2)
-	// k = 11.512925465 / 0.6931471806
-	// k = 16.6096404735
-	// k = 17
+	// k = 13.815510558 / 0.6931471806
+	// k = 19.9315685693
+	// k = 20
 	// m = N * k / ln(2)
-	// m = N * 16.6096404735 / 0.6931471806
-	// m = N * 23.9626459407
-	// m = N * 24
-	static constexpr size_t k = 17;
-	static constexpr size_t m = N * 24;
+	// m = N * 19.9315685693 / 0.6931471806
+	// m = N * 28.7551751321
+	// m = N * 32
+	// m = 8192 * 32
+	// m = 262144 bits => 32768 bytes => 32K
+	static constexpr size_t k = 20;
+	static constexpr size_t m = N * 32;
 	std::bitset<m> bits;
 
 	auto hash(const char* data, size_t len) const {
