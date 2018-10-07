@@ -93,6 +93,10 @@
 #endif
 
 
+#define NODE_LABEL "node"
+#define CLUSTER_LABEL "cluster"
+
+
 #ifndef L_MANAGER
 #define L_MANAGER_DEFINED
 #define L_MANAGER L_NOTHING
@@ -397,7 +401,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	L_INFO("Node %s accepted to the party!", node_name);
-	Metrics::metrics(node_name, opts.cluster_name);
+	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
 	{
 		// Get a node (any node)

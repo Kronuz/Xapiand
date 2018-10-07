@@ -31,16 +31,15 @@
 
 
 class Metrics {
-	std::string node_name;
-	std::string cluster_name;
+	std::map<std::string, std::string> constant_labels;
 
 	prometheus::Registry registry;
 
 public:
-	Metrics(const std::string& node_name_, const std::string& cluster_name_);
+	Metrics(const std::map<std::string, std::string>& constant_labels_);
 	~Metrics() = default;
 
-	static Metrics& metrics(const std::string& new_node_name = "", const std::string& new_cluster_name = "");
+	static Metrics& metrics(const std::map<std::string, std::string>& constant_labels_ = {});
 
 	std::string serialise();
 

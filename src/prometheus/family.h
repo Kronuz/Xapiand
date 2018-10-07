@@ -12,9 +12,6 @@
 
 #include "check_names.h"
 #include "collectable.h"
-#include "counter_builder.h"
-#include "gauge_builder.h"
-#include "histogram_builder.h"
 #include "metric.h"
 #include "metric_family.h"
 
@@ -23,10 +20,6 @@ namespace prometheus {
 template <typename T>
 class Family : public Collectable {
  public:
-  friend class detail::CounterBuilder;
-  friend class detail::GaugeBuilder;
-  friend class detail::HistogramBuilder;
-
   Family(const std::string& name, const std::string& help,
          const std::map<std::string, std::string>& constant_labels);
   template <typename... Args>
@@ -43,7 +36,7 @@ class Family : public Collectable {
 
   const std::string name_;
   const std::string help_;
-  const std::map<std::string, std::string> constant_labels_;
+  const std::map<std::string, std::string>& constant_labels_;
   std::mutex mutex_;
 
   ClientMetric CollectMetric(std::size_t hash, T* metric);

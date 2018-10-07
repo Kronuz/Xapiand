@@ -29,399 +29,348 @@
 #include "package.h"                          // for Package::FULLVERSION Package::HASH
 #include "utils.h"                            // for check_compiler, check_OS
 
-#define NODE_LABEL "node"
-#define CLUSTER_LABEL "cluster"
 
-
-Metrics::Metrics(const std::string& node_name_, const std::string& cluster_name_)
-	: node_name{node_name_},
-	  cluster_name{cluster_name_},
+Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)
+	: constant_labels{constant_labels_},
 	  xapiand_index_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_index_summary")
-			.Help("Index requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+	  	registry.AddSummary(
+	  		"xapiand_index_summary",
+	  		"Index requests summary",
+	  		constant_labels)
+	    .Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_search_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_search_summary")
-			.Help("Search requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_search_summary",
+			"Search requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_delete_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_delete_summary")
-			.Help("Delete requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_delete_summary",
+			"Delete requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_patch_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_patch_summary")
-			.Help("Patch requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_patch_summary",
+			"Patch requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_merge_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_merge_summary")
-			.Help("Merge requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_merge_summary",
+			"Merge requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_aggregation_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_aggregation_summary")
-			.Help("Aggregation requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_aggregation_summary",
+			"Aggregation requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_commit_summary{
-		prometheus::BuildSummary()
-			.Name("xapiand_commit_summary")
-			.Help("Commit requests summary")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddSummary(
+			"xapiand_commit_summary",
+			"Commit requests summary",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_uptime{
-		prometheus::BuildGauge()
-			.Name("xapiand_uptime")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Server uptime in seconds")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_uptime",
+			"Server uptime in seconds",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_running{
-		prometheus::BuildGauge()
-			.Name("xapiand_running")
-			.Help("If the node is actually running")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_running",
+			"If the node is actually running",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_info{
-		prometheus::BuildGauge()
-			.Name("xapiand_info")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Version string as reported by Xapiand")
-			.Register(registry)
-			.Add({
-				{"name", Package::NAME},
-				{"url", Package::URL},
-				{"url", Package::URL},
-				{"version", Package::VERSION},
-				{"full_version", Package::FULLVERSION},
-				{"revision", Package::REVISION},
-				{"hash", Package::HASH},
-				{"compiler", check_compiler()},
-				{"os", check_OS()},
-				{"arch", check_architecture()},
-			})
+		registry.AddGauge(
+			"xapiand_info",
+			"Version string as reported by Xapiand",
+			constant_labels)
+		.Add({
+			{"name", Package::NAME},
+			{"url", Package::URL},
+			{"url", Package::URL},
+			{"version", Package::VERSION},
+			{"full_version", Package::FULLVERSION},
+			{"revision", Package::REVISION},
+			{"hash", Package::HASH},
+			{"compiler", check_compiler()},
+			{"os", check_OS()},
+			{"arch", check_architecture()},
+		})
 	  },
 	  xapiand_clients_running{
-		prometheus::BuildGauge()
-			.Name("xapiand_clients_running")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Amount of clients running")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_clients_running",
+			"Amount of clients running",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_clients_queue_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_clients_queue_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Clients in the queue")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_clients_queue_size",
+			"Clients in the queue",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_clients_capacity{
-		prometheus::BuildGauge()
-			.Name("xapiand_clients_capacity")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Client queue capacity")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_clients_capacity",
+			"Client queue capacity",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_clients_pool_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_clients_pool_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Client total pool size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_clients_pool_size",
+			"Client total pool size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_servers_running{
-		prometheus::BuildGauge()
-			.Name("xapiand_servers_running")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Amount of servers running")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_servers_running",
+			"Amount of servers running",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_servers_queue_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_servers_queue_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Servers in the queue")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_servers_queue_size",
+			"Servers in the queue",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_servers_capacity{
-		prometheus::BuildGauge()
-			.Name("xapiand_servers_capacity")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Server queue capacity")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_servers_capacity",
+			"Server queue capacity",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_servers_pool_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_servers_pool_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Server pool size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_servers_pool_size",
+			"Server pool size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_committers_running{
-		prometheus::BuildGauge()
-			.Name("xapiand_committers_running")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Amount of committers running")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_committers_running",
+			"Amount of committers running",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_committers_queue_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_committers_queue_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Committers in the queue")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_committers_queue_size",
+			"Committers in the queue",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_committers_capacity{
-		prometheus::BuildGauge()
-			.Name("xapiand_committers_capacity")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Committers queue capacity")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_committers_capacity",
+			"Committers queue capacity",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_committers_pool_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_committers_pool_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Server pool size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_committers_pool_size",
+			"Server pool size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_fsync_running{
-		prometheus::BuildGauge()
-			.Name("xapiand_fsync_running")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Amount of fsync running")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_fsync_running",
+			"Amount of fsync running",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_fsync_queue_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_fsync_queue")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Fsync in the queue")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_fsync_queue",
+			"Fsync in the queue",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_fsync_capacity{
-		prometheus::BuildGauge()
-			.Name("xapiand_fsync_capacity")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Fsync queue capacity")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_fsync_capacity",
+			"Fsync queue capacity",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_fsync_pool_size{
-		prometheus::BuildGauge()
-			.Name("xapiand_fsync_pool_size")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Fsync pool size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_fsync_pool_size",
+			"Fsync pool size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_http_current_connections{
-		prometheus::BuildGauge()
-			.Name("xapiand_http_current_connections")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Current http connections")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_http_current_connections",
+			"Current http connections",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_http_peak_connections{
-		prometheus::BuildGauge()
-			.Name("xapiand_http_peak_connections")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Max http connections")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_http_peak_connections",
+			"Max http connections",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_binary_current_connections{
-		prometheus::BuildGauge()
-			.Name("xapiand_binary_current_connections")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Current binary connections")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_binary_current_connections",
+			"Current binary connections",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_binary_peak_connections{
-		prometheus::BuildGauge()
-			.Name("xapiand_binary_peak_connections")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Max binary connections")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_binary_peak_connections",
+			"Max binary connections",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_file_descriptors{
-		prometheus::BuildGauge()
-			.Name("xapiand_file_descriptors")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Amount of file descriptors in use")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_file_descriptors",
+			"Amount of file descriptors in use",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_max_file_descriptors{
-		prometheus::BuildGauge()
-			.Name("xapiand_max_file_descriptors")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Maximum number of file descriptors")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_max_file_descriptors",
+			"Maximum number of file descriptors",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_free_inodes{
-		prometheus::BuildGauge()
-			.Name("xapiand_free_inodes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Free inodes")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_free_inodes",
+			"Free inodes",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_max_inodes{
-		prometheus::BuildGauge()
-			.Name("xapiand_max_inodes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Maximum inodes")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_max_inodes",
+			"Maximum inodes",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_resident_memory_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_resident_memory_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Memory in use")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_resident_memory_bytes",
+			"Memory in use",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_virtual_memory_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_virtual_memory_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Virtual memory in use")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_virtual_memory_bytes",
+			"Virtual memory in use",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_used_memory_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_used_memory_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total memory currently allocated")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_used_memory_bytes",
+			"Total memory currently allocated",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_total_memory_system_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_total_memory_system_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total memory used")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_total_memory_system_bytes",
+			"Total memory used",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_total_virtual_memory_used{
-		prometheus::BuildGauge()
-			.Name("xapiand_total_virtual_memory_used")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total virtual memory used")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_total_virtual_memory_used",
+			"Total virtual memory used",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_total_disk_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_total_disk_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total disk size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_total_disk_bytes",
+			"Total disk size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_free_disk_bytes{
-		prometheus::BuildGauge()
-			.Name("xapiand_free_disk_bytes")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Free disk size")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_free_disk_bytes",
+			"Free disk size",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_readable_db_queues{
-		prometheus::BuildGauge()
-			.Name("xapiand_readable_db_queues")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Readable database queues")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_readable_db_queues",
+			"Readable database queues",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_readable_db{
-		prometheus::BuildGauge()
-			.Name("xapiand_readable_db")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Open databases")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_readable_db",
+			"Open databases",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_writable_db_queues{
-		prometheus::BuildGauge()
-			.Name("xapiand_writable_db_queues")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Writable database queues")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_writable_db_queues",
+			"Writable database queues",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_writable_db{
-		prometheus::BuildGauge()
-			.Name("xapiand_writable_db")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Open writable databases")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_writable_db",
+			"Open writable databases",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_db_queues{
-		prometheus::BuildGauge()
-			.Name("xapiand_db_queues")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Total database queues")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_db_queues",
+			"Total database queues",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  },
 	  xapiand_db{
-		prometheus::BuildGauge()
-			.Name("xapiand_db")
-			.Labels({{NODE_LABEL, node_name}, {CLUSTER_LABEL, cluster_name}})
-			.Help("Open databases")
-			.Register(registry)
-			.Add(std::map<std::string, std::string>())
+		registry.AddGauge(
+			"xapiand_db",
+			"Open databases",
+			constant_labels)
+		.Add(std::map<std::string, std::string>())
 	  }
 {
 	xapiand_running.Set(1);
@@ -430,13 +379,15 @@ Metrics::Metrics(const std::string& node_name_, const std::string& cluster_name_
 
 
 Metrics&
-Metrics::metrics(const std::string& new_node_name, const std::string& new_cluster_name)
+Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 {
-	static auto metrics = std::make_unique<Metrics>(new_node_name, new_cluster_name);
-	if (new_node_name != metrics->node_name || new_cluster_name != metrics->cluster_name) {
-		metrics = std::make_unique<Metrics>(new_node_name, new_cluster_name);
+	static Metrics metrics{constant_labels_};
+	for (auto& label : constant_labels_) {
+		if (metrics.constant_labels[label.first] != label.second) {
+			metrics.constant_labels[label.first] = label.second;
+		}
 	}
-	return *metrics;
+	return metrics;
 }
 
 
