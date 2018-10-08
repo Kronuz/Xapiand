@@ -268,14 +268,17 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 		} catch (const StorageEOF& exc) { }
 	}
 
-	if (volumes.first <= volumes.second && end_rev < revision) {
-		if (!unsafe) {
-			THROW(StorageCorruptVolume, "WAL revision not reached");
+	if (volumes.first <= volumes.second) {
+		if (end_rev < revision) {
+			if (!unsafe) {
+				THROW(StorageCorruptVolume, "WAL revision not reached");
+			}
+			L_WARNING("WAL revision not reached");
 		}
-		L_WARNING("WAL revision not reached");
+		open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	} else {
+		open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	}
-
-	open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 
 	return modified;
 }
