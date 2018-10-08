@@ -1071,13 +1071,17 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 		{ RESPONSE_COMMIT,  query_field.commit }
 	};
 
+	write_http_response(request, response, status_code, response_obj);
+
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Deletion took %s", string::from_delta(took));
 
-	write_http_response(request, response, status_code, response_obj);
 	Metrics::metrics()
 		.xapiand_operations_summary
-		.Add({{"operation", "delete"}})
+		.Add({
+			{"operation", "delete"},
+			{"op", "delete"},
+		})
 		.Observe(took / 1e9);
 }
 
@@ -1097,6 +1101,17 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, response, HTTP_STATUS_NO_CONTENT);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Schema deletion took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "delete_schema"},
+			{"op", "delete_schema"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1124,16 +1139,20 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 
 	request.ready = std::chrono::system_clock::now();
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Indexing took %s", string::from_delta(took));
-
 	status_code = HTTP_STATUS_OK;
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Indexing took %s", string::from_delta(took));
+
 	Metrics::metrics()
 		.xapiand_operations_summary
-		.Add({{"operation", "index"}})
+		.Add({
+			{"operation", "index"},
+			{"op", "index"},
+		})
 		.Observe(took / 1e9);
 }
 
@@ -1159,6 +1178,17 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 	response_obj = db_handler.get_schema()->get_full(true);
 
 	write_http_response(request, response, status_code, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Schema write took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "write_schema"},
+			{"op", "write_schema"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1188,9 +1218,6 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 	request.ready = std::chrono::system_clock::now();
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Updating took %s", string::from_delta(took));
-
 	status_code = HTTP_STATUS_OK;
 	if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
 		response_obj[ID_FIELD_NAME] = doc_id;
@@ -1199,20 +1226,32 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 	write_http_response(request, response, status_code, response_obj);
 
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Updating took %s", string::from_delta(took));
+
 	if (method == HTTP_PATCH) {
 		Metrics::metrics()
 			.xapiand_operations_summary
-			.Add({{"operation", "patch"}})
+			.Add({
+				{"operation", "update"},
+				{"op", "patch"},
+			})
 			.Observe(took / 1e9);
 	} else if (method == HTTP_STORE) {
 		Metrics::metrics()
 			.xapiand_operations_summary
-			.Add({{"operation", "store"}})
+			.Add({
+				{"operation", "update"},
+				{"op", "store"},
+			})
 			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
-			.Add({{"operation", "merge"}})
+			.Add({
+				{"operation", "update"},
+				{"op", "merge"},
+			})
 			.Observe(took / 1e9);
 	}
 }
@@ -1226,6 +1265,8 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 	enum http_status status_code = HTTP_STATUS_OK;
 
 	endpoints_maker(request, 2s);
+
+	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 
@@ -1260,11 +1301,24 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 		}
 	}
 
+	request.ready = std::chrono::system_clock::now();
+
 	if (!selector.empty()) {
 		response_obj = response_obj.select(selector);
 	}
 
 	write_http_response(request, response, status_code, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Get metadata took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "get_metadata"},
+			{"op", "get_metadata"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1333,6 +1387,17 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Info took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "info"},
+			{"op", "info"}
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1352,7 +1417,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 		return;
 	}
 
-	MsgPack nodes(MsgPack::Type::MAP);
+	MsgPack nodes{MsgPack::Type::MAP};
 
 	// FIXME: Get all nodes from cluster database:
 	auto local_node_ = local_node.load();
@@ -1386,6 +1451,17 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_CREATED, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Touch took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "touch"},
+			{"op", "touch"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1404,16 +1480,20 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Commit took %s", string::from_delta(took));
-
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Commit took %s", string::from_delta(took));
+
 	Metrics::metrics()
 		.xapiand_operations_summary
-		.Add({{"operation", "commit"}})
+		.Add({
+			{"operation", "commit"},
+			{"op", "commit"},
+		})
 		.Observe(took / 1e9);
 }
 
@@ -1467,7 +1547,19 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 	auto docs = db_handler.dump_documents();
 
 	request.ready = std::chrono::system_clock::now();
+
 	write_http_response(request, response, HTTP_STATUS_OK, docs);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Dump took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "dump"},
+			{"op", "dump"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1515,6 +1607,16 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 	};
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+
+	L_TIME("Restore took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "restore"},
+			{"op", "restore"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1548,6 +1650,17 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, response, HTTP_STATUS_OK, schema);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Schema took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "schema"},
+			{"op", "schema"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1569,6 +1682,17 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, response, HTTP_STATUS_OK, repr);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("WAL took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "wal"},
+			{"op", "wal"},
+		})
+		.Observe(took / 1e9);
 }
 #endif
 
@@ -1589,6 +1713,17 @@ HttpClient::check_view(Request& request, Response& response, enum http_method /*
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, response, HTTP_STATUS_OK, status);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Database check took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "db_check"},
+			{"op", "db_check"},
+		})
+		.Observe(took / 1e9);
 }
 
 
@@ -1961,12 +2096,18 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	if (aggregations) {
 		Metrics::metrics()
 			.xapiand_operations_summary
-			.Add({{"operation", "aggregation"}})
+			.Add({
+				{"operation", "search"},
+				{"op", "aggregation"},
+			})
 			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
-			.Add({{"operation", "search"}})
+			.Add({
+				{"operation", "search"},
+				{"op", "search"},
+			})
 			.Observe(took / 1e9);
 	}
 
