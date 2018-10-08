@@ -43,13 +43,8 @@ public:
 
 	std::string serialise();
 
-	prometheus::Summary& xapiand_index_summary;
-	prometheus::Summary& xapiand_search_summary;
-	prometheus::Summary& xapiand_delete_summary;
-	prometheus::Summary& xapiand_patch_summary;
-	prometheus::Summary& xapiand_merge_summary;
-	prometheus::Summary& xapiand_aggregation_summary;
-	prometheus::Summary& xapiand_commit_summary;
+	prometheus::Family<prometheus::Summary>& xapiand_operations_summary;
+	prometheus::Family<prometheus::Summary>& xapiand_http_requests_summary;
 
 	prometheus::Gauge& xapiand_uptime;
 	prometheus::Gauge& xapiand_running;

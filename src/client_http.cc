@@ -1075,7 +1075,10 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	L_TIME("Deletion took %s", string::from_delta(took));
 
 	write_http_response(request, response, status_code, response_obj);
-	Metrics::metrics().xapiand_delete_summary.Observe(took / 1e6);
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({{"operation", "delete"}})
+		.Observe(took / 1e6);
 }
 
 
@@ -1128,7 +1131,10 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, response, status_code, response_obj);
-	Metrics::metrics().xapiand_index_summary.Observe(took / 1e6);
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({{"operation", "index"}})
+		.Observe(took / 1e6);
 }
 
 
@@ -1194,11 +1200,20 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	write_http_response(request, response, status_code, response_obj);
 
 	if (method == HTTP_PATCH) {
-		Metrics::metrics().xapiand_patch_summary.Observe(took / 1e6);
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({{"operation", "patch"}})
+			.Observe(took / 1e6);
 	} else if (method == HTTP_STORE) {
-		// Metrics::metrics().xapiand_store_summary.Observe(took / 1e6);
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({{"operation", "store"}})
+			.Observe(took / 1e6);
 	} else {
-		Metrics::metrics().xapiand_merge_summary.Observe(took / 1e6);
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({{"operation", "merge"}})
+			.Observe(took / 1e6);
 	}
 }
 
@@ -1396,7 +1411,10 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
-	Metrics::metrics().xapiand_commit_summary.Observe(took / 1e6);
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({{"operation", "commit"}})
+		.Observe(took / 1e6);
 }
 
 
@@ -1941,9 +1959,15 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	if (aggregations) {
-		Metrics::metrics().xapiand_aggregation_summary.Observe(took / 1e6);
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({{"operation", "aggregation"}})
+			.Observe(took / 1e6);
 	} else {
-		Metrics::metrics().xapiand_search_summary.Observe(took / 1e6);
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({{"operation", "search"}})
+			.Observe(took / 1e6);
 	}
 
 	L_SEARCH("FINISH SEARCH");
@@ -2581,6 +2605,16 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(response);
 		}
+
+		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count();
+		Metrics::metrics()
+			.xapiand_http_requests_summary
+			.Add({
+				{"method", http_method_str(HTTP_PARSER_METHOD(&request.parser))},
+				{"status", string::Number(response.status).str()},
+			})
+			.Observe(took / 1e6);
+
 		L(priority, NO_COLOR, fmt, request.head, (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
 	}
 

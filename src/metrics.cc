@@ -32,54 +32,17 @@
 
 Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)
 	: constant_labels{constant_labels_},
-	  xapiand_index_summary{
-	  	registry.AddSummary(
-	  		"xapiand_index_summary",
-	  		"Index requests summary",
-	  		constant_labels)
-	    .Add({})
-	  },
-	  xapiand_search_summary{
+	  xapiand_operations_summary{
 		registry.AddSummary(
-			"xapiand_search_summary",
-			"Search requests summary",
+			"xapiand_operations_summary",
+			"Operations summary",
 			constant_labels)
-		.Add({})
 	  },
-	  xapiand_delete_summary{
+	  xapiand_http_requests_summary{
 		registry.AddSummary(
-			"xapiand_delete_summary",
-			"Delete requests summary",
+			"xapiand_http_requests_summary",
+			"HTTP requests summary",
 			constant_labels)
-		.Add({})
-	  },
-	  xapiand_patch_summary{
-		registry.AddSummary(
-			"xapiand_patch_summary",
-			"Patch requests summary",
-			constant_labels)
-		.Add({})
-	  },
-	  xapiand_merge_summary{
-		registry.AddSummary(
-			"xapiand_merge_summary",
-			"Merge requests summary",
-			constant_labels)
-		.Add({})
-	  },
-	  xapiand_aggregation_summary{
-		registry.AddSummary(
-			"xapiand_aggregation_summary",
-			"Aggregation requests summary",
-			constant_labels)
-		.Add({})
-	  },
-	  xapiand_commit_summary{
-		registry.AddSummary(
-			"xapiand_commit_summary",
-			"Commit requests summary",
-			constant_labels)
-		.Add({})
 	  },
 	  xapiand_uptime{
 		registry.AddGauge(
