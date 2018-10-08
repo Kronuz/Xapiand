@@ -46,6 +46,8 @@ public:
 	prometheus::Family<prometheus::Summary>& xapiand_operations_summary;
 	prometheus::Family<prometheus::Summary>& xapiand_http_requests_summary;
 
+	// server info
+	prometheus::Counter& xapiand_wal_errors;
 	prometheus::Gauge& xapiand_uptime;
 	prometheus::Gauge& xapiand_running;
 	prometheus::Gauge& xapiand_info;

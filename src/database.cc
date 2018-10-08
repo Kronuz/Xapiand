@@ -681,48 +681,54 @@ void
 DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 {
 	L_CALL("DatabaseWAL::write_line(...)");
-
-	assert(database->flags & DB_WRITABLE);
-	assert(!(database->flags & DB_NOWAL));
-
-	auto endpoint = database->endpoints[0];
-	assert(endpoint.is_local());
-
-	std::string revision_encode = database->get_revision_str();
-	std::string line = revision_encode;
-	line.append(serialise_length(toUType(type)));
-	line.append(data);
-
-	L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path, repr(line, quote));
-
-	uint32_t rev = database->get_revision();
-
-	uint32_t slot = rev - header.head.revision;
-
-	if (slot >= WAL_SLOTS) {
-		open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-		slot = rev - header.head.revision;
-	}
-
 	try {
-		write(line.data(), line.size());
-	} catch (const StorageClosedError&) {
-		auto volumes = get_volumes_range(WAL_STORAGE_PATH, rev, rev);
-		open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-		write(line.data(), line.size());
-	}
+		assert(database->flags & DB_WRITABLE);
+		assert(!(database->flags & DB_NOWAL));
 
-	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
+		auto endpoint = database->endpoints[0];
+		assert(endpoint.is_local());
 
-	if (commit_) {
-		if (slot + 1 >= WAL_SLOTS) {
-			open(string::format(WAL_STORAGE_PATH "%u", rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
-		} else {
-			header.slot[slot + 1] = header.slot[slot];
+		std::string revision_encode = database->get_revision_str();
+		std::string line = revision_encode;
+		line.append(serialise_length(toUType(type)));
+		line.append(data);
+
+		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path, repr(line, quote));
+
+		uint32_t rev = database->get_revision();
+
+		uint32_t slot = rev - header.head.revision;
+
+		if (slot >= WAL_SLOTS) {
+			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			slot = rev - header.head.revision;
 		}
-	}
 
-	commit();
+		try {
+			write(line.data(), line.size());
+		} catch (const StorageClosedError&) {
+			auto volumes = get_volumes_range(WAL_STORAGE_PATH, rev, rev);
+			open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			write(line.data(), line.size());
+		}
+
+		header.slot[slot] = header.head.offset; /* Beginning of the next revision */
+
+		if (commit_) {
+			if (slot + 1 >= WAL_SLOTS) {
+				open(string::format(WAL_STORAGE_PATH "%u", rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
+			} else {
+				header.slot[slot + 1] = header.slot[slot];
+			}
+		}
+
+		commit();
+	} catch (const StorageException& exc) {
+		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
+		Metrics::metrics()
+			.xapiand_wal_errors
+			.Increment();
+	}
 }
 
 

@@ -44,6 +44,13 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)
 			"HTTP requests summary",
 			constant_labels)
 	  },
+	  xapiand_wal_errors{
+		registry.AddCounter(
+			"xapiand_wal_errors",
+			"WAL errors",
+			constant_labels)
+		.Add({})
+	  },
 	  xapiand_uptime{
 		registry.AddGauge(
 			"xapiand_uptime",
