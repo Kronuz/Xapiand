@@ -1507,7 +1507,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	auto took_milliseconds = took / 1000000.0;
+	auto took_milliseconds = took / 1e6;
 
 	MsgPack response_obj = {
 		{ RESPONSE_ENDPOINT, endpoints.to_string() },
@@ -1890,7 +1890,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	auto took_milliseconds = took / 1000000.0;
+	auto took_milliseconds = took / 1e6;
 	auto took_delta = string::Number(took_milliseconds).str();
 	L_TIME("Searching took %s", string::from_delta(took));
 
