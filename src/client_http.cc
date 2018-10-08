@@ -1078,7 +1078,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({{"operation", "delete"}})
-		.Observe(took / 1e6);
+		.Observe(took / 1e9);
 }
 
 
@@ -1134,7 +1134,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({{"operation", "index"}})
-		.Observe(took / 1e6);
+		.Observe(took / 1e9);
 }
 
 
@@ -1203,17 +1203,17 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({{"operation", "patch"}})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 	} else if (method == HTTP_STORE) {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({{"operation", "store"}})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({{"operation", "merge"}})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 	}
 }
 
@@ -1414,7 +1414,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({{"operation", "commit"}})
-		.Observe(took / 1e6);
+		.Observe(took / 1e9);
 }
 
 
@@ -1962,12 +1962,12 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({{"operation", "aggregation"}})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({{"operation", "search"}})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 	}
 
 	L_SEARCH("FINISH SEARCH");
@@ -2613,7 +2613,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 				{"method", http_method_str(HTTP_PARSER_METHOD(&request.parser))},
 				{"status", string::Number(response.status).str()},
 			})
-			.Observe(took / 1e6);
+			.Observe(took / 1e9);
 
 		L(priority, NO_COLOR, fmt, request.head, (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
 	}
