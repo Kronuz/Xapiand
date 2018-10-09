@@ -681,7 +681,7 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
+DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint32_t revision)
 {
 	L_CALL("DatabaseWAL::write_line(...)");
 	try {
@@ -691,35 +691,37 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool commit_)
 		auto endpoint = database->endpoints[0];
 		assert(endpoint.is_local());
 
-		std::string revision_encode = database->get_revision_str();
-		std::string line = revision_encode;
+		if (!was_commit) {
+			revision = database->get_revision();
+		}
+
+		std::string line;
+		line.append(serialise_length(revision));
 		line.append(serialise_length(toUType(type)));
 		line.append(data);
 
 		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path, repr(line, quote));
 
-		uint32_t rev = database->get_revision();
-
-		uint32_t slot = rev - header.head.revision;
+		uint32_t slot = revision - header.head.revision;
 
 		if (slot >= WAL_SLOTS) {
-			open(string::format(WAL_STORAGE_PATH "%u", rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-			slot = rev - header.head.revision;
+			open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			slot = revision - header.head.revision;
 		}
 
 		try {
 			write(line.data(), line.size());
 		} catch (const StorageClosedError&) {
-			auto volumes = get_volumes_range(WAL_STORAGE_PATH, rev, rev);
-			open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
+			open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			write(line.data(), line.size());
 		}
 
 		header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
-		if (commit_) {
+		if (was_commit) {
 			if (slot + 1 >= WAL_SLOTS) {
-				open(string::format(WAL_STORAGE_PATH "%u", rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
+				open(string::format(WAL_STORAGE_PATH "%u", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
 			} else {
 				header.slot[slot + 1] = header.slot[slot];
 			}
@@ -765,11 +767,11 @@ DatabaseWAL::write_delete_document_term(std::string_view term)
 
 
 void
-DatabaseWAL::write_commit()
+DatabaseWAL::write_commit(uint32_t revision)
 {
-	L_CALL("DatabaseWAL::write_commit()");
+	L_CALL("DatabaseWAL::write_commit(%u)", revision);
 
-	write_line(Type::COMMIT, "", true);
+	write_line(Type::COMMIT, "", true, revision);
 }
 
 
@@ -1214,7 +1216,7 @@ Database::get_uuid() const
 }
 
 
-uint32_t
+Xapian::rev
 Database::get_revision() const
 {
 	L_CALL("Database::get_revision()");
@@ -1224,15 +1226,6 @@ Database::get_revision() const
 #else
 	return 0;
 #endif
-}
-
-
-std::string
-Database::get_revision_str() const
-{
-	L_CALL("Database::get_revision_str()");
-
-	return serialise_length(get_revision());
 }
 
 
@@ -1251,14 +1244,9 @@ Database::commit(bool wal_)
 		return false;
 	}
 
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_commit(); }
-#else
-	ignore_unused(wal_);
-#endif
-
 	L_DATABASE_WRAP_INIT();
 
+	Xapian::rev revision;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Commit: t: %d", t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1266,6 +1254,7 @@ Database::commit(bool wal_)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
+			revision = wdb->get_revision();
 			wdb->commit();
 			if (queue) {
 				queue->modified = false;
@@ -1288,6 +1277,12 @@ Database::commit(bool wal_)
 	}
 
 	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_commit(revision); }
+#else
+	ignore_unused(wal_);
+#endif
 
 	return true;
 }

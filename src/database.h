@@ -193,11 +193,11 @@ public:
 	const UUID& uuid_le() const;
 
 	bool init_database();
-	void write_line(Type type, std::string_view data, bool commit_=false);
+	void write_line(Type type, std::string_view data, bool was_commit=false, uint32_t revision=0);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
 	void write_delete_document_term(std::string_view term);
-	void write_commit();
+	void write_commit(uint32_t revision);
 	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
 	void write_replace_document_term(std::string_view term, const Xapian::Document& doc);
 	void write_delete_document(Xapian::docid did);
@@ -325,8 +325,7 @@ public:
 #endif /* XAPIAND_DATA_STORAGE */
 
 	UUID get_uuid() const;
-	uint32_t get_revision() const;
-	std::string get_revision_str() const;
+	Xapian::rev get_revision() const;
 
 	bool commit(bool wal_=true);
 	void cancel(bool wal_=true);
