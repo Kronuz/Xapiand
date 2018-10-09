@@ -309,8 +309,12 @@ Logging::cleanup()
 long double
 Logging::age()
 {
-	auto now = (cleared_at > created_at) ? time_point_from_ullong(cleared_at) : std::chrono::system_clock::now();
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(now - time_point_from_ullong(created_at)).count();
+	if (cleared_at > created_at) {
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(
+			time_point_from_ullong(cleared_at) - time_point_from_ullong(created_at)
+		).count();
+	}
+	return 0;
 }
 
 
