@@ -1703,8 +1703,8 @@ DatabaseHandler::get_database_info()
 	L_CALL("DatabaseHandler::get_database_info()");
 
 	lock_database lk_db(this);
-	unsigned doccount = database->db->get_doccount();
-	unsigned lastdocid = database->db->get_lastdocid();
+	auto doccount = database->db->get_doccount();
+	auto lastdocid = database->db->get_lastdocid();
 	MsgPack info;
 	info[RESPONSE_UUID] = database->db->get_uuid();
 	info[RESPONSE_REVISION] = database->db->get_revision();
