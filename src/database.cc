@@ -690,7 +690,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint32_t revision)
 {
-	L_CALL("DatabaseWAL::write_line(...)");
+	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s, %u)", names[toUType(type)], was_commit ? "true" : "false", revision);
 	try {
 		assert(database->flags & DB_WRITABLE);
 		assert(!(database->flags & DB_NOWAL));
