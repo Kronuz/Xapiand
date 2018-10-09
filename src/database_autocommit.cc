@@ -103,21 +103,22 @@ DatabaseAutocommit::run()
 	}
 
 	if (weak_database.lock()) {
-		bool successful = false;
 		auto start = std::chrono::system_clock::now();
 
+		std::string error;
 		try {
 			DatabaseHandler db_handler(endpoints, DB_WRITABLE);
 			db_handler.commit();
-			successful = true;
-		} catch (const Exception& e) { }
+		} catch (const Exception& exc) {
+			error = exc.get_message();
+		}
 
 		auto end = std::chrono::system_clock::now();
 
-		if (successful) {
-			L_DEBUG("Autocommit: %s%s (took %s)", repr(endpoints.to_string()), forced ? " (forced)" : "", string::from_delta(start, end));
+		if (error.empty()) {
+			L_DEBUG("Autocommit%s succeeded after %s", forced ? " (forced)" : "", string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit falied: %s%s (took %s)", repr(endpoints.to_string()), forced ? " (forced)" : "", string::from_delta(start, end));
+			L_WARNING("Autocommit%s falied after %s: %s", forced ? " (forced)" : "", string::from_delta(start, end), error);
 		}
 	}
 }

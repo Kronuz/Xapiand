@@ -111,11 +111,11 @@ AsyncFsync::run()
 
 	if (err == -1) {
 		if (errno == EBADF || errno == EINVAL) {
-			L_DEBUG("Async %s%s falied in %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+			L_DEBUG("Async %s%s falied after %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
 		} else {
-			L_WARNING("Async %s%s falied in %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+			L_WARNING("Async %s%s falied after %s: %s (%d): %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
 		}
 	} else {
-		L_DEBUG("Async %s%s succeeded in %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end));
+		L_DEBUG("Async %s%s succeeded after %s", mode == 1 ? "Full Fsync" : "Fsync", forced ? " (forced)" : "", string::from_delta(start, end));
 	}
 }
