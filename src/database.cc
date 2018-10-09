@@ -224,11 +224,6 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 			}
 		}
 
-		end_rev = file_rev + high_slot;
-		if (end_rev < revision) {
-			continue;
-		}
-
 		if (file_rev == volumes.second) {
 			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 			if (only_committed) {
@@ -236,6 +231,11 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 				// In case not "committed" not execute the high slot avaible because are operations without commit
 				--high_slot;
 			}
+		}
+
+		end_rev = file_rev + high_slot;
+		if (end_rev < revision) {
+			continue;
 		}
 
 		uint32_t start_off;
@@ -457,13 +457,13 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 			continue;
 		}
 
+		if (file_rev == volumes.second) {
+			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
+		}
+
 		end_rev = file_rev + high_slot;
 		if (end_rev < start_revision) {
 			continue;
-		}
-
-		if (file_rev == volumes.second) {
-			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 		}
 
 		uint32_t start_off;
