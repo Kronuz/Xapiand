@@ -177,107 +177,114 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
 	bool modified = false;
-	bool reach_end = false;
 
-	uint32_t end_rev;
-	for (end_rev = volumes.first; end_rev <= volumes.second && !reach_end; ++end_rev) {
-		try {
-			open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
-		} catch (const StorageIOError& exc) {
-			if (unsafe) {
-				L_WARNING("Cannot open WAL volume: %s", exc.get_context());
-				continue;
-			}
-			throw;
-		} catch (const StorageCorruptVolume& exc) {
-			if (unsafe) {
-				L_WARNING("Corrupt WAL volume: %s", exc.get_context());
-				continue;
-			}
-			throw;
-		}
-
-		uint32_t file_rev, begin_rev;
-		file_rev = begin_rev = end_rev;
-		if (file_rev != header.head.revision) {
-			if (unsafe) {
-				L_WARNING("Incorrect WAL revision");
-				continue;
-			}
-			THROW(StorageCorruptVolume, "Incorrect WAL revision");
-		}
-
-		auto high_slot = highest_valid_slot();
-		if (high_slot == static_cast<uint32_t>(-1)) {
-			if (revision != file_rev) {
+	try {
+		bool end = false;
+		uint32_t end_rev;
+		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
+			try {
+				open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
+			} catch (const StorageIOError& exc) {
 				if (unsafe) {
-					L_WARNING("No WAL slots");
+					L_WARNING("Cannot open WAL volume: %s", exc.get_context());
 					continue;
 				}
-				THROW(StorageCorruptVolume, "No WAL slots");
+				throw;
+			} catch (const StorageCorruptVolume& exc) {
+				if (unsafe) {
+					L_WARNING("Corrupt WAL volume: %s", exc.get_context());
+					continue;
+				}
+				throw;
 			}
-			continue;
-		}
-		if (high_slot == 0) {
-			if (only_committed) {
+
+			uint32_t file_rev, begin_rev;
+			file_rev = begin_rev = end_rev;
+			if (file_rev != header.head.revision) {
+				if (unsafe) {
+					L_WARNING("Incorrect WAL revision");
+					continue;
+				}
+				THROW(StorageCorruptVolume, "Incorrect WAL revision");
+			}
+
+			auto high_slot = highest_valid_slot();
+			if (high_slot == static_cast<uint32_t>(-1)) {
+				if (revision != file_rev) {
+					if (unsafe) {
+						L_WARNING("No WAL slots");
+						continue;
+					}
+					THROW(StorageCorruptVolume, "No WAL slots");
+				}
 				continue;
 			}
-		}
-
-		if (file_rev == volumes.second) {
-			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
-			if (only_committed) {
-				// last slot is uncommitted contain offset at the end of file
-				// In case not "committed" not execute the high slot avaible because are operations without commit
-				--high_slot;
+			if (high_slot == 0) {
+				if (only_committed) {
+					continue;
+				}
 			}
-		}
 
-		end_rev = file_rev + high_slot;
-		if (end_rev < revision) {
-			continue;
-		}
+			if (file_rev == volumes.second) {
+				end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
+				if (only_committed) {
+					// last slot is uncommitted contain offset at the end of file
+					// In case not "committed" not execute the high slot avaible because are operations without commit
+					--high_slot;
+				}
+			}
 
-		uint32_t start_off;
-		if (file_rev == volumes.first) {
-			auto slot = revision - file_rev - 1;
-			if (slot == static_cast<uint32_t>(-1)) {
-				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
-				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-				begin_rev = file_rev;
-				start_off = STORAGE_START_BLOCK_OFFSET;
+			end_rev = file_rev + high_slot;
+			if (end_rev < revision) {
+				continue;
+			}
+
+			uint32_t start_off;
+			if (file_rev == volumes.first) {
+				auto slot = revision - file_rev - 1;
+				if (slot == static_cast<uint32_t>(-1)) {
+					// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+					// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+					begin_rev = file_rev;
+					start_off = STORAGE_START_BLOCK_OFFSET;
+				} else {
+					begin_rev = file_rev + slot;
+					start_off = header.slot[slot];
+				}
 			} else {
-				begin_rev = file_rev + slot;
-				start_off = header.slot[slot];
+				start_off = STORAGE_START_BLOCK_OFFSET;
 			}
+
+			auto end_off = header.slot[high_slot];
+			if (start_off < end_off) {
+				L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
+			}
+
+			seek(start_off);
+			try {
+				while (true) {
+					std::string line = read(end_off);
+					modified = execute(line, unsafe);
+				}
+			} catch (const StorageEOF& exc) { }
+		}
+
+		if (volumes.first <= volumes.second) {
+			if (end_rev < revision) {
+				if (!unsafe) {
+					THROW(StorageCorruptVolume, "WAL revision not reached");
+				}
+				L_WARNING("WAL revision not reached");
+			}
+			open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		} else {
-			start_off = STORAGE_START_BLOCK_OFFSET;
+			open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		}
-
-		auto end_off = header.slot[high_slot];
-		if (start_off < end_off) {
-			L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
-		}
-
-		seek(start_off);
-		try {
-			while (true) {
-				std::string line = read(end_off);
-				modified = execute(line, unsafe);
-			}
-		} catch (const StorageEOF& exc) { }
-	}
-
-	if (volumes.first <= volumes.second) {
-		if (end_rev < revision) {
-			if (!unsafe) {
-				THROW(StorageCorruptVolume, "WAL revision not reached");
-			}
-			L_WARNING("WAL revision not reached");
-		}
-		open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-	} else {
-		open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+	} catch (const StorageException& exc) {
+		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
+		Metrics::metrics()
+			.xapiand_wal_errors
+			.Increment();
 	}
 
 	return modified;
@@ -428,10 +435,9 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 
 	MsgPack repr{MsgPack::Type::ARRAY};
 
-	bool reach_end = false;
-
+	bool end = false;
 	uint32_t end_rev;
-	for (end_rev = volumes.first; end_rev <= volumes.second && !reach_end; ++end_rev) {
+	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
 			open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
 		} catch (const StorageIOError& exc) {
@@ -458,7 +464,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 		}
 
 		if (file_rev == volumes.second) {
-			reach_end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
+			end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
 		}
 
 		end_rev = file_rev + high_slot;
