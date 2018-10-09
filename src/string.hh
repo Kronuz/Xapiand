@@ -341,11 +341,11 @@ inline void to_lower(std::string& str) {
 }
 
 
-std::string from_bytes(size_t bytes, bool colored = false);
-std::string from_small_time(long double seconds, bool colored = false);
-std::string from_time(long double seconds, bool colored = false);
-std::string from_delta(long double nanoseconds, bool colored = false);
-std::string from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored = false);
+std::string from_bytes(size_t bytes, const char* prefix = "", bool colored = false);
+std::string from_small_time(long double seconds, const char* prefix = "", bool colored = false);
+std::string from_time(long double seconds, const char* prefix = "", bool colored = false);
+std::string from_delta(long double nanoseconds, const char* prefix = "", bool colored = false);
+std::string from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, const char* prefix = "", bool colored = false);
 
 
 class Number {
