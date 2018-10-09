@@ -158,7 +158,6 @@ constexpr int DB_VOLATILE     = 0x0008; // Always drop the database from the dat
 constexpr int DB_REPLICATION  = 0x0010; // Use conditional pop in the queue, only pop when replication is done
 constexpr int DB_NOWAL        = 0x0020; // Disable open wal file
 constexpr int DB_NOSTORAGE    = 0x0040; // Disable separate data storage file for the database
-constexpr int DB_COMMIT       = 0x0101; // Commits database when needed
 
 
 enum class FieldType : uint8_t;

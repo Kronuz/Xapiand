@@ -296,6 +296,7 @@ public:
 	int flags;
 	size_t hash;
 	long long mastery_level;
+	bool modified;
 	std::chrono::system_clock::time_point reopen_time;
 	uint32_t reopen_revision;
 	bool incomplete;
@@ -372,7 +373,6 @@ private:
 	};
 
 	replica_state state;
-	std::atomic_bool modified;
 	std::atomic_uint32_t revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;

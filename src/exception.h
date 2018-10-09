@@ -115,13 +115,6 @@ public:
 };
 
 
-class CheckoutErrorCommited : public CheckoutError {
-public:
-	template<typename... Args>
-	CheckoutErrorCommited(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
-};
-
-
 class CheckoutErrorReplicating : public CheckoutError {
 public:
 	template<typename... Args>
