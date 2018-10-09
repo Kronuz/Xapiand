@@ -434,7 +434,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 		start_revision = volumes.first;
 	}
 
-	MsgPack repr{MsgPack::Type::ARRAY};
+	MsgPack repr(MsgPack::Type::ARRAY);
 
 	bool end = false;
 	uint32_t end_rev;
