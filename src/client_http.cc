@@ -1080,7 +1080,6 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "delete"},
-			{"op", "delete"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1109,7 +1108,6 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "delete_schema"},
-			{"op", "delete_schema"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1151,7 +1149,6 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "index"},
-			{"op", "index"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1186,7 +1183,6 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "write_schema"},
-			{"op", "write_schema"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1233,24 +1229,21 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
-				{"operation", "update"},
-				{"op", "patch"},
+				{"operation", "patch"},
 			})
 			.Observe(took / 1e9);
 	} else if (method == HTTP_STORE) {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
-				{"operation", "update"},
-				{"op", "store"},
+				{"operation", "store"},
 			})
 			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
-				{"operation", "update"},
-				{"op", "merge"},
+				{"operation", "merge"},
 			})
 			.Observe(took / 1e9);
 	}
@@ -1316,7 +1309,6 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "get_metadata"},
-			{"op", "get_metadata"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1394,8 +1386,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({
-			{"operation", "info"},
-			{"op", "info"}
+			{"operation", "info"}
 		})
 		.Observe(took / 1e9);
 }
@@ -1459,7 +1450,6 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "touch"},
-			{"op", "touch"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1492,7 +1482,6 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "commit"},
-			{"op", "commit"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1557,7 +1546,6 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "dump"},
-			{"op", "dump"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1614,7 +1602,6 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "restore"},
-			{"op", "restore"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1658,7 +1645,6 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "schema"},
-			{"op", "schema"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1690,7 +1676,6 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "wal"},
-			{"op", "wal"},
 		})
 		.Observe(took / 1e9);
 }
@@ -1721,7 +1706,6 @@ HttpClient::check_view(Request& request, Response& response, enum http_method /*
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "db_check"},
-			{"op", "db_check"},
 		})
 		.Observe(took / 1e9);
 }
@@ -2097,8 +2081,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
-				{"operation", "search"},
-				{"op", "aggregation"},
+				{"operation", "aggregation"},
 			})
 			.Observe(took / 1e9);
 	} else {
@@ -2106,7 +2089,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			.xapiand_operations_summary
 			.Add({
 				{"operation", "search"},
-				{"op", "search"},
 			})
 			.Observe(took / 1e9);
 	}
