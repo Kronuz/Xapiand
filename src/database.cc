@@ -282,6 +282,7 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 		}
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
+		database->wal.reset();
 		Metrics::metrics()
 			.xapiand_wal_errors
 			.Increment();
@@ -736,6 +737,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint3
 		commit();
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
+		database->wal.reset();
 		Metrics::metrics()
 			.xapiand_wal_errors
 			.Increment();
