@@ -61,7 +61,7 @@ BinaryServer::signal_async_cb(ev::async&, int revents)
 
 	L_EV_BEGIN("BinaryServer::signal_async_cb:BEGIN");
 
-	while (binary->tasks.call(share_this<BinaryServer>())) {}
+	while (binary->tasks.call(share_this<BinaryServer>())) {};
 
 	L_EV_END("BinaryServer::signal_async_cb:END");
 }

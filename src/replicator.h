@@ -40,7 +40,6 @@ class XapiandReplicator : public Worker {
 
 	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
-	void run();
 
 	void on_commit(const Endpoint &endpoint);
 
@@ -55,6 +54,8 @@ public:
 	}
 
 	~XapiandReplicator();
+
+	void run();
 };
 
 #endif

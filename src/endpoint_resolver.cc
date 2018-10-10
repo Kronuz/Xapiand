@@ -25,6 +25,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "client_http.h"
+#include "manager.h"
 #include "servers/discovery.h"
 
 #include <unistd.h>

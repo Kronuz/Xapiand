@@ -27,9 +27,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <memory>            // for shared_ptr, weak_ptr
-#include <string>            // for string
-#include <vector>            // for vector
+#include <future>            // for std::shared_future
+#include <memory>            // for std::shared_ptr, std::weak_ptr
+#include <string>            // for std::string
+#include <vector>            // for std::vector
 
 #include "tcp_base.h"        // for BaseTCP
 #include "threadpool.h"      // for TaskQueue
@@ -37,7 +38,7 @@
 
 class Endpoint;
 class BinaryServer;
-
+class DiscoveryServer;
 
 // Configuration data for Binary
 class Binary : public BaseTCP {
@@ -47,7 +48,7 @@ class Binary : public BaseTCP {
 	void signal_send_async();
 
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
-	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;
+	TaskQueue<bool(const std::shared_ptr<BinaryServer>&)> tasks;
 
 public:
 	std::string __repr__() const override {

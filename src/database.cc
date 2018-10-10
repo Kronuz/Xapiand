@@ -2627,6 +2627,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 
+	if (signal_checkins) {
+		while (database->checkin_callbacks.call(database)) {};
+	}
+
 	database.reset();
 
 	lk.unlock();

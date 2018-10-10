@@ -43,9 +43,11 @@ constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MINOR_VERSION = 0;
 
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_VERSION = XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION | XAPIAND_RAFT_PROTOCOL_MINOR_VERSION << 8;
 
+class RaftServer;
 
 // The Raft consensus algorithm
 class Raft : public BaseUDP {
+	friend RaftServer;
 public:
 	enum class State {
 		LEADER,

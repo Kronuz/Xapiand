@@ -256,7 +256,7 @@ DiscoveryServer::db(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto index_path = unserialise_string(&p, p_end);
+	auto index_path = std::string(unserialise_string(&p, p_end));
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(index_path)), DB_OPEN);
 	long long mastery_level = db_handler.get_mastery_level();
@@ -299,7 +299,7 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 
 	long long remote_mastery_level = unserialise_length(&p, p_end);
 
-	auto index_path = unserialise_string(&p, p_end);
+	auto index_path = std::string(unserialise_string(&p, p_end));
 
 	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
@@ -346,7 +346,7 @@ DiscoveryServer::db_updated(const std::string& message)
 	const char *p_end = p + message.size();
 
 	long long remote_mastery_level = unserialise_length(&p, p_end);
-	auto index_path = unserialise_string(&p, p_end);
+	auto index_path = std::string(unserialise_string(&p, p_end));
 
 	DatabaseHandler db_handler(Endpoints(Endpoint(index_path)), DB_OPEN);
 	long long mastery_level = db_handler.get_mastery_level();
@@ -382,7 +382,7 @@ DiscoveryServer::db_updated(const std::string& message)
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	int fd = binary->sock;
+	int fd = discovery->sock;
 	if (fd == -1) {
 		return;
 	}

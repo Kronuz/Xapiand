@@ -29,6 +29,7 @@
 #include <functional>     // for std::function
 #include <future>         // for std::future, std::packaged_task
 #include <mutex>          // for std::mutex
+#include <queue>          // for std::queue
 #include <thread>         // for std::thread
 #include <tuple>          // for std::make_tuple, std::apply
 #include <vector>         // for std::vector
@@ -354,3 +355,44 @@ inline auto ThreadPool::finished()
 {
 	return _finished.load(std::memory_order_relaxed);
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename>
+class TaskQueue;
+
+template <typename R, typename... Args>
+class TaskQueue<R(Args...)> {
+	std::queue<std::packaged_task<R(Args...)>> _queue;
+
+public:
+	template <typename Func>
+	auto enqueue(Func&& func) {
+		auto packaged_task = std::packaged_task<R(Args...)>(std::forward<Func>(func));
+		auto future = packaged_task.get_future();
+		_queue.push(std::move(packaged_task));
+		return future;
+	}
+
+	bool call(Args&&... args) {
+		if (_queue.empty()) {
+			return false;
+		}
+		_queue.front()(std::forward<Args>(args)...);
+		_queue.pop();
+		return true;
+	}
+
+	void clear() {
+		_queue.clear();
+	}
+
+	auto empty() {
+		return _queue.empty();
+	}
+
+	auto size() {
+		return _queue.size();
+	}
+};

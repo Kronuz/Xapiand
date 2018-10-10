@@ -39,9 +39,12 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
+class DiscoveryServer;
 
 // Discovery for nodes and databases
 class Discovery : public BaseUDP {
+	friend DiscoveryServer;
+
 private:
 	ev::timer heartbeat;
 	ev::async enter_async;
