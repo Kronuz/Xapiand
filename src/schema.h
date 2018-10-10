@@ -1070,7 +1070,7 @@ public:
 				}
 				/* FALLTHROUGH */
 			default:
-				return spc;
+				return std::move(spc);
 		}
 	}
 
