@@ -29,7 +29,7 @@
 #include <functional>     // for std::function
 #include <future>         // for std::future, std::packaged_task
 #include <mutex>          // for std::mutex
-#include <queue>          // for std::queue
+#include <deque>          // for std::deque
 #include <thread>         // for std::thread
 #include <tuple>          // for std::make_tuple, std::apply
 #include <vector>         // for std::vector
@@ -364,14 +364,14 @@ class TaskQueue;
 
 template <typename R, typename... Args>
 class TaskQueue<R(Args...)> {
-	std::queue<std::packaged_task<R(Args...)>> _queue;
+	std::deque<std::packaged_task<R(Args...)>> _queue;
 
 public:
 	template <typename Func>
 	auto enqueue(Func&& func) {
 		auto packaged_task = std::packaged_task<R(Args...)>(std::forward<Func>(func));
 		auto future = packaged_task.get_future();
-		_queue.push(std::move(packaged_task));
+		_queue.push_back(std::move(packaged_task));
 		return future;
 	}
 
@@ -380,7 +380,7 @@ public:
 			return false;
 		}
 		_queue.front()(std::forward<Args>(args)...);
-		_queue.pop();
+		_queue.pop_front();
 		return true;
 	}
 
