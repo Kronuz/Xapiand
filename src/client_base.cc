@@ -471,12 +471,12 @@ BaseClient::write(const char *buf, size_t buf_size)
 	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
-	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
 
 	int fd = sock;
 	if (fd == -1) {
 		return false;
 	}
+	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> %s", fd, repr(buf, buf_size));
 
 	written += 1;
 
@@ -501,12 +501,12 @@ BaseClient::write_file(std::string_view path, bool unlink)
 	if (!write_queue.push(std::make_shared<Buffer>(path, unlink))) {
 		return false;
 	}
-	//L_TCP_WIRE("{fd:%d} <ENQUEUE> '%s'", fd, repr(buf, buf_size));
 
 	int fd = sock;
 	if (fd == -1) {
 		return false;
 	}
+	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> file: '%s", fd, repr(path));
 
 	written += 1;
 
