@@ -461,7 +461,6 @@ class DatabasePool {
 	template<typename Func>
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, Func&& callback) {
 		checkout(database, endpoints, flags);
-		assert(database->checkin_callbacks.empty());
 		database->checkin_callbacks.clear();
 		database->checkin_callbacks.enqueue(std::forward<Func>(callback));
 	}

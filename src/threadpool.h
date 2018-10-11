@@ -364,35 +364,33 @@ class TaskQueue;
 
 template <typename R, typename... Args>
 class TaskQueue<R(Args...)> {
-	std::deque<std::packaged_task<R(Args...)>> _queue;
+	using Queue = ConcurrentQueue<std::packaged_task<R(Args...)>>;
+	Queue _queue;
 
 public:
 	template <typename Func>
 	auto enqueue(Func&& func) {
 		auto packaged_task = std::packaged_task<R(Args...)>(std::forward<Func>(func));
 		auto future = packaged_task.get_future();
-		_queue.push_back(std::move(packaged_task));
+		_queue.enqueue(std::move(packaged_task));
 		return future;
 	}
 
 	bool call(Args&&... args) {
-		if (_queue.empty()) {
-			return false;
+		std::packaged_task<R(Args...)> task;
+		if (_queue.try_dequeue(task)) {
+			task(std::forward<Args>(args)...);
+			return true;
 		}
-		_queue.front()(std::forward<Args>(args)...);
-		_queue.pop_front();
-		return true;
+		return false;
 	}
 
-	void clear() {
-		_queue.clear();
-	}
-
-	auto empty() {
-		return _queue.empty();
-	}
-
-	auto size() {
-		return _queue.size();
+	size_t clear() {
+		std::array<std::packaged_task<R(Args...)>, Queue::BLOCK_SIZE> tasks;
+		size_t cleared = 0;
+		while (auto dequeued = _queue.try_dequeue_bulk(tasks.begin(), tasks.size())) {
+			cleared += dequeued;
+		}
+		return cleared;
 	}
 };
