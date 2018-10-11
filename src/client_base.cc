@@ -348,6 +348,8 @@ BaseClient::destroyer()
 void
 BaseClient::stop()
 {
+	L_CALL("BaseClient::stop()");
+
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
 	L_EV("Stop read event");
@@ -444,7 +446,7 @@ BaseClient::write_from_queue(int fd)
 WR
 BaseClient::write_from_queue(int fd, int max)
 {
-	L_CALL("BaseClient::write_from_queue(%d)", fd);
+	L_CALL("BaseClient::write_from_queue(%d, %d)", fd, max);
 
 	WR status = WR::PENDING;
 
@@ -462,7 +464,7 @@ BaseClient::write_from_queue(int fd, int max)
 bool
 BaseClient::write(const char *buf, size_t buf_size)
 {
-	L_CALL("BaseClient::write(<buf>, %lu)", buf_size);
+	L_CALL("BaseClient::write(<buf>, %zu)", buf_size);
 
 	assert(buf_size);
 
@@ -524,14 +526,14 @@ BaseClient::write_file(std::string_view path, bool unlink)
 void
 BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
+	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock.load(), watcher.fd);
+
 	int fd = sock;
 	if (fd == -1) {
 		return;
 	}
-	ignore_unused(watcher);
-	assert(fd == watcher.fd || fd == -1);
+	assert(fd == watcher.fd);
 
-	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
@@ -572,14 +574,14 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 void
 BaseClient::io_cb_read(ev::io &watcher, int revents)
 {
+	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock.load(), watcher.fd);
+
 	int fd = sock;
 	if (fd == -1) {
 		return;
 	}
-	ignore_unused(watcher);
-	assert(fd == watcher.fd || fd == -1);
+	assert(fd == watcher.fd);
 
-	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
@@ -810,7 +812,7 @@ BaseClient::read_file()
 bool
 BaseClient::send_file(int fd, size_t offset)
 {
-	L_CALL("BaseClient::send_file()");
+	L_CALL("BaseClient::send_file(%d, %zu)", fd, offset);
 
 	ssize_t compressed = -1;
 	switch (*TYPE_COMPRESSOR) {
