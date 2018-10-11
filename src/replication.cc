@@ -139,7 +139,7 @@ Replication::msg_get_changesets(const std::string &)
 void
 Replication::replication_client(ReplicationReplyType type, const std::string &message)
 {
-	L_CALL("Replication::replication_client(%s, <message>)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames[static_cast<int>(type)]);
 
 	static const dispatch_func dispatch[] = {
 		&Replication::reply_end_of_changes,
