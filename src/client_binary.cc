@@ -121,6 +121,8 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
+	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+
 	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
@@ -161,6 +163,8 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 void
 BinaryClient::on_read_file_done()
 {
+	L_CALL("BinaryClient::on_read_file_done()");
+
 	L_BINARY_WIRE("BinaryClient::on_read_file_done");
 
 	io::lseek(file_descriptor, 0, SEEK_SET);
@@ -197,6 +201,8 @@ BinaryClient::on_read_file_done()
 void
 BinaryClient::on_read_file(const char *buf, ssize_t received)
 {
+	L_CALL("BinaryClient::on_read_file(<buf>, %zu)", received);
+
 	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
 	io::write(file_descriptor, buf, received);
 }
@@ -205,6 +211,8 @@ BinaryClient::on_read_file(const char *buf, ssize_t received)
 void
 BinaryClient::on_read(const char *buf, ssize_t received)
 {
+	L_CALL("BinaryClient::on_read(<buf>, %zu)", received);
+
 	if (received <= 0) {
 		return;
 	}
@@ -225,7 +233,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			return;
 		}
 
-		L_BINARY("on_read message: '\\%02x' (state=0x%x)", type, state);
+		L_BINARY("on_read message: '\\%02x' (state=0x%x)", static_cast<int>(type), toUType(state));
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
@@ -251,6 +259,8 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 char
 BinaryClient::get_message(std::string &result, char max_type)
 {
+	L_CALL("BinaryClient::get_message(<result>, <max_type>)");
+
 	std::unique_ptr<Buffer> msg;
 	if (!messages_queue.pop(msg)) {
 		THROW(NetworkError, "No message available");
@@ -281,6 +291,8 @@ BinaryClient::get_message(std::string &result, char max_type)
 void
 BinaryClient::send_message(char type_as_char, const std::string &message, double)
 {
+	L_CALL("BinaryClient::send_message(<type_as_char>, <message>, <>)");
+
 	std::string buf;
 	buf += type_as_char;
 
@@ -294,6 +306,8 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 void
 BinaryClient::checkout_database()
 {
+	L_CALL("BinaryClient::checkout_database()");
+
 	if (!database) {
 		int _flags = writable ? DB_WRITABLE : DB_OPEN;
 		if ((flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
@@ -315,6 +329,8 @@ BinaryClient::checkout_database()
 void
 BinaryClient::checkin_database()
 {
+	L_CALL("BinaryClient::checkin_database()");
+
 	if (database) {
 		XapiandManager::manager->database_pool.checkin(database);
 		database.reset();
@@ -327,6 +343,8 @@ BinaryClient::checkin_database()
 void
 BinaryClient::run()
 {
+	L_CALL("BinaryClient::run()");
+
 	try {
 		_run();
 	} catch (...) {
@@ -340,6 +358,8 @@ BinaryClient::run()
 void
 BinaryClient::_run()
 {
+	L_CALL("BinaryClient::_run()");
+
 	L_OBJ_BEGIN("BinaryClient::run:BEGIN");
 	if (running++) {
 		--running;
