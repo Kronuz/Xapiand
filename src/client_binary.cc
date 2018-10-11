@@ -244,11 +244,16 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		}
 
 		if (messages_queue.empty()) {
+			// Enqueue message...
+			messages_queue.push(std::make_unique<Buffer>(type, p, len));
+			// And start a runner.
 			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 				task->run();
 			});
+		} else {
+			// There should be a runner, just enqueue message.
+			messages_queue.push(std::make_unique<Buffer>(type, p, len));
 		}
-		messages_queue.push(std::make_unique<Buffer>(type, p, len));
 		buffer.erase(0, p - o + len);
 	}
 }

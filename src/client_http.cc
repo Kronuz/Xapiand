@@ -383,12 +383,16 @@ HttpClient::on_info(http_parser* parser)
 				}
 				std::lock_guard<std::mutex> lk(requests_mutex);
 				if (requests.empty()) {
-					// There wasn't one, start runner
+					// Enqueue request...
+					requests.push_back(std::move(new_request));
+					// And start a runner.
 					XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
 						task->run();
 					});
+				} else {
+					// There should be a runner, just enqueue request.
+					requests.push_back(std::move(new_request));
 				}
-				requests.push_back(std::move(new_request));
 			}
 			new_request = Request(this);
 			break;
