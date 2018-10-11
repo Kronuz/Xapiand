@@ -48,6 +48,8 @@ enum class State {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient {
+	std::mutex running_mutex;
+
 	State state;
 
 	char file_path[PATH_MAX];

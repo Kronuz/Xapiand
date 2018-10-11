@@ -343,12 +343,10 @@ BinaryClient::run()
 {
 	L_CALL("BinaryClient::run()");
 
+	std::lock_guard<std::mutex> lk(running_mutex);
 	L_CONN("Start running in binary worker...");
 
-	if (!idle.exchange(false)) {
-		// if it already wasn't idle, do nothing!
-		return;
-	}
+	idle = false;
 	try {
 		_run();
 	} catch (...) {
