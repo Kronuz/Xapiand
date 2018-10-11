@@ -43,7 +43,7 @@ using dispatch_func = void (Replication::*)(const std::string&);
 Replication::Replication(BinaryClient* client_)
 	: client(client_)
 {
-		L_OBJ("CREATED REPLICATION OBJ!");
+	L_OBJ("CREATED REPLICATION OBJ!");
 }
 
 
@@ -56,6 +56,8 @@ Replication::~Replication()
 void
 Replication::replication_server(ReplicationMessageType type, const std::string &message)
 {
+	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+
 	static const dispatch_func dispatch[] = {
 		&Replication::msg_get_changesets,
 	};
@@ -76,6 +78,8 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 void
 Replication::msg_get_changesets(const std::string &)
 {
+	L_CALL("Replication::msg_get_changesets(<message>)");
+
 	L_REPLICATION("Replication::msg_get_changesets");
 
 	// Xapian::Database *db_;
@@ -135,6 +139,8 @@ Replication::msg_get_changesets(const std::string &)
 void
 Replication::replication_client(ReplicationReplyType type, const std::string &message)
 {
+	L_CALL("Replication::replication_client(%s, <message>)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+
 	static const dispatch_func dispatch[] = {
 		&Replication::reply_end_of_changes,
 		&Replication::reply_fail,
@@ -161,6 +167,8 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 void
 Replication::reply_end_of_changes(const std::string &)
 {
+	L_CALL("Replication::reply_end_of_changes(<message>)");
+
 	L_REPLICATION("Replication::reply_end_of_changes");
 
 	// if (repl_switched_db) {
@@ -176,6 +184,8 @@ Replication::reply_end_of_changes(const std::string &)
 void
 Replication::reply_fail(const std::string &)
 {
+	L_CALL("Replication::reply_fail(<message>)");
+
 	L_REPLICATION("Replication::reply_fail");
 
 	// L_ERR("Replication failure!");
@@ -188,6 +198,8 @@ Replication::reply_fail(const std::string &)
 void
 Replication::reply_db_header(const std::string &)
 {
+	L_CALL("Replication::reply_db_header(<message>)");
+
 	L_REPLICATION("Replication::reply_db_header");
 
 	// const char *p = message.data();
@@ -219,6 +231,8 @@ Replication::reply_db_header(const std::string &)
 void
 Replication::reply_db_filename(const std::string &)
 {
+	L_CALL("Replication::reply_db_filename(<message>)");
+
 	L_REPLICATION("Replication::reply_db_filename");
 
 	// const char *p = message.data();
@@ -230,6 +244,8 @@ Replication::reply_db_filename(const std::string &)
 void
 Replication::reply_db_filedata(const std::string &)
 {
+	L_CALL("Replication::reply_db_filedata(<message>)");
+
 	L_REPLICATION("Replication::reply_db_filedata");
 
 	// const char *p = message.data();
@@ -255,6 +271,8 @@ Replication::reply_db_filedata(const std::string &)
 void
 Replication::reply_db_footer(const std::string &)
 {
+	L_CALL("Replication::reply_db_footer(<message>)");
+
 	L_REPLICATION("Replication::reply_db_footer");
 
 	// // const char *p = message.data();
@@ -283,6 +301,8 @@ Replication::reply_db_footer(const std::string &)
 void
 Replication::reply_changeset(const std::string &)
 {
+	L_CALL("Replication::reply_changeset(<message>)");
+
 	L_REPLICATION("Replication::reply_changeset");
 
 	// Xapian::WritableDatabase *wdb_;
@@ -342,6 +362,8 @@ Replication::reply_changeset(const std::string &)
 void
 Replication::replication_client_file_done()
 {
+	L_CALL("Replication::replication_client_file_done(<message>)");
+
 	L_REPLICATION("Replication::replication_client_file_done");
 
 	char buf[1024];
