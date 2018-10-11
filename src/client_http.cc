@@ -703,32 +703,37 @@ HttpClient::run()
 	L_CONN("Start running in worker...");
 
 	idle = false;
+	try {
 
-	{
-		std::unique_lock<std::mutex> lk(requests_mutex);
-		while (!requests.empty() && !closed) {
-			auto& request = requests.front();
-			Response response;
-			lk.unlock();
+		{
+			std::unique_lock<std::mutex> lk(requests_mutex);
+			while (!requests.empty() && !closed) {
+				auto& request = requests.front();
+				Response response;
+				lk.unlock();
 
-			run_one(request, response);
+				run_one(request, response);
 
-			lk.lock();
-			requests.pop_front();
+				lk.lock();
+				requests.pop_front();
+			}
 		}
-	}
 
-	if (shutting_down && write_queue.empty()) {
-		L_WARNING("Programmed shut down!");
-		destroy();
-		detach();
-	}
+		if (shutting_down && write_queue.empty()) {
+			L_WARNING("Programmed shut down!");
+			destroy();
+			detach();
+		}
 
+	} catch (...) {
+		idle = true;
+		L_CONN("Running in worker ended with an exception.");
+		detach();  // try re-detaching if already flagged as detaching
+		throw;
+	}
 	idle = true;
-
 	L_CONN("Running in worker ended.");
-
-	redetach();  // try re-detaching if already detaching
+	redetach();  // try re-detaching if already flagged as detaching
 }
 
 
