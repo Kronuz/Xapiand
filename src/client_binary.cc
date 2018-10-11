@@ -381,7 +381,7 @@ BinaryClient::_run()
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s)", RemoteMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REMOTEPROTOCOL_SERVER", RemoteMessageTypeNames[static_cast<int>(type)]);
 					L_BINARY_PROTO("message: '%s'", repr(message));
 					remote_protocol->remote_server(type, message);
 					break;
@@ -390,7 +390,7 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_SERVER: {
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_SERVER", ReplicationMessageTypeNames[static_cast<int>(type)]);
 					L_BINARY_PROTO("message: '%s'", repr(message));
 					replication->replication_server(type, message);
 					break;
@@ -399,11 +399,15 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_CLIENT: {
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-					L_BINARY(">> get_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_CLIENT", ReplicationReplyTypeNames[static_cast<int>(type)]);
 					L_BINARY_PROTO("message: '%s'", repr(message));
 					replication->replication_client(type, message);
 					break;
 				}
+
+				default:
+					L_ERR("Unexpected BinaryClient State!");
+					break;
 			}
 		} catch (const Xapian::NetworkTimeoutError& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
