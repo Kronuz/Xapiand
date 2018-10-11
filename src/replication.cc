@@ -142,6 +142,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames[static_cast<int>(type)]);
 
 	static const dispatch_func dispatch[] = {
+		&Replication::reply_welcome,
 		&Replication::reply_end_of_changes,
 		&Replication::reply_fail,
 		&Replication::reply_db_header,
@@ -163,6 +164,19 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 	}
 }
 
+
+void
+Replication::reply_welcome(const std::string &)
+{
+	std::string message;
+	message.append(serialise_string("UUID"));
+	message.append(serialise_string("REVISION"));
+	message.append(serialise_string("PATH"));
+	// message.append(serialise_string(db_->get_uuid()));
+	// message.append(serialise_string(db_->get_revision_info()));
+	// message.append(serialise_string(endpoints[0].path));
+	send_message(static_cast<ReplicationReplyType>(SWITCH_TO_REPL), message);
+}
 
 void
 Replication::reply_end_of_changes(const std::string &)

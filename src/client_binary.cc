@@ -56,9 +56,6 @@ std::string serialise_error(const Xapian::Error &exc) {
 }
 
 
-#define SWITCH_TO_REPL '\xfe'
-
-
 //
 // Xapian binary client
 //

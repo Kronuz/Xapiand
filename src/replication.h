@@ -29,6 +29,8 @@
 
 #include "client_binary.h"
 
+#define SWITCH_TO_REPL '\xfe'
+
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
 	MSG_MAX,
@@ -41,18 +43,20 @@ static constexpr const char* const ReplicationMessageTypeNames[] = {
 
 
 enum class ReplicationReplyType {
-	REPLY_END_OF_CHANGES,       // No more changes to transfer.
-	REPLY_FAIL,                 // Couldn't generate full set of changes.
-	REPLY_DB_HEADER,            // The start of a whole DB copy.
-	REPLY_DB_FILENAME,          // The name of a file in a DB copy.
-	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy.
-	REPLY_DB_FOOTER,            // End of a whole DB copy.
-	REPLY_CHANGESET,            // A changeset file is being sent.
+	REPLY_WELCOME,              // Welcome message (same as Remote Protocol's REPLY_UPDATE)
+	REPLY_END_OF_CHANGES,       // No more changes to transfer
+	REPLY_FAIL,                 // Couldn't generate full set of changes
+	REPLY_DB_HEADER,            // The start of a whole DB copy
+	REPLY_DB_FILENAME,          // The name of a file in a DB copy
+	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy
+	REPLY_DB_FOOTER,            // End of a whole DB copy
+	REPLY_CHANGESET,            // A changeset file is being sent
 	REPLY_MAX,
 };
 
 
 static constexpr const char* const ReplicationReplyTypeNames[] = {
+	"REPLY_WELCOME",
 	"REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
 	"REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
 };
@@ -71,6 +75,7 @@ public:
 	void replication_client_file_done();
 
 	void msg_get_changesets(const std::string& message);
+	void reply_welcome(const std::string& message);
 	void reply_end_of_changes(const std::string& message);
 	void reply_fail(const std::string& message);
 	void reply_db_header(const std::string& message);
