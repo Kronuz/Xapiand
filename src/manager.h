@@ -31,7 +31,6 @@
 
 #include "base_x.hh"
 #include "database.h"
-#include "endpoint_resolver.h"
 #include "ev/ev++.h"
 #include "length.h"
 #include "opts.h"
@@ -145,9 +144,6 @@ public:
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool replicator_pool;
 #endif
-#ifdef XAPIAND_CLUSTERING
-	EndpointResolver endp_r;
-#endif
 
 	std::atomic<time_t> shutdown_asap;
 	std::atomic<time_t> shutdown_now;
@@ -196,7 +192,7 @@ public:
 	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
-	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, std::chrono::duration<double, std::milli> timeout=1s);
+	Endpoint resolve_index_endpoint(const std::string &path);
 
 	std::string server_metrics();
 

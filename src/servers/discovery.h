@@ -66,16 +66,12 @@ public:
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
 		ENTER,         // Node enters the room
 		BYE,           // Node says goodbye
-		DB,            //
-		DB_WAVE,       //
-		BOSSY_DB_WAVE, //
 		DB_UPDATED,    //
 		MAX,           //
 	};
 
 	static constexpr const char* const MessageNames[] = {
-		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB", "DB_WAVE",
-		"BOSSY_DB_WAVE", "DB_UPDATED",
+		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
 	};
 
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);

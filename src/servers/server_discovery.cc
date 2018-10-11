@@ -66,9 +66,6 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 		&DiscoveryServer::sneer,
 		&DiscoveryServer::enter,
 		&DiscoveryServer::bye,
-		&DiscoveryServer::db,
-		&DiscoveryServer::db_wave,
-		&DiscoveryServer::bossy_db_wave,
 		&DiscoveryServer::db_updated,
 	};
 	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
@@ -243,95 +240,6 @@ DiscoveryServer::bye(const std::string& message)
 	local_node_copy->regions = -1;
 	local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	XapiandManager::manager->get_region();
-}
-
-
-void
-DiscoveryServer::db(const std::string& message)
-{
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
-		return;
-	}
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	auto index_path = std::string(unserialise_string(&p, p_end));
-
-	DatabaseHandler db_handler(Endpoints(Endpoint(index_path)), DB_OPEN);
-	long long mastery_level = db_handler.get_mastery_level();
-
-	if (XapiandManager::manager->get_region() == XapiandManager::manager->get_region(index_path) /* FIXME: missing leader check */) {
-		std::shared_ptr<const Node> node;
-		if (XapiandManager::manager->endp_r.get_master_node(index_path, &node)) {
-			discovery->send_message(
-				Discovery::Message::BOSSY_DB_WAVE,
-				serialise_length(mastery_level) +  // The mastery level of the database
-				serialise_string(index_path) +  // The path of the index
-				node->serialise()				// The node where the index master is at
-			);
-			return;
-		}
-	}
-
-	if (mastery_level != -1) {
-		auto local_node_ = local_node.load();
-		L_DISCOVERY("Found local database '%s' with m:%llx!", index_path, mastery_level);
-		discovery->send_message(
-			Discovery::Message::DB_WAVE,
-			serialise_length(mastery_level) +  // The mastery level of the database
-			serialise_string(index_path) +  // The path of the index
-			local_node_->serialise()  // The node where the index is at
-		);
-	}
-}
-
-
-void
-DiscoveryServer::_db_wave(bool bossy, const std::string& message)
-{
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
-		return;
-	}
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	long long remote_mastery_level = unserialise_length(&p, p_end);
-
-	auto index_path = std::string(unserialise_string(&p, p_end));
-
-	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
-
-	if (XapiandManager::manager->put_node(remote_node)) {
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-	}
-
-	L_DISCOVERY("Node %s has '%s' with a mastery of %llx!", remote_node->name(), index_path, remote_mastery_level);
-
-	if (XapiandManager::manager->get_region() == XapiandManager::manager->get_region(index_path)) {
-		L_DEBUG("The DB is in the same region that this cluster!");
-		Endpoint index(index_path, remote_node.get(), remote_mastery_level, remote_node->name());
-		XapiandManager::manager->endp_r.add_index_endpoint(index, true, bossy);
-	} else if (XapiandManager::manager->endp_r.exists(index_path)) {
-		L_DEBUG("The DB is in the LRU of this node!");
-		Endpoint index(index_path, remote_node.get(), remote_mastery_level, remote_node->name());
-		XapiandManager::manager->endp_r.add_index_endpoint(index, false, bossy);
-	}
-}
-
-
-void
-DiscoveryServer::db_wave(const std::string& message)
-{
-	_db_wave(false, message);
-}
-
-
-void
-DiscoveryServer::bossy_db_wave(const std::string& message)
-{
-	_db_wave(true, message);
 }
 
 

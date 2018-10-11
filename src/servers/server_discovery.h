@@ -38,7 +38,6 @@ class DiscoveryServer : public BaseServer {
 	std::shared_ptr<Discovery> discovery;
 
 	void _wave(bool heartbeat, const std::string& message);
-	void _db_wave(bool bossy, const std::string& message);
 
 	void discovery_server(Discovery::Message type, const std::string& message);
 
@@ -48,9 +47,6 @@ class DiscoveryServer : public BaseServer {
 	void sneer(const std::string& message);
 	void enter(const std::string& message);
 	void bye(const std::string& message);
-	void db(const std::string& message);
-	void db_wave(const std::string& message);
-	void bossy_db_wave(const std::string& message);
 	void db_updated(const std::string& message);
 
 public:

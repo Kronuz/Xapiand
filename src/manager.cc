@@ -130,7 +130,6 @@ XapiandManager::XapiandManager()
 	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", opts.num_replicators),
-	  endp_r(opts.endpoints_list_size),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -155,7 +154,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  server_pool("S%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", opts.num_replicators),
-	  endp_r(opts.endpoints_list_size),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -963,7 +961,8 @@ XapiandManager::get_region(std::string_view db_name)
 	auto local_node_ = local_node.load();
 	if (local_node_->regions == -1) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->regions = sqrt(nodes_size());
+		// local_node_copy->regions = sqrt(nodes_size());
+		local_node_copy->regions = 1;  // hardcode only one region (for now)
 		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 		re_load = true;
 	}
@@ -993,7 +992,8 @@ XapiandManager::get_region()
 			} else if (state == State::READY) {
 				raft->start();
 				auto local_node_copy = std::make_unique<Node>(*local_node_);
-				local_node_copy->regions = sqrt(nodes_size() + 1);
+				// local_node_copy->regions = sqrt(nodes_size() + 1);
+				local_node_copy->regions = 1;  // hardcode only one region (for now)
 				int32_t region = jump_consistent_hash(local_node_copy->id, local_node_copy->regions);
 				if (local_node_copy->region != region) {
 					local_node_copy->region = region;
@@ -1024,22 +1024,26 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 #endif
 
 
-bool
-XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, std::chrono::duration<double, std::milli> timeout)
+Endpoint
+XapiandManager::resolve_index_endpoint(const std::string &path)
 {
 	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		return endp_r.resolve_index_endpoint(path, endpv, n_endps, timeout);
+		Endpoint endpoint(path);
+		// std::hash<std::string> hash_fn;
+		// Xapian::docid = hash = hash_fn(path);
+		// auto consistent_hash = jump_consistent_hash(hash, all_seen_nodes.size());
+		// node = all_seen_nodes[hash];
+		// endpoint.host = node.host();
+		// endpoint.port = node.binary_port;
+		return endpoint;
 	}
 	else
-#else
-	ignore_unused(n_endps, timeout);
 #endif
 	{
-		endpv.emplace_back(path);
-		return true;
+		return Endpoint(path);
 	}
 }
 
