@@ -48,8 +48,6 @@ enum class State {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient {
-	std::atomic_int running;
-
 	State state;
 
 	char file_path[PATH_MAX];

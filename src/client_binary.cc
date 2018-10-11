@@ -65,7 +65,6 @@ std::string serialise_error(const Xapian::Error &exc) {
 
 BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
-	  running(0),
 	  state(State::INIT),
 	  writable(false),
 	  flags(0)
@@ -84,6 +83,8 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	}
 
 	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
+
+	idle = true;
 
 	L_OBJ("CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
@@ -242,16 +243,13 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				break;
 		}
 
-		messages_queue.push(std::make_unique<Buffer>(type, p, len));
-		buffer.erase(0, p - o + len);
-	}
-
-	if (!messages_queue.empty()) {
-		if (!running) {
+		if (messages_queue.empty()) {
 			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 				task->run();
 			});
 		}
+		messages_queue.push(std::make_unique<Buffer>(type, p, len));
+		buffer.erase(0, p - o + len);
 	}
 }
 
@@ -345,13 +343,23 @@ BinaryClient::run()
 {
 	L_CALL("BinaryClient::run()");
 
+	L_CONN("Start running in binary worker...");
+
+	if (!idle.exchange(false)) {
+		// if it already wasn't idle, do nothing!
+		return;
+	}
 	try {
 		_run();
 	} catch (...) {
+		idle = true;
+		L_CONN("Running in binary worker ended with an exception.");
 		detach();
 		throw;
 	}
-	detach();
+	idle = true;
+	L_CONN("Running in binary worker ended.");
+	redetach();  // try re-detaching if already detaching
 }
 
 
@@ -361,18 +369,13 @@ BinaryClient::_run()
 	L_CALL("BinaryClient::_run()");
 
 	L_OBJ_BEGIN("BinaryClient::run:BEGIN");
-	if (running++) {
-		--running;
-		L_OBJ_END("BinaryClient::run:END");
-		return;
-	}
 
 	if (state == State::INIT) {
 		state = State::REMOTEPROTOCOL_SERVER;
 		remote_protocol->msg_update(std::string());
 	}
 
-	while (!messages_queue.empty()) {
+	while (!messages_queue.empty() && !closed) {
 		try {
 			switch (state) {
 				case State::INIT:
@@ -441,7 +444,6 @@ BinaryClient::_run()
 		}
 	}
 
-	--running;
 	L_OBJ_END("BinaryClient::run:END");
 }
 
