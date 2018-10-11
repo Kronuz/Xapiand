@@ -972,8 +972,7 @@ XapiandManager::get_region(std::string_view db_name)
 		local_node_ = local_node.load();
 	}
 
-	std::hash<std::string_view> hash_fn;
-	return jump_consistent_hash(hash_fn(db_name), local_node_->regions);
+	return jump_consistent_hash(db_name, local_node_->regions);
 }
 
 
