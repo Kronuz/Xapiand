@@ -58,12 +58,12 @@ struct File_ptr {
 
 // It'll return the enum's underlying type.
 template<typename E>
-inline constexpr auto toUType(E enumerator) noexcept {
+static inline constexpr auto toUType(E enumerator) noexcept {
 	return static_cast<std::underlying_type_t<E>>(enumerator);
 }
 
 template<typename T, std::size_t N>
-inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
+static inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 	return N;
 }
 
@@ -75,7 +75,7 @@ const std::string& get_thread_name(std::thread::id thread_id);
 const std::string& get_thread_name();
 
 
-inline bool ignored_errorno(int e, bool tcp, bool udp) {
+static inline bool ignored_errorno(int e, bool tcp, bool udp) {
 	switch(e) {
 		case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
@@ -106,7 +106,7 @@ inline bool ignored_errorno(int e, bool tcp, bool udp) {
 }
 
 
-inline std::string fast_inet_ntop4(const struct in_addr& addr) {
+static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 	// char ip[INET_ADDRSTRLEN];
 	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
 	// return std::string(ip);
@@ -155,17 +155,17 @@ std::string check_compiler();
 std::string check_OS();
 std::string check_architecture();
 
-inline void tcp_nopush(int sock) {
+static inline void tcp_nopush(int sock) {
 	_tcp_nopush(sock, 1);
 }
 
-inline void tcp_push(int sock) {
+static inline void tcp_push(int sock) {
 	_tcp_nopush(sock, 0);
 }
 
 namespace epoch {
 	template<typename Period = std::chrono::seconds>
-	inline auto now() noexcept {
+	static inline auto now() noexcept {
 		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 }
@@ -201,22 +201,20 @@ struct Clk {
 
 
 template <typename T>
-inline
-unsigned long long
+static inline unsigned long long
 time_point_to_ullong(std::chrono::time_point<T> t) {
 	return Clk::clk().time_point_to_ullong<T>(t);
 }
 
 
 template <typename T=std::chrono::system_clock>
-inline
-std::chrono::time_point<T>
+static inline std::chrono::time_point<T>
 time_point_from_ullong(unsigned long long t) {
 	return Clk::clk().time_point_from_ullong<T>(t);
 }
 
 
-inline std::string readable_revents(int revents) {
+static inline std::string readable_revents(int revents) {
 	std::vector<std::string> values;
 	if (revents == EV_NONE) values.push_back("EV_NONE");
 	if ((revents & EV_READ) == EV_READ) values.push_back("EV_READ");
@@ -240,7 +238,7 @@ inline std::string readable_revents(int revents) {
 
 
 template<typename T, typename M, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value && std::is_integral<std::decay_t<M>>::value>>
-inline M modulus(T val, M mod) {
+static inline M modulus(T val, M mod) {
 	if (mod < 0) {
 		throw std::invalid_argument("Modulus must be positive");
 	}
@@ -253,7 +251,8 @@ inline M modulus(T val, M mod) {
 }
 
 
-constexpr inline int hexdigit(char c) noexcept {
+static constexpr inline int
+hexdigit(char c) noexcept {
 	constexpr int _[256]{
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -279,7 +278,8 @@ constexpr inline int hexdigit(char c) noexcept {
 }
 
 // converts the two hexadecimal characters to an int (a byte)
-constexpr inline int hexdec(const char** ptr) noexcept {
+static constexpr inline int
+hexdec(const char** ptr) noexcept {
 	auto pos = *ptr;
 	auto a = hexdigit(*pos++);
 	auto b = hexdigit(*pos++);
