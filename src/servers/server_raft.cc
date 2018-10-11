@@ -302,13 +302,13 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;
 			} catch (...) {
-				L_EV_END("RaftServer::io_accept_cb:END %lld", now);
+				L_EV_END("RaftServer::io_accept_cb:END %lld", SchedulerQueue::now);
 				throw;
 			}
 		}
 	}
 
-	L_EV_END("RaftServer::io_accept_cb:END %lld", now);
+	L_EV_END("RaftServer::io_accept_cb:END %lld", SchedulerQueue::now);
 }
 
 #endif
