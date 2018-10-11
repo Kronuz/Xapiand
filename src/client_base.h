@@ -92,8 +92,11 @@ public:
 	{ }
 
 	~Buffer() {
-		if (!_path.empty() && _unlink) {
-			io::unlink(_path.c_str());
+		if (_fd != -1) {
+			io::close(_fd);
+			if (!_path.empty() && _unlink) {
+				io::unlink(_path.c_str());
+			}
 		}
 	}
 
