@@ -408,6 +408,7 @@ BinaryClient::_run()
 				}
 			}
 		} catch (const Xapian::NetworkTimeoutError& exc) {
+			L_EXC("ERROR: %s", exc.get_description());
 			try {
 				// We've had a timeout, so the client may not be listening, so
 				// set the end_time to 1 and if we can't send the message right
@@ -426,6 +427,7 @@ BinaryClient::_run()
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::Error& exc) {
+			L_EXC("ERROR: %s", exc.get_description());
 			// Propagate the exception to the client, then return to the main
 			// message handling loop.
 			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
