@@ -23,6 +23,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "client_binary.h"
 #include "database.h"
 #include "length.h"
 
@@ -67,9 +68,18 @@ RemoteProtocol::~RemoteProtocol()
 
 
 void
+RemoteProtocol::send_message(RemoteReplyType type, const std::string& message, double end_time)
+{
+	L_BINARY("<< send_message(%s)", RemoteReplyTypeNames(type));
+	L_BINARY_PROTO("message: %s", repr(message));
+	client->send_message(static_cast<char>(type), message, end_time);
+}
+
+
+void
 RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocol::remote_server(%s, <message>)", RemoteMessageTypeNames[static_cast<int>(type)]);
+	L_CALL("RemoteProtocol::remote_server(%s, <message>)", RemoteMessageTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&RemoteProtocol::msg_allterms,

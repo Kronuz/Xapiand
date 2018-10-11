@@ -31,10 +31,14 @@
 #include <string>
 #include <vector>
 
-#include "client_binary.h"
+#include "utils.h"
+
 
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
+
+
+class BinaryClient;
 
 
 enum class RemoteMessageType {
@@ -74,17 +78,25 @@ enum class RemoteMessageType {
 };
 
 
-static constexpr const char* const RemoteMessageTypeNames[] = {
-	"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
-	"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
-	"MSG_QUERY", "MSG_TERMLIST", "MSG_POSITIONLIST", "MSG_POSTLIST",
-	"MSG_REOPEN", "MSG_UPDATE", "MSG_ADDDOCUMENT", "MSG_CANCEL",
-	"MSG_DELETEDOCUMENTTERM", "MSG_COMMIT", "MSG_REPLACEDOCUMENT",
-	"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
-	"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
-	"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
-	"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
-};
+static inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
+	static const std::string RemoteMessageTypeNames[] = {
+		"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
+		"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
+		"MSG_QUERY", "MSG_TERMLIST", "MSG_POSITIONLIST", "MSG_POSTLIST",
+		"MSG_REOPEN", "MSG_UPDATE", "MSG_ADDDOCUMENT", "MSG_CANCEL",
+		"MSG_DELETEDOCUMENTTERM", "MSG_COMMIT", "MSG_REPLACEDOCUMENT",
+		"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
+		"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
+		"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
+		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
+	};
+	auto type_int = static_cast<int>(type);
+	if (type_int >= 0 || type_int < toUType(RemoteMessageType::MSG_MAX)) {
+		return RemoteMessageTypeNames[type_int];
+	}
+	static const std::string UNKNOWN = "RemoteMessageType::UNKNOWN";
+	return UNKNOWN;
+}
 
 
 enum class RemoteReplyType {
@@ -115,14 +127,22 @@ enum class RemoteReplyType {
 };
 
 
-static constexpr const char* const RemoteReplyTypeNames[] = {
-	"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
-	"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
-	"REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
-	"REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
-	"REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
-	"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
-};
+static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
+	static const std::string RemoteReplyTypeNames[] = {
+		"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
+		"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
+		"REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
+		"REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
+		"REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
+		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
+	};
+	auto type_int = static_cast<int>(type);
+	if (type_int >= 0 || type_int < toUType(RemoteReplyType::REPLY_MAX)) {
+		return RemoteReplyTypeNames[type_int];
+	}
+	static const std::string UNKNOWN = "RemoteReplyType::UNKNOWN";
+	return UNKNOWN;
+}
 
 
 class RemoteProtocol {
@@ -138,6 +158,8 @@ public:
 	Xapian::Registry reg;
 	std::unique_ptr<Xapian::Enquire> enquire;
 	std::vector<Xapian::MatchSpy*> matchspies;
+
+	void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0);
 
 	void remote_server(RemoteMessageType type, const std::string& message);
 	void msg_allterms(const std::string& message);
@@ -173,13 +195,6 @@ public:
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
 	void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_);
-
-	inline void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0) {
-		L_BINARY("<< send_message(%s)", RemoteReplyTypeNames[static_cast<int>(type)]);
-		L_BINARY_PROTO("message: %s", repr(message));
-		client->send_message(static_cast<char>(type), message, end_time);
-	}
-
 };
 
 

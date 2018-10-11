@@ -72,6 +72,15 @@ public:
 	size_t pos;
 	char type;
 
+	Buffer()
+		: _data_view(_data),
+		  _fd(-1),
+		  _unlink(false),
+		  _max_pos(0),
+		  pos(0),
+		  type('\xff')
+	{ }
+
 	Buffer(std::string_view path, bool unlink = false)
 		: _path(path),
 		  _fd(io::open(_path.c_str())),
@@ -102,6 +111,8 @@ public:
 
 	Buffer(const Buffer&) = delete;
 	Buffer& operator=(const Buffer&) = delete;
+	Buffer(Buffer&&) = default;
+	Buffer& operator=(Buffer&&) = default;
 
 	const char *data() {
 		feed();

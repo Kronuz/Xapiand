@@ -24,10 +24,11 @@
 
 #include "xapiand.h"
 
-
 #ifdef XAPIAND_CLUSTERING
 
-#include "client_binary.h"
+#include <string>
+
+#include "utils.h"
 
 #define SWITCH_TO_REPL '\xfe'
 
@@ -37,9 +38,17 @@ enum class ReplicationMessageType {
 };
 
 
-static constexpr const char* const ReplicationMessageTypeNames[] = {
-	"MSG_GET_CHANGESETS",
-};
+static inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
+	static const std::string ReplicationMessageTypeNames[] = {
+		"MSG_GET_CHANGESETS",
+	};
+	auto type_int = static_cast<int>(type);
+	if (type_int >= 0 || type_int < toUType(ReplicationMessageType::MSG_MAX)) {
+		return ReplicationMessageTypeNames[type_int];
+	}
+	static const std::string UNKNOWN = "ReplicationMessageType::UNKNOWN";
+	return UNKNOWN;
+}
 
 
 enum class ReplicationReplyType {
@@ -55,20 +64,35 @@ enum class ReplicationReplyType {
 };
 
 
-static constexpr const char* const ReplicationReplyTypeNames[] = {
-	"REPLY_WELCOME",
-	"REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
-	"REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
-};
+static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
+	static const std::string ReplicationReplyTypeNames[] = {
+		"REPLY_WELCOME",
+		"REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
+		"REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
+	};
+	auto type_int = static_cast<int>(type);
+	if (type_int == SWITCH_TO_REPL) {
+		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
+		return SWITCH_TO_REPL_NAME;
+	} else if (type_int >= 0 || type_int < toUType(ReplicationReplyType::REPLY_MAX)) {
+		return ReplicationReplyTypeNames[type_int];
+	}
+	static const std::string UNKNOWN = "ReplicationReplyType::UNKNOWN";
+	return UNKNOWN;
+}
+
+
+class BinaryClient;
 
 
 class Replication {
-
 	BinaryClient* client;
 
 public:
 	explicit Replication(BinaryClient* client_);
 	~Replication();
+
+	void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0);
 
 	void replication_server(ReplicationMessageType type, const std::string& message);
 	void replication_client(ReplicationReplyType type, const std::string& message);
@@ -83,13 +107,6 @@ public:
 	void reply_db_filedata(const std::string& message);
 	void reply_db_footer(const std::string& message);
 	void reply_changeset(const std::string& message);
-
-	inline void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0) {
-		L_BINARY("<< send_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
-		L_BINARY_PROTO("message: %s", repr(message));
-		client->send_message(static_cast<char>(type), message, end_time);
-	}
-
 };
 
 

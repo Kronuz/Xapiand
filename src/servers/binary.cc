@@ -26,6 +26,8 @@
 
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 
+#include "endpoint.h"
+#include "io_utils.h"
 #include "remote_protocol.h"
 #include "server_binary.h"
 

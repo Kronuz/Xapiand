@@ -34,8 +34,6 @@
 #include "io_utils.h"
 #include "length.h"
 #include "manager.h"
-#include "remote_protocol.h"
-#include "replication.h"
 #include "servers/server.h"
 #include "servers/server_binary.h"
 #include "servers/tcp_base.h"
@@ -64,11 +62,10 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  writable(false),
-	  flags(0)
+	  flags(0),
+	  remote_protocol(this),
+	  replication(this)
 {
-	remote_protocol = std::make_unique<RemoteProtocol>(this);
-	replication = std::make_unique<Replication>(this);
-
 	int binary_clients = ++XapiandServer::binary_clients;
 	if (binary_clients > XapiandServer::max_binary_clients) {
 		XapiandServer::max_binary_clients = binary_clients;
@@ -168,7 +165,7 @@ BinaryClient::on_read_file_done()
 	try {
 		switch (state) {
 			case State::REPLICATIONPROTOCOL_CLIENT:
-				replication->replication_client_file_done();
+				replication.replication_client_file_done();
 				break;
 			default:
 				L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
@@ -240,14 +237,14 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 
 		if (messages_queue.empty()) {
 			// Enqueue message...
-			messages_queue.push(std::make_unique<Buffer>(type, p, len));
+			messages_queue.push(Buffer(type, p, len));
 			// And start a runner.
 			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 				task->run();
 			});
 		} else {
 			// There should be a runner, just enqueue message.
-			messages_queue.push(std::make_unique<Buffer>(type, p, len));
+			messages_queue.push(Buffer(type, p, len));
 		}
 		buffer.erase(0, p - o + len);
 	}
@@ -259,12 +256,12 @@ BinaryClient::get_message(std::string &result, char max_type)
 {
 	L_CALL("BinaryClient::get_message(<result>, <max_type>)");
 
-	std::unique_ptr<Buffer> msg;
+	Buffer msg;
 	if (!messages_queue.pop(msg)) {
 		THROW(NetworkError, "No message available");
 	}
 
-	char type = msg->type;
+	char type = msg.type;
 
 	if (type >= max_type) {
 		std::string errmsg("Invalid message type ");
@@ -272,8 +269,8 @@ BinaryClient::get_message(std::string &result, char max_type)
 		THROW(InvalidArgumentError, errmsg);
 	}
 
-	const char *msg_str = msg->dpos();
-	size_t msg_size = msg->nbytes();
+	const char *msg_str = msg.dpos();
+	size_t msg_size = msg.nbytes();
 	result.assign(msg_str, msg_size);
 
 	std::string buf;
@@ -333,8 +330,8 @@ BinaryClient::checkin_database()
 		XapiandManager::manager->database_pool.checkin(database);
 		database.reset();
 	}
-	remote_protocol->matchspies.clear();
-	remote_protocol->enquire.reset();
+	remote_protocol.matchspies.clear();
+	remote_protocol.enquire.reset();
 }
 
 
@@ -370,7 +367,7 @@ BinaryClient::_run()
 
 	if (state == State::INIT) {
 		state = State::REMOTEPROTOCOL_SERVER;
-		remote_protocol->msg_update(std::string());
+		remote_protocol.msg_update(std::string());
 	}
 
 	while (!messages_queue.empty() && !closed) {
@@ -379,27 +376,27 @@ BinaryClient::_run()
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s) -> REMOTEPROTOCOL_SERVER", RemoteMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REMOTEPROTOCOL_SERVER", RemoteMessageTypeNames(type));
 					L_BINARY_PROTO("message: '%s'", repr(message));
-					remote_protocol->remote_server(type, message);
+					remote_protocol.remote_server(type, message);
 					break;
 				}
 
 				case State::REPLICATIONPROTOCOL_SERVER: {
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_SERVER", ReplicationMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_SERVER", ReplicationMessageTypeNames(type));
 					L_BINARY_PROTO("message: '%s'", repr(message));
-					replication->replication_server(type, message);
+					replication.replication_server(type, message);
 					break;
 				}
 
 				case State::REPLICATIONPROTOCOL_CLIENT: {
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_CLIENT", ReplicationReplyTypeNames[static_cast<int>(type)]);
+					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_CLIENT", ReplicationReplyTypeNames(type));
 					L_BINARY_PROTO("message: '%s'", repr(message));
-					replication->replication_client(type, message);
+					replication.replication_client(type, message);
 					break;
 				}
 
@@ -417,7 +414,7 @@ BinaryClient::_run()
 				// We've had a timeout, so the client may not be listening, so
 				// set the end_time to 1 and if we can't send the message right
 				// away, just exit and the client will cope.
-				remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
+				remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
 			} catch (...) {}
 			checkin_database();
 			shutdown();
@@ -427,24 +424,24 @@ BinaryClient::_run()
 			shutdown();
 		} catch (const BaseException& exc) {
 			L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::Error& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
 			// Propagate the exception to the client, then return to the main
 			// message handling loop.
-			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
+			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
 		} catch (const std::exception& exc) {
 			L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
-			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (...) {
 			std::exception exc;
 			L_EXC("ERROR: %s", "Unkown exception!");
-			remote_protocol->send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		}

@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "client_binary.h"
 #include "io_utils.h"
 #include "length.h"
 
@@ -54,9 +55,18 @@ Replication::~Replication()
 
 
 void
+Replication::send_message(ReplicationReplyType type, const std::string& message, double end_time)
+{
+	L_BINARY("<< send_message(%s)", ReplicationReplyTypeNames(type));
+	L_BINARY_PROTO("message: %s", repr(message));
+	client->send_message(static_cast<char>(type), message, end_time);
+}
+
+
+void
 Replication::replication_server(ReplicationMessageType type, const std::string &message)
 {
-	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Replication::msg_get_changesets,
@@ -139,7 +149,7 @@ Replication::msg_get_changesets(const std::string &)
 void
 Replication::replication_client(ReplicationReplyType type, const std::string &message)
 {
-	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames[static_cast<int>(type)]);
+	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Replication::reply_welcome,

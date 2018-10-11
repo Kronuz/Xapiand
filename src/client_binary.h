@@ -30,6 +30,8 @@
 #include <xapian.h>
 
 #include "client_base.h"
+#include "remote_protocol.h"
+#include "replication.h"
 #include "threadpool.h"         // for Task
 
 class BinaryServer;
@@ -61,7 +63,7 @@ class BinaryClient : public BaseClient {
 
 	// Buffers that are pending write
 	std::string buffer;
-	queue::Queue<std::unique_ptr<Buffer>> messages_queue;
+	queue::Queue<Buffer> messages_queue;
 
 	Endpoints repl_endpoints;
 
@@ -75,10 +77,10 @@ class BinaryClient : public BaseClient {
 	void checkin_database();
 
 	// Remote protocol:
-	std::unique_ptr<RemoteProtocol> remote_protocol;
+	RemoteProtocol remote_protocol;
 
 	// Replication protocol:
-	std::unique_ptr<Replication> replication;
+	Replication replication;
 
 	friend Worker;
 	friend RemoteProtocol;
