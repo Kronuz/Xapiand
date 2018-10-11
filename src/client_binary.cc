@@ -379,8 +379,6 @@ BinaryClient::_run()
 	while (!messages_queue.empty() && !closed) {
 		try {
 			switch (state) {
-				case State::INIT:
-					L_ERR("Unexpected INIT!");
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
@@ -407,6 +405,10 @@ BinaryClient::_run()
 					replication->replication_client(type, message);
 					break;
 				}
+
+				case State::INIT:
+					L_ERR("Unexpected BinaryClient State::INIT!");
+					break;
 
 				default:
 					L_ERR("Unexpected BinaryClient State!");
