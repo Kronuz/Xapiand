@@ -86,10 +86,10 @@ class BinaryClient;
 
 
 class Replication {
-	BinaryClient* client;
+	BinaryClient& client;
 
 public:
-	explicit Replication(BinaryClient* client_);
+	explicit Replication(BinaryClient& client_);
 	~Replication();
 
 	void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0);

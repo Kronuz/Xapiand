@@ -54,7 +54,7 @@ inline std::string::size_type common_prefix_length(const std::string &a, const s
 }
 
 
-RemoteProtocol::RemoteProtocol(BinaryClient* client_)
+RemoteProtocol::RemoteProtocol(BinaryClient& client_)
 	: client(client_)
 	{
 		L_OBJ("CREATED REMOTE PROTOCOL!");
@@ -72,7 +72,7 @@ RemoteProtocol::send_message(RemoteReplyType type, const std::string& message, d
 {
 	L_BINARY("<< send_message(%s)", RemoteReplyTypeNames(type));
 	L_BINARY_PROTO("message: %s", repr(message));
-	client->send_message(static_cast<char>(type), message, end_time);
+	client.send_message(static_cast<char>(type), message, end_time);
 }
 
 
@@ -123,7 +123,7 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		client->checkin_database();
+		client.checkin_database();
 		throw;
 	}
 }
@@ -137,9 +137,9 @@ RemoteProtocol::msg_allterms(const std::string &message)
 	std::string prev = message;
 	const std::string& prefix = message;
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	const Xapian::TermIterator end = db->allterms_end(prefix);
 	for (Xapian::TermIterator t = db->allterms_begin(prefix); t != end; ++t) {
@@ -154,7 +154,7 @@ RemoteProtocol::msg_allterms(const std::string &message)
 		prev = v;
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -169,9 +169,9 @@ RemoteProtocol::msg_termlist(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 	std::string prev;
@@ -190,7 +190,7 @@ RemoteProtocol::msg_termlist(const std::string &message)
 		prev = v;
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -206,9 +206,9 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 	std::string term(p, p_end - p);
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
 	const Xapian::PositionIterator end = db->positionlist_end(did, term);
@@ -219,7 +219,7 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 		lastpos = pos;
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -232,9 +232,9 @@ RemoteProtocol::msg_postlist(const std::string &message)
 
 	const std::string & term = message;
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	Xapian::doccount termfreq = db->get_termfreq(term);
 	Xapian::termcount collfreq = db->get_collection_freq(term);
@@ -253,7 +253,7 @@ RemoteProtocol::msg_postlist(const std::string &message)
 		lastdocid = newdocid;
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -325,14 +325,14 @@ RemoteProtocol::msg_reopen(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_reopen(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	if (!client->database->reopen()) {
-		client->checkin_database();
+	if (!client.database->reopen()) {
+		client.checkin_database();
 
 		send_message(RemoteReplyType::REPLY_DONE, std::string());
 	} else {
-		client->checkin_database();
+		client.checkin_database();
 
 		msg_update(message);
 	}
@@ -351,10 +351,10 @@ RemoteProtocol::msg_update(const std::string &)
 
 	std::string message(protocol, 2);
 
-	if (!client->endpoints.empty()) {
-		client->checkout_database();
+	if (!client.endpoints.empty()) {
+		client.checkout_database();
 
-		Xapian::Database* db = client->database->db.get();
+		Xapian::Database* db = client.database->db.get();
 
 		Xapian::doccount num_docs = db->get_doccount();
 		message += serialise_length(num_docs);
@@ -371,7 +371,7 @@ RemoteProtocol::msg_update(const std::string &)
 		std::string uuid = db->get_uuid();
 		message += uuid;
 
-		client->checkin_database();
+		client.checkin_database();
 	}
 
 	send_message(RemoteReplyType::REPLY_UPDATE, message);
@@ -388,9 +388,9 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	matchspies.clear();
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	enquire = std::make_unique<Xapian::Enquire>(*db);
 
@@ -562,7 +562,7 @@ RemoteProtocol::msg_getmset(const std::string & message)
 	}
 	msg += mset.serialise();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
@@ -577,11 +577,11 @@ RemoteProtocol::msg_document(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Document doc = client->database->get_document(did, false, true);
+	Xapian::Document doc = client.database->get_document(did, false, true);
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
@@ -601,14 +601,14 @@ RemoteProtocol::msg_keepalive(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_keepalive(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	// Ensure *our* database stays alive, as it may contain remote databases!
 	db->keep_alive();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -619,11 +619,11 @@ RemoteProtocol::msg_termexists(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_termexists(<term>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message((db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST), std::string());
 }
@@ -634,11 +634,11 @@ RemoteProtocol::msg_collfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_collfreq(<term>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(db->get_collection_freq(term)));
 }
@@ -649,11 +649,11 @@ RemoteProtocol::msg_termfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_termfreq(<term>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(db->get_termfreq(term)));
 }
@@ -664,14 +664,14 @@ RemoteProtocol::msg_freqs(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_freqs(<term>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	std::string msg(serialise_length(db->get_termfreq(term)));
 	msg += serialise_length(db->get_collection_freq(term));
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_FREQS, msg);
 }
@@ -682,9 +682,9 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_valuestats(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -702,7 +702,7 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 		send_message(RemoteReplyType::REPLY_VALUESTATS, message_out);
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -715,11 +715,11 @@ RemoteProtocol::msg_doclength(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 }
@@ -734,11 +734,11 @@ RemoteProtocol::msg_uniqueterms(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(db->get_unique_terms(did)));
 }
@@ -749,11 +749,11 @@ RemoteProtocol::msg_commit(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_commit(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->commit();
+	client.database->commit();
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -764,11 +764,11 @@ RemoteProtocol::msg_cancel(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_cancel(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->cancel();
+	client.database->cancel();
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -777,11 +777,11 @@ RemoteProtocol::msg_adddocument(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_adddocument(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	auto did = client->database->add_document(Xapian::Document::unserialise(message));
+	auto did = client.database->add_document(Xapian::Document::unserialise(message));
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
@@ -796,11 +796,11 @@ RemoteProtocol::msg_deletedocument(const std::string & message)
 	const char *p_end = p + message.size();
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->delete_document(did);
+	client.database->delete_document(did);
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -811,11 +811,11 @@ RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_deletedocumentterm(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->delete_document_term(message);
+	client.database->delete_document_term(message);
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -828,11 +828,11 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
+	client.database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -847,11 +847,11 @@ RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 	std::string unique_term(p, len);
 	p += len;
 
-	client->checkout_database();
+	client.checkout_database();
 
-	auto did = client->database->replace_document_term(unique_term, Xapian::Document::unserialise(std::string(p, p_end)));
+	auto did = client.database->replace_document_term(unique_term, Xapian::Document::unserialise(std::string(p, p_end)));
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
@@ -862,11 +862,11 @@ RemoteProtocol::msg_getmetadata(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_getmetadata(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	auto value = client->database->get_metadata(message);
+	auto value = client.database->get_metadata(message);
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_METADATA, value);
 }
@@ -877,9 +877,9 @@ RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_openmetadatakeylist(<message>)");
 
-	client->checkout_database();
+	client.checkout_database();
 
-	Xapian::Database* db = client->database->db.get();
+	Xapian::Database* db = client.database->db.get();
 
 	std::string prev = message;
 	std::string reply;
@@ -898,7 +898,7 @@ RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
 		prev = v;
 	}
 
-	client->checkin_database();
+	client.checkin_database();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -916,11 +916,11 @@ RemoteProtocol::msg_setmetadata(const std::string & message)
 	p += keylen;
 	std::string val(p, p_end - p);
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->set_metadata(key, val);
+	client.database->set_metadata(key, val);
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -933,11 +933,11 @@ RemoteProtocol::msg_addspelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->add_spelling(std::string(p, p_end - p), freqinc);
+	client.database->add_spelling(std::string(p, p_end - p), freqinc);
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -950,11 +950,11 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	client->checkout_database();
+	client.checkout_database();
 
-	client->database->remove_spelling(std::string(p, p_end - p), freqdec);
+	client.database->remove_spelling(std::string(p, p_end - p), freqdec);
 
-	client->checkin_database();
+	client.checkin_database();
 }
 
 
@@ -963,7 +963,7 @@ RemoteProtocol::msg_shutdown(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_shutdown(<message>)");
 
-	client->shutdown();
+	client.shutdown();
 }
 
 
@@ -972,20 +972,20 @@ RemoteProtocol::select_db(const std::vector<std::string> &dbpaths_, bool writabl
 {
 	L_CALL("RemoteProtocol::select_db(<dbpaths>, %s, %d)", writable_ ? "true" : "false", flags_);
 
-	client->endpoints.clear();
+	client.endpoints.clear();
 
-	client->checkin_database();
+	client.checkin_database();
 
-	client->writable = writable_;
-	client->flags = flags_;
+	client.writable = writable_;
+	client.flags = flags_;
 
 	if (!dbpaths_.empty()) {
-		if (client->writable) {
+		if (client.writable) {
 			assert(dbpaths_.size() == 1); // Expecting exactly one database.
-			client->endpoints.add(Endpoint(dbpaths_[0]));
+			client.endpoints.add(Endpoint(dbpaths_[0]));
 		} else {
 			for (auto& path : dbpaths_) {
-				client->endpoints.add(Endpoint(path));
+				client.endpoints.add(Endpoint(path));
 			}
 		}
 	}

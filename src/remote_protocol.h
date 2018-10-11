@@ -147,11 +147,11 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 
 class RemoteProtocol {
 
-	BinaryClient* client;
+	BinaryClient& client;
 
 public:
 
-	explicit RemoteProtocol(BinaryClient* client_);
+	explicit RemoteProtocol(BinaryClient& client_);
 	~RemoteProtocol();
 
 // For msg_query and msg_mset:

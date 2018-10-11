@@ -1759,7 +1759,7 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 {
 	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string(), repr(term_id));
 
-	static std::hash<std::string_view> hash_fn_string;
+	std::hash<std::string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(term_id);
 
 	bool is_local = endpoints[0].is_local();
@@ -1804,7 +1804,7 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 {
 	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s)", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
 
-	static std::hash<std::string_view> hash_fn_string;
+	std::hash<std::string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(new_document_pair->first);
 
 	bool is_local = endpoints[0].is_local();
@@ -1860,7 +1860,7 @@ DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, 
 {
 	L_CALL("DatabaseHandler::dec_document_change_cnt(%s)", endpoints.to_string(), repr(old_document_pair->first));
 
-	static std::hash<std::string_view> hash_fn_string;
+	std::hash<std::string_view> hash_fn_string;
 	auto key = endpoints.hash() ^ hash_fn_string(old_document_pair->first);
 
 	bool is_local = endpoints[0].is_local();

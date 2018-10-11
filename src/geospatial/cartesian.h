@@ -187,7 +187,7 @@ namespace std {
 	template<>
 	struct hash<Cartesian> {
 		size_t operator()(const Cartesian& p) const {
-			static std::hash<std::string> hash_fn;
+			std::hash<std::string> hash_fn;
 			return hash_fn(p.to_string());
 		}
 	};

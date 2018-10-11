@@ -41,7 +41,7 @@
 using dispatch_func = void (Replication::*)(const std::string&);
 
 
-Replication::Replication(BinaryClient* client_)
+Replication::Replication(BinaryClient& client_)
 	: client(client_)
 {
 	L_OBJ("CREATED REPLICATION OBJ!");
@@ -59,7 +59,7 @@ Replication::send_message(ReplicationReplyType type, const std::string& message,
 {
 	L_BINARY("<< send_message(%s)", ReplicationReplyTypeNames(type));
 	L_BINARY_PROTO("message: %s", repr(message));
-	client->send_message(static_cast<char>(type), message, end_time);
+	client.send_message(static_cast<char>(type), message, end_time);
 }
 
 
@@ -79,7 +79,7 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		client->checkin_database();
+		client.checkin_database();
 		throw;
 	}
 }
@@ -169,7 +169,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		client->checkin_database();
+		client.checkin_database();
 		throw;
 	}
 }
@@ -199,7 +199,7 @@ Replication::reply_end_of_changes(const std::string &)
 	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
 	// }
 
-	// client->checkin_database();
+	// client.checkin_database();
 
 	// shutdown();
 }
@@ -213,7 +213,7 @@ Replication::reply_fail(const std::string &)
 	L_REPLICATION("Replication::reply_fail");
 
 	// L_ERR("Replication failure!");
-	// client->checkin_database();
+	// client.checkin_database();
 
 	// shutdown();
 }
@@ -395,7 +395,7 @@ Replication::replication_client_file_done()
 	const char *p_end;
 	std::string buffer;
 
-	ssize_t size = io::read(client->file_descriptor, buf, sizeof(buf));
+	ssize_t size = io::read(client.file_descriptor, buf, sizeof(buf));
 	buffer.append(buf, size);
 	p = buffer.data();
 	p_end = p + buffer.size();
@@ -406,7 +406,7 @@ Replication::replication_client_file_done()
 		ssize_t len = unserialise_length(&p, p_end);
 		size_t pos = p - s;
 		while (p_end - p < len || static_cast<size_t>(p_end - p) < sizeof(buf) / 2) {
-			size = io::read(client->file_descriptor, buf, sizeof(buf));
+			size = io::read(client.file_descriptor, buf, sizeof(buf));
 			if (!size) break;
 			buffer.append(buf, size);
 			s = p = buffer.data();

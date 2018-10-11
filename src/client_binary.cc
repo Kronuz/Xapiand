@@ -63,8 +63,8 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	  state(State::INIT),
 	  writable(false),
 	  flags(0),
-	  remote_protocol(this),
-	  replication(this)
+	  remote_protocol(*this),
+	  replication(*this)
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	if (binary_clients > XapiandServer::max_binary_clients) {
