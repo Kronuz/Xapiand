@@ -69,6 +69,7 @@ RemoteProtocol::~RemoteProtocol()
 void
 RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message)
 {
+	L_CALL("RemoteProtocol::remote_server(%s, <message>)", RemoteMessageTypeNames[static_cast<int>(type)]);
 
 	static const dispatch_func dispatch[] = {
 		&RemoteProtocol::msg_allterms,
@@ -121,6 +122,8 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 void
 RemoteProtocol::msg_allterms(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_allterms(<message>)");
+
 	std::string prev = message;
 	const std::string& prefix = message;
 
@@ -150,6 +153,8 @@ RemoteProtocol::msg_allterms(const std::string &message)
 void
 RemoteProtocol::msg_termlist(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_termlist(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -184,6 +189,8 @@ RemoteProtocol::msg_termlist(const std::string &message)
 void
 RemoteProtocol::msg_positionlist(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_positionlist(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -211,6 +218,8 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 void
 RemoteProtocol::msg_postlist(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_postlist(<message>)");
+
 	const std::string & term = message;
 
 	client->checkout_database();
@@ -243,6 +252,8 @@ RemoteProtocol::msg_postlist(const std::string &message)
 void
 RemoteProtocol::msg_readaccess(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_readaccess(<message>)");
+
 	int flags = Xapian::DB_OPEN;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -271,6 +282,8 @@ RemoteProtocol::msg_readaccess(const std::string &message)
 void
 RemoteProtocol::msg_writeaccess(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_writeaccess(<message>)");
+
 	int flags = Xapian::DB_OPEN;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -300,6 +313,8 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 void
 RemoteProtocol::msg_reopen(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_reopen(<message>)");
+
 	client->checkout_database();
 
 	if (!client->database->reopen()) {
@@ -317,6 +332,8 @@ RemoteProtocol::msg_reopen(const std::string & message)
 void
 RemoteProtocol::msg_update(const std::string &)
 {
+	L_CALL("RemoteProtocol::msg_update(<message>)");
+
 	static const char protocol[2] = {
 		char(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION),
 		char(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION)
@@ -354,6 +371,8 @@ RemoteProtocol::msg_update(const std::string &)
 void
 RemoteProtocol::msg_query(const std::string &message_in)
 {
+	L_CALL("RemoteProtocol::msg_query(<message>)");
+
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
 
@@ -507,6 +526,8 @@ RemoteProtocol::msg_query(const std::string &message_in)
 void
 RemoteProtocol::msg_getmset(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_getmset(<message>)");
+
 	if (!enquire) {
 		THROW(NetworkError, "Unexpected MSG_GETMSET");
 	}
@@ -540,6 +561,8 @@ RemoteProtocol::msg_getmset(const std::string & message)
 void
 RemoteProtocol::msg_document(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_document(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -566,6 +589,8 @@ RemoteProtocol::msg_document(const std::string &message)
 void
 RemoteProtocol::msg_keepalive(const std::string &)
 {
+	L_CALL("RemoteProtocol::msg_keepalive(<message>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -582,6 +607,8 @@ RemoteProtocol::msg_keepalive(const std::string &)
 void
 RemoteProtocol::msg_termexists(const std::string &term)
 {
+	L_CALL("RemoteProtocol::msg_termexists(<term>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -595,6 +622,8 @@ RemoteProtocol::msg_termexists(const std::string &term)
 void
 RemoteProtocol::msg_collfreq(const std::string &term)
 {
+	L_CALL("RemoteProtocol::msg_collfreq(<term>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -608,6 +637,8 @@ RemoteProtocol::msg_collfreq(const std::string &term)
 void
 RemoteProtocol::msg_termfreq(const std::string &term)
 {
+	L_CALL("RemoteProtocol::msg_termfreq(<term>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -621,6 +652,8 @@ RemoteProtocol::msg_termfreq(const std::string &term)
 void
 RemoteProtocol::msg_freqs(const std::string &term)
 {
+	L_CALL("RemoteProtocol::msg_freqs(<term>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -637,6 +670,8 @@ RemoteProtocol::msg_freqs(const std::string &term)
 void
 RemoteProtocol::msg_valuestats(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_valuestats(<message>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -664,6 +699,8 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 void
 RemoteProtocol::msg_doclength(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_doclength(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -681,6 +718,8 @@ RemoteProtocol::msg_doclength(const std::string &message)
 void
 RemoteProtocol::msg_uniqueterms(const std::string &message)
 {
+	L_CALL("RemoteProtocol::msg_uniqueterms(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -698,6 +737,8 @@ RemoteProtocol::msg_uniqueterms(const std::string &message)
 void
 RemoteProtocol::msg_commit(const std::string &)
 {
+	L_CALL("RemoteProtocol::msg_commit(<message>)");
+
 	client->checkout_database();
 
 	client->database->commit();
@@ -711,6 +752,8 @@ RemoteProtocol::msg_commit(const std::string &)
 void
 RemoteProtocol::msg_cancel(const std::string &)
 {
+	L_CALL("RemoteProtocol::msg_cancel(<message>)");
+
 	client->checkout_database();
 
 	client->database->cancel();
@@ -722,6 +765,8 @@ RemoteProtocol::msg_cancel(const std::string &)
 void
 RemoteProtocol::msg_adddocument(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_adddocument(<message>)");
+
 	client->checkout_database();
 
 	auto did = client->database->add_document(Xapian::Document::unserialise(message));
@@ -735,6 +780,8 @@ RemoteProtocol::msg_adddocument(const std::string & message)
 void
 RemoteProtocol::msg_deletedocument(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_deletedocument(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -752,6 +799,8 @@ RemoteProtocol::msg_deletedocument(const std::string & message)
 void
 RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_deletedocumentterm(<message>)");
+
 	client->checkout_database();
 
 	client->database->delete_document_term(message);
@@ -763,6 +812,7 @@ RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 void
 RemoteProtocol::msg_replacedocument(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_replacedocument(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -779,6 +829,8 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 void
 RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_replacedocumentterm(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t len = unserialise_length(&p, p_end, true);
@@ -798,6 +850,8 @@ RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 void
 RemoteProtocol::msg_getmetadata(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_getmetadata(<message>)");
+
 	client->checkout_database();
 
 	auto value = client->database->get_metadata(message);
@@ -811,6 +865,8 @@ RemoteProtocol::msg_getmetadata(const std::string & message)
 void
 RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_openmetadatakeylist(<message>)");
+
 	client->checkout_database();
 
 	Xapian::Database* db = client->database->db.get();
@@ -841,6 +897,8 @@ RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
 void
 RemoteProtocol::msg_setmetadata(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_setmetadata(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t keylen = unserialise_length(&p, p_end, true);
@@ -859,6 +917,8 @@ RemoteProtocol::msg_setmetadata(const std::string & message)
 void
 RemoteProtocol::msg_addspelling(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_addspelling(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
@@ -874,6 +934,8 @@ RemoteProtocol::msg_addspelling(const std::string & message)
 void
 RemoteProtocol::msg_removespelling(const std::string & message)
 {
+	L_CALL("RemoteProtocol::msg_removespelling(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
@@ -889,6 +951,8 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 void
 RemoteProtocol::msg_shutdown(const std::string &)
 {
+	L_CALL("RemoteProtocol::msg_shutdown(<message>)");
+
 	client->shutdown();
 }
 
@@ -896,6 +960,8 @@ RemoteProtocol::msg_shutdown(const std::string &)
 void
 RemoteProtocol::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_)
 {
+	L_CALL("RemoteProtocol::select_db(<dbpaths>, %s, %d)", writable_ ? "true" : "false", flags_);
+
 	client->endpoints.clear();
 
 	client->checkin_database();
