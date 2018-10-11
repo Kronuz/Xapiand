@@ -115,6 +115,7 @@ BinaryClient::init_remote()
 	XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 		task->run();
 	});
+
 	return true;
 }
 
@@ -154,9 +155,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
 
-	XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-		task->run();
-	});
 	return true;
 }
 
