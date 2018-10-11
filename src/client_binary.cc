@@ -133,7 +133,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
 			src_endpoint,
 			dst_endpoint
-		] (std::shared_ptr<Database>&) {
+		] () {
 			L_DEBUG("Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()));
 			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 		});

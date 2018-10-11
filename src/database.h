@@ -305,8 +305,6 @@ public:
 	std::unique_ptr<Xapian::Database> db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;
 
-	TaskQueue<void(std::shared_ptr<Database>& database)> checkin_callbacks;
-
 #if XAPIAND_DATABASE_WAL
 	std::unique_ptr<DatabaseWAL> wal;
 #endif /* XAPIAND_DATABASE_WAL */
@@ -386,6 +384,8 @@ private:
 	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
+	TaskQueue<void()> checkin_callbacks;
+
 protected:
 	template <typename... Args>
 	DatabaseQueue(const Endpoints& endpoints, Args&&... args);
@@ -459,10 +459,23 @@ class DatabasePool {
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 	template<typename Func>
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, Func&& callback) {
-		checkout(database, endpoints, flags);
-		database->checkin_callbacks.clear();
-		database->checkin_callbacks.enqueue(std::forward<Func>(callback));
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, Func&& on_ready) {
+		try {
+			checkout(database, endpoints, flags);
+		} catch (const CheckoutErrorReplicating& e) {
+			std::lock_guard<std::mutex> lk(qmtx);
+
+			std::shared_ptr<DatabaseQueue> queue;
+			if (flags & DB_WRITABLE) {
+				queue = writable_databases.get(endpoints.hash(), flags & DB_VOLATILE, endpoints);
+			} else {
+				queue = databases.get(endpoints.hash(), flags & DB_VOLATILE, endpoints);
+			}
+
+			queue->checkin_callbacks.clear();
+			queue->checkin_callbacks.enqueue(std::forward<Func>(on_ready));
+			throw;
+		}
 	}
 
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
