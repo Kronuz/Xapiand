@@ -166,8 +166,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	}
 
 	auto local_node_ = local_node.load();
-	L_RAFT_PROTO("Raft { Reg: %d; State: %s; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader);
+	L_RAFT_PROTO("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader.to_string());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -192,7 +192,6 @@ Raft::_reset_leader_election_timeout()
 	number_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
 	auto timeout = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
-	L_RAFT_PROTO("Raft: Reset leader election timeout to: %f!", timeout);
 	leader_election_timeout.repeat = timeout;
 	leader_election_timeout.again();
 
@@ -246,8 +245,8 @@ Raft::send_message(Message type, const std::string& message)
 
 	if (type != Raft::Message::HEARTBEAT_LEADER) {
 		L_RAFT("<< send_message(%s)", MessageNames(type));
+		L_RAFT_PROTO("message: %s", repr(message));
 	}
-	L_RAFT_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);
 }
 
