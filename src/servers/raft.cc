@@ -42,6 +42,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loo
 	  reset_async(*ev_loop)
 {
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
+	leader_election_timeout.repeat = 0;
 
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
 
