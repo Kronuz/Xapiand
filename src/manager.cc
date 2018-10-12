@@ -775,6 +775,78 @@ XapiandManager::reset_state()
 }
 
 
+void
+XapiandManager::check_state()
+{
+	L_CALL("XapiandManager::check_state() {state:%s}", XapiandManager::StateNames(state.load()));
+
+	switch (state.load()) {
+		case XapiandManager::State::RESET: {
+			auto local_node_ = local_node.load();
+			auto node_copy = std::make_unique<Node>(*local_node_);
+			std::string drop = node_copy->name();
+
+			if (node_name.empty()) {
+				node_copy->name(name_generator());
+			} else {
+				node_copy->name(node_name);
+			}
+			local_node = std::shared_ptr<const Node>(node_copy.release());
+
+			if (!drop.empty()) {
+				drop_node(drop);
+			}
+
+			local_node_ = local_node.load();
+			auto reset = XapiandManager::State::RESET;
+			state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
+			L_INFO("Advertising as %s...", local_node_->name());
+			if (auto discovery = weak_discovery.lock()) {
+				discovery->send_message(Discovery::Message::HELLO, local_node_->serialise());
+			}
+			break;
+		}
+
+		case XapiandManager::State::WAITING: {
+			// We're here because no one sneered nor waved during
+			// WAITING_FAST, wait longer then...
+			auto waiting = XapiandManager::State::WAITING;
+			if (state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+				if (auto discovery = weak_discovery.lock()) {
+					discovery->wait_longer();
+				}
+			}
+			break;
+		}
+
+		case XapiandManager::State::WAITING_MORE: {
+			auto waiting_more = XapiandManager::State::WAITING_MORE;
+			state.compare_exchange_strong(waiting_more, XapiandManager::State::SETUP);
+			break;
+		}
+
+		case XapiandManager::State::SETUP: {
+			setup_node();
+			break;
+		}
+
+		case XapiandManager::State::READY: {
+			break;
+		}
+
+		case XapiandManager::State::BAD: {
+			L_ERR("ERROR: Manager is in BAD state!!");
+			break;
+		}
+
+		default: {
+			L_ERR("ERROR: Manager is in UNKNOWN state!!");
+			break;
+		}
+	}
+}
+
+
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
