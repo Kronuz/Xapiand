@@ -1305,6 +1305,51 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 
 
 MSet
+DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
+{
+	L_CALL("DatabaseHandler::get_all_mset()");
+
+	MSet mset{};
+
+	lock_database lk_db(this);
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto it = database->db->postlist_begin("");
+			auto it_e = database->db->postlist_end("");
+			if (initial) {
+				it.skip_to(initial);
+			}
+			for (; it != it_e && limit; ++it, --limit) {
+				initial = *it;
+				mset.push_back(initial);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::QueryParserError& exc) {
+			THROW(ClientError, exc.get_description());
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_description());
+		} catch (const std::exception& exc) {
+			THROW(ClientError, "The search was not performed: %s", exc.what());
+		}
+		database->reopen();
+	}
+
+	return mset;
+}
+
+
+MSet
 DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
 	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(e.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");

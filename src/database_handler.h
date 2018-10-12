@@ -110,7 +110,9 @@ class MSet {
 	Xapian::doccount matches_estimated;
 
 public:
-	MSet() = default;
+	MSet() :
+		matches_estimated{0}
+	{ }
 
 	MSet(const Xapian::MSet& mset) :
 		matches_estimated{mset.get_matches_estimated()}
@@ -141,6 +143,11 @@ public:
 
 	auto end() const {
 		return MSetIterator(items.end());
+	}
+
+	void push_back(const Xapian::docid& did) {
+		items.push_back(did);
+		++matches_estimated;
 	}
 };
 
@@ -230,6 +237,7 @@ public:
 	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
+	MSet get_all_mset(Xapian::docid initial=0, size_t limit=-1);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& suggestions);
 
 	void dump_metadata(int fd);
