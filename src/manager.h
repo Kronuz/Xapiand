@@ -168,8 +168,6 @@ public:
 
 	void run();
 
-	bool is_single_node();
-
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();
 

@@ -363,7 +363,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	state = State::READY;
 
 #ifdef XAPIAND_CLUSTERING
-	if (!is_single_node()) {
+	if (!opts.solo) {
 		if (auto raft = weak_raft.lock()) {
 			raft->start();
 		}
@@ -762,15 +762,6 @@ XapiandManager::nodes_size()
 }
 
 
-bool
-XapiandManager::is_single_node()
-{
-	L_CALL("XapiandManager::is_single_node()");
-
-	return opts.solo || (nodes_size() == 0);
-}
-
-
 #ifdef XAPIAND_CLUSTERING
 
 void
@@ -927,7 +918,7 @@ XapiandManager::get_region()
 	if (auto raft = weak_raft.lock()) {
 		auto local_node_ = local_node.load();
 		if (local_node_->regions == -1) {
-			if (is_single_node()) {
+			if (opts.solo) {
 				auto local_node_copy = std::make_unique<Node>(*local_node_);
 				local_node_copy->regions = 1;
 				local_node_copy->region = 0;
