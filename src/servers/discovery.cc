@@ -59,7 +59,6 @@ Discovery::start() {
 	L_EV("Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
 
 	L_DISCOVERY("Discovery was started! (exploring)");
-
 }
 
 
@@ -161,6 +160,11 @@ Discovery::_check_state()
 			L_ERR("ERROR: Manager is in BAD state!!");
 			break;
 		}
+
+		default: {
+			L_ERR("ERROR: Manager is in UNKNOWN state!!");
+			break;
+		}
 	}
 }
 
@@ -185,8 +189,8 @@ Discovery::send_message(Message type, const std::string& message)
 {
 	if (type != Discovery::Message::HEARTBEAT) {
 		L_DISCOVERY("<< send_message(%s)", MessageNames(type));
+		L_DISCOVERY_PROTO("message: %s", repr(message));
 	}
-	L_DISCOVERY_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);
 }
 
