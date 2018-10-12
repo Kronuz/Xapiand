@@ -49,14 +49,11 @@ class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
 	ev::async enter_async;
-	ev::async wait_longer_async;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
 	void enter_async_cb(ev::async& watcher, int revents);
-	void wait_longer_async_cb(ev::async& watcher, int revents);
 
 	void _enter();
-	void _wait_longer();
 
 public:
 	std::string __repr__() const override {
@@ -92,10 +89,6 @@ public:
 
 	inline void enter() {
 		enter_async.send();
-	}
-
-	inline void wait_longer() {
-		wait_longer_async.send();
 	}
 
 	void start();

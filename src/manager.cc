@@ -811,11 +811,7 @@ XapiandManager::check_state()
 			// We're here because no one sneered nor waved during
 			// WAITING_FAST, wait longer then...
 			auto waiting = XapiandManager::State::WAITING;
-			if (state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
-				if (auto discovery = weak_discovery.lock()) {
-					discovery->wait_longer();
-				}
-			}
+			state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			break;
 		}
 

@@ -32,18 +32,13 @@
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  heartbeat(*ev_loop),
-	  enter_async(*ev_loop),
-	  wait_longer_async(*ev_loop)
+	  enter_async(*ev_loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 
 	enter_async.set<Discovery, &Discovery::enter_async_cb>(this);
 	enter_async.start();
 	L_EV("Start discovery's async enter event");
-
-	wait_longer_async.set<Discovery, &Discovery::wait_longer_async_cb>(this);
-	wait_longer_async.start();
-	L_EV("Start discovery's async wait_longer event");
 
 	L_OBJ("CREATED DISCOVERY");
 }
@@ -91,17 +86,6 @@ Discovery::enter_async_cb(ev::async&, int revents)
 
 
 void
-Discovery::wait_longer_async_cb(ev::async&, int revents)
-{
-	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	_wait_longer();
-}
-
-
-void
 Discovery::_enter()
 {
 	auto local_node_ = local_node.load();
@@ -116,14 +100,6 @@ Discovery::_enter()
 
 
 void
-Discovery::_wait_longer()
-{
-	heartbeat.repeat = WAITING_SLOW;
-	heartbeat.again();
-}
-
-
-void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
 	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
@@ -132,8 +108,27 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 
 	L_EV_BEGIN("Discovery::heartbeat_cb:BEGIN");
 
-	auto local_node_ = local_node.load();
-	send_message(Message::HEARTBEAT, local_node_->serialise());
+	switch (XapiandManager::manager->state.load()) {
+		case XapiandManager::State::READY: {
+			auto local_node_ = local_node.load();
+			send_message(Message::HEARTBEAT, local_node_->serialise());
+			break;
+		}
+		case XapiandManager::State::WAITING: {
+			heartbeat.repeat = WAITING_SLOW;
+			heartbeat.again();
+		}
+		/* FALLTHROUGH */
+		case XapiandManager::State::RESET:
+		case XapiandManager::State::WAITING_MORE:
+		case XapiandManager::State::SETUP: {
+			XapiandManager::manager->check_state();
+			break;
+		}
+		default: {
+			break;
+		}
+	}
 
 	L_EV_END("Discovery::heartbeat_cb:END");
 }
