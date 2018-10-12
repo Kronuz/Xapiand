@@ -94,7 +94,7 @@ static inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) 
 	if (type_int >= 0 || type_int < static_cast<int>(RemoteMessageType::MSG_MAX)) {
 		return RemoteMessageTypeNames[type_int];
 	}
-	static const std::string UNKNOWN = "RemoteMessageType::UNKNOWN";
+	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
 }
 
@@ -140,7 +140,7 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 	if (type_int >= 0 || type_int < static_cast<int>(RemoteReplyType::REPLY_MAX)) {
 		return RemoteReplyTypeNames[type_int];
 	}
-	static const std::string UNKNOWN = "RemoteReplyType::UNKNOWN";
+	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
 }
 

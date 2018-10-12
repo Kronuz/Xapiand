@@ -79,7 +79,7 @@ public:
 		if (type_int >= 0 || type_int < static_cast<int>(Message::MAX)) {
 			return MessageNames[type_int];
 		}
-		static const std::string UNKNOWN = "Message::UNKNOWN";
+		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;
 	}
 
