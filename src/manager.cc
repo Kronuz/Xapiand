@@ -915,28 +915,24 @@ XapiandManager::get_region()
 {
 	L_CALL("XapiandManager::get_region()");
 
-	if (auto raft = weak_raft.lock()) {
-		auto local_node_ = local_node.load();
-		if (local_node_->regions == -1) {
-			if (opts.solo) {
-				auto local_node_copy = std::make_unique<Node>(*local_node_);
-				local_node_copy->regions = 1;
-				local_node_copy->region = 0;
-				local_node = std::shared_ptr<const Node>(local_node_copy.release());
-				raft->stop();
-			} else if (state == State::READY) {
-				raft->start();
-				auto local_node_copy = std::make_unique<Node>(*local_node_);
-				// local_node_copy->regions = sqrt(nodes_size() + 1);
-				local_node_copy->regions = 1;  // hardcode only one region (for now)
-				int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
-				if (local_node_copy->region != region) {
-					local_node_copy->region = region;
-					raft->reset();
+	if (!opts.solo) {
+		if (state == State::READY) {
+			auto local_node_ = local_node.load();
+			if (local_node_->regions == -1) {
+				if (auto raft = weak_raft.lock()) {
+					raft->start();
+					auto local_node_copy = std::make_unique<Node>(*local_node_);
+					// local_node_copy->regions = sqrt(nodes_size() + 1);
+					local_node_copy->regions = 1;  // hardcode only one region (for now)
+					int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
+					if (local_node_copy->region != region) {
+						local_node_copy->region = region;
+						raft->reset();
+					}
+					local_node = std::shared_ptr<const Node>(local_node_copy.release());
+					L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 				}
-				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 			}
-			L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 		}
 	}
 
