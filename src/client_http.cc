@@ -1428,6 +1428,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 	for (auto m = mset.begin(); m != m_e; ++m) {
 		auto document = db_handler.get_document(*m);
 		auto obj = document.get_obj();
+		obj.erase(ID_FIELD_NAME);
 		auto node = XapiandManager::manager->get_node(obj["name"].as_str());
 		if (node) {
 			obj["host"] = node->host();

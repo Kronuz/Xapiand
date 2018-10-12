@@ -314,7 +314,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 			db_handler.index(local_node_->name(), false, {
 				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_STORE, false } } },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
 				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
 				{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, msgpack_type);
