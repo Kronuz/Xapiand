@@ -112,13 +112,13 @@ public:
 		BAD,
 		READY,
 		SETUP,
-		WAITING_,
 		WAITING,
+		WAITING_MORE,
 		RESET,
 	};
 
 	static constexpr const char* const StateNames[] = {
-		"BAD", "READY", "SETUP", "WAITING_", "WAITING", "RESET",
+		"BAD", "READY", "SETUP", "WAITING", "WAITING_MORE", "RESET",
 	};
 
 	static std::shared_ptr<XapiandManager> manager;

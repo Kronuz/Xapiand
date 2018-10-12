@@ -55,11 +55,13 @@ Discovery::~Discovery()
 
 void
 Discovery::start() {
-	heartbeat.repeat = HEARTBEAT_EXPLORE;
+	heartbeat.repeat = WAITING_FAST;
 	heartbeat.again();
 	L_EV("Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
 
 	L_DISCOVERY("Discovery was started! (exploring)");
+
+	_check_state();
 }
 
 
@@ -101,14 +103,8 @@ Discovery::_enter()
 
 
 void
-Discovery::heartbeat_cb(ev::timer&, int revents)
+Discovery::_check_state()
 {
-	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	L_EV_BEGIN("Discovery::heartbeat_cb:BEGIN");
-
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		L_DISCOVERY("Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(XapiandManager::manager->state.load())]);
 	}
@@ -137,17 +133,24 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			break;
 		}
 
-		case XapiandManager::State::WAITING:
-			XapiandManager::manager->state.store(XapiandManager::State::WAITING_);
+		case XapiandManager::State::WAITING: {
+			// We're here because no one sneered nor waved during WAITING_FAST,
+			// wait longer then...
+			heartbeat.repeat = WAITING_SLOW;
+			heartbeat.again();
+			XapiandManager::manager->state.store(XapiandManager::State::WAITING_MORE);
 			break;
+		}
 
-		case XapiandManager::State::WAITING_:
+		case XapiandManager::State::WAITING_MORE: {
 			XapiandManager::manager->state.store(XapiandManager::State::SETUP);
 			break;
+		}
 
-		case XapiandManager::State::SETUP:
+		case XapiandManager::State::SETUP: {
 			XapiandManager::manager->setup_node();
 			break;
+		}
 
 		case XapiandManager::State::READY:
 		{
@@ -156,10 +159,24 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			break;
 		}
 
-		case XapiandManager::State::BAD:
+		case XapiandManager::State::BAD: {
 			L_ERR("ERROR: Manager is in BAD state!!");
 			break;
+		}
 	}
+}
+
+
+void
+Discovery::heartbeat_cb(ev::timer&, int revents)
+{
+	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	ignore_unused(revents);
+
+	L_EV_BEGIN("Discovery::heartbeat_cb:BEGIN");
+
+	_check_state();
 
 	L_EV_END("Discovery::heartbeat_cb:END");
 }

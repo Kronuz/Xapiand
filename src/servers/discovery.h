@@ -30,9 +30,10 @@
 
 
 // Values in seconds
-constexpr double HEARTBEAT_EXPLORE   = 0.100;
-constexpr double HEARTBEAT_MIN       = 1.0;
-constexpr double HEARTBEAT_MAX       = 2.0;
+constexpr double WAITING_FAST        = 0.2;
+constexpr double WAITING_SLOW        = 1.0;
+constexpr double HEARTBEAT_MIN       = 2.0;
+constexpr double HEARTBEAT_MAX       = 4.0;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
@@ -53,6 +54,7 @@ private:
 	void enter_async_cb(ev::async& watcher, int revents);
 
 	void _enter();
+	void _check_state();
 
 public:
 	std::string __repr__() const override {

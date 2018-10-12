@@ -95,7 +95,10 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 
 	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), region);
 	if (node) {
-		if (*remote_node != *node && remote_node->name() != local_node_->name()) {
+		if (*remote_node != *node && remote_node->lower_name() != local_node_->lower_name()) {
+			// After receiving WAVE, if state is still WAITING, flag as WAITING_MORE so it waits just a little longer...
+			auto waiting = XapiandManager::State::WAITING;
+			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			if (heartbeat || node->touched < epoch::now<>() - HEARTBEAT_MAX) {
 				XapiandManager::manager->drop_node(remote_node->name());
 				L_INFO("Stalled node %s left the party!", remote_node->name());

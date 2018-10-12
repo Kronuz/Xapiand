@@ -78,7 +78,7 @@ Raft::start()
 {
 	L_CALL("Raft::start()");
 
-	_reset_leader_election_timeout();
+	_request_vote();
 
 	L_RAFT("Raft was started!");
 }
@@ -152,22 +152,17 @@ Raft::_reset()
 
 
 void
-Raft::leader_election_timeout_cb(ev::timer&, int revents)
+Raft::_request_vote()
 {
-	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
+	L_CALL("Raft::_request_vote()");
 
 	if (XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_EV_END("Raft::leader_election_timeout_cb:END");
 		return;
 	}
 
 	auto local_node_ = local_node.load();
-	L_RAFT_PROTO("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader.to_string());
+	L_RAFT("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader.name());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -178,6 +173,22 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	}
 
 	_reset_leader_election_timeout();
+}
+
+
+void
+Raft::leader_election_timeout_cb(ev::timer&, int revents)
+{
+	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	ignore_unused(revents);
+
+	if (XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
+
+	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
+
+	_request_vote();
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -203,15 +214,13 @@ void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
 	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
-
 	if (XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_EV_END("Raft::leader_heartbeat_cb:END");
 		return;
 	}
+
+	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
 
 	auto local_node_ = local_node.load();
 	send_message(Message::HEARTBEAT_LEADER, local_node_->serialise());

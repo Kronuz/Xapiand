@@ -116,6 +116,7 @@ private:
 	void reset_leader_election_timeout_async_cb(ev::async& watcher, int revents);
 	void reset_async_cb(ev::async& watcher, int revents);
 
+	void _request_vote();
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
 	void _reset();
