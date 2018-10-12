@@ -43,7 +43,7 @@ static inline const std::string& ReplicationMessageTypeNames(ReplicationMessageT
 		"MSG_GET_CHANGESETS",
 	};
 	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < toUType(ReplicationMessageType::MSG_MAX)) {
+	if (type_int >= 0 || type_int < static_cast<int>(ReplicationMessageType::MSG_MAX)) {
 		return ReplicationMessageTypeNames[type_int];
 	}
 	static const std::string UNKNOWN = "ReplicationMessageType::UNKNOWN";
@@ -74,7 +74,7 @@ static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType 
 	if (type_int == SWITCH_TO_REPL) {
 		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
 		return SWITCH_TO_REPL_NAME;
-	} else if (type_int >= 0 || type_int < toUType(ReplicationReplyType::REPLY_MAX)) {
+	} else if (type_int >= 0 || type_int < static_cast<int>(ReplicationReplyType::REPLY_MAX)) {
 		return ReplicationReplyTypeNames[type_int];
 	}
 	static const std::string UNKNOWN = "ReplicationReplyType::UNKNOWN";

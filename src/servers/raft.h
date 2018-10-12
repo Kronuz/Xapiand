@@ -53,11 +53,21 @@ public:
 		LEADER,
 		FOLLOWER,
 		CANDIDATE,
+		MAX,
 	};
 
-	static constexpr const char* const StateNames[] = {
-		"LEADER", "FOLLOWER", "CANDIDATE",
-	};
+	static const std::string& StateNames(State type) {
+		static const std::string StateNames[] = {
+			"LEADER", "FOLLOWER", "CANDIDATE",
+		};
+
+		auto type_int = static_cast<int>(type);
+		if (type_int >= 0 || type_int < static_cast<int>(State::MAX)) {
+			return StateNames[type_int];
+		}
+		static const std::string UNKNOWN = "State::UNKNOWN";
+		return UNKNOWN;
+	}
 
 	enum class Message {
 		HEARTBEAT_LEADER,   // Only leader send heartbeats to its follower servers
@@ -69,10 +79,19 @@ public:
 		MAX,
 	};
 
-	static constexpr const char* const MessageNames[] = {
-		"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
-		"LEADERSHIP", "RESET",
-	};
+	static const std::string& MessageNames(Message type) {
+		static const std::string MessageNames[] = {
+			"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
+			"LEADERSHIP", "RESET",
+		};
+
+		auto type_int = static_cast<int>(type);
+		if (type_int >= 0 || type_int < static_cast<int>(Message::MAX)) {
+			return MessageNames[type_int];
+		}
+		static const std::string UNKNOWN = "Message::UNKNOWN";
+		return UNKNOWN;
+	}
 
 	uint64_t term;
 	size_t votes;

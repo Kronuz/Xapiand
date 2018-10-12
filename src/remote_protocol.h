@@ -91,7 +91,7 @@ static inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) 
 		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
 	};
 	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < toUType(RemoteMessageType::MSG_MAX)) {
+	if (type_int >= 0 || type_int < static_cast<int>(RemoteMessageType::MSG_MAX)) {
 		return RemoteMessageTypeNames[type_int];
 	}
 	static const std::string UNKNOWN = "RemoteMessageType::UNKNOWN";
@@ -137,7 +137,7 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
 	};
 	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < toUType(RemoteReplyType::REPLY_MAX)) {
+	if (type_int >= 0 || type_int < static_cast<int>(RemoteReplyType::REPLY_MAX)) {
 		return RemoteReplyTypeNames[type_int];
 	}
 	static const std::string UNKNOWN = "RemoteReplyType::UNKNOWN";

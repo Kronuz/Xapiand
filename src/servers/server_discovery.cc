@@ -313,7 +313,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				std::string message;
 				Discovery::Message type = static_cast<Discovery::Message>(discovery->get_message(message, static_cast<char>(Discovery::Message::MAX)));
 				if (type != Discovery::Message::HEARTBEAT) {
-					L_DISCOVERY(">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
+					L_DISCOVERY(">> get_message(%s)", Discovery::MessageNames(type));
 				}
 				L_DISCOVERY_PROTO("message: %s", repr(message));
 				discovery_server(type, message);

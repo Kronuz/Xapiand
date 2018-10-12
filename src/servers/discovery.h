@@ -70,9 +70,18 @@ public:
 		MAX,           //
 	};
 
-	static constexpr const char* const MessageNames[] = {
-		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
-	};
+	static const std::string& MessageNames(Message type) {
+		static const std::string MessageNames[] = {
+			"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
+		};
+
+		auto type_int = static_cast<int>(type);
+		if (type_int >= 0 || type_int < static_cast<int>(Message::MAX)) {
+			return MessageNames[type_int];
+		}
+		static const std::string UNKNOWN = "Message::UNKNOWN";
+		return UNKNOWN;
+	}
 
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();

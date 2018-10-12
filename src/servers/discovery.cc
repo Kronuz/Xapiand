@@ -29,9 +29,6 @@
 #include "manager.h"
 
 
-constexpr const char* const Discovery::MessageNames[];
-
-
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  heartbeat(*ev_loop),
@@ -172,7 +169,7 @@ void
 Discovery::send_message(Message type, const std::string& message)
 {
 	if (type != Discovery::Message::HEARTBEAT) {
-		L_DISCOVERY("<< send_message(%s)", MessageNames[toUType(type)]);
+		L_DISCOVERY("<< send_message(%s)", MessageNames(type));
 	}
 	L_DISCOVERY_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);

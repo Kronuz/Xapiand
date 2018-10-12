@@ -30,10 +30,6 @@
 #include "manager.h"
 
 
-constexpr const char* const Raft::MessageNames[];
-constexpr const char* const Raft::StateNames[];
-
-
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
@@ -234,7 +230,7 @@ void
 Raft::send_message(Message type, const std::string& message)
 {
 	if (type != Raft::Message::HEARTBEAT_LEADER) {
-		L_RAFT("<< send_message(%s)", MessageNames[toUType(type)]);
+		L_RAFT("<< send_message(%s)", MessageNames(type));
 	}
 	L_RAFT_PROTO("message: %s", repr(message));
 	BaseUDP::send_message(toUType(type), message);
