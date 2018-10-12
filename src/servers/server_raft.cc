@@ -54,6 +54,8 @@ RaftServer::~RaftServer()
 void
 RaftServer::raft_server(Raft::Message type, const std::string& message)
 {
+	L_CALL("RaftServer::raft_server(%s, <message>)", Raft::MessageNames(type));
+
 	static const dispatch_func dispatch[] = {
 		&RaftServer::heartbeat_leader,
 		&RaftServer::request_vote,
@@ -74,6 +76,8 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 void
 RaftServer::heartbeat_leader(const std::string& message)
 {
+	L_CALL("RaftServer::heartbeat_leader(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -97,6 +101,8 @@ RaftServer::heartbeat_leader(const std::string& message)
 void
 RaftServer::request_vote(const std::string& message)
 {
+	L_CALL("RaftServer::request_vote(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -151,6 +157,8 @@ RaftServer::request_vote(const std::string& message)
 void
 RaftServer::response_vote(const std::string& message)
 {
+	L_CALL("RaftServer::response_vote(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -193,6 +201,8 @@ RaftServer::response_vote(const std::string& message)
 void
 RaftServer::leader(const std::string& message)
 {
+	L_CALL("RaftServer::leader(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -227,6 +237,8 @@ RaftServer::leader(const std::string& message)
 void
 RaftServer::leadership(const std::string& message)
 {
+	L_CALL("RaftServer::leadership(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -249,6 +261,8 @@ RaftServer::leadership(const std::string& message)
 void
 RaftServer::reset(const std::string& message)
 {
+	L_CALL("RaftServer::reset(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -268,6 +282,8 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	L_CALL("RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), raft->sock, watcher.fd);
+
 	int fd = raft->sock;
 	if (fd == -1) {
 		return;
@@ -275,7 +291,6 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	assert(fd == watcher.fd || fd == -1);
 
-	L_CALL("RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("RaftServer::io_accept_cb", "RaftServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	if (EV_ERROR & revents) {
