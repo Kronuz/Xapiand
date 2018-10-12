@@ -823,8 +823,15 @@ XapiandManager::get_node(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::get_node(%s)", _node_name);
 
+	auto lower_node_name = string::lower(_node_name);
+
+	auto local_node_ = local_node.load();
+	if (lower_node_name == local_node_->lower_name()) {
+		return local_node_;
+	}
+
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	auto it = nodes.find(string::lower(_node_name));
+	auto it = nodes.find(lower_node_name);
 	if (it != nodes.end()) {
 		return it->second;
 	}
