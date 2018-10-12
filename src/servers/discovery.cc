@@ -102,6 +102,8 @@ Discovery::_enter()
 void
 Discovery::_check_state()
 {
+	L_CALL("Discovery::_check_state() {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		L_DISCOVERY("Waiting manager get ready!! (%s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	}
@@ -124,23 +126,26 @@ Discovery::_check_state()
 			}
 
 			local_node_ = local_node.load();
+			auto reset = XapiandManager::State::RESET;
+			XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
 			L_INFO("Advertising as %s...", local_node_->name());
 			send_message(Message::HELLO, local_node_->serialise());
-			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
 		}
 
 		case XapiandManager::State::WAITING: {
-			// We're here because no one sneered nor waved during WAITING_FAST,
-			// wait longer then...
+			// We're here because no one sneered nor waved during
+			// WAITING_FAST, wait longer then...
+			auto waiting = XapiandManager::State::WAITING;
+			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			heartbeat.repeat = WAITING_SLOW;
 			heartbeat.again();
-			XapiandManager::manager->state.store(XapiandManager::State::WAITING_MORE);
 			break;
 		}
 
 		case XapiandManager::State::WAITING_MORE: {
-			XapiandManager::manager->state.store(XapiandManager::State::SETUP);
+			auto waiting_more = XapiandManager::State::WAITING_MORE;
+			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::SETUP);
 			break;
 		}
 

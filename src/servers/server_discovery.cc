@@ -80,25 +80,29 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 void
 DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 {
+	L_CALL("DiscoveryServer::_wave(%s, <message>) {state:%s}", heartbeat ? "true" : "false", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 
-	int32_t region;
 	auto local_node_ = local_node.load();
 	if (*remote_node == *local_node_) {
-		region = local_node_->region;
-	} else {
-		region = remote_node->region;
+		// it's just me ...ignore.
+		return;
 	}
 
-	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), region);
+	if (!heartbeat) {
+		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
+		// (prevent it from switching to slow waiting)
+		auto waiting = XapiandManager::State::WAITING;
+		XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
+	}
+
+	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
 	if (node) {
-		if (*remote_node != *node && remote_node->lower_name() != local_node_->lower_name()) {
-			// After receiving WAVE, if state is still WAITING, flag as WAITING_MORE so it waits just a little longer...
-			auto waiting = XapiandManager::State::WAITING;
-			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
+		if (*remote_node != *node) {
 			if (heartbeat || node->touched < epoch::now<>() - HEARTBEAT_MAX) {
 				XapiandManager::manager->drop_node(remote_node->name());
 				L_INFO("Stalled node %s left the party!", remote_node->name());
