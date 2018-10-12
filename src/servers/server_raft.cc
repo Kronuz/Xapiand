@@ -94,7 +94,6 @@ RaftServer::heartbeat_leader(const std::string& message)
 		L_RAFT("Request the raft server's configuration!");
 		raft->send_message(Raft::Message::LEADERSHIP, local_node_->serialise());
 	}
-	L_RAFT_PROTO("Listening %s's heartbeat in timestamp: %f!", remote_node.name(), raft->last_activity);
 }
 
 

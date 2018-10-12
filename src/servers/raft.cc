@@ -166,8 +166,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	}
 
 	auto local_node_ = local_node.load();
-	L_RAFT_PROTO("Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node_->region, state, leader_election_timeout.repeat, term, number_servers, leader);
+	L_RAFT_PROTO("Raft { Reg: %d; State: %s; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader);
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -191,8 +191,11 @@ Raft::_reset_leader_election_timeout()
 	auto local_node_ = local_node.load();
 	number_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
-	leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
+	auto timeout = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
+	L_RAFT_PROTO("Raft: Reset leader election timeout to: %f!", timeout);
+	leader_election_timeout.repeat = timeout;
 	leader_election_timeout.again();
+
 	L_EV("Restart raft's leader election event (%g)", leader_election_timeout.repeat);
 }
 
