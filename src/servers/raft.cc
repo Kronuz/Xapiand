@@ -76,6 +76,8 @@ Raft::~Raft()
 void
 Raft::start()
 {
+	L_CALL("Raft::start()");
+
 	_reset_leader_election_timeout();
 
 	L_RAFT("Raft was started!");
@@ -85,6 +87,8 @@ Raft::start()
 void
 Raft::stop()
 {
+	L_CALL("Raft::stop()");
+
 	leader_election_timeout.stop();
 	L_EV("Stop raft's leader election event");
 
@@ -134,6 +138,8 @@ Raft::reset_async_cb(ev::async&, int revents)
 void
 Raft::_reset()
 {
+	L_CALL("Raft::_reset()");
+
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
 
@@ -180,6 +186,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 void
 Raft::_reset_leader_election_timeout()
 {
+	L_CALL("Raft::_reset_leader_election_timeout()");
+
 	auto local_node_ = local_node.load();
 	number_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
@@ -213,6 +221,8 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 void
 Raft::_start_leader_heartbeat()
 {
+	L_CALL("Raft::_start_leader_heartbeat()");
+
 	auto local_node_ = local_node.load();
 	assert(leader == *local_node_);
 
@@ -229,6 +239,8 @@ Raft::_start_leader_heartbeat()
 void
 Raft::send_message(Message type, const std::string& message)
 {
+	L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
+
 	if (type != Raft::Message::HEARTBEAT_LEADER) {
 		L_RAFT("<< send_message(%s)", MessageNames(type));
 	}
@@ -240,6 +252,8 @@ Raft::send_message(Message type, const std::string& message)
 std::string
 Raft::getDescription() const noexcept
 {
+	L_CALL("Raft::getDescription()");
+
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_RAFT_PROTOCOL_MINOR_VERSION) + ")";
 }
 
