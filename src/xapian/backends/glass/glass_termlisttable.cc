@@ -47,7 +47,7 @@ GlassTermListTable::set_termlist(Xapian::docid did,
 	// doclen is sum(wdf) so should be zero if there are no terms.
 	Assert(doclen == 0);
 	Assert(doc.termlist_begin() == doc.termlist_end());
-	add(make_key(did), string());
+	del(make_key(did));
 	return;
     }
 
