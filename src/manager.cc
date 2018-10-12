@@ -167,7 +167,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	// Set the id in local node.
 	auto local_node_ = local_node.load();
 	auto node_copy = std::make_unique<Node>(*local_node_);
-	node_copy->id = get_node_id();
 
 	// Setup node from node database directory
 	std::string node_name_(load_node_name());
@@ -217,7 +216,7 @@ XapiandManager::load_node_name()
 
 	ssize_t length = 0;
 	char buf[512];
-	int fd = io::open("nodename", O_RDONLY | O_CLOEXEC);
+	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
 	if (fd != -1) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
@@ -234,15 +233,15 @@ XapiandManager::save_node_name(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::save_node_name(%s)", _node_name);
 
-	int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
+	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
 	if (fd != -1) {
 		if (io::write(fd, _node_name.data(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
-			L_CRIT("Cannot write in nodename file");
+			L_CRIT("Cannot write in node file");
 			sig_exit(-EX_IOERR);
 		}
 		io::close(fd);
 	} else {
-		L_CRIT("Cannot open or create the nodename file");
+		L_CRIT("Cannot open or create the node file");
 		sig_exit(-EX_NOINPUT);
 	}
 }
@@ -264,68 +263,6 @@ XapiandManager::set_node_name(std::string_view node_name_)
 	}
 
 	return node_name;
-}
-
-
-uint64_t
-XapiandManager::load_node_id()
-{
-	L_CALL("XapiandManager::load_node_id()");
-
-	uint64_t node_id = 0;
-	ssize_t length = 0;
-	char buf[512];
-	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
-	if (fd != -1) {
-		length = io::read(fd, buf, sizeof(buf) - 1);
-		io::close(fd);
-		if (length < 0) { length = 0; }
-		buf[length] = '\0';
-		for (size_t i = 0, j = 0; (buf[j] = buf[i]) != 0; j += static_cast<unsigned long>(isspace(buf[i++]) == 0)) { }
-		try {
-			node_id = unserialise_node_id(std::string_view(buf, length));
-		} catch (...) {
-			L_CRIT("Cannot load node_id!");
-			sig_exit(-EX_IOERR);
-		}
-	}
-	return node_id;
-}
-
-
-void
-XapiandManager::save_node_id(uint64_t node_id)
-{
-	L_CALL("XapiandManager::save_node_id(%llu)", node_id);
-
-	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
-	if (fd != -1) {
-		auto node_id_str = serialise_node_id(node_id);
-		if (io::write(fd, node_id_str.data(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
-			L_CRIT("Cannot write in node file");
-			sig_exit(-EX_IOERR);
-		}
-		io::close(fd);
-	} else {
-		L_CRIT("Cannot open or create the node file");
-		sig_exit(-EX_NOINPUT);
-	}
-}
-
-
-uint64_t
-XapiandManager::get_node_id()
-{
-	L_CALL("XapiandManager::get_node_id()");
-
-	uint64_t node_id = load_node_id();
-
-	if (node_id == 0u) {
-		node_id = random_int(1, UINT64_MAX - 1);
-		save_node_id(node_id);
-	}
-
-	return node_id;
 }
 
 
@@ -365,7 +302,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		if (db_handler.get_metadata(reserved_schema).empty()) {
 			THROW(CheckoutError);
 		}
-		db_handler.get_document(serialise_node_id(local_node_->id));
+		db_handler.get_document(local_node_->name());
 	} catch (const Xapian::DocNotFoundError&) {
 		L_CRIT("Cluster database is corrupt");
 		sig_exit(-EX_DATAERR);
@@ -375,9 +312,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
-			db_handler.index(serialise_node_id(local_node_->id), false, {
+			db_handler.index(local_node_->name(), false, {
 				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_STORE, false } } },
 				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
 				{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 			}, true, msgpack_type);
@@ -994,7 +931,7 @@ XapiandManager::get_region()
 				auto local_node_copy = std::make_unique<Node>(*local_node_);
 				// local_node_copy->regions = sqrt(nodes_size() + 1);
 				local_node_copy->regions = 1;  // hardcode only one region (for now)
-				int32_t region = jump_consistent_hash(local_node_copy->id, local_node_copy->regions);
+				int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
 				if (local_node_copy->region != region) {
 					local_node_copy->region = region;
 					raft->reset();

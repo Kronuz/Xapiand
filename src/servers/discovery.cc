@@ -134,7 +134,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			}
 
 			local_node_ = local_node.load();
-			L_INFO("Advertising as %s (id: %016llX)...", local_node_->name(), local_node_->id);
+			L_INFO("Advertising as %s...", local_node_->name());
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;

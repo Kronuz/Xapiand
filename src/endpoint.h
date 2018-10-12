@@ -49,7 +49,6 @@ class Node {
 	struct sockaddr_in _addr;
 
 public:
-	uint64_t id;
 	int http_port;
 	int binary_port;
 
@@ -57,7 +56,7 @@ public:
 	int32_t region;
 	time_t touched;
 
-	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
+	Node() : http_port(0), binary_port(0), regions(1), region(0), touched(0) {
 		memset(&_addr, 0, sizeof(_addr));
 	}
 
@@ -67,7 +66,6 @@ public:
 		  _name(std::move(other._name)),
 		  _lower_name(std::move(other._lower_name)),
 		  _addr(std::move(other._addr)),
-		  id(std::move(other.id)),
 		  http_port(std::move(other.http_port)),
 		  binary_port(std::move(other.binary_port)),
 		  regions(std::move(other.regions)),
@@ -80,7 +78,6 @@ public:
 		  _name(other._name),
 		  _lower_name(other._lower_name),
 		  _addr(other._addr),
-		  id(other.id),
 		  http_port(other.http_port),
 		  binary_port(other.binary_port),
 		  regions(other.regions),
@@ -93,7 +90,6 @@ public:
 		_name = std::move(other._name);
 		_lower_name = std::move(other._lower_name);
 		_addr = std::move(other._addr);
-		id = std::move(other.id);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
 		regions = std::move(other.regions);
@@ -108,7 +104,6 @@ public:
 		_name = other._name;
 		_lower_name = other._lower_name;
 		_addr = other._addr;
-		id = other.id;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
 		regions = other.regions;
@@ -121,7 +116,6 @@ public:
 		_host.clear();
 		_name.clear();
 		_lower_name.clear();
-		id = 0;
 		regions = 1;
 		region = 0;
 		memset(&_addr, 0, sizeof(_addr));
@@ -176,7 +170,7 @@ public:
 	}
 
 	std::string to_string() const {
-		return string::format("%s (%llu)", _name, id);
+		return _name;
 	}
 };
 

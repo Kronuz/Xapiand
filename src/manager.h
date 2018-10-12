@@ -100,10 +100,6 @@ protected:
 	void save_node_name(std::string_view _node_name);
 	std::string set_node_name(std::string_view node_name_);
 
-	uint64_t load_node_id();
-	void save_node_id(uint64_t node_id);
-	uint64_t get_node_id();
-
 	void make_servers();
 	void make_replicators();
 

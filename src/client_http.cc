@@ -88,7 +88,6 @@ constexpr const char RESPONSE_QUERY[]               = "#query";
 constexpr const char RESPONSE_MESSAGE[]             = "#message";
 constexpr const char RESPONSE_STATUS[]              = "#status";
 constexpr const char RESPONSE_TOOK[]                = "#took";
-constexpr const char RESPONSE_NAME[]                = "#name";
 constexpr const char RESPONSE_NODES[]               = "#nodes";
 constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
 constexpr const char RESPONSE_COMMIT[]              = "#commit";
@@ -992,7 +991,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 
 	auto local_node_ = local_node.load();
-	auto document = db_handler.get_document(serialise_node_id(local_node_->id));
+	auto document = db_handler.get_document(local_node_->name());
 
 	auto obj = document.get_obj();
 	if (obj.find(ID_FIELD_NAME) == obj.end()) {
@@ -1402,7 +1401,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 
 void
-HttpClient::nodes_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::nodes_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
 {
 	L_CALL("HttpClient::nodes_view()");
 
@@ -1417,13 +1416,32 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 		return;
 	}
 
-	MsgPack nodes{MsgPack::Type::MAP};
+	endpoints.clear();
+	endpoints.add(Endpoint("."));
 
-	// FIXME: Get all nodes from cluster database:
-	auto local_node_ = local_node.load();
-	nodes[serialise_node_id(local_node_->id)] = {
-		{ RESPONSE_NAME, local_node_->name() },
-	};
+	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
+
+	MsgPack nodes(MsgPack::Type::ARRAY);
+
+	auto mset = db_handler.get_all_mset();
+	const auto m_e = mset.end();
+	for (auto m = mset.begin(); m != m_e; ++m) {
+		auto document = db_handler.get_document(*m);
+		auto obj = document.get_obj();
+		L_RED(repr(obj.to_string()));
+		auto node = XapiandManager::manager->get_node(obj["name"].as_str());
+		if (node) {
+			obj["host"] = node->host();
+			obj["http_port"] = node->http_port;
+			obj["binary_port"] = node->binary_port;
+			// obj["region"] = node->region;
+			obj["active"] = true;
+		} else {
+			obj["active"] = false;
+		}
+		obj["id"] = *m;
+		nodes.push_back(obj);
+	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, {
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
