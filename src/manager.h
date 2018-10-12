@@ -115,11 +115,21 @@ public:
 		WAITING,
 		WAITING_MORE,
 		RESET,
+		MAX,
 	};
 
-	static constexpr const char* const StateNames[] = {
-		"BAD", "READY", "SETUP", "WAITING", "WAITING_MORE", "RESET",
-	};
+	static const std::string& StateNames(State type) {
+		static const std::string StateNames[] = {
+			"BAD", "READY", "SETUP", "WAITING", "WAITING_MORE", "RESET",
+		};
+
+		auto type_int = static_cast<int>(type);
+		if (type_int >= 0 || type_int < static_cast<int>(State::MAX)) {
+			return StateNames[type_int];
+		}
+		static const std::string UNKNOWN = "UNKNOWN";
+		return UNKNOWN;
+	}
 
 	static std::shared_ptr<XapiandManager> manager;
 

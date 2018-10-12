@@ -55,13 +55,11 @@ Discovery::~Discovery()
 
 void
 Discovery::start() {
-	heartbeat.repeat = WAITING_FAST;
-	heartbeat.again();
+	heartbeat.start(0, WAITING_FAST);
 	L_EV("Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
 
 	L_DISCOVERY("Discovery was started! (exploring)");
 
-	_check_state();
 }
 
 
@@ -106,7 +104,7 @@ void
 Discovery::_check_state()
 {
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
-		L_DISCOVERY("Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(XapiandManager::manager->state.load())]);
+		L_DISCOVERY("Waiting manager get ready!! (%s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	}
 
 	switch (XapiandManager::manager->state.load()) {
