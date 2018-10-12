@@ -70,6 +70,8 @@ BinaryServer::signal_async_cb(ev::async&, int revents)
 void
 BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), binary->sock, watcher.fd);
+
 	int fd = binary->sock;
 	if (fd == -1) {
 		return;
@@ -77,7 +79,6 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	assert(fd == watcher.fd || fd == -1);
 
-	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	if (EV_ERROR & revents) {

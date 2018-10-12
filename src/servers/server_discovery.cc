@@ -290,6 +290,8 @@ DiscoveryServer::db_updated(const std::string& message)
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
+	L_CALL("DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), discovery->sock, watcher.fd);
+
 	int fd = discovery->sock;
 	if (fd == -1) {
 		return;
@@ -297,7 +299,6 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 	ignore_unused(watcher);
 	assert(fd == watcher.fd || fd == -1);
 
-	L_CALL("DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("DiscoveryServer::io_accept_cb", "DiscoveryServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	if (EV_ERROR & revents) {

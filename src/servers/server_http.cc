@@ -59,6 +59,8 @@ HttpServer::~HttpServer()
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d, fd:%d}", revents, readable_revents(revents), http->sock, watcher.fd);
+
 	int fd = http->sock;
 	if (fd == -1) {
 		return;
@@ -66,7 +68,6 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	assert(fd == watcher.fd || fd == -1);
 
-	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
 
 	if ((EV_ERROR & revents) != 0) {
