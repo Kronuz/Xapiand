@@ -173,13 +173,14 @@ RaftServer::response_vote(const std::string& message)
 
 		if (vote) {
 			++raft->votes;
-			L_RAFT("Number of servers: %d;  Votes received: %d", raft->number_servers.load(), raft->votes);
+			L_RAFT("Number of servers: %d; Votes received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				raft->state = Raft::State::LEADER;
 
 				if (raft->leader != *local_node_) {
 					raft->leader = *local_node_;
 					L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, raft->leader.name());
+					XapiandManager::manager->check_state();
 				}
 
 				raft->start_leader_heartbeat();
@@ -227,6 +228,7 @@ RaftServer::leader(const std::string& message)
 	if (raft->leader != remote_node) {
 		raft->leader = remote_node;
 		L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, raft->leader.name());
+		XapiandManager::manager->check_state();
 	}
 
 	raft->reset_leader_election_timeout();

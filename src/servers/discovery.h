@@ -48,12 +48,8 @@ class Discovery : public BaseUDP {
 
 private:
 	ev::timer heartbeat;
-	ev::async enter_async;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
-	void enter_async_cb(ev::async& watcher, int revents);
-
-	void _enter();
 
 public:
 	std::string __repr__() const override {
@@ -86,10 +82,6 @@ public:
 
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();
-
-	inline void enter() {
-		enter_async.send();
-	}
 
 	void start();
 	void stop();

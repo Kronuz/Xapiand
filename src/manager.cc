@@ -359,18 +359,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	state = State::READY;
 
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		if (auto raft = weak_raft.lock()) {
-			raft->start();
-		}
-	}
-
-	if (auto discovery = weak_discovery.lock()) {
-		discovery->enter();
-	}
-#endif
-
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
@@ -607,7 +595,7 @@ XapiandManager::make_servers()
 	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		L_INFO("Joining cluster %s...", opts.cluster_name);
+		L_INFO("Discovering cluster %s...", opts.cluster_name);
 		discovery->start();
 
 		weak_binary = std::move(binary);
@@ -817,7 +805,17 @@ XapiandManager::check_state()
 
 		case XapiandManager::State::WAITING_MORE: {
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
-			state.compare_exchange_strong(waiting_more, XapiandManager::State::SETUP);
+			state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
+			L_INFO("Joining cluster %s...", opts.cluster_name);
+			if (auto raft = weak_raft.lock()) {
+				raft->start();
+			}
+			break;
+		}
+
+		case XapiandManager::State::JOINING: {
+			auto joining = XapiandManager::State::JOINING;
+			state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 			break;
 		}
 

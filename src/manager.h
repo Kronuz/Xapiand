@@ -112,6 +112,7 @@ public:
 		BAD,
 		READY,
 		SETUP,
+		JOINING,
 		WAITING,
 		WAITING_MORE,
 		RESET,
@@ -120,7 +121,7 @@ public:
 
 	static const std::string& StateNames(State type) {
 		static const std::string StateNames[] = {
-			"BAD", "READY", "SETUP", "WAITING", "WAITING_MORE", "RESET",
+			"BAD", "READY", "SETUP", "JOINING", "WAITING", "WAITING_MORE", "RESET",
 		};
 
 		auto type_int = static_cast<int>(type);
