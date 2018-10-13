@@ -953,7 +953,6 @@ XapiandManager::get_region()
 			auto local_node_ = local_node.load();
 			if (local_node_->regions == -1) {
 				if (auto raft = weak_raft.lock()) {
-					raft->start();
 					auto local_node_copy = std::make_unique<Node>(*local_node_);
 					// local_node_copy->regions = sqrt(nodes_size() + 1);
 					local_node_copy->regions = 1;  // hardcode only one region (for now)
