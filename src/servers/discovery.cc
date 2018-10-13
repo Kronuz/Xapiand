@@ -122,7 +122,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			auto local_node_ = local_node.load();
 			send_message(Message::ENTER, local_node_->serialise());
 
-			XapiandManager::manager->check_state();
+			XapiandManager::manager->join_cluster();
 			break;
 		}
 		case XapiandManager::State::READY: {

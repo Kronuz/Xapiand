@@ -764,49 +764,13 @@ XapiandManager::reset_state()
 
 
 void
-XapiandManager::check_state()
+XapiandManager::join_cluster()
 {
-	L_CALL("XapiandManager::check_state() {state:%s}", XapiandManager::StateNames(state.load()));
+	L_CALL("XapiandManager::join_cluster()");
 
-	switch (state.load()) {
-		case XapiandManager::State::RESET: {
-			break;
-		}
-
-		case XapiandManager::State::WAITING: {
-			break;
-		}
-
-		case XapiandManager::State::WAITING_MORE: {
-			break;
-		}
-
-		case XapiandManager::State::JOINING: {
-			L_INFO("Joining cluster %s...", opts.cluster_name);
-			if (auto raft = weak_raft.lock()) {
-				raft->start();
-			}
-			break;
-		}
-
-		case XapiandManager::State::SETUP: {
-			setup_node();
-			break;
-		}
-
-		case XapiandManager::State::READY: {
-			break;
-		}
-
-		case XapiandManager::State::BAD: {
-			L_ERR("ERROR: Manager is in BAD state!!");
-			break;
-		}
-
-		default: {
-			L_ERR("ERROR: Manager is in UNKNOWN state!!");
-			break;
-		}
+	L_INFO("Joining cluster %s...", opts.cluster_name);
+	if (auto raft = weak_raft.lock()) {
+		raft->start();
 	}
 }
 

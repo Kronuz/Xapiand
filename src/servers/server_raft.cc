@@ -181,7 +181,7 @@ RaftServer::response_vote(const std::string& message)
 					L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, raft->leader.name());
 					auto joining = XapiandManager::State::JOINING;
 					XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
-					XapiandManager::manager->check_state();
+					XapiandManager::manager->setup_node();
 				}
 
 				raft->start_leader_heartbeat();
@@ -231,7 +231,7 @@ RaftServer::leader(const std::string& message)
 		L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, raft->leader.name());
 		auto joining = XapiandManager::State::JOINING;
 		XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
-		XapiandManager::manager->check_state();
+		XapiandManager::manager->setup_node();
 	}
 
 	raft->reset_leader_election_timeout();

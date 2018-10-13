@@ -181,7 +181,7 @@ public:
 
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();
-	void check_state();
+	void join_cluster();
 
 	bool put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
