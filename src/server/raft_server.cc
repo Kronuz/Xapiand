@@ -89,7 +89,8 @@ RaftServer::heartbeat_leader(const std::string& message)
 
 	raft->reset_leader_election_timeout();
 
-	if (raft->leader != remote_node) {
+	auto master_node_ = master_node.load();
+	if (*master_node_ != remote_node) {
 		L_RAFT("Request the raft server's configuration!");
 		raft->send_message(Raft::Message::LEADERSHIP, local_node_->serialise());
 	}
@@ -175,14 +176,14 @@ RaftServer::response_vote(const std::string& message)
 			L_RAFT("Number of servers: %d; Votes received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				raft->state = Raft::State::LEADER;
-
-				if (raft->leader != *local_node_) {
-					if (raft->leader.empty()) {
+				auto master_node_ = master_node.load();
+				if (*master_node_ != *local_node_) {
+					if (master_node_->empty()) {
 						L_NOTICE("Raft: Leader for region %d is %s (1)", local_node_->region, local_node_->name());
 					} else {
 						L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, local_node_->name());
 					}
-					raft->leader = *local_node_;
+					master_node = local_node_;
 					auto joining = XapiandManager::State::JOINING;
 					XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 					XapiandManager::manager->setup_node();
@@ -211,15 +212,15 @@ RaftServer::leader(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
+	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
+	if (local_node_->region != remote_node->region) {
 		return;
 	}
 
 	if (raft->state == Raft::State::LEADER) {
-		if (remote_node != *local_node_) {
+		if (*remote_node != *local_node_) {
 			L_CRIT("I'm leader, other responded as leader!");
 			raft->reset();
 		}
@@ -230,13 +231,19 @@ RaftServer::leader(const std::string& message)
 	raft->number_servers.store(unserialise_length(&p, p_end));
 	raft->term = unserialise_length(&p, p_end);
 
-	if (raft->leader != remote_node) {
-		if (raft->leader.empty()) {
-			L_NOTICE("Raft: Leader for region %d is %s (2)", local_node_->region, remote_node.name());
+	auto master_node_ = master_node.load();
+	if (*master_node_ != *remote_node) {
+		if (master_node_->empty()) {
+			L_NOTICE("Raft: Leader for region %d is %s (2)", local_node_->region, remote_node->name());
 		} else {
-			L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, remote_node.name());
+			L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, remote_node->name());
 		}
-		raft->leader = remote_node;
+		auto put = XapiandManager::manager->put_node(remote_node);
+		remote_node = put.first;
+		if (put.second) {
+			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (5)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+		}
+		master_node = remote_node;
 		auto joining = XapiandManager::State::JOINING;
 		XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 		XapiandManager::manager->setup_node();

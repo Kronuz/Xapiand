@@ -32,6 +32,7 @@
 
 
 atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
+atomic_shared_ptr<const Node> master_node(std::make_shared<const Node>());
 
 
 static inline std::string

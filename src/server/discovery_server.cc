@@ -106,7 +106,9 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			if (heartbeat || node->touched < epoch::now<>() - HEARTBEAT_MAX) {
 				XapiandManager::manager->drop_node(remote_node->name());
 				L_INFO("Stalled node %s left the party!", remote_node->name());
-				if (XapiandManager::manager->put_node(remote_node)) {
+				auto put = XapiandManager::manager->put_node(remote_node);
+				if (put.second) {
+					remote_node = put.first;
 					if (heartbeat) {
 						L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 					} else {
@@ -122,7 +124,9 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			}
 		}
 	} else {
-		if (XapiandManager::manager->put_node(remote_node)) {
+		auto put = XapiandManager::manager->put_node(remote_node);
+		if (put.second) {
+			remote_node = put.first;
 			if (heartbeat) {
 				L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 			} else {
@@ -220,9 +224,11 @@ DiscoveryServer::enter(const std::string& message)
 
 	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
-	XapiandManager::manager->put_node(remote_node);
-
-	L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	auto put = XapiandManager::manager->put_node(remote_node);
+	if (put.second) {
+		remote_node = put.first;
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	}
 }
 
 
@@ -244,6 +250,10 @@ DiscoveryServer::bye(const std::string& message)
 	auto local_node_copy = std::make_unique<Node>(*local_node_);
 	local_node_copy->regions = -1;
 	local_node = std::shared_ptr<const Node>(local_node_copy.release());
+	auto master_node_ = master_node.load();
+	if (*master_node_ == remote_node) {
+		master_node.compare_exchange_strong(master_node_, std::make_shared<const Node>());
+	}
 	XapiandManager::manager->get_region();
 }
 
@@ -272,7 +282,9 @@ DiscoveryServer::db_updated(const std::string& message)
 
 		std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
 
-		if (XapiandManager::manager->put_node(remote_node)) {
+		auto put = XapiandManager::manager->put_node(remote_node);
+		if (put.second) {
+			remote_node = put.first;
 			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 		}
 

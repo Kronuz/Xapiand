@@ -183,7 +183,7 @@ public:
 	void reset_state();
 	void join_cluster();
 
-	bool put_node(std::shared_ptr<const Node> node);
+	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
 	std::shared_ptr<const Node> touch_node(std::string_view node_name, int32_t region);
 	void drop_node(std::string_view node_name);

@@ -163,8 +163,9 @@ Raft::_request_vote()
 	}
 
 	auto local_node_ = local_node.load();
+	auto master_node_ = master_node.load();
 	L_RAFT("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, leader.name());
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->name());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -207,8 +208,13 @@ Raft::_reset_leader_election_timeout()
 	auto local_node_ = local_node.load();
 	number_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
-	auto timeout = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
-	leader_election_timeout.repeat = timeout;
+	auto master_node_ = master_node.load();
+	if (master_node_->empty()) {
+		// No master (leader), elect one as quickly as possible!
+		leader_election_timeout.repeat = random_real(0, LEADER_ELECTION_MIN);
+	} else {
+		leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
+	}
 	leader_election_timeout.again();
 
 	L_EV("Restart raft's leader election event (%g)", leader_election_timeout.repeat);
@@ -241,7 +247,8 @@ Raft::_start_leader_heartbeat()
 	L_CALL("Raft::_start_leader_heartbeat()");
 
 	auto local_node_ = local_node.load();
-	assert(leader == *local_node_);
+	auto master_node_ = master_node.load();
+	assert(*master_node_ == *local_node_);
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();

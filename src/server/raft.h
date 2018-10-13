@@ -96,7 +96,6 @@ public:
 	size_t votes;
 	uint64_t term;
 	Node voted_for;
-	Node leader;
 
 	State state;
 	std::atomic_size_t number_servers;

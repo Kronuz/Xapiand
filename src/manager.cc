@@ -187,6 +187,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	local_node_ = std::shared_ptr<const Node>(node_copy.release());
 	local_node = local_node_;
 
+	if (opts.solo) {
+		master_node = local_node_;
+	}
+
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
 
@@ -777,7 +781,7 @@ XapiandManager::join_cluster()
 }
 
 
-bool
+std::pair<std::shared_ptr<const Node>, bool>
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
 	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()));
@@ -788,24 +792,26 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 		local_node_copy->touched = epoch::now<>();
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 		local_node = local_node_;
-	} else {
-		std::lock_guard<std::mutex> lk(nodes_mtx);
-		auto it = nodes.find(node->lower_name());
-		if (it != nodes.end()) {
-			auto& node_ref = it->second;
-			if (*node == *node_ref) {
-				auto node_copy = std::make_unique<Node>(*node_ref);
-				node_copy->touched = epoch::now<>();
-				node_ref = std::shared_ptr<const Node>(node_copy.release());
-			}
-		} else {
-			auto node_copy = std::make_unique<Node>(*node);
-			node_copy->touched = epoch::now<>();
-			nodes[node->lower_name()] = std::shared_ptr<const Node>(node_copy.release());
-			return true;
-		}
+		return std::make_pair(local_node_, false);
 	}
-	return false;
+
+	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto it = nodes.find(node->lower_name());
+	if (it != nodes.end()) {
+		auto& node_ref = it->second;
+		if (*node == *node_ref) {
+			auto node_copy = std::make_unique<Node>(*node_ref);
+			node_copy->touched = epoch::now<>();
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
+		}
+		return std::make_pair(node_ref, false);
+	}
+
+	auto node_copy = std::make_unique<Node>(*node);
+	node_copy->touched = epoch::now<>();
+	auto final_node = std::shared_ptr<const Node>(node_copy.release());
+	nodes[node->lower_name()] = final_node;
+	return std::make_pair(final_node, true);
 }
 
 
@@ -923,6 +929,12 @@ XapiandManager::get_region()
 					if (local_node_copy->region != region) {
 						local_node_copy->region = region;
 						raft->reset();
+					} else {
+						auto master_node_ = master_node.load();
+						if (master_node_->empty()) {
+							// if leader left the party, trigger leader election
+							raft->reset_leader_election_timeout();
+						}
 					}
 					local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 					local_node = local_node_;

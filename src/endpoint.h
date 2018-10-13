@@ -176,6 +176,7 @@ public:
 
 
 extern atomic_shared_ptr<const Node> local_node;
+extern atomic_shared_ptr<const Node> master_node;
 
 
 #include <unordered_set>        // for unordered_set
