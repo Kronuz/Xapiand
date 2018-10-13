@@ -341,27 +341,25 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	L_INFO("Node %s accepted to the party!", node_name);
 	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
-	{
+	#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
 		// Get a node (any node)
 		std::lock_guard<std::mutex> lk_n(nodes_mtx);
 		for (const auto & it : nodes) {
 			auto& node = it.second;
 			Endpoint remote_endpoint(".", node.get());
 			// Replicate database from the other node
-	#ifdef XAPIAND_CLUSTERING
-			if (!opts.solo) {
-				L_INFO("Syncing cluster data from %s...", node->name());
+			L_INFO("Syncing cluster data from %s...", node->name());
 
-				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
-				if (ret.get()) {
-					L_INFO("Cluster data being synchronized from %s...", node->name());
-					new_cluster = 2;
-					break;
-				}
+			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+			if (ret.get()) {
+				L_INFO("Cluster data being synchronized from %s...", node->name());
+				new_cluster = 2;
+				break;
 			}
-	#endif
 		}
 	}
+	#endif
 
 	state = State::READY;
 
