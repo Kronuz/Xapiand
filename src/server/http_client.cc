@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "client_http.h"
+#include "http_client.h"
 
 #include <algorithm>                        // for move
 #include <exception>                        // for exception
@@ -59,8 +59,8 @@
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for boolean
-#include "servers/server.h"                 // for XapiandServer, XapiandSer...
-#include "servers/server_http.h"            // for HttpServer
+#include "server.h"                         // for XapiandServer, XapiandSer...
+#include "http_server.h"                    // for HttpServer
 #include "threadpool.h"                     // for ThreadPool
 #include "string.hh"                        // for string::from_delta
 #include "package.h"                        // for Package

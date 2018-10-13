@@ -20,35 +20,35 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#include "http.h"
 
-#include "xapiand.h"
-
-#include <stdio.h>     // for snprintf
-#include <memory>      // for shared_ptr
-#include <string>      // for string
-
-#include "tcp_base.h"  // for BaseTCP
-
-class HttpServer;
-class XapiandManager;
+#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "endpoint.h"           // for Node, local_node
+#include "log.h"                // for L_OBJ
+#include "manager.h"            // for XapiandManager
+#include "base_tcp.h"           // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
 
 
-constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION = 1;
-constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MINOR_VERSION = 1;
+Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+	: BaseTCP(manager_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
+{
+	auto local_node_ = local_node.load();
+	auto node_copy = std::make_unique<Node>(*local_node_);
+	node_copy->http_port = port;
+	local_node = std::shared_ptr<const Node>(node_copy.release());
+
+	L_OBJ("CREATED CONFIGURATION FOR HTTP");
+}
 
 
-// Configuration data for Http
-class Http : public BaseTCP {
-	friend HttpServer;
+Http::~Http()
+{
+	L_OBJ("DELETED CONFIGURATION FOR HTTP");
+}
 
-public:
-	std::string __repr__() const override {
-		return Worker::__repr__("Http");
-	}
 
-	Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
-	~Http();
-
-	std::string getDescription() const noexcept override;
-};
+std::string
+Http::getDescription() const noexcept
+{
+	return "TCP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_HTTP_PROTOCOL_MINOR_VERSION) + ")";
+}

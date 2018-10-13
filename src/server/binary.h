@@ -27,36 +27,45 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "raft.h"
-#include "server_base.h"
+#include <future>            // for std::shared_future
+#include <memory>            // for std::shared_ptr, std::weak_ptr
+#include <string>            // for std::string
+#include <vector>            // for std::vector
+
+#include "base_tcp.h"        // for BaseTCP
+#include "threadpool.h"      // for TaskQueue
 
 
-// Raft Server
-class RaftServer : public BaseServer {
-	friend Raft;
+class Endpoint;
+class BinaryServer;
+class DiscoveryServer;
 
-	std::shared_ptr<Raft> raft;
+// Configuration data for Binary
+class Binary : public BaseTCP {
+	friend BinaryServer;
 
-	Node unserialise_remote_node(const char **p, const char *p_end);
+	std::mutex bsmtx;
+	void signal_send_async();
 
-	void raft_server(Raft::Message type, const std::string& message);
-
-	void heartbeat_leader(const std::string& message);
-	void request_vote(const std::string& message);
-	void response_vote(const std::string& message);
-	void leader(const std::string& message);
-	void leadership(const std::string& message);
-	void reset(const std::string& message);
+	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
+	TaskQueue<bool(const std::shared_ptr<BinaryServer>&)> tasks;
 
 public:
 	std::string __repr__() const override {
-		return Worker::__repr__("RaftServer");
+		return Worker::__repr__("Binary");
 	}
 
-	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Raft>& raft_);
-	~RaftServer();
+	Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
+	~Binary();
 
-	void io_accept_cb(ev::io& watcher, int revents) override;
+	std::string getDescription() const noexcept override;
+
+	int connection_socket();
+
+	void add_server(const std::shared_ptr<BinaryServer>& server);
+
+	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
-#endif
+
+#endif  /* XAPIAND_CLUSTERING */

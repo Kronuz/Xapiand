@@ -20,12 +20,12 @@
  * THE SOFTWARE.
  */
 
-#include "server_binary.h"
+#include "binary_server.h"
 
 #ifdef XAPIAND_CLUSTERING
 
 #include "binary.h"
-#include "client_binary.h"
+#include "binary_client.h"
 #include "endpoint.h"
 #include "ignore_unused.h"
 

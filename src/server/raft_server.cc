@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "server_raft.h"
+#include "raft_server.h"
 
 #ifdef XAPIAND_CLUSTERING
 

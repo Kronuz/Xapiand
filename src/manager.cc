@@ -76,20 +76,20 @@
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "serialise.h"                        // for KEYWORD_STR
-#include "servers/http.h"                     // for Http
-#include "servers/server.h"                   // for XapiandServer, XapiandSe...
-#include "servers/server_http.h"              // for HttpServer
+#include "server/http.h"                     // for Http
+#include "server/server.h"                   // for XapiandServer, XapiandSe...
+#include "server/http_server.h"              // for HttpServer
 #include "threadpool.h"                       // for ThreadPool
 #include "worker.h"                           // for Worker, enable_make_shared
 
 #ifdef XAPIAND_CLUSTERING
 #include "replicator.h"                       // for XapiandReplicator
-#include "servers/binary.h"                   // for Binary
-#include "servers/discovery.h"                // for Discovery
-#include "servers/raft.h"                     // for Raft
-#include "servers/server_binary.h"            // for RaftBinary
-#include "servers/server_discovery.h"         // for DicoveryServer
-#include "servers/server_raft.h"              // for RaftServer
+#include "server/binary.h"                   // for Binary
+#include "server/discovery.h"                // for Discovery
+#include "server/raft.h"                     // for Raft
+#include "server/binary_server.h"            // for RaftBinary
+#include "server/discovery_server.h"         // for DicoveryServer
+#include "server/raft_server.h"              // for RaftServer
 #endif
 
 

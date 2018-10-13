@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "server_http.h"
+#include "http_server.h"
 
 #include <cstring>               // for strerror
 #include <errno.h>                // for __error, errno
@@ -28,9 +28,9 @@
 #include <ratio>                  // for ratio
 #include <utility>
 
-#include "./server.h"             // for XapiandServer
-#include "./server_base.h"        // for BaseServer
-#include "client_http.h"          // for HttpClient
+#include "server.h"               // for XapiandServer
+#include "base_server.h"          // for BaseServer
+#include "http_client.h"          // for HttpClient
 #include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                 // for Http
 #include "ignore_unused.h"        // for ignore_unused

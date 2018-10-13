@@ -38,7 +38,7 @@
 #include <vector>               // for vector
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "client_base.h"        // for BaseClient
+#include "base_client.h"        // for BaseClient
 #include "cuuid/uuid.h"         // for UUIDGenerator
 #include "database_handler.h"   // for DatabaseHandler
 #include "database_utils.h"     // for query_field_t (ptr only)

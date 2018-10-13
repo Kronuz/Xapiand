@@ -20,10 +20,10 @@
  * THE SOFTWARE.
  */
 
-#include "server_base.h"
+#include "base_server.h"
 
 #include "log.h"             // for L_OBJ
-#include "servers/server.h"  // for XapiandServer
+#include "server.h"          // for XapiandServer
 
 
 BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)

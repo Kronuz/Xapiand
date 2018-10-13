@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "server_discovery.h"
+#include "discovery_server.h"
 
 
 #ifdef XAPIAND_CLUSTERING

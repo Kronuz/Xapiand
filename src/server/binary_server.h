@@ -27,45 +27,36 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <future>            // for std::shared_future
-#include <memory>            // for std::shared_ptr, std::weak_ptr
-#include <string>            // for std::string
-#include <vector>            // for std::vector
-
-#include "tcp_base.h"        // for BaseTCP
-#include "threadpool.h"      // for TaskQueue
+#include "base_server.h"
 
 
+class Binary;
 class Endpoint;
-class BinaryServer;
-class DiscoveryServer;
 
-// Configuration data for Binary
-class Binary : public BaseTCP {
-	friend BinaryServer;
 
-	std::mutex bsmtx;
-	void signal_send_async();
+// Binary Server
+class BinaryServer : public BaseServer {
+	friend Binary;
 
-	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
-	TaskQueue<bool(const std::shared_ptr<BinaryServer>&)> tasks;
+	std::shared_ptr<Binary> binary;
+
+	ev::async signal_async;
+
+	void signal_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {
-		return Worker::__repr__("Binary");
+		return Worker::__repr__("BinaryServer");
 	}
 
-	Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
-	~Binary();
+	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_);
 
-	std::string getDescription() const noexcept override;
+	~BinaryServer();
 
-	int connection_socket();
+	void io_accept_cb(ev::io& watcher, int revents) override;
 
-	void add_server(const std::shared_ptr<BinaryServer>& server);
-
-	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
 
-#endif  /* XAPIAND_CLUSTERING */
+#endif /* XAPIAND_CLUSTERING */

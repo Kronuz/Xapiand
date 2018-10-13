@@ -26,7 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "udp_base.h"
+#include "base_udp.h"
 
 
 // Values in seconds

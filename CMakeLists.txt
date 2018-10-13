@@ -289,7 +289,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h"
 	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h"
 	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h"
-	"${PROJECT_SOURCE_DIR}/src/servers/*.c*" "${PROJECT_SOURCE_DIR}/src/servers/*.h"
+	"${PROJECT_SOURCE_DIR}/src/server/*.c*" "${PROJECT_SOURCE_DIR}/src/server/*.h"
 	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST

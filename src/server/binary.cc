@@ -29,7 +29,7 @@
 #include "endpoint.h"
 #include "io_utils.h"
 #include "remote_protocol.h"
-#include "server_binary.h"
+#include "binary_server.h"
 
 
 Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)

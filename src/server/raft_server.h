@@ -27,36 +27,36 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "server_base.h"
+#include "raft.h"
+#include "base_server.h"
 
 
-class Binary;
-class Endpoint;
+// Raft Server
+class RaftServer : public BaseServer {
+	friend Raft;
 
+	std::shared_ptr<Raft> raft;
 
-// Binary Server
-class BinaryServer : public BaseServer {
-	friend Binary;
+	Node unserialise_remote_node(const char **p, const char *p_end);
 
-	std::shared_ptr<Binary> binary;
+	void raft_server(Raft::Message type, const std::string& message);
 
-	ev::async signal_async;
-
-	void signal_async_cb(ev::async& watcher, int revents);
+	void heartbeat_leader(const std::string& message);
+	void request_vote(const std::string& message);
+	void response_vote(const std::string& message);
+	void leader(const std::string& message);
+	void leadership(const std::string& message);
+	void reset(const std::string& message);
 
 public:
 	std::string __repr__() const override {
-		return Worker::__repr__("BinaryServer");
+		return Worker::__repr__("RaftServer");
 	}
 
-	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_);
-
-	~BinaryServer();
+	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Raft>& raft_);
+	~RaftServer();
 
 	void io_accept_cb(ev::io& watcher, int revents) override;
-
-	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
-
-#endif /* XAPIAND_CLUSTERING */
+#endif

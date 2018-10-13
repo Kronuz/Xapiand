@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "client_base.h"
+#include "base_client.h"
 
 #include <algorithm>             // for move
 #include <chrono>                // for operator""ms
@@ -42,8 +42,8 @@
 #include "lz4/xxhash.h"          // for XXH32_createState, XXH32_digest, XXH...
 #include "lz4_compressor.h"      // for LZ4BlockStreaming<>::iterator, LZ4Co...
 #include "manager.h"             // for sig_exit
-#include "servers/server.h"      // for XapiandServer, XapiandServer::max_to...
-#include "servers/server_base.h" // for BaseServer
+#include "server.h"              // for XapiandServer, XapiandServer::max_to...
+#include "base_server.h"         // for BaseServer
 #include "utils.h"               // for readable_revents, ignored_errorno, repr
 
 #define BUF_SIZE 4096

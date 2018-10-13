@@ -24,7 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "servers/discovery.h"
+#include "server/discovery.h"
 
 
 XapiandReplicator::XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)

@@ -27,7 +27,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "udp_base.h"  // for BaseUDP
+#include "base_udp.h"  // for BaseUDP
 #include "endpoint.h"  // for Node
 
 

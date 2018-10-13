@@ -29,7 +29,7 @@
 #include <unordered_map>
 #include <xapian.h>
 
-#include "client_base.h"
+#include "base_client.h"
 #include "remote_protocol.h"
 #include "replication.h"
 #include "threadpool.h"         // for Task

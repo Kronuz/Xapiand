@@ -29,9 +29,6 @@
 #include "log.h"
 #include "manager.h"
 
-#undef L_RAFT
-#define L_RAFT L_CYAN
-
 
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),

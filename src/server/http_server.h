@@ -20,35 +20,33 @@
  * THE SOFTWARE.
  */
 
-#include "http.h"
+#pragma once
 
-#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "endpoint.h"           // for Node, local_node
-#include "log.h"                // for L_OBJ
-#include "manager.h"            // for XapiandManager
-#include "servers/tcp_base.h"   // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
+#include "xapiand.h"
 
+#include <stdio.h>        // for snprintf
+#include <memory>         // for shared_ptr
+#include <string>         // for string
 
-Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
-	: BaseTCP(manager_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
-{
-	auto local_node_ = local_node.load();
-	auto node_copy = std::make_unique<Node>(*local_node_);
-	node_copy->http_port = port;
-	local_node = std::shared_ptr<const Node>(node_copy.release());
+#include "base_server.h"  // for BaseServer
 
-	L_OBJ("CREATED CONFIGURATION FOR HTTP");
-}
+class Http;
+class XapiandServer;
 
 
-Http::~Http()
-{
-	L_OBJ("DELETED CONFIGURATION FOR HTTP");
-}
+// Http Server
+class HttpServer : public BaseServer {
+	friend Http;
 
+	std::shared_ptr<Http> http;
 
-std::string
-Http::getDescription() const noexcept
-{
-	return "TCP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_HTTP_PROTOCOL_MINOR_VERSION) + ")";
-}
+public:
+	std::string __repr__() const override {
+		return Worker::__repr__("HttpServer");
+	}
+
+	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_);
+	~HttpServer();
+
+	void io_accept_cb(ev::io& watcher, int revents) override;
+};

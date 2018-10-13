@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "client_binary.h"
+#include "binary_client.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -34,11 +34,10 @@
 #include "io_utils.h"
 #include "length.h"
 #include "manager.h"
-#include "servers/server.h"
-#include "servers/server_binary.h"
-#include "servers/tcp_base.h"
+#include "server.h"
+#include "binary_server.h"
+#include "base_tcp.h"
 #include "utils.h"
-
 
 std::string serialise_error(const Xapian::Error &exc) {
 	// The byte before the type name is the type code.

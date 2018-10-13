@@ -24,40 +24,31 @@
 
 #include "xapiand.h"
 
+#include <stdio.h>     // for snprintf
+#include <memory>      // for shared_ptr
+#include <string>      // for string
 
-#ifdef XAPIAND_CLUSTERING
+#include "base_tcp.h"  // for BaseTCP
 
-#include "discovery.h"
-#include "server_base.h"
+class HttpServer;
+class XapiandManager;
 
 
-// Discovery Server
-class DiscoveryServer : public BaseServer {
-	friend Discovery;
+constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION = 1;
+constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MINOR_VERSION = 1;
 
-	std::shared_ptr<Discovery> discovery;
 
-	void _wave(bool heartbeat, const std::string& message);
-
-	void discovery_server(Discovery::Message type, const std::string& message);
-
-	void heartbeat(const std::string& message);
-	void hello(const std::string& message);
-	void wave(const std::string& message);
-	void sneer(const std::string& message);
-	void enter(const std::string& message);
-	void bye(const std::string& message);
-	void db_updated(const std::string& message);
+// Configuration data for Http
+class Http : public BaseTCP {
+	friend HttpServer;
 
 public:
 	std::string __repr__() const override {
-		return Worker::__repr__("DiscoveryServer");
+		return Worker::__repr__("Http");
 	}
 
-	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Discovery>& discovery_);
-	~DiscoveryServer();
+	Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
+	~Http();
 
-	void io_accept_cb(ev::io& watcher, int revents) override;
+	std::string getDescription() const noexcept override;
 };
-
-#endif

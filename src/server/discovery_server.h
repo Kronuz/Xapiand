@@ -24,29 +24,40 @@
 
 #include "xapiand.h"
 
-#include <stdio.h>        // for snprintf
-#include <memory>         // for shared_ptr
-#include <string>         // for string
 
-#include "server_base.h"  // for BaseServer
+#ifdef XAPIAND_CLUSTERING
 
-class Http;
-class XapiandServer;
+#include "discovery.h"
+#include "base_server.h"
 
 
-// Http Server
-class HttpServer : public BaseServer {
-	friend Http;
+// Discovery Server
+class DiscoveryServer : public BaseServer {
+	friend Discovery;
 
-	std::shared_ptr<Http> http;
+	std::shared_ptr<Discovery> discovery;
+
+	void _wave(bool heartbeat, const std::string& message);
+
+	void discovery_server(Discovery::Message type, const std::string& message);
+
+	void heartbeat(const std::string& message);
+	void hello(const std::string& message);
+	void wave(const std::string& message);
+	void sneer(const std::string& message);
+	void enter(const std::string& message);
+	void bye(const std::string& message);
+	void db_updated(const std::string& message);
 
 public:
 	std::string __repr__() const override {
-		return Worker::__repr__("HttpServer");
+		return Worker::__repr__("DiscoveryServer");
 	}
 
-	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_);
-	~HttpServer();
+	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Discovery>& discovery_);
+	~DiscoveryServer();
 
 	void io_accept_cb(ev::io& watcher, int revents) override;
 };
+
+#endif

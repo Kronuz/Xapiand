@@ -24,7 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "client_binary.h"
+#include "server/binary_client.h"
 #include "io_utils.h"
 #include "length.h"
 
@@ -36,6 +36,21 @@
  * |_| \_\___| .__/|_|_|\___\__,_|\__|_|\___/|_| |_|
  *           |_|
  */
+
+#undef L_DEBUG
+#define L_DEBUG L_GREY
+#undef L_CALL
+#define L_CALL L_STACKED_DIM_GREY
+#undef L_REPLICATION
+#define L_REPLICATION L_RED
+#undef L_CONN
+#define L_CONN L_GREEN
+#undef L_BINARY_WIRE
+#define L_BINARY_WIRE L_ORANGE
+#undef L_BINARY
+#define L_BINARY L_TEAL
+#undef L_BINARY_PROTO
+#define L_BINARY_PROTO L_TEAL
 
 
 using dispatch_func = void (Replication::*)(const std::string&);
@@ -178,6 +193,15 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 void
 Replication::reply_welcome(const std::string &)
 {
+	// strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
+	// file_descriptor = mkstemp(file_path);
+	// if (file_descriptor < 0) {
+	// 	L_ERR(this, "Cannot write to %s (1)", file_path);
+	// 	return;
+	// }
+
+	// read_file();
+
 	std::string message;
 	message.append(serialise_string("UUID"));
 	message.append(serialise_string("REVISION"));
