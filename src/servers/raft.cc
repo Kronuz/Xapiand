@@ -29,11 +29,14 @@
 #include "log.h"
 #include "manager.h"
 
+#undef L_RAFT
+#define L_RAFT L_CYAN
+
 
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
-	  term(0),
 	  votes(0),
+	  term(0),
 	  state(State::FOLLOWER),
 	  number_servers(1),
 	  leader_election_timeout(*ev_loop),
@@ -170,8 +173,10 @@ Raft::_request_vote()
 		state = State::CANDIDATE;
 		++term;
 		votes = 0;
-		votedFor.clear();
-		send_message(Message::REQUEST_VOTE, local_node_->serialise() + serialise_length(term));
+		voted_for.clear();
+		send_message(Message::REQUEST_VOTE,
+			local_node_->serialise() +
+			serialise_length(term));
 	}
 
 	_reset_leader_election_timeout();
@@ -245,7 +250,8 @@ Raft::_start_leader_heartbeat()
 	leader_heartbeat.again();
 	L_EV("Restart raft's leader heartbeat event (%g)", leader_heartbeat.repeat);
 
-	send_message(Message::LEADER, local_node_->serialise() +
+	send_message(Message::LEADER,
+		local_node_->serialise() +
 		serialise_length(number_servers) +
 		serialise_length(term));
 }

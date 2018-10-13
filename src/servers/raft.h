@@ -93,10 +93,9 @@ public:
 		return UNKNOWN;
 	}
 
-	uint64_t term;
 	size_t votes;
-
-	Node votedFor;
+	uint64_t term;
+	Node voted_for;
 	Node leader;
 
 	State state;

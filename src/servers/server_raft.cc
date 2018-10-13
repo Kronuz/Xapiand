@@ -121,10 +121,10 @@ RaftServer::request_vote(const std::string& message)
 			raft->reset();
 		}
 
-		raft->votedFor = remote_node;
+		raft->voted_for = remote_node;
 		raft->term = remote_term;
 
-		L_RAFT("It Vote for %s", raft->votedFor.name());
+		L_RAFT("It Vote for %s", raft->voted_for.name());
 		raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 			serialise_length(true) + serialise_length(remote_term));
 	} else {
@@ -135,16 +135,16 @@ RaftServer::request_vote(const std::string& message)
 		}
 
 		if (remote_term < raft->term) {
-			L_RAFT("Vote for %s", raft->votedFor.name());
+			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
-		} else if (raft->votedFor.empty()) {
-			raft->votedFor = remote_node;
-			L_RAFT("Vote for %s", raft->votedFor.name());
+		} else if (raft->voted_for.empty()) {
+			raft->voted_for = remote_node;
+			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(true) + serialise_length(raft->term));
 		} else {
-			L_RAFT("Vote for %s", raft->votedFor.name());
+			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
 		}
