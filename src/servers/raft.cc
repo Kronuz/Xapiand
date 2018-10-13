@@ -78,7 +78,7 @@ Raft::start()
 {
 	L_CALL("Raft::start()");
 
-	leader_election_timeout.start(0);
+	leader_election_timeout.start(HEARTBEAT_LEADER_MAX);
 	L_EV("Start raft's leader election event");
 
 	L_RAFT("Raft was started!");
