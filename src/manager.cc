@@ -184,7 +184,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	// Set addr in local node
 	node_copy->addr(host_address());
 
-	local_node = std::shared_ptr<const Node>(node_copy.release());
+	local_node_ = std::shared_ptr<const Node>(node_copy.release());
+	local_node = local_node_;
 
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
@@ -329,7 +330,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (string::lower(node_name) != local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->name(node_name);
-		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
 	}
 
 	L_INFO("Node %s accepted to the party!", node_name);
@@ -784,7 +786,8 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	if (node->lower_name() == local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
-		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		auto it = nodes.find(node->lower_name());
@@ -840,8 +843,9 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 		if (region != UNKNOWN_REGION) {
 			local_node_copy->region = region;
 		}
-		local_node = std::shared_ptr<const Node>(local_node_copy.release());
-		return local_node.load();
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
+		return local_node_;
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		auto it = nodes.find(lower_node_name);
@@ -889,18 +893,13 @@ XapiandManager::get_region(std::string_view db_name)
 {
 	L_CALL("XapiandManager::get_region(%s)", db_name);
 
-	bool re_load = false;
 	auto local_node_ = local_node.load();
 	if (local_node_->regions == -1) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		// local_node_copy->regions = sqrt(nodes_size());
 		local_node_copy->regions = 1;  // hardcode only one region (for now)
-		local_node = std::shared_ptr<const Node>(local_node_copy.release());
-		re_load = true;
-	}
-
-	if (re_load) {
-		local_node_ = local_node.load();
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
 	}
 
 	return jump_consistent_hash(db_name, local_node_->regions);
@@ -912,9 +911,9 @@ XapiandManager::get_region()
 {
 	L_CALL("XapiandManager::get_region()");
 
+	auto local_node_ = local_node.load();
 	if (!opts.solo) {
 		if (state == State::READY) {
-			auto local_node_ = local_node.load();
 			if (local_node_->regions == -1) {
 				if (auto raft = weak_raft.lock()) {
 					auto local_node_copy = std::make_unique<Node>(*local_node_);
@@ -925,14 +924,13 @@ XapiandManager::get_region()
 						local_node_copy->region = region;
 						raft->reset();
 					}
-					local_node = std::shared_ptr<const Node>(local_node_copy.release());
+					local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+					local_node = local_node_;
 					L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 				}
 			}
 		}
 	}
-
-	auto local_node_ = local_node.load();
 	return local_node_->region;
 }
 
