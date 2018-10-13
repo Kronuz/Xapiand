@@ -770,52 +770,22 @@ XapiandManager::check_state()
 
 	switch (state.load()) {
 		case XapiandManager::State::RESET: {
-			auto local_node_ = local_node.load();
-			auto node_copy = std::make_unique<Node>(*local_node_);
-			std::string drop = node_copy->name();
-
-			if (node_name.empty()) {
-				node_copy->name(name_generator());
-			} else {
-				node_copy->name(node_name);
-			}
-			local_node = std::shared_ptr<const Node>(node_copy.release());
-
-			if (!drop.empty()) {
-				drop_node(drop);
-			}
-
-			local_node_ = local_node.load();
-			auto reset = XapiandManager::State::RESET;
-			state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
-			L_INFO("Advertising as %s...", local_node_->name());
-			if (auto discovery = weak_discovery.lock()) {
-				discovery->send_message(Discovery::Message::HELLO, local_node_->serialise());
-			}
 			break;
 		}
 
 		case XapiandManager::State::WAITING: {
-			// We're here because no one sneered nor waved during
-			// WAITING_FAST, wait longer then...
-			auto waiting = XapiandManager::State::WAITING;
-			state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			break;
 		}
 
 		case XapiandManager::State::WAITING_MORE: {
-			auto waiting_more = XapiandManager::State::WAITING_MORE;
-			state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
-			L_INFO("Joining cluster %s...", opts.cluster_name);
-			if (auto raft = weak_raft.lock()) {
-				raft->start();
-			}
 			break;
 		}
 
 		case XapiandManager::State::JOINING: {
-			auto joining = XapiandManager::State::JOINING;
-			state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
+			L_INFO("Joining cluster %s...", opts.cluster_name);
+			if (auto raft = weak_raft.lock()) {
+				raft->start();
+			}
 			break;
 		}
 

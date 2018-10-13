@@ -22,7 +22,6 @@
 
 #include "server_raft.h"
 
-
 #ifdef XAPIAND_CLUSTERING
 
 #include "ignore_unused.h"        // for ignore_unused
@@ -180,6 +179,8 @@ RaftServer::response_vote(const std::string& message)
 				if (raft->leader != *local_node_) {
 					raft->leader = *local_node_;
 					L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, raft->leader.name());
+					auto joining = XapiandManager::State::JOINING;
+					XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 					XapiandManager::manager->check_state();
 				}
 
@@ -228,6 +229,8 @@ RaftServer::leader(const std::string& message)
 	if (raft->leader != remote_node) {
 		raft->leader = remote_node;
 		L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, raft->leader.name());
+		auto joining = XapiandManager::State::JOINING;
+		XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 		XapiandManager::manager->check_state();
 	}
 
@@ -302,7 +305,10 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	L_EV_BEGIN("RaftServer::io_accept_cb:BEGIN");
 
 	if (revents & EV_READ) {
-		while (XapiandManager::manager->state == XapiandManager::State::READY) {
+		while (
+			XapiandManager::manager->state == XapiandManager::State::JOINING ||
+			XapiandManager::manager->state == XapiandManager::State::READY
+		) {
 			try {
 				std::string message;
 				Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));

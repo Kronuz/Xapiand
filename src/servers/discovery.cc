@@ -80,22 +80,47 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
-			XapiandManager::manager->check_state();
+			auto local_node_ = local_node.load();
+			auto node_copy = std::make_unique<Node>(*local_node_);
+			std::string drop = node_copy->name();
+
+			if (XapiandManager::manager->node_name.empty()) {
+				node_copy->name(name_generator());
+			} else {
+				node_copy->name(XapiandManager::manager->node_name);
+			}
+			local_node = std::shared_ptr<const Node>(node_copy.release());
+
+			if (!drop.empty()) {
+				XapiandManager::manager->drop_node(drop);
+			}
+
+			local_node_ = local_node.load();
+			auto reset = XapiandManager::State::RESET;
+			XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
+			L_INFO("Advertising as %s...", local_node_->name());
+			send_message(Discovery::Message::HELLO, local_node_->serialise());
 			break;
 		}
 		case XapiandManager::State::WAITING: {
 			heartbeat.repeat = WAITING_SLOW;
 			heartbeat.again();
-			XapiandManager::manager->check_state();
+			// We're here because no one sneered nor waved during
+			// WAITING_FAST, wait longer then...
+			auto waiting = XapiandManager::State::WAITING;
+			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			break;
 		}
 		case XapiandManager::State::WAITING_MORE: {
-			auto local_node_ = local_node.load();
-			send_message(Message::ENTER, local_node_->serialise());
+			auto waiting_more = XapiandManager::State::WAITING_MORE;
+			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
 
 			heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 			heartbeat.again();
 			L_EV("Reset discovery's heartbeat event (%f)", heartbeat.repeat);
+
+			auto local_node_ = local_node.load();
+			send_message(Message::ENTER, local_node_->serialise());
 
 			XapiandManager::manager->check_state();
 			break;

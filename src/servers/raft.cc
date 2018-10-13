@@ -157,7 +157,8 @@ Raft::_request_vote()
 {
 	L_CALL("Raft::_request_vote()");
 
-	if (XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -183,7 +184,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 	ignore_unused(revents);
 
-	if (XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -217,7 +219,8 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 	ignore_unused(revents);
 
-	if (XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
