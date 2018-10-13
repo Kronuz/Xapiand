@@ -115,7 +115,6 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					auto local_node_copy = std::make_unique<Node>(*local_node_);
 					local_node_copy->regions = -1;
 					local_node = std::shared_ptr<const Node>(local_node_copy.release());
-
 					XapiandManager::manager->get_region();
 				} else {
 					L_ERR("ERROR: Cannot register remote node (1): %s", remote_node->name());
@@ -132,7 +131,6 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			auto local_node_copy = std::make_unique<Node>(*local_node_);
 			local_node_copy->regions = -1;
 			local_node = std::shared_ptr<const Node>(local_node_copy.release());
-
 			XapiandManager::manager->get_region();
 		} else {
 			L_ERR("ERROR: Cannot register remote node (2): %s", remote_node->name());
