@@ -179,9 +179,9 @@ RaftServer::response_vote(const std::string& message)
 				auto master_node_ = master_node.load();
 				if (*master_node_ != *local_node_) {
 					if (master_node_->empty()) {
-						L_NOTICE("Raft: Leader for region %d is %s (1)", local_node_->region, local_node_->name());
+						L_NOTICE("Raft: Leader for region %d is %s (me)", local_node_->region, local_node_->name());
 					} else {
-						L_NOTICE("Raft: New leader for region %d is %s (1)", local_node_->region, local_node_->name());
+						L_NOTICE("Raft: New leader for region %d is %s (me)", local_node_->region, local_node_->name());
 					}
 					master_node = local_node_;
 					auto joining = XapiandManager::State::JOINING;
@@ -234,9 +234,9 @@ RaftServer::leader(const std::string& message)
 	auto master_node_ = master_node.load();
 	if (*master_node_ != *remote_node) {
 		if (master_node_->empty()) {
-			L_NOTICE("Raft: Leader for region %d is %s (2)", local_node_->region, remote_node->name());
+			L_NOTICE("Raft: Leader for region %d is %s", local_node_->region, remote_node->name());
 		} else {
-			L_NOTICE("Raft: New leader for region %d is %s (2)", local_node_->region, remote_node->name());
+			L_NOTICE("Raft: New leader for region %d is %s", local_node_->region, remote_node->name());
 		}
 		auto put = XapiandManager::manager->put_node(remote_node);
 		remote_node = put.first;
