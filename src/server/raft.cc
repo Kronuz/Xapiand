@@ -64,7 +64,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loo
 Raft::~Raft()
 {
 	leader_election_timeout.stop();
-	L_EV("Stop raft's leader election event");
+	L_EV("Stop raft's leader election timeout event");
 
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
@@ -79,7 +79,7 @@ Raft::start()
 	L_CALL("Raft::start()");
 
 	leader_election_timeout.start(HEARTBEAT_LEADER_MAX);
-	L_EV("Start raft's leader election event");
+	L_EV("Start raft's leader election timeout event");
 
 	L_RAFT("Raft was started!");
 }
@@ -91,7 +91,7 @@ Raft::stop()
 	L_CALL("Raft::stop()");
 
 	leader_election_timeout.stop();
-	L_EV("Stop raft's leader election event");
+	L_EV("Stop raft's leader election timeout event");
 
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
@@ -165,7 +165,7 @@ Raft::_request_vote()
 	auto local_node_ = local_node.load();
 	auto master_node_ = master_node.load();
 	L_RAFT("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->name());
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
@@ -217,7 +217,7 @@ Raft::_reset_leader_election_timeout()
 	}
 	leader_election_timeout.again();
 
-	L_EV("Restart raft's leader election event (%g)", leader_election_timeout.repeat);
+	L_EV("Restart raft's leader election timeout event (%g)", leader_election_timeout.repeat);
 }
 
 
@@ -249,6 +249,9 @@ Raft::_start_leader_heartbeat()
 	auto local_node_ = local_node.load();
 	auto master_node_ = master_node.load();
 	assert(*master_node_ == *local_node_);
+
+	leader_election_timeout.stop();
+	L_EV("Stop raft's leader election timeout event");
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();
