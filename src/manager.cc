@@ -295,24 +295,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	// Open cluster database
-	Endpoints cluster_endpoints(Endpoint("."));
+	auto master_node_ = master_node.load();
+	Endpoints cluster_endpoints(Endpoint(".", master_node_.get()));
 
 	static const std::string reserved_schema(RESERVED_SCHEMA);
-	DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
+	DatabaseHandler db_handler(cluster_endpoints);
 	auto local_node_ = local_node.load();
 	try {
 		if (db_handler.get_metadata(reserved_schema).empty()) {
 			THROW(CheckoutError);
 		}
 		db_handler.get_document(local_node_->name());
-	} catch (const Xapian::DocNotFoundError&) {
-		L_CRIT("Cluster database is corrupt");
-		sig_exit(-EX_DATAERR);
 	} catch (const NotFoundError&) {
 		new_cluster = 1;
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		try {
-			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
 			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 			db_handler.index(local_node_->name(), false, {
 				{ RESERVED_INDEX, "field_all" },
@@ -325,7 +323,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			sig_exit(-EX_CANTCREAT);
 		}
 	} catch (const Exception& e) {
-		L_CRIT("Exception: %s", e.what());
+		L_CRIT("Exception: %s", e.get_message());
 		sig_exit(-EX_SOFTWARE);
 	}
 
