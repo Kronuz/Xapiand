@@ -1262,11 +1262,17 @@ Database::commit(bool wal_)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
-			revision = wdb->get_revision();
+			const auto& db_pair = dbs[0]; // writable database, only one db in dbs
+			bool local = db_pair.second;
+			if (local) {
+				revision = db_pair.first.get_revision();
+			}
 			wdb->commit();
 			modified = false;
-			if (auto queue = weak_queue.lock()) {
-				queue->revision = wdb->get_revision();
+			if (local) {
+				if (auto queue = weak_queue.lock()) {
+					queue->local_revision = db_pair.first.get_revision();
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -2527,13 +2533,13 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		} else {
 			for (size_t i = 0; i < database->dbs.size(); ++i) {
 				const auto& db_pair = database->dbs[i];
+				bool local = db_pair.second;
 				auto hash = endpoints[i].hash();
-				std::lock_guard<std::mutex> lk(qmtx);
-				if (db_pair.second) {
-					// Local database:
+				if (local) {
+					std::lock_guard<std::mutex> lk(qmtx);
 					auto queue = writable_databases.get(hash);
 					if (queue) {
-						auto revision = queue->revision.load();
+						auto revision = queue->local_revision.load();
 						if (revision != db_pair.first.get_revision()) {
 							// Local writable database has changed revision.
 							reopen = true;
@@ -2541,7 +2547,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						}
 					}
 				} else {
-					// Remote database:
 					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
 						// Remote database is too old, reopen.
 						reopen = true;

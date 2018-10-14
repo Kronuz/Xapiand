@@ -373,7 +373,7 @@ private:
 	};
 
 	replica_state state;
-	std::atomic_uint32_t revision;
+	std::atomic_uint32_t local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;
 
