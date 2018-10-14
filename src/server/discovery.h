@@ -30,10 +30,11 @@
 
 
 // Values in seconds
-constexpr double WAITING_FAST        = 0.2;
-constexpr double WAITING_SLOW        = 1.0;
-constexpr double HEARTBEAT_MIN       = 2.0;
-constexpr double HEARTBEAT_MAX       = 4.0;
+constexpr double WAITING_FAST  = 0.200;
+constexpr double WAITING_SLOW  = 0.600;
+constexpr double HEARTBEAT_MIN = 1.500;
+constexpr double HEARTBEAT_MAX = 3.000;
+constexpr double NODE_LIFESPAN = 2.5 * HEARTBEAT_MAX;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;

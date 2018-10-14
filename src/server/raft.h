@@ -32,8 +32,8 @@
 
 
 // Values in seconds
-constexpr double HEARTBEAT_LEADER_MIN = 1.5;
-constexpr double HEARTBEAT_LEADER_MAX = 3.0;
+constexpr double HEARTBEAT_LEADER_MIN = 0.150;
+constexpr double HEARTBEAT_LEADER_MAX = 0.300;
 
 constexpr double LEADER_ELECTION_MIN = 2.5 * HEARTBEAT_LEADER_MAX;
 constexpr double LEADER_ELECTION_MAX = 5.0 * HEARTBEAT_LEADER_MAX;

@@ -103,7 +103,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
 	if (node) {
 		if (*remote_node != *node) {
-			if (heartbeat || node->touched < epoch::now<>() - HEARTBEAT_MAX) {
+			if (heartbeat || node->touched < epoch::now<>() - NODE_LIFESPAN) {
 				XapiandManager::manager->drop_node(remote_node->name());
 				L_INFO("Stalled node %s left the party!", remote_node->name());
 				auto put = XapiandManager::manager->put_node(remote_node);
