@@ -211,7 +211,7 @@ Raft::_reset_leader_election_timeout()
 	auto master_node_ = master_node.load();
 	if (master_node_->empty()) {
 		// No master (leader), elect one as quickly as possible!
-		leader_election_timeout.repeat = random_real(0, LEADER_ELECTION_MIN);
+		leader_election_timeout.repeat = random_real(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
 	} else {
 		leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
 	}
