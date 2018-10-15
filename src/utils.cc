@@ -516,8 +516,7 @@ size_t get_open_files_per_proc()
 			fds[idx].revents = 0;
 			fds[idx].fd = idx + off;
 		}
-		int err;
-		TEMP_FAILURE_RETRY(::poll(fds.data(), nfds, 0));
+		int err = io::RetryAfterSignal(::poll, fds.data(), nfds, 0);
 		if likely(err != -1) {
 			for (size_t idx = 0; idx < nfds; ++idx) {
 				if likely((fds[idx].revents & POLLNVAL) == 0) {

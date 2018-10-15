@@ -174,7 +174,7 @@ int open(const char* path, int oflag, int mode) {
 		}
 		::close(fd);
 		fd = -1;
-		if unlikely(TEMP_FAILURE_RETRY(::open("/dev/null", oflag, mode)) == -1) {
+		if unlikely(RetryAfterSignal(::open, "/dev/null", oflag, mode) == -1) {
 			break;
 		}
 	}
@@ -182,11 +182,11 @@ int open(const char* path, int oflag, int mode) {
 		if (mode != 0) {
 			struct stat statbuf;
 			if (::fstat(fd, &statbuf) == 0 && statbuf.st_size == 0 && (statbuf.st_mode & 0777) != mode) {
-				TEMP_FAILURE_RETRY(::fchmod(fd, mode));
+				RetryAfterSignal(::fchmod, fd, mode);
 			}
 		}
 #if defined(FD_CLOEXEC) && (!defined(O_CLOEXEC) || O_CLOEXEC == 0)
-		TEMP_FAILURE_RETRY(::fcntl(fd, F_SETFD, TEMP_FAILURE_RETRY(::fcntl(fd, F_GETFD, 0)) | FD_CLOEXEC));
+		RetryAfterSignal(::fcntl, fd, F_SETFD, RetryAfterSignal(::fcntl, fd, F_GETFD, 0) | FD_CLOEXEC);
 #endif
 	}
 	CHECK_OPEN(fd);
@@ -199,7 +199,7 @@ int close(int fd) {
 	assert(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
 	if unlikely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
 		CHECK_CLOSING(fd);
-		return ::close(fd);  // IMPORTANT: don't check EINTR (do not use TEMP_FAILURE_RETRY here)
+		return ::close(fd);  // IMPORTANT: don't check EINTR (do not use RetryAfterSignal here)
 	}
 	errno = EBADF;
 	return -1;
@@ -350,14 +350,14 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 	// Try to get a continous chunk of disk space
 	// {fst_flags, fst_posmode, fst_offset, fst_length, fst_bytesalloc}
 	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, offset + len, 0};
-	int err = TEMP_FAILURE_RETRY(::fcntl(fd, F_PREALLOCATE, &store));
+	int err = RetryAfterSignal(::fcntl, fd, F_PREALLOCATE, &store);
 	if unlikely(err == -1) {
 		// Try and allocate space with fragments
 		store.fst_flags = F_ALLOCATEALL;
-		err = TEMP_FAILURE_RETRY(::fcntl(fd, F_PREALLOCATE, &store));
+		err = RetryAfterSignal(::fcntl, fd, F_PREALLOCATE, &store);
 	}
 	if likely(err != -1) {
-		TEMP_FAILURE_RETRY(::ftruncate(fd, offset + len));
+		RetryAfterSignal(::ftruncate, fd, offset + len);
 	}
 	return err;
 #else
@@ -383,15 +383,16 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 		return -1;
 	}
 
-	if (TEMP_FAILURE_RETRY(::ftruncate(fd, offset + len)))
+	if (RetryAfterSignal(::ftruncate, fd, offset + len)) {
 		return -1;
+	}
 
 	off_t next_offset = ((buf.st_size + 2 * st_blksize - 1) / st_blksize) * st_blksize - 1;  // Next offset to write to
 	int written;
 	do {
 		written = 0;
 		if (::lseek(fd, next_offset, SEEK_SET) == next_offset) {
-			written = TEMP_FAILURE_RETRY(::write(fd, "", 1));
+			written = RetryAfterSignal(::write, fd, "", 1);
 		}
 		next_offset += st_blksize;
 	} while (written == 1 && next_offset < offset + len);
@@ -473,13 +474,13 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #ifdef XAPIAND_CHECK_IO_FDES
 #include <sysexits.h>                       // for EX_SOFTWARE
 int close(int fd) {
-	static int honeypot = TEMP_FAILURE_RETRY(::open("/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644));
+	static int honeypot = io::RetryAfterSignal(::open, "/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if unlikely(honeypot == -1) {
 		L_ERR("honeypot -> %s", io::strerrno(errno));
 		exit(EX_SOFTWARE);
 	}
 	CHECK_CLOSE(fd);
-	return TEMP_FAILURE_RETRY(::dup2(honeypot, fd));
+	return io::RetryAfterSignal(::dup2, honeypot, fd);
 }
 #endif
 

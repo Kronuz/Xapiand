@@ -46,18 +46,6 @@
 #endif
 
 
-#ifndef TEMP_FAILURE_RETRY
-#define TEMP_FAILURE_RETRY(exp) \
-	({ \
-		decltype(exp) _err; \
-		do { \
-			_err = (exp); \
-		} while unlikely(_err == -1 && errno == EINTR && io::ignore_eintr().load()); \
-		_err; \
-	})
-#endif
-
-
 namespace io {
 
 #ifdef XAPIAND_CHECK_IO_FDES
@@ -126,6 +114,17 @@ static inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
 }
 
 
+template <typename Fun, typename... Args>
+inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As...)) {
+	decltype(F(As...)) _err;
+	do {
+		errno = 0;
+		_err = F(As...);
+	} while (_err == -1 && errno == EINTR && ignore_eintr().load());
+	return _err;
+}
+
+
 const char* strerrno(int errnum);
 
 int open(const char* path, int oflag=O_RDONLY, int mode=0644);
@@ -151,7 +150,7 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 
 template <typename... Args>
 inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
-	return TEMP_FAILURE_RETRY(::fcntl(fd, cmd, std::forward<Args>(args)...));
+	return RetryAfterSignal(::fcntl, fd, cmd, std::forward<Args>(args)...);
 }
 
 
@@ -176,7 +175,7 @@ inline int dup(int fd) {
 
 inline int dup2(int fd, int fd2) {
 	CHECK_OPENED("during dup2()", fd);
-	return ::dup2(fd, fd2);  // TEMP_FAILURE_RETRY?
+	return ::dup2(fd, fd2);  // RetryAfterSignal?
 }
 
 
@@ -188,30 +187,32 @@ inline int shutdown(int socket, int how) {
 
 inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during send()", socket);
-	return TEMP_FAILURE_RETRY(::send(socket, buffer, length, flags));
+	return RetryAfterSignal(::send, socket, buffer, length, flags);
 }
 
 
 inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
 	CHECK_OPENED_SOCKET("during sendto()", socket);
-	return TEMP_FAILURE_RETRY(::sendto(socket, buffer, length, flags, dest_addr, dest_len));
+	return RetryAfterSignal(::sendto, socket, buffer, length, flags, dest_addr, dest_len);
 }
 
 
 inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during recv()", socket);
-	return TEMP_FAILURE_RETRY(::recv(socket, buffer, length, flags));
+	return RetryAfterSignal(::recv, socket, buffer, length, flags);
 }
+
+
+inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
+	CHECK_OPENED_SOCKET("during recvfrom()", socket);
+	return RetryAfterSignal(::recvfrom, socket, buffer, length, flags, address, address_len);
+}
+
 
 inline int socket(int domain, int type, int protocol) {
 	int socket = ::socket(domain, type, protocol);
 	CHECK_OPEN_SOCKET(socket);
 	return socket;
-}
-
-inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
-	CHECK_OPENED_SOCKET("during recvfrom()", socket);
-	return TEMP_FAILURE_RETRY(::recvfrom(socket, buffer, length, flags, address, address_len));
 }
 
 
@@ -235,7 +236,7 @@ inline int listen(int socket, int backlog) {
 
 inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during accept()", socket);
-	int new_socket = TEMP_FAILURE_RETRY(::accept(socket, address, address_len));
+	int new_socket = RetryAfterSignal(::accept, socket, address, address_len);
 	CHECK_OPEN_SOCKET(new_socket);
 	return new_socket;
 }
@@ -249,12 +250,12 @@ inline int bind(int socket, const struct sockaddr *address, socklen_t address_le
 
 inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
 	CHECK_OPENED_SOCKET("during connect()", socket);
-	return TEMP_FAILURE_RETRY(::connect(socket, address, address_len));
+	return RetryAfterSignal(::connect, socket, address, address_len);
 }
 
 
 inline int unchecked_fsync(int fd) {
-	return TEMP_FAILURE_RETRY(__io_fsync(fd));
+	return RetryAfterSignal(__io_fsync, fd);
 }
 
 
@@ -266,9 +267,9 @@ inline int fsync(int fd) {
 
 inline int unchecked_full_fsync(int fd) {
 #ifdef F_FULLFSYNC
-	return TEMP_FAILURE_RETRY(::fcntl(fd, F_FULLFSYNC, 0));
+	return RetryAfterSignal(::fcntl, fd, F_FULLFSYNC, 0);
 #else
-	return TEMP_FAILURE_RETRY(__io_fsync(fd));
+	return RetryAfterSignal(__io_fsync, fd);
 #endif
 }
 
@@ -282,7 +283,7 @@ inline int full_fsync(int fd) {
 #ifdef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {
 	CHECK_OPENED("during fallocate()", fd);
-	return TEMP_FAILURE_RETRY(::fallocate(fd, mode, offset, len));
+	return RetryAfterSignal(::fallocate, fd, mode, offset, len);
 }
 #else
 int fallocate(int fd, int mode, off_t offset, off_t len);
