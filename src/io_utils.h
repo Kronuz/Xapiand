@@ -28,6 +28,7 @@
 #include "xapiand.h"
 #include "ignore_unused.h"       // for ignore_unused
 
+#include <atomic>                // for std::atomic_bool
 #include <errno.h>               // for errno, EINTR
 #include <fcntl.h>               // for fchmod, open, O_RDONLY
 #include <stddef.h>              // for size_t
@@ -88,6 +89,41 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 inline int __noop(int /*unused*/) { return 0; }
 #define __io_fsync io::__noop
 #endif
+
+
+std::atomic_bool& ignore_intr();
+
+
+static inline bool ignored_errorno(int e, bool again, bool tcp, bool udp) {
+	switch(e) {
+		case EINTR:
+			return ignore_intr().load();  //  Always ignore error
+		case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+		case EWOULDBLOCK:
+#endif
+			return again;  //  Ignore not-available error
+		case EPIPE:
+		case EINPROGRESS:
+			return tcp;  //  Ignore error on TCP sockets
+
+		case ENETDOWN:
+		case EPROTO:
+		case ENOPROTOOPT:
+		case EHOSTDOWN:
+#ifdef ENONET  // Linux-specific
+		case ENONET:
+#endif
+		case EHOSTUNREACH:
+		case EOPNOTSUPP:
+		case ENETUNREACH:
+		case ECONNRESET:
+			return udp;  //  Ignore error on UDP sockets
+
+		default:
+			return false;  // Do not ignore error
+	}
+}
 
 
 const char* strerrno(int errnum);

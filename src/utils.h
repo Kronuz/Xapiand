@@ -75,37 +75,6 @@ const std::string& get_thread_name(std::thread::id thread_id);
 const std::string& get_thread_name();
 
 
-static inline bool ignored_errorno(int e, bool tcp, bool udp) {
-	switch(e) {
-		case EINTR:
-		case EAGAIN:
-#if EAGAIN != EWOULDBLOCK
-		case EWOULDBLOCK:
-#endif
-			return true;  //  Ignore error
-		case EPIPE:
-		case EINPROGRESS:
-			return tcp;  //  Ignore error
-
-		case ENETDOWN:
-		case EPROTO:
-		case ENOPROTOOPT:
-		case EHOSTDOWN:
-#ifdef ENONET  // Linux-specific
-		case ENONET:
-#endif
-		case EHOSTUNREACH:
-		case EOPNOTSUPP:
-		case ENETUNREACH:
-		case ECONNRESET:
-			return udp;  //  Ignore error on UDP sockets
-
-		default:
-			return false;  // Do not ignore error
-	}
-}
-
-
 static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 	// char ip[INET_ADDRSTRLEN];
 	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);

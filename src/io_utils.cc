@@ -32,6 +32,12 @@
 
 namespace io {
 
+std::atomic_bool& ignore_intr() {
+	static std::atomic_bool ignore_intr = true;
+	return ignore_intr;
+}
+
+
 // From /usr/include/sys/errno.h:
 const char* sys_errnolist[] {
 	"",

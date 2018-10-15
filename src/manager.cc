@@ -468,12 +468,14 @@ XapiandManager::shutdown_sig(int sig)
 	}
 	if ((shutdown_now != 0) && sig != SIGTERM) {
 		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+			ignore_intr().store(false);
 			L_WARNING("You insisted... Xapiand exiting now!");
 			throw Exit(1);
 		}
 	} else if ((shutdown_asap != 0) && sig != SIGTERM) {
 		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
+			ignore_intr().store(false);
 			L_INFO("Trying immediate shutdown.");
 		} else if (sig == 0) {
 			shutdown_now = now;
