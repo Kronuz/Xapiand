@@ -203,9 +203,7 @@ char
 BaseUDP::get_message(std::string& result, char max_type)
 {
 	char buf[1024];
-	struct sockaddr_in _addr;
-	socklen_t addrlen = sizeof(_addr);
-	ssize_t received = io::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&_addr, &addrlen);
+	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
 		if (!ignored_errorno(errno, true, true)) {
 			L_ERR("ERROR: read error (sock=%d): %s", sock, strerror(errno));
