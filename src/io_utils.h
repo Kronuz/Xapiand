@@ -52,7 +52,7 @@
 		decltype(exp) _err; \
 		do { \
 			_err = (exp); \
-		} while unlikely(_err == -1 && errno == EINTR); \
+		} while unlikely(_err == -1 && errno == EINTR && ignore_intr().load()); \
 		_err; \
 	})
 #endif

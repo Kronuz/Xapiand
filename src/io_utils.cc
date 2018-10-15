@@ -164,7 +164,7 @@ int open(const char* path, int oflag, int mode) {
 		fd = ::open(path, oflag, mode);
 #endif
 		if unlikely(fd == -1) {
-			if unlikely(errno == EINTR) {
+			if unlikely(errno == EINTR && ignore_intr().load()) {
 				continue;
 			}
 			break;
@@ -215,7 +215,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c == -1) {
 			L_ERRNO("io::write() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if unlikely(errno == EINTR) {
+			if unlikely(errno == EINTR && ignore_intr().load()) {
 				continue;
 			}
 			size_t written = p - static_cast<const char*>(buf);
@@ -252,7 +252,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 #endif
 		if unlikely(c == -1) {
 			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if unlikely(errno == EINTR) {
+			if unlikely(errno == EINTR && ignore_intr().load()) {
 				continue;
 			}
 			size_t written = p - static_cast<const char*>(buf);
@@ -281,7 +281,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c == -1) {
 			L_ERRNO("io::read() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if unlikely(errno == EINTR) {
+			if unlikely(errno == EINTR && ignore_intr().load()) {
 				continue;
 			}
 			size_t read = p - static_cast<const char*>(buf);
@@ -320,7 +320,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 #endif
 		if unlikely(c == -1) {
 			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
-			if unlikely(errno == EINTR) {
+			if unlikely(errno == EINTR && ignore_intr().load()) {
 				continue;
 			}
 			size_t read = p - static_cast<const char*>(buf);

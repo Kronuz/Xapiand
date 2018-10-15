@@ -519,7 +519,7 @@ size_t get_open_files_per_proc()
 		int err;
 		do {
 			err = ::poll(fds.data(), nfds, 0);
-		} while unlikely(err == -1 && errno == EINTR);
+		} while unlikely(err == -1 && errno == EINTR && ignore_intr().load());
 		if likely(err != -1) {
 			for (size_t idx = 0; idx < nfds; ++idx) {
 				if likely((fds[idx].revents & POLLNVAL) == 0) {
