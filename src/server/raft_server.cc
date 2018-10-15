@@ -322,6 +322,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	if (revents & EV_READ) {
 		while (
 			XapiandManager::manager->state == XapiandManager::State::JOINING ||
+			XapiandManager::manager->state == XapiandManager::State::SETUP ||
 			XapiandManager::manager->state == XapiandManager::State::READY
 		) {
 			try {
