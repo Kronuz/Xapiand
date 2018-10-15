@@ -77,12 +77,12 @@ const std::string& get_thread_name();
 
 static inline bool ignored_errorno(int e, bool tcp, bool udp) {
 	switch(e) {
+		case EINTR:
 		case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
 		case EWOULDBLOCK:
 #endif
 			return true;  //  Ignore error
-		case EINTR:
 		case EPIPE:
 		case EINPROGRESS:
 			return tcp;  //  Ignore error
