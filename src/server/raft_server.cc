@@ -176,6 +176,8 @@ RaftServer::response_vote(const std::string& message)
 			L_RAFT("Number of servers: %d; Votes received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				raft->state = Raft::State::LEADER;
+				raft->start_leader_heartbeat();
+
 				auto master_node_ = master_node.load();
 				if (*master_node_ != *local_node_) {
 					if (master_node_->empty()) {
@@ -188,8 +190,6 @@ RaftServer::response_vote(const std::string& message)
 					XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 					XapiandManager::manager->setup_node();
 				}
-
-				raft->start_leader_heartbeat();
 			}
 			return;
 		}
@@ -198,6 +198,7 @@ RaftServer::response_vote(const std::string& message)
 		if (raft->term < remote_term) {
 			raft->term = remote_term;
 			raft->state = Raft::State::FOLLOWER;
+			raft->reset_leader_election_timeout();
 			return;
 		}
 	}
@@ -227,9 +228,10 @@ RaftServer::leader(const std::string& message)
 		return;
 	}
 
-	raft->state = Raft::State::FOLLOWER;
 	raft->number_servers.store(unserialise_length(&p, p_end));
 	raft->term = unserialise_length(&p, p_end);
+	raft->state = Raft::State::FOLLOWER;
+	raft->reset_leader_election_timeout();
 
 	auto master_node_ = master_node.load();
 	if (*master_node_ != *remote_node) {
@@ -248,8 +250,6 @@ RaftServer::leader(const std::string& message)
 		XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
 		XapiandManager::manager->setup_node();
 	}
-
-	raft->reset_leader_election_timeout();
 }
 
 

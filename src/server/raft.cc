@@ -90,14 +90,14 @@ Raft::stop()
 {
 	L_CALL("Raft::stop()");
 
-	leader_election_timeout.stop();
-	L_EV("Stop raft's leader election timeout event");
+	number_servers = 1;
 
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
 
 	state = State::FOLLOWER;
-	number_servers = 1;
+	leader_election_timeout.stop();
+	L_EV("Stop raft's leader election timeout event");
 
 	L_RAFT("Raft was stopped!");
 }
@@ -145,7 +145,6 @@ Raft::_reset()
 	L_EV("Stop raft's leader heartbeat event");
 
 	state = State::FOLLOWER;
-
 	_reset_leader_election_timeout();
 
 	L_RAFT("Raft was restarted!");
@@ -162,22 +161,25 @@ Raft::_request_vote()
 		return;
 	}
 
-	auto local_node_ = local_node.load();
-	auto master_node_ = master_node.load();
-	L_RAFT("Raft { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
-
-	if (state != State::LEADER) {
-		state = State::CANDIDATE;
-		++term;
-		votes = 0;
-		voted_for.clear();
-		send_message(Message::REQUEST_VOTE,
-			local_node_->serialise() +
-			serialise_length(term));
+	if (state == State::LEADER) {
+		// Already leader, shouldn't even be here!
+		return;
 	}
 
+	auto local_node_ = local_node.load();
+	auto master_node_ = master_node.load();
+	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
+
+	state = State::CANDIDATE;
 	_reset_leader_election_timeout();
+
+	++term;
+	votes = 0;
+	voted_for.clear();
+	send_message(Message::REQUEST_VOTE,
+		local_node_->serialise() +
+		serialise_length(term));
 }
 
 
