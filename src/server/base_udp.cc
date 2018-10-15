@@ -149,7 +149,8 @@ BaseUDP::bind(int tries, const std::string& group)
 		}
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_CRIT("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			sig_exit(-EX_CONFIG);
 		}
 
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)

@@ -169,7 +169,8 @@ BaseTCP::bind(int tries)
 		}
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_CRIT("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			sig_exit(-EX_CONFIG);
 		}
 
 		check_backlog(tcp_backlog);
