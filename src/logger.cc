@@ -309,7 +309,7 @@ Logging::cleanup()
 long double
 Logging::age()
 {
-	if (cleared_at > created_at) {
+	if (clean && cleared_at > created_at) {
 		return std::chrono::duration_cast<std::chrono::nanoseconds>(
 			time_point_from_ullong(cleared_at) - time_point_from_ullong(created_at)
 		).count();
