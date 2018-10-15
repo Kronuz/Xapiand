@@ -329,14 +329,16 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		while (true) {
 			try {
 				std::string message;
-				Discovery::Message type = static_cast<Discovery::Message>(discovery->get_message(message, static_cast<char>(Discovery::Message::MAX)));
+				auto raw_type = discovery->get_message(message, static_cast<char>(Discovery::Message::MAX));
+				if (raw_type == '\xff') {
+					break;  // no message
+				}
+				Discovery::Message type = static_cast<Discovery::Message>(raw_type);
 				if (type != Discovery::Message::HEARTBEAT) {
 					L_DISCOVERY(">> get_message(%s)", Discovery::MessageNames(type));
 					L_DISCOVERY_PROTO("message: %s", repr(message));
 				}
 				discovery_server(type, message);
-			} catch (const DummyException&) {
-				break;  // No message.
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;

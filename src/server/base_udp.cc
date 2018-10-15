@@ -211,11 +211,11 @@ BaseUDP::get_message(std::string& result, char max_type)
 			THROW(NetworkError, strerror(errno));
 		}
 		L_CONN("Received EOF (sock=%d)!", sock);
-		throw DummyException();
+		return '\xff';
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
 		L_CONN("Received EOF (sock=%d)!", sock);
-		throw DummyException();
+		return '\xff';
 	} else if (received < 4) {
 		THROW(NetworkError, "Badly formed message: Incomplete!");
 	}
@@ -242,7 +242,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	}
 
 	if (remote_cluster_name != opts.cluster_name) {
-		throw DummyException();
+		return '\xff';
 	}
 
 	result = std::string(p, p_end - p);

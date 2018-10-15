@@ -326,15 +326,17 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 		) {
 			try {
 				std::string message;
-				Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
+				auto raw_type = raft->get_message(message, static_cast<char>(Raft::Message::MAX));
+				if (raw_type == '\xff') {
+					break;  // no message
+				}
+				Raft::Message type = static_cast<Raft::Message>(raw_type);
 				if (type != Raft::Message::HEARTBEAT_LEADER) {
 					L_RAFT(">> get_message(%s)", Raft::MessageNames(type));
 					L_RAFT_PROTO("message: %s", repr(message));
 				}
 
 				raft_server(type, message);
-			} catch (const DummyException&) {
-				break;  // no message
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;
