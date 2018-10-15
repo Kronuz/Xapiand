@@ -82,21 +82,14 @@
 
 
 void
-WalHeader::init(void* param, void* args)
+WalHeader::init(void* param, void* /*unused*/)
 {
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
-	auto commit_eof = static_cast<bool>(args);
 
 	memcpy(head.magic, MAGIC, sizeof(head.magic));
 	memcpy(&head.uuid[0], wal->database->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-
-	auto revision = wal->database->get_revision();
-	if (commit_eof) {
-		++revision;
-	}
-
-	head.revision = revision;
+	head.revision = wal->database->get_revision();
 }
 
 
@@ -688,9 +681,9 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint32_t revision)
+DatabaseWAL::write_line(Type type, std::string_view data)
 {
-	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s, %u)", names[toUType(type)], was_commit ? "true" : "false", revision);
+	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s, %u)", names[toUType(type)]);
 	try {
 		assert(database->flags & DB_WRITABLE);
 		assert(!(database->flags & DB_NOWAL));
@@ -698,8 +691,9 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint3
 		auto endpoint = database->endpoints[0];
 		assert(endpoint.is_local());
 
-		if (!was_commit) {
-			revision = database->get_revision();
+		auto revision = database->get_revision();
+		if (type == Type::COMMIT) {
+			--revision;
 		}
 
 		std::string line;
@@ -726,9 +720,9 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool was_commit, uint3
 
 		header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
-		if (was_commit) {
+		if (type == Type::COMMIT) {
 			if (slot + 1 >= WAL_SLOTS) {
-				open(string::format(WAL_STORAGE_PATH "%u", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
+				open(string::format(WAL_STORAGE_PATH "%u", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			} else {
 				header.slot[slot + 1] = header.slot[slot];
 			}
@@ -775,11 +769,11 @@ DatabaseWAL::write_delete_document_term(std::string_view term)
 
 
 void
-DatabaseWAL::write_commit(uint32_t revision)
+DatabaseWAL::write_commit()
 {
-	L_CALL("DatabaseWAL::write_commit(%u)", revision);
+	L_CALL("DatabaseWAL::write_commit()");
 
-	write_line(Type::COMMIT, "", true, revision);
+	write_line(Type::COMMIT, "");
 }
 
 
@@ -1254,7 +1248,6 @@ Database::commit(bool wal_)
 
 	L_DATABASE_WRAP_INIT();
 
-	Xapian::rev revision;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP("Commit: t: %d", t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1262,13 +1255,10 @@ Database::commit(bool wal_)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
-			const auto& db_pair = dbs[0]; // writable database, only one db in dbs
-			bool local = db_pair.second;
-			if (local) {
-				revision = db_pair.first.get_revision();
-			}
 			wdb->commit();
 			modified = false;
+			const auto& db_pair = dbs[0]; // writable database, only one db in dbs
+			bool local = db_pair.second;
 			if (local) {
 				if (auto queue = weak_queue.lock()) {
 					queue->local_revision = db_pair.first.get_revision();
@@ -1293,7 +1283,7 @@ Database::commit(bool wal_)
 	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_commit(revision); }
+	if (wal_ && wal) { wal->write_commit(); }
 #else
 	ignore_unused(wal_);
 #endif
