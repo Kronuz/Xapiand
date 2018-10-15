@@ -356,10 +356,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				break;
 			}
 		}
-	}
+		state = State::READY;  // TODO: Set this state only when cluster replication finishes!
+	} else
 	#endif
-
-	state = State::READY;
+	{
+		state = State::READY;
+	}
 
 	if (opts.solo) {
 		switch (new_cluster) {
