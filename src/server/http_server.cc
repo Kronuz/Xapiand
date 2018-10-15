@@ -35,7 +35,7 @@
 #include "http.h"                 // for Http
 #include "ignore_unused.h"        // for ignore_unused
 #include "log.h"                  // for L_EV, L_OBJ, L_CALL, L_ERR
-#include "io_utils.h"             // for ignored_errorno
+#include "io_utils.h"             // for ignored_errno
 #include "utils.h"                // for readable_revents
 #include "worker.h"               // for Worker
 
@@ -80,7 +80,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 
 	int client_sock = http->accept();
 	if (client_sock == -1) {
-		if (!io::ignored_errorno(errno, true, true, false)) {
+		if (!io::ignored_errno(errno, true, true, false)) {
 			L_ERR("ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
 		}
 	} else {

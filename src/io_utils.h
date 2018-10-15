@@ -52,7 +52,7 @@
 		decltype(exp) _err; \
 		do { \
 			_err = (exp); \
-		} while unlikely(_err == -1 && errno == EINTR && ignore_intr().load()); \
+		} while unlikely(_err == -1 && errno == EINTR && io::ignore_eintr().load()); \
 		_err; \
 	})
 #endif
@@ -91,13 +91,13 @@ inline int __noop(int /*unused*/) { return 0; }
 #endif
 
 
-std::atomic_bool& ignore_intr();
+std::atomic_bool& ignore_eintr();
 
 
-static inline bool ignored_errorno(int e, bool again, bool tcp, bool udp) {
+static inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
 	switch(e) {
 		case EINTR:
-			return ignore_intr().load();  //  Always ignore error
+			return ignore_eintr().load();  //  Always ignore error
 		case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
 		case EWOULDBLOCK:

@@ -36,7 +36,7 @@
 #endif
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
-#include "io_utils.h"               // for close, ignored_errorno
+#include "io_utils.h"               // for close, ignored_errno
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
 #include "manager.h"                // for sig_exit
 
@@ -160,7 +160,7 @@ BaseTCP::bind(int tries)
 		addr.sin_port = htons(port);
 
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-			if (!io::ignored_errorno(errno, true, true, true)) {
+			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 				continue;
@@ -195,7 +195,7 @@ BaseTCP::accept()
 	socklen_t addrlen = sizeof(addr);
 
 	if ((client_sock = io::accept(sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
-		if (!io::ignored_errorno(errno, true, true, true)) {
+		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: accept error (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 		return -1;
@@ -295,7 +295,7 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 	}
 
 	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
-		if (!io::ignored_errorno(errno, true, true, true)) {
+		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname, servname, sock_, errno, strerror(errno));
 			freeaddrinfo(result);
 			io::close(sock_);

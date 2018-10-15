@@ -36,7 +36,7 @@
 
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "ignore_unused.h"       // for ignore_unused
-#include "io_utils.h"            // for read, close, lseek, write, ignored_errorno
+#include "io_utils.h"            // for read, close, lseek, write, ignored_errno
 #include "length.h"              // for serialise_length, unserialise_length
 #include "log.h"                 // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
 #include "lz4/xxhash.h"          // for XXH32_createState, XXH32_digest, XXH...
@@ -412,7 +412,7 @@ BaseClient::write_from_queue(int fd)
 #endif
 
 		if (_written < 0) {
-			if (io::ignored_errorno(errno, true, true, false)) {
+			if (io::ignored_errno(errno, true, true, false)) {
 				L_CONN("WR:RETRY: {fd:%d} - %d: %s", fd, errno, strerror(errno));
 				return WR::RETRY;
 			}
@@ -598,7 +598,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
 
 	if (received < 0) {
-		if (io::ignored_errorno(errno, true, true, false)) {
+		if (io::ignored_errno(errno, true, true, false)) {
 			L_CONN("Ignored error: {fd:%d} - %d: %s", fd, errno, strerror(errno));
 			L_EV_END("BaseClient::io_cb_read:END");
 			return;

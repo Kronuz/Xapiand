@@ -31,7 +31,7 @@
 #include <sysexits.h>               // for EX_CONFIG
 
 #include "exception.h"              // for MSG_NetworkError, NetworkError
-#include "io_utils.h"               // for close, ignored_errorno
+#include "io_utils.h"               // for close, ignored_errno
 #include "length.h"                 // for serialise_string, unserialise_string
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
 #include "opts.h"                   // for opts
@@ -140,7 +140,7 @@ BaseUDP::bind(int tries, const std::string& group)
 		addr.sin_port = htons(port);
 
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-			if (!io::ignored_errorno(errno, true, true, true)) {
+			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
 				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 				continue;
@@ -176,7 +176,7 @@ BaseUDP::sending_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			if (sock != -1 && !io::ignored_errorno(errno, true, true, true)) {
+			if (sock != -1 && !io::ignored_errno(errno, true, true, true)) {
 				L_ERR("ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 				XapiandManager::manager->shutdown();
 			}
@@ -204,7 +204,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	char buf[1024];
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
-		if (!io::ignored_errorno(errno, true, true, true)) {
+		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: read error (sock=%d): %s", sock, strerror(errno));
 			THROW(NetworkError, strerror(errno));
 		}
