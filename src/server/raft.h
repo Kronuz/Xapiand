@@ -94,7 +94,7 @@ public:
 	}
 
 	size_t votes;
-	uint64_t term;
+	uint64_t current_term;
 	Node voted_for;
 
 	State state;

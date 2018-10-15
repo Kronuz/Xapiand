@@ -114,40 +114,40 @@ RaftServer::request_vote(const std::string& message)
 
 	uint64_t remote_term = unserialise_length(&p, p_end);
 
-	L_RAFT("remote_term: %llu  local_term: %llu", remote_term, raft->term);
+	L_RAFT("remote_term: %llu  local_term: %llu", remote_term, raft->current_term);
 
-	if (remote_term > raft->term) {
+	if (remote_term > raft->current_term) {
 		if (raft->state == Raft::State::LEADER && remote_node != *local_node_) {
-			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name(), remote_term, raft->term);
+			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name(), remote_term, raft->current_term);
 			raft->reset();
 		}
 
 		raft->voted_for = remote_node;
-		raft->term = remote_term;
+		raft->current_term = remote_term;
 
 		L_RAFT("It Vote for %s", raft->voted_for.name());
 		raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 			serialise_length(true) + serialise_length(remote_term));
 	} else {
 		if (raft->state == Raft::State::LEADER && remote_node != *local_node_) {
-			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name(), remote_term, raft->term);
+			L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name(), remote_term, raft->current_term);
 			raft->send_message(Raft::Message::RESET, remote_node.serialise());
 			return;
 		}
 
-		if (remote_term < raft->term) {
+		if (remote_term < raft->current_term) {
 			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
-				serialise_length(false) + serialise_length(raft->term));
+				serialise_length(false) + serialise_length(raft->current_term));
 		} else if (raft->voted_for.empty()) {
 			raft->voted_for = remote_node;
 			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
-				serialise_length(true) + serialise_length(raft->term));
+				serialise_length(true) + serialise_length(raft->current_term));
 		} else {
 			L_RAFT("Vote for %s", raft->voted_for.name());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
-				serialise_length(false) + serialise_length(raft->term));
+				serialise_length(false) + serialise_length(raft->current_term));
 		}
 	}
 }
@@ -195,8 +195,8 @@ RaftServer::response_vote(const std::string& message)
 		}
 
 		uint64_t remote_term = unserialise_length(&p, p_end);
-		if (raft->term < remote_term) {
-			raft->term = remote_term;
+		if (raft->current_term < remote_term) {
+			raft->current_term = remote_term;
 			raft->state = Raft::State::FOLLOWER;
 			raft->reset_leader_election_timeout();
 			return;
@@ -229,7 +229,7 @@ RaftServer::leader(const std::string& message)
 	}
 
 	raft->number_servers.store(unserialise_length(&p, p_end));
-	raft->term = unserialise_length(&p, p_end);
+	raft->current_term = unserialise_length(&p, p_end);
 	raft->state = Raft::State::FOLLOWER;
 	raft->reset_leader_election_timeout();
 
@@ -272,7 +272,7 @@ RaftServer::leadership(const std::string& message)
 		L_DEBUG("Sending Data!");
 		raft->send_message(Raft::Message::LEADER, local_node_->serialise() +
 			serialise_length(raft->number_servers) +
-			serialise_length(raft->term));
+			serialise_length(raft->current_term));
 	}
 }
 

@@ -29,11 +29,14 @@
 #include "log.h"
 #include "manager.h"
 
+#undef L_RAFT
+#define L_RAFT L_CYAN
+
 
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  votes(0),
-	  term(0),
+	  current_term(0),
 	  state(State::FOLLOWER),
 	  number_servers(1),
 	  leader_election_timeout(*ev_loop),
@@ -168,18 +171,18 @@ Raft::_request_vote()
 
 	auto local_node_ = local_node.load();
 	auto master_node_ = master_node.load();
-	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
+	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; number_servers: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
 
 	state = State::CANDIDATE;
 	_reset_leader_election_timeout();
 
-	++term;
+	++current_term;
 	votes = 0;
 	voted_for.clear();
 	send_message(Message::REQUEST_VOTE,
 		local_node_->serialise() +
-		serialise_length(term));
+		serialise_length(current_term));
 }
 
 
@@ -262,7 +265,7 @@ Raft::_start_leader_heartbeat()
 	send_message(Message::LEADER,
 		local_node_->serialise() +
 		serialise_length(number_servers) +
-		serialise_length(term));
+		serialise_length(current_term));
 }
 
 
