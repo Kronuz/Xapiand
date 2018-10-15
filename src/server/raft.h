@@ -93,11 +93,12 @@ public:
 		return UNKNOWN;
 	}
 
+	State state;
 	size_t votes;
+
 	uint64_t current_term;
 	Node voted_for;
 
-	State state;
 	std::atomic_size_t number_servers;
 
 private:
