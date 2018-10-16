@@ -756,8 +756,6 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 
 		send_message(RemoteReplyType::REPLY_VALUESTATS, message_out);
 	}
-
-	lk_db.unlock();
 }
 
 
@@ -822,8 +820,6 @@ RemoteProtocol::msg_cancel(const std::string &)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->cancel();
-
-	lk_db.unlock();
 }
 
 
@@ -869,8 +865,6 @@ RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->delete_document_term(message);
-
-	lk_db.unlock();
 }
 
 
@@ -886,8 +880,6 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
-
-	lk_db.unlock();
 }
 
 
@@ -974,8 +966,6 @@ RemoteProtocol::msg_setmetadata(const std::string & message)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->set_metadata(key, val);
-
-	lk_db.unlock();
 }
 
 
@@ -991,8 +981,6 @@ RemoteProtocol::msg_addspelling(const std::string & message)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->add_spelling(std::string(p, p_end - p), freqinc);
-
-	lk_db.unlock();
 }
 
 
@@ -1008,8 +996,6 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 	lock_database<RemoteProtocol> lk_db(this);
 
 	database->remove_spelling(std::string(p, p_end - p), freqdec);
-
-	lk_db.unlock();
 }
 
 
