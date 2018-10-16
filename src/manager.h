@@ -95,7 +95,6 @@ protected:
 	std::mutex nodes_mtx;
 	nodes_map_t nodes;
 
-	size_t nodes_size();
 	std::string load_node_name();
 	void save_node_name(std::string_view _node_name);
 	std::string set_node_name(std::string_view node_name_);
@@ -157,6 +156,7 @@ public:
 
 	std::atomic<State> state;
 	std::string node_name;
+	std::string node_name_setup;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
@@ -183,13 +183,14 @@ public:
 	void reset_state();
 	void join_cluster();
 
+	std::atomic_size_t active_nodes;
+	void _update_active_nodes(int32_t region);
+
 	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
 	std::shared_ptr<const Node> touch_node(std::string_view node_name, int32_t region);
 	void drop_node(std::string_view node_name);
 	void renew_master();
-
-	size_t get_nodes_by_region(int32_t region);
 
 	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif

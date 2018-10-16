@@ -42,7 +42,6 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  state(State::FOLLOWER),
 	  votes_granted(0),
 	  votes_denied(0),
-	  num_servers(1),
 	  current_term(0),
 	  commit_index(0),
 	  last_applied(0)
@@ -309,8 +308,8 @@ Raft::request_vote_response(const std::string& message)
 			} else {
 				++votes_denied;
 			}
-			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", num_servers.load(), votes_granted, votes_denied);
-			if (votes_granted + votes_denied > num_servers / 2) {
+			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", XapiandManager::manager->active_nodes, votes_granted, votes_denied);
+			if (votes_granted + votes_denied > XapiandManager::manager->active_nodes / 2) {
 				if (votes_granted > votes_denied) {
 					state = State::LEADER;
 					voted_for.clear();
@@ -489,8 +488,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		serialise_length(log.size()) +
 		serialise_length(log.empty() ? 0 : log.back().term));
 
-	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; num_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, num_servers, master_node.load()->empty() ? "<none>" : master_node.load()->name());
+	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; active_nodes: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, XapiandManager::manager->active_nodes, master_node.load()->empty() ? "<none>" : master_node.load()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -547,9 +546,6 @@ Raft::_reset_leader_election_timeout(double min, double max)
 {
 	L_CALL("Raft::_reset_leader_election_timeout()");
 
-	auto local_node_ = local_node.load();
-	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
-
 	leader_election_timeout.repeat = random_real(min, max);
 	leader_election_timeout.again();
 	L_EV("Restart raft's leader election timeout event (%g)", leader_election_timeout.repeat);
@@ -593,9 +589,6 @@ Raft::request_vote()
 {
 	L_CALL("Raft::request_vote()");
 
-	auto local_node_ = local_node.load();
-	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
-
 	state = State::FOLLOWER;
 	voted_for.clear();
 
@@ -607,9 +600,6 @@ void
 Raft::start()
 {
 	L_CALL("Raft::start()");
-
-	auto local_node_ = local_node.load();
-	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
 	state = State::FOLLOWER;
 	voted_for.clear();

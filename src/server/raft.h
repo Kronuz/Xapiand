@@ -103,7 +103,6 @@ class Raft : public UDP, public Worker {
 	State state;
 	size_t votes_granted;
 	size_t votes_denied;
-	std::atomic_size_t num_servers;
 
 	uint64_t current_term;
 	Node voted_for;

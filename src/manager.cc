@@ -286,11 +286,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 {
 	L_CALL("XapiandManager::setup_node(...)");
 
+	std::lock_guard<std::mutex> lk(qmtx);
+
+	if (node_name_setup == node_name) {
+		return;
+	}
+
 	L_DISCOVERY("Setup Node!");
 
 	int new_cluster = 0;
-
-	std::lock_guard<std::mutex> lk(qmtx);
 
 	// Open cluster database
 	auto master_node_ = master_node.load();
@@ -383,6 +387,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				break;
 		}
 	}
+
+	node_name_setup = node_name;
 }
 
 
@@ -736,16 +742,6 @@ XapiandManager::join()
 }
 
 
-size_t
-XapiandManager::nodes_size()
-{
-	L_CALL("XapiandManager::nodes_size()");
-
-	std::unique_lock<std::mutex> lk_n(nodes_mtx);
-	return nodes.size();
-}
-
-
 #ifdef XAPIAND_CLUSTERING
 
 void
@@ -754,8 +750,10 @@ XapiandManager::reset_state()
 	L_CALL("XapiandManager::reset_state()");
 
 	if (state != State::RESET) {
-		state = State::RESET;
 		if (auto discovery = weak_discovery.lock()) {
+			state = State::RESET;
+			std::lock_guard<std::mutex> lk(qmtx);
+			nodes.clear();
 			discovery->start();
 		}
 	}
@@ -771,6 +769,21 @@ XapiandManager::join_cluster()
 	if (auto raft = weak_raft.lock()) {
 		raft->start();
 	}
+}
+
+
+void
+XapiandManager::_update_active_nodes(int32_t region)
+{
+	L_CALL("XapiandManager::_update_active_nodes(%x)", region);
+
+	size_t cnt = 1;
+	for (const auto& node : nodes) {
+		if (node.second->region == region) {
+			++cnt;
+		}
+	}
+	active_nodes = cnt;
 }
 
 
@@ -806,14 +819,21 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	nodes[node->lower_name()] = final_node;
 
 	int32_t regions = 1;  // hardcode only one region (for now)
-	// int32_t regions = sqrt(nodes_size());
+	// int32_t regions = sqrt(total_nodes);
 	if (regions != local_node_->regions) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->regions = regions;
+		int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
+		if (local_node_copy->region != region) {
+			local_node_copy->region = region;
+			reset_state();
+		}
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 		local_node = local_node_;
 		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 	}
+
+	_update_active_nodes(local_node_->region);
 
 	return std::make_pair(final_node, true);
 }
@@ -890,15 +910,22 @@ XapiandManager::drop_node(std::string_view _node_name)
 	nodes.erase(string::lower(_node_name));
 
 	int32_t regions = 1;  // hardcode only one region (for now)
-	// int32_t regions = sqrt(nodes_size());
+	// int32_t regions = sqrt(total_nodes);
 	auto local_node_ = local_node.load();
 	if (regions != local_node_->regions) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->regions = regions;
+		int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
+		if (local_node_copy->region != region) {
+			local_node_copy->region = region;
+			reset_state();
+		}
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 		local_node = local_node_;
 		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 	}
+
+	_update_active_nodes(local_node_->region);
 }
 
 
@@ -909,20 +936,6 @@ XapiandManager::renew_master()
 	if (auto raft = weak_raft.lock()) {
 		raft->request_vote();
 	}
-}
-
-
-size_t
-XapiandManager::get_nodes_by_region(int32_t region)
-{
-	L_CALL("XapiandManager::get_nodes_by_region(%x)", region);
-
-	std::lock_guard<std::mutex> lk(nodes_mtx);
-	size_t cnt = 0;
-	for (const auto& node : nodes) {
-		if (node.second->region == region) ++cnt;
-	}
-	return cnt;
 }
 
 
