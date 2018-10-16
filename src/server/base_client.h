@@ -30,8 +30,6 @@
 #include <string>        // for string
 #include <sys/types.h>   // for ssize_t
 #include <time.h>        // for time_t
-
-#include "endpoint.h"    // for Endpoints
 #include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
 #include "io_utils.h"    // for io::*
 #include "queue.h"       // for Queue
@@ -197,8 +195,6 @@ protected:
 	std::string file_buffer;
 	size_t block_size;
 	bool receive_checksum;
-
-	Endpoints endpoints;
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 

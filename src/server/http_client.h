@@ -260,6 +260,7 @@ class HttpClient : public BaseClient {
 	Request new_request;
 	std::mutex requests_mutex;
 	std::deque<Request> requests;
+	Endpoints endpoints;
 
 	static int _on_info(http_parser* parser);
 	int on_info(http_parser* parser);
