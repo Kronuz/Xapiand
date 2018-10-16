@@ -848,8 +848,9 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 	auto local_node_ = local_node.load();
 	auto lower_node_name = string::lower(_node_name);
 	if (lower_node_name == local_node_->lower_name()) {
+		auto now = epoch::now<>();
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->touched = epoch::now<>();
+		local_node_copy->touched = now;
 		if (region != UNKNOWN_REGION) {
 			local_node_copy->region = region;
 		}
@@ -862,8 +863,13 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 	auto it = nodes.find(lower_node_name);
 	if (it != nodes.end()) {
 		auto& node_ref = it->second;
+		auto now = epoch::now<>();
+		if (node_ref->touched < now - NODE_LIFESPAN) {
+			nodes.erase(it);
+			return nullptr;
+		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
-		node_ref_copy->touched = epoch::now<>();
+		node_ref_copy->touched = now;
 		if (region != UNKNOWN_REGION) {
 			node_ref_copy->region = region;
 		}
