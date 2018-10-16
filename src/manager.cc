@@ -805,12 +805,15 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	auto final_node = std::shared_ptr<const Node>(node_copy.release());
 	nodes[node->lower_name()] = final_node;
 
-	auto local_node_copy = std::make_unique<Node>(*local_node_);
-	// local_node_copy->regions = sqrt(nodes_size());
-	local_node_copy->regions = 1;  // hardcode only one region (for now)
-	local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-	local_node = local_node_;
-	L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
+	int32_t regions = 1;  // hardcode only one region (for now)
+	// int32_t regions = sqrt(nodes_size());
+	if (regions != local_node_->regions) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->regions = regions;
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
+		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
+	}
 
 	return std::make_pair(final_node, true);
 }
@@ -880,13 +883,16 @@ XapiandManager::drop_node(std::string_view _node_name)
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(string::lower(_node_name));
 
+	int32_t regions = 1;  // hardcode only one region (for now)
+	// int32_t regions = sqrt(nodes_size());
 	auto local_node_ = local_node.load();
-	auto local_node_copy = std::make_unique<Node>(*local_node_);
-	// local_node_copy->regions = sqrt(nodes_size());
-	local_node_copy->regions = 1;  // hardcode only one region (for now)
-	local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-	local_node = local_node_;
-	L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
+	if (regions != local_node_->regions) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->regions = regions;
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
+		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
+	}
 }
 
 
