@@ -44,7 +44,6 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 class Discovery : public UDP, public Worker {
 	enum class Message {
 		HELLO,         // New node saying hello
-		WAVE,          // Nodes waving hello to the new node
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
 		ENTER,         // Node enters the room
 		BYE,           // Node says goodbye
@@ -54,7 +53,7 @@ class Discovery : public UDP, public Worker {
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
-			"HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
+			"HELLO", "SNEER", "ENTER", "BYE", "DB_UPDATED",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -73,7 +72,6 @@ class Discovery : public UDP, public Worker {
 	void discovery_server(Discovery::Message type, const std::string& message);
 
 	void hello(const std::string& message);
-	void wave(const std::string& message);
 	void sneer(const std::string& message);
 	void enter(const std::string& message);
 	void bye(const std::string& message);

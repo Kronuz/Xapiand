@@ -157,7 +157,6 @@ Discovery::discovery_server(Message type, const std::string& message)
 
 	static const dispatch_func dispatch[] = {
 		&Discovery::hello,
-		&Discovery::wave,
 		&Discovery::sneer,
 		&Discovery::enter,
 		&Discovery::bye,
@@ -184,41 +183,18 @@ Discovery::hello(const std::string& message)
 	L_DISCOVERY(">> HELLO [%s]", remote_node.name());
 
 	auto local_node_ = local_node.load();
-	if (remote_node == *local_node_) {
-		// It's me! ...wave hello!
-		send_message(Message::WAVE, local_node_->serialise());
-	} else {
+	if (remote_node != *local_node_) {
 		auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
 		if (node) {
 			if (remote_node == *node) {
-				send_message(Message::WAVE, local_node_->serialise());
+				send_message(Message::ENTER, local_node_->serialise());
 			} else {
 				send_message(Message::SNEER, remote_node.serialise());
 			}
 		} else {
-			send_message(Message::WAVE, local_node_->serialise());
+			send_message(Message::ENTER, local_node_->serialise());
 		}
 	}
-}
-
-
-void
-Discovery::wave(const std::string& message)
-{
-	L_CALL("Discovery::wave(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> WAVE [%s]", remote_node->name());
-
-	L_DISCOVERY("Node %s joining the party...", remote_node->name());
-
-	// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
-	// (prevent it from switching to slow waiting)
-	auto waiting = XapiandManager::State::WAITING;
-	XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 }
 
 
@@ -227,9 +203,10 @@ Discovery::sneer(const std::string& message)
 {
 	L_CALL("Discovery::sneer(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::RESET &&
+		XapiandManager::manager->state != XapiandManager::State::WAITING &&
+		XapiandManager::manager->state != XapiandManager::State::WAITING_MORE &&
+		XapiandManager::manager->state != XapiandManager::State::JOINING) {
 		return;
 	}
 
@@ -260,12 +237,6 @@ Discovery::enter(const std::string& message)
 {
 	L_CALL("Discovery::enter(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		return;
-	}
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -273,10 +244,15 @@ Discovery::enter(const std::string& message)
 	L_DISCOVERY(">> ENTER [%s]", remote_node->name());
 
 	auto put = XapiandManager::manager->put_node(remote_node);
+	remote_node = put.first;
 	if (put.second) {
-		remote_node = put.first;
 		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [enter]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 	}
+
+	// After receiving ENTER, flag as WAITING_MORE so it waits just a little longer
+	// (prevent it from switching to slow waiting)
+	auto waiting = XapiandManager::State::WAITING;
+	XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 }
 
 
@@ -389,7 +365,7 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			break;
 		}
 		case XapiandManager::State::WAITING: {
-			// We're here because no one sneered nor waved during
+			// We're here because no one sneered nor entered during
 			// WAITING_FAST, wait longer then...
 
 			discovery.repeat = WAITING_SLOW;
