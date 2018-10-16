@@ -151,37 +151,11 @@ public:
 	}
 };
 
-
-class lock_database {
-	DatabaseHandler* db_handler;
-
-	lock_database(const lock_database&) = delete;
-	lock_database& operator=(const lock_database&) = delete;
-
-	template <bool internal>
-	void _lock();
-
-	template <bool internal>
-	void _unlock();
-
-public:
-	lock_database(DatabaseHandler* db_handler_);
-	~lock_database();
-
-	void lock() {
-		_lock<false>();
-	}
-	void unlock() {
-		_unlock<false>();
-	}
-};
-
-
 using DataType = std::pair<Xapian::docid, MsgPack>;
-
 
 class DatabaseHandler {
 	friend class Document;
+	template<typename T, typename U>
 	friend class lock_database;
 	friend class Schema;
 	friend class SchemasLRU;
