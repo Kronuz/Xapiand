@@ -200,7 +200,7 @@ UDP::get_message(std::string& result, char max_type)
 		L_CONN("Received EOF (sock=%d)!", sock);
 		return '\xff';
 	} else if (received < 4) {
-		THROW(NetworkError, "Badly formed message: Incomplete!");
+		L_CONN("Badly formed message: Incomplete!");
 	}
 
 	L_UDP_WIRE("(sock=%d) -->> %s", sock, repr(buf, received));
@@ -210,18 +210,21 @@ UDP::get_message(std::string& result, char max_type)
 
 	char type = *p++;
 	if (type >= max_type) {
-		THROW(NetworkError, "Invalid message type %u", unsigned(type));
+		L_CONN("Badly formed message: Invalid message type %u", unsigned(type));
+		return '\xff';
 	}
 
 	uint16_t remote_protocol_version = *(uint16_t *)p;
 	if ((remote_protocol_version & 0xff) > version) {
-		THROW(NetworkError, "Badly formed message: Protocol version mismatch!");
+		L_CONN("Badly formed message: Protocol version mismatch!");
+		return '\xff';
 	}
 	p += sizeof(uint16_t);
 
 	auto remote_cluster_name = unserialise_string(&p, p_end);
 	if (remote_cluster_name.empty()) {
-		THROW(NetworkError, "Badly formed message: No cluster name!");
+		L_CONN("Badly formed message: No cluster name!");
+		return '\xff';
 	}
 
 	if (remote_cluster_name != opts.cluster_name) {
