@@ -56,7 +56,6 @@ class Database;
 class DatabasePool;
 class DatabaseQueue;
 class DatabasesLRU;
-class lock_database;
 class MsgPack;
 struct WalHeader;
 
@@ -436,9 +435,12 @@ class DatabasePool {
 	// FIXME: Add cleanup for removing old database queues
 #ifdef XAPIAND_CLUSTERING
 	friend class BinaryClient;
+	friend class RemoteProtocol;
 #endif
 	friend class DatabaseQueue;
+	template<typename T, typename U>
 	friend class lock_database;
+	friend class lock_remote_database;
 
 	std::mutex qmtx;
 	std::atomic_bool finished;

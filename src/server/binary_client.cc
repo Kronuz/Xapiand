@@ -85,7 +85,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 
 BinaryClient::~BinaryClient()
 {
-	checkin_database();
+	remote_protocol.checkin_database();
 
 	int binary_clients = --XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
@@ -122,12 +122,12 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
 	repl_endpoints.add(src_endpoint);
-	endpoints.add(dst_endpoint);
+	remote_protocol.endpoints.add(dst_endpoint); /* Set endpoints in to remote_protocol */
 
 	writable = true;
 
 	try {
-		XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
+		XapiandManager::manager->database_pool.checkout(remote_protocol.database, remote_protocol.endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
 			src_endpoint,
 			dst_endpoint
 		] () {
@@ -135,7 +135,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 		});
 	} catch (const CheckoutError&) {
-		L_ERR("Cannot checkout %s", repr(endpoints.to_string()));
+		L_ERR("Cannot checkout %s", repr(remote_protocol.endpoints.to_string()));
 		return false;
 	}
 
@@ -143,7 +143,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) == -1) {
 		L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
-		checkin_database();
+		remote_protocol.checkin_database();
 		return false;
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
@@ -168,21 +168,21 @@ BinaryClient::on_read_file_done()
 				break;
 			default:
 				L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
-				checkin_database();
+				remote_protocol.checkin_database();
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
 		L_EXC("ERROR: %s", exc.get_description());
-		checkin_database();
+		remote_protocol.checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
-		checkin_database();
+		remote_protocol.checkin_database();
 		shutdown();
 	} catch (...) {
 		std::exception exc;
 		L_EXC("ERROR: Unkown error!");
-		checkin_database();
+		remote_protocol.checkin_database();
 		shutdown();
 	}
 
@@ -298,43 +298,6 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 
 
 void
-BinaryClient::checkout_database()
-{
-	L_CALL("BinaryClient::checkout_database()");
-
-	if (!database) {
-		int _flags = writable ? DB_WRITABLE : DB_OPEN;
-		if ((flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
-			_flags |= DB_SPAWN;
-		} else if ((flags & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
-			_flags |= DB_SPAWN;
-		} else if ((flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
-			_flags |= DB_SPAWN;
-		}
-		try {
-			XapiandManager::manager->database_pool.checkout(database, endpoints, _flags);
-		} catch (const CheckoutError&) {
-			THROW(InvalidOperationError, "Server has no open database");
-		}
-	}
-}
-
-
-void
-BinaryClient::checkin_database()
-{
-	L_CALL("BinaryClient::checkin_database()");
-
-	if (database) {
-		XapiandManager::manager->database_pool.checkin(database);
-		database.reset();
-	}
-	remote_protocol.matchspies.clear();
-	remote_protocol.enquire.reset();
-}
-
-
-void
 BinaryClient::run()
 {
 	L_CALL("BinaryClient::run()");
@@ -415,33 +378,33 @@ BinaryClient::_run()
 				// away, just exit and the client will cope.
 				remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
 			} catch (...) {}
-			checkin_database();
+			remote_protocol.checkin_database();
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
-			checkin_database();
+			remote_protocol.checkin_database();
 			shutdown();
 		} catch (const BaseException& exc) {
 			L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			remote_protocol.checkin_database();
 			shutdown();
 		} catch (const Xapian::Error& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
 			// Propagate the exception to the client, then return to the main
 			// message handling loop.
 			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-			checkin_database();
+			remote_protocol.checkin_database();
 		} catch (const std::exception& exc) {
 			L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			remote_protocol.checkin_database();
 			shutdown();
 		} catch (...) {
 			std::exception exc;
 			L_EXC("ERROR: %s", "Unkown exception!");
 			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			remote_protocol.checkin_database();
 			shutdown();
 		}
 	}

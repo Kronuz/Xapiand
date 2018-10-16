@@ -73,9 +73,6 @@ class BinaryClient : public BaseClient {
 	void on_read_file(const char *buf, ssize_t received) override;
 	void on_read_file_done() override;
 
-	void checkout_database();
-	void checkin_database();
-
 	// Remote protocol:
 	RemoteProtocol remote_protocol;
 

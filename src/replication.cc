@@ -94,7 +94,7 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		client.checkin_database();
+		client.remote_protocol.checkin_database();
 		throw;
 	}
 }
@@ -184,7 +184,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		client.checkin_database();
+		client.remote_protocol.checkin_database();
 		throw;
 	}
 }
@@ -223,7 +223,7 @@ Replication::reply_end_of_changes(const std::string &)
 	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
 	// }
 
-	// client.checkin_database();
+	// client.remote_protocol.checkin_database();
 
 	// shutdown();
 }
@@ -237,7 +237,7 @@ Replication::reply_fail(const std::string &)
 	L_REPLICATION("Replication::reply_fail");
 
 	// L_ERR("Replication failure!");
-	// client.checkin_database();
+	// client.remote_protocol.checkin_database();
 
 	// shutdown();
 }

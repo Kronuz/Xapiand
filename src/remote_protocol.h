@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include "database_handler.h"
+#include "lock_database.h"
 #include "utils.h"
 
 
@@ -147,7 +149,17 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 
 class RemoteProtocol {
 
+	template<typename T, typename U>
+	friend class lock_database;
+	friend class BinaryClient;
+
 	BinaryClient& client;
+
+protected:
+	Endpoints endpoints;
+	std::shared_ptr<Database> database;
+	int flags;
+	int database_locks;
 
 public:
 
@@ -158,6 +170,9 @@ public:
 	Xapian::Registry reg;
 	std::unique_ptr<Xapian::Enquire> enquire;
 	std::vector<Xapian::MatchSpy*> matchspies;
+
+	void checkout_database();
+	void checkin_database();
 
 	void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0);
 
