@@ -440,7 +440,6 @@ class DatabasePool {
 	friend class DatabaseQueue;
 	template<typename T, typename U>
 	friend class lock_database;
-	friend class lock_remote_database;
 
 	std::mutex qmtx;
 	std::atomic_bool finished;
