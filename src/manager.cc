@@ -845,20 +845,21 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 		local_node = local_node_;
 		return local_node_;
-	} else {
-		std::lock_guard<std::mutex> lk(nodes_mtx);
-		auto it = nodes.find(lower_node_name);
-		if (it != nodes.end()) {
-			auto& node_ref = it->second;
-			auto node_ref_copy = std::make_unique<Node>(*node_ref);
-			node_ref_copy->touched = epoch::now<>();
-			if (region != UNKNOWN_REGION) {
-				node_ref_copy->region = region;
-			}
-			node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
-			return node_ref;
-		}
 	}
+
+	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto it = nodes.find(lower_node_name);
+	if (it != nodes.end()) {
+		auto& node_ref = it->second;
+		auto node_ref_copy = std::make_unique<Node>(*node_ref);
+		node_ref_copy->touched = epoch::now<>();
+		if (region != UNKNOWN_REGION) {
+			node_ref_copy->region = region;
+		}
+		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+		return node_ref;
+	}
+
 	return nullptr;
 }
 

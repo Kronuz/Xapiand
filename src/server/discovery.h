@@ -86,8 +86,6 @@ class Discovery : public UDP, public Worker {
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
 
-	void _wave(bool heartbeat, const std::string& message);
-
 	void destroyer();
 
 	void destroy_impl() override;

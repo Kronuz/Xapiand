@@ -173,7 +173,36 @@ Discovery::heartbeat(const std::string& message)
 {
 	L_CALL("Discovery::heartbeat(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	_wave(true, message);
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> HEARTBEAT [%s]", remote_node->name());
+
+	auto local_node_ = local_node.load();
+	if (*remote_node == *local_node_) {
+		// it's just me ...ignore.
+		return;
+	}
+
+	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
+	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
+		XapiandManager::manager->drop_node(remote_node->name());
+		L_INFO("Stalled node %s left the party!", remote_node->name());
+		node.reset();
+	}
+
+	auto put = XapiandManager::manager->put_node(remote_node);
+	if (put.second) {
+		remote_node = put.first;
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->regions = -1;
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		XapiandManager::manager->get_region();
+	} else {
+		L_ERR("ERROR: Cannot register remote node (2): %s", remote_node->name());
+	}
 }
 
 
@@ -212,7 +241,31 @@ Discovery::wave(const std::string& message)
 {
 	L_CALL("Discovery::wave(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	_wave(false, message);
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> WAVE [%s]", remote_node->name());
+
+	auto local_node_ = local_node.load();
+	if (*remote_node == *local_node_) {
+		// it's just me ...ignore.
+		return;
+	}
+
+	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
+	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
+		XapiandManager::manager->drop_node(remote_node->name());
+		L_INFO("Stalled node %s left the party!", remote_node->name());
+		node.reset();
+	}
+
+	L_DISCOVERY("Node %s joining the party (2)...", remote_node->name());
+
+	// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
+	// (prevent it from switching to slow waiting)
+	auto waiting = XapiandManager::State::WAITING;
+	XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 }
 
 
@@ -422,73 +475,6 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 	}
 
 	L_EV_END("Discovery::heartbeat_cb:END");
-}
-
-
-void
-Discovery::_wave(bool heartbeat, const std::string& message)
-{
-	L_CALL("Discovery::_wave(%s, <message>) {state:%s}", heartbeat ? "true" : "false", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> %s [%s]", heartbeat ? "HEARTBEAT" : "WAVE", remote_node->name());
-
-	auto local_node_ = local_node.load();
-	if (*remote_node == *local_node_) {
-		// it's just me ...ignore.
-		return;
-	}
-
-	if (!heartbeat) {
-		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
-		// (prevent it from switching to slow waiting)
-		auto waiting = XapiandManager::State::WAITING;
-		XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
-	}
-
-	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
-	if (node) {
-		if (*remote_node != *node) {
-			if (heartbeat || node->touched < epoch::now<>() - NODE_LIFESPAN) {
-				XapiandManager::manager->drop_node(remote_node->name());
-				L_INFO("Stalled node %s left the party!", remote_node->name());
-				auto put = XapiandManager::manager->put_node(remote_node);
-				if (put.second) {
-					remote_node = put.first;
-					if (heartbeat) {
-						L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-					} else {
-						L_DISCOVERY("Node %s joining the party (1)...", remote_node->name());
-					}
-					auto local_node_copy = std::make_unique<Node>(*local_node_);
-					local_node_copy->regions = -1;
-					local_node = std::shared_ptr<const Node>(local_node_copy.release());
-					XapiandManager::manager->get_region();
-				} else {
-					L_ERR("ERROR: Cannot register remote node (1): %s", remote_node->name());
-				}
-			}
-		}
-	} else {
-		auto put = XapiandManager::manager->put_node(remote_node);
-		if (put.second) {
-			remote_node = put.first;
-			if (heartbeat) {
-				L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-			} else {
-				L_DISCOVERY("Node %s joining the party (2)...", remote_node->name());
-			}
-			auto local_node_copy = std::make_unique<Node>(*local_node_);
-			local_node_copy->regions = -1;
-			local_node = std::shared_ptr<const Node>(local_node_copy.release());
-			XapiandManager::manager->get_region();
-		} else {
-			L_ERR("ERROR: Cannot register remote node (2): %s", remote_node->name());
-		}
-	}
 }
 
 void
