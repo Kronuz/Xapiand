@@ -28,10 +28,6 @@
 #include "ignore_unused.h"
 #include "manager.h"
 
-#undef L_CALL
-#define L_CALL L_STACKED_DIM_GREY
-#undef L_DISCOVERY
-#define L_DISCOVERY L_DARK_SALMON
 
 using dispatch_func = void (Discovery::*)(const std::string&);
 
