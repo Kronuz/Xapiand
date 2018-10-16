@@ -66,7 +66,7 @@ class Discovery : public UDP, public Worker {
 	}
 
 	ev::io io;
-	ev::timer tick;
+	ev::timer discovery;
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
@@ -79,7 +79,7 @@ class Discovery : public UDP, public Worker {
 	void bye(const std::string& message);
 	void db_updated(const std::string& message);
 
-	void tick_cb(ev::timer& watcher, int revents);
+	void discovery_cb(ev::timer& watcher, int revents);
 
 	void destroyer();
 

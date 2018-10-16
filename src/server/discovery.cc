@@ -39,11 +39,11 @@ using dispatch_func = void (Discovery::*)(const std::string&);
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: UDP(port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  Worker(parent_, ev_loop_, ev_flags_),
-	  tick(*ev_loop)
+	  discovery(*ev_loop)
 {
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
 
-	tick.set<Discovery, &Discovery::tick_cb>(this);
+	discovery.set<Discovery, &Discovery::discovery_cb>(this);
 
 	L_OBJ("CREATED DISCOVERY");
 }
@@ -86,8 +86,8 @@ Discovery::destroyer()
 {
 	L_CALL("Discovery::destroyer()");
 
-	tick.stop();
-	L_EV("Stop discovery's tick event");
+	discovery.stop();
+	L_EV("Stop discovery's discovery event");
 
 	io.stop();
 	L_EV("Stop discovery's io event");
@@ -356,13 +356,13 @@ Discovery::db_updated(const std::string& message)
 
 
 void
-Discovery::tick_cb(ev::timer&, int revents)
+Discovery::discovery_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::tick_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Discovery::tick_cb:BEGIN");
+	L_EV_BEGIN("Discovery::discovery_cb:BEGIN");
 
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
@@ -392,17 +392,17 @@ Discovery::tick_cb(ev::timer&, int revents)
 			// We're here because no one sneered nor waved during
 			// WAITING_FAST, wait longer then...
 
-			tick.repeat = WAITING_SLOW;
-			tick.again();
-			L_EV("Reset discovery's tick event (%f)", tick.repeat);
+			discovery.repeat = WAITING_SLOW;
+			discovery.again();
+			L_EV("Reset discovery's discovery event (%f)", discovery.repeat);
 
 			auto waiting = XapiandManager::State::WAITING;
 			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			break;
 		}
 		case XapiandManager::State::WAITING_MORE: {
-			tick.stop();
-			L_EV("Stop discovery's tick event");
+			discovery.stop();
+			L_EV("Stop discovery's discovery event");
 
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
 			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
@@ -418,7 +418,7 @@ Discovery::tick_cb(ev::timer&, int revents)
 		}
 	}
 
-	L_EV_END("Discovery::tick_cb:END");
+	L_EV_END("Discovery::discovery_cb:END");
 }
 
 void
@@ -441,8 +441,8 @@ Discovery::start()
 {
 	L_CALL("Discovery::start()");
 
-	tick.start(0, WAITING_FAST);
-	L_EV("Start discovery's tick exploring event (%f)", tick.repeat);
+	discovery.start(0, WAITING_FAST);
+	L_EV("Start discovery's discovery exploring event (%f)", discovery.repeat);
 
 	io.start(sock, ev::READ);
 	L_EV("Start discovery's server accept event (sock=%d)", sock);
@@ -456,8 +456,8 @@ Discovery::stop()
 {
 	L_CALL("Discovery::stop()");
 
-	tick.stop();
-	L_EV("Stop discovery's tick event");
+	discovery.stop();
+	L_EV("Stop discovery's discovery event");
 
 	auto local_node_ = local_node.load();
 	send_message(Message::BYE, local_node_->serialise());
