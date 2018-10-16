@@ -38,6 +38,7 @@ constexpr double HEARTBEAT_LEADER_MAX = 0.300;
 
 constexpr double LEADER_ELECTION_MIN = 2.5 * HEARTBEAT_LEADER_MAX;
 constexpr double LEADER_ELECTION_MAX = 5.0 * HEARTBEAT_LEADER_MAX;
+constexpr double NODE_LIFESPAN = 5.0 * HEARTBEAT_LEADER_MAX;
 
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MINOR_VERSION = 0;
@@ -128,7 +129,7 @@ class Raft : public UDP, public Worker {
 
 	void _start_leader_heartbeat(double min = HEARTBEAT_LEADER_MIN, double max = HEARTBEAT_LEADER_MAX);
 	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
-	void _set_master_node(const Node& node);
+	void _set_master_node(const std::shared_ptr<const Node>& node);
 
 	void _apply(size_t idx);
 

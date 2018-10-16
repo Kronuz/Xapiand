@@ -33,9 +33,6 @@
 // Values in seconds
 constexpr double WAITING_FAST  = 0.200;
 constexpr double WAITING_SLOW  = 0.600;
-constexpr double HEARTBEAT_MIN = 1.500;
-constexpr double HEARTBEAT_MAX = 3.000;
-constexpr double NODE_LIFESPAN = 2.5 * HEARTBEAT_MAX;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
@@ -46,7 +43,6 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 // Discovery for nodes and databases
 class Discovery : public UDP, public Worker {
 	enum class Message {
-		HEARTBEAT,     // Heartbeat
 		HELLO,         // New node saying hello
 		WAVE,          // Nodes waving hello to the new node
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
@@ -58,7 +54,7 @@ class Discovery : public UDP, public Worker {
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
-			"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
+			"HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -70,13 +66,12 @@ class Discovery : public UDP, public Worker {
 	}
 
 	ev::io io;
-	ev::timer node_heartbeat;
+	ev::timer tick;
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
 	void discovery_server(Discovery::Message type, const std::string& message);
 
-	void heartbeat(const std::string& message);
 	void hello(const std::string& message);
 	void wave(const std::string& message);
 	void sneer(const std::string& message);
@@ -84,7 +79,7 @@ class Discovery : public UDP, public Worker {
 	void bye(const std::string& message);
 	void db_updated(const std::string& message);
 
-	void heartbeat_cb(ev::timer& watcher, int revents);
+	void tick_cb(ev::timer& watcher, int revents);
 
 	void destroyer();
 

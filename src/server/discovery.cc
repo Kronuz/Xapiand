@@ -28,17 +28,22 @@
 #include "ignore_unused.h"
 #include "manager.h"
 
+#undef L_CALL
+#define L_CALL L_STACKED_DIM_GREY
+#undef L_DISCOVERY
+#define L_DISCOVERY L_DARK_SALMON
+
 using dispatch_func = void (Discovery::*)(const std::string&);
 
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: UDP(port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  Worker(parent_, ev_loop_, ev_flags_),
-	  node_heartbeat(*ev_loop)
+	  tick(*ev_loop)
 {
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
 
-	node_heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
+	tick.set<Discovery, &Discovery::tick_cb>(this);
 
 	L_OBJ("CREATED DISCOVERY");
 }
@@ -81,8 +86,8 @@ Discovery::destroyer()
 {
 	L_CALL("Discovery::destroyer()");
 
-	node_heartbeat.stop();
-	L_EV("Stop discovery's node heartbeat event");
+	tick.stop();
+	L_EV("Stop discovery's tick event");
 
 	io.stop();
 	L_EV("Stop discovery's io event");
@@ -151,7 +156,6 @@ Discovery::discovery_server(Message type, const std::string& message)
 	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
-		&Discovery::heartbeat,
 		&Discovery::hello,
 		&Discovery::wave,
 		&Discovery::sneer,
@@ -165,34 +169,6 @@ Discovery::discovery_server(Message type, const std::string& message)
 		THROW(InvalidArgumentError, errmsg);
 	}
 	(this->*(dispatch[toUType(type)]))(message);
-}
-
-
-void
-Discovery::heartbeat(const std::string& message)
-{
-	L_CALL("Discovery::heartbeat(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> HEARTBEAT [%s]", remote_node->name());
-
-	auto node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
-	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
-		XapiandManager::manager->drop_node(remote_node->name());
-		L_INFO("Stalled node %s left the party!", remote_node->name());
-		node.reset();
-	}
-
-	if (!node) {
-		auto put = XapiandManager::manager->put_node(remote_node);
-		if (put.second) {
-			remote_node = put.first;
-			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [heartbeat]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-		}
-	}
 }
 
 
@@ -236,13 +212,6 @@ Discovery::wave(const std::string& message)
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	L_DISCOVERY(">> WAVE [%s]", remote_node->name());
-
-	auto node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
-	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
-		XapiandManager::manager->drop_node(remote_node->name());
-		L_INFO("Stalled node %s left the party!", remote_node->name());
-		node.reset();
-	}
 
 	L_DISCOVERY("Node %s joining the party...", remote_node->name());
 
@@ -366,24 +335,20 @@ Discovery::db_updated(const std::string& message)
 	if (mastery_level > remote_mastery_level) {
 		L_DISCOVERY("Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path, mastery_level, remote_mastery_level);
 
-		auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-
-		auto put = XapiandManager::manager->put_node(remote_node);
-		if (put.second) {
-			remote_node = put.first;
-			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [db_updated]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-		}
-
-		Endpoint local_endpoint(index_path);
-		Endpoint remote_endpoint(index_path, remote_node.get());
+		Node remote_node = Node::unserialise(&p, p_end);
+		auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+		if (node) {
+			Endpoint local_endpoint(index_path);
+			Endpoint remote_endpoint(index_path, node.get());
 #ifdef XAPIAND_CLUSTERING
-		// Replicate database from the other node
-		L_INFO("Request syncing database [%s]...", remote_node->name());
-		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
-		if (ret.get()) {
-			L_INFO("Replication triggered!");
-		}
+			// Replicate database from the other node
+			L_INFO("Request syncing database [%s]...", node->name());
+			auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+			if (ret.get()) {
+				L_INFO("Replication triggered!");
+			}
 #endif
+		}
 	} else if (mastery_level != remote_mastery_level) {
 		L_DISCOVERY("Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!", index_path, mastery_level, remote_mastery_level);
 	}
@@ -391,13 +356,13 @@ Discovery::db_updated(const std::string& message)
 
 
 void
-Discovery::heartbeat_cb(ev::timer&, int revents)
+Discovery::tick_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::tick_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Discovery::heartbeat_cb:BEGIN");
+	L_EV_BEGIN("Discovery::tick_cb:BEGIN");
 
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
@@ -424,21 +389,23 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			break;
 		}
 		case XapiandManager::State::WAITING: {
-			node_heartbeat.repeat = WAITING_SLOW;
-			node_heartbeat.again();
 			// We're here because no one sneered nor waved during
 			// WAITING_FAST, wait longer then...
+
+			tick.repeat = WAITING_SLOW;
+			tick.again();
+			L_EV("Reset discovery's tick event (%f)", tick.repeat);
+
 			auto waiting = XapiandManager::State::WAITING;
 			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
 			break;
 		}
 		case XapiandManager::State::WAITING_MORE: {
+			tick.stop();
+			L_EV("Stop discovery's tick event");
+
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
 			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
-
-			node_heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-			node_heartbeat.again();
-			L_EV("Reset discovery's node heartbeat event (%f)", node_heartbeat.repeat);
 
 			auto local_node_ = local_node.load();
 			send_message(Message::ENTER, local_node_->serialise());
@@ -446,17 +413,12 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			XapiandManager::manager->join_cluster();
 			break;
 		}
-		case XapiandManager::State::READY: {
-			auto local_node_ = local_node.load();
-			send_message(Message::HEARTBEAT, local_node_->serialise());
-			break;
-		}
 		default: {
 			break;
 		}
 	}
 
-	L_EV_END("Discovery::heartbeat_cb:END");
+	L_EV_END("Discovery::tick_cb:END");
 }
 
 void
@@ -479,8 +441,8 @@ Discovery::start()
 {
 	L_CALL("Discovery::start()");
 
-	node_heartbeat.start(0, WAITING_FAST);
-	L_EV("Start discovery's node heartbeat exploring event (%f)", node_heartbeat.repeat);
+	tick.start(0, WAITING_FAST);
+	L_EV("Start discovery's tick exploring event (%f)", tick.repeat);
 
 	io.start(sock, ev::READ);
 	L_EV("Start discovery's server accept event (sock=%d)", sock);
@@ -494,8 +456,8 @@ Discovery::stop()
 {
 	L_CALL("Discovery::stop()");
 
-	node_heartbeat.stop();
-	L_EV("Stop discovery's node heartbeat event");
+	tick.stop();
+	L_EV("Stop discovery's tick event");
 
 	auto local_node_ = local_node.load();
 	send_message(Message::BYE, local_node_->serialise());
