@@ -190,11 +190,6 @@ public:
 
 	size_t get_nodes_by_region(int32_t region);
 
-	// Return the region to which db name belongs
-	int32_t get_region(std::string_view db_name);
-	// Return the region to which local_node belongs
-	int32_t get_region();
-
 	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 

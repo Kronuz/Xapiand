@@ -804,6 +804,14 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	node_copy->touched = epoch::now<>();
 	auto final_node = std::shared_ptr<const Node>(node_copy.release());
 	nodes[node->lower_name()] = final_node;
+
+	auto local_node_copy = std::make_unique<Node>(*local_node_);
+	// local_node_copy->regions = sqrt(nodes_size());
+	local_node_copy->regions = 1;  // hardcode only one region (for now)
+	local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+	local_node = local_node_;
+	L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
+
 	return std::make_pair(final_node, true);
 }
 
@@ -871,6 +879,14 @@ XapiandManager::drop_node(std::string_view _node_name)
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(string::lower(_node_name));
+
+	auto local_node_ = local_node.load();
+	auto local_node_copy = std::make_unique<Node>(*local_node_);
+	// local_node_copy->regions = sqrt(nodes_size());
+	local_node_copy->regions = 1;  // hardcode only one region (for now)
+	local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+	local_node = local_node_;
+	L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
 }
 
 
@@ -885,59 +901,6 @@ XapiandManager::get_nodes_by_region(int32_t region)
 		if (node.second->region == region) ++cnt;
 	}
 	return cnt;
-}
-
-
-int32_t
-XapiandManager::get_region(std::string_view db_name)
-{
-	L_CALL("XapiandManager::get_region(%s)", db_name);
-
-	auto local_node_ = local_node.load();
-	if (local_node_->regions == -1) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		// local_node_copy->regions = sqrt(nodes_size());
-		local_node_copy->regions = 1;  // hardcode only one region (for now)
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-	}
-
-	return jump_consistent_hash(db_name, local_node_->regions);
-}
-
-
-int32_t
-XapiandManager::get_region()
-{
-	L_CALL("XapiandManager::get_region()");
-
-	auto local_node_ = local_node.load();
-	if (!opts.solo) {
-		if (state == State::READY) {
-			if (local_node_->regions == -1) {
-				if (auto raft = weak_raft.lock()) {
-					auto local_node_copy = std::make_unique<Node>(*local_node_);
-					// local_node_copy->regions = sqrt(nodes_size() + 1);
-					local_node_copy->regions = 1;  // hardcode only one region (for now)
-					int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
-					if (local_node_copy->region != region) {
-						local_node_copy->region = region;
-						raft->start();
-					} else {
-						auto master_node_ = master_node.load();
-						if (master_node_->empty()) {
-							// if leader left the party, trigger leader election
-							raft->reset_leader_election_timeout();
-						}
-					}
-					local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-					local_node = local_node_;
-					L_RAFT("Regions: %d Region: %d", local_node_->regions, local_node_->region);
-				}
-			}
-		}
-	}
-	return local_node_->region;
 }
 
 

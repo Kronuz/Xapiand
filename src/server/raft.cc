@@ -350,7 +350,7 @@ Raft::append_entries(const std::string& message)
 	// 	auto put = XapiandManager::manager->put_node(remote_node);
 	// 	remote_node = put.first;
 	// 	if (put.second) {
-	// 		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (5)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	// 		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [append_entries]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 	// 	}
 	// 	master_node = remote_node;
 	// 	auto joining = XapiandManager::State::JOINING;
