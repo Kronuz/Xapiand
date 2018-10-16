@@ -41,41 +41,30 @@
 #include "manager.h"                // for sig_exit
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_)
-	: Worker(manager_, ev_loop_, ev_flags_),
-	  port(port_),
+TCP::TCP(int port_, std::string  description_, int tries_, int flags_)
+	: port(port_),
 	  flags(flags_),
 	  description(std::move(description_))
 {
 	bind(tries_);
 
-	L_OBJ("CREATED BASE TCP!");
+	L_OBJ("CREATED TCP!");
 }
 
 
-BaseTCP::~BaseTCP()
-{
-	destroyer();
+void
+TCP::close() {
+	if (sock == -1) {
+		return;
+	}
 
 	io::close(sock);
 	sock = -1;
-
-	L_OBJ("DELETED BASE TCP!");
 }
 
 
 void
-BaseTCP::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-BaseTCP::destroyer()
-{
-	L_CALL("BaseTCP::destroyer()");
-
+TCP::shutdown() {
 	if (sock == -1) {
 		return;
 	}
@@ -85,22 +74,7 @@ BaseTCP::destroyer()
 
 
 void
-BaseTCP::shutdown_impl(time_t asap, time_t now)
-{
-	L_CALL("BaseTCP::shutdown_impl(%d, %d)", (int)asap, (int)now);
-
-	Worker::shutdown_impl(asap, now);
-
-	destroy();
-
-	if (now != 0) {
-		detach();
-	}
-}
-
-
-void
-BaseTCP::bind(int tries)
+TCP::bind(int tries)
 {
 	struct sockaddr_in addr;
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
@@ -185,7 +159,7 @@ BaseTCP::bind(int tries)
 
 
 int
-BaseTCP::accept()
+TCP::accept()
 {
 	int client_sock;
 
@@ -231,7 +205,7 @@ BaseTCP::accept()
 
 
 void
-BaseTCP::check_backlog(int tcp_backlog)
+TCP::check_backlog(int tcp_backlog)
 {
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KIPC_SOMAXCONN)
@@ -278,7 +252,7 @@ BaseTCP::check_backlog(int tcp_backlog)
 
 
 int
-BaseTCP::connect(int sock_, const std::string& hostname, const std::string& servname)
+TCP::connect(int sock_, const std::string& hostname, const std::string& servname)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -310,4 +284,53 @@ BaseTCP::connect(int sock_, const std::string& hostname, const std::string& serv
 	}
 
 	return sock_;
+}
+
+
+BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_)
+	: TCP(port_, description_, tries_, flags_),
+	  Worker(parent_, ev_loop_, ev_flags_)
+{
+	L_OBJ("CREATED BASE TCP!");
+}
+
+
+BaseTCP::~BaseTCP()
+{
+	destroyer();
+
+	TCP::close();
+
+	L_OBJ("DELETED BASE TCP!");
+}
+
+
+void
+BaseTCP::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+BaseTCP::destroyer()
+{
+	L_CALL("BaseTCP::destroyer()");
+
+	TCP::shutdown();
+}
+
+
+void
+BaseTCP::shutdown_impl(time_t asap, time_t now)
+{
+	L_CALL("BaseTCP::shutdown_impl(%d, %d)", (int)asap, (int)now);
+
+	Worker::shutdown_impl(asap, now);
+
+	destroy();
+
+	if (now != 0) {
+		detach();
+	}
 }

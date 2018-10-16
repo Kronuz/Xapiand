@@ -36,19 +36,13 @@ constexpr int CONN_TCP_NODELAY      = 1;
 constexpr int CONN_TCP_DEFER_ACCEPT = 2;
 
 
-class XapiandManager;
-
 // Values in seconds.
 constexpr double idle_timeout = 60;
 constexpr double active_timeout = 15;
 
 
 // Base class for configuration data for TCP.
-class BaseTCP : public Worker {
-private:
-	void bind(int tries);
-	void check_backlog(int tcp_backlog);
-
+class TCP {
 protected:
 	int port;
 	int sock;
@@ -57,18 +51,32 @@ protected:
 
 	std::string description;
 
+	void bind(int tries);
+	void check_backlog(int tcp_backlog);
+
+	void close();
+	void shutdown();
+
+public:
+	TCP(int port_, std::string  description_, int tries_, int flags_);
+	virtual ~TCP() {};
+
+	static int connect(int sock_, const std::string& hostname, const std::string& servname);
+	int accept();
+
+	virtual std::string getDescription() const noexcept = 0;
+};
+
+
+// Base class for configuration data for TCP.
+class BaseTCP : public TCP, public Worker {
+protected:
 	void destroyer();
 
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_);
 	~BaseTCP();
-
-	virtual std::string getDescription() const noexcept = 0;
-
-	int accept();
-
-	static int connect(int sock_, const std::string& hostname, const std::string& servname);
 };

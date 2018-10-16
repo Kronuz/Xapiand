@@ -32,11 +32,8 @@
 
 #include "worker.h"      // for Worker
 
-class XapiandManager;
 
-
-// Base class for UDP messages configuration
-class BaseUDP : public Worker {
+class UDP {
 protected:
 	struct sockaddr_in addr;
 
@@ -48,19 +45,31 @@ protected:
 
 	void sending_message(const std::string& message);
 
+	void close();
+	void shutdown();
+
+public:
+	UDP(int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
+	virtual ~UDP() {};
+
+	void send_message(char type, const std::string& content);
+	char get_message(std::string& result, char max_type);
+
+	void bind(int tries, const std::string& group);
+
+	virtual std::string getDescription() const noexcept = 0;
+};
+
+
+// Base class for UDP messages configuration
+class BaseUDP : public UDP, public Worker {
+protected:
 	void destroyer();
 
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
+	BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
 	~BaseUDP();
-
-	void send_message(char type, const std::string& content);
-	char get_message(std::string& result, char max_type);
-
-	virtual std::string getDescription() const noexcept = 0;
-
-	void bind(int tries, const std::string& group);
 };

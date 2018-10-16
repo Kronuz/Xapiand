@@ -38,41 +38,30 @@
 #include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
-	: Worker(manager_, ev_loop_, ev_flags_),
-	  port(port_),
+UDP::UDP(int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
+	: port(port_),
 	  description(std::move(description_)),
 	  version(version_)
 {
 	bind(tries_, group_);
 
-	L_OBJ("CREATED BASE UDP!");
+	L_OBJ("CREATED UDP!");
 }
 
 
-BaseUDP::~BaseUDP()
-{
-	destroyer();
+void
+UDP::close() {
+	if (sock == -1) {
+		return;
+	}
 
 	io::close(sock);
 	sock = -1;
-
-	L_OBJ("DELETED BASE UDP!");
 }
 
 
 void
-BaseUDP::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-BaseUDP::destroyer()
-{
-	L_CALL("BaseUDP::destroyer()");
-
+UDP::shutdown() {
 	if (sock == -1) {
 		return;
 	}
@@ -80,24 +69,8 @@ BaseUDP::destroyer()
 	io::shutdown(sock, SHUT_RDWR);
 }
 
-
 void
-BaseUDP::shutdown_impl(time_t asap, time_t now)
-{
-	L_CALL("BaseUDP::shutdown_impl(%d, %d)", (int)asap, (int)now);
-
-	Worker::shutdown_impl(asap, now);
-
-	destroy();
-
-	if (now != 0) {
-		detach();
-	}
-}
-
-
-void
-BaseUDP::bind(int tries, const std::string& group)
+UDP::bind(int tries, const std::string& group)
 {
 	int optval = 1;
 	unsigned char ttl = 3;
@@ -176,7 +149,7 @@ BaseUDP::bind(int tries, const std::string& group)
 
 
 void
-BaseUDP::sending_message(const std::string& message)
+UDP::sending_message(const std::string& message)
 {
 	if (sock != -1) {
 		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message));
@@ -198,7 +171,7 @@ BaseUDP::sending_message(const std::string& message)
 
 
 void
-BaseUDP::send_message(char type, const std::string& content)
+UDP::send_message(char type, const std::string& content)
 {
 	if (!content.empty()) {
 		std::string message(1, type);
@@ -211,7 +184,7 @@ BaseUDP::send_message(char type, const std::string& content)
 
 
 char
-BaseUDP::get_message(std::string& result, char max_type)
+UDP::get_message(std::string& result, char max_type)
 {
 	char buf[1024];
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
@@ -257,4 +230,53 @@ BaseUDP::get_message(std::string& result, char max_type)
 
 	result = std::string(p, p_end - p);
 	return type;
+}
+
+
+BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
+	: UDP(port_, description_, version_, group_, tries_),
+	  Worker(parent_, ev_loop_, ev_flags_)
+{
+	L_OBJ("CREATED BASE UDP!");
+}
+
+
+BaseUDP::~BaseUDP()
+{
+	destroyer();
+
+	UDP::close();
+
+	L_OBJ("DELETED BASE UDP!");
+}
+
+
+void
+BaseUDP::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+BaseUDP::destroyer()
+{
+	L_CALL("BaseUDP::destroyer()");
+
+	UDP::shutdown();
+}
+
+
+void
+BaseUDP::shutdown_impl(time_t asap, time_t now)
+{
+	L_CALL("BaseUDP::shutdown_impl(%d, %d)", (int)asap, (int)now);
+
+	Worker::shutdown_impl(asap, now);
+
+	destroy();
+
+	if (now != 0) {
+		detach();
+	}
 }
