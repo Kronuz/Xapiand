@@ -70,6 +70,8 @@ Discovery::shutdown_impl(time_t asap, time_t now)
 void
 Discovery::destroy_impl()
 {
+	L_CALL("Discovery::destroy_impl()");
+
 	destroyer();
 }
 
@@ -90,6 +92,8 @@ Discovery::destroyer()
 void
 Discovery::send_message(Message type, const std::string& message)
 {
+	L_CALL("Discovery::send_message(%s, <message>)", MessageNames(type));
+
 	L_DISCOVERY_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
 	UDP::send_message(toUType(type), message);
 }
@@ -144,6 +148,8 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 void
 Discovery::discovery_server(Message type, const std::string& message)
 {
+	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
+
 	static const dispatch_func dispatch[] = {
 		&Discovery::heartbeat,
 		&Discovery::hello,
@@ -165,6 +171,8 @@ Discovery::discovery_server(Message type, const std::string& message)
 void
 Discovery::heartbeat(const std::string& message)
 {
+	L_CALL("Discovery::heartbeat(<message>)");
+
 	_wave(true, message);
 }
 
@@ -172,6 +180,8 @@ Discovery::heartbeat(const std::string& message)
 void
 Discovery::hello(const std::string& message)
 {
+	L_CALL("Discovery::hello(<message>)");
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -200,6 +210,8 @@ Discovery::hello(const std::string& message)
 void
 Discovery::wave(const std::string& message)
 {
+	L_CALL("Discovery::wave(<message>)");
+
 	_wave(false, message);
 }
 
@@ -207,6 +219,8 @@ Discovery::wave(const std::string& message)
 void
 Discovery::sneer(const std::string& message)
 {
+	L_CALL("Discovery::sneer(<message>)");
+
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
 	}
@@ -236,6 +250,8 @@ Discovery::sneer(const std::string& message)
 void
 Discovery::enter(const std::string& message)
 {
+	L_CALL("Discovery::enter(<message>)");
+
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
 	}
@@ -256,6 +272,8 @@ Discovery::enter(const std::string& message)
 void
 Discovery::bye(const std::string& message)
 {
+	L_CALL("Discovery::bye(<message>)");
+
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
 	}
@@ -283,6 +301,8 @@ Discovery::bye(const std::string& message)
 void
 Discovery::db_updated(const std::string& message)
 {
+	L_CALL("Discovery::db_updated(<message>)");
+
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
 	}
@@ -465,6 +485,8 @@ Discovery::_wave(bool heartbeat, const std::string& message)
 void
 Discovery::signal_db_update(const Endpoint& endpoint)
 {
+	L_CALL("Discovery::signal_db_update(%s)", repr(endpoint.to_string()));
+
 	auto local_node_ = local_node.load();
 	send_message(
 		Message::DB_UPDATED,
@@ -478,6 +500,8 @@ Discovery::signal_db_update(const Endpoint& endpoint)
 void
 Discovery::start()
 {
+	L_CALL("Discovery::start()");
+
 	node_heartbeat.start(0, WAITING_FAST);
 	L_EV("Start discovery's node heartbeat exploring event (%f)", node_heartbeat.repeat);
 
@@ -491,6 +515,8 @@ Discovery::start()
 void
 Discovery::stop()
 {
+	L_CALL("Discovery::stop()");
+
 	node_heartbeat.stop();
 	L_EV("Stop discovery's node heartbeat event");
 
@@ -507,6 +533,8 @@ Discovery::stop()
 std::string
 Discovery::getDescription() const noexcept
 {
+	L_CALL("Raft::getDescription()");
+
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + ")";
 }
 
