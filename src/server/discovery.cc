@@ -171,7 +171,7 @@ Discovery::discovery_server(Message type, const std::string& message)
 void
 Discovery::heartbeat(const std::string& message)
 {
-	L_CALL("Discovery::heartbeat(<message>)");
+	L_CALL("Discovery::heartbeat(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	_wave(true, message);
 }
@@ -180,7 +180,7 @@ Discovery::heartbeat(const std::string& message)
 void
 Discovery::hello(const std::string& message)
 {
-	L_CALL("Discovery::hello(<message>)");
+	L_CALL("Discovery::hello(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -210,7 +210,7 @@ Discovery::hello(const std::string& message)
 void
 Discovery::wave(const std::string& message)
 {
-	L_CALL("Discovery::wave(<message>)");
+	L_CALL("Discovery::wave(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	_wave(false, message);
 }
@@ -219,7 +219,7 @@ Discovery::wave(const std::string& message)
 void
 Discovery::sneer(const std::string& message)
 {
-	L_CALL("Discovery::sneer(<message>)");
+	L_CALL("Discovery::sneer(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
@@ -250,7 +250,7 @@ Discovery::sneer(const std::string& message)
 void
 Discovery::enter(const std::string& message)
 {
-	L_CALL("Discovery::enter(<message>)");
+	L_CALL("Discovery::enter(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
@@ -272,7 +272,7 @@ Discovery::enter(const std::string& message)
 void
 Discovery::bye(const std::string& message)
 {
-	L_CALL("Discovery::bye(<message>)");
+	L_CALL("Discovery::bye(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
@@ -301,7 +301,7 @@ Discovery::bye(const std::string& message)
 void
 Discovery::db_updated(const std::string& message)
 {
-	L_CALL("Discovery::db_updated(<message>)");
+	L_CALL("Discovery::db_updated(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
 		return;
@@ -349,7 +349,7 @@ Discovery::db_updated(const std::string& message)
 void
 Discovery::heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	ignore_unused(revents);
 

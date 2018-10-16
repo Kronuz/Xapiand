@@ -189,7 +189,7 @@ Raft::raft_server(Message type, const std::string& message)
 void
 Raft::request_vote(const std::string& message)
 {
-	L_CALL("Raft::request_vote(<message>)");
+	L_CALL("Raft::request_vote(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(message);
 
 	ignore_unused(commit_index);
@@ -259,7 +259,7 @@ Raft::request_vote(const std::string& message)
 void
 Raft::request_vote_response(const std::string& message)
 {
-	L_CALL("Raft::request_vote_response(<message>)");
+	L_CALL("Raft::request_vote_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(message);
 
 	// const char *p = message.data();
@@ -313,7 +313,7 @@ Raft::request_vote_response(const std::string& message)
 void
 Raft::append_entries(const std::string& message)
 {
-	L_CALL("Raft::append_entries(<message>)");
+	L_CALL("Raft::append_entries(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(message);
 
 	// const char *p = message.data();
@@ -363,7 +363,7 @@ Raft::append_entries(const std::string& message)
 void
 Raft::append_entries_response(const std::string& message)
 {
-	L_CALL("Raft::append_entries_response(<message>)");
+	L_CALL("Raft::append_entries_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(message);
 
 	// const char *p = message.data();
