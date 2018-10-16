@@ -264,6 +264,7 @@ Discovery::enter(const std::string& message)
 	const char *p_end = p + message.size();
 
 	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> ENTER [%s]", remote_node->name());
 
 	auto put = XapiandManager::manager->put_node(remote_node);
 	if (put.second) {
