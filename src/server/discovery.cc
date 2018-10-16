@@ -90,10 +90,7 @@ Discovery::destroyer()
 void
 Discovery::send_message(Message type, const std::string& message)
 {
-	if (type != Discovery::Message::HEARTBEAT) {
-		L_DISCOVERY("<< send_message(%s)", MessageNames(type));
-		L_DISCOVERY_PROTO("message: %s", repr(message));
-	}
+	L_DISCOVERY_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
 	UDP::send_message(toUType(type), message);
 }
 
@@ -123,15 +120,12 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 		while (true) {
 			try {
 				std::string message;
-				auto raw_type = get_message(message, static_cast<char>(Discovery::Message::MAX));
+				auto raw_type = get_message(message, static_cast<char>(Message::MAX));
 				if (raw_type == '\xff') {
 					break;  // no message
 				}
-				Discovery::Message type = static_cast<Discovery::Message>(raw_type);
-				if (type != Discovery::Message::HEARTBEAT) {
-					L_DISCOVERY(">> get_message(%s)", Discovery::MessageNames(type));
-					L_DISCOVERY_PROTO("message: %s", repr(message));
-				}
+				Message type = static_cast<Message>(raw_type);
+				L_DISCOVERY_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
 				discovery_server(type, message);
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
@@ -148,7 +142,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 
 
 void
-Discovery::discovery_server(Discovery::Message type, const std::string& message)
+Discovery::discovery_server(Message type, const std::string& message)
 {
 	static const dispatch_func dispatch[] = {
 		&Discovery::heartbeat,
@@ -182,21 +176,22 @@ Discovery::hello(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
+	L_DISCOVERY(">> HELLO [%s]", remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
 		// It's me! ...wave hello!
-		send_message(Discovery::Message::WAVE, local_node_->serialise());
+		send_message(Message::WAVE, local_node_->serialise());
 	} else {
 		std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
 		if (node) {
 			if (remote_node == *node) {
-				send_message(Discovery::Message::WAVE, local_node_->serialise());
+				send_message(Message::WAVE, local_node_->serialise());
 			} else {
-				send_message(Discovery::Message::SNEER, remote_node.serialise());
+				send_message(Message::SNEER, remote_node.serialise());
 			}
 		} else {
-			send_message(Discovery::Message::WAVE, local_node_->serialise());
+			send_message(Message::WAVE, local_node_->serialise());
 		}
 	}
 }
@@ -220,6 +215,7 @@ Discovery::sneer(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
+	L_DISCOVERY(">> SNEER [%s]", remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
@@ -268,6 +264,7 @@ Discovery::bye(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
+	L_DISCOVERY(">> BYE [%s]", remote_node.name());
 
 	XapiandManager::manager->drop_node(remote_node.name());
 	L_INFO("Node %s left the party!", remote_node.name());
@@ -317,7 +314,7 @@ Discovery::db_updated(const std::string& message)
 		Endpoint remote_endpoint(index_path, remote_node.get());
 #ifdef XAPIAND_CLUSTERING
 		// Replicate database from the other node
-		L_INFO("Request syncing database from %s...", remote_node->name());
+		L_INFO("Request syncing database [%s]...", remote_node->name());
 		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
 		if (ret.get()) {
 			L_INFO("Replication triggered!");
@@ -359,7 +356,7 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			auto reset = XapiandManager::State::RESET;
 			XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
 			L_INFO("Advertising as %s...", local_node_->name());
-			send_message(Discovery::Message::HELLO, local_node_->serialise());
+			send_message(Message::HELLO, local_node_->serialise());
 			break;
 		}
 		case XapiandManager::State::WAITING: {
@@ -408,6 +405,7 @@ Discovery::_wave(bool heartbeat, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> %s [%s]", heartbeat ? "HEARTBEAT" : "WAVE", remote_node->name());
 
 	auto local_node_ = local_node.load();
 	if (*remote_node == *local_node_) {

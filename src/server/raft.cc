@@ -110,8 +110,7 @@ Raft::send_message(Message type, const std::string& message)
 {
 	L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
 
-	L_RAFT("<< send_message(%s)", MessageNames(type));
-	L_RAFT_PROTO("message: %s", repr(message));
+	L_RAFT_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
 
 	UDP::send_message(toUType(type), message);
 }
@@ -146,14 +145,12 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 		) {
 			try {
 				std::string message;
-				auto raw_type = get_message(message, static_cast<char>(Raft::Message::MAX));
+				auto raw_type = get_message(message, static_cast<char>(Message::MAX));
 				if (raw_type == '\xff') {
 					break;  // no message
 				}
-				Raft::Message type = static_cast<Raft::Message>(raw_type);
-				L_RAFT(">> get_message(%s)", Raft::MessageNames(type));
-				L_RAFT_PROTO("message: %s", repr(message));
-
+				Message type = static_cast<Message>(raw_type);
+				L_RAFT_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
 				raft_server(type, message);
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
@@ -170,9 +167,9 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 
 
 void
-Raft::raft_server(Raft::Message type, const std::string& message)
+Raft::raft_server(Message type, const std::string& message)
 {
-	L_CALL("Raft::raft_server(%s, <message>)", Raft::MessageNames(type));
+	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Raft::request_vote,
@@ -202,6 +199,7 @@ Raft::request_vote(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
+	L_RAFT(">> REQUEST_VOTE [%s]", remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
@@ -231,27 +229,27 @@ Raft::request_vote(const std::string& message)
 	// 	current_term = term;
 
 	// 	L_RAFT("It Vote for %s", voted_for.name());
-	// 	send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
+	// 	send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
 	// 		serialise_length(true) + serialise_length(term));
 	// } else {
 	// 	if (state == Raft::State::LEADER && remote_node != *local_node_) {
 	// 		L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name(), term, current_term);
-	// 		send_message(Raft::Message::RESET, remote_node.serialise());
+	// 		send_message(Message::RESET, remote_node.serialise());
 	// 		return;
 	// 	}
 
 	// 	if (term < current_term) {
 	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
+	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
 	// 			serialise_length(false) + serialise_length(current_term));
 	// 	} else if (voted_for.empty()) {
 	// 		voted_for = remote_node;
 	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
+	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
 	// 			serialise_length(true) + serialise_length(current_term));
 	// 	} else {
 	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
+	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
 	// 			serialise_length(false) + serialise_length(current_term));
 	// 	}
 	// }
@@ -268,6 +266,7 @@ Raft::request_vote_response(const std::string& message)
 	// const char *p_end = p + message.size();
 
 	// Node remote_node = Node::unserialise(&p, p_end);
+	// L_RAFT(">> REQUEST_VOTE_RESPONSE [%s]", remote_node.name());
 
 	// auto local_node_ = local_node.load();
 	// if (local_node_->region != remote_node.region) {
@@ -321,6 +320,7 @@ Raft::append_entries(const std::string& message)
 	// const char *p_end = p + message.size();
 
 	// std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+	// L_RAFT(">> APPEND_ENTRIES [%s]", remote_node->name());
 
 	// auto local_node_ = local_node.load();
 	// if (local_node_->region != remote_node->region) {
@@ -370,6 +370,7 @@ Raft::append_entries_response(const std::string& message)
 	// const char *p_end = p + message.size();
 
 	// Node remote_node = Node::unserialise(&p, p_end);
+	// L_RAFT(">> APPEND_ENTRIES_RESPONSE [%s]", remote_node.name());
 
 	// auto local_node_ = local_node.load();
 	// if (local_node_->region != remote_node.region) {
@@ -378,7 +379,7 @@ Raft::append_entries_response(const std::string& message)
 
 	// if (state == Raft::State::LEADER) {
 	// 	L_DEBUG("Sending Data!");
-	// 	send_message(Raft::Message::LEADER, local_node_->serialise() +
+	// 	send_message(Message::LEADER, local_node_->serialise() +
 	// 		serialise_length(number_servers) +
 	// 		serialise_length(current_term));
 	// }
