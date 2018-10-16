@@ -146,7 +146,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		remote_protocol.checkin_database();
 		return false;
 	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock.load());
 
 	return true;
 }
