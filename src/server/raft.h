@@ -27,8 +27,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "base_udp.h"  // for BaseUDP
+#include "base_udp.h"  // for UDP
 #include "endpoint.h"  // for Node
+#include "worker.h"    // for Worker
 
 
 // Values in seconds
@@ -43,16 +44,18 @@ constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MINOR_VERSION = 0;
 
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_VERSION = XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION | XAPIAND_RAFT_PROTOCOL_MINOR_VERSION << 8;
 
-class RaftServer;
+
+struct RaftLogEntry {
+	uint64_t term;
+	std::string entry;
+};
 
 // The Raft consensus algorithm
-class Raft : public BaseUDP {
-	friend RaftServer;
-public:
+class Raft : public UDP, public Worker {
 	enum class State {
-		LEADER,
 		FOLLOWER,
 		CANDIDATE,
+		LEADER,
 		MAX,
 	};
 
@@ -70,19 +73,17 @@ public:
 	}
 
 	enum class Message {
-		HEARTBEAT_LEADER,   // Only leader send heartbeats to its follower servers
-		REQUEST_VOTE,       // Invoked by candidates to gather votes
-		RESPONSE_VOTE,      // Gather votes
-		LEADER,             // Node saying hello when it become leader
-		LEADERSHIP,         // Request information from leader
-		RESET,              // Force reset a node
+		REQUEST_VOTE,            // Invoked by candidates to gather votes
+		REQUEST_VOTE_RESPONSE,   // Gather votes
+		APPEND_ENTRIES,          // Node saying hello when it become leader
+		APPEND_ENTRIES_RESPONSE, // Request information from leader
 		MAX,
 	};
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
-			"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
-			"LEADERSHIP", "RESET",
+			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
+			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -93,40 +94,57 @@ public:
 		return UNKNOWN;
 	}
 
-	State state;
-	size_t votes;
-
-	uint64_t current_term;
-	Node voted_for;
-
-	std::atomic_size_t number_servers;
-
-private:
+	ev::io io;
 
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
 	ev::async start_leader_heartbeat_async;
 	ev::async reset_leader_election_timeout_async;
-	ev::async reset_async;
+
+	State state;
+	size_t votes;
+
+	uint64_t current_term;
+	Node voted_for;
+	std::vector<RaftLogEntry> log;
+
+	size_t commit_index;
+	size_t last_applied;
+
+	// nextIndex
+	// matchIndex
+
+	std::atomic_size_t number_servers;
+
+	void send_message(Message type, const std::string& message);
+	void io_accept_cb(ev::io& watcher, int revents);
+	void raft_server(Raft::Message type, const std::string& message);
+
+	void request_vote(const std::string& message);
+	void request_vote_response(const std::string& message);
+	void append_entries(const std::string& message);
+	void append_entries_response(const std::string& message);
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
 	void start_leader_heartbeat_async_cb(ev::async& watcher, int revents);
 	void reset_leader_election_timeout_async_cb(ev::async& watcher, int revents);
-	void reset_async_cb(ev::async& watcher, int revents);
 
 	void _request_vote();
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
-	void _reset();
+
+	void destroyer();
+
+	void destroy_impl() override;
+	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("Raft");
-	}
-
-	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
+	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
+
+	void start();
+	void stop();
 
 	inline void start_leader_heartbeat() {
 		start_leader_heartbeat_async.send();
@@ -136,14 +154,10 @@ public:
 		reset_leader_election_timeout_async.send();
 	}
 
-	inline void reset() {
-		reset_async.send();
+	std::string __repr__() const override {
+		return Worker::__repr__("Raft");
 	}
 
-	void start();
-	void stop();
-
-	void send_message(Message type, const std::string& message);
 	std::string getDescription() const noexcept override;
 };
 

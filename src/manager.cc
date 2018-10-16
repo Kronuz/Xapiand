@@ -89,7 +89,6 @@
 #include "server/raft.h"                     // for Raft
 #include "server/binary_server.h"            // for RaftBinary
 #include "server/discovery_server.h"         // for DicoveryServer
-#include "server/raft_server.h"              // for RaftServer
 #endif
 
 
@@ -565,6 +564,7 @@ XapiandManager::make_servers()
 		msg += binary->getDescription() + ", ";
 
 		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, opts.discovery_port, opts.discovery_group);
+		Worker::make_shared<DiscoveryServer>(XapiandManager::manager, ev_loop, ev_flags, discovery);
 		msg += discovery->getDescription() + ", ";
 
 		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, opts.raft_port, opts.raft_group);
@@ -585,10 +585,6 @@ XapiandManager::make_servers()
 		if (!opts.solo) {
 			auto binary_server = Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary);
 			binary->add_server(binary_server);
-
-			Worker::make_shared<DiscoveryServer>(server, server->ev_loop, ev_flags, discovery);
-
-			Worker::make_shared<RaftServer>(server, server->ev_loop, ev_flags, raft);
 		}
 #endif
 		server_pool.enqueue([task = std::move(server)]{
@@ -927,7 +923,7 @@ XapiandManager::get_region()
 					int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
 					if (local_node_copy->region != region) {
 						local_node_copy->region = region;
-						raft->reset();
+						raft->start();
 					} else {
 						auto master_node_ = master_node.load();
 						if (master_node_->empty()) {
