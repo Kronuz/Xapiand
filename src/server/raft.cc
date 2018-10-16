@@ -368,7 +368,7 @@ Raft::append_entries(const std::string& message)
 		// _set_master_node(node);
 	}
 
-	if (state != State::FOLLOWER) {
+	if (state == State::LEADER) {
 		return;
 	}
 
@@ -376,6 +376,13 @@ Raft::append_entries(const std::string& message)
 
 	auto success = false;
 	if (term == current_term) {
+		if (state == State::CANDIDATE) {
+			// If AppendEntries RPC received from new leader:
+			// convert to follower
+			state = State::FOLLOWER;
+			voted_for.clear();
+		}
+
 		_reset_leader_election_timeout();
 		_set_master_node(node);
 
@@ -468,11 +475,11 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	}
 
 	// If election timeout elapses without receiving AppendEntries
-	// RPC from current leader or granting vote to candidate: convert to candidate
+	// RPC from current leader or granting vote to candidate:
+	// convert to candidate
 	if (!voted_for.empty()) {
 		return;
 	}
-
 	++current_term;
 	state = State::CANDIDATE;
 	voted_for.clear();
