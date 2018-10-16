@@ -30,18 +30,15 @@
 #include "ev/ev++.h"  // for io, loop_ref (ptr only)
 #include "worker.h"   // for Worker
 
-class XapiandServer;
-
 
 // This class lets make different types of servers.
 class BaseServer : public Worker {
 	friend Worker;
-	friend XapiandServer;
 
 protected:
 	ev::io io;
 
-	BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
+	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	void destroyer();
 

@@ -23,11 +23,10 @@
 #include "base_server.h"
 
 #include "log.h"             // for L_OBJ
-#include "server.h"          // for XapiandServer
 
 
-BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: Worker(server_, ev_loop_, ev_flags_),
+BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);

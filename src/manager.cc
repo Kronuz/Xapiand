@@ -275,7 +275,7 @@ XapiandManager::setup_node()
 
 	for (const auto& weak_server : servers_weak) {
 		if (auto server = weak_server.lock()) {
-			server->setup_node_async.send();
+			server->setup_node();
 			return;
 		}
 	}
@@ -574,7 +574,6 @@ XapiandManager::make_servers()
 
 	msg += "at pid:" + std::to_string(getpid()) + " ...";
 	L_NOTICE(msg);
-
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);

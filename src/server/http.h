@@ -31,7 +31,6 @@
 #include "base_tcp.h"  // for BaseTCP
 
 class HttpServer;
-class XapiandManager;
 
 
 constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION = 1;
@@ -47,7 +46,7 @@ public:
 		return Worker::__repr__("Http");
 	}
 
-	Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
+	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 	~Http();
 
 	std::string getDescription() const noexcept override;

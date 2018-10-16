@@ -28,7 +28,6 @@
 #include <ratio>                  // for ratio
 #include <utility>
 
-#include "server.h"               // for XapiandServer
 #include "base_server.h"          // for BaseServer
 #include "http_client.h"          // for HttpClient
 #include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
@@ -40,8 +39,8 @@
 #include "worker.h"               // for Worker
 
 
-HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_)
-	: BaseServer(server_, ev_loop_, ev_flags_),
+HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_)
+	: BaseServer(parent_, ev_loop_, ev_flags_),
 	  http(std::move(http_))
 {
 	io.start(http->sock, ev::READ);

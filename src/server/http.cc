@@ -25,12 +25,11 @@
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "endpoint.h"           // for Node, local_node
 #include "log.h"                // for L_OBJ
-#include "manager.h"            // for XapiandManager
 #include "base_tcp.h"           // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
 
 
-Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
-	: BaseTCP(manager_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
+Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
 {
 	auto local_node_ = local_node.load();
 	auto node_copy = std::make_unique<Node>(*local_node_);

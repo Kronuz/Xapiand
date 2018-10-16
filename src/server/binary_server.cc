@@ -30,8 +30,8 @@
 #include "ignore_unused.h"
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)
-	: BaseServer(server_, ev_loop_, ev_flags_),
+BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)
+	: BaseServer(parent_, ev_loop_, ev_flags_),
 	  binary(binary_),
 	  signal_async(*ev_loop)
 {

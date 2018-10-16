@@ -39,19 +39,17 @@ class BaseServer;
 class BinaryServer;
 class DiscoveryServer;
 class HttpServer;
-class RaftServer;
-class XapiandManager;
 
 
 class XapiandServer : public Worker {
 	friend Worker;
-	friend XapiandManager;
+	friend class XapiandManager;
 
 	std::mutex qmtx;
 
 	ev::async setup_node_async;
 
-	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
+	XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	void destroyer();
 
@@ -74,6 +72,10 @@ public:
 	static std::atomic_int max_binary_clients;
 
 	~XapiandServer();
+
+	void setup_node() {
+		setup_node_async.send();
+	}
 
 	void run();
 };

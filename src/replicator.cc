@@ -27,8 +27,8 @@
 #include "server/discovery.h"
 
 
-XapiandReplicator::XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: Worker(std::move(manager_), ev_loop_, ev_flags_) {
+XapiandReplicator::XapiandReplicator(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: Worker(parent_, ev_loop_, ev_flags_) {
 
 	L_OBJ("CREATED XAPIAN REPLICATOR!");
 }
