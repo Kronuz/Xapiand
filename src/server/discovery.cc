@@ -221,7 +221,9 @@ Discovery::sneer(const std::string& message)
 {
 	L_CALL("Discovery::sneer(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -252,7 +254,9 @@ Discovery::enter(const std::string& message)
 {
 	L_CALL("Discovery::enter(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -274,7 +278,9 @@ Discovery::bye(const std::string& message)
 {
 	L_CALL("Discovery::bye(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -303,7 +309,9 @@ Discovery::db_updated(const std::string& message)
 {
 	L_CALL("Discovery::db_updated(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
-	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
