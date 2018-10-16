@@ -523,6 +523,9 @@ XapiandManager::destroyer() {
 	L_CALL("XapiandManager::destroyer()");
 
 #ifdef XAPIAND_CLUSTERING
+	if (auto raft = weak_raft.lock()) {
+		raft->stop();
+	}
 	if (auto discovery = weak_discovery.lock()) {
 		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 		discovery->stop();
