@@ -27,6 +27,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "base_udp.h"
+#include "endpoint.h"
 
 
 // Values in seconds
@@ -41,22 +42,9 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
-class DiscoveryServer;
 
 // Discovery for nodes and databases
-class Discovery : public BaseUDP {
-	friend DiscoveryServer;
-
-private:
-	ev::timer heartbeat;
-
-	void heartbeat_cb(ev::timer& watcher, int revents);
-
-public:
-	std::string __repr__() const override {
-		return Worker::__repr__("Discovery");
-	}
-
+class Discovery : public UDP, public Worker {
 	enum class Message {
 		HEARTBEAT,     // Heartbeat
 		HELLO,         // New node saying hello
@@ -81,13 +69,43 @@ public:
 		return UNKNOWN;
 	}
 
+	ev::io io;
+	ev::timer node_heartbeat;
+
+	void send_message(Message type, const std::string& message);
+	void io_accept_cb(ev::io& watcher, int revents);
+	void discovery_server(Discovery::Message type, const std::string& message);
+
+	void heartbeat(const std::string& message);
+	void hello(const std::string& message);
+	void wave(const std::string& message);
+	void sneer(const std::string& message);
+	void enter(const std::string& message);
+	void bye(const std::string& message);
+	void db_updated(const std::string& message);
+
+	void heartbeat_cb(ev::timer& watcher, int revents);
+
+	void _wave(bool heartbeat, const std::string& message);
+
+	void destroyer();
+
+	void destroy_impl() override;
+	void shutdown_impl(time_t asap, time_t now) override;
+
+public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();
 
 	void start();
 	void stop();
 
-	void send_message(Message type, const std::string& message);
+	void signal_db_update(const Endpoint& endpoint);
+
+	std::string __repr__() const override {
+		return Worker::__repr__("Discovery");
+	}
+
 	std::string getDescription() const noexcept override;
 };
 

@@ -76,19 +76,18 @@
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "serialise.h"                        // for KEYWORD_STR
-#include "server/http.h"                     // for Http
-#include "server/server.h"                   // for XapiandServer, XapiandSe...
-#include "server/http_server.h"              // for HttpServer
+#include "server/http.h"                      // for Http
+#include "server/server.h"                    // for XapiandServer, XapiandSe...
+#include "server/http_server.h"               // for HttpServer
 #include "threadpool.h"                       // for ThreadPool
 #include "worker.h"                           // for Worker, enable_make_shared
 
 #ifdef XAPIAND_CLUSTERING
 #include "replicator.h"                       // for XapiandReplicator
-#include "server/binary.h"                   // for Binary
-#include "server/discovery.h"                // for Discovery
-#include "server/raft.h"                     // for Raft
-#include "server/binary_server.h"            // for RaftBinary
-#include "server/discovery_server.h"         // for DicoveryServer
+#include "server/binary.h"                    // for Binary
+#include "server/binary_server.h"             // for BinaryServer
+#include "server/discovery.h"                 // for Discovery
+#include "server/raft.h"                      // for Raft
 #endif
 
 
@@ -564,7 +563,6 @@ XapiandManager::make_servers()
 		msg += binary->getDescription() + ", ";
 
 		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, opts.discovery_port, opts.discovery_group);
-		Worker::make_shared<DiscoveryServer>(XapiandManager::manager, ev_loop, ev_flags, discovery);
 		msg += discovery->getDescription() + ", ";
 
 		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, opts.raft_port, opts.raft_group);

@@ -24,16 +24,21 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "endpoint.h"
+#include "database_handler.h"
 #include "ignore_unused.h"
 #include "manager.h"
 
+using dispatch_func = void (Discovery::*)(const std::string&);
+
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
-	: BaseUDP(parent_, ev_loop_, ev_flags_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
-	  heartbeat(*ev_loop)
+	: UDP(port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
+	  Worker(parent_, ev_loop_, ev_flags_),
+	  node_heartbeat(*ev_loop)
 {
-	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
+	io.set<Discovery, &Discovery::io_accept_cb>(this);
+
+	node_heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 
 	L_OBJ("CREATED DISCOVERY");
 }
@@ -41,31 +46,286 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 
 Discovery::~Discovery()
 {
-	heartbeat.stop();
-	L_EV("Stop discovery's heartbeat event");
+	destroyer();
 
 	L_OBJ("DELETED DISCOVERY");
 }
 
 
 void
-Discovery::start() {
-	heartbeat.start(0, WAITING_FAST);
-	L_EV("Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
+Discovery::shutdown_impl(time_t asap, time_t now)
+{
+	L_CALL("Discovery::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
-	L_DISCOVERY("Discovery was started! (exploring)");
+	Worker::shutdown_impl(asap, now);
+
+	destroy();
+
+	if (now != 0) {
+		detach();
+	}
 }
 
 
 void
-Discovery::stop() {
-	heartbeat.stop();
-	L_EV("Stop discovery's heartbeat event");
+Discovery::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+Discovery::destroyer()
+{
+	L_CALL("Discovery::destroyer()");
+
+	node_heartbeat.stop();
+	L_EV("Stop discovery's node heartbeat event");
+
+	io.stop();
+	L_EV("Stop discovery's io event");
+}
+
+
+void
+Discovery::send_message(Message type, const std::string& message)
+{
+	if (type != Discovery::Message::HEARTBEAT) {
+		L_DISCOVERY("<< send_message(%s)", MessageNames(type));
+		L_DISCOVERY_PROTO("message: %s", repr(message));
+	}
+	UDP::send_message(toUType(type), message);
+}
+
+
+void
+Discovery::io_accept_cb(ev::io &watcher, int revents)
+{
+	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock, watcher.fd);
+
+	int fd = sock;
+	if (fd == -1) {
+		return;
+	}
+	ignore_unused(watcher);
+	assert(fd == watcher.fd || fd == -1);
+
+	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+
+	if (EV_ERROR & revents) {
+		L_EV("ERROR: got invalid discovery event {fd:%d}: %s", fd, strerror(errno));
+		return;
+	}
+
+	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN");
+
+	if (revents & EV_READ) {
+		while (true) {
+			try {
+				std::string message;
+				auto raw_type = get_message(message, static_cast<char>(Discovery::Message::MAX));
+				if (raw_type == '\xff') {
+					break;  // no message
+				}
+				Discovery::Message type = static_cast<Discovery::Message>(raw_type);
+				if (type != Discovery::Message::HEARTBEAT) {
+					L_DISCOVERY(">> get_message(%s)", Discovery::MessageNames(type));
+					L_DISCOVERY_PROTO("message: %s", repr(message));
+				}
+				discovery_server(type, message);
+			} catch (const BaseException& exc) {
+				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+				break;
+			} catch (...) {
+				L_EV_END("Discovery::io_accept_cb:END %lld", SchedulerQueue::now);
+				throw;
+			}
+		}
+	}
+
+	L_EV_END("Discovery::io_accept_cb:END %lld", SchedulerQueue::now);
+}
+
+
+void
+Discovery::discovery_server(Discovery::Message type, const std::string& message)
+{
+	static const dispatch_func dispatch[] = {
+		&Discovery::heartbeat,
+		&Discovery::hello,
+		&Discovery::wave,
+		&Discovery::sneer,
+		&Discovery::enter,
+		&Discovery::bye,
+		&Discovery::db_updated,
+	};
+	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+		std::string errmsg("Unexpected message type ");
+		errmsg += std::to_string(toUType(type));
+		THROW(InvalidArgumentError, errmsg);
+	}
+	(this->*(dispatch[toUType(type)]))(message);
+}
+
+
+void
+Discovery::heartbeat(const std::string& message)
+{
+	_wave(true, message);
+}
+
+
+void
+Discovery::hello(const std::string& message)
+{
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	auto local_node_ = local_node.load();
-	send_message(Message::BYE, local_node_->serialise());
+	if (remote_node == *local_node_) {
+		// It's me! ...wave hello!
+		send_message(Discovery::Message::WAVE, local_node_->serialise());
+	} else {
+		std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+		if (node) {
+			if (remote_node == *node) {
+				send_message(Discovery::Message::WAVE, local_node_->serialise());
+			} else {
+				send_message(Discovery::Message::SNEER, remote_node.serialise());
+			}
+		} else {
+			send_message(Discovery::Message::WAVE, local_node_->serialise());
+		}
+	}
+}
 
-	L_DISCOVERY("Discovery was stopped!");
+
+void
+Discovery::wave(const std::string& message)
+{
+	_wave(false, message);
+}
+
+
+void
+Discovery::sneer(const std::string& message)
+{
+	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+
+	auto local_node_ = local_node.load();
+	if (remote_node == *local_node_) {
+		if (XapiandManager::manager->node_name.empty()) {
+			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node_->name());
+			XapiandManager::manager->reset_state();
+		} else {
+			L_WARNING("Cannot join the party. Node name %s already taken!", local_node_->name());
+			XapiandManager::manager->state.store(XapiandManager::State::BAD);
+			local_node = std::make_shared<const Node>();
+			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
+			XapiandManager::manager->shutdown_sig(0);
+		}
+	}
+}
+
+
+void
+Discovery::enter(const std::string& message)
+{
+	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+
+	auto put = XapiandManager::manager->put_node(remote_node);
+	if (put.second) {
+		remote_node = put.first;
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	}
+}
+
+
+void
+Discovery::bye(const std::string& message)
+{
+	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+
+	XapiandManager::manager->drop_node(remote_node.name());
+	L_INFO("Node %s left the party!", remote_node.name());
+	auto local_node_ = local_node.load();
+	auto local_node_copy = std::make_unique<Node>(*local_node_);
+	local_node_copy->regions = -1;
+	local_node = std::shared_ptr<const Node>(local_node_copy.release());
+	auto master_node_ = master_node.load();
+	if (*master_node_ == remote_node) {
+		master_node.compare_exchange_strong(master_node_, std::make_shared<const Node>());
+	}
+	XapiandManager::manager->get_region();
+}
+
+
+void
+Discovery::db_updated(const std::string& message)
+{
+	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	long long remote_mastery_level = unserialise_length(&p, p_end);
+	auto index_path = std::string(unserialise_string(&p, p_end));
+
+	DatabaseHandler db_handler(Endpoints(Endpoint(index_path)), DB_OPEN);
+	long long mastery_level = db_handler.get_mastery_level();
+	if (mastery_level == -1) {
+		return;
+	}
+
+	if (mastery_level > remote_mastery_level) {
+		L_DISCOVERY("Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path, mastery_level, remote_mastery_level);
+
+		std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+
+		auto put = XapiandManager::manager->put_node(remote_node);
+		if (put.second) {
+			remote_node = put.first;
+			L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+		}
+
+		Endpoint local_endpoint(index_path);
+		Endpoint remote_endpoint(index_path, remote_node.get());
+#ifdef XAPIAND_CLUSTERING
+		// Replicate database from the other node
+		L_INFO("Request syncing database from %s...", remote_node->name());
+		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+		if (ret.get()) {
+			L_INFO("Replication triggered!");
+		}
+#endif
+	} else if (mastery_level != remote_mastery_level) {
+		L_DISCOVERY("Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!", index_path, mastery_level, remote_mastery_level);
+	}
 }
 
 
@@ -103,8 +363,8 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			break;
 		}
 		case XapiandManager::State::WAITING: {
-			heartbeat.repeat = WAITING_SLOW;
-			heartbeat.again();
+			node_heartbeat.repeat = WAITING_SLOW;
+			node_heartbeat.again();
 			// We're here because no one sneered nor waved during
 			// WAITING_FAST, wait longer then...
 			auto waiting = XapiandManager::State::WAITING;
@@ -115,9 +375,9 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
 			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
 
-			heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-			heartbeat.again();
-			L_EV("Reset discovery's heartbeat event (%f)", heartbeat.repeat);
+			node_heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
+			node_heartbeat.again();
+			L_EV("Reset discovery's node heartbeat event (%f)", node_heartbeat.repeat);
 
 			auto local_node_ = local_node.load();
 			send_message(Message::ENTER, local_node_->serialise());
@@ -140,13 +400,109 @@ Discovery::heartbeat_cb(ev::timer&, int revents)
 
 
 void
-Discovery::send_message(Message type, const std::string& message)
+Discovery::_wave(bool heartbeat, const std::string& message)
 {
-	if (type != Discovery::Message::HEARTBEAT) {
-		L_DISCOVERY("<< send_message(%s)", MessageNames(type));
-		L_DISCOVERY_PROTO("message: %s", repr(message));
+	L_CALL("Discovery::_wave(%s, <message>) {state:%s}", heartbeat ? "true" : "false", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+
+	auto local_node_ = local_node.load();
+	if (*remote_node == *local_node_) {
+		// it's just me ...ignore.
+		return;
 	}
-	BaseUDP::send_message(toUType(type), message);
+
+	if (!heartbeat) {
+		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
+		// (prevent it from switching to slow waiting)
+		auto waiting = XapiandManager::State::WAITING;
+		XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
+	}
+
+	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
+	if (node) {
+		if (*remote_node != *node) {
+			if (heartbeat || node->touched < epoch::now<>() - NODE_LIFESPAN) {
+				XapiandManager::manager->drop_node(remote_node->name());
+				L_INFO("Stalled node %s left the party!", remote_node->name());
+				auto put = XapiandManager::manager->put_node(remote_node);
+				if (put.second) {
+					remote_node = put.first;
+					if (heartbeat) {
+						L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+					} else {
+						L_DISCOVERY("Node %s joining the party (1)...", remote_node->name());
+					}
+					auto local_node_copy = std::make_unique<Node>(*local_node_);
+					local_node_copy->regions = -1;
+					local_node = std::shared_ptr<const Node>(local_node_copy.release());
+					XapiandManager::manager->get_region();
+				} else {
+					L_ERR("ERROR: Cannot register remote node (1): %s", remote_node->name());
+				}
+			}
+		}
+	} else {
+		auto put = XapiandManager::manager->put_node(remote_node);
+		if (put.second) {
+			remote_node = put.first;
+			if (heartbeat) {
+				L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+			} else {
+				L_DISCOVERY("Node %s joining the party (2)...", remote_node->name());
+			}
+			auto local_node_copy = std::make_unique<Node>(*local_node_);
+			local_node_copy->regions = -1;
+			local_node = std::shared_ptr<const Node>(local_node_copy.release());
+			XapiandManager::manager->get_region();
+		} else {
+			L_ERR("ERROR: Cannot register remote node (2): %s", remote_node->name());
+		}
+	}
+}
+
+void
+Discovery::signal_db_update(const Endpoint& endpoint)
+{
+	auto local_node_ = local_node.load();
+	send_message(
+		Message::DB_UPDATED,
+		serialise_length(endpoint.mastery_level) +  // The mastery level of the database
+		serialise_string(endpoint.path) +  // The path of the index
+		local_node_->serialise()   // The node where the index is at
+	);
+}
+
+
+void
+Discovery::start()
+{
+	node_heartbeat.start(0, WAITING_FAST);
+	L_EV("Start discovery's node heartbeat exploring event (%f)", node_heartbeat.repeat);
+
+	io.start(sock, ev::READ);
+	L_EV("Start discovery's server accept event (sock=%d)", sock);
+
+	L_DISCOVERY("Discovery was started! (exploring)");
+}
+
+
+void
+Discovery::stop()
+{
+	node_heartbeat.stop();
+	L_EV("Stop discovery's node heartbeat event");
+
+	auto local_node_ = local_node.load();
+	send_message(Message::BYE, local_node_->serialise());
+
+	io.stop();
+	L_EV("Stop discovery's server accept event");
+
+	L_DISCOVERY("Discovery was stopped!");
 }
 
 
