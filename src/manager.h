@@ -187,6 +187,7 @@ public:
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
 	std::shared_ptr<const Node> touch_node(std::string_view node_name, int32_t region);
 	void drop_node(std::string_view node_name);
+	void renew_master();
 
 	size_t get_nodes_by_region(int32_t region);
 

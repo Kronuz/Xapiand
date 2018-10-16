@@ -896,6 +896,16 @@ XapiandManager::drop_node(std::string_view _node_name)
 }
 
 
+void
+XapiandManager::renew_master()
+{
+	L_CALL("XapiandManager::renew_master()");
+	if (auto raft = weak_raft.lock()) {
+		raft->request_vote();
+	}
+}
+
+
 size_t
 XapiandManager::get_nodes_by_region(int32_t region)
 {

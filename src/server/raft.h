@@ -98,11 +98,11 @@ class Raft : public UDP, public Worker {
 
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
-	ev::async start_leader_heartbeat_async;
-	ev::async reset_leader_election_timeout_async;
 
 	State state;
-	size_t votes;
+	size_t votes_granted;
+	size_t votes_denied;
+	std::atomic_size_t num_servers;
 
 	uint64_t current_term;
 	Node voted_for;
@@ -113,8 +113,6 @@ class Raft : public UDP, public Worker {
 
 	// nextIndex
 	// matchIndex
-
-	std::atomic_size_t number_servers;
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
@@ -127,12 +125,12 @@ class Raft : public UDP, public Worker {
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
-	void start_leader_heartbeat_async_cb(ev::async& watcher, int revents);
-	void reset_leader_election_timeout_async_cb(ev::async& watcher, int revents);
 
-	void _request_vote();
-	void _start_leader_heartbeat();
-	void _reset_leader_election_timeout();
+	void _start_leader_heartbeat(double min = HEARTBEAT_LEADER_MIN, double max = HEARTBEAT_LEADER_MAX);
+	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
+	void _set_master_node(const Node& node);
+
+	void _apply(size_t idx);
 
 	void destroyer();
 
@@ -143,16 +141,9 @@ public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
+	void request_vote();
 	void start();
 	void stop();
-
-	inline void start_leader_heartbeat() {
-		start_leader_heartbeat_async.send();
-	}
-
-	inline void reset_leader_election_timeout() {
-		reset_leader_election_timeout_async.send();
-	}
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Raft");

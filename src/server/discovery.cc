@@ -179,7 +179,7 @@ Discovery::heartbeat(const std::string& message)
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	L_DISCOVERY(">> HEARTBEAT [%s]", remote_node->name());
 
-	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
+	auto node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
 	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
 		XapiandManager::manager->drop_node(remote_node->name());
 		L_INFO("Stalled node %s left the party!", remote_node->name());
@@ -212,7 +212,7 @@ Discovery::hello(const std::string& message)
 		// It's me! ...wave hello!
 		send_message(Message::WAVE, local_node_->serialise());
 	} else {
-		std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+		auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
 		if (node) {
 			if (remote_node == *node) {
 				send_message(Message::WAVE, local_node_->serialise());
@@ -237,7 +237,7 @@ Discovery::wave(const std::string& message)
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	L_DISCOVERY(">> WAVE [%s]", remote_node->name());
 
-	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
+	auto node = XapiandManager::manager->touch_node(remote_node->name(), remote_node->region);
 	if (node && *remote_node != *node && node->touched < epoch::now<>() - NODE_LIFESPAN) {
 		XapiandManager::manager->drop_node(remote_node->name());
 		L_INFO("Stalled node %s left the party!", remote_node->name());
@@ -300,7 +300,7 @@ Discovery::enter(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	L_DISCOVERY(">> ENTER [%s]", remote_node->name());
 
 	auto put = XapiandManager::manager->put_node(remote_node);
@@ -333,7 +333,9 @@ Discovery::bye(const std::string& message)
 
 	auto master_node_ = master_node.load();
 	if (*master_node_ == remote_node) {
-		master_node.compare_exchange_strong(master_node_, std::make_shared<const Node>());
+		if (master_node.compare_exchange_strong(master_node_, std::make_shared<const Node>())) {
+			XapiandManager::manager->renew_master();
+		}
 	}
 }
 
@@ -364,7 +366,7 @@ Discovery::db_updated(const std::string& message)
 	if (mastery_level > remote_mastery_level) {
 		L_DISCOVERY("Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path, mastery_level, remote_mastery_level);
 
-		std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
+		auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 
 		auto put = XapiandManager::manager->put_node(remote_node);
 		if (put.second) {

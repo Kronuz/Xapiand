@@ -39,21 +39,18 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
-	  reset_leader_election_timeout_async(*ev_loop),
 	  state(State::FOLLOWER),
-	  votes(0),
+	  votes_granted(0),
+	  votes_denied(0),
+	  num_servers(1),
 	  current_term(0),
 	  commit_index(0),
-	  last_applied(0),
-	  number_servers(1)
+	  last_applied(0)
 {
 	io.set<Raft, &Raft::io_accept_cb>(this);
 
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
-
-	start_leader_heartbeat_async.set<Raft, &Raft::start_leader_heartbeat_async_cb>(this);
-	reset_leader_election_timeout_async.set<Raft, &Raft::reset_leader_election_timeout_async_cb>(this);
 
 	L_OBJ("CREATED RAFT CONSENSUS");
 }
@@ -190,69 +187,71 @@ void
 Raft::request_vote(const std::string& message)
 {
 	L_CALL("Raft::request_vote(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	ignore_unused(message);
 
-	ignore_unused(commit_index);
-	ignore_unused(last_applied);
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
-	L_RAFT(">> REQUEST_VOTE [%s]", remote_node.name());
+	Node candidate_node = Node::unserialise(&p, p_end);
 
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
+	if (local_node_->region != candidate_node.region) {
 		return;
 	}
 
+	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
 	if (term > current_term) {
-		state = Raft::State::FOLLOWER;
+		// set currentTerm = T,
+		current_term = term;
+		// convert to follower
+		state = State::FOLLOWER;
+		voted_for.clear();
+
+		_reset_leader_election_timeout();
+		_set_master_node(candidate_node);
 	}
 
-	// if (term >= current_term) {
-	// 	size_t last_log_index = unserialise_length(&p, p_end);
-	// 	uint64_t last_log_term = unserialise_length(&p, p_end);
-	// }
+	L_RAFT(">> REQUEST_VOTE [%s]", candidate_node.name());
 
+	auto granted = false;
+	if (term == current_term) {
+		if (voted_for.empty()) {
+			if (candidate_node == *local_node_) {
+				voted_for = candidate_node;
+				L_RAFT("I vote for %s (1)", voted_for.name());
+			} else if (state == State::FOLLOWER) {
+				size_t remote_last_log_index = unserialise_length(&p, p_end);
+				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
+				// §5.4.1
+				auto last_log_term = log.empty() ? 0 : log.back().term;
+				if (last_log_term < remote_last_log_term) {
+					// If the logs have last entries with different terms, then the
+					// log with the later term is more up-to-date.
+					voted_for = candidate_node;
+					L_RAFT("I vote for %s (2)", voted_for.name());
+				} else if (last_log_term == remote_last_log_term) {
+					// If the logs end with the same term, then whichever
+					// log is longer is more up-to-date.
+					if (log.size() < remote_last_log_index) {
+						voted_for = candidate_node;
+						L_RAFT("I vote for %s (3)", voted_for.name());
+					}
+				}
+			}
+		}
+		granted = voted_for == candidate_node;
+	}
 
-	// L_RAFT("term: %llu  local_term: %llu", term, current_term);
-
-	// if (term > current_term) {
-	// 	if (state == Raft::State::LEADER && remote_node != *local_node_) {
-	// 		L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name(), term, current_term);
-	// 		reset();
-	// 	}
-
-	// 	voted_for = remote_node;
-	// 	current_term = term;
-
-	// 	L_RAFT("It Vote for %s", voted_for.name());
-	// 	send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
-	// 		serialise_length(true) + serialise_length(term));
-	// } else {
-	// 	if (state == Raft::State::LEADER && remote_node != *local_node_) {
-	// 		L_ERR("ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name(), term, current_term);
-	// 		send_message(Message::RESET, remote_node.serialise());
-	// 		return;
-	// 	}
-
-	// 	if (term < current_term) {
-	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
-	// 			serialise_length(false) + serialise_length(current_term));
-	// 	} else if (voted_for.empty()) {
-	// 		voted_for = remote_node;
-	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
-	// 			serialise_length(true) + serialise_length(current_term));
-	// 	} else {
-	// 		L_RAFT("Vote for %s", voted_for.name());
-	// 		send_message(Message::RESPONSE_VOTE, remote_node.serialise() +
-	// 			serialise_length(false) + serialise_length(current_term));
-	// 	}
-	// }
+	send_message(Message::REQUEST_VOTE_RESPONSE,
+		candidate_node.serialise() +
+		serialise_length(term) +
+		serialise_length(granted));
 }
 
 
@@ -260,53 +259,70 @@ void
 Raft::request_vote_response(const std::string& message)
 {
 	L_CALL("Raft::request_vote_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	ignore_unused(message);
 
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
 
-	// Node remote_node = Node::unserialise(&p, p_end);
-	// L_RAFT(">> REQUEST_VOTE_RESPONSE [%s]", remote_node.name());
+	const char *p = message.data();
+	const char *p_end = p + message.size();
 
-	// auto local_node_ = local_node.load();
-	// if (local_node_->region != remote_node.region) {
-	// 	return;
-	// }
+	Node candidate_node = Node::unserialise(&p, p_end);
 
-	// if (remote_node == *local_node_ && state == Raft::State::CANDIDATE) {
-	// 	bool vote = unserialise_length(&p, p_end);
+	auto local_node_ = local_node.load();
+	if (local_node_->region != candidate_node.region) {
+		return;
+	}
 
-	// 	if (vote) {
-	// 		++votes;
-	// 		L_RAFT("Number of servers: %d; Votes received: %d", number_servers.load(), votes);
-	// 		if (votes > number_servers / 2) {
-	// 			state = Raft::State::LEADER;
-	// 			start_leader_heartbeat();
+	// If RPC request or response contains term T > currentTerm:
+	uint64_t term = unserialise_length(&p, p_end);
+	if (term > current_term) {
+		// set currentTerm = T,
+		current_term = term;
+		// convert to follower
+		state = State::FOLLOWER;
+		voted_for.clear();
 
-	// 			auto master_node_ = master_node.load();
-	// 			if (*master_node_ != *local_node_) {
-	// 				if (master_node_->empty()) {
-	// 					L_NOTICE("Raft: Leader for region %d is %s (me)", local_node_->region, local_node_->name());
-	// 				} else {
-	// 					L_NOTICE("Raft: New leader for region %d is %s (me)", local_node_->region, local_node_->name());
-	// 				}
-	// 				master_node = local_node_;
-	// 				auto joining = XapiandManager::State::JOINING;
-	// 				XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
-	// 				XapiandManager::manager->setup_node();
-	// 			}
-	// 		}
-	// 		return;
-	// 	}
+		_reset_leader_election_timeout();
+		_set_master_node(candidate_node);
+	}
 
-	// 	uint64_t term = unserialise_length(&p, p_end);
-	// 	if (current_term < term) {
-	// 		current_term = term;
-	// 		state = Raft::State::FOLLOWER;
-	// 		reset_leader_election_timeout();
-	// 		return;
-	// 	}
-	// }
+	if (state != State::CANDIDATE) {
+		return;
+	}
+
+	L_RAFT(">> REQUEST_VOTE_RESPONSE [%s]", candidate_node.name());
+
+	if (term == current_term) {
+		if (candidate_node == *local_node_) {
+			bool granted = unserialise_length(&p, p_end);
+			if (granted) {
+				++votes_granted;
+			} else {
+				++votes_denied;
+			}
+			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", num_servers.load(), votes_granted, votes_denied);
+			if (votes_granted + votes_denied > num_servers / 2) {
+				if (votes_granted > votes_denied) {
+					state = State::LEADER;
+					voted_for.clear();
+
+					_start_leader_heartbeat();
+					_set_master_node(candidate_node);
+
+					send_message(Message::APPEND_ENTRIES,
+						local_node_->serialise() +
+						serialise_length(current_term) +
+						serialise_length(log.size()) +
+						serialise_length(log.empty() ? 0 : log.back().term) +
+						serialise_string("") +
+						serialise_length(commit_index));
+				}
+			}
+		}
+	}
 }
 
 
@@ -314,49 +330,62 @@ void
 Raft::append_entries(const std::string& message)
 {
 	L_CALL("Raft::append_entries(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	ignore_unused(message);
 
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
 
-	// std::shared_ptr<const Node> remote_node = std::make_shared<Node>(Node::unserialise(&p, p_end));
-	// L_RAFT(">> APPEND_ENTRIES [%s]", remote_node->name());
+	const char *p = message.data();
+	const char *p_end = p + message.size();
 
-	// auto local_node_ = local_node.load();
-	// if (local_node_->region != remote_node->region) {
-	// 	return;
-	// }
+	Node remote_node = Node::unserialise(&p, p_end);
 
-	// if (state == Raft::State::LEADER) {
-	// 	if (*remote_node != *local_node_) {
-	// 		L_CRIT("I'm leader, other responded as leader!");
-	// 		reset();
-	// 	}
-	// 	return;
-	// }
+	auto local_node_ = local_node.load();
+	if (local_node_->region != remote_node.region) {
+		return;
+	}
 
-	// number_servers.store(unserialise_length(&p, p_end));
-	// current_term = unserialise_length(&p, p_end);
-	// state = Raft::State::FOLLOWER;
-	// reset_leader_election_timeout();
+	// If RPC request or response contains term T > currentTerm:
+	uint64_t term = unserialise_length(&p, p_end);
+	if (term > current_term) {
+		// set currentTerm = T,
+		current_term = term;
+		// convert to follower
+		state = State::FOLLOWER;
+		voted_for.clear();
 
-	// auto master_node_ = master_node.load();
-	// if (*master_node_ != *remote_node) {
-	// 	if (master_node_->empty()) {
-	// 		L_NOTICE("Raft: Leader for region %d is %s", local_node_->region, remote_node->name());
-	// 	} else {
-	// 		L_NOTICE("Raft: New leader for region %d is %s", local_node_->region, remote_node->name());
-	// 	}
-	// 	auto put = XapiandManager::manager->put_node(remote_node);
-	// 	remote_node = put.first;
-	// 	if (put.second) {
-	// 		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [append_entries]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-	// 	}
-	// 	master_node = remote_node;
-	// 	auto joining = XapiandManager::State::JOINING;
-	// 	XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP);
-	// 	XapiandManager::manager->setup_node();
-	// }
+		// _reset_leader_election_timeout();  // resetted below!
+		// _set_master_node(remote_node);
+	}
+
+	if (state != State::FOLLOWER) {
+		return;
+	}
+
+	L_RAFT(">> APPEND_ENTRIES [%s]", remote_node.name());
+
+	auto success = false;
+	if (term == current_term) {
+		_reset_leader_election_timeout();
+		_set_master_node(remote_node);
+
+		// If commitIndex > lastApplied:
+		if (commit_index > last_applied) {
+			// increment lastApplied,
+			++last_applied;
+			// apply log[lastApplied] to state machine
+			_apply(last_applied);
+		}
+
+		// ...
+	}
+
+	send_message(Message::APPEND_ENTRIES_RESPONSE,
+		local_node_->serialise() +
+		serialise_length(term) +
+		serialise_length(success));
 }
 
 
@@ -364,25 +393,48 @@ void
 Raft::append_entries_response(const std::string& message)
 {
 	L_CALL("Raft::append_entries_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	ignore_unused(message);
 
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
 
-	// Node remote_node = Node::unserialise(&p, p_end);
-	// L_RAFT(">> APPEND_ENTRIES_RESPONSE [%s]", remote_node.name());
+	const char *p = message.data();
+	const char *p_end = p + message.size();
 
-	// auto local_node_ = local_node.load();
-	// if (local_node_->region != remote_node.region) {
-	// 	return;
-	// }
+	Node candidate_node = Node::unserialise(&p, p_end);
 
-	// if (state == Raft::State::LEADER) {
-	// 	L_DEBUG("Sending Data!");
-	// 	send_message(Message::LEADER, local_node_->serialise() +
-	// 		serialise_length(number_servers) +
-	// 		serialise_length(current_term));
-	// }
+	auto local_node_ = local_node.load();
+	if (local_node_->region != candidate_node.region) {
+		return;
+	}
+
+	// If RPC request or response contains term T > currentTerm:
+	uint64_t term = unserialise_length(&p, p_end);
+	if (term > current_term) {
+		// set currentTerm = T,
+		current_term = term;
+		// convert to follower
+		state = State::FOLLOWER;
+		voted_for.clear();
+
+		_reset_leader_election_timeout();
+		_set_master_node(candidate_node);
+	}
+
+	if (state != State::LEADER) {
+		return;
+	}
+
+	L_RAFT(">> APPEND_ENTRIES_RESPONSE [%s]", candidate_node.name());
+
+	if (term == current_term) {
+		bool success = unserialise_length(&p, p_end);
+		if (success) {
+			// ...
+		}
+	}
 }
 
 void
@@ -399,7 +451,34 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
 
-	_request_vote();
+	if (state == State::LEADER) {
+		// We're a leader, we shouldn't be here!
+		return;
+	}
+
+	// If election timeout elapses without receiving AppendEntries
+	// RPC from current leader or granting vote to candidate: convert to candidate
+	if (!voted_for.empty()) {
+		return;
+	}
+
+	++current_term;
+	state = State::CANDIDATE;
+	voted_for.clear();
+	votes_granted = 0;
+	votes_denied = 0;
+
+	_reset_leader_election_timeout();
+
+	auto local_node_ = local_node.load();
+	send_message(Message::REQUEST_VOTE,
+		local_node_->serialise() +
+		serialise_length(current_term) +
+		serialise_length(log.size()) +
+		serialise_length(log.empty() ? 0 : log.back().term));
+
+	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; num_servers: %zu; leader: %s }",
+		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, num_servers, master_node.load()->empty() ? "<none>" : master_node.load()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -410,49 +489,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
 	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	// ignore_unused(revents);
-
-	// if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-	// 	XapiandManager::manager->state != XapiandManager::State::SETUP &&
-	// 	XapiandManager::manager->state != XapiandManager::State::READY) {
-	// 	return;
-	// }
-
-	// L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
-
-	// auto local_node_ = local_node.load();
-	// send_message(Message::HEARTBEAT_LEADER, local_node_->serialise());
-
-	// L_EV_END("Raft::leader_heartbeat_cb:END");
-}
-
-
-void
-Raft::reset_leader_election_timeout_async_cb(ev::async&, int revents)
-{
-	L_CALL("Raft::reset_leader_election_timeout_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
 	ignore_unused(revents);
-
-	_reset_leader_election_timeout();
-}
-
-
-void
-Raft::start_leader_heartbeat_async_cb(ev::async&, int revents)
-{
-	L_CALL("Raft::start_leader_heartbeat_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	// ignore_unused(revents);
-
-	// _start_leader_heartbeat();
-}
-
-
-void
-Raft::_request_vote()
-{
-	L_CALL("Raft::_request_vote()");
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -460,72 +497,101 @@ Raft::_request_vote()
 		return;
 	}
 
-	if (state == State::LEADER) {
-		// Already leader, shouldn't even be here!
+	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
+
+	if (state != State::LEADER) {
 		return;
 	}
 
 	auto local_node_ = local_node.load();
-	auto master_node_ = master_node.load();
-	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; number_servers: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, number_servers, master_node_->empty() ? "<none>" : master_node_->name());
-
-	state = State::CANDIDATE;
-	_reset_leader_election_timeout();
-
-	++current_term;
-	votes = 0;
-	voted_for.clear();
-
-	// RequestVote RPC
-	// Arguments:
-	//   candidateId  - candidate requesting vote
-	//   term         - candidate's term
-	//   lastLogIndex - index of candidate’s last log entry
-	//   lastLogTerm  - term of candidate’s last log entry
-	send_message(Message::REQUEST_VOTE,
+	send_message(Message::APPEND_ENTRIES,
 		local_node_->serialise() +
 		serialise_length(current_term) +
 		serialise_length(log.size()) +
-		serialise_length(log.empty() ? 0 : log.back().term));
+		serialise_length(log.empty() ? 0 : log.back().term) +
+		serialise_string("") +
+		serialise_length(commit_index));
+
+	L_EV_END("Raft::leader_heartbeat_cb:END");
 }
 
 
 void
-Raft::_start_leader_heartbeat()
+Raft::_start_leader_heartbeat(double min, double max)
 {
 	L_CALL("Raft::_start_leader_heartbeat()");
 
-	// auto local_node_ = local_node.load();
-	// auto master_node_ = master_node.load();
-	// assert(*master_node_ == *local_node_);
+	leader_election_timeout.stop();
+	L_EV("Stop raft's leader election timeout event");
 
-	// leader_election_timeout.stop();
-	// L_EV("Stop raft's leader election timeout event");
-
-	// leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
-	// leader_heartbeat.again();
-	// L_EV("Restart raft's leader heartbeat event (%g)", leader_heartbeat.repeat);
-
-	// send_message(Message::LEADER,
-	// 	local_node_->serialise() +
-	// 	serialise_length(number_servers) +
-	// 	serialise_length(current_term));
+	leader_heartbeat.repeat = random_real(min, max);
+	leader_heartbeat.again();
+	L_EV("Restart raft's leader heartbeat event (%g)", leader_heartbeat.repeat);
 }
 
 
 void
-Raft::_reset_leader_election_timeout()
+Raft::_reset_leader_election_timeout(double min, double max)
 {
 	L_CALL("Raft::_reset_leader_election_timeout()");
 
 	auto local_node_ = local_node.load();
-	number_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
+	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
-	leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
+	leader_election_timeout.repeat = random_real(min, max);
 	leader_election_timeout.again();
-
 	L_EV("Restart raft's leader election timeout event (%g)", leader_election_timeout.repeat);
+
+	leader_heartbeat.stop();
+	L_EV("Stop raft's leader heartbeat event");
+}
+
+
+void
+Raft::_set_master_node(const Node& remote_node)
+{
+	L_CALL("Raft::_set_master_node(%s)", repr(remote_node.name()));
+
+	auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+
+	if (node) {
+		auto master_node_ = master_node.load();
+		if (*master_node_ != *node) {
+			if (master_node_->empty()) {
+				L_NOTICE("Raft: Leader for region %d is %s", node->region, node->name());
+			} else {
+				L_NOTICE("Raft: New leader for region %d is %s", node->region, node->name());
+			}
+			master_node = node;
+			auto joining = XapiandManager::State::JOINING;
+			if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+				XapiandManager::manager->setup_node();
+			}
+		}
+	}
+}
+
+
+void
+Raft::_apply(size_t idx)
+{
+	L_CALL("Raft::_apply()");
+	ignore_unused(idx);
+}
+
+
+void
+Raft::request_vote()
+{
+	L_CALL("Raft::request_vote()");
+
+	auto local_node_ = local_node.load();
+	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
+
+	state = State::FOLLOWER;
+	voted_for.clear();
+
+	_reset_leader_election_timeout(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
 }
 
 
@@ -534,14 +600,13 @@ Raft::start()
 {
 	L_CALL("Raft::start()");
 
-	number_servers = 1;
+	auto local_node_ = local_node.load();
+	num_servers = XapiandManager::manager->get_nodes_by_region(local_node_->region) + 1;
 
 	state = State::FOLLOWER;
-	leader_election_timeout.start(HEARTBEAT_LEADER_MAX);
-	L_EV("Start raft's leader election timeout event");
+	voted_for.clear();
 
-	leader_heartbeat.stop();
-	L_EV("Stop raft's leader heartbeat event");
+	_reset_leader_election_timeout();
 
 	io.start(sock, ev::READ);
 	L_EV("Start raft's server accept event (sock=%d)", sock);
