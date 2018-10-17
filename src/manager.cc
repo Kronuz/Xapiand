@@ -288,10 +288,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	std::lock_guard<std::mutex> lk(qmtx);
 
-	if (node_name_setup == node_name) {
-		return;
-	}
-
 	L_MANAGER("Setup Node!");
 
 	int new_cluster = 0;
@@ -389,8 +385,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				break;
 		}
 	}
-
-	node_name_setup = node_name;
 }
 
 

@@ -153,7 +153,6 @@ public:
 
 	std::atomic<State> state;
 	std::string node_name;
-	std::string node_name_setup;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
