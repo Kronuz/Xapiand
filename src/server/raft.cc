@@ -31,7 +31,7 @@
 #include "manager.h"
 
 
-using dispatch_func = void (Raft::*)(const std::string&);
+using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
 Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
@@ -168,6 +168,7 @@ Raft::raft_server(Message type, const std::string& message)
 	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
+		&Raft::append_entries,
 		&Raft::request_vote,
 		&Raft::request_vote_response,
 		&Raft::append_entries,
@@ -178,14 +179,15 @@ Raft::raft_server(Message type, const std::string& message)
 		errmsg += std::to_string(toUType(type));
 		THROW(InvalidArgumentError, errmsg);
 	}
-	(this->*(dispatch[toUType(type)]))(message);
+	(this->*(dispatch[toUType(type)]))(type, message);
 }
 
 
 void
-Raft::request_vote(const std::string& message)
+Raft::request_vote(Message type, const std::string& message)
 {
-	L_CALL("Raft::request_vote(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::request_vote(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -216,7 +218,7 @@ Raft::request_vote(const std::string& message)
 		_set_master_node(node);
 	}
 
-	L_RAFT(">> REQUEST_VOTE [%s]", node->name());
+	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	auto granted = false;
 	if (term == current_term) {
@@ -225,10 +227,11 @@ Raft::request_vote(const std::string& message)
 				voted_for = *node;
 				L_RAFT("I vote for %s (1)", voted_for.name());
 			} else if (state == State::FOLLOWER) {
-				size_t remote_last_log_index = unserialise_length(&p, p_end);
 				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
+				size_t remote_last_log_index = unserialise_length(&p, p_end);
 				// §5.4.1
-				auto last_log_term = log.empty() ? 0 : log.back().term;
+				auto last_log_index = log.size();
+				auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 				if (last_log_term < remote_last_log_term) {
 					// If the logs have last entries with different terms, then the
 					// log with the later term is more up-to-date.
@@ -255,9 +258,10 @@ Raft::request_vote(const std::string& message)
 
 
 void
-Raft::request_vote_response(const std::string& message)
+Raft::request_vote_response(Message type, const std::string& message)
 {
-	L_CALL("Raft::request_vote_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -292,7 +296,7 @@ Raft::request_vote_response(const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> REQUEST_VOTE_RESPONSE [%s]", node->name());
+	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
 		if (*node == *local_node_) {
@@ -311,12 +315,16 @@ Raft::request_vote_response(const std::string& message)
 					_start_leader_heartbeat();
 					_set_master_node(node);
 
-					send_message(Message::APPEND_ENTRIES,
+					auto entry_index = log.size();
+					auto prev_log_term = entry_index > 0 ? log[entry_index - 1].term : 0;
+
+					L_RAFT("<< HEARTBEAT {prev_log_term: %llu, entry_index: %zu, commit_index: %zu}",
+						prev_log_term, entry_index, 0, commit_index);
+					send_message(Message::HEARTBEAT,
 						local_node_->serialise() +
 						serialise_length(current_term) +
-						serialise_length(log.size()) +
-						serialise_length(log.empty() ? 0 : log.back().term) +
-						serialise_length(0) +
+						serialise_length(prev_log_term) +
+						serialise_length(entry_index) +
 						serialise_length(commit_index));
 				}
 			}
@@ -326,9 +334,9 @@ Raft::request_vote_response(const std::string& message)
 
 
 void
-Raft::append_entries(const std::string& message)
+Raft::append_entries(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -363,7 +371,7 @@ Raft::append_entries(const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> APPEND_ENTRIES [%s]", node->name());
+	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
@@ -379,30 +387,32 @@ Raft::append_entries(const std::string& message)
 		_reset_leader_election_timeout();
 		_set_master_node(node);
 
-		std::lock_guard lk(log_mtx);
-
 		// Reply false if log doesn’t contain an entry at
 		// prevLogIndex (entry_index - 1) whose term matches prevLogTerm
 		auto last_index = log.size();
-		if (entry_index == 0 || (entry_index <= last_index && log[entry_index - 1].term == prev_log_term)) {
-			uint64_t entry_term = unserialise_length(&p, p_end);
-			if (entry_term) {
+		L_DEBUG("   {entry_index: %zu, last_index: %zu, prev_log_term: %llu}", entry_index, last_index, prev_log_term);
+		for (size_t i = 0; i < last_index; ++i) {
+			L_DEBUG("   log[%zu] -> term: %llu, command: %s", i, log[i].term, log[i].command);
+		}
+		if (entry_index == 0 || (entry_index - 1 < last_index && log[entry_index - 1].term == prev_log_term)) {
+			if (type == Message::APPEND_ENTRIES) {
 				// If an existing entry conflicts with a new one (same
 				// index but different terms), delete the existing entry
 				// and all that follow it
 				// Append any new entries not already in the log
+				uint64_t entry_term = unserialise_length(&p, p_end);
 				auto entry_command = unserialise_string(&p, p_end);
 				if (entry_index > 0 && entry_index <= last_index) {
 					if (log[entry_index - 1].term != entry_term) {
-						log.resize(entry_index - 1);
-						log.push_back(RaftLogEntry{
+						log.resize(entry_index);
+						log.push_back({
 							entry_term,
 							std::string(entry_command),
 						});
 						last_index = log.size();
 					}
 				} else {
-					log.push_back(RaftLogEntry{
+					log.push_back({
 						entry_term,
 						std::string(entry_command),
 					});
@@ -422,19 +432,24 @@ Raft::append_entries(const std::string& message)
 				// increment lastApplied,
 				++last_applied;
 				// apply log[lastApplied] to state machine
-				_apply(last_applied);
+				const auto& command = log[last_applied - 1].command;
+				_apply(command);
 			}
 
+			auto next_index = last_index + 1;
+			auto match_index = entry_index;
+			L_RAFT("<< APPEND_ENTRIES_RESPONSE {term: %llu success: true, next_index: %zu, match_index: %zu}", term, next_index, match_index);
 			send_message(Message::APPEND_ENTRIES_RESPONSE,
 				local_node_->serialise() +
 				serialise_length(term) +
 				serialise_length(true) +
-				serialise_length(entry_index) +
-				serialise_length(last_index + 1));
+				serialise_length(next_index) +
+				serialise_length(match_index));
 			return;
 		}
 	}
 
+	L_RAFT("<< APPEND_ENTRIES_RESPONSE {term: %llu success: false}", term);
 	send_message(Message::APPEND_ENTRIES_RESPONSE,
 		local_node_->serialise() +
 		serialise_length(term) +
@@ -443,9 +458,10 @@ Raft::append_entries(const std::string& message)
 
 
 void
-Raft::append_entries_response(const std::string& message)
+Raft::append_entries_response(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries_response(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -480,27 +496,32 @@ Raft::append_entries_response(const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> APPEND_ENTRIES_RESPONSE [%s]", node->name());
+	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
 		bool success = unserialise_length(&p, p_end);
 		if (success) {
 			// If successful:
 			// update nextIndex and matchIndex for follower
-			size_t match_index = unserialise_length(&p, p_end);
 			size_t next_index = unserialise_length(&p, p_end);
-			match_indexes[remote_node.lower_name()] = match_index;
+			size_t match_index = unserialise_length(&p, p_end);
 			next_indexes[remote_node.lower_name()] = next_index;
-			L_RAFT("   success: {match_index: %zu, next_index: %zu}", match_index, next_index);
+			match_indexes[remote_node.lower_name()] = match_index;
+			L_RAFT("   {success: true, next_index: %zu, match_index: %zu}", next_index, match_index);
 		} else {
 			// If AppendEntries fails because of log inconsistency:
 			// decrement nextIndex and retry
 			auto it = next_indexes.find(remote_node.lower_name());
 			if (it == next_indexes.end()) {
-				std::lock_guard lk(log_mtx);
-				next_indexes[remote_node.lower_name()] = log.size() + 1;
-			} else if (it->second > 1) {
-				--it->second;
+				auto next_index = log.size() + 1;
+				next_indexes[remote_node.lower_name()] = next_index;
+				L_RAFT("   {success: false, next_index: %zu}", next_index);
+			} else {
+				auto& next_index = it->second;
+				if (next_index > 1) {
+					--next_index;
+				}
+				L_RAFT("   {success: false, next_index: %zu}", next_index);
 			}
 		}
 		_send_missing_entries();
@@ -541,20 +562,15 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	_reset_leader_election_timeout();
 
-	size_t last_log_index;
-	uint64_t last_log_term;
-	{
-		std::lock_guard lk(log_mtx);
-		last_log_index = log.size();
-		last_log_term = log.empty() ? 0 : log.back().term;
-	}
+	auto last_log_index = log.size();
+	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 
 	auto local_node_ = local_node.load();
 	send_message(Message::REQUEST_VOTE,
 		local_node_->serialise() +
 		serialise_length(current_term) +
-		serialise_length(last_log_index) +
-		serialise_length(last_log_term));
+		serialise_length(last_log_term) +
+		serialise_length(last_log_index));
 
 	L_RAFT("request_vote { state: %s, timeout: %f, current_term: %llu, active_nodes: %zu, leader: %s }",
 		StateNames(state), leader_election_timeout.repeat, current_term, XapiandManager::manager->active_nodes, master_node.load()->empty() ? "<none>" : master_node.load()->name());
@@ -582,21 +598,18 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		return;
 	}
 
-	size_t last_log_index;
-	uint64_t last_log_term;
-	{
-		std::lock_guard lk(log_mtx);
-		last_log_index = log.size();
-		last_log_term = log.empty() ? 0 : log.back().term;
-	}
-
 	auto local_node_ = local_node.load();
-	send_message(Message::APPEND_ENTRIES,
+
+	auto last_log_index = log.size();
+	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
+
+	L_RAFT("<< HEARTBEAT {last_log_term: %llu, last_log_index: %zu, commit_index: %zu}",
+		last_log_term, last_log_index, 0, commit_index);
+	send_message(Message::HEARTBEAT,
 		local_node_->serialise() +
 		serialise_length(current_term) +
-		serialise_length(last_log_index) +
 		serialise_length(last_log_term) +
-		serialise_length(0) +
+		serialise_length(last_log_index) +
 		serialise_length(commit_index));
 
 	L_EV_END("Raft::leader_heartbeat_cb:END");
@@ -653,13 +666,11 @@ Raft::_set_master_node(const std::shared_ptr<const Node>& node)
 
 
 void
-Raft::_apply(size_t index)
+Raft::_apply(const std::string& command)
 {
-	L_CALL("Raft::_apply()");
+	L_CALL("Raft::_apply(%s)", repr(command));
 
-	std::lock_guard lk(log_mtx);
-
-	L_RED("APPLY: %s", repr(log[index].command));
+	L_RED("APPLY: %s", repr(command));
 }
 
 
@@ -668,9 +679,12 @@ Raft::_send_missing_entries()
 {
 	L_CALL("Raft::_send_missing_entries()");
 
+	for (size_t i = 0; i < log.size(); ++i) {
+		L_DEBUG("log[%zu] -> term: %llu, command: %s", i, log[i].term, log[i].command);
+	}
+
 	// If last log index ≥ nextIndex for a follower:
 	// send AppendEntries RPC with log entries starting at nextIndex
-	std::unique_lock lk(log_mtx);
 	auto last_log_index = log.size();
 	if (last_log_index > 0) {
 		auto entry_index = last_log_index;
@@ -679,14 +693,14 @@ Raft::_send_missing_entries()
 				entry_index = next_index_pair.second;
 			}
 		}
-		L_RAFT("missing: {entry_index: %zu, last_log_index: %zu}", entry_index, last_log_index);
 		assert(entry_index > 0);
 		if (entry_index != last_log_index) {
 			auto local_node_ = local_node.load();
 			auto prev_log_term = entry_index > 0 ? log[entry_index - 1].term : 0;
 			auto entry_term = log[entry_index].term;
 			auto entry_command = log[entry_index].command;
-			lk.unlock();
+			L_RAFT("<< APPEND_ENTRIES {prev_log_term: %llu, entry_index: %zu, entry_term: %llu, entry_command: %s, commit_index: %zu}",
+				prev_log_term, entry_index, entry_term, repr(entry_command), commit_index);
 			send_message(Message::APPEND_ENTRIES,
 				local_node_->serialise() +
 				serialise_length(current_term) +
@@ -709,7 +723,6 @@ Raft::_commit_log()
 	// a majority of matchIndex[i] ≥ N,
 	// and log[N].term == currentTerm:
 	// set commitIndex = N
-	std::lock_guard lk(log_mtx);
 	for (size_t index = commit_index + 1; index < log.size(); ++index) {
 		if (log[index].term == current_term) {
 			size_t matches = 0;
@@ -726,21 +739,23 @@ Raft::_commit_log()
 }
 
 
-void
+bool
 Raft::add(const std::string& command)
 {
 	L_CALL("Raft::add(%s)", repr(command));
 
-	{
-		std::lock_guard lk(log_mtx);
-		log.push_back(RaftLogEntry{
+	if (state == State::LEADER) {
+		log.push_back({
 			current_term,
 			command,
 		});
+
+		_send_missing_entries();
+		_commit_log();
+		return true;
 	}
 
-	_send_missing_entries();
-	_commit_log();
+	return false;
 }
 
 

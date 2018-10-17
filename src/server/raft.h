@@ -58,6 +58,7 @@ struct RaftLogEntry {
 
 // The Raft consensus algorithm
 class Raft : public UDP, public Worker {
+public:
 	enum class State {
 		FOLLOWER,
 		CANDIDATE,
@@ -79,6 +80,7 @@ class Raft : public UDP, public Worker {
 	}
 
 	enum class Message {
+		HEARTBEAT,
 		REQUEST_VOTE,            // Invoked by candidates to gather votes
 		REQUEST_VOTE_RESPONSE,   // Gather votes
 		APPEND_ENTRIES,          // Node saying hello when it become leader
@@ -88,6 +90,7 @@ class Raft : public UDP, public Worker {
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
+			"HEARTBEAT",
 			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
 			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
 		};
@@ -100,6 +103,7 @@ class Raft : public UDP, public Worker {
 		return UNKNOWN;
 	}
 
+private:
 	ev::io io;
 
 	ev::timer leader_election_timeout;
@@ -112,7 +116,6 @@ class Raft : public UDP, public Worker {
 	uint64_t current_term;
 	Node voted_for;
 	std::vector<RaftLogEntry> log;
-	std::mutex log_mtx;
 
 	size_t commit_index;
 	size_t last_applied;
@@ -124,10 +127,10 @@ class Raft : public UDP, public Worker {
 	void io_accept_cb(ev::io& watcher, int revents);
 	void raft_server(Raft::Message type, const std::string& message);
 
-	void request_vote(const std::string& message);
-	void request_vote_response(const std::string& message);
-	void append_entries(const std::string& message);
-	void append_entries_response(const std::string& message);
+	void request_vote(Message type, const std::string& message);
+	void request_vote_response(Message type, const std::string& message);
+	void append_entries(Message type, const std::string& message);
+	void append_entries_response(Message type, const std::string& message);
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
@@ -136,7 +139,7 @@ class Raft : public UDP, public Worker {
 	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
 	void _set_master_node(const std::shared_ptr<const Node>& node);
 
-	void _apply(size_t index);
+	void _apply(const std::string& command);
 	void _send_missing_entries();
 	void _commit_log();
 
@@ -149,7 +152,7 @@ public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
-	void add(const std::string& entry);
+	bool add(const std::string& entry);
 	void request_vote();
 	void start();
 	void stop();
