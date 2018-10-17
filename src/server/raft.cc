@@ -179,6 +179,7 @@ Raft::raft_server(Message type, const std::string& message)
 		&Raft::request_vote_response,
 		&Raft::append_entries,
 		&Raft::append_entries_response,
+		&Raft::add,
 	};
 	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 		std::string errmsg("Unexpected message type ");
@@ -492,7 +493,6 @@ Raft::append_entries_response(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto local_node_ = local_node.load();
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		return;
@@ -549,6 +549,37 @@ Raft::append_entries_response(Message type, const std::string& message)
 		_commit_log();
 	}
 }
+
+
+void
+Raft::add(Message type, const std::string& message)
+{
+	L_CALL("Raft::add(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
+
+	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
+		XapiandManager::manager->state != XapiandManager::State::SETUP &&
+		XapiandManager::manager->state != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	if (!node) {
+		return;
+	}
+
+	if (state != State::LEADER) {
+		return;
+	}
+
+	auto command = std::string(unserialise_string(&p, p_end));
+	add(command);
+}
+
 
 void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
@@ -773,7 +804,7 @@ Raft::_commit_log()
 }
 
 
-bool
+void
 Raft::add(const std::string& command)
 {
 	L_CALL("Raft::add(%s)", repr(command));
@@ -786,10 +817,12 @@ Raft::add(const std::string& command)
 
 		_send_missing_entries();
 		_commit_log();
-		return true;
+	} else {
+		auto local_node_ = local_node.load();
+		send_message(Message::ADD,
+			local_node_->serialise() +
+			serialise_string(command));
 	}
-
-	return false;
 }
 
 

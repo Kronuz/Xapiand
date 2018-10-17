@@ -85,6 +85,7 @@ public:
 		REQUEST_VOTE_RESPONSE,   // Gather votes
 		APPEND_ENTRIES,          // Node saying hello when it become leader
 		APPEND_ENTRIES_RESPONSE, // Request information from leader
+		ADD,
 		MAX,
 	};
 
@@ -93,6 +94,7 @@ public:
 			"HEARTBEAT",
 			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
 			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
+			"ADD",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -131,6 +133,7 @@ private:
 	void request_vote_response(Message type, const std::string& message);
 	void append_entries(Message type, const std::string& message);
 	void append_entries_response(Message type, const std::string& message);
+	void add(Message type, const std::string& message);
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
@@ -156,7 +159,7 @@ public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
-	bool add(const std::string& entry);
+	void add(const std::string& command);
 	void request_vote();
 	void start();
 	void stop();
