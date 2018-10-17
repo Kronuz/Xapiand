@@ -347,15 +347,17 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		std::lock_guard<std::mutex> lk_n(nodes_mtx);
 		for (const auto& node_pair : nodes) {
 			const auto& node_ref = node_pair.second;
-			Endpoint remote_endpoint(".", node_ref.get());
-			// Replicate database from the other node
-			L_INFO("Syncing cluster data from %s...", node_ref->name());
+			if (*node_ref != *local_node_) {
+				Endpoint remote_endpoint(".", node_ref.get());
+				// Replicate database from the other node
+				L_INFO("Syncing cluster data from %s...", node_ref->name());
 
-			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
-			if (ret.get()) {
-				L_INFO("Cluster data being synchronized from %s...", node_ref->name());
-				new_cluster = 2;
-				break;
+				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+				if (ret.get()) {
+					L_INFO("Cluster data being synchronized from %s...", node_ref->name());
+					new_cluster = 2;
+					break;
+				}
 			}
 		}
 		state = State::READY;  // TODO: Set this state only when cluster replication finishes!
@@ -782,11 +784,6 @@ XapiandManager::get_node(std::string_view _node_name)
 
 	auto lower_node_name = string::lower(_node_name);
 
-	auto local_node_ = local_node.load();
-	if (lower_node_name == local_node_->lower_name()) {
-		return local_node_;
-	}
-
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	auto it = nodes.find(lower_node_name);
 	if (it != nodes.end()) {
@@ -803,15 +800,6 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 
 	auto now = epoch::now<>();
 
-	auto local_node_ = local_node.load();
-	if (node->lower_name() == local_node_->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->touched = now;
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-		return std::make_pair(local_node_, false);
-	}
-
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	auto it = nodes.find(node->lower_name());
 	if (it != nodes.end()) {
@@ -820,6 +808,10 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 			auto node_copy = std::make_unique<Node>(*node_ref);
 			node_copy->touched = now;
 			node_ref = std::shared_ptr<const Node>(node_copy.release());
+			auto local_node_ = local_node.load();
+			if (node->lower_name() == local_node_->lower_name()) {
+				local_node = node_ref;
+			}
 		}
 		return std::make_pair(node_ref, false);
 	}
@@ -828,19 +820,23 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	node_copy->touched = now;
 	auto final_node = std::shared_ptr<const Node>(node_copy.release());
 	nodes[node->lower_name()] = final_node;
+	auto local_node_ = local_node.load();
+	if (node->lower_name() == local_node_->lower_name()) {
+		local_node = final_node;
+	}
 
 	if (auto raft = weak_raft.lock()) {
 		raft->add(node->name());
 	}
 
-	size_t cnt = 1;
+	size_t cnt = 0;
 	for (const auto& node_pair : nodes) {
 		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
 			++cnt;
 		}
 	}
 	active_nodes = cnt;
-	total_nodes = nodes.size() + 1;
+	total_nodes = nodes.size();
 
 	return std::make_pair(final_node, true);
 }
@@ -852,16 +848,7 @@ XapiandManager::touch_node(std::string_view _node_name)
 	L_CALL("XapiandManager::touch_node(%s)", _node_name);
 
 	auto now = epoch::now<>();
-
-	auto local_node_ = local_node.load();
 	auto lower_node_name = string::lower(_node_name);
-	if (lower_node_name == local_node_->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->touched = now;
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-		return local_node_;
-	}
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	auto it = nodes.find(lower_node_name);
@@ -873,6 +860,10 @@ XapiandManager::touch_node(std::string_view _node_name)
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->touched = now;
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+		auto local_node_ = local_node.load();
+		if (lower_node_name == local_node_->lower_name()) {
+			local_node = node_ref;
+		}
 		return node_ref;
 	}
 
@@ -886,9 +877,9 @@ XapiandManager::drop_node(std::string_view _node_name)
 	L_CALL("XapiandManager::drop_node(%s)", _node_name);
 
 	auto now = epoch::now<>();
+	auto lower_node_name = string::lower(_node_name);
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	auto lower_node_name = string::lower(_node_name);
 	auto it = nodes.find(lower_node_name);
 	if (it != nodes.end()) {
 		auto& node_ref = it->second;
@@ -897,14 +888,14 @@ XapiandManager::drop_node(std::string_view _node_name)
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 	}
 
-	size_t cnt = 1;
+	size_t cnt = 0;
 	for (const auto& node_pair : nodes) {
 		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
 			++cnt;
 		}
 	}
 	active_nodes = cnt;
-	total_nodes = nodes.size() + 1;
+	total_nodes = nodes.size();
 }
 
 
