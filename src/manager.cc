@@ -72,6 +72,7 @@
 #include "http_parser.h"                      // for http_method
 #include "ignore_unused.h"                    // for ignore_unused
 #include "io_utils.h"                         // for close, open, read, write
+#include "length.h"                           // for serialise_length
 #include "log.h"                              // for L_CALL, L_DEBUG
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                          // for MsgPack, object::object
@@ -296,33 +297,47 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	auto master_node_ = master_node.load();
 	Endpoints cluster_endpoints(Endpoint(".", master_node_.get()));
 
-	static const std::string reserved_schema(RESERVED_SCHEMA);
-	DatabaseHandler db_handler(cluster_endpoints);
 	auto local_node_ = local_node.load();
-	try {
-		if (db_handler.get_metadata(reserved_schema).empty()) {
-			THROW(CheckoutError);
-		}
-		db_handler.get_document(local_node_->name());
-	} catch (const NotFoundError&) {
-		new_cluster = 1;
-		L_INFO("Cluster database doesn't exist. Generating database...");
+	if (auto raft = weak_raft.lock()) {
+		DatabaseHandler db_handler(cluster_endpoints);
 		try {
-			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
-			db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
-			db_handler.index(local_node_->name(), false, {
-				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
-				{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
-			}, true, msgpack_type);
-		} catch (const CheckoutError&) {
-			L_CRIT("Cannot generate cluster database");
-			sig_exit(-EX_CANTCREAT);
+			bool found = false;
+			auto mset = db_handler.get_all_mset();
+			const auto m_e = mset.end();
+			for (auto m = mset.begin(); m != m_e; ++m) {
+				auto did = *m;
+				auto document = db_handler.get_document(did);
+				auto obj = document.get_obj();
+				if (obj[ID_FIELD_NAME] == local_node_->lower_name()) {
+					found = true;
+				}
+				if (*local_node_ == *master_node_) {
+					raft->add(serialise_length(did) + serialise_string(obj["name"].as_str()));
+				}
+			}
+			if (!found) {
+				THROW(NotFoundError);
+			}
+		} catch (const NotFoundError&) {
+			new_cluster = 1;
+			L_INFO("Cluster database doesn't exist. Generating database...");
+			try {
+				db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
+				auto did = db_handler.index(local_node_->lower_name(), false, {
+					{ RESERVED_INDEX, "field_all" },
+					{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+					{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
+					{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
+				}, true, msgpack_type).first;
+				raft->add(serialise_length(did) + serialise_string(local_node_->name()));
+			} catch (const CheckoutError&) {
+				L_CRIT("Cannot generate cluster database");
+				sig_exit(-EX_CANTCREAT);
+			}
+		} catch (const Exception& e) {
+			L_CRIT("Exception: %s", e.get_message());
+			sig_exit(-EX_SOFTWARE);
 		}
-	} catch (const Exception& e) {
-		L_CRIT("Exception: %s", e.get_message());
-		sig_exit(-EX_SOFTWARE);
 	}
 
 	// Set node as ready!
@@ -818,10 +833,6 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	auto local_node_ = local_node.load();
 	if (node->lower_name() == local_node_->lower_name()) {
 		local_node = final_node;
-	}
-
-	if (auto raft = weak_raft.lock()) {
-		raft->add(node->name());
 	}
 
 	size_t cnt = 0;
