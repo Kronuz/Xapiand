@@ -527,6 +527,7 @@ void
 BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock.load(), watcher.fd);
+	ignore_unused(watcher);
 
 	int fd = sock;
 	if (fd == -1) {
@@ -575,6 +576,7 @@ void
 BaseClient::io_cb_read(ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock.load(), watcher.fd);
+	ignore_unused(watcher);
 
 	int fd = sock;
 	if (fd == -1) {
