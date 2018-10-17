@@ -442,15 +442,16 @@ Raft::append_entries(Message type, const std::string& message)
 			size_t leader_commit = unserialise_length(&p, p_end);
 			if (leader_commit > commit_index) {
 				commit_index = std::min(leader_commit, entry_index);
-			}
+				L_RAFT("committed {commit_index:%zu}", commit_index);
 
-			// If commitIndex > lastApplied:
-			while (commit_index > last_applied) {
-				// increment lastApplied,
-				++last_applied;
-				// apply log[lastApplied] to state machine
-				const auto& command = log[last_applied - 1].command;
-				_apply(command);
+				// If commitIndex > lastApplied:
+				while (commit_index > last_applied) {
+					// increment lastApplied,
+					++last_applied;
+					// apply log[lastApplied] to state machine
+					const auto& command = log[last_applied - 1].command;
+					_apply(command);
+				}
 			}
 
 			auto next_index = last_index + 1;
@@ -756,6 +757,15 @@ Raft::_commit_log()
 				commit_index = index;
 				L_RAFT("committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
 					matches, XapiandManager::manager->active_nodes, commit_index);
+
+				// If commitIndex > lastApplied:
+				while (commit_index > last_applied) {
+					// increment lastApplied,
+					++last_applied;
+					// apply log[lastApplied] to state machine
+					const auto& command = log[last_applied - 1].command;
+					_apply(command);
+				}
 			}
 		}
 	}
