@@ -345,15 +345,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (!opts.solo) {
 		// Get a node (any node)
 		std::lock_guard<std::mutex> lk_n(nodes_mtx);
-		for (const auto & it : nodes) {
-			auto& node = it.second;
-			Endpoint remote_endpoint(".", node.get());
+		for (const auto& node_pair : nodes) {
+			const auto& node_ref = node_pair.second;
+			Endpoint remote_endpoint(".", node_ref.get());
 			// Replicate database from the other node
-			L_INFO("Syncing cluster data from %s...", node->name());
+			L_INFO("Syncing cluster data from %s...", node_ref->name());
 
 			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 			if (ret.get()) {
-				L_INFO("Cluster data being synchronized from %s...", node->name());
+				L_INFO("Cluster data being synchronized from %s...", node_ref->name());
 				new_cluster = 2;
 				break;
 			}
