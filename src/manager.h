@@ -180,10 +180,11 @@ public:
 	void reset_state();
 	void join_cluster();
 
+	std::atomic_size_t total_nodes;
 	std::atomic_size_t active_nodes;
 
-	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
+	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> touch_node(std::string_view node_name);
 	void drop_node(std::string_view node_name);
 	void renew_master();

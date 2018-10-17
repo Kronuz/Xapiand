@@ -755,7 +755,7 @@ XapiandManager::reset_state()
 	if (state != State::RESET) {
 		if (auto discovery = weak_discovery.lock()) {
 			state = State::RESET;
-			std::lock_guard<std::mutex> lk(qmtx);
+			std::lock_guard<std::mutex> lk(nodes_mtx);
 			nodes.clear();
 			discovery->start();
 		}
@@ -772,43 +772,6 @@ XapiandManager::join_cluster()
 	if (auto raft = weak_raft.lock()) {
 		raft->start();
 	}
-}
-
-
-std::pair<std::shared_ptr<const Node>, bool>
-XapiandManager::put_node(std::shared_ptr<const Node> node)
-{
-	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()));
-
-	auto local_node_ = local_node.load();
-	if (node->lower_name() == local_node_->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->touched = epoch::now<>();
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-		return std::make_pair(local_node_, false);
-	}
-
-	std::lock_guard<std::mutex> lk(nodes_mtx);
-	auto it = nodes.find(node->lower_name());
-	if (it != nodes.end()) {
-		auto& node_ref = it->second;
-		if (*node == *node_ref) {
-			auto node_copy = std::make_unique<Node>(*node_ref);
-			node_copy->touched = epoch::now<>();
-			node_ref = std::shared_ptr<const Node>(node_copy.release());
-		}
-		return std::make_pair(node_ref, false);
-	}
-
-	auto node_copy = std::make_unique<Node>(*node);
-	node_copy->touched = epoch::now<>();
-	auto final_node = std::shared_ptr<const Node>(node_copy.release());
-	nodes[node->lower_name()] = final_node;
-
-	active_nodes = nodes.size();
-
-	return std::make_pair(final_node, true);
 }
 
 
@@ -833,15 +796,66 @@ XapiandManager::get_node(std::string_view _node_name)
 }
 
 
+std::pair<std::shared_ptr<const Node>, bool>
+XapiandManager::put_node(std::shared_ptr<const Node> node)
+{
+	L_CALL("XapiandManager::put_node(%s)", repr(node->to_string()));
+
+	auto now = epoch::now<>();
+
+	auto local_node_ = local_node.load();
+	if (node->lower_name() == local_node_->lower_name()) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->touched = now;
+		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
+		local_node = local_node_;
+		return std::make_pair(local_node_, false);
+	}
+
+	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto it = nodes.find(node->lower_name());
+	if (it != nodes.end()) {
+		auto& node_ref = it->second;
+		if (*node == *node_ref) {
+			auto node_copy = std::make_unique<Node>(*node_ref);
+			node_copy->touched = now;
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
+		}
+		return std::make_pair(node_ref, false);
+	}
+
+	auto node_copy = std::make_unique<Node>(*node);
+	node_copy->touched = now;
+	auto final_node = std::shared_ptr<const Node>(node_copy.release());
+	nodes[node->lower_name()] = final_node;
+
+	if (auto raft = weak_raft.lock()) {
+		raft->add(node->name());
+	}
+
+	size_t cnt = 1;
+	for (const auto& node_pair : nodes) {
+		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+			++cnt;
+		}
+	}
+	active_nodes = cnt;
+	total_nodes = nodes.size() + 1;
+
+	return std::make_pair(final_node, true);
+}
+
+
 std::shared_ptr<const Node>
 XapiandManager::touch_node(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::touch_node(%s)", _node_name);
 
+	auto now = epoch::now<>();
+
 	auto local_node_ = local_node.load();
 	auto lower_node_name = string::lower(_node_name);
 	if (lower_node_name == local_node_->lower_name()) {
-		auto now = epoch::now<>();
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = now;
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
@@ -853,9 +867,7 @@ XapiandManager::touch_node(std::string_view _node_name)
 	auto it = nodes.find(lower_node_name);
 	if (it != nodes.end()) {
 		auto& node_ref = it->second;
-		auto now = epoch::now<>();
 		if (node_ref->touched < now - NODE_LIFESPAN) {
-			nodes.erase(it);
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -873,9 +885,26 @@ XapiandManager::drop_node(std::string_view _node_name)
 {
 	L_CALL("XapiandManager::drop_node(%s)", _node_name);
 
+	auto now = epoch::now<>();
+
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	nodes.erase(string::lower(_node_name));
-	active_nodes = nodes.size();
+	auto lower_node_name = string::lower(_node_name);
+	auto it = nodes.find(lower_node_name);
+	if (it != nodes.end()) {
+		auto& node_ref = it->second;
+		auto node_ref_copy = std::make_unique<Node>(*node_ref);
+		node_ref_copy->touched = 0;
+		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+	}
+
+	size_t cnt = 1;
+	for (const auto& node_pair : nodes) {
+		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+			++cnt;
+		}
+	}
+	active_nodes = cnt;
+	total_nodes = nodes.size() + 1;
 }
 
 
