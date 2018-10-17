@@ -27,6 +27,11 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "base_udp.h"  // for UDP
 #include "endpoint.h"  // for Node
 #include "worker.h"    // for Worker
@@ -48,7 +53,7 @@ constexpr uint16_t XAPIAND_RAFT_PROTOCOL_VERSION = XAPIAND_RAFT_PROTOCOL_MAJOR_V
 
 struct RaftLogEntry {
 	uint64_t term;
-	std::string entry;
+	std::string command;
 };
 
 // The Raft consensus algorithm
@@ -107,12 +112,13 @@ class Raft : public UDP, public Worker {
 	uint64_t current_term;
 	Node voted_for;
 	std::vector<RaftLogEntry> log;
+	std::mutex log_mtx;
 
 	size_t commit_index;
 	size_t last_applied;
 
-	// nextIndex
-	// matchIndex
+	std::unordered_map<std::string, size_t> next_indexes;
+	std::unordered_map<std::string, size_t> match_indexes;
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
@@ -130,7 +136,9 @@ class Raft : public UDP, public Worker {
 	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
 	void _set_master_node(const std::shared_ptr<const Node>& node);
 
-	void _apply(size_t idx);
+	void _apply(size_t index);
+	void _send_missing_entries();
+	void _commit_log();
 
 	void destroyer();
 
@@ -141,6 +149,7 @@ public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
+	void add(const std::string& entry);
 	void request_vote();
 	void start();
 	void stop();
