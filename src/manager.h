@@ -195,8 +195,4 @@ public:
 	Endpoint resolve_index_endpoint(const std::string &path);
 
 	std::string server_metrics();
-
-	inline decltype(auto) get_lock() noexcept {
-		return std::unique_lock<std::mutex>(qmtx);
-	}
 };
