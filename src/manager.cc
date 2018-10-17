@@ -292,7 +292,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		return;
 	}
 
-	L_DISCOVERY("Setup Node!");
+	L_MANAGER("Setup Node!");
 
 	int new_cluster = 0;
 
@@ -705,7 +705,7 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	L_MANAGER("Workers:" STEEL_BLUE "%s", dump_tree());
+	L_MANAGER("Workers:" + STEEL_BLUE + "%s", dump_tree());
 
 	finish();
 
