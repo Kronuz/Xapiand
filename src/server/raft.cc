@@ -656,7 +656,7 @@ Raft::_start_leader_heartbeat(double min, double max)
 void
 Raft::_reset_leader_election_timeout(double min, double max)
 {
-	L_CALL("Raft::_reset_leader_election_timeout()");
+	L_CALL("Raft::_reset_leader_election_timeout(%g, %g)", min, max);
 
 	leader_election_timeout.repeat = random_real(min, max);
 	leader_election_timeout.again();
