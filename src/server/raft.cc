@@ -731,7 +731,7 @@ Raft::_commit_log()
 void
 Raft::add(const std::string& command)
 {
-	L_CALL("Raft::_add()");
+	L_CALL("Raft::add(%s)", repr(command));
 
 	{
 		std::lock_guard lk(log_mtx);
