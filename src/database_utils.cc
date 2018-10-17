@@ -46,21 +46,6 @@
 #include "utils.h"                                   // for random_int
 
 
-inline static long long save_mastery(std::string_view dir)
-{
-	char buf[20];
-	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
-	mastery_level |= static_cast<int>(random_int(0, 0xffff));
-	int fd = io::open((std::string(dir) + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd != -1) {
-		snprintf(buf, sizeof(buf), "%llx", mastery_level);
-		io::write(fd, buf, strlen(buf));
-		io::close(fd);
-	}
-	return mastery_level;
-}
-
-
 std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type)
 {
 	std::string result;
@@ -142,44 +127,6 @@ int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 	}
 
 	return -1;
-}
-
-
-long long read_mastery(std::string_view dir, bool force)
-{
-	auto sdir = std::string(dir);
-	L_DATABASE("+ READING MASTERY OF INDEX '%s'...", sdir);
-
-	struct stat info;
-	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
-		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
-		return -1;
-	}
-
-	long long mastery_level = -1;
-
-	int fd = io::open((sdir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd == -1) {
-		if (force) {
-			mastery_level = save_mastery(dir);
-		}
-	} else {
-		char buf[20];
-		mastery_level = 0;
-		size_t length = io::read(fd, buf, sizeof(buf) - 1);
-		if (length > 0) {
-			buf[length] = '\0';
-			mastery_level = strict_stoll(buf, nullptr, 16);
-		}
-		io::close(fd);
-		if (mastery_level == 0) {
-			mastery_level = save_mastery(dir);
-		}
-	}
-
-	L_DATABASE("- MASTERY OF INDEX '%s' is %llx", sdir, mastery_level);
-
-	return mastery_level;
 }
 
 

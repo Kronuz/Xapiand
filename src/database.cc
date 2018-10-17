@@ -915,7 +915,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  hash(endpoints.hash()),
-	  mastery_level(-1),
 	  modified(false),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
@@ -945,20 +944,6 @@ Database::~Database()
 }
 
 
-long long
-Database::read_mastery(const Endpoint& endpoint)
-{
-	L_CALL("Database::read_mastery(%s)", repr(endpoint.to_string()));
-
-	if (mastery_level != -1) { return mastery_level; }
-	if (!endpoint.is_local()) { return -1; }
-
-	mastery_level = ::read_mastery(endpoint.path, true);
-
-	return mastery_level;
-}
-
-
 void
 Database::reopen_writable()
 {
@@ -978,6 +963,7 @@ Database::reopen_writable()
 #endif /* XAPIAND_DATA_STORAGE */
 
 	auto endpoints_size = endpoints.size();
+	ignore_unused(endpoints_size);
 	assert(endpoints_size == 1);
 
 	db = std::make_unique<Xapian::WritableDatabase>();
@@ -1007,7 +993,6 @@ Database::reopen_writable()
 					} else throw;
 				}
 				local = true;
-				if (endpoints_size == 1) read_mastery(e);
 			}
 		} catch (const Xapian::DatabaseOpeningError&) { }
 #endif /* XAPIAN_LOCAL_DB_FALLBACK */
@@ -1030,7 +1015,6 @@ Database::reopen_writable()
 			} else { throw; }
 		}
 		local = true;
-		if (endpoints_size == 1) { read_mastery(e); }
 	}
 
 	db->add_database(wdb);
@@ -1090,6 +1074,7 @@ Database::reopen_readable()
 #endif /* XAPIAND_DATA_STORAGE */
 
 	auto endpoints_size = endpoints.size();
+	ignore_unused(endpoints_size);
 	assert(endpoints_size >= 1);
 
 	db = std::make_unique<Xapian::Database>();
@@ -1111,7 +1096,6 @@ Database::reopen_readable()
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					rdb = Xapian::Database(e.path, _flags);
 					local = true;
-					if (endpoints_size == 1) read_mastery(e);
 				}
 			} catch (const Xapian::DatabaseOpeningError& exc) { }
 #endif /* XAPIAN_LOCAL_DB_FALLBACK */
@@ -1126,7 +1110,6 @@ Database::reopen_readable()
 			try {
 				rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 				local = true;
-				if (endpoints_size == 1) { read_mastery(e); }
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				fail_db.insert(std::hash<std::string>{}(e.path));
 				if ((flags & DB_SPAWN) == 0)  {
@@ -1150,7 +1133,6 @@ Database::reopen_readable()
 
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					local = true;
-					if (endpoints_size == 1) { read_mastery(e); }
 				}
 			}
 		}
@@ -2574,10 +2556,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 			auto new_revision = database->get_revision();
 			if (database->reopen_revision != new_revision) {
 				database->reopen_revision = new_revision;
-				if (database->mastery_level != -1) {
-					endpoint.mastery_level = database->mastery_level;
-					updated_databases.push(endpoint);
-				}
+				updated_databases.push(endpoint);
 			}
 		}
 		queue = writable_databases.get(database->hash, false, database->endpoints);

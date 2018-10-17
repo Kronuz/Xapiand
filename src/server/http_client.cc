@@ -2261,7 +2261,7 @@ HttpClient::_endpoint_maker(Request& request)
 		if (!node_port) {
 			node_port = node->binary_port;
 		}
-		Endpoint endpoint(string::format("xapian://%s:%d/%s", node->host(), node_port, index_path), nullptr, -1, node_name);
+		Endpoint endpoint(string::format("xapian://%s:%d/%s", node->host(), node_port, index_path), nullptr, node_name);
 #else
 		Endpoint endpoint(index_path);
 #endif

@@ -294,7 +294,6 @@ public:
 	Endpoints endpoints;
 	int flags;
 	size_t hash;
-	long long mastery_level;
 	bool modified;
 	std::chrono::system_clock::time_point reopen_time;
 	uint32_t reopen_revision;
@@ -315,8 +314,6 @@ public:
 
 	Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_);
 	~Database();
-
-	long long read_mastery(const Endpoint& endpoint);
 
 	bool reopen();
 

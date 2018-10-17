@@ -295,34 +295,28 @@ Discovery::db_updated(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	long long remote_mastery_level = unserialise_length(&p, p_end);
-	auto index_path = std::string(unserialise_string(&p, p_end));
+	Node remote_node = Node::unserialise(&p, p_end);
 
-	DatabaseHandler db_handler(Endpoints(Endpoint(index_path)), DB_OPEN);
-	long long mastery_level = db_handler.get_mastery_level();
-	if (mastery_level == -1) {
+	auto local_node_ = local_node.load();
+	if (remote_node == *local_node_) {
+		// It's just me, do nothing!
 		return;
 	}
 
-	if (mastery_level > remote_mastery_level) {
-		L_DISCOVERY("Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path, mastery_level, remote_mastery_level);
+	auto index_path = std::string(unserialise_string(&p, p_end));
 
-		Node remote_node = Node::unserialise(&p, p_end);
-		auto node = XapiandManager::manager->touch_node(remote_node.name());
-		if (node) {
-			Endpoint local_endpoint(index_path);
-			Endpoint remote_endpoint(index_path, node.get());
-#ifdef XAPIAND_CLUSTERING
-			// Replicate database from the other node
-			L_INFO("Request syncing database [%s]...", node->name());
-			auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
-			if (ret.get()) {
-				L_INFO("Replication triggered!");
-			}
-#endif
+	L_DISCOVERY(">> DB_UPDATE [%s]: %s", remote_node.name(), repr(index_path));
+
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	if (node) {
+		Endpoint remote_endpoint(index_path, node.get());
+		Endpoint local_endpoint(index_path);
+		// Replicate database from the other node
+		L_INFO("Request syncing database [%s]...", node->name());
+		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+		if (ret.get()) {
+			L_INFO("Replication triggered!");
 		}
-	} else if (mastery_level != remote_mastery_level) {
-		L_DISCOVERY("Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!", index_path, mastery_level, remote_mastery_level);
 	}
 }
 
@@ -399,12 +393,9 @@ Discovery::signal_db_update(const Endpoint& endpoint)
 	L_CALL("Discovery::signal_db_update(%s)", repr(endpoint.to_string()));
 
 	auto local_node_ = local_node.load();
-	send_message(
-		Message::DB_UPDATED,
-		serialise_length(endpoint.mastery_level) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node_->serialise()   // The node where the index is at
-	);
+	send_message(Message::DB_UPDATED,
+		local_node_->serialise() +   // The node where the index is at
+		serialise_string(endpoint.path));  // The path of the index
 }
 
 

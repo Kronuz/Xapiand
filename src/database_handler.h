@@ -245,7 +245,6 @@ public:
 
 	bool commit(bool _wal=true);
 	bool reopen();
-	long long get_mastery_level();
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	const std::shared_ptr<std::pair<std::string, const Data>> get_document_change_seq(std::string_view term_id, bool validate_exists = false);

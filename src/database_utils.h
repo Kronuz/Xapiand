@@ -224,7 +224,6 @@ std::string normalize_uuid(std::string_view uuid);
 std::string normalize_uuid(const std::string& uuid);
 MsgPack normalize_uuid(const MsgPack& uuid);
 int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid);
-long long read_mastery(std::string_view dir, bool force);
 void json_load(rapidjson::Document& doc, std::string_view str);
 rapidjson::Document to_json(std::string_view str);
 std::string msgpack_to_html(const msgpack::object& o);

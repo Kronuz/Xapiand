@@ -206,10 +206,9 @@ public:
 	std::string user, password, host, path, search;
 
 	std::string node_name;
-	long long mastery_level;
 
 	Endpoint();
-	Endpoint(std::string_view uri, const Node* node_=nullptr, long long mastery_level_=-1, std::string_view node_name_="");
+	Endpoint(std::string_view uri, const Node* node_=nullptr, std::string_view node_name_="");
 
 	bool is_local() const {
 		auto local_node_ = local_node.load();
@@ -222,13 +221,6 @@ public:
 	std::string to_string() const;
 
 	bool operator<(const Endpoint& other) const;
-	bool operator==(const Node& other) const;
-
-	struct compare {
-		constexpr bool operator() (const Endpoint& a, const Endpoint& b) const noexcept {
-			return b.mastery_level > a.mastery_level;
-		}
-	};
 };
 
 

@@ -1732,20 +1732,6 @@ DatabaseHandler::reopen()
 }
 
 
-long long
-DatabaseHandler::get_mastery_level()
-{
-	L_CALL("DatabaseHandler::get_mastery_level()");
-
-	try {
-		lock_database<DatabaseHandler> lk_db(this);
-		return database->mastery_level;
-	} catch (const CheckoutError&) {
-		return ::read_mastery(endpoints[0].path, false);
-	}
-}
-
-
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 const std::shared_ptr<std::pair<std::string, const Data>>
 DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)

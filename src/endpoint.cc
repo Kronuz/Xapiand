@@ -223,13 +223,11 @@ std::string Endpoint::cwd("/");
 
 
 Endpoint::Endpoint()
-	: port(-1),
-	  mastery_level(-1) { }
+	: port(-1) { }
 
 
-Endpoint::Endpoint(std::string_view uri, const Node* node_, long long mastery_level_, std::string_view node_name_)
-	: node_name(node_name_),
-	  mastery_level(mastery_level_)
+Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view node_name_)
+	: node_name(node_name_)
 {
 	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
