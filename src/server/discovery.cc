@@ -29,7 +29,7 @@
 #include "manager.h"
 
 
-using dispatch_func = void (Discovery::*)(const std::string&);
+using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&);
 
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
@@ -163,20 +163,21 @@ Discovery::discovery_server(Message type, const std::string& message)
 		errmsg += std::to_string(toUType(type));
 		THROW(InvalidArgumentError, errmsg);
 	}
-	(this->*(dispatch[toUType(type)]))(message);
+	(this->*(dispatch[toUType(type)]))(type, message);
 }
 
 
 void
-Discovery::hello(const std::string& message)
+Discovery::hello(Message type, const std::string& message)
 {
-	L_CALL("Discovery::hello(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> HELLO [%s]", remote_node.name());
+	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node != *local_node_) {
@@ -195,9 +196,10 @@ Discovery::hello(const std::string& message)
 
 
 void
-Discovery::sneer(const std::string& message)
+Discovery::sneer(Message type, const std::string& message)
 {
-	L_CALL("Discovery::sneer(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::RESET &&
 		XapiandManager::manager->state != XapiandManager::State::WAITING &&
@@ -210,7 +212,7 @@ Discovery::sneer(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> SNEER [%s]", remote_node.name());
+	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
@@ -229,15 +231,16 @@ Discovery::sneer(const std::string& message)
 
 
 void
-Discovery::enter(const std::string& message)
+Discovery::enter(Message type, const std::string& message)
 {
-	L_CALL("Discovery::enter(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> ENTER [%s]", remote_node->name());
+	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node->name());
 
 	auto put = XapiandManager::manager->put_node(remote_node);
 	remote_node = put.first;
@@ -253,9 +256,10 @@ Discovery::enter(const std::string& message)
 
 
 void
-Discovery::bye(const std::string& message)
+Discovery::bye(Message type, const std::string& message)
 {
-	L_CALL("Discovery::bye(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -267,7 +271,7 @@ Discovery::bye(const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> BYE [%s]", remote_node.name());
+	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
 
 	XapiandManager::manager->drop_node(remote_node.name());
 	L_INFO("Node %s left the party!", remote_node.name());
@@ -282,9 +286,10 @@ Discovery::bye(const std::string& message)
 
 
 void
-Discovery::db_updated(const std::string& message)
+Discovery::db_updated(Message type, const std::string& message)
 {
-	L_CALL("Discovery::db_updated(<message>) {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::db_updated(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -305,7 +310,7 @@ Discovery::db_updated(const std::string& message)
 
 	auto index_path = std::string(unserialise_string(&p, p_end));
 
-	L_DISCOVERY(">> DB_UPDATE [%s]: %s", remote_node.name(), repr(index_path));
+	L_DISCOVERY(">> %s [%s]: %s", MessageNames(type), remote_node.name(), repr(index_path));
 
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (node) {

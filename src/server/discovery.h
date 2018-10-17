@@ -42,6 +42,7 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 
 // Discovery for nodes and databases
 class Discovery : public UDP, public Worker {
+public:
 	enum class Message {
 		HELLO,         // New node saying hello
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
@@ -64,6 +65,7 @@ class Discovery : public UDP, public Worker {
 		return UNKNOWN;
 	}
 
+private:
 	ev::io io;
 	ev::timer discovery;
 
@@ -71,11 +73,11 @@ class Discovery : public UDP, public Worker {
 	void io_accept_cb(ev::io& watcher, int revents);
 	void discovery_server(Discovery::Message type, const std::string& message);
 
-	void hello(const std::string& message);
-	void sneer(const std::string& message);
-	void enter(const std::string& message);
-	void bye(const std::string& message);
-	void db_updated(const std::string& message);
+	void hello(Message type, const std::string& message);
+	void sneer(Message type, const std::string& message);
+	void enter(Message type, const std::string& message);
+	void bye(Message type, const std::string& message);
+	void db_updated(Message type, const std::string& message);
 
 	void discovery_cb(ev::timer& watcher, int revents);
 

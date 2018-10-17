@@ -365,11 +365,9 @@ Raft::append_entries(const std::string& message)
 
 	L_RAFT(">> APPEND_ENTRIES [%s]", node->name());
 
-	size_t last_new_entry = 0;
-	size_t last_index = 0;
 	if (term == current_term) {
-		size_t prev_log_index = unserialise_length(&p, p_end);
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
+		size_t entry_index = unserialise_length(&p, p_end);
 
 		if (state == State::CANDIDATE) {
 			// If AppendEntries RPC received from new leader:
@@ -381,28 +379,22 @@ Raft::append_entries(const std::string& message)
 		_reset_leader_election_timeout();
 		_set_master_node(node);
 
-		last_new_entry = prev_log_index;
-
 		std::lock_guard lk(log_mtx);
 
 		// Reply false if log doesn’t contain an entry at
-		// prevLogIndex whose term matches prevLogTerm
-		last_index = log.size();
-		if (prev_log_index <= last_index &&
-			log[prev_log_index - 1].term == prev_log_term) {
-
+		// prevLogIndex (entry_index - 1) whose term matches prevLogTerm
+		auto last_index = log.size();
+		if (entry_index == 0 || (entry_index <= last_index && log[entry_index - 1].term == prev_log_term)) {
 			uint64_t entry_term = unserialise_length(&p, p_end);
 			if (entry_term) {
-				auto entry_command = unserialise_string(&p, p_end);
-				++last_new_entry;
-
 				// If an existing entry conflicts with a new one (same
 				// index but different terms), delete the existing entry
 				// and all that follow it
 				// Append any new entries not already in the log
-				if (prev_log_index < last_index) {
-					if (log[prev_log_index].term != entry_term) {
-						log.resize(prev_log_index);
+				auto entry_command = unserialise_string(&p, p_end);
+				if (entry_index > 0 && entry_index <= last_index) {
+					if (log[entry_index - 1].term != entry_term) {
+						log.resize(entry_index - 1);
 						log.push_back(RaftLogEntry{
 							entry_term,
 							std::string(entry_command),
@@ -422,7 +414,7 @@ Raft::append_entries(const std::string& message)
 			// set commitIndex = min(leaderCommit, index of last new entry)
 			size_t leader_commit = unserialise_length(&p, p_end);
 			if (leader_commit > commit_index) {
-				commit_index = std::min(leader_commit, last_new_entry);
+				commit_index = std::min(leader_commit, entry_index);
 			}
 
 			// If commitIndex > lastApplied:
@@ -437,8 +429,8 @@ Raft::append_entries(const std::string& message)
 				local_node_->serialise() +
 				serialise_length(term) +
 				serialise_length(true) +
-				serialise_length(last_new_entry) +
-				serialise_length(last_index));
+				serialise_length(entry_index) +
+				serialise_length(last_index + 1));
 			return;
 		}
 	}
@@ -499,18 +491,18 @@ Raft::append_entries_response(const std::string& message)
 			size_t next_index = unserialise_length(&p, p_end);
 			match_indexes[remote_node.lower_name()] = match_index;
 			next_indexes[remote_node.lower_name()] = next_index;
+			L_RAFT("   success: {match_index: %zu, next_index: %zu}", match_index, next_index);
 		} else {
 			// If AppendEntries fails because of log inconsistency:
 			// decrement nextIndex and retry
 			auto it = next_indexes.find(remote_node.lower_name());
 			if (it == next_indexes.end()) {
 				std::lock_guard lk(log_mtx);
-				next_indexes[remote_node.lower_name()] = log.size();
-			} else {
+				next_indexes[remote_node.lower_name()] = log.size() + 1;
+			} else if (it->second > 1) {
 				--it->second;
 			}
 		}
-		L_RAFT("   success: {match_index: %zu, next_index: %zu}", match_indexes[remote_node.lower_name()], next_indexes[remote_node.lower_name()]);
 		_send_missing_entries();
 		_commit_log();
 	}
@@ -681,25 +673,25 @@ Raft::_send_missing_entries()
 	std::unique_lock lk(log_mtx);
 	auto last_log_index = log.size();
 	if (last_log_index > 0) {
-		auto index = last_log_index;
-		for (auto& next_index : next_indexes) {
-			if (index > next_index.second) {
-				index = next_index.second;
+		auto entry_index = last_log_index;
+		for (const auto& next_index_pair : next_indexes) {
+			if (entry_index > next_index_pair.second) {
+				entry_index = next_index_pair.second;
 			}
 		}
-		assert(index > 0);
-		if (index != last_log_index) {
+		L_RAFT("missing: {entry_index: %zu, last_log_index: %zu}", entry_index, last_log_index);
+		assert(entry_index > 0);
+		if (entry_index != last_log_index) {
 			auto local_node_ = local_node.load();
-			auto prev_log_index = index - 1;
-			auto prev_log_term = log[index - 1].term;
-			auto entry_term = log[index].term;
-			auto entry_command = log[index].command;
+			auto prev_log_term = entry_index > 0 ? log[entry_index - 1].term : 0;
+			auto entry_term = log[entry_index].term;
+			auto entry_command = log[entry_index].command;
 			lk.unlock();
 			send_message(Message::APPEND_ENTRIES,
 				local_node_->serialise() +
 				serialise_length(current_term) +
-				serialise_length(prev_log_index) +
 				serialise_length(prev_log_term) +
+				serialise_length(entry_index) +
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
@@ -721,8 +713,8 @@ Raft::_commit_log()
 	for (size_t index = commit_index + 1; index < log.size(); ++index) {
 		if (log[index].term == current_term) {
 			size_t matches = 0;
-			for (auto& match_index : match_indexes) {
-				if (match_index.second > index) {
+			for (const auto& match_index_pair : match_indexes) {
+				if (match_index_pair.second > index) {
 					++matches;
 				}
 			}
