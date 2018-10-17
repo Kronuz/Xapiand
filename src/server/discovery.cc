@@ -329,13 +329,15 @@ Discovery::db_updated(Message type, const std::string& message)
 void
 Discovery::discovery_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	auto state = XapiandManager::manager->state.load();
+
+	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
 
 	ignore_unused(revents);
 
 	L_EV_BEGIN("Discovery::discovery_cb:BEGIN");
 
-	switch (XapiandManager::manager->state.load()) {
+	switch (state) {
 		case XapiandManager::State::RESET: {
 			auto local_node_ = local_node.load();
 			auto node_copy = std::make_unique<Node>(*local_node_);
@@ -388,6 +390,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			break;
 		}
 	}
+
+	L_DISCOVERY("discovery: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	L_EV_END("Discovery::discovery_cb:END");
 }
