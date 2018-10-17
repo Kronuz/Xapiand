@@ -71,21 +71,11 @@ inline std::string::size_type common_prefix_length(const std::string &a, const s
 
 RemoteProtocol::RemoteProtocol(BinaryClient& client_)
 	: client(client_),
-	  flags(0),
-	  database_locks(0)
-	{
-		L_OBJ("CREATED REMOTE PROTOCOL!");
-
-		int _flags = client.writable ? DB_WRITABLE : DB_OPEN;
-		if ((client.flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
-			_flags |= DB_SPAWN;
-		} else if ((client.flags & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
-			_flags |= DB_SPAWN;
-		} else if ((client.flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
-			_flags |= DB_SPAWN;
-		}
-		flags = _flags;
-	}
+	  database_locks(0),
+	  flags(DB_OPEN)
+{
+	L_OBJ("CREATED REMOTE PROTOCOL!");
+}
 
 
 RemoteProtocol::~RemoteProtocol()
@@ -1017,11 +1007,17 @@ RemoteProtocol::select_db(const std::vector<std::string> &dbpaths_, bool writabl
 
 	checkin_database();
 
-	client.writable = writable_;
-	client.flags = flags_;
+	flags = writable_ ? DB_WRITABLE : DB_OPEN;
+	if ((flags_ & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
+		flags |= DB_SPAWN;
+	} else if ((flags_ & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
+		flags |= DB_SPAWN;
+	} else if ((flags_ & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
+		flags |= DB_SPAWN;
+	}
 
 	if (!dbpaths_.empty()) {
-		if (client.writable) {
+		if (writable_) {
 			assert(dbpaths_.size() == 1); // Expecting exactly one database.
 			endpoints.add(Endpoint(dbpaths_[0]));
 		} else {

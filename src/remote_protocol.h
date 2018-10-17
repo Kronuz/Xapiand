@@ -158,8 +158,8 @@ class RemoteProtocol {
 protected:
 	Endpoints endpoints;
 	std::shared_ptr<Database> database;
-	int flags;
 	int database_locks;
+	int flags;
 
 public:
 

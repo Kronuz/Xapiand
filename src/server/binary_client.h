@@ -57,10 +57,6 @@ class BinaryClient : public BaseClient {
 	char file_path[PATH_MAX];
 	int file_descriptor;
 
-	bool writable;
-	int flags;
-	std::shared_ptr<Database> database;
-
 	// Buffers that are pending write
 	std::string buffer;
 	queue::Queue<Buffer> messages_queue;

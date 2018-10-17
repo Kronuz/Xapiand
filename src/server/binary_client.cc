@@ -60,8 +60,6 @@ std::string serialise_error(const Xapian::Error &exc) {
 BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
-	  writable(false),
-	  flags(0),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -123,8 +121,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	repl_endpoints.add(src_endpoint);
 	remote_protocol.endpoints.add(dst_endpoint); /* Set endpoints in to remote_protocol */
-
-	writable = true;
 
 	try {
 		XapiandManager::manager->database_pool.checkout(remote_protocol.database, remote_protocol.endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
