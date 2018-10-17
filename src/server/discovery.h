@@ -86,6 +86,10 @@ private:
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
+	// No copy constructor
+	Discovery(const Discovery&) = delete;
+	Discovery& operator=(const Discovery&) = delete;
+
 public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();

@@ -148,6 +148,10 @@ private:
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
+	// No copy constructor
+	Raft(const Raft&) = delete;
+	Raft& operator=(const Raft&) = delete;
+
 public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
