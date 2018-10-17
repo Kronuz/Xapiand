@@ -316,15 +316,16 @@ Raft::request_vote_response(Message type, const std::string& message)
 					_set_master_node(node);
 
 					auto entry_index = log.size();
-					auto prev_log_term = entry_index > 0 ? log[entry_index - 1].term : 0;
+					auto prev_log_index = entry_index - 1;
+					auto prev_log_term = entry_index > 0 ? log[prev_log_index].term : 0;
 
-					L_RAFT("<< HEARTBEAT {prev_log_term: %llu, entry_index: %zu, commit_index: %zu}",
-						prev_log_term, entry_index, 0, commit_index);
+					L_RAFT("<< HEARTBEAT {prev_log_term: %llu, prev_log_index: %zu, commit_index: %zu}",
+						prev_log_term, prev_log_index, 0, commit_index);
 					send_message(Message::HEARTBEAT,
 						local_node_->serialise() +
 						serialise_length(current_term) +
 						serialise_length(prev_log_term) +
-						serialise_length(entry_index) +
+						serialise_length(prev_log_index) +
 						serialise_length(commit_index));
 				}
 			}
@@ -375,7 +376,7 @@ Raft::append_entries(Message type, const std::string& message)
 
 	if (term == current_term) {
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
-		size_t entry_index = unserialise_length(&p, p_end);
+		size_t prev_log_index = unserialise_length(&p, p_end);
 
 		if (state == State::CANDIDATE) {
 			// If AppendEntries RPC received from new leader:
@@ -388,13 +389,14 @@ Raft::append_entries(Message type, const std::string& message)
 		_set_master_node(node);
 
 		// Reply false if log doesn’t contain an entry at
-		// prevLogIndex (entry_index - 1) whose term matches prevLogTerm
+		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = log.size();
-		L_DEBUG("   {entry_index: %zu, last_index: %zu, prev_log_term: %llu}", entry_index, last_index, prev_log_term);
+		L_DEBUG("   {prev_log_index: %zu, last_index: %zu, prev_log_term: %llu}", prev_log_index, last_index, prev_log_term);
 		for (size_t i = 0; i < last_index; ++i) {
 			L_DEBUG("   log[%zu] -> term: %llu, command: %s", i, log[i].term, log[i].command);
 		}
-		if (entry_index == 0 || (entry_index - 1 < last_index && log[entry_index - 1].term == prev_log_term)) {
+		auto entry_index = prev_log_index + 1;
+		if (entry_index == 0 || (prev_log_index < last_index && log[prev_log_index].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
 				// If an existing entry conflicts with a new one (same
 				// index but different terms), delete the existing entry
@@ -403,7 +405,7 @@ Raft::append_entries(Message type, const std::string& message)
 				uint64_t entry_term = unserialise_length(&p, p_end);
 				auto entry_command = unserialise_string(&p, p_end);
 				if (entry_index > 0 && entry_index <= last_index) {
-					if (log[entry_index - 1].term != entry_term) {
+					if (log[prev_log_index].term != entry_term) {
 						log.resize(entry_index);
 						log.push_back({
 							entry_term,
@@ -687,25 +689,26 @@ Raft::_send_missing_entries()
 	// send AppendEntries RPC with log entries starting at nextIndex
 	auto last_log_index = log.size();
 	if (last_log_index > 0) {
-		auto entry_index = last_log_index;
+		auto entry_index = last_log_index + 1;
 		for (const auto& next_index_pair : next_indexes) {
 			if (entry_index > next_index_pair.second) {
 				entry_index = next_index_pair.second;
 			}
 		}
 		assert(entry_index > 0);
-		if (entry_index != last_log_index) {
+		if (entry_index <= last_log_index) {
 			auto local_node_ = local_node.load();
-			auto prev_log_term = entry_index > 0 ? log[entry_index - 1].term : 0;
+			auto prev_log_index = entry_index - 1;
+			auto prev_log_term = entry_index > 0 ? log[prev_log_index].term : 0;
 			auto entry_term = log[entry_index].term;
 			auto entry_command = log[entry_index].command;
-			L_RAFT("<< APPEND_ENTRIES {prev_log_term: %llu, entry_index: %zu, entry_term: %llu, entry_command: %s, commit_index: %zu}",
-				prev_log_term, entry_index, entry_term, repr(entry_command), commit_index);
+			L_RAFT("<< APPEND_ENTRIES {prev_log_term: %llu, prev_log_index: %zu, entry_term: %llu, entry_command: %s, commit_index: %zu}",
+				prev_log_term, prev_log_index, entry_term, repr(entry_command), commit_index);
 			send_message(Message::APPEND_ENTRIES,
 				local_node_->serialise() +
 				serialise_length(current_term) +
 				serialise_length(prev_log_term) +
-				serialise_length(entry_index) +
+				serialise_length(prev_log_index) +
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
