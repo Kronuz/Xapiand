@@ -185,15 +185,12 @@ normalizer(const void *p, size_t size)
 std::string
 Node::serialise() const
 {
-	std::string node_str;
-	if (!_name.empty()) {
-		node_str.append(serialise_length(_addr.sin_addr.s_addr));
-		node_str.append(serialise_length(http_port));
-		node_str.append(serialise_length(binary_port));
-		node_str.append(serialise_length(region));
-		node_str.append(serialise_string(_name));
-	}
-	return node_str;
+	return _name.empty()
+		? ""
+		: serialise_length(_addr.sin_addr.s_addr) +
+			serialise_length(http_port) +
+			serialise_length(binary_port) +
+			serialise_string(_name);
 }
 
 
@@ -204,10 +201,9 @@ Node::unserialise(const char **p, const char *end)
 
 	Node node;
 
-	node._addr.sin_addr.s_addr = static_cast<int>(unserialise_length(&ptr, end, false));
-	node.http_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	node.binary_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	node.region = static_cast<int>(unserialise_length(&ptr, end, false));
+	node._addr.sin_addr.s_addr = unserialise_length(&ptr, end);
+	node.http_port = unserialise_length(&ptr, end);
+	node.binary_port = unserialise_length(&ptr, end);
 
 	node._name = unserialise_string(&ptr, end);
 	if (node._name.empty()) {

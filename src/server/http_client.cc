@@ -1436,7 +1436,6 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 			obj["host"] = node->host();
 			obj["http_port"] = node->http_port;
 			obj["binary_port"] = node->binary_port;
-			// obj["region"] = node->region;
 			obj["active"] = true;
 		} else {
 			obj["active"] = false;
@@ -2255,7 +2254,7 @@ HttpClient::_endpoint_maker(Request& request)
 		node_name = index.host.empty() ? node_name : index.host;
 
 		// Convert node to endpoint:
-		auto node = XapiandManager::manager->touch_node(node_name, UNKNOWN_REGION);
+		auto node = XapiandManager::manager->touch_node(node_name);
 		if (!node) {
 			THROW(Error, "Node %s not found", node_name);
 		}

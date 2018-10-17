@@ -52,11 +52,9 @@ public:
 	int http_port;
 	int binary_port;
 
-	int32_t regions;
-	int32_t region;
 	time_t touched;
 
-	Node() : http_port(0), binary_port(0), regions(1), region(0), touched(0) {
+	Node() : http_port(0), binary_port(0), touched(0) {
 		memset(&_addr, 0, sizeof(_addr));
 	}
 
@@ -68,8 +66,6 @@ public:
 		  _addr(std::move(other._addr)),
 		  http_port(std::move(other.http_port)),
 		  binary_port(std::move(other.binary_port)),
-		  regions(std::move(other.regions)),
-		  region(std::move(other.region)),
 		  touched(std::move(other.touched)) { }
 
 	// Copy Constructor
@@ -80,8 +76,6 @@ public:
 		  _addr(other._addr),
 		  http_port(other.http_port),
 		  binary_port(other.binary_port),
-		  regions(other.regions),
-		  region(other.region),
 		  touched(other.touched) { }
 
 	// Move assignment
@@ -92,8 +86,6 @@ public:
 		_addr = std::move(other._addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		regions = std::move(other.regions);
-		region = std::move(other.region);
 		touched = std::move(other.touched);
 		return *this;
 	}
@@ -106,8 +98,6 @@ public:
 		_addr = other._addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		regions = other.regions;
-		region = other.region;
 		touched = other.touched;
 		return *this;
 	}
@@ -116,8 +106,6 @@ public:
 		_host.clear();
 		_name.clear();
 		_lower_name.clear();
-		regions = 1;
-		region = 0;
 		memset(&_addr, 0, sizeof(_addr));
 		http_port = 0;
 		binary_port = 0;

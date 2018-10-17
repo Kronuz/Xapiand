@@ -198,10 +198,7 @@ Raft::request_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
-		return;
-	}
-	auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		return;
 	}
@@ -273,10 +270,7 @@ Raft::request_vote_response(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
-		return;
-	}
-	auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		return;
 	}
@@ -347,10 +341,7 @@ Raft::append_entries(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
-		return;
-	}
-	auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		return;
 	}
@@ -473,10 +464,7 @@ Raft::append_entries_response(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto local_node_ = local_node.load();
-	if (local_node_->region != remote_node.region) {
-		return;
-	}
-	auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		return;
 	}
@@ -574,8 +562,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		serialise_length(last_log_index) +
 		serialise_length(last_log_term));
 
-	L_RAFT("request_vote { region: %d; state: %s; timeout: %f; current_term: %llu; active_nodes: %zu; leader: %s }",
-		local_node_->region, StateNames(state), leader_election_timeout.repeat, current_term, XapiandManager::manager->active_nodes, master_node.load()->empty() ? "<none>" : master_node.load()->name());
+	L_RAFT("request_vote { state: %s, timeout: %f, current_term: %llu, active_nodes: %zu, leader: %s }",
+		StateNames(state), leader_election_timeout.repeat, current_term, XapiandManager::manager->active_nodes, master_node.load()->empty() ? "<none>" : master_node.load()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -657,9 +645,9 @@ Raft::_set_master_node(const std::shared_ptr<const Node>& node)
 	auto master_node_ = master_node.load();
 	if (*master_node_ != *node) {
 		if (master_node_->empty()) {
-			L_NOTICE("Raft: Leader for region %d is %s", node->region, node->name());
+			L_NOTICE("Raft: Leader is %s", node->name());
 		} else {
-			L_NOTICE("Raft: New leader for region %d is %s", node->region, node->name());
+			L_NOTICE("Raft: New leader is %s", node->name());
 		}
 		master_node = node;
 		auto joining = XapiandManager::State::JOINING;

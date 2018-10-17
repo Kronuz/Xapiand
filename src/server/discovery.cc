@@ -180,7 +180,7 @@ Discovery::hello(const std::string& message)
 
 	auto local_node_ = local_node.load();
 	if (remote_node != *local_node_) {
-		auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+		auto node = XapiandManager::manager->touch_node(remote_node.name());
 		if (node) {
 			if (remote_node == *node) {
 				send_message(Message::ENTER, local_node_->serialise());
@@ -308,7 +308,7 @@ Discovery::db_updated(const std::string& message)
 		L_DISCOVERY("Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path, mastery_level, remote_mastery_level);
 
 		Node remote_node = Node::unserialise(&p, p_end);
-		auto node = XapiandManager::manager->touch_node(remote_node.name(), remote_node.region);
+		auto node = XapiandManager::manager->touch_node(remote_node.name());
 		if (node) {
 			Endpoint local_endpoint(index_path);
 			Endpoint remote_endpoint(index_path, node.get());

@@ -41,9 +41,6 @@
 #include "serialise.h"
 
 
-#define UNKNOWN_REGION -1
-
-
 class Http;
 #ifdef XAPIAND_CLUSTERING
 class Binary;
@@ -184,11 +181,10 @@ public:
 	void join_cluster();
 
 	std::atomic_size_t active_nodes;
-	void _update_active_nodes(int32_t region);
 
 	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
 	std::shared_ptr<const Node> get_node(std::string_view node_name);
-	std::shared_ptr<const Node> touch_node(std::string_view node_name, int32_t region);
+	std::shared_ptr<const Node> touch_node(std::string_view node_name);
 	void drop_node(std::string_view node_name);
 	void renew_master();
 

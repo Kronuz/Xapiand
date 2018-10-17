@@ -775,21 +775,6 @@ XapiandManager::join_cluster()
 }
 
 
-void
-XapiandManager::_update_active_nodes(int32_t region)
-{
-	L_CALL("XapiandManager::_update_active_nodes(%x)", region);
-
-	size_t cnt = 1;
-	for (const auto& node : nodes) {
-		if (node.second->region == region) {
-			++cnt;
-		}
-	}
-	active_nodes = cnt;
-}
-
-
 std::pair<std::shared_ptr<const Node>, bool>
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
@@ -821,22 +806,7 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 	auto final_node = std::shared_ptr<const Node>(node_copy.release());
 	nodes[node->lower_name()] = final_node;
 
-	int32_t regions = 1;  // hardcode only one region (for now)
-	// int32_t regions = sqrt(total_nodes);
-	if (regions != local_node_->regions) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->regions = regions;
-		int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
-		if (local_node_copy->region != region) {
-			local_node_copy->region = region;
-			reset_state();
-		}
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
-	}
-
-	_update_active_nodes(local_node_->region);
+	active_nodes = nodes.size();
 
 	return std::make_pair(final_node, true);
 }
@@ -864,9 +834,9 @@ XapiandManager::get_node(std::string_view _node_name)
 
 
 std::shared_ptr<const Node>
-XapiandManager::touch_node(std::string_view _node_name, int32_t region)
+XapiandManager::touch_node(std::string_view _node_name)
 {
-	L_CALL("XapiandManager::touch_node(%s, %x)", _node_name, region);
+	L_CALL("XapiandManager::touch_node(%s)", _node_name);
 
 	auto local_node_ = local_node.load();
 	auto lower_node_name = string::lower(_node_name);
@@ -874,9 +844,6 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 		auto now = epoch::now<>();
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = now;
-		if (region != UNKNOWN_REGION) {
-			local_node_copy->region = region;
-		}
 		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
 		local_node = local_node_;
 		return local_node_;
@@ -893,9 +860,6 @@ XapiandManager::touch_node(std::string_view _node_name, int32_t region)
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->touched = now;
-		if (region != UNKNOWN_REGION) {
-			node_ref_copy->region = region;
-		}
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		return node_ref;
 	}
@@ -911,24 +875,7 @@ XapiandManager::drop_node(std::string_view _node_name)
 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(string::lower(_node_name));
-
-	int32_t regions = 1;  // hardcode only one region (for now)
-	// int32_t regions = sqrt(total_nodes);
-	auto local_node_ = local_node.load();
-	if (regions != local_node_->regions) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->regions = regions;
-		int32_t region = jump_consistent_hash(local_node_copy->name(), local_node_copy->regions);
-		if (local_node_copy->region != region) {
-			local_node_copy->region = region;
-			reset_state();
-		}
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		local_node = local_node_;
-		L_MANAGER("Regions: %d Region: %d", local_node_->regions, local_node_->region);
-	}
-
-	_update_active_nodes(local_node_->region);
+	active_nodes = nodes.size();
 }
 
 
