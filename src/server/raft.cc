@@ -674,6 +674,8 @@ Raft::_apply(size_t index)
 void
 Raft::_send_missing_entries()
 {
+	L_CALL("Raft::_send_missing_entries()");
+
 	// If last log index ≥ nextIndex for a follower:
 	// send AppendEntries RPC with log entries starting at nextIndex
 	std::unique_lock lk(log_mtx);
@@ -709,6 +711,8 @@ Raft::_send_missing_entries()
 void
 Raft::_commit_log()
 {
+	L_CALL("Raft::_commit_log()");
+
 	// If there exists an N such that N > commitIndex,
 	// a majority of matchIndex[i] ≥ N,
 	// and log[N].term == currentTerm:
