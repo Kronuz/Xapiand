@@ -340,6 +340,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		// Get a node (any node)
+		Endpoint local_endpoint(".");
 		std::lock_guard<std::mutex> lk_n(nodes_mtx);
 		for (const auto& node_pair : nodes) {
 			const auto& node_ref = node_pair.second;
@@ -348,7 +349,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				// Replicate database from the other node
 				L_INFO("Syncing cluster data from %s...", node_ref->name());
 
-				auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+				auto ret = trigger_replication(remote_endpoint, local_endpoint);
 				if (ret.get()) {
 					L_INFO("Cluster data being synchronized from %s...", node_ref->name());
 					new_cluster = 2;
