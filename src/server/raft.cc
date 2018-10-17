@@ -34,6 +34,11 @@
 using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
+static inline bool has_consensus(size_t votes) {
+	return votes >= (1 + XapiandManager::manager->active_nodes) / 2;
+}
+
+
 Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: UDP(port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  Worker(parent_, ev_loop_, ev_flags_),
@@ -311,7 +316,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 				++votes_denied;
 			}
 			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", XapiandManager::manager->active_nodes, votes_granted, votes_denied);
-			if (votes_granted + votes_denied > XapiandManager::manager->active_nodes / 2) {
+			if (has_consensus(votes_granted + votes_denied)) {
 				if (votes_granted > votes_denied) {
 					state = State::LEADER;
 					voted_for.clear();
@@ -747,7 +752,7 @@ Raft::_commit_log()
 					++matches;
 				}
 			}
-			if (matches > XapiandManager::manager->active_nodes / 2) {
+			if (has_consensus(matches)) {
 				commit_index = index;
 				L_RAFT("committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
 					matches, XapiandManager::manager->active_nodes, commit_index);
