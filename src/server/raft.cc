@@ -367,7 +367,6 @@ Raft::append_entries(const std::string& message)
 
 	size_t last_new_entry = 0;
 	size_t last_index = 0;
-	auto success = false;
 	if (term == current_term) {
 		size_t prev_log_index = unserialise_length(&p, p_end);
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
@@ -391,7 +390,6 @@ Raft::append_entries(const std::string& message)
 		last_index = log.size();
 		if (prev_log_index <= last_index &&
 			log[prev_log_index - 1].term == prev_log_term) {
-			success = true;
 
 			uint64_t entry_term = unserialise_length(&p, p_end);
 			if (entry_term) {
@@ -434,17 +432,21 @@ Raft::append_entries(const std::string& message)
 				// apply log[lastApplied] to state machine
 				_apply(last_applied);
 			}
-		}
 
-		// ...
+			send_message(Message::APPEND_ENTRIES_RESPONSE,
+				local_node_->serialise() +
+				serialise_length(term) +
+				serialise_length(true) +
+				serialise_length(last_new_entry) +
+				serialise_length(last_index));
+			return;
+		}
 	}
 
 	send_message(Message::APPEND_ENTRIES_RESPONSE,
 		local_node_->serialise() +
 		serialise_length(term) +
-		serialise_length(success) +
-		serialise_length(last_new_entry) +
-		serialise_length(last_index));
+		serialise_length(false));
 }
 
 
