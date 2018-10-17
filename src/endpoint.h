@@ -24,19 +24,17 @@
 
 #include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
 
-#include <algorithm>            // for move
-#include <atomic>
 #include <cstddef>              // for size_t
-#include <functional>           // for hash
-#include <memory>               // for shared_ptr
+#include <functional>           // for std::hash
+#include <memory>               // for std::shared_ptr
 #include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
 #include <string.h>             // for memset
-#include <string>               // for string, allocator, operator==, operator+
+#include <string>               // for std::string
 #include "string_view.hh"       // for std::string_view
 #include <sys/socket.h>         // for AF_INET
 #include <sys/types.h>          // for int32_t, uint64_t
 #include <time.h>               // for time_t
-#include <utility>              // for pair
+#include <utility>              // for std::pair, std::move
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "utils.h"              // for fast_inet_ntop4, string::lower
