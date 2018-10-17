@@ -75,25 +75,15 @@ XapiandReplicator::run()
 {
 	L_CALL("XapiandReplicator::run()");
 
-	// Function that retrieves a task from a queue, runs it and deletes it
-	Endpoint endpoint;
-	while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
-		L_DEBUG("Replicator was informed database was updated: %s", repr(endpoint.to_string()));
-		on_commit(endpoint);
+	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
+		Endpoint endpoint;
+		while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
+			L_DEBUG("Replicator was informed database was updated: %s", repr(endpoint.to_string()));
+			discovery->signal_db_update(endpoint);
+		}
 	}
 
 	detach();
-}
-
-
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	L_CALL("XapiandReplicator::on_commit(%s)", repr(endpoint.to_string()));
-
-	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-		discovery->signal_db_update(endpoint);
-	}
 }
 
 #endif

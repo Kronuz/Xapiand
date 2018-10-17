@@ -40,9 +40,6 @@ class XapiandReplicator : public Worker {
 
 	XapiandReplicator(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
-
-	void on_commit(const Endpoint &endpoint);
-
 	void destroyer();
 
 	void destroy_impl() override;
