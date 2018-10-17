@@ -47,34 +47,38 @@ class Node {
 	struct sockaddr_in _addr;
 
 public:
+	size_t idx;
+
 	int http_port;
 	int binary_port;
 
 	time_t touched;
 
-	Node() : http_port(0), binary_port(0), touched(0) {
+	Node() : idx{0}, http_port{0}, binary_port{0}, touched{0} {
 		memset(&_addr, 0, sizeof(_addr));
 	}
 
 	// Move constructor
 	Node(Node&& other)
-		: _host(std::move(other._host)),
-		  _name(std::move(other._name)),
-		  _lower_name(std::move(other._lower_name)),
-		  _addr(std::move(other._addr)),
-		  http_port(std::move(other.http_port)),
-		  binary_port(std::move(other.binary_port)),
-		  touched(std::move(other.touched)) { }
+		: _host{std::move(other._host)},
+		  _name{std::move(other._name)},
+		  _lower_name{std::move(other._lower_name)},
+		  _addr{std::move(other._addr)},
+		  idx{std::move(other.idx)},
+		  http_port{std::move(other.http_port)},
+		  binary_port{std::move(other.binary_port)},
+		  touched{std::move(other.touched)} { }
 
 	// Copy Constructor
 	Node(const Node& other)
-		: _host(other._host),
-		  _name(other._name),
-		  _lower_name(other._lower_name),
-		  _addr(other._addr),
-		  http_port(other.http_port),
-		  binary_port(other.binary_port),
-		  touched(other.touched) { }
+		: _host{other._host},
+		  _name{other._name},
+		  _lower_name{other._lower_name},
+		  _addr{other._addr},
+		  idx{other.idx},
+		  http_port{other.http_port},
+		  binary_port{other.binary_port},
+		  touched{other.touched} { }
 
 	// Move assignment
 	Node& operator=(Node&& other) {
@@ -82,6 +86,7 @@ public:
 		_name = std::move(other._name);
 		_lower_name = std::move(other._lower_name);
 		_addr = std::move(other._addr);
+		idx = std::move(other.idx);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
 		touched = std::move(other.touched);
@@ -94,6 +99,7 @@ public:
 		_name = other._name;
 		_lower_name = other._lower_name;
 		_addr = other._addr;
+		idx = other.idx;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
 		touched = other.touched;
@@ -105,6 +111,7 @@ public:
 		_name.clear();
 		_lower_name.clear();
 		memset(&_addr, 0, sizeof(_addr));
+		idx = 0;
 		http_port = 0;
 		binary_port = 0;
 		touched = 0;
@@ -146,6 +153,7 @@ public:
 	bool operator==(const Node& other) const {
 		return
 			_addr.sin_addr.s_addr == other._addr.sin_addr.s_addr &&
+			idx == other.idx &&
 			http_port == other.http_port &&
 			binary_port == other.binary_port &&
 			_lower_name == other._lower_name;
