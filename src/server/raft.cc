@@ -330,8 +330,8 @@ Raft::request_vote_response(Message type, const std::string& message)
 					send_message(Message::HEARTBEAT,
 						local_node_->serialise() +
 						serialise_length(current_term) +
-						serialise_length(prev_log_term) +
 						serialise_length(prev_log_index) +
+						serialise_length(prev_log_term) +
 						serialise_length(commit_index));
 				}
 			}
@@ -383,8 +383,8 @@ Raft::append_entries(Message type, const std::string& message)
 	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
-		uint64_t prev_log_term = unserialise_length(&p, p_end);
 		size_t prev_log_index = unserialise_length(&p, p_end);
+		uint64_t prev_log_term = unserialise_length(&p, p_end);
 
 		if (state == State::CANDIDATE) {
 			// If AppendEntries RPC received from new leader:
@@ -624,8 +624,8 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 	send_message(Message::HEARTBEAT,
 		local_node_->serialise() +
 		serialise_length(current_term) +
-		serialise_length(last_log_term) +
 		serialise_length(last_log_index) +
+		serialise_length(last_log_term) +
 		serialise_length(commit_index));
 
 	L_EV_END("Raft::leader_heartbeat_cb:END");
@@ -720,8 +720,8 @@ Raft::_send_missing_entries()
 			send_message(Message::APPEND_ENTRIES,
 				local_node_->serialise() +
 				serialise_length(current_term) +
-				serialise_length(prev_log_term) +
 				serialise_length(prev_log_index) +
+				serialise_length(prev_log_term) +
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
