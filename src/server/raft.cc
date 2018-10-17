@@ -35,7 +35,8 @@ using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
 static inline bool has_consensus(size_t votes) {
-	return votes >= (1 + XapiandManager::manager->active_nodes) / 2;
+	auto active_nodes = XapiandManager::manager->active_nodes.load();
+	return active_nodes == 1 || votes > active_nodes / 2;
 }
 
 
