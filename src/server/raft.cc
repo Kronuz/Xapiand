@@ -502,11 +502,13 @@ Raft::append_entries(Message type, const std::string& message)
 			: ""
 		));
 
+#ifdef L_RAFT_LOG
 	if (type != Message::HEARTBEAT) {
 		for (size_t i = 0; i < log.size(); ++i) {
-			L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+			L_RAFT_LOG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 		}
 	}
+#endif
 }
 
 
@@ -587,6 +589,14 @@ Raft::append_entries_response(Message type, const std::string& message)
 		}
 		_send_missing_entries();
 		_commit_log();
+
+#ifdef L_RAFT_LOG
+		if (type != Message::HEARTBEAT_RESPONSE) {
+			for (size_t i = 0; i < log.size(); ++i) {
+				L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+			}
+		}
+#endif
 	}
 }
 
@@ -838,10 +848,6 @@ Raft::_commit_log()
 			}
 		}
 	}
-
-	for (size_t i = 0; i < log.size(); ++i) {
-		L_DEBUG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-	}
 }
 
 
@@ -858,6 +864,12 @@ Raft::add_command(const std::string& command)
 
 		_send_missing_entries();
 		_commit_log();
+
+#ifdef L_RAFT_LOG
+		for (size_t i = 0; i < log.size(); ++i) {
+			L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+		}
+#endif
 	} else {
 		auto local_node_ = Node::local_node();
 		send_message(Message::ADD_COMMAND,
