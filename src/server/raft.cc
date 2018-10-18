@@ -56,7 +56,6 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
-	send_missing_entries.set<Raft, &Raft::send_missing_entries_cb>(this);
 
 	L_OBJ("CREATED RAFT CONSENSUS");
 }
@@ -102,9 +101,6 @@ Raft::destroyer()
 
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
-
-	send_missing_entries.stop();
-	L_EV("Stop raft's send missing event");
 
 	io.stop();
 	L_EV("Stop raft's io event");
@@ -575,7 +571,6 @@ Raft::append_entries_response(Message type, const std::string& message)
 			L_RAFT("   {success:false, next_index:%zu}", next_index);
 		}
 		_commit_log();
-		_send_missing_entries();
 
 #ifdef L_RAFT_LOG
 		for (size_t i = 0; i < log.size(); ++i) {
@@ -688,43 +683,6 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		return;
 	}
 
-	auto local_node_ = Node::local_node();
-
-	auto last_log_index = log.size();
-	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
-
-	L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, commit_index:%zu}", last_log_term, last_log_index, commit_index);
-	send_message(Message::HEARTBEAT,
-		local_node_->serialise() +
-		serialise_length(current_term) +
-		serialise_length(last_log_index) +
-		serialise_length(last_log_term) +
-		serialise_length(commit_index));
-
-	L_EV_END("Raft::leader_heartbeat_cb:END");
-}
-
-
-void
-Raft::send_missing_entries_cb(ev::timer&, int revents)
-{
-	L_CALL("Raft::send_missing_entries_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-
-	ignore_unused(revents);
-
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		// L_RAFT("   << SEND_MISSING_ENTRIES (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
-		return;
-	}
-
-	L_EV_BEGIN("Raft::send_missing_entries_cb:BEGIN");
-
-	if (state != State::LEADER) {
-		return;
-	}
-
 	// If last log index ≥ nextIndex for a follower:
 	// send AppendEntries RPC with log entries starting at nextIndex
 	auto last_log_index = log.size();
@@ -752,10 +710,23 @@ Raft::send_missing_entries_cb(ev::timer&, int revents)
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
+
+			L_EV_END("Raft::leader_heartbeat_cb:END");
+			return;
 		}
 	}
 
-	L_EV_END("Raft::send_missing_entries_cb:END");
+	auto local_node_ = Node::local_node();
+	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
+	L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, commit_index:%zu}", last_log_term, last_log_index, commit_index);
+	send_message(Message::HEARTBEAT,
+		local_node_->serialise() +
+		serialise_length(current_term) +
+		serialise_length(last_log_index) +
+		serialise_length(last_log_term) +
+		serialise_length(commit_index));
+
+	L_EV_END("Raft::leader_heartbeat_cb:END");
 }
 
 
@@ -818,15 +789,6 @@ Raft::_apply(const std::string& command)
 
 
 void
-Raft::_send_missing_entries()
-{
-	L_CALL("Raft::_send_missing_entries()");
-
-	send_missing_entries.start(SEND_MISSING_ENTRIES_TIMEOUT);
-}
-
-
-void
 Raft::_commit_log()
 {
 	L_CALL("Raft::_commit_log()");
@@ -874,7 +836,6 @@ Raft::add_command(const std::string& command)
 		});
 
 		_commit_log();
-		_send_missing_entries();
 
 #ifdef L_RAFT_LOG
 		for (size_t i = 0; i < log.size(); ++i) {
