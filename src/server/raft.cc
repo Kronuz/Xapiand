@@ -24,11 +24,11 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "endpoint.h"
 #include "ignore_unused.h"
 #include "length.h"
 #include "log.h"
 #include "manager.h"
+#include "node.h"                             // for Node, local_node
 
 
 using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);

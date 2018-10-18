@@ -66,7 +66,7 @@
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
 #include "database_utils.h"                   // for RESERVED_TYPE, DB_NOWAL
-#include "endpoint.h"                         // for Node, Endpoint, local_node
+#include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"                          // for async, loop_ref (ptr only)
 #include "exception.h"                        // for Exit, ClientError, Excep...
 #include "http_parser.h"                      // for http_method
@@ -76,6 +76,7 @@
 #include "log.h"                              // for L_CALL, L_DEBUG
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                          // for MsgPack, object::object
+#include "node.h"                             // for Node, local_node
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
 #include "server/server.h"                    // for XapiandServer, XapiandSe...

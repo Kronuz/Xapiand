@@ -27,6 +27,7 @@
 #include "database_handler.h"
 #include "ignore_unused.h"
 #include "manager.h"
+#include "node.h"                             // for Node, local_node
 
 
 using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&);
