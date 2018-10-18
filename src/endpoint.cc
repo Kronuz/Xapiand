@@ -32,9 +32,9 @@
 #include "string.hh"        // for string::Number
 
 
-#define L_NODE_NODES() \
+#define L_NODE_NODES(prefix) \
 	for (const auto& _ : _nodes) { \
-		L_ORANGE("nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched); \
+		L_ORANGE("%s: nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", prefix, _.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched); \
 	}
 
 
@@ -295,7 +295,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 			node_ref = node;
 		}
 
-		L_NODE_NODES();
+		L_NODE_NODES("local_node");
 	} else {
 		L_CALL("Node::local_node()");
 	}
@@ -325,7 +325,7 @@ Node::master_node(std::shared_ptr<const Node> node)
 			node_ref = node;
 		}
 
-		L_NODE_NODES();
+		L_NODE_NODES("master_node");
 	} else {
 		L_CALL("Node::master_node()");
 	}
@@ -340,13 +340,13 @@ Node::get_node(std::string_view _node_name)
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-	L_NODE_NODES();
-
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
+		// L_NODE_NODES("get_node");
 		return it->second;
 	}
 
+	L_NODE_NODES("get_node");
 	return nullptr;
 }
 
@@ -369,7 +369,7 @@ Node::put_node(std::shared_ptr<const Node> node)
 			node_ref = std::shared_ptr<const Node>(node_copy.release());
 			_update_nodes(node_ref);
 		}
-		L_NODE_NODES();
+		// L_NODE_NODES("put_node");
 		return std::make_pair(node_ref, false);
 	}
 
@@ -388,7 +388,7 @@ Node::put_node(std::shared_ptr<const Node> node)
 	active_nodes = cnt;
 	total_nodes = _nodes.size();
 
-	L_NODE_NODES();
+	L_NODE_NODES("put_node");
 	return std::make_pair(final_node, true);
 }
 
@@ -406,7 +406,7 @@ Node::touch_node(std::string_view _node_name)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (node_ref->touched < now - NODE_LIFESPAN) {
-			L_NODE_NODES();
+			L_NODE_NODES("touch_node");
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -414,11 +414,11 @@ Node::touch_node(std::string_view _node_name)
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 
-		L_NODE_NODES();
+		// L_NODE_NODES("touch_node");
 		return node_ref;
 	}
 
-	L_NODE_NODES();
+	L_NODE_NODES("touch_node");
 	return nullptr;
 }
 
@@ -450,7 +450,7 @@ Node::drop_node(std::string_view _node_name)
 	active_nodes = cnt;
 	total_nodes = _nodes.size();
 
-	L_NODE_NODES();
+	L_NODE_NODES("drop_node");
 }
 
 
