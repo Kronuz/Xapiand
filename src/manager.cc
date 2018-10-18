@@ -357,8 +357,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		// Get a node (any node)
 		Endpoint local_endpoint(".");
 		for (const auto& node_ref : Node::nodes()) {
-			if (*node_ref != *local_node_) {
-				Endpoint remote_endpoint(".", node_ref.get());
+			Endpoint remote_endpoint(".", node_ref.get());
+			if (!remote_endpoint.is_local()) {
 				// Replicate database from the other node
 				L_INFO("Syncing cluster data from %s...", node_ref->name());
 

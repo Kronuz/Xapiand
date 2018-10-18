@@ -290,9 +290,7 @@ Discovery::db_updated(Message type, const std::string& message)
 	L_CALL("Discovery::db_updated(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -314,12 +312,14 @@ Discovery::db_updated(Message type, const std::string& message)
 	auto node = Node::touch_node(remote_node.name());
 	if (node) {
 		Endpoint remote_endpoint(index_path, node.get());
-		Endpoint local_endpoint(index_path);
-		// Replicate database from the other node
-		L_INFO("Request syncing database [%s]...", node->name());
-		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
-		if (ret.get()) {
-			L_INFO("Replication triggered!");
+		if (!remote_endpoint.is_local()) {
+			Endpoint local_endpoint(index_path);
+			// Replicate database from the other node
+			L_INFO("Request syncing database [%s]...", node->name());
+			auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+			if (ret.get()) {
+				L_INFO("Replication triggered!");
+			}
 		}
 	}
 }
