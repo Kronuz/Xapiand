@@ -345,8 +345,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (string::lower(node_name) != local_node_->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->name(node_name);
-		local_node_ = std::shared_ptr<const Node>(local_node_copy.release());
-		Node::local_node(local_node_);
+		local_node_ = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
 	}
 
 	L_INFO("Node %s accepted to the party!", node_name);
@@ -380,22 +379,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Using solo cluster: %s", opts.cluster_name);
+				L_NOTICE("%s using solo cluster %s", local_node_->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Using new solo cluster: %s", opts.cluster_name);
+				L_NOTICE("%s using new solo cluster %s", local_node_->name(), opts.cluster_name);
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("Joined cluster: %s (it is now online!)", opts.cluster_name);
+				L_NOTICE("%s joined cluster %s (it is now online!)", local_node_->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Joined new cluster: %s (it is now online!)", opts.cluster_name);
+				L_NOTICE("%s joined new cluster %s (it is now online!)", local_node_->name(), opts.cluster_name);
 				break;
 			case 2:
-				L_NOTICE("Joined cluster: %s (it was already online!)", opts.cluster_name);
+				L_NOTICE("%s joined cluster %s (it was already online!)", local_node_->name(), opts.cluster_name);
 				break;
 		}
 	}
