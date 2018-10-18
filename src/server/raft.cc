@@ -35,7 +35,7 @@ using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
 static inline bool has_consensus(size_t votes) {
-	auto active_nodes = XapiandManager::manager->active_nodes.load();
+	auto active_nodes = Node::active_nodes.load();
 	return active_nodes == 1 || votes > active_nodes / 2;
 }
 
@@ -212,8 +212,8 @@ Raft::request_vote(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto local_node_ = local_node.load();
-	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	auto local_node_ = Node::local_node();
+	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -294,8 +294,8 @@ Raft::request_vote_response(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto local_node_ = local_node.load();
-	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	auto local_node_ = Node::local_node();
+	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -326,7 +326,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 			} else {
 				++votes_denied;
 			}
-			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", XapiandManager::manager->active_nodes, votes_granted, votes_denied);
+			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", Node::active_nodes, votes_granted, votes_denied);
 			if (has_consensus(votes_granted + votes_denied)) {
 				if (votes_granted > votes_denied) {
 					state = State::LEADER;
@@ -374,8 +374,8 @@ Raft::append_entries(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto local_node_ = local_node.load();
-	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	auto local_node_ = Node::local_node();
+	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
 		if (type != Message::HEARTBEAT) {
 			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
@@ -532,7 +532,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
 		if (type != Message::HEARTBEAT_RESPONSE) {
 			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
@@ -608,7 +608,7 @@ Raft::add_command(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	auto node = XapiandManager::manager->touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -659,7 +659,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	auto last_log_index = log.size();
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 
-	auto local_node_ = local_node.load();
+	auto local_node_ = Node::local_node();
 	send_message(Message::REQUEST_VOTE,
 		local_node_->serialise() +
 		serialise_length(current_term) +
@@ -667,7 +667,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		serialise_length(last_log_index));
 
 	L_RAFT("request_vote { state:%s, timeout:%f, current_term:%llu, active_nodes:%zu, leader:%s }",
-		StateNames(state), leader_election_timeout.repeat, current_term, XapiandManager::manager->active_nodes, master_node.load()->empty() ? "<none>" : master_node.load()->name());
+		StateNames(state), leader_election_timeout.repeat, current_term, Node::active_nodes, Node::master_node()->empty() ? "<none>" : Node::master_node()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -693,7 +693,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		return;
 	}
 
-	auto local_node_ = local_node.load();
+	auto local_node_ = Node::local_node();
 
 	auto last_log_index = log.size();
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
@@ -744,14 +744,14 @@ Raft::_set_master_node(const std::shared_ptr<const Node>& node)
 {
 	L_CALL("Raft::_set_master_node(%s)", repr(node->name()));
 
-	auto master_node_ = master_node.load();
+	auto master_node_ = Node::master_node();
 	if (*master_node_ != *node) {
 		if (master_node_->empty()) {
 			L_NOTICE("Raft: Leader is %s", node->name());
 		} else {
 			L_NOTICE("Raft: New leader is %s", node->name());
 		}
-		master_node = node;
+		Node::master_node(node);
 		auto joining = XapiandManager::State::JOINING;
 		if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
 			XapiandManager::manager->setup_node();
@@ -785,7 +785,7 @@ Raft::_send_missing_entries()
 			}
 		}
 		if (entry_index > 0 && entry_index <= last_log_index) {
-			auto local_node_ = local_node.load();
+			auto local_node_ = Node::local_node();
 			auto prev_log_index = entry_index - 1;
 			auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 			auto entry_term = log[entry_index - 1].term;
@@ -825,7 +825,7 @@ Raft::_commit_log()
 			if (has_consensus(matches)) {
 				commit_index = index;
 				L_RAFT("committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
-					matches, XapiandManager::manager->active_nodes, commit_index);
+					matches, Node::active_nodes, commit_index);
 
 				// If commitIndex > lastApplied:
 				while (commit_index > last_applied) {
@@ -859,7 +859,7 @@ Raft::add_command(const std::string& command)
 		_send_missing_entries();
 		_commit_log();
 	} else {
-		auto local_node_ = local_node.load();
+		auto local_node_ = Node::local_node();
 		send_message(Message::ADD_COMMAND,
 			local_node_->serialise() +
 			serialise_string(command));

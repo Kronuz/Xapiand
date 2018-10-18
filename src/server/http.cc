@@ -31,10 +31,10 @@
 Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
 	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
 {
-	auto local_node_ = local_node.load();
+	auto local_node_ = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node_);
 	node_copy->http_port = port;
-	local_node = std::shared_ptr<const Node>(node_copy.release());
+	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	L_OBJ("CREATED CONFIGURATION FOR HTTP");
 }

@@ -24,9 +24,11 @@
 
 #include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
 
+#include <atomic>               // for std::atomic_size_t
 #include <cstddef>              // for size_t
 #include <functional>           // for std::hash
 #include <memory>               // for std::shared_ptr
+#include <mutex>                // for std::mutex
 #include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
 #include <string.h>             // for memset
 #include <string>               // for std::string
@@ -34,10 +36,15 @@
 #include <sys/socket.h>         // for AF_INET
 #include <sys/types.h>          // for int32_t, uint64_t
 #include <time.h>               // for time_t
+#include <unordered_map>        // for std::unordered_map
 #include <utility>              // for std::pair, std::move
+#include <vector>               // for std::vector
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "utils.h"              // for fast_inet_ntop4, string::lower
+
+
+constexpr double NODE_LIFESPAN = 2.0;
 
 
 class Node {
@@ -166,11 +173,33 @@ public:
 	std::string to_string() const {
 		return _name;
 	}
+
+	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
+	static std::shared_ptr<const Node> master_node(std::shared_ptr<const Node> node = nullptr);
+
+private:
+	static atomic_shared_ptr<const Node> _local_node;
+	static atomic_shared_ptr<const Node> _master_node;
+
+#ifdef XAPIAND_CLUSTERING
+	static std::mutex _nodes_mtx;
+	static std::unordered_map<std::string, std::shared_ptr<const Node>> _nodes;
+
+	static void _update_nodes(const std::shared_ptr<const Node>& node);
+
+public:
+	static std::atomic_size_t total_nodes;
+	static std::atomic_size_t active_nodes;
+
+	static std::shared_ptr<const Node> get_node(std::string_view node_name);
+	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
+	static std::shared_ptr<const Node> touch_node(std::string_view node_name);
+	static void drop_node(std::string_view node_name);
+	static void reset();
+
+	static std::vector<std::shared_ptr<const Node>> nodes();
+#endif
 };
-
-
-extern atomic_shared_ptr<const Node> local_node;
-extern atomic_shared_ptr<const Node> master_node;
 
 
 #include <unordered_set>        // for unordered_set
@@ -217,7 +246,7 @@ public:
 	Endpoint(std::string_view uri, const Node* node_=nullptr, std::string_view node_name_="");
 
 	bool is_local() const {
-		auto local_node_ = local_node.load();
+		auto local_node_ = Node::local_node();
 		int binary_port = local_node_->binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
 		return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;

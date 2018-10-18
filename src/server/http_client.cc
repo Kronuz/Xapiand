@@ -984,14 +984,14 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	L_CALL("HttpClient::home_view()");
 
 	endpoints.clear();
-	auto master_node_ = master_node.load();
+	auto master_node_ = Node::master_node();
 	endpoints.add(Endpoint(".", master_node_.get()));
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 
-	auto local_node_ = local_node.load();
+	auto local_node_ = Node::local_node();
 	auto document = db_handler.get_document(local_node_->name());
 
 	auto obj = document.get_obj();
@@ -1418,7 +1418,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 	}
 
 	endpoints.clear();
-	auto master_node_ = master_node.load();
+	auto master_node_ = Node::master_node();
 	endpoints.add(Endpoint(".", master_node_.get()));
 
 	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
@@ -1431,7 +1431,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 		auto document = db_handler.get_document(*m);
 		auto obj = document.get_obj();
 		obj.erase(ID_FIELD_NAME);
-		auto node = XapiandManager::manager->get_node(obj["name"].as_str());
+		auto node = Node::get_node(obj["name"].as_str());
 		if (node) {
 			obj["host"] = node->host();
 			obj["http_port"] = node->http_port;
@@ -2254,7 +2254,7 @@ HttpClient::_endpoint_maker(Request& request)
 		node_name = index.host.empty() ? node_name : index.host;
 
 		// Convert node to endpoint:
-		auto node = XapiandManager::manager->touch_node(node_name);
+		auto node = Node::touch_node(node_name);
 		if (!node) {
 			THROW(Error, "Node %s not found", node_name);
 		}

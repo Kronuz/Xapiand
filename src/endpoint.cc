@@ -31,10 +31,6 @@
 #include "string.hh"        // for string::Number
 
 
-atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
-atomic_shared_ptr<const Node> master_node(std::make_shared<const Node>());
-
-
 static inline std::string
 normalize(const void *p, size_t size)
 {
@@ -219,6 +215,228 @@ Node::unserialise(const char **p, const char *end)
 }
 
 
+atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};
+atomic_shared_ptr<const Node> Node::_master_node{std::make_shared<const Node>()};
+
+
+#ifndef XAPIAND_CLUSTERING
+
+static std::shared_ptr<const Node>
+Node::local_node(std::shared_ptr<const Node> node)
+{
+	atomic_shared_ptr<const Node> _local_node{std::make_shared<const Node>()};
+	if (node) {
+		_local_node.store(node);
+	}
+	return _local_node.load();
+}
+
+
+static std::shared_ptr<const Node>
+Node::master_node(std::shared_ptr<const Node> node)
+{
+	atomic_shared_ptr<const Node> _master_node{std::make_shared<const Node>()};
+	if (node) {
+		_master_node.store(node);
+	}
+	return _master_node.load();
+}
+
+#else
+
+std::mutex Node::_nodes_mtx;
+std::unordered_map<std::string, std::shared_ptr<const Node>> Node::_nodes;
+
+std::atomic_size_t Node::total_nodes;
+std::atomic_size_t Node::active_nodes;
+
+
+inline void
+Node::_update_nodes(const std::shared_ptr<const Node>& node)
+{
+	auto local_node_ = _local_node.load();
+	if (node->lower_name() == local_node_->lower_name()) {
+		_local_node.store(node);
+	}
+
+	auto master_node_ = _master_node.load();
+	if (node->lower_name() == master_node_->lower_name()) {
+		_master_node.store(node);
+	}
+}
+
+
+std::shared_ptr<const Node>
+Node::local_node(std::shared_ptr<const Node> node)
+{
+	if (node) {
+		auto now = epoch::now<>();
+		auto node_copy = std::make_unique<Node>(*node);
+		node_copy->touched = now;
+		node = std::shared_ptr<const Node>(node_copy.release());
+		_local_node.store(node);
+		auto master_node_ = _master_node.load();
+		if (node->lower_name() == master_node_->lower_name()) {
+			_master_node.store(node);
+		}
+		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		auto it = _nodes.find(node->lower_name());
+		if (it != _nodes.end()) {
+			auto& node_ref = it->second;
+			node_ref = node;
+		}
+	}
+	return _local_node.load();
+}
+
+
+std::shared_ptr<const Node>
+Node::master_node(std::shared_ptr<const Node> node)
+{
+	if (node) {
+		auto now = epoch::now<>();
+		auto node_copy = std::make_unique<Node>(*node);
+		node_copy->touched = now;
+		node = std::shared_ptr<const Node>(node_copy.release());
+		_master_node.store(node);
+		auto local_node_ = _local_node.load();
+		if (node->lower_name() == local_node_->lower_name()) {
+			_local_node.store(node);
+		}
+		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		auto it = _nodes.find(node->lower_name());
+		if (it != _nodes.end()) {
+			auto& node_ref = it->second;
+			node_ref = node;
+		}
+	}
+	return _master_node.load();
+}
+
+
+std::shared_ptr<const Node>
+Node::get_node(std::string_view _node_name)
+{
+	auto lower_node_name = string::lower(_node_name);
+
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+	auto it = _nodes.find(lower_node_name);
+	if (it != _nodes.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
+
+std::pair<std::shared_ptr<const Node>, bool>
+Node::put_node(std::shared_ptr<const Node> node)
+{
+	auto now = epoch::now<>();
+
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+	auto it = _nodes.find(node->lower_name());
+	if (it != _nodes.end()) {
+		auto& node_ref = it->second;
+		if (*node == *node_ref) {
+			auto node_copy = std::make_unique<Node>(*node_ref);
+			node_copy->touched = now;
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
+			_update_nodes(node_ref);
+		}
+		return std::make_pair(node_ref, false);
+	}
+
+	auto node_copy = std::make_unique<Node>(*node);
+	node_copy->touched = now;
+	auto final_node = std::shared_ptr<const Node>(node_copy.release());
+	_nodes[node->lower_name()] = final_node;
+	_update_nodes(final_node);
+
+	size_t cnt = 0;
+	for (const auto& node_pair : _nodes) {
+		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+			++cnt;
+		}
+	}
+	active_nodes = cnt;
+	total_nodes = _nodes.size();
+
+	return std::make_pair(final_node, true);
+}
+
+
+std::shared_ptr<const Node>
+Node::touch_node(std::string_view _node_name)
+{
+	auto now = epoch::now<>();
+	auto lower_node_name = string::lower(_node_name);
+
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+	auto it = _nodes.find(lower_node_name);
+	if (it != _nodes.end()) {
+		auto& node_ref = it->second;
+		if (node_ref->touched < now - NODE_LIFESPAN) {
+			return nullptr;
+		}
+		auto node_ref_copy = std::make_unique<Node>(*node_ref);
+		node_ref_copy->touched = now;
+		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+		_update_nodes(node_ref);
+		return node_ref;
+	}
+
+	return nullptr;
+}
+
+
+void
+Node::drop_node(std::string_view _node_name)
+{
+	auto now = epoch::now<>();
+	auto lower_node_name = string::lower(_node_name);
+
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+	auto it = _nodes.find(lower_node_name);
+	if (it != _nodes.end()) {
+		auto& node_ref = it->second;
+		auto node_ref_copy = std::make_unique<Node>(*node_ref);
+		node_ref_copy->touched = 0;
+		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+		_update_nodes(node_ref);
+	}
+
+	size_t cnt = 0;
+	for (const auto& node_pair : _nodes) {
+		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+			++cnt;
+		}
+	}
+	active_nodes = cnt;
+	total_nodes = _nodes.size();
+}
+
+
+void
+Node::reset()
+{
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+	_nodes.clear();
+}
+
+
+std::vector<std::shared_ptr<const Node>>
+Node::nodes()
+{
+	std::vector<std::shared_ptr<const Node>> nodes;
+	for (const auto& node_pair : _nodes) {
+		nodes.push_back(node_pair.second);
+	}
+	return nodes;
+}
+
+#endif
+
+
 std::string Endpoint::cwd("/");
 
 
@@ -277,7 +495,7 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	}
 
 	if (protocol == "file") {
-		auto local_node_ = local_node.load();
+		auto local_node_ = Node::local_node();
 		if (node_ == nullptr) {
 			node_ = local_node_.get();
 		}

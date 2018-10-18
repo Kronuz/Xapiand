@@ -69,8 +69,6 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 class XapiandManager : public Worker  {
 	friend Worker;
 
-	using nodes_map_t = std::unordered_map<std::string, std::shared_ptr<const Node>>;
-
 	std::mutex qmtx;
 
 	XapiandManager();
@@ -89,9 +87,6 @@ class XapiandManager : public Worker  {
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
 protected:
-	std::mutex nodes_mtx;
-	nodes_map_t nodes;
-
 	std::string load_node_name();
 	void save_node_name(std::string_view _node_name);
 	std::string set_node_name(std::string_view node_name_);
@@ -179,13 +174,6 @@ public:
 	void reset_state();
 	void join_cluster();
 
-	std::atomic_size_t total_nodes;
-	std::atomic_size_t active_nodes;
-
-	std::shared_ptr<const Node> get_node(std::string_view node_name);
-	std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
-	std::shared_ptr<const Node> touch_node(std::string_view node_name);
-	void drop_node(std::string_view node_name);
 	void renew_master();
 
 	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
