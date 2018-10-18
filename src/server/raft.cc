@@ -614,9 +614,6 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	// If election timeout elapses without receiving AppendEntries
 	// RPC from current leader or granting vote to candidate:
 	// convert to candidate
-	if (!voted_for.empty()) {
-		return;
-	}
 	++current_term;
 	state = State::CANDIDATE;
 	voted_for.clear();
