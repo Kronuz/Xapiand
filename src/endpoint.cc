@@ -26,9 +26,16 @@
 #include <xapian.h>         // for SerialisationError
 
 #include "length.h"         // for serialise_length, unserialise_length, ser...
+#include "log.h"
 #include "opts.h"           // for opts
 #include "serialise.h"      // for Serialise
 #include "string.hh"        // for string::Number
+
+
+#define L_NODE_NODES() \
+	for (const auto& _ : _nodes) { \
+		L_ORANGE("nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched); \
+	}
 
 
 static inline std::string
@@ -270,6 +277,8 @@ std::shared_ptr<const Node>
 Node::local_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
+		L_CALL("Node::local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+
 		auto now = epoch::now<>();
 		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
@@ -285,6 +294,10 @@ Node::local_node(std::shared_ptr<const Node> node)
 			auto& node_ref = it->second;
 			node_ref = node;
 		}
+
+		L_NODE_NODES();
+	} else {
+		L_CALL("Node::local_node()");
 	}
 	return _local_node.load();
 }
@@ -294,6 +307,8 @@ std::shared_ptr<const Node>
 Node::master_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
+		L_CALL("Node::master_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+
 		auto now = epoch::now<>();
 		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
@@ -309,6 +324,10 @@ Node::master_node(std::shared_ptr<const Node> node)
 			auto& node_ref = it->second;
 			node_ref = node;
 		}
+
+		L_NODE_NODES();
+	} else {
+		L_CALL("Node::master_node()");
 	}
 	return _master_node.load();
 }
@@ -317,13 +336,17 @@ Node::master_node(std::shared_ptr<const Node> node)
 std::shared_ptr<const Node>
 Node::get_node(std::string_view _node_name)
 {
-	auto lower_node_name = string::lower(_node_name);
+	L_CALL("Node::get_node(%s)", repr(_node_name));
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
-	auto it = _nodes.find(lower_node_name);
+
+	L_NODE_NODES();
+
+	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		return it->second;
 	}
+
 	return nullptr;
 }
 
@@ -331,9 +354,12 @@ Node::get_node(std::string_view _node_name)
 std::pair<std::shared_ptr<const Node>, bool>
 Node::put_node(std::shared_ptr<const Node> node)
 {
+	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+
 	auto now = epoch::now<>();
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
+
 	auto it = _nodes.find(node->lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
@@ -343,6 +369,7 @@ Node::put_node(std::shared_ptr<const Node> node)
 			node_ref = std::shared_ptr<const Node>(node_copy.release());
 			_update_nodes(node_ref);
 		}
+		L_NODE_NODES();
 		return std::make_pair(node_ref, false);
 	}
 
@@ -361,6 +388,7 @@ Node::put_node(std::shared_ptr<const Node> node)
 	active_nodes = cnt;
 	total_nodes = _nodes.size();
 
+	L_NODE_NODES();
 	return std::make_pair(final_node, true);
 }
 
@@ -368,23 +396,29 @@ Node::put_node(std::shared_ptr<const Node> node)
 std::shared_ptr<const Node>
 Node::touch_node(std::string_view _node_name)
 {
+	L_CALL("Node::touch_node(%s)", repr(_node_name));
+
 	auto now = epoch::now<>();
-	auto lower_node_name = string::lower(_node_name);
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
-	auto it = _nodes.find(lower_node_name);
+
+	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (node_ref->touched < now - NODE_LIFESPAN) {
+			L_NODE_NODES();
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->touched = now;
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
+
+		L_NODE_NODES();
 		return node_ref;
 	}
 
+	L_NODE_NODES();
 	return nullptr;
 }
 
@@ -392,11 +426,13 @@ Node::touch_node(std::string_view _node_name)
 void
 Node::drop_node(std::string_view _node_name)
 {
+	L_CALL("Node::drop_node(%s)", repr(_node_name));
+
 	auto now = epoch::now<>();
-	auto lower_node_name = string::lower(_node_name);
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
-	auto it = _nodes.find(lower_node_name);
+
+	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -413,13 +449,18 @@ Node::drop_node(std::string_view _node_name)
 	}
 	active_nodes = cnt;
 	total_nodes = _nodes.size();
+
+	L_NODE_NODES();
 }
 
 
 void
 Node::reset()
 {
+	L_CALL("Node::reset()");
+
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
+
 	_nodes.clear();
 }
 
@@ -427,6 +468,8 @@ Node::reset()
 std::vector<std::shared_ptr<const Node>>
 Node::nodes()
 {
+	L_CALL("Node::nodes()");
+
 	std::vector<std::shared_ptr<const Node>> nodes;
 	for (const auto& node_pair : _nodes) {
 		nodes.push_back(node_pair.second);
