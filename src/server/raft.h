@@ -80,21 +80,22 @@ public:
 	}
 
 	enum class Message {
-		HEARTBEAT,
-		REQUEST_VOTE,            // Invoked by candidates to gather votes
-		REQUEST_VOTE_RESPONSE,   // Gather votes
+		HEARTBEAT,               // same as APPEND_ENTRIES
+		HEARTBEAT_RESPONSE,      // same as APPEND_ENTRIES_RESPONSE
 		APPEND_ENTRIES,          // Node saying hello when it become leader
 		APPEND_ENTRIES_RESPONSE, // Request information from leader
-		ADD,
+		REQUEST_VOTE,            // Invoked by candidates to gather votes
+		REQUEST_VOTE_RESPONSE,   // Gather votes
+		ADD_COMMAND,
 		MAX,
 	};
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
-			"HEARTBEAT",
-			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
+			"HEARTBEAT", "HEARTBEAT_RESPONSE",
 			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
-			"ADD",
+			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
+			"ADD_COMMAND",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -133,7 +134,7 @@ private:
 	void request_vote_response(Message type, const std::string& message);
 	void append_entries(Message type, const std::string& message);
 	void append_entries_response(Message type, const std::string& message);
-	void add(Message type, const std::string& message);
+	void add_command(Message type, const std::string& message);
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
@@ -159,7 +160,7 @@ public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
-	void add(const std::string& command);
+	void add_command(const std::string& command);
 	void request_vote();
 	void start();
 	void stop();

@@ -179,11 +179,12 @@ Raft::raft_server(Message type, const std::string& message)
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,
-		&Raft::request_vote,
-		&Raft::request_vote_response,
+		&Raft::append_entries_response,
 		&Raft::append_entries,
 		&Raft::append_entries_response,
-		&Raft::add,
+		&Raft::request_vote,
+		&Raft::request_vote_response,
+		&Raft::add_command,
 	};
 	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 		std::string errmsg("Unexpected message type ");
@@ -476,8 +477,14 @@ Raft::append_entries(Message type, const std::string& message)
 
 			auto next_index = last_index + 1;
 			auto match_index = entry_index;
-			L_RAFT("<< APPEND_ENTRIES_RESPONSE {term:%llu success:true, next_index:%zu, match_index:%zu}", term, next_index, match_index);
-			send_message(Message::APPEND_ENTRIES_RESPONSE,
+			Message response_type;
+			if (type != Message::HEARTBEAT) {
+				L_RAFT("<< APPEND_ENTRIES_RESPONSE {term:%llu success:true, next_index:%zu, match_index:%zu}", term, next_index, match_index);
+				response_type = Message::APPEND_ENTRIES_RESPONSE;
+			} else {
+				response_type = Message::HEARTBEAT_RESPONSE;
+			}
+			send_message(response_type,
 				local_node_->serialise() +
 				serialise_length(term) +
 				serialise_length(true) +
@@ -487,8 +494,14 @@ Raft::append_entries(Message type, const std::string& message)
 		}
 	}
 
-	L_RAFT("<< APPEND_ENTRIES_RESPONSE {term:%llu success:false}", term);
-	send_message(Message::APPEND_ENTRIES_RESPONSE,
+	Message response_type;
+	if (type != Message::HEARTBEAT) {
+		L_RAFT("<< APPEND_ENTRIES_RESPONSE {term:%llu success:false}", term);
+		response_type = Message::APPEND_ENTRIES_RESPONSE;
+	} else {
+		response_type = Message::HEARTBEAT_RESPONSE;
+	}
+	send_message(response_type,
 		local_node_->serialise() +
 		serialise_length(term) +
 		serialise_length(false));
@@ -572,9 +585,9 @@ Raft::append_entries_response(Message type, const std::string& message)
 
 
 void
-Raft::add(Message type, const std::string& message)
+Raft::add_command(Message type, const std::string& message)
 {
-	L_CALL("Raft::add(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::add_command(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
@@ -599,7 +612,7 @@ Raft::add(Message type, const std::string& message)
 	}
 
 	auto command = std::string(unserialise_string(&p, p_end));
-	add(command);
+	add_command(command);
 }
 
 
@@ -826,9 +839,9 @@ Raft::_commit_log()
 
 
 void
-Raft::add(const std::string& command)
+Raft::add_command(const std::string& command)
 {
-	L_CALL("Raft::add(%s)", repr(command));
+	L_CALL("Raft::add_command(%s)", repr(command));
 
 	if (state == State::LEADER) {
 		log.push_back({
@@ -840,7 +853,7 @@ Raft::add(const std::string& command)
 		_commit_log();
 	} else {
 		auto local_node_ = local_node.load();
-		send_message(Message::ADD,
+		send_message(Message::ADD_COMMAND,
 			local_node_->serialise() +
 			serialise_string(command));
 	}

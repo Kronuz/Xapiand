@@ -312,7 +312,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 					found = true;
 				}
 				if (*local_node_ == *master_node_) {
-					raft->add(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
 			}
 			if (!found) {
@@ -329,7 +329,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 					{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
 					{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
 				}, true, msgpack_type).first;
-				raft->add(serialise_length(did) + serialise_string(local_node_->name()));
+				raft->add_command(serialise_length(did) + serialise_string(local_node_->name()));
 			} catch (const CheckoutError&) {
 				L_CRIT("Cannot generate cluster database");
 				sig_exit(-EX_CANTCREAT);
