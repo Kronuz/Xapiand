@@ -434,22 +434,27 @@ Raft::append_entries(Message type, const std::string& message)
 		auto entry_index = prev_log_index + 1;
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
-				// If an existing entry conflicts with a new one (same
-				// index but different terms), delete the existing entry
-				// and all that follow it
-				// Append any new entries not already in the log
 				uint64_t entry_term = unserialise_length(&p, p_end);
 				auto entry_command = unserialise_string(&p, p_end);
 				if (entry_index <= last_index) {
 					if (entry_index > 1 && log[prev_log_index - 1].term != entry_term) {
+						// If an existing entry conflicts with a new one (same
+						// index but different terms),
+						// delete the existing entry and all that follow it
+						// and append new entries
 						log.resize(entry_index);
 						log.push_back({
 							entry_term,
 							std::string(entry_command),
 						});
 						last_index = log.size();
+					} else {
+						// If a valid existing entry already exists,
+						// just ignore the message
+						return;
 					}
 				} else {
+					// Append any new entries not already in the log
 					log.push_back({
 						entry_term,
 						std::string(entry_command),
