@@ -817,9 +817,9 @@ Raft::_set_master_node(const std::shared_ptr<const Node>& node)
 	auto master_node_ = Node::master_node();
 	if (*master_node_ != *node) {
 		if (master_node_->empty()) {
-			L_NOTICE("Raft: Leader is %s", node->name());
+			L_NOTICE("Cluster %s leader is %s", opts.cluster_name, node->name());
 		} else {
-			L_NOTICE("Raft: New leader is %s", node->name());
+			L_NOTICE("Cluster %s new leader is %s", opts.cluster_name, node->name());
 		}
 		Node::master_node(node);
 		auto joining = XapiandManager::State::JOINING;
