@@ -341,7 +341,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 					auto prev_log_index = entry_index - 1;
 					auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 
-					// L_RAFT("   << HEARTBEAT {prev_log_term:%llu, prev_log_index:%zu, commit_index:%zu}", prev_log_term, prev_log_index, commit_index);
+					L_RAFT("   << HEARTBEAT {prev_log_term:%llu, prev_log_index:%zu, commit_index:%zu}", prev_log_term, prev_log_index, commit_index);
 					send_message(Message::HEARTBEAT,
 						local_node_->serialise() +
 						serialise_length(current_term) +
@@ -677,7 +677,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
-		// L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+		L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 		return;
 	}
 
@@ -692,7 +692,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 	auto last_log_index = log.size();
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 
-	// L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, commit_index:%zu}", last_log_term, last_log_index, commit_index);
+	L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, commit_index:%zu}", last_log_term, last_log_index, commit_index);
 	send_message(Message::HEARTBEAT,
 		local_node_->serialise() +
 		serialise_length(current_term) +
