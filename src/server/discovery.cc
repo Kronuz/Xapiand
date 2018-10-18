@@ -177,7 +177,7 @@ Discovery::hello(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node != *local_node_) {
@@ -212,7 +212,7 @@ Discovery::sneer(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
@@ -240,7 +240,7 @@ Discovery::enter(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node->name());
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
 
 	auto put = XapiandManager::manager->put_node(remote_node);
 	remote_node = put.first;
@@ -271,7 +271,7 @@ Discovery::bye(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [%s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 	XapiandManager::manager->drop_node(remote_node.name());
 	L_INFO("Node %s left the party!", remote_node.name());
@@ -310,7 +310,7 @@ Discovery::db_updated(Message type, const std::string& message)
 
 	auto index_path = std::string(unserialise_string(&p, p_end));
 
-	L_DISCOVERY(">> %s [%s]: %s", MessageNames(type), remote_node.name(), repr(index_path));
+	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node.name(), repr(index_path));
 
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (node) {

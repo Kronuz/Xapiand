@@ -215,7 +215,7 @@ Raft::request_vote(Message type, const std::string& message)
 	auto local_node_ = local_node.load();
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
-		L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -234,7 +234,7 @@ Raft::request_vote(Message type, const std::string& message)
 		_set_master_node(node);
 	}
 
-	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	auto granted = false;
 	if (term == current_term) {
@@ -297,7 +297,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	auto local_node_ = local_node.load();
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
-		L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -316,7 +316,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 		_set_master_node(node);
 	}
 
-	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
 		if (*node == *local_node_) {
@@ -378,7 +378,7 @@ Raft::append_entries(Message type, const std::string& message)
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		if (type != Message::HEARTBEAT) {
-			L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		}
 		return;
 	}
@@ -403,7 +403,7 @@ Raft::append_entries(Message type, const std::string& message)
 	}
 
 	if (type != Message::HEARTBEAT) {
-		L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+		L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 	}
 
 	size_t next_index;
@@ -535,7 +535,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
 		if (type != Message::HEARTBEAT_RESPONSE) {
-			L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		}
 		return;
 	}
@@ -556,7 +556,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	}
 
 	if (type != Message::HEARTBEAT_RESPONSE) {
-		L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+		L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 	}
 
 	if (term == current_term) {
@@ -610,7 +610,7 @@ Raft::add_command(Message type, const std::string& message)
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
-		L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
