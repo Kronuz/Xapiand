@@ -397,7 +397,7 @@ Raft::append_entries(Message type, const std::string& message)
 
 	size_t next_index;
 	size_t match_index;
-	bool succeeded = false;
+	bool success = false;
 
 	if (term == current_term) {
 		size_t prev_log_index = unserialise_length(&p, p_end);
@@ -422,7 +422,7 @@ Raft::append_entries(Message type, const std::string& message)
 		// for (size_t i = 0; i < log.size(); ++i) {
 		// 	L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 		// }
-		// L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
+		// L_DEBUG("   {entry_index:%zu, prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", entry_index, prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
 				size_t last_log_index = unserialise_length(&p, p_end);
@@ -476,7 +476,7 @@ Raft::append_entries(Message type, const std::string& message)
 
 			next_index = last_index + 1;
 			match_index = entry_index;
-			succeeded = true;
+			success = true;
 		}
 	}
 
@@ -486,12 +486,12 @@ Raft::append_entries(Message type, const std::string& message)
 	} else {
 		response_type = Message::HEARTBEAT_RESPONSE;
 	}
-	L_RAFT("   << %s {term:%llu, success:false}", MessageNames(response_type), term);
+	L_RAFT("   << %s {term:%llu, success:%s}", MessageNames(response_type), term, success ? "true" : "false");
 	send_message(response_type,
 		local_node_->serialise() +
 		serialise_length(term) +
-		serialise_length(succeeded) +
-		(succeeded
+		serialise_length(success) +
+		(success
 			? serialise_length(next_index) +
 			  serialise_length(match_index)
 			: ""
@@ -557,7 +557,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 			size_t match_index = unserialise_length(&p, p_end);
 			next_indexes[remote_node.lower_name()] = next_index;
 			match_indexes[remote_node.lower_name()] = match_index;
-			L_RAFT("   {success:true, next_index:%zu, match_index:%zu}", next_index, match_index);
+			L_RAFT("   {success:%s, next_index:%zu, match_index:%zu}", success ? "true" : "false", next_index, match_index);
 		} else {
 			// If AppendEntries fails because of log inconsistency:
 			// decrement nextIndex and retry
@@ -568,7 +568,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 			if (next_index > 1) {
 				--next_index;
 			}
-			L_RAFT("   {success:false, next_index:%zu}", next_index);
+			L_RAFT("   {success:%s, next_index:%zu}", success ? "true" : "false", next_index);
 		}
 		_commit_log();
 
@@ -818,6 +818,9 @@ Raft::_commit_log()
 					const auto& command = log[last_applied - 1].command;
 					_apply(command);
 				}
+			} else {
+				L_RAFT("not committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
+					matches, Node::active_nodes, commit_index);
 			}
 		}
 	}
