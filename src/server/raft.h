@@ -44,6 +44,8 @@ constexpr double HEARTBEAT_LEADER_MAX = 0.300;
 constexpr double LEADER_ELECTION_MIN = 2.5 * HEARTBEAT_LEADER_MAX;
 constexpr double LEADER_ELECTION_MAX = 5.0 * HEARTBEAT_LEADER_MAX;
 
+constexpr double SEND_MISSING_ENTRIES_TIMEOUT = 0.300;
+
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MINOR_VERSION = 0;
 
@@ -110,6 +112,7 @@ private:
 
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
+	ev::timer send_missing_entries;
 
 	State state;
 	size_t votes_granted;
@@ -137,6 +140,7 @@ private:
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
+	void send_missing_entries_cb(ev::timer& watcher, int revents);
 
 	void _start_leader_heartbeat(double min = HEARTBEAT_LEADER_MIN, double max = HEARTBEAT_LEADER_MAX);
 	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
