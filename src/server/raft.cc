@@ -278,6 +278,10 @@ Raft::request_vote_response(Message type, const std::string& message)
 	L_CALL("Raft::request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
+	if (state != State::CANDIDATE) {
+		return;
+	}
+
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
@@ -309,10 +313,6 @@ Raft::request_vote_response(Message type, const std::string& message)
 
 		_reset_leader_election_timeout();
 		_set_master_node(node);
-	}
-
-	if (state != State::CANDIDATE) {
-		return;
 	}
 
 	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
@@ -501,6 +501,10 @@ Raft::append_entries_response(Message type, const std::string& message)
 	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
+	if (state != State::LEADER) {
+		return;
+	}
+
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
@@ -531,10 +535,6 @@ Raft::append_entries_response(Message type, const std::string& message)
 
 		_reset_leader_election_timeout();
 		_set_master_node(node);
-	}
-
-	if (state != State::LEADER) {
-		return;
 	}
 
 	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
