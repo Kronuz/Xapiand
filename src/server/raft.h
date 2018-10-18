@@ -144,7 +144,7 @@ private:
 
 	void _start_leader_heartbeat(double min = HEARTBEAT_LEADER_MIN, double max = HEARTBEAT_LEADER_MAX);
 	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
-	void _set_master_node(const std::shared_ptr<const Node>& node);
+	void _set_leader_node(const std::shared_ptr<const Node>& node);
 
 	void _apply(const std::string& command);
 	void _send_missing_entries();

@@ -175,11 +175,11 @@ public:
 	}
 
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
-	static std::shared_ptr<const Node> master_node(std::shared_ptr<const Node> node = nullptr);
+	static std::shared_ptr<const Node> leader_node(std::shared_ptr<const Node> node = nullptr);
 
 private:
 	static atomic_shared_ptr<const Node> _local_node;
-	static atomic_shared_ptr<const Node> _master_node;
+	static atomic_shared_ptr<const Node> _leader_node;
 
 #ifdef XAPIAND_CLUSTERING
 	static std::mutex _nodes_mtx;

@@ -174,7 +174,7 @@ public:
 	void reset_state();
 	void join_cluster();
 
-	void renew_master();
+	void renew_leader();
 
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif

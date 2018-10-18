@@ -223,7 +223,7 @@ Node::unserialise(const char **p, const char *end)
 
 
 atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};
-atomic_shared_ptr<const Node> Node::_master_node{std::make_shared<const Node>()};
+atomic_shared_ptr<const Node> Node::_leader_node{std::make_shared<const Node>()};
 
 
 #ifndef XAPIAND_CLUSTERING
@@ -240,13 +240,13 @@ Node::local_node(std::shared_ptr<const Node> node)
 
 
 static std::shared_ptr<const Node>
-Node::master_node(std::shared_ptr<const Node> node)
+Node::leader_node(std::shared_ptr<const Node> node)
 {
-	atomic_shared_ptr<const Node> _master_node{std::make_shared<const Node>()};
+	atomic_shared_ptr<const Node> _leader_node{std::make_shared<const Node>()};
 	if (node) {
-		_master_node.store(node);
+		_leader_node.store(node);
 	}
-	return _master_node.load();
+	return _leader_node.load();
 }
 
 #else
@@ -266,9 +266,9 @@ Node::_update_nodes(const std::shared_ptr<const Node>& node)
 		_local_node.store(node);
 	}
 
-	auto master_node_ = _master_node.load();
-	if (node->lower_name() == master_node_->lower_name()) {
-		_master_node.store(node);
+	auto leader_node_ = _leader_node.load();
+	if (node->lower_name() == leader_node_->lower_name()) {
+		_leader_node.store(node);
 	}
 }
 
@@ -284,9 +284,9 @@ Node::local_node(std::shared_ptr<const Node> node)
 		node_copy->touched = now;
 		node = std::shared_ptr<const Node>(node_copy.release());
 		_local_node.store(node);
-		auto master_node_ = _master_node.load();
-		if (node->lower_name() == master_node_->lower_name()) {
-			_master_node.store(node);
+		auto leader_node_ = _leader_node.load();
+		if (node->lower_name() == leader_node_->lower_name()) {
+			_leader_node.store(node);
 		}
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
 		auto it = _nodes.find(node->lower_name());
@@ -304,16 +304,16 @@ Node::local_node(std::shared_ptr<const Node> node)
 
 
 std::shared_ptr<const Node>
-Node::master_node(std::shared_ptr<const Node> node)
+Node::leader_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		L_CALL("Node::master_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+		L_CALL("Node::leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 
 		auto now = epoch::now<>();
 		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
 		node = std::shared_ptr<const Node>(node_copy.release());
-		_master_node.store(node);
+		_leader_node.store(node);
 		auto local_node_ = _local_node.load();
 		if (node->lower_name() == local_node_->lower_name()) {
 			_local_node.store(node);
@@ -325,11 +325,11 @@ Node::master_node(std::shared_ptr<const Node> node)
 			node_ref = node;
 		}
 
-		L_NODE_NODES("master_node");
+		L_NODE_NODES("leader_node");
 	} else {
-		L_CALL("Node::master_node()");
+		L_CALL("Node::leader_node()");
 	}
-	return _master_node.load();
+	return _leader_node.load();
 }
 
 

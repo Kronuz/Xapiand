@@ -187,7 +187,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	local_node_ = Node::local_node(local_node_);
 
 	if (opts.solo) {
-		Node::master_node(local_node_);
+		Node::leader_node(local_node_);
 	}
 
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
@@ -294,8 +294,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	int new_cluster = 0;
 
 	// Open cluster database
-	auto master_node_ = Node::master_node();
-	Endpoints cluster_endpoints(Endpoint(".", master_node_.get()));
+	auto leader_node_ = Node::leader_node();
+	Endpoints cluster_endpoints(Endpoint(".", leader_node_.get()));
 
 	auto local_node_ = Node::local_node();
 	if (auto raft = weak_raft.lock()) {
@@ -311,7 +311,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				if (obj[ID_FIELD_NAME] == local_node_->lower_name()) {
 					found = true;
 				}
-				if (*local_node_ == *master_node_) {
+				if (*local_node_ == *leader_node_) {
 					raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
 			}
@@ -784,9 +784,9 @@ XapiandManager::join_cluster()
 
 
 void
-XapiandManager::renew_master()
+XapiandManager::renew_leader()
 {
-	L_CALL("XapiandManager::renew_master()");
+	L_CALL("XapiandManager::renew_leader()");
 	if (auto raft = weak_raft.lock()) {
 		raft->request_vote();
 	}

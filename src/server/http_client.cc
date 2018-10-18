@@ -984,8 +984,8 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	L_CALL("HttpClient::home_view()");
 
 	endpoints.clear();
-	auto master_node_ = Node::master_node();
-	endpoints.add(Endpoint(".", master_node_.get()));
+	auto leader_node_ = Node::leader_node();
+	endpoints.add(Endpoint(".", leader_node_.get()));
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1418,8 +1418,8 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 	}
 
 	endpoints.clear();
-	auto master_node_ = Node::master_node();
-	endpoints.add(Endpoint(".", master_node_.get()));
+	auto leader_node_ = Node::leader_node();
+	endpoints.add(Endpoint(".", leader_node_.get()));
 
 	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 

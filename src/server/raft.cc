@@ -235,7 +235,7 @@ Raft::request_vote(Message type, const std::string& message)
 		match_indexes.clear();
 
 		_reset_leader_election_timeout();
-		_set_master_node(node);
+		_set_leader_node(node);
 	}
 
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
@@ -317,7 +317,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 		match_indexes.clear();
 
 		_reset_leader_election_timeout();
-		_set_master_node(node);
+		_set_leader_node(node);
 	}
 
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
@@ -339,7 +339,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 					match_indexes.clear();
 
 					_start_leader_heartbeat();
-					_set_master_node(node);
+					_set_leader_node(node);
 
 					auto entry_index = log.size();
 					auto prev_log_index = entry_index - 1;
@@ -398,7 +398,7 @@ Raft::append_entries(Message type, const std::string& message)
 		match_indexes.clear();
 
 		// _reset_leader_election_timeout();  // resetted below!
-		// _set_master_node(node);
+		// _set_leader_node(node);
 	}
 
 	if (state == State::LEADER) {
@@ -427,7 +427,7 @@ Raft::append_entries(Message type, const std::string& message)
 		}
 
 		_reset_leader_election_timeout();
-		_set_master_node(node);
+		_set_leader_node(node);
 
 		// Reply false if log doesn’t contain an entry at
 		// prevLogIndex whose term matches prevLogTerm
@@ -562,7 +562,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 		match_indexes.clear();
 
 		_reset_leader_election_timeout();
-		_set_master_node(node);
+		_set_leader_node(node);
 	}
 
 	if (type != Message::HEARTBEAT_RESPONSE) {
@@ -685,7 +685,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		serialise_length(last_log_index));
 
 	L_RAFT("request_vote { state:%s, timeout:%f, current_term:%llu, active_nodes:%zu, leader:%s }",
-		StateNames(state), leader_election_timeout.repeat, current_term, Node::active_nodes, Node::master_node()->empty() ? "<none>" : Node::master_node()->name());
+		StateNames(state), leader_election_timeout.repeat, current_term, Node::active_nodes, Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
@@ -810,18 +810,18 @@ Raft::_reset_leader_election_timeout(double min, double max)
 
 
 void
-Raft::_set_master_node(const std::shared_ptr<const Node>& node)
+Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 {
-	L_CALL("Raft::_set_master_node(%s)", repr(node->name()));
+	L_CALL("Raft::_set_leader_node(%s)", repr(node->name()));
 
-	auto master_node_ = Node::master_node();
-	if (*master_node_ != *node) {
-		if (master_node_->empty()) {
+	auto leader_node_ = Node::leader_node();
+	if (*leader_node_ != *node) {
+		if (leader_node_->empty()) {
 			L_NOTICE("Cluster %s leader is %s", opts.cluster_name, node->name());
 		} else {
 			L_NOTICE("Cluster %s new leader is %s", opts.cluster_name, node->name());
 		}
-		Node::master_node(node);
+		Node::leader_node(node);
 		auto joining = XapiandManager::State::JOINING;
 		if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
 			XapiandManager::manager->setup_node();
