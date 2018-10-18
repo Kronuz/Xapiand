@@ -174,6 +174,16 @@ public:
 		return _name;
 	}
 
+	static bool is_local(const std::shared_ptr<const Node>& node) {
+		const auto& local_node_ = _local_node.load();
+		return (local_node_ == node || *local_node_ == *node);
+	}
+
+	static bool is_leader(const std::shared_ptr<const Node>& node) {
+		const auto& leader_node_ = _leader_node.load();
+		return (leader_node_ == node || *leader_node_ == *node);
+	}
+
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
 	static std::shared_ptr<const Node> leader_node(std::shared_ptr<const Node> node = nullptr);
 
