@@ -363,7 +363,9 @@ Raft::append_entries(Message type, const std::string& message)
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+		if (type != Message::HEARTBEAT) {
+			L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+		}
 		return;
 	}
 
@@ -374,7 +376,9 @@ Raft::append_entries(Message type, const std::string& message)
 	auto local_node_ = local_node.load();
 	auto node = XapiandManager::manager->touch_node(remote_node.name());
 	if (!node) {
-		L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+		if (type != Message::HEARTBEAT) {
+			L_RAFT(">> %s [%s] (nonexistent node)", MessageNames(type), remote_node.name());
+		}
 		return;
 	}
 
@@ -397,7 +401,9 @@ Raft::append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+	if (type != Message::HEARTBEAT) {
+		L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
+	}
 
 	if (term == current_term) {
 		size_t prev_log_index = unserialise_length(&p, p_end);
@@ -418,9 +424,11 @@ Raft::append_entries(Message type, const std::string& message)
 		// Reply false if log doesn’t contain an entry at
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = log.size();
-		L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
-		for (size_t i = 0; i < last_index; ++i) {
-			L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+		if (type != Message::HEARTBEAT) {
+			L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
+			for (size_t i = 0; i < last_index; ++i) {
+				L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+			}
 		}
 		auto entry_index = prev_log_index + 1;
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
