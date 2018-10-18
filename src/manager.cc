@@ -793,7 +793,7 @@ XapiandManager::renew_master()
 }
 
 
-std::shared_future<bool>
+std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));

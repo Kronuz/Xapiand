@@ -118,7 +118,7 @@ Binary::signal_send_async()
 }
 
 
-std::shared_future<bool>
+std::future<bool>
 Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	auto future = tasks.enqueue([src_endpoint, dst_endpoint] (const std::shared_ptr<BinaryServer>& server) {

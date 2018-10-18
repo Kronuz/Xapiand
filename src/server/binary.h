@@ -64,7 +64,7 @@ public:
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 
-	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
 

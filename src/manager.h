@@ -176,7 +176,7 @@ public:
 
 	void renew_master();
 
-	std::shared_future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
 	Endpoint resolve_index_endpoint(const std::string &path);
