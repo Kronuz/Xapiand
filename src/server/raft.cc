@@ -416,7 +416,7 @@ Raft::append_entries(Message type, const std::string& message)
 		auto last_index = log.size();
 		L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
 		for (size_t i = 0; i < last_index; ++i) {
-			L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i, log[i].term, repr(log[i].command));
+			L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 		}
 		auto entry_index = prev_log_index + 1;
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
@@ -746,7 +746,7 @@ Raft::_send_missing_entries()
 	L_CALL("Raft::_send_missing_entries()");
 
 	for (size_t i = 0; i < log.size(); ++i) {
-		L_DEBUG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i, log[i].term, repr(log[i].command));
+		L_DEBUG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 	}
 
 	// If last log index ≥ nextIndex for a follower:
