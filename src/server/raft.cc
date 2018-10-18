@@ -425,13 +425,8 @@ Raft::append_entries(Message type, const std::string& message)
 		// Reply false if log doesn’t contain an entry at
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = log.size();
-		if (type != Message::HEARTBEAT) {
-			L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
-			for (size_t i = 0; i < last_index; ++i) {
-				L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-			}
-		}
 		auto entry_index = prev_log_index + 1;
+		// L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
 				uint64_t entry_term = unserialise_length(&p, p_end);
@@ -510,6 +505,12 @@ Raft::append_entries(Message type, const std::string& message)
 		local_node_->serialise() +
 		serialise_length(term) +
 		serialise_length(false));
+
+	if (type != Message::HEARTBEAT) {
+		for (size_t i = 0; i < log.size(); ++i) {
+			L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+		}
+	}
 }
 
 
@@ -772,10 +773,6 @@ Raft::_send_missing_entries()
 {
 	L_CALL("Raft::_send_missing_entries()");
 
-	for (size_t i = 0; i < log.size(); ++i) {
-		L_DEBUG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-	}
-
 	// If last log index ≥ nextIndex for a follower:
 	// send AppendEntries RPC with log entries starting at nextIndex
 	auto last_log_index = log.size();
@@ -839,6 +836,10 @@ Raft::_commit_log()
 				}
 			}
 		}
+	}
+
+	for (size_t i = 0; i < log.size(); ++i) {
+		L_DEBUG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 	}
 }
 
