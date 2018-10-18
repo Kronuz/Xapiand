@@ -114,11 +114,9 @@ Raft::destroyer()
 void
 Raft::send_message(Message type, const std::string& message)
 {
-	if (type != Message::HEARTBEAT && type != Message::HEARTBEAT_RESPONSE) {
-		L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
+	L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
 
-		L_RAFT_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
-	}
+	L_RAFT_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
 
 	UDP::send_message(toUType(type), message);
 }
@@ -158,9 +156,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 					break;  // no message
 				}
 				Message type = static_cast<Message>(raw_type);
-				if (type != Message::HEARTBEAT && type != Message::HEARTBEAT_RESPONSE) {
-					L_RAFT_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
-				}
+				L_RAFT_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
 				raft_server(type, message);
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
@@ -179,9 +175,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 void
 Raft::raft_server(Message type, const std::string& message)
 {
-	if (type != Message::HEARTBEAT && type != Message::HEARTBEAT_RESPONSE) {
-		L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
-	}
+	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,
@@ -364,16 +358,12 @@ Raft::request_vote_response(Message type, const std::string& message)
 void
 Raft::append_entries(Message type, const std::string& message)
 {
-	if (type != Message::HEARTBEAT) {
-		L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	}
+	L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
-		if (type != Message::HEARTBEAT) {
-			L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-		}
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 		return;
 	}
 
@@ -384,9 +374,7 @@ Raft::append_entries(Message type, const std::string& message)
 	auto local_node_ = Node::local_node();
 	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
-		if (type != Message::HEARTBEAT) {
-			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
-		}
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -409,9 +397,7 @@ Raft::append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	if (type != Message::HEARTBEAT) {
-		L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
-	}
+	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	size_t next_index;
 	size_t match_index;
@@ -437,12 +423,10 @@ Raft::append_entries(Message type, const std::string& message)
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = log.size();
 		auto entry_index = prev_log_index + 1;
-		// if (type != Message::HEARTBEAT) {
-		// 	for (size_t i = 0; i < log.size(); ++i) {
-		// 		L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-		// 	}
-		// 	L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
+		// for (size_t i = 0; i < log.size(); ++i) {
+		// 	L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 		// }
+		// L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
 				uint64_t entry_term = unserialise_length(&p, p_end);
@@ -490,9 +474,6 @@ Raft::append_entries(Message type, const std::string& message)
 						const auto& command = log[last_applied - 1].command;
 						_apply(command);
 					}
-
-					// For logging, mutate HEARTBEAT type to APPEND_ENTRIES:
-					type = Message::APPEND_ENTRIES;
 				}
 			}
 
@@ -504,11 +485,11 @@ Raft::append_entries(Message type, const std::string& message)
 
 	Message response_type;
 	if (type != Message::HEARTBEAT) {
-		L_RAFT("   << APPEND_ENTRIES_RESPONSE {term:%llu, success:false}", term);
 		response_type = Message::APPEND_ENTRIES_RESPONSE;
 	} else {
 		response_type = Message::HEARTBEAT_RESPONSE;
 	}
+	L_RAFT("   << %s {term:%llu, success:false}", MessageNames(response_type), term);
 	send_message(response_type,
 		local_node_->serialise() +
 		serialise_length(term) +
@@ -520,10 +501,8 @@ Raft::append_entries(Message type, const std::string& message)
 		));
 
 #ifdef L_RAFT_LOG
-	if (type != Message::HEARTBEAT) {
-		for (size_t i = 0; i < log.size(); ++i) {
-			L_RAFT_LOG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-		}
+	for (size_t i = 0; i < log.size(); ++i) {
+		L_RAFT_LOG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 	}
 #endif
 }
@@ -532,9 +511,7 @@ Raft::append_entries(Message type, const std::string& message)
 void
 Raft::append_entries_response(Message type, const std::string& message)
 {
-	if (type != Message::HEARTBEAT_RESPONSE) {
-		L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-	}
+	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	if (state != State::LEADER) {
 		return;
@@ -543,9 +520,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
-		if (type != Message::HEARTBEAT_RESPONSE) {
-			L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-		}
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 		return;
 	}
 
@@ -555,9 +530,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	Node remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node.name());
 	if (!node) {
-		if (type != Message::HEARTBEAT_RESPONSE) {
-			L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
-		}
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -576,9 +549,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 		_set_leader_node(node);
 	}
 
-	if (type != Message::HEARTBEAT_RESPONSE) {
-		L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
-	}
+	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
 		bool success = unserialise_length(&p, p_end);
@@ -589,9 +560,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 			size_t match_index = unserialise_length(&p, p_end);
 			next_indexes[remote_node.lower_name()] = next_index;
 			match_indexes[remote_node.lower_name()] = match_index;
-			if (type != Message::HEARTBEAT_RESPONSE) {
-				L_RAFT("   {success:true, next_index:%zu, match_index:%zu}", next_index, match_index);
-			}
+			L_RAFT("   {success:true, next_index:%zu, match_index:%zu}", next_index, match_index);
 		} else {
 			// If AppendEntries fails because of log inconsistency:
 			// decrement nextIndex and retry
@@ -602,18 +571,14 @@ Raft::append_entries_response(Message type, const std::string& message)
 			if (next_index > 1) {
 				--next_index;
 			}
-			if (type != Message::HEARTBEAT_RESPONSE) {
-				L_RAFT("   {success:false, next_index:%zu}", next_index);
-			}
+			L_RAFT("   {success:false, next_index:%zu}", next_index);
 		}
 		_commit_log();
 		_send_missing_entries();
 
 #ifdef L_RAFT_LOG
-		if (type != Message::HEARTBEAT_RESPONSE) {
-			for (size_t i = 0; i < log.size(); ++i) {
-				L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-			}
+		for (size_t i = 0; i < log.size(); ++i) {
+			L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
 		}
 #endif
 	}
