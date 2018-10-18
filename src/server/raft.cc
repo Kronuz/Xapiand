@@ -799,7 +799,7 @@ Raft::_commit_log()
 	// set commitIndex = N
 	for (size_t index = commit_index + 1; index <= log.size(); ++index) {
 		if (log[index - 1].term == current_term) {
-			size_t matches = 0;
+			size_t matches = 1;
 			for (const auto& match_index_pair : match_indexes) {
 				if (match_index_pair.second >= index) {
 					++matches;
