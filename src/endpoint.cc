@@ -35,12 +35,15 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 
-#define L_NODE L_ORANGE
+#define L_NODE L_SLATE_GREY
 
 #define L_NODE_NODES(args...) \
 	L_NODE(args); \
 	for (const auto& _ : _nodes) { \
-		L_NODE("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched); \
+		L_NODE("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}%s%s", \
+			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched, \
+			Node::is_local(_.second) ? " (local)" : "", \
+			Node::is_leader(_.second) ? " (leader)" : ""); \
 	}
 
 
@@ -414,7 +417,7 @@ Node::touch_node(std::string_view _node_name)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (node_ref->touched < now - NODE_LIFESPAN && !is_local(node_ref)) {
-			L_NODE_NODES("touch_node(%s) -> nullptr", _node_name);
+			L_NODE_NODES("touch_node(%s) -> nullptr (1)", _node_name);
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -426,7 +429,7 @@ Node::touch_node(std::string_view _node_name)
 		return node_ref;
 	}
 
-	L_NODE_NODES("touch_node(%s) -> nullptr", _node_name);
+	L_NODE_NODES("touch_node(%s) -> nullptr (2)", _node_name);
 	return nullptr;
 }
 
