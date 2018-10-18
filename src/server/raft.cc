@@ -429,6 +429,7 @@ Raft::append_entries(Message type, const std::string& message)
 		// L_DEBUG("   {prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
+				size_t last_log_index = unserialise_length(&p, p_end);
 				uint64_t entry_term = unserialise_length(&p, p_end);
 				auto entry_command = unserialise_string(&p, p_end);
 				if (entry_index <= last_index) {
@@ -443,9 +444,9 @@ Raft::append_entries(Message type, const std::string& message)
 							std::string(entry_command),
 						});
 						last_index = log.size();
-					} else {
-						// If a valid existing entry already exists,
-						// just ignore the message
+					} else if (entry_index == last_log_index) {
+						// If a valid existing entry already exists
+						// and it's the last one, just ignore the message
 						return;
 					}
 				} else {
@@ -740,13 +741,14 @@ Raft::send_missing_entries_cb(ev::timer&, int revents)
 			auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 			auto entry_term = log[entry_index - 1].term;
 			auto entry_command = log[entry_index - 1].command;
-			L_RAFT("   << APPEND_ENTRIES {prev_log_index:%zu, prev_log_term:%llu, entry_term:%llu, entry_command:%s, commit_index:%zu}",
-				prev_log_index, prev_log_term, entry_term, repr(entry_command), commit_index);
+			L_RAFT("   << APPEND_ENTRIES {current_term:%llu, prev_log_index:%zu, prev_log_term:%llu, last_log_index:%zu, entry_term:%llu, entry_command:%s, commit_index:%zu}",
+				current_term, prev_log_index, prev_log_term, last_log_index, entry_term, repr(entry_command), commit_index);
 			send_message(Message::APPEND_ENTRIES,
 				local_node_->serialise() +
 				serialise_length(current_term) +
 				serialise_length(prev_log_index) +
 				serialise_length(prev_log_term) +
+				serialise_length(last_log_index) +
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
