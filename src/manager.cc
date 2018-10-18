@@ -801,7 +801,10 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 	if (auto binary = weak_binary.lock()) {
 		return binary->trigger_replication(src_endpoint, dst_endpoint);
 	}
-	return std::future<bool>();
+
+	std::promise<bool> promise;
+	promise.set_value(false);
+	return promise.get_future();
 }
 
 #endif
