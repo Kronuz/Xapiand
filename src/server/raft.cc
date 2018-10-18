@@ -114,9 +114,9 @@ Raft::destroyer()
 void
 Raft::send_message(Message type, const std::string& message)
 {
-	L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
-
 	if (type != Message::HEARTBEAT && type != Message::HEARTBEAT_RESPONSE) {
+		L_CALL("Raft::send_message(%s, <message>)", MessageNames(type));
+
 		L_RAFT_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
 	}
 
@@ -127,7 +127,7 @@ Raft::send_message(Message type, const std::string& message)
 void
 Raft::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock, watcher.fd);
+	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock, watcher.fd);
 
 	int fd = sock;
 	if (fd == -1) {
@@ -179,7 +179,9 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 void
 Raft::raft_server(Message type, const std::string& message)
 {
-	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
+	if (type != Message::HEARTBEAT && type != Message::HEARTBEAT_RESPONSE) {
+		L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
+	}
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,
@@ -362,7 +364,9 @@ Raft::request_vote_response(Message type, const std::string& message)
 void
 Raft::append_entries(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (type != Message::HEARTBEAT) {
+		L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	}
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
@@ -528,7 +532,9 @@ Raft::append_entries(Message type, const std::string& message)
 void
 Raft::append_entries_response(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (type != Message::HEARTBEAT_RESPONSE) {
+		L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	}
 
 	if (state != State::LEADER) {
 		return;
@@ -699,7 +705,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
-	L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	// L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	ignore_unused(revents);
 
