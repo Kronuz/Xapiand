@@ -44,7 +44,7 @@
 #include "utils.h"              // for fast_inet_ntop4, string::lower
 
 
-constexpr double NODE_LIFESPAN = 2.0;
+constexpr double NODE_LIFESPAN = 120.0;
 
 
 class Node {
