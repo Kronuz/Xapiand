@@ -406,6 +406,10 @@ Raft::append_entries(Message type, const std::string& message)
 		L_RAFT(">> %s [%s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 	}
 
+	size_t next_index;
+	size_t match_index;
+	bool succeeded = false;
+
 	if (term == current_term) {
 		size_t prev_log_index = unserialise_length(&p, p_end);
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
@@ -475,22 +479,9 @@ Raft::append_entries(Message type, const std::string& message)
 				}
 			}
 
-			auto next_index = last_index + 1;
-			auto match_index = entry_index;
-			Message response_type;
-			if (type != Message::HEARTBEAT) {
-				L_RAFT("<< APPEND_ENTRIES_RESPONSE {term:%llu success:true, next_index:%zu, match_index:%zu}", term, next_index, match_index);
-				response_type = Message::APPEND_ENTRIES_RESPONSE;
-			} else {
-				response_type = Message::HEARTBEAT_RESPONSE;
-			}
-			send_message(response_type,
-				local_node_->serialise() +
-				serialise_length(term) +
-				serialise_length(true) +
-				serialise_length(next_index) +
-				serialise_length(match_index));
-			return;
+			next_index = last_index + 1;
+			match_index = entry_index;
+			succeeded = true;
 		}
 	}
 
@@ -504,7 +495,12 @@ Raft::append_entries(Message type, const std::string& message)
 	send_message(response_type,
 		local_node_->serialise() +
 		serialise_length(term) +
-		serialise_length(false));
+		serialise_length(succeeded) +
+		(succeeded
+			? serialise_length(next_index) +
+			  serialise_length(match_index)
+			: ""
+		));
 
 	if (type != Message::HEARTBEAT) {
 		for (size_t i = 0; i < log.size(); ++i) {
