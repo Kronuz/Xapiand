@@ -388,7 +388,8 @@ Node::put_node(std::shared_ptr<const Node> node)
 
 	size_t cnt = 0;
 	for (const auto& node_pair : _nodes) {
-		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+		const auto& node_ref = node_pair.second;
+		if (node_ref->touched >= now - NODE_LIFESPAN || is_local(node_ref)) {
 			++cnt;
 		}
 	}
@@ -412,7 +413,7 @@ Node::touch_node(std::string_view _node_name)
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (node_ref->touched < now - NODE_LIFESPAN) {
+		if (node_ref->touched < now - NODE_LIFESPAN && !is_local(node_ref)) {
 			L_NODE_NODES("touch_node(%s) -> nullptr", _node_name);
 			return nullptr;
 		}
@@ -450,7 +451,8 @@ Node::drop_node(std::string_view _node_name)
 
 	size_t cnt = 0;
 	for (const auto& node_pair : _nodes) {
-		if (node_pair.second->touched >= now - NODE_LIFESPAN) {
+		const auto& node_ref = node_pair.second;
+		if (node_ref->touched >= now - NODE_LIFESPAN || is_local(node_ref)) {
 			++cnt;
 		}
 	}
