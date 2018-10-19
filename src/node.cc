@@ -32,16 +32,18 @@
 #include "string.hh"        // for string::Number
 
 
-// #define L_NODE L_SLATE_GREY
+#define L_NODE_NODES(args...)
 
-// #define L_NODE_NODES(args...) \
-// 	L_NODE(args); \
-// 	for (const auto& _ : _nodes) { \
-// 		L_NODE("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}%s%s", \
-// 			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched, \
-// 			Node::is_local(_.second) ? " (local)" : "", \
-// 			Node::is_leader(_.second) ? " (leader)" : ""); \
-// 	}
+#ifndef L_NODE_NODES
+#define L_NODE_NODES(args...) \
+	L_SLATE_GREY(args); \
+	for (const auto& _ : _nodes) { \
+		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}%s%s", \
+			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched, \
+			Node::is_local(_.second) ? " (local)" : "", \
+			Node::is_leader(_.second) ? " (leader)" : ""); \
+	}
+#endif
 
 
 std::string

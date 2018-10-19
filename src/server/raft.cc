@@ -512,6 +512,7 @@ void
 Raft::append_entries_response(Message type, const std::string& message)
 {
 	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
 
 	if (state != State::LEADER) {
 		return;
