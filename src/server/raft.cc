@@ -246,20 +246,27 @@ Raft::request_vote(Message type, const std::string& message)
 					// If the logs have last entries with different terms, then the
 					// log with the later term is more up-to-date.
 					voted_for = *node;
-					L_RAFT("I vote for %s (2)", voted_for.name());
+					L_RAFT("I vote for %s (log term is newer)", voted_for.name());
 				} else if (last_log_term == remote_last_log_term) {
 					// If the logs end with the same term, then whichever
 					// log is longer is more up-to-date.
-					if (log.size() < remote_last_log_index) {
+					if (log.size() <= remote_last_log_index) {
 						voted_for = *node;
-						L_RAFT("I vote for %s (3)", voted_for.name());
+						L_RAFT("I vote for %s (log index size concurs)", voted_for.name());
+					} else {
+						L_RAFT("I don't vote for %s (log index is shorter)", voted_for.name());
 					}
+				} else {
+					L_RAFT("I don't vote for %s (log term is older)", voted_for.name());
 				}
 			}
+		} else {
+			L_RAFT("I already voted for %s", voted_for.name());
 		}
 		granted = voted_for == *node;
 	}
 
+	L_RAFT("   << REQUEST_VOTE_RESPONSE {node:%s, term:%llu, granted:%s}", node->name(), term, granted ? "true" : "false");
 	send_message(Message::REQUEST_VOTE_RESPONSE,
 		node->serialise() +
 		serialise_length(term) +
@@ -333,7 +340,8 @@ Raft::request_vote_response(Message type, const std::string& message)
 					auto prev_log_index = entry_index - 1;
 					auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 
-					L_RAFT("   << HEARTBEAT {prev_log_term:%llu, prev_log_index:%zu, commit_index:%zu}", prev_log_term, prev_log_index, commit_index);
+					L_RAFT("   << HEARTBEAT {node:%s, term:%llu, prev_log_term:%llu, prev_log_index:%zu, commit_index:%zu}",
+						local_node_->name(), current_term, prev_log_term, prev_log_index, commit_index);
 					send_message(Message::HEARTBEAT,
 						local_node_->serialise() +
 						serialise_length(current_term) +
@@ -480,7 +488,8 @@ Raft::append_entries(Message type, const std::string& message)
 	} else {
 		response_type = Message::HEARTBEAT_RESPONSE;
 	}
-	L_RAFT("   << %s {term:%llu, success:%s}", MessageNames(response_type), term, success ? "true" : "false");
+	L_RAFT("   << %s {node:%s, term:%llu, success:%s}",
+		MessageNames(response_type), local_node_->name(), term, success ? "true" : "false");
 	send_message(response_type,
 		local_node_->serialise() +
 		serialise_length(term) +
@@ -642,14 +651,13 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 
 	auto local_node_ = Node::local_node();
+	L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
+		local_node_->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes, Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 	send_message(Message::REQUEST_VOTE,
 		local_node_->serialise() +
 		serialise_length(current_term) +
 		serialise_length(last_log_term) +
 		serialise_length(last_log_index));
-
-	L_RAFT("request_vote { state:%s, timeout:%f, current_term:%llu, active_nodes:%zu, leader:%s }",
-		StateNames(state), leader_election_timeout.repeat, current_term, Node::active_nodes, Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
