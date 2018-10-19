@@ -348,6 +348,13 @@ Raft::request_vote_response(Message type, const std::string& message)
 						serialise_length(prev_log_index) +
 						serialise_length(prev_log_term) +
 						serialise_length(commit_index));
+
+					// First time we elect a leader's, we setup node
+					auto joining = XapiandManager::State::JOINING;
+					if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+						// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+						XapiandManager::manager->setup_node();
+					}
 				}
 			}
 		}
@@ -470,6 +477,15 @@ Raft::append_entries(Message type, const std::string& message)
 						const auto& command = log[last_applied - 1].command;
 						_apply(command);
 					}
+				}
+			}
+
+			if (leader_commit == commit_index) {
+				// First time we reach leader's commit, we setup node
+				auto joining = XapiandManager::State::JOINING;
+				if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+					// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+					XapiandManager::manager->setup_node();
 				}
 			}
 
@@ -769,10 +785,6 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 			L_NOTICE("Cluster %s new leader is %s", opts.cluster_name, node->name());
 		}
 		Node::leader_node(node);
-		auto joining = XapiandManager::State::JOINING;
-		if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
-			XapiandManager::manager->setup_node();
-		}
 	}
 }
 

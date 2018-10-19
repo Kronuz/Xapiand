@@ -221,8 +221,8 @@ Discovery::sneer(Message type, const std::string& message)
 			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node_->name());
 			XapiandManager::manager->reset_state();
 		} else {
-			L_WARNING("Cannot join the party. Node name %s already taken!", local_node_->name());
 			XapiandManager::manager->state.store(XapiandManager::State::BAD);
+			L_WARNING("Cannot join the party. Node name %s already taken!", local_node_->name());
 			Node::local_node(std::make_shared<const Node>());
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
 			XapiandManager::manager->shutdown_sig(0);
@@ -252,7 +252,9 @@ Discovery::enter(Message type, const std::string& message)
 	// After receiving ENTER, flag as WAITING_MORE so it waits just a little longer
 	// (prevent it from switching to slow waiting)
 	auto waiting = XapiandManager::State::WAITING;
-	XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
+	if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	}
 }
 
 
@@ -356,7 +358,9 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 			local_node_ = Node::local_node();
 			auto reset = XapiandManager::State::RESET;
-			XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING);
+			if (XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			}
 			L_INFO("Advertising as %s...", local_node_->name());
 			send_message(Message::HELLO, local_node_->serialise());
 			break;
@@ -370,7 +374,9 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			L_EV("Reset discovery's discovery event (%f)", discovery.repeat);
 
 			auto waiting = XapiandManager::State::WAITING;
-			XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE);
+			if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			}
 			break;
 		}
 		case XapiandManager::State::WAITING_MORE: {
@@ -378,7 +384,9 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			L_EV("Stop discovery's discovery event");
 
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
-			XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING);
+			if (XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			}
 
 			auto local_node_ = Node::local_node();
 			send_message(Message::ENTER, local_node_->serialise());
@@ -390,8 +398,6 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			break;
 		}
 	}
-
-	L_DISCOVERY("discovery: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	L_EV_END("Discovery::discovery_cb:END");
 }
