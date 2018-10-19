@@ -233,7 +233,7 @@ Raft::request_vote(Message type, const std::string& message)
 	auto granted = false;
 	if (term == current_term) {
 		if (voted_for.empty()) {
-			if (*node == *local_node_) {
+			if (node == local_node_ || *node == *local_node_) {
 				voted_for = *node;
 				L_RAFT("I vote for %s (1)", voted_for.name());
 			} else if (state == State::FOLLOWER) {
@@ -318,7 +318,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
-		if (*node == *local_node_) {
+		if (node == local_node_ || *node == *local_node_) {
 			bool granted = unserialise_length(&p, p_end);
 			if (granted) {
 				++votes_granted;

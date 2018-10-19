@@ -225,7 +225,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	auto it = _nodes.find(node->lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (*node == *node_ref) {
+		if (node == node_ref || *node == *node_ref) {
 			auto node_copy = std::make_unique<Node>(*node_ref);
 			if (touch) {
 				node_copy->touched = now;
