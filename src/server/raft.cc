@@ -785,6 +785,29 @@ Raft::_apply(const std::string& command)
 {
 	L_CALL("Raft::_apply(%s)", repr(command));
 
+	const char *p = command.data();
+	const char *p_end = p + command.size();
+
+	size_t idx = unserialise_length(&p, p_end);
+	auto node_name = unserialise_string(&p, p_end);
+
+	auto node = Node::get_node(node_name);
+	if (node) {
+		auto node_copy = std::make_unique<Node>(*node);
+		node_copy->idx = idx;
+		node = std::shared_ptr<const Node>(node_copy.release());
+	} else {
+		auto node_copy = std::make_unique<Node>();
+		node_copy->name(std::string(node_name));
+		node_copy->idx = idx;
+		node = std::shared_ptr<const Node>(node_copy.release());
+	}
+	auto put = Node::put_node(node);
+	node = put.first;
+	if (put.second) {
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [enter]", node->name(), node->host(), node->http_port, node->binary_port);
+	}
+
 	L_RED("APPLY: %s", repr(command));
 }
 
