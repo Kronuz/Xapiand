@@ -214,7 +214,7 @@ Node::get_node(std::string_view _node_name)
 
 
 std::pair<std::shared_ptr<const Node>, bool>
-Node::put_node(std::shared_ptr<const Node> node)
+Node::put_node(std::shared_ptr<const Node> node, bool touch)
 {
 	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 
@@ -226,20 +226,24 @@ Node::put_node(std::shared_ptr<const Node> node)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (*node == *node_ref) {
-			auto node_copy = std::make_unique<Node>(*node_ref);
-			node_copy->touched = now;
-			node_ref = std::shared_ptr<const Node>(node_copy.release());
+			if (touch) {
+				auto node_copy = std::make_unique<Node>(*node_ref);
+				node_copy->touched = now;
+				node_ref = std::shared_ptr<const Node>(node_copy.release());
+			}
 			_update_nodes(node_ref);
 		}
 		// L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 		return std::make_pair(node_ref, false);
 	}
 
-	auto node_copy = std::make_unique<Node>(*node);
-	node_copy->touched = now;
-	auto final_node = std::shared_ptr<const Node>(node_copy.release());
-	_nodes[node->lower_name()] = final_node;
-	_update_nodes(final_node);
+	if (touch) {
+		auto node_copy = std::make_unique<Node>(*node);
+		node_copy->touched = now;
+		node = std::shared_ptr<const Node>(node_copy.release());
+	}
+	_nodes[node->lower_name()] = node;
+	_update_nodes(node);
 
 	size_t cnt = 0;
 	for (const auto& node_pair : _nodes) {
@@ -251,8 +255,8 @@ Node::put_node(std::shared_ptr<const Node> node)
 	active_nodes = cnt;
 	total_nodes = _nodes.size();
 
-	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> true", final_node->idx, final_node->name(), final_node->http_port, final_node->binary_port, final_node->touched);
-	return std::make_pair(final_node, true);
+	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> true", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+	return std::make_pair(node, true);
 }
 
 

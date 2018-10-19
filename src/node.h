@@ -202,7 +202,7 @@ public:
 	static std::atomic_size_t active_nodes;
 
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
-	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node);
+	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node, bool touch = true);
 	static std::shared_ptr<const Node> touch_node(std::string_view node_name);
 	static void drop_node(std::string_view node_name);
 	static void reset();
