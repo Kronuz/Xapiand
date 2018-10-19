@@ -421,10 +421,7 @@ Raft::append_entries(Message type, const std::string& message)
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = log.size();
 		auto entry_index = prev_log_index + 1;
-		// for (size_t i = 0; i < log.size(); ++i) {
-		// 	L_DEBUG("   %s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-		// }
-		// L_DEBUG("   {entry_index:%zu, prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", entry_index, prev_log_index, last_index, prev_log_term);
+		// L_RAFT("   {entry_index:%zu, prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", entry_index, prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::APPEND_ENTRIES) {
 				size_t last_log_index = unserialise_length(&p, p_end);
