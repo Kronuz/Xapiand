@@ -780,9 +780,9 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 	auto leader_node_ = Node::leader_node();
 	if (leader_node_ != node && *leader_node_ != *node) {
 		if (leader_node_->empty()) {
-			L_NOTICE("Cluster %s leader is %s", opts.cluster_name, node->name());
+			L_INFO("Cluster %s leader is %s", opts.cluster_name, node->name());
 		} else {
-			L_NOTICE("Cluster %s new leader is %s", opts.cluster_name, node->name());
+			L_INFO("Cluster %s new leader is %s", opts.cluster_name, node->name());
 		}
 		Node::leader_node(node);
 	}
