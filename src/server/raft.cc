@@ -225,9 +225,7 @@ Raft::request_vote(Message type, const std::string& message)
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
-
 		_reset_leader_election_timeout();
-		_set_leader_node(node);
 	}
 
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
@@ -307,9 +305,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
-
 		_reset_leader_election_timeout();
-		_set_leader_node(node);
 	}
 
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
@@ -384,9 +380,7 @@ Raft::append_entries(Message type, const std::string& message)
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
-
 		// _reset_leader_election_timeout();  // resetted below!
-		// _set_leader_node(node);
 	}
 
 	if (state == State::LEADER) {
@@ -541,9 +535,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
-
 		_reset_leader_election_timeout();
-		_set_leader_node(node);
 	}
 
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
