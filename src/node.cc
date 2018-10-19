@@ -226,11 +226,14 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (*node == *node_ref) {
+			auto node_copy = std::make_unique<Node>(*node_ref);
 			if (touch) {
-				auto node_copy = std::make_unique<Node>(*node_ref);
 				node_copy->touched = now;
-				node_ref = std::shared_ptr<const Node>(node_copy.release());
 			}
+			if (!node_copy->idx && node->idx) {
+				node_copy->idx = node->idx;
+			}
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
 			_update_nodes(node_ref);
 		}
 		// L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
