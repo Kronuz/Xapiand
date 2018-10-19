@@ -802,7 +802,7 @@ Raft::_apply(const std::string& command)
 	auto put = Node::put_node(node, false);
 	node = put.first;
 	if (put.second) {
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [enter]", node->name(), node->host(), node->http_port, node->binary_port);
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [apply]", node->name(), node->host(), node->http_port, node->binary_port);
 	}
 
 	L_RED("APPLY: %s", repr(command));
