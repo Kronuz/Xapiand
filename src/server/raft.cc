@@ -799,11 +799,7 @@ Raft::_apply(const std::string& command)
 		node_copy->idx = idx;
 		node = std::shared_ptr<const Node>(node_copy.release());
 	}
-	auto put = Node::put_node(node, false);
-	node = put.first;
-	if (put.second) {
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [apply]", node->name(), node->host(), node->http_port, node->binary_port);
-	}
+	Node::put_node(node, false);
 
 	L_RED("APPLY: %s", repr(command));
 }
