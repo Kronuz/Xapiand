@@ -158,7 +158,6 @@ public:
 	bool operator==(const Node& other) const {
 		return
 			_addr.sin_addr.s_addr == other._addr.sin_addr.s_addr &&
-			idx == other.idx &&
 			http_port == other.http_port &&
 			binary_port == other.binary_port &&
 			_lower_name == other._lower_name;
