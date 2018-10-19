@@ -838,7 +838,6 @@ void writepid(const char* pidfile) {
 
 
 void usedir(const char* path, bool force) {
-
 	if (!force) {
 		DIR *dirp;
 		dirp = opendir(path, true);
@@ -855,15 +854,14 @@ void usedir(const char* path, bool force) {
 				continue;
 			}
 			if (ent->d_type == DT_REG) {
-#if defined(__APPLE__) && defined(__MACH__)
-				if (ent->d_namlen == 9 && std::strcmp(s, "flintlock") == 0)
-#else
-					if (std::strcmp(s, "flintlock") == 0)
-#endif
-					{
-						empty = true;
-						break;
-					}
+				if (
+					std::strcmp(s, "node") == 0 ||
+					std::strcmp(s, "iamchert") == 0 ||
+					std::strcmp(s, "iamglass") == 0
+				) {
+					empty = true;
+					break;
+				}
 			}
 			empty = false;
 		}
