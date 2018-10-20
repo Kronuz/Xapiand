@@ -297,19 +297,20 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (!opts.solo && !raft) {
 		L_CRIT("Raft not available");
 		sig_exit(-EX_SOFTWARE);
+		return;
 	}
 	#endif
 
-	int new_cluster = 0;
-
 	auto leader_node_ = Node::leader_node();
-	Endpoints cluster_endpoints(Endpoint(".", leader_node_.get()));
-
 	auto local_node_ = Node::local_node();
+	auto is_leader = Node::is_equal(leader_node_, local_node_);
+
+	int new_cluster = 0;
+	Endpoint cluster_endpoint(".", leader_node_.get());
 	try {
 		bool found = false;
-		if (Node::is_leader(local_node_)) {
-			DatabaseHandler db_handler(cluster_endpoints);
+		if (is_leader) {
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
 			auto mset = db_handler.get_all_mset();
 			const auto m_e = mset.end();
 			for (auto m = mset.begin(); m != m_e; ++m) {
@@ -335,7 +336,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	} catch (const NotFoundError&) {
 		try {
 			L_INFO("Cluster database doesn't exist. Generating database...");
-			DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
 			auto did = db_handler.index(local_node_->lower_name(), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
@@ -351,10 +352,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		} catch (const CheckoutError&) {
 			L_CRIT("Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
+			return;
 		}
 	} catch (const Exception& e) {
 		L_CRIT("Exception: %s", e.get_message());
 		sig_exit(-EX_SOFTWARE);
+		return;
 	}
 
 	// Set node as ready!
@@ -370,23 +373,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		// Get a node (any node)
-		Endpoint local_endpoint(".");
-		for (const auto& node_ref : Node::nodes()) {
-			Endpoint remote_endpoint(".", node_ref.get());
-			if (!remote_endpoint.is_local()) {
-				// Replicate database from the other node
-				L_INFO("Syncing cluster data from %s...", node_ref->name());
-
-				auto ret = trigger_replication(remote_endpoint, local_endpoint);
-				if (ret.get()) {
-					L_INFO("Cluster data being synchronized from %s...", node_ref->name());
-					new_cluster = 2;
-					break;
-				}
+		// Replicate database from the leader
+		if (is_leader) {
+			state = State::READY;
+		} else {
+			assert(!cluster_endpoint.is_local());
+			Endpoint local_endpoint(".");
+			auto ret = trigger_replication(cluster_endpoint, local_endpoint);
+			if (!ret.get()) {
+				L_CRIT("Cannot synchronize cluster database from %s", leader_node_->name());
+				sig_exit(-EX_CANTCREAT);
+				return;
 			}
+			L_INFO("Cluster data being synchronized from %s...", leader_node_->name());
+			new_cluster = 2;
+			state = State::READY;  // TODO: Set this state only when cluster replication finishes!
 		}
-		state = State::READY;  // TODO: Set this state only when cluster replication finishes!
 	} else
 	#endif
 	{
