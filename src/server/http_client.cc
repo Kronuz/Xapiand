@@ -1417,31 +1417,22 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method me
 		return;
 	}
 
-	endpoints.clear();
-	auto leader_node_ = Node::leader_node();
-	endpoints.add(Endpoint(".", leader_node_.get()));
-
-	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
-
 	MsgPack nodes(MsgPack::Type::ARRAY);
-
-	auto mset = db_handler.get_all_mset();
-	const auto m_e = mset.end();
-	for (auto m = mset.begin(); m != m_e; ++m) {
-		auto document = db_handler.get_document(*m);
-		auto obj = document.get_obj();
-		obj.erase(ID_FIELD_NAME);
-		auto node = Node::get_node(obj["name"].as_str());
-		if (node) {
-			obj["host"] = node->host();
-			obj["http_port"] = node->http_port;
-			obj["binary_port"] = node->binary_port;
-			obj["active"] = true;
-		} else {
-			obj["active"] = false;
+	for (auto& node : Node::nodes()) {
+		if (node->idx) {
+			MsgPack obj(MsgPack::Type::MAP);
+			obj["id"] = node->idx;
+			obj["name"] = node->name();
+			if (Node::is_active(node)) {
+				obj["host"] = node->host();
+				obj["http_port"] = node->http_port;
+				obj["binary_port"] = node->binary_port;
+				obj["active"] = true;
+			} else {
+				obj["active"] = false;
+			}
+			nodes.push_back(obj);
 		}
-		obj["id"] = *m;
-		nodes.push_back(obj);
 	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, {
