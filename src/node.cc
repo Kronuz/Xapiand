@@ -343,10 +343,13 @@ Node::nodes()
 {
 	L_CALL("Node::nodes()");
 
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+
 	std::vector<std::shared_ptr<const Node>> nodes;
 	for (const auto& node_pair : _nodes) {
 		nodes.push_back(node_pair.second);
 	}
+
 	return nodes;
 }
 
