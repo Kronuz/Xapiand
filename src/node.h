@@ -183,6 +183,10 @@ public:
 		return is_equal(_leader_node.load(), node);
 	}
 
+	static bool is_active(const std::shared_ptr<const Node>& node) {
+		return node->touched >= epoch::now<>() - NODE_LIFESPAN || is_local(node);
+	}
+
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
 	static std::shared_ptr<const Node> leader_node(std::shared_ptr<const Node> node = nullptr);
 
