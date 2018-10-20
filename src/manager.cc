@@ -110,10 +110,10 @@ std::shared_ptr<XapiandManager> XapiandManager::manager;
 static ev::loop_ref* loop_ref_nil = nullptr;
 
 void sig_exit(int sig) {
-	if (sig < 0) {
-		exit(-sig);
-	} else if (XapiandManager::manager) {
+	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
+	} else if (sig < 0) {
+		exit(-sig);
 	}
 }
 
@@ -470,6 +470,10 @@ XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, int revents)
 	ignore_unused(revents);
 
 	int sig = atom_sig;
+	if (sig < 0) {
+		shutdown_sig(sig);
+	}
+
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
@@ -498,13 +502,17 @@ XapiandManager::shutdown_sig(int sig)
 	auto now = epoch::now<>();
 
 	if (sig < 0) {
-		throw Exit(-sig);
+		atom_sig = sig;
+		break_loop();
+		return;
 	}
 	if ((shutdown_now != 0) && sig != SIGTERM) {
 		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			io::ignore_eintr().store(false);
 			L_WARNING("You insisted... Xapiand exiting now!");
-			throw Exit(1);
+			atom_sig = -1;
+			break_loop();
+			return;
 		}
 	} else if ((shutdown_asap != 0) && sig != SIGTERM) {
 		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
@@ -692,13 +700,13 @@ XapiandManager::run()
 		setup_node();
 	}
 
-	try {
-		L_EV("Entered manager loop...");
-		run_loop();
-		L_EV("Manager loop ended!");
-	} catch (...) {
-		join();
-		throw;
+	L_EV("Entered manager loop...");
+	run_loop();
+	L_EV("Manager loop ended!");
+
+	int sig = atom_sig;
+	if (sig < 0) {
+		throw Exit(-sig);
 	}
 
 	join();

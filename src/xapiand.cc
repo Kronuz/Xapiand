@@ -1182,6 +1182,8 @@ int main(int argc, char **argv) {
 			} else {
 				server(process_start);
 			}
+		} catch (const Exit&) {
+			throw;
 		} catch (const BaseException& exc) {
 			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 			throw Exit(EX_SOFTWARE);
