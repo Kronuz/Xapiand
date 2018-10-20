@@ -1402,7 +1402,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 
 void
-HttpClient::nodes_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::nodes_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
 {
 	L_CALL("HttpClient::nodes_view()");
 
