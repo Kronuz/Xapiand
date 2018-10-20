@@ -222,6 +222,8 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
+	size_t idx = 0;
+
 	auto it = _nodes.find(node->lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
@@ -240,13 +242,17 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 			// L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 			return std::make_pair(node_ref, false);
 		}
+		idx = node_ref->idx;
 	}
 
+	auto node_copy = std::make_unique<Node>(*node);
 	if (touch) {
-		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
-		node = std::shared_ptr<const Node>(node_copy.release());
 	}
+	if (!node_copy->idx && idx) {
+		node_copy->idx = idx;
+	}
+	node = std::shared_ptr<const Node>(node_copy.release());
 	_nodes[node->lower_name()] = node;
 	_update_nodes(node);
 
