@@ -706,6 +706,7 @@ XapiandManager::run()
 
 	int sig = atom_sig;
 	if (sig < 0) {
+		destroyer();
 		throw Exit(-sig);
 	}
 
