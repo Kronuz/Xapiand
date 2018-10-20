@@ -292,17 +292,24 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	L_MANAGER("Setup Node!");
 
+	#ifdef XAPIAND_CLUSTERING
+	auto raft = weak_raft.lock();
+	if (!opts.solo && !raft) {
+		L_CRIT("Raft not available");
+		sig_exit(-EX_SOFTWARE);
+	}
+	#endif
+
 	int new_cluster = 0;
 
-	// Open cluster database
 	auto leader_node_ = Node::leader_node();
 	Endpoints cluster_endpoints(Endpoint(".", leader_node_.get()));
 
 	auto local_node_ = Node::local_node();
-	if (auto raft = weak_raft.lock()) {
-		DatabaseHandler db_handler(cluster_endpoints);
-		try {
-			bool found = false;
+	try {
+		bool found = false;
+		if (Node::is_leader(local_node_)) {
+			DatabaseHandler db_handler(cluster_endpoints);
 			auto mset = db_handler.get_all_mset();
 			const auto m_e = mset.end();
 			for (auto m = mset.begin(); m != m_e; ++m) {
@@ -312,33 +319,42 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				if (obj[ID_FIELD_NAME] == local_node_->lower_name()) {
 					found = true;
 				}
-				if (*local_node_ == *leader_node_) {
+				#ifdef XAPIAND_CLUSTERING
+				if (!opts.solo) {
 					raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
+				#endif
 			}
-			if (!found) {
-				THROW(NotFoundError);
-			}
-		} catch (const NotFoundError&) {
-			new_cluster = 1;
-			L_INFO("Cluster database doesn't exist. Generating database...");
-			try {
-				db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
-				auto did = db_handler.index(local_node_->lower_name(), false, {
-					{ RESERVED_INDEX, "field_all" },
-					{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-					{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
-					{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
-				}, true, msgpack_type).first;
-				raft->add_command(serialise_length(did) + serialise_string(local_node_->name()));
-			} catch (const CheckoutError&) {
-				L_CRIT("Cannot generate cluster database");
-				sig_exit(-EX_CANTCREAT);
-			}
-		} catch (const Exception& e) {
-			L_CRIT("Exception: %s", e.get_message());
-			sig_exit(-EX_SOFTWARE);
+		} else {
+			auto node = Node::get_node(local_node_->lower_name());
+			found = node && !!node->idx;
 		}
+		if (!found) {
+			THROW(NotFoundError);
+		}
+	} catch (const NotFoundError&) {
+		try {
+			L_INFO("Cluster database doesn't exist. Generating database...");
+			DatabaseHandler db_handler(cluster_endpoints, DB_WRITABLE | DB_SPAWN);
+			auto did = db_handler.index(local_node_->lower_name(), false, {
+				{ RESERVED_INDEX, "field_all" },
+				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
+				{ "tagline",      { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_INDEX, "none" }, { RESERVED_VALUE, XAPIAND_TAGLINE } } },
+			}, true, msgpack_type).first;
+			new_cluster = 1;
+			#ifdef XAPIAND_CLUSTERING
+			if (!opts.solo) {
+				raft->add_command(serialise_length(did) + serialise_string(local_node_->name()));
+			}
+			#endif
+		} catch (const CheckoutError&) {
+			L_CRIT("Cannot generate cluster database");
+			sig_exit(-EX_CANTCREAT);
+		}
+	} catch (const Exception& e) {
+		L_CRIT("Exception: %s", e.get_message());
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	// Set node as ready!
