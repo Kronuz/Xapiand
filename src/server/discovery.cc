@@ -246,7 +246,7 @@ Discovery::enter(Message type, const std::string& message)
 	auto put = Node::put_node(remote_node);
 	remote_node = put.first;
 	if (put.second) {
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! [enter]", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 	}
 
 	// After receiving ENTER, flag as WAITING_MORE so it waits just a little longer
