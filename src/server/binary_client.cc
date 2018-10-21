@@ -221,7 +221,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			return;
 		}
 
-		L_BINARY("on_read message: '\\%02x' (state=0x%x)", static_cast<int>(type), toUType(state));
+		L_BINARY_WIRE("on_read message: '\\%02x' (state=0x%x)", static_cast<int>(type), toUType(state));
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
@@ -334,8 +334,7 @@ BinaryClient::_run()
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s) -> REMOTEPROTOCOL_SERVER", RemoteMessageTypeNames(type));
-					L_BINARY_PROTO("message: '%s'", repr(message));
+					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
 					remote_protocol.remote_server(type, message);
 					break;
 				}
@@ -343,8 +342,7 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_SERVER: {
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_SERVER", ReplicationMessageTypeNames(type));
-					L_BINARY_PROTO("message: '%s'", repr(message));
+					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
 					replication.replication_server(type, message);
 					break;
 				}
@@ -352,8 +350,7 @@ BinaryClient::_run()
 				case State::REPLICATIONPROTOCOL_CLIENT: {
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-					L_BINARY(">> get_message(%s) -> REPLICATIONPROTOCOL_CLIENT", ReplicationReplyTypeNames(type));
-					L_BINARY_PROTO("message: '%s'", repr(message));
+					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 					replication.replication_client(type, message);
 					break;
 				}
