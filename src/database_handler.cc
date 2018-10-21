@@ -215,8 +215,8 @@ DatabaseHandler::DatabaseHandler()
 	  database_locks(0) { }
 
 
-DatabaseHandler::DatabaseHandler(Endpoints  endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<size_t>>  context_)
-	: endpoints(std::move(endpoints_)),
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<size_t>> context_)
+	: endpoints(endpoints_),
 	  flags(flags_),
 	  method(method_),
 	  database_locks(0),
