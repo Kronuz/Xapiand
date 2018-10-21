@@ -279,9 +279,9 @@ BinaryClient::get_message(std::string &result, char max_type)
 
 
 void
-BinaryClient::send_message(char type_as_char, const std::string &message, double)
+BinaryClient::send_message(char type_as_char, const std::string &message)
 {
-	L_CALL("BinaryClient::send_message(<type_as_char>, <message>, <>)");
+	L_CALL("BinaryClient::send_message(<type_as_char>, <message>)");
 
 	std::string buf;
 	buf += type_as_char;
@@ -369,10 +369,9 @@ BinaryClient::_run()
 		} catch (const Xapian::NetworkTimeoutError& exc) {
 			L_EXC("ERROR: %s", exc.get_description());
 			try {
-				// We've had a timeout, so the client may not be listening, so
-				// set the end_time to 1 and if we can't send the message right
-				// away, just exit and the client will cope.
-				remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
+				// We've had a timeout, so the client may not be listening, if we can't
+				// send the message right away, just exit and the client will cope.
+				remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			} catch (...) {}
 			remote_protocol.checkin_database();
 			shutdown();

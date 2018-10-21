@@ -174,7 +174,7 @@ public:
 	void checkout_database();
 	void checkin_database();
 
-	void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0);
+	void send_message(RemoteReplyType type, const std::string& message);
 
 	void remote_server(RemoteMessageType type, const std::string& message);
 	void msg_allterms(const std::string& message);

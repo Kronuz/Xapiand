@@ -87,7 +87,7 @@ public:
 	~BinaryClient();
 
 	char get_message(std::string &result, char max_type);
-	void send_message(char type_as_char, const std::string& message, double end_time=0.0);
+	void send_message(char type_as_char, const std::string& message);
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);

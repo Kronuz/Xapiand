@@ -114,11 +114,13 @@ RemoteProtocol::checkin_database()
 
 
 void
-RemoteProtocol::send_message(RemoteReplyType type, const std::string& message, double end_time)
+RemoteProtocol::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_BINARY("<< send_message(%s)", RemoteReplyTypeNames(type));
-	L_BINARY_PROTO("message: %s", repr(message));
-	client.send_message(static_cast<char>(type), message, end_time);
+	L_CALL("RemoteProtocol::send_message(%s, <message>)", RemoteReplyTypeNames(type));
+
+	L_BINARY_PROTO("<< send_message (%s): %s", RemoteReplyTypeNames(type), repr(message));
+
+	client.send_message(toUType(type), message);
 }
 
 

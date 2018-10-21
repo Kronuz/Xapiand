@@ -70,11 +70,13 @@ Replication::~Replication()
 
 
 void
-Replication::send_message(ReplicationReplyType type, const std::string& message, double end_time)
+Replication::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_BINARY("<< send_message(%s)", ReplicationReplyTypeNames(type));
-	L_BINARY_PROTO("message: %s", repr(message));
-	client.send_message(static_cast<char>(type), message, end_time);
+	L_CALL("Replication::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
+
+	L_BINARY_PROTO("<< send_message (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+
+	client.send_message(toUType(type), message);
 }
 
 

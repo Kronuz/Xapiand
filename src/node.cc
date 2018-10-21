@@ -54,6 +54,7 @@ Node::serialise() const
 		: serialise_length(_addr.sin_addr.s_addr) +
 			serialise_length(http_port) +
 			serialise_length(binary_port) +
+			serialise_length(idx) +
 			serialise_string(_name);
 }
 
@@ -68,7 +69,7 @@ Node::unserialise(const char **p, const char *end)
 	node._addr.sin_addr.s_addr = unserialise_length(&ptr, end);
 	node.http_port = unserialise_length(&ptr, end);
 	node.binary_port = unserialise_length(&ptr, end);
-
+	node.idx = unserialise_length(&ptr, end);
 	node._name = unserialise_string(&ptr, end);
 	if (node._name.empty()) {
 		throw Xapian::SerialisationError("Bad Node: No name");

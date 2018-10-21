@@ -92,7 +92,7 @@ public:
 	explicit Replication(BinaryClient& client_);
 	~Replication();
 
-	void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0);
+	void send_message(ReplicationReplyType type, const std::string& message);
 
 	void replication_server(ReplicationMessageType type, const std::string& message);
 	void replication_client(ReplicationReplyType type, const std::string& message);
