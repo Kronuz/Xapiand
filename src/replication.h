@@ -28,7 +28,8 @@
 
 #include <string>
 
-#include "utils.h"
+#include "endpoint.h"
+#include "lock_database.h"
 
 #define SWITCH_TO_REPL '\xfe'
 
@@ -86,11 +87,23 @@ class BinaryClient;
 
 
 class Replication {
+	template<typename T, typename U>
+	friend class lock_database;
+
 	BinaryClient& client;
+
+public:
+	Endpoints src_endpoints;
+	Endpoints endpoints;
+	std::shared_ptr<Database> database;
+	int database_locks;
+	int flags;
 
 public:
 	explicit Replication(BinaryClient& client_);
 	~Replication();
+
+	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void send_message(ReplicationReplyType type, const std::string& message);
 

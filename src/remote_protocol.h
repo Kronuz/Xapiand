@@ -31,9 +31,7 @@
 #include <string>
 #include <vector>
 
-#include "database_handler.h"
 #include "lock_database.h"
-#include "utils.h"
 
 
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
@@ -148,7 +146,6 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 
 
 class RemoteProtocol {
-
 	template<typename T, typename U>
 	friend class lock_database;
 	friend class BinaryClient;

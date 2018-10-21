@@ -39,19 +39,6 @@
 #include "base_tcp.h"
 #include "utils.h"
 
-std::string serialise_error(const Xapian::Error &exc) {
-	// The byte before the type name is the type code.
-	std::string result(1, (exc.get_type())[-1]);
-	result += serialise_length(exc.get_context().length());
-	result += exc.get_context();
-	result += serialise_length(exc.get_msg().length());
-	result += exc.get_msg();
-	// The "error string" goes last so we don't need to store its length.
-	const char* err = exc.get_error_string();
-	if (err) result += err;
-	return result;
-}
-
 
 //
 // Xapian binary client
@@ -83,8 +70,6 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 
 BinaryClient::~BinaryClient()
 {
-	remote_protocol.checkin_database();
-
 	int binary_clients = --XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
 	if (binary_clients < 0 || binary_clients > total_clients) {
@@ -116,35 +101,17 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 {
 	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	state = State::REPLICATIONPROTOCOL_CLIENT;
-
-	repl_endpoints.add(src_endpoint);
-	remote_protocol.endpoints.add(dst_endpoint); /* Set endpoints in to remote_protocol */
-
-	try {
-		XapiandManager::manager->database_pool.checkout(remote_protocol.database, remote_protocol.endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
-			src_endpoint,
-			dst_endpoint
-		] () {
-			L_DEBUG("Triggering replication for %s after checkin!", repr(dst_endpoint.to_string()));
-			XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
-		});
-	} catch (const CheckoutError&) {
-		L_ERR("Cannot checkout %s", repr(remote_protocol.endpoints.to_string()));
-		return false;
-	}
 
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) == -1) {
 		L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
-		remote_protocol.checkin_database();
 		return false;
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock.load());
 
-	return true;
+	return replication.init_replication(src_endpoint, dst_endpoint);
 }
 
 
@@ -164,22 +131,22 @@ BinaryClient::on_read_file_done()
 				break;
 			default:
 				L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
-				remote_protocol.checkin_database();
-				shutdown();
+				destroy();
+				detach();
 		};
 	} catch (const Xapian::NetworkError& exc) {
 		L_EXC("ERROR: %s", exc.get_description());
-		remote_protocol.checkin_database();
-		shutdown();
+		destroy();
+		detach();
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
-		remote_protocol.checkin_database();
-		shutdown();
+		destroy();
+		detach();
 	} catch (...) {
 		std::exception exc;
 		L_EXC("ERROR: Unkown error!");
-		remote_protocol.checkin_database();
-		shutdown();
+		destroy();
+		detach();
 	}
 
 	io::unlink(file_path);
@@ -329,75 +296,38 @@ BinaryClient::_run()
 	}
 
 	while (!messages_queue.empty() && !closed) {
-		try {
-			switch (state) {
-				case State::REMOTEPROTOCOL_SERVER: {
-					std::string message;
-					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
-					remote_protocol.remote_server(type, message);
-					break;
-				}
-
-				case State::REPLICATIONPROTOCOL_SERVER: {
-					std::string message;
-					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
-					replication.replication_server(type, message);
-					break;
-				}
-
-				case State::REPLICATIONPROTOCOL_CLIENT: {
-					std::string message;
-					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
-					replication.replication_client(type, message);
-					break;
-				}
-
-				case State::INIT:
-					L_ERR("Unexpected BinaryClient State::INIT!");
-					break;
-
-				default:
-					L_ERR("Unexpected BinaryClient State!");
-					break;
+		switch (state) {
+			case State::REMOTEPROTOCOL_SERVER: {
+				std::string message;
+				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
+				L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
+				remote_protocol.remote_server(type, message);
+				break;
 			}
-		} catch (const Xapian::NetworkTimeoutError& exc) {
-			L_EXC("ERROR: %s", exc.get_description());
-			try {
-				// We've had a timeout, so the client may not be listening, if we can't
-				// send the message right away, just exit and the client will cope.
-				remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-			} catch (...) {}
-			remote_protocol.checkin_database();
-			shutdown();
-		} catch (const Xapian::NetworkError& exc) {
-			L_EXC("ERROR: %s", exc.get_description());
-			remote_protocol.checkin_database();
-			shutdown();
-		} catch (const BaseException& exc) {
-			L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			remote_protocol.checkin_database();
-			shutdown();
-		} catch (const Xapian::Error& exc) {
-			L_EXC("ERROR: %s", exc.get_description());
-			// Propagate the exception to the client, then return to the main
-			// message handling loop.
-			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-			remote_protocol.checkin_database();
-		} catch (const std::exception& exc) {
-			L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
-			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			remote_protocol.checkin_database();
-			shutdown();
-		} catch (...) {
-			std::exception exc;
-			L_EXC("ERROR: %s", "Unkown exception!");
-			remote_protocol.send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			remote_protocol.checkin_database();
-			shutdown();
+
+			case State::REPLICATIONPROTOCOL_SERVER: {
+				std::string message;
+				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
+				L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
+				replication.replication_server(type, message);
+				break;
+			}
+
+			case State::REPLICATIONPROTOCOL_CLIENT: {
+				std::string message;
+				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
+				L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+				replication.replication_client(type, message);
+				break;
+			}
+
+			case State::INIT:
+				L_ERR("Unexpected BinaryClient State::INIT!");
+				break;
+
+			default:
+				L_ERR("Unexpected BinaryClient State!");
+				break;
 		}
 	}
 

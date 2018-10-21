@@ -24,9 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "server/binary_client.h"
+#include "database_handler.h"
 #include "io_utils.h"
 #include "length.h"
+#include "server/binary_client.h"
 
 
 /*  ____            _ _           _   _
@@ -42,7 +43,9 @@ using dispatch_func = void (Replication::*)(const std::string&);
 
 
 Replication::Replication(BinaryClient& client_)
-	: client(client_)
+	: client(client_),
+	  database_locks(0),
+	  flags(DB_WRITABLE | DB_SPAWN | DB_NOWAL)
 {
 	L_OBJ("CREATED REPLICATION OBJ!");
 }
@@ -51,6 +54,19 @@ Replication::Replication(BinaryClient& client_)
 Replication::~Replication()
 {
 	L_OBJ("DELETED REPLICATION OBJ!");
+}
+
+
+bool
+Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+	L_CALL("Replication::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+
+	src_endpoints = Endpoints{src_endpoint};
+	endpoints = Endpoints{dst_endpoint};
+	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+
+	return true;
 }
 
 
@@ -190,12 +206,13 @@ Replication::reply_welcome(const std::string &)
 	// read_file();
 
 	std::string message;
-	message.append(serialise_string("UUID"));
-	message.append(serialise_string("REVISION"));
-	message.append(serialise_string("PATH"));
-	// message.append(serialise_string(db_->get_uuid()));
-	// message.append(serialise_string(db_->get_revision_info()));
-	// message.append(serialise_string(endpoints[0].path));
+
+	lock_database<Replication> lk_db(this);
+	message.append(serialise_string(database->db->get_uuid()));
+	message.append(serialise_length(database->db->get_revision()));
+	message.append(serialise_string(endpoints[0].path));
+	lk_db.unlock();
+
 	send_message(static_cast<ReplicationReplyType>(SWITCH_TO_REPL), message);
 }
 

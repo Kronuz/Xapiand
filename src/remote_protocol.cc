@@ -59,7 +59,21 @@ using dispatch_func = void (RemoteProtocol::*)(const std::string&);
 constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
 
 
-inline std::string::size_type common_prefix_length(const std::string &a, const std::string &b) {
+static inline std::string serialise_error(const Xapian::Error &exc) {
+	// The byte before the type name is the type code.
+	std::string result(1, (exc.get_type())[-1]);
+	result += serialise_length(exc.get_context().length());
+	result += exc.get_context();
+	result += serialise_length(exc.get_msg().length());
+	result += exc.get_msg();
+	// The "error string" goes last so we don't need to store its length.
+	const char* err = exc.get_error_string();
+	if (err) result += err;
+	return result;
+}
+
+
+static inline std::string::size_type common_prefix_length(const std::string &a, const std::string &b) {
 	std::string::size_type minlen = std::min(a.size(), b.size());
 	std::string::size_type common;
 	for (common = 0; common < minlen; ++common) {
@@ -170,9 +184,40 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 			THROW(InvalidArgumentError, errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
+	} catch (const Xapian::NetworkTimeoutError& exc) {
+		L_EXC("ERROR: %s", exc.get_description());
+		try {
+			// We've had a timeout, so the client may not be listening, if we can't
+			// send the message right away, just exit and the client will cope.
+			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
+		} catch (...) {}
+		client.destroy();
+		client.detach();
+	} catch (const Xapian::NetworkError& exc) {
+		L_EXC("ERROR: %s", exc.get_description());
+		client.destroy();
+		client.detach();
+	} catch (const BaseException& exc) {
+		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		client.destroy();
+		client.detach();
+	} catch (const Xapian::Error& exc) {
+		L_EXC("ERROR: %s", exc.get_description());
+		// Propagate the exception to the client, then return to the main
+		// message handling loop.
+		send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
+	} catch (const std::exception& exc) {
+		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		client.destroy();
+		client.detach();
 	} catch (...) {
-		checkin_database();
-		throw;
+		std::exception exc;
+		L_EXC("ERROR: %s", "Unkown exception!");
+		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		client.destroy();
+		client.detach();
 	}
 }
 

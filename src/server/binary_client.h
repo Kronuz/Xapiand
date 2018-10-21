@@ -61,8 +61,6 @@ class BinaryClient : public BaseClient {
 	std::string buffer;
 	queue::Queue<Buffer> messages_queue;
 
-	Endpoints repl_endpoints;
-
 	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
 
 	void on_read(const char *buf, ssize_t received) override;
