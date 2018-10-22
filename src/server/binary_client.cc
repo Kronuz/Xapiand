@@ -125,6 +125,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 	}
 
 	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
+	ssize_t processed = -buffer.size();
 	buffer.append(buf, received);
 	while (!buffer.empty()) {
 		const char *o = buffer.data();
@@ -143,7 +144,8 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				buffer.clear();
 				read_file();
 				L_BINARY("Start reading file");
-				return p - o;
+				processed += p - o;
+				return processed;
 		}
 
 		ssize_t len;
@@ -165,6 +167,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			messages_queue.push(Buffer(type, p, len));
 		}
 		buffer.erase(0, p - o + len);
+		processed += p - o + len;
 	}
 
 	return received;
