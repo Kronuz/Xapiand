@@ -329,8 +329,7 @@ Replication::reply_db_filename(const std::string& filename)
 
 	L_REPLICATION("Replication::reply_db_filename");
 
-	auto file_path = endpoints[0].path + "/.tmp/" + filename;
-	L_MAGENTA("file_path: %s", file_path);
+	file_path = endpoints[0].path + "/.tmp/" + filename;
 }
 
 
@@ -341,7 +340,9 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 
 	L_REPLICATION("Replication::reply_db_filedata");
 
-	L_RED("tmp_file: %s", repr(tmp_file));
+	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
+		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
+	}
 }
 
 

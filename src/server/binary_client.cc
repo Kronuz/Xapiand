@@ -155,9 +155,9 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			case FILE_FOLLOWS: {
 				char file_path[PATH_MAX];
 				strcpy(file_path, "/tmp/xapiand.XXXXXX");
+				file_descriptor = io::mkstemp(file_path);
 				temp_files.push_back(file_path);
 				file_message_type = *p++;
-				file_descriptor = io::mkstemp(file_path);
 				if (file_descriptor == -1) {
 					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
 				} else {
