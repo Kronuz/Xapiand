@@ -104,6 +104,8 @@ public:
 	int database_locks;
 	int flags;
 
+	std::string switch_db;
+
 	std::string file_path;
 
 	std::string current_uuid;

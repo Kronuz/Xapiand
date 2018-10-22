@@ -53,6 +53,10 @@ Replication::Replication(BinaryClient& client_)
 
 Replication::~Replication()
 {
+	if (!switch_db.empty()) {
+		delete_files(switch_db.c_str());
+	}
+
 	L_OBJ("DELETED REPLICATION OBJ!");
 }
 
@@ -102,17 +106,12 @@ Replication::replication_server(ReplicationMessageType type, const std::string& 
 	static const dispatch_func dispatch[] = {
 		&Replication::msg_get_changesets,
 	};
-	try {
-		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-			std::string errmsg("Unexpected message type ");
-			errmsg += std::to_string(toUType(type));
-			THROW(InvalidArgumentError, errmsg);
-		}
-		(this->*(dispatch[static_cast<int>(type)]))(message);
-	} catch (...) {
-		client.remote_protocol.checkin_database();
-		throw;
+	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+		std::string errmsg("Unexpected message type ");
+		errmsg += std::to_string(toUType(type));
+		THROW(InvalidArgumentError, errmsg);
 	}
+	(this->*(dispatch[static_cast<int>(type)]))(message);
 }
 
 
@@ -136,13 +135,13 @@ Replication::msg_get_changesets(const std::string& message)
 	auto revision = database->db->get_revision();
 	lk_db.unlock();
 
-	// WAL required on a local writable database, open it.
-	DatabaseWAL wal(endpoints[0].path, nullptr);
-
 	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
 
+	// TODO: Implement WAL's has_revision() and iterator
+	// // WAL required on a local writable database, open it.
+	// DatabaseWAL wal(endpoints[0].path, nullptr);
 	// if (from_revision && !wal.has_revision(from_revision)) {
 	// 	from_revision = 0;
 	// }
@@ -189,6 +188,7 @@ Replication::msg_get_changesets(const std::string& message)
 
 				if (whole_db_copies_left == 0) {
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
+					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
 					uuid = database->db->get_uuid();
@@ -203,6 +203,7 @@ Replication::msg_get_changesets(const std::string& message)
 			lk_db.unlock();
 		}
 
+		// TODO: Implement WAL's has_revision() and iterator
 		// int wal_iterations = 5;
 		// do {
 		// 	// Send WAL operations.
@@ -216,6 +217,8 @@ Replication::msg_get_changesets(const std::string& message)
 		// 	lk_db.unlock();
 		// while (from_revision < revision && --wal_iterations != 0);
 	}
+
+	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
 }
 
 
@@ -234,17 +237,12 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 		&Replication::reply_db_footer,
 		&Replication::reply_changeset,
 	};
-	try {
-		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-			std::string errmsg("Unexpected message type ");
-			errmsg += std::to_string(toUType(type));
-			THROW(InvalidArgumentError, errmsg);
-		}
-		(this->*(dispatch[static_cast<int>(type)]))(message);
-	} catch (...) {
-		client.remote_protocol.checkin_database();
-		throw;
+	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+		std::string errmsg("Unexpected message type ");
+		errmsg += std::to_string(toUType(type));
+		THROW(InvalidArgumentError, errmsg);
 	}
+	(this->*(dispatch[static_cast<int>(type)]))(message);
 }
 
 
@@ -269,13 +267,15 @@ Replication::reply_end_of_changes(const std::string&)
 
 	L_REPLICATION("Replication::reply_end_of_changes");
 
-	// if (repl_switched_db) {
-	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
-	// }
+	if (switch_db.empty()) {
+		flags = DB_WRITABLE;
+		lock_database<Replication> lk_db(this);
+	} else {
+		XapiandManager::manager->database_pool.switch_db(endpoints[0]/*, switch_db*/);  // TODO: pass switch_db
+	}
 
-	// client.remote_protocol.checkin_database();
-
-	// shutdown();
+	client.destroy();
+	client.detach();
 }
 
 
@@ -286,10 +286,9 @@ Replication::reply_fail(const std::string&)
 
 	L_REPLICATION("Replication::reply_fail");
 
-	// L_ERR("Replication failure!");
-	// client.remote_protocol.checkin_database();
-
-	// shutdown();
+	L_ERR("Replication failure!");
+	client.destroy();
+	client.detach();
 }
 
 
@@ -306,20 +305,16 @@ Replication::reply_db_header(const std::string& message)
 	current_uuid = unserialise_string(&p, p_end);
 	current_revision = unserialise_length(&p, p_end);
 
-	std::string path_tmp = endpoints[0].path + "/.tmp";
-
-	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (dir == 0) {
-		L_DEBUG("Directory %s created", path_tmp);
-	} else if (errno == EEXIST) {
-		delete_files(path_tmp.c_str());
-		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		if (dir == 0) {
-			L_DEBUG("Directory %s created", path_tmp);
-		}
-	} else {
-		L_ERR("Directory %s not created: %s (%d): %s", path_tmp, io::strerrno(errno), errno, strerror(errno));
+	char switch_db_path[PATH_MAX];
+	snprintf(switch_db_path, PATH_MAX, "%s/:tmp.XXXXXX", endpoints[0].path.c_str());
+	if (io::mkdtemp(switch_db_path) == nullptr) {
+		L_ERR("Directory %s not created: %s (%d): %s", switch_db, io::strerrno(errno), errno, strerror(errno));
+		client.destroy();
+		client.detach();
+		return;
 	}
+
+	switch_db = switch_db_path;
 }
 
 
@@ -330,7 +325,7 @@ Replication::reply_db_filename(const std::string& filename)
 
 	L_REPLICATION("Replication::reply_db_filename");
 
-	file_path = endpoints[0].path + "/.tmp/" + filename;
+	file_path = switch_db + "/" + filename;
 }
 
 
@@ -343,98 +338,55 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
+		client.destroy();
+		client.detach();
+		return;
 	}
 }
 
 
 void
-Replication::reply_db_footer(const std::string&)
+Replication::reply_db_footer(const std::string& message)
 {
 	L_CALL("Replication::reply_db_footer(<message>)");
 
 	L_REPLICATION("Replication::reply_db_footer");
 
-	// // const char *p = message.data();
-	// // const char *p_end = p + message.size();
-	// // size_t revision = unserialise_length(&p, p_end);
-	// // Indicates the end of a DB copy operation, signal switch
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	size_t revision = unserialise_length(&p, p_end);
 
-	// Endpoints endpoints_tmp;
-	// Endpoint& endpoint_tmp = endpoints[0];
-	// endpoint_tmp.path.append("/.tmp");
-	// endpoints_tmp.insert(endpoint_tmp);
-
-	// if (!repl_database_tmp) {
-	// 	try {
-	// 		XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE);
-	// 	} catch (const CheckoutError&)
-	// 		L_ERR("Cannot checkout tmp %s", endpoint_tmp.path);
-	// 	}
-	// }
-
-	// repl_switched_db = true;
-	// repl_just_switched_db = true;
+	if (revision != current_revision) {
+		delete_files(switch_db.c_str());
+		switch_db.clear();
+	}
 }
 
 
 void
-Replication::reply_changeset(const std::string&)
+Replication::reply_changeset(const std::string& message)
 {
 	L_CALL("Replication::reply_changeset(<message>)");
 
 	L_REPLICATION("Replication::reply_changeset");
 
-	// Xapian::WritableDatabase *wdb_;
-	// if (repl_database_tmp) {
-	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
-	// } else {
-	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(database);
-	// }
+	ignore_unused(message);
 
-	// char path[] = "/tmp/xapian_changes.XXXXXX";
-	// int fd = mkstemp(path);
-	// if (fd == -1) {
-	// 	L_ERR("Cannot write to %s (1)", path);
-	// 	return;
-	// }
+	// const char *p = message.data();
+	// const char *p_end = p + message.size();
+	// auto line = unserialise_string(&p, p_end);
 
-	// std::string header;
-	// header += toUType(ReplicationMessageType::REPLY_CHANGESET);
-	// header += serialise_length(message.size());
-
-	// if (io::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
-	// 	L_ERR("Cannot write to %s (2)", path);
-	// 	return;
-	// }
-
-	// if (io::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
-	// 	L_ERR("Cannot write to %s (3)", path);
-	// 	return;
-	// }
-
-	// io::lseek(fd, 0, SEEK_SET);
-
-	// try {
-	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
-	// 	repl_just_switched_db = false;
-	// } catch (const MSG_NetworkError& exc) {
-	// 	L_EXC("ERROR: %s", exc.get_description());
-	// 	io::close(fd);
-	// 	io::unlink(path);
-	// 	throw;
-	// } catch (const Xapian::DatabaseError& exc) {
-	// 	L_EXC("ERROR: %s", exc.get_description());
-	// 	io::close(fd);
-	// 	io::unlink(path);
-	// 	throw;
-	// } catch (...) {
-	// 	io::close(fd);
-	// 	io::unlink(path);
-	// 	throw;
-	// }
-
-	// io::close(fd);
-	// io::unlink(path);
+	if (switch_db.empty()) {
+		// write changeset to WAL in endpoints[0] directory
+		// DatabaseWAL wal(switch_db, nullptr);
+		// wal.write_line(line);  // TODO: Implement
+	} else {
+		// write changeset to WAL in ':tmp' directory (in switch_db)
+		// flags = DB_WRITABLE;
+		// lock_database<Replication> lk_db(this);
+		// DatabaseWAL wal(endpoints[0].path, database.get());
+		// wal.write_line(line);  // TODO: Implement
+	}
 }
 
 
