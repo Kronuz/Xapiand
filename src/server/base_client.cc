@@ -110,7 +110,9 @@ ClientLZ4Compressor::compress()
 		return -1;
 	}
 
-	if (!client.write(serialise_length(0)) || !client.write(serialise_length(get_digest()))) {
+	auto checksum = get_digest();
+	L_DEBUG("checksum: 0x%04x", checksum);
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(checksum))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
@@ -175,7 +177,9 @@ ClientNoCompressor::compress()
 		return -1;
 	}
 
-	if (!client.write(serialise_length(0)) || !client.write(serialise_length(XXH32_digest(xxh_state)))) {
+	auto checksum = XXH32_digest(xxh_state);
+	L_DEBUG("checksum: 0x%04x", checksum);
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(checksum))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
@@ -221,7 +225,7 @@ public:
 	ssize_t decompress() override;
 
 	bool verify(uint32_t checksum_) noexcept override {
-		L_CALL("ClientLZ4Decompressor::verify()");
+		L_CALL("ClientLZ4Decompressor::verify(0x%04x)", checksum_);
 
 		return get_digest() == checksum_;
 	}
@@ -260,7 +264,7 @@ public:
 	ssize_t decompress() override;
 
 	bool verify(uint32_t checksum_) noexcept override {
-		L_CALL("ClientNoDecompressor::verify()");
+		L_CALL("ClientNoDecompressor::verify(0x%04x)", checksum_);
 
 		return XXH32_digest(xxh_state) == checksum_;
 	}
@@ -685,16 +689,15 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 					if (receive_checksum) {
 						receive_checksum = false;
-						if (decompressor->verify(static_cast<uint32_t>(file_size))) {
-							on_read_file_done();
-							mode = MODE::READ_BUF;
-							decompressor.reset();
-							break;
+						if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
+							L_ERR("Data is corrupt!");
+							L_EV_END("BaseClient::io_cb_read:END");
+							return;
 						}
-
-						L_ERR("Data is corrupt!");
-						L_EV_END("BaseClient::io_cb_read:END");
-						return;
+						on_read_file_done();
+						mode = MODE::READ_BUF;
+						decompressor.reset();
+						break;
 					}
 
 					block_size = file_size;
