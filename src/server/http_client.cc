@@ -275,7 +275,7 @@ HttpClient::~HttpClient()
 }
 
 
-void
+ssize_t
 HttpClient::on_read(const char* buf, ssize_t received)
 {
 	L_CALL("HttpClient::on_read(<buf>, %zd)", received);
@@ -290,7 +290,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		} else if (!write_queue.empty()) {
 			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		}
-		return;
+		return received;
 	}
 
 	L_HTTP_WIRE("HttpClient::on_read: %zd bytes", received);
@@ -314,6 +314,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		destroy();  // Handle error. Just close the connection.
 		detach();
 	}
+
+	return received;
 }
 
 

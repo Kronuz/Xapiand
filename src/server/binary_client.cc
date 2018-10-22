@@ -115,13 +115,13 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 }
 
 
-void
+ssize_t
 BinaryClient::on_read(const char *buf, ssize_t received)
 {
 	L_CALL("BinaryClient::on_read(<buf>, %zu)", received);
 
 	if (received <= 0) {
-		return;
+		return received;
 	}
 
 	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
@@ -132,14 +132,6 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-
-		ssize_t len;
-		try {
-			len = unserialise_length(&p, p_end, true);
-		} catch (Xapian::SerialisationError) {
-			return;
-		}
-
 		L_BINARY_WIRE("on_read message: '\\%02x' (state=0x%x)", static_cast<int>(type), toUType(state));
 		switch (type) {
 			case SWITCH_TO_REPL:
@@ -148,6 +140,8 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				L_BINARY("Switched to replication protocol");
 				break;
 		}
+
+		ssize_t len = unserialise_length(&p, p_end, true);
 
 		if (messages_queue.empty()) {
 			// Enqueue message...
@@ -162,6 +156,8 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		}
 		buffer.erase(0, p - o + len);
 	}
+
+	return received;
 }
 
 
@@ -244,7 +240,6 @@ BinaryClient::send_message(char type_as_char, const std::string &message)
 	buf += type_as_char;
 	buf += serialise_length(message.size());
 	buf += message;
-
 	write(buf);
 }
 

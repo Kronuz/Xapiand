@@ -251,7 +251,7 @@ class HttpClient : public BaseClient {
 
 	Command getCommand(std::string_view command_name);
 
-	void on_read(const char* buf, ssize_t received) override;
+	ssize_t on_read(const char* buf, ssize_t received) override;
 	void on_read_file(const char* buf, ssize_t received) override;
 	void on_read_file_done() override;
 
