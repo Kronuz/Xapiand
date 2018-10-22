@@ -104,17 +104,12 @@ public:
 	int database_locks;
 	int flags;
 
-	int file_descriptor;
-
 	std::string current_uuid;
 	Xapian::rev current_revision;
 
 public:
 	explicit Replication(BinaryClient& client_);
 	~Replication();
-
-	void on_read_file(const char *buf, ssize_t received);
-	void on_read_file_done();
 
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 

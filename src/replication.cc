@@ -45,8 +45,7 @@ using dispatch_func = void (Replication::*)(const std::string&);
 Replication::Replication(BinaryClient& client_)
 	: client(client_),
 	  database_locks(0),
-	  flags(DB_OPEN),
-	  file_descriptor(-1)
+	  flags(DB_OPEN)
 {
 	L_OBJ("CREATED REPLICATION OBJ!");
 }
@@ -54,33 +53,7 @@ Replication::Replication(BinaryClient& client_)
 
 Replication::~Replication()
 {
-	if (file_descriptor != -1) {
-		io::close(file_descriptor);
-		file_descriptor = -1;
-	}
-
 	L_OBJ("DELETED REPLICATION OBJ!");
-}
-
-
-void
-Replication::on_read_file(const char *buf, ssize_t received)
-{
-	L_CALL("BinaryClient::on_read_file(<buf>, %zu)", received);
-
-	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
-
-	io::write(file_descriptor, buf, received);
-}
-
-
-void
-Replication::on_read_file_done()
-{
-	L_CALL("Replication::on_read_file_done()");
-
-	io::close(file_descriptor);
-	file_descriptor = -1;
 }
 
 
@@ -277,15 +250,6 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 void
 Replication::reply_welcome(const std::string&)
 {
-	// strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
-	// file_descriptor = mkstemp(file_path);
-	// if (file_descriptor < 0) {
-	// 	L_ERR(this, "Cannot write to %s (1)", file_path);
-	// 	return;
-	// }
-
-	// read_file();
-
 	std::string message;
 
 	lock_database<Replication> lk_db(this);
@@ -365,20 +329,19 @@ Replication::reply_db_filename(const std::string& filename)
 
 	L_REPLICATION("Replication::reply_db_filename");
 
-	auto path = endpoints[0].path + "/.tmp/" + filename;
-	file_descriptor = io::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
-	if (file_descriptor == -1) {
-		L_ERR("ERROR: Unable to open %s: %s (%d): %s", path, io::strerrno(errno), errno, std::strerror(errno));
-	}
+	auto file_path = endpoints[0].path + "/.tmp/" + filename;
+	L_MAGENTA("file_path: %s", file_path);
 }
 
 
 void
-Replication::reply_db_filedata(const std::string&)
+Replication::reply_db_filedata(const std::string& tmp_file)
 {
-	L_CALL("Replication::reply_db_filedata(<message>)");
+	L_CALL("Replication::reply_db_filedata(<tmp_file>)");
 
 	L_REPLICATION("Replication::reply_db_filedata");
+
+	L_RED("tmp_file: %s", repr(tmp_file));
 }
 
 

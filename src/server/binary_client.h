@@ -69,6 +69,10 @@ class BinaryClient : public BaseClient {
 
 	State state;
 
+	int file_descriptor;
+	char file_message_type;
+	std::vector<std::string> temp_files;
+
 	// Buffers that are pending write
 	std::string buffer;
 	queue::Queue<Buffer> messages_queue;

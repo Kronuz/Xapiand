@@ -47,6 +47,8 @@
 BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
+	  file_descriptor(-1),
+	  file_message_type('\xff'),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -75,6 +77,15 @@ BinaryClient::~BinaryClient()
 	if (binary_clients < 0 || binary_clients > total_clients) {
 		L_CRIT("Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
+	}
+
+	if (file_descriptor != -1) {
+		io::close(file_descriptor);
+		file_descriptor = -1;
+	}
+
+	for (const auto& filename : temp_files) {
+		io::unlink(filename.c_str());
 	}
 
 	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
@@ -127,7 +138,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
 	ssize_t processed = -buffer.size();
 	buffer.append(buf, received);
-	while (!buffer.empty()) {
+	while (buffer.size() >= 2) {
 		const char *o = buffer.data();
 		const char *p = o;
 		const char *p_end = p + buffer.size();
@@ -135,17 +146,28 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		char type = *p++;
 		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
-			case SWITCH_TO_REPL:
+			case SWITCH_TO_REPL: {
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY("Switched to replication protocol");
 				break;
-			case FILE_FOLLOWS:
-				buffer.clear();
+			}
+			case FILE_FOLLOWS: {
+				char file_path[PATH_MAX];
+				strcpy(file_path, "/tmp/xapiand.XXXXXX");
+				temp_files.push_back(file_path);
+				file_message_type = *p++;
+				file_descriptor = io::mkstemp(file_path);
+				if (file_descriptor == -1) {
+					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
+				} else {
+					L_BINARY("Start reading file: %s (%d)", file_path, file_descriptor);
+				}
 				read_file();
-				L_BINARY("Start reading file");
 				processed += p - o;
+				buffer.clear();
 				return processed;
+			}
 		}
 
 		ssize_t len;
@@ -166,6 +188,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			// There should be a runner, just enqueue message.
 			messages_queue.push(Buffer(type, p, len));
 		}
+
 		buffer.erase(0, p - o + len);
 		processed += p - o + len;
 	}
@@ -181,15 +204,7 @@ BinaryClient::on_read_file(const char *buf, ssize_t received)
 
 	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
 
-	switch (state) {
-		case State::REPLICATIONPROTOCOL_CLIENT:
-			replication.on_read_file(buf, received);
-			break;
-		default:
-			L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
-			destroy();
-			detach();
-	};
+	io::write(file_descriptor, buf, received);
 }
 
 
@@ -200,15 +215,22 @@ BinaryClient::on_read_file_done()
 
 	L_BINARY_WIRE("BinaryClient::on_read_file_done");
 
-	switch (state) {
-		case State::REPLICATIONPROTOCOL_CLIENT:
-			replication.on_read_file_done();
-			break;
-		default:
-			L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
-			destroy();
-			detach();
-	};
+	io::close(file_descriptor);
+	file_descriptor = -1;
+
+	const auto& temp_file = temp_files.back();
+
+	if (messages_queue.empty()) {
+		// Enqueue message...
+		messages_queue.push(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+		// And start a runner.
+		XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
+			task->run();
+		});
+	} else {
+		// There should be a runner, just enqueue message.
+		messages_queue.push(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+	}
 }
 
 
@@ -262,14 +284,12 @@ BinaryClient::send_file(char type_as_char, int fd)
 {
 	L_CALL("BinaryClient::send_file(<type_as_char>, <fd>)");
 
-	write(std::string(1, FILE_FOLLOWS));
+	std::string buf;
+	buf += FILE_FOLLOWS;
+	buf += type_as_char;
+	write(buf);
 
 	BaseClient::send_file(fd);
-
-	std::string buf;
-	buf += type_as_char;
-	buf += serialise_length(0);
-	write(buf);
 }
 
 
