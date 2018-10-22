@@ -202,7 +202,7 @@ public:
 	}
 
 	inline void append(const char *buf, size_t size) {
-		L_CALL("ClientDecompressor::append()");
+		L_CALL("ClientDecompressor::append(%s)", repr(buf, size));
 
 		input.append(buf, size);
 	}
