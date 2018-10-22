@@ -74,10 +74,10 @@ enum class MODE {
 
 
 class ClientLZ4Compressor : public LZ4CompressFile {
-	BaseClient *client;
+	BaseClient& client;
 
 public:
-	ClientLZ4Compressor(BaseClient *client_, int fd, size_t offset=0)
+	ClientLZ4Compressor(BaseClient& client_, int fd, size_t offset=0)
 		: LZ4CompressFile(fd, offset, -1, CMP_SEED),
 		  client(client_) { }
 
@@ -88,7 +88,7 @@ public:
 ssize_t
 ClientLZ4Compressor::compress()
 {
-	if (!client->write(LZ4_COMPRESSOR)) {
+	if (!client.write(LZ4_COMPRESSOR)) {
 		L_ERR("Write Header failed!");
 		return -1;
 	}
@@ -97,7 +97,7 @@ ClientLZ4Compressor::compress()
 		auto it = begin();
 		while (it) {
 			std::string length(serialise_length(it.size()));
-			if (!client->write(length) || !client->write(it->data(), it.size())) {
+			if (!client.write(length) || !client.write(it->data(), it.size())) {
 				L_ERR("Write failed!");
 				return -1;
 			}
@@ -108,7 +108,7 @@ ClientLZ4Compressor::compress()
 		return -1;
 	}
 
-	if (!client->write(serialise_length(0)) || !client->write(serialise_length(get_digest()))) {
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(get_digest()))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
@@ -118,13 +118,13 @@ ClientLZ4Compressor::compress()
 
 
 class ClientNoCompressor {
-	BaseClient *client;
+	BaseClient& client;
 	int fd;
 	size_t offset;
 	XXH32_state_t* xxh_state;
 
 public:
-	ClientNoCompressor(BaseClient *client_, int fd_, size_t offset_=0)
+	ClientNoCompressor(BaseClient& client_, int fd_, size_t offset_=0)
 		: client(client_),
 		  fd(fd_),
 		  offset(offset_),
@@ -141,7 +141,7 @@ public:
 ssize_t
 ClientNoCompressor::compress()
 {
-	if (!client->write(NO_COMPRESSOR)) {
+	if (!client.write(NO_COMPRESSOR)) {
 		L_ERR("Write Header failed!");
 		return -1;
 	}
@@ -158,7 +158,7 @@ ClientNoCompressor::compress()
 	ssize_t r;
 	while ((r = io::read(fd, buffer, sizeof(buffer))) > 0) {
 		std::string length(serialise_length(r));
-		if (!client->write(length) || !client->write(buffer, r)) {
+		if (!client.write(length) || !client.write(buffer, r)) {
 			L_ERR("Write failed!");
 			return -1;
 		}
@@ -171,7 +171,7 @@ ClientNoCompressor::compress()
 		return -1;
 	}
 
-	if (!client->write(serialise_length(0)) || !client->write(serialise_length(XXH32_digest(xxh_state)))) {
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(XXH32_digest(xxh_state)))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
@@ -182,11 +182,11 @@ ClientNoCompressor::compress()
 
 class ClientDecompressor {
 protected:
-	BaseClient *client;
+	BaseClient& client;
 	std::string input;
 
 public:
-	ClientDecompressor(BaseClient *client_)
+	ClientDecompressor(BaseClient& client_)
 		: client(client_) { }
 
 	virtual ~ClientDecompressor() = default;
@@ -206,7 +206,7 @@ public:
 
 class ClientLZ4Decompressor : public ClientDecompressor, public LZ4DecompressData {
 public:
-	ClientLZ4Decompressor(BaseClient *client_)
+	ClientLZ4Decompressor(BaseClient& client_)
 		: ClientDecompressor(client_),
 		  LZ4DecompressData(nullptr, 0, CMP_SEED) { }
 
@@ -224,7 +224,7 @@ ClientLZ4Decompressor::decompress()
 	add_data(input.data(), input.size());
 	auto it = begin();
 	while (it) {
-		client->on_read_file(it->data(), it.size());
+		client.on_read_file(it->data(), it.size());
 		++it;
 	}
 	return size();
@@ -235,7 +235,7 @@ class ClientNoDecompressor : public ClientDecompressor {
 	XXH32_state_t* xxh_state;
 
 public:
-	ClientNoDecompressor(BaseClient *client_)
+	ClientNoDecompressor(BaseClient& client_)
 		: ClientDecompressor(client_),
 		  xxh_state(XXH32_createState()) {
 		XXH32_reset(xxh_state, CMP_SEED);
@@ -258,7 +258,7 @@ ClientNoDecompressor::decompress()
 {
 	size_t size = input.size();
 	const char* data = input.data();
-	client->on_read_file(data, size);
+	client.on_read_file(data, size);
 	XXH32_update(xxh_state, data, size);
 
 	return size;
@@ -635,11 +635,11 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 				switch (compressor) {
 					case *NO_COMPRESSOR:
 						L_CONN("Receiving uncompressed file {fd:%d}...", fd);
-						decompressor = std::make_unique<ClientNoDecompressor>(this);
+						decompressor = std::make_unique<ClientNoDecompressor>(*this);
 						break;
 					case *LZ4_COMPRESSOR:
 						L_CONN("Receiving LZ4 compressed file {fd:%d}...", fd);
-						decompressor = std::make_unique<ClientLZ4Decompressor>(this);
+						decompressor = std::make_unique<ClientLZ4Decompressor>(*this);
 						break;
 					default:
 						L_CONN("Received wrong file mode: %s {fd:%d}!", repr(std::string(1, compressor)), fd);
@@ -812,12 +812,12 @@ BaseClient::send_file(int fd, size_t offset)
 	ssize_t compressed = -1;
 	switch (*TYPE_COMPRESSOR) {
 		case *NO_COMPRESSOR: {
-			ClientNoCompressor compressor(this, fd, offset);
+			ClientNoCompressor compressor(*this, fd, offset);
 			compressed = compressor.compress();
 			break;
 		}
 		case *LZ4_COMPRESSOR: {
-			ClientLZ4Compressor compressor(this, fd, offset);
+			ClientLZ4Compressor compressor(*this, fd, offset);
 			compressed = compressor.compress();
 			break;
 		}
