@@ -106,6 +106,17 @@ Replication::send_message(ReplicationReplyType type, const std::string& message)
 
 
 void
+Replication::send_file(ReplicationReplyType type, int fd)
+{
+	L_CALL("Replication::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
+
+	L_BINARY_PROTO("<< send_file (%s): %d", ReplicationReplyTypeNames(type), fd);
+
+	client.send_file(toUType(type), fd);
+}
+
+
+void
 Replication::replication_server(ReplicationMessageType type, const std::string& message)
 {
 	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
@@ -177,7 +188,7 @@ Replication::msg_get_changesets(const std::string& message)
 				int fd = io::open(path.c_str());
 				if (fd != -1) {
 					send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
-					client.write_buffer(std::make_shared<Buffer>(fd));
+					send_file(ReplicationReplyType::REPLY_DB_FILEDATA, fd);
 				}
 			}
 

@@ -119,6 +119,7 @@ public:
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void send_message(ReplicationReplyType type, const std::string& message);
+	void send_file(ReplicationReplyType type, int fd);
 
 	void replication_server(ReplicationMessageType type, const std::string& message);
 	void replication_client(ReplicationReplyType type, const std::string& message);

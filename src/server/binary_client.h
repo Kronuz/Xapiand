@@ -86,7 +86,7 @@ public:
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);
-	void send_file(char type_as_char, std::string_view path, bool unlink = false);
+	void send_file(char type_as_char, int fd);
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);

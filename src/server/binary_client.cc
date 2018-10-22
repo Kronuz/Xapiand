@@ -250,12 +250,12 @@ BinaryClient::send_message(char type_as_char, const std::string &message)
 
 
 void
-BinaryClient::send_file(char type_as_char, std::string_view path, bool unlink)
+BinaryClient::send_file(char type_as_char, int fd)
 {
-	L_CALL("BinaryClient::send_file(<type_as_char>, <path>, <unlink>)");
+	L_CALL("BinaryClient::send_file(<type_as_char>, <fd>)");
 
 	write(std::string(1, FILE_FOLLOWS));
-	write_buffer(std::make_shared<Buffer>(path, unlink));
+	write_buffer(std::make_shared<Buffer>(fd));
 
 	std::string buf;
 	buf += type_as_char;
