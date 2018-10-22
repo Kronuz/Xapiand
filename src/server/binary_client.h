@@ -48,7 +48,19 @@ enum class State {
 	REMOTEPROTOCOL_SERVER,
 	REPLICATIONPROTOCOL_CLIENT,
 	REPLICATIONPROTOCOL_SERVER,
+	MAX,
 };
+
+static inline const std::string& StateNames(State type) {
+	static const std::string _[] = {
+		"INIT",
+		"REMOTEPROTOCOL_SERVER",
+		"REPLICATIONPROTOCOL_CLIENT",
+		"REPLICATIONPROTOCOL_SERVER",
+		"UNKNOWN",
+	};
+	return _[static_cast<int>(type >= static_cast<State>(0) || type < State::MAX ? type : State::MAX)];
+}
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler

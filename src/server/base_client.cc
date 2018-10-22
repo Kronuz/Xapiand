@@ -631,7 +631,8 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 			}
 
 			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
-				switch (*buf_data++) {
+				auto compressor = *buf_data++;
+				switch (compressor) {
 					case *NO_COMPRESSOR:
 						L_CONN("Receiving uncompressed file {fd:%d}...", fd);
 						decompressor = std::make_unique<ClientNoDecompressor>(this);
@@ -641,7 +642,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 						decompressor = std::make_unique<ClientLZ4Decompressor>(this);
 						break;
 					default:
-						L_CONN("Received wrong file mode (%02x) {fd:%d}!", *buf_data, fd);
+						L_CONN("Received wrong file mode: %s {fd:%d}!", repr(std::string(1, compressor)), fd);
 						destroy();
 						detach();
 						L_EV_END("BaseClient::io_cb_read:END");

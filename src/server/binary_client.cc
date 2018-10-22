@@ -132,7 +132,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_BINARY_WIRE("on_read message: '\\%02x' (state=0x%x)", static_cast<int>(type), toUType(state));
+		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
