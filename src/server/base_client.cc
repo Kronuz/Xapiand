@@ -88,6 +88,8 @@ public:
 ssize_t
 ClientLZ4Compressor::compress()
 {
+	L_CALL("ClientLZ4Compressor::compress()");
+
 	if (!client.write(LZ4_COMPRESSOR)) {
 		L_ERR("Write Header failed!");
 		return -1;
@@ -141,6 +143,8 @@ public:
 ssize_t
 ClientNoCompressor::compress()
 {
+	L_CALL("ClientNoCompressor::compress()");
+
 	if (!client.write(NO_COMPRESSOR)) {
 		L_ERR("Write Header failed!");
 		return -1;
@@ -192,10 +196,14 @@ public:
 	virtual ~ClientDecompressor() = default;
 
 	inline void clear() noexcept {
+		L_CALL("ClientDecompressor::clear()");
+
 		input.clear();
 	}
 
 	inline void append(const char *buf, size_t size) {
+		L_CALL("ClientDecompressor::append()");
+
 		input.append(buf, size);
 	}
 
@@ -213,6 +221,8 @@ public:
 	ssize_t decompress() override;
 
 	bool verify(uint32_t checksum_) noexcept override {
+		L_CALL("ClientLZ4Decompressor::verify()");
+
 		return get_digest() == checksum_;
 	}
 };
@@ -221,6 +231,8 @@ public:
 ssize_t
 ClientLZ4Decompressor::decompress()
 {
+	L_CALL("ClientLZ4Decompressor::decompress()");
+
 	add_data(input.data(), input.size());
 	auto it = begin();
 	while (it) {
@@ -248,6 +260,8 @@ public:
 	ssize_t decompress() override;
 
 	bool verify(uint32_t checksum_) noexcept override {
+		L_CALL("ClientNoDecompressor::verify()");
+
 		return XXH32_digest(xxh_state) == checksum_;
 	}
 };
@@ -256,6 +270,8 @@ public:
 ssize_t
 ClientNoDecompressor::decompress()
 {
+	L_CALL("ClientNoDecompressor::decompress()");
+
 	size_t size = input.size();
 	const char* data = input.data();
 	client.on_read_file(data, size);
