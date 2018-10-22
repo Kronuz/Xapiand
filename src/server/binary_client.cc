@@ -126,7 +126,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 
 	L_BINARY_WIRE("BinaryClient::on_read: %zd bytes", received);
 	buffer.append(buf, received);
-	while (buffer.size() >= 2) {
+	while (!buffer.empty()) {
 		const char *o = buffer.data();
 		const char *p = o;
 		const char *p_end = p + buffer.size();
@@ -146,7 +146,12 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				return p - o;
 		}
 
-		ssize_t len = unserialise_length(&p, p_end, true);
+		ssize_t len;
+		try {
+			len = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError) {
+			return received;
+		}
 
 		if (messages_queue.empty()) {
 			// Enqueue message...

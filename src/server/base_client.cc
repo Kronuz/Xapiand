@@ -639,114 +639,112 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	const char *buf_end = read_buffer + received;
 	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500), received);
 
-	try {
-		while (received > 0) {
-			if ((received > 0) && mode == MODE::READ_BUF) {
-				buf_data += on_read(buf_data, received);
-				received = buf_end - buf_data;
-			}
+	while (received > 0) {
+		if ((received > 0) && mode == MODE::READ_BUF) {
+			buf_data += on_read(buf_data, received);
+			received = buf_end - buf_data;
+		}
 
-			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
-				auto compressor = *buf_data++;
-				switch (compressor) {
-					case *NO_COMPRESSOR:
-						L_CONN("Receiving uncompressed file {fd:%d}...", fd);
-						decompressor = std::make_unique<ClientNoDecompressor>(*this);
+		if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
+			auto compressor = *buf_data++;
+			switch (compressor) {
+				case *NO_COMPRESSOR:
+					L_CONN("Receiving uncompressed file {fd:%d}...", fd);
+					decompressor = std::make_unique<ClientNoDecompressor>(*this);
+					break;
+				case *LZ4_COMPRESSOR:
+					L_CONN("Receiving LZ4 compressed file {fd:%d}...", fd);
+					decompressor = std::make_unique<ClientLZ4Decompressor>(*this);
+					break;
+				default:
+					L_CONN("Received wrong file mode: %s {fd:%d}!", repr(std::string(1, compressor)), fd);
+					destroy();
+					detach();
+					L_EV_END("BaseClient::io_cb_read:END");
+					return;
+			}
+			--received;
+			file_buffer.clear();
+			mode = MODE::READ_FILE;
+		}
+
+		if ((received > 0) && mode == MODE::READ_FILE) {
+			do {
+				if (file_size == -1) {
+					if (buf_data != nullptr) {
+						file_buffer.append(buf_data, received);
+					}
+					buf_data = file_buffer.data();
+					buf_end = buf_data + file_buffer.size();
+
+					try {
+						file_size = unserialise_length(&buf_data, buf_end, false);
+					} catch (const Xapian::SerialisationError) {
 						break;
-					case *LZ4_COMPRESSOR:
-						L_CONN("Receiving LZ4 compressed file {fd:%d}...", fd);
-						decompressor = std::make_unique<ClientLZ4Decompressor>(*this);
-						break;
-					default:
-						L_CONN("Received wrong file mode: %s {fd:%d}!", repr(std::string(1, compressor)), fd);
-						destroy();
-						detach();
+					}
+
+					if (receive_checksum) {
+						receive_checksum = false;
+						if (decompressor->verify(static_cast<uint32_t>(file_size))) {
+							on_read_file_done();
+							mode = MODE::READ_BUF;
+							decompressor.reset();
+							break;
+						}
+
+						L_ERR("Data is corrupt!");
 						L_EV_END("BaseClient::io_cb_read:END");
 						return;
-				}
-				--received;
-				file_buffer.clear();
-				mode = MODE::READ_FILE;
-			}
-
-			if ((received > 0) && mode == MODE::READ_FILE) {
-				do {
-					if (file_size == -1) {
-						if (buf_data != nullptr) {
-							file_buffer.append(buf_data, received);
-						}
-						buf_data = file_buffer.data();
-						buf_end = buf_data + file_buffer.size();
-
-						file_size = unserialise_length(&buf_data, buf_end, false);
-
-						if (receive_checksum) {
-							receive_checksum = false;
-							if (decompressor->verify(static_cast<uint32_t>(file_size))) {
-								on_read_file_done();
-								mode = MODE::READ_BUF;
-								decompressor.reset();
-								break;
-							}
-
-							L_ERR("Data is corrupt!");
-							L_EV_END("BaseClient::io_cb_read:END");
-							return;
-						}
-
-						block_size = file_size;
-						decompressor->clear();
 					}
 
-					const char *file_buf_to_write;
-					size_t block_size_to_write;
-					size_t buf_left_size = buf_end - buf_data;
-					if (block_size < buf_left_size) {
-						file_buf_to_write = buf_data;
-						block_size_to_write = block_size;
-						buf_data += block_size;
-						received = buf_left_size - block_size;
-					} else {
-						file_buf_to_write = buf_data;
-						block_size_to_write = buf_left_size;
+					block_size = file_size;
+					decompressor->clear();
+				}
+
+				const char *file_buf_to_write;
+				size_t block_size_to_write;
+				size_t buf_left_size = buf_end - buf_data;
+				if (block_size < buf_left_size) {
+					file_buf_to_write = buf_data;
+					block_size_to_write = block_size;
+					buf_data += block_size;
+					received = buf_left_size - block_size;
+				} else {
+					file_buf_to_write = buf_data;
+					block_size_to_write = buf_left_size;
+					buf_data = nullptr;
+					received = 0;
+				}
+
+				if (block_size_to_write != 0u) {
+					decompressor->append(file_buf_to_write, block_size_to_write);
+					block_size -= block_size_to_write;
+				}
+
+				if (file_size == 0) {
+					decompressor->clear();
+					decompressor->decompress();
+					receive_checksum = true;
+				} else if (block_size == 0) {
+					decompressor->decompress();
+					if (buf_data != nullptr) {
+						file_buffer.assign(buf_data, received);
 						buf_data = nullptr;
 						received = 0;
+					} else {
+						file_buffer.clear();
 					}
-
-					if (block_size_to_write != 0u) {
-						decompressor->append(file_buf_to_write, block_size_to_write);
-						block_size -= block_size_to_write;
-					}
-
-					if (file_size == 0) {
-						decompressor->clear();
-						decompressor->decompress();
-						receive_checksum = true;
-					} else if (block_size == 0) {
-						decompressor->decompress();
-						if (buf_data != nullptr) {
-							file_buffer.assign(buf_data, received);
-							buf_data = nullptr;
-							received = 0;
-						} else {
-							file_buffer.clear();
-						}
-					}
-					file_size = -1;
-				} while (file_size == -1);
-			}
-
-			if (closed) {
-				destroy();
-				detach();
-				L_EV_END("BaseClient::io_cb_read:END");
-				return;
-			}
+				}
+				file_size = -1;
+			} while (file_size == -1);
 		}
-	} catch (const Xapian::SerialisationError) {
-		L_ERR("ERROR: Invalid serialization");
-		destroy();
-		detach();
+
+		if (closed) {
+			destroy();
+			detach();
+			L_EV_END("BaseClient::io_cb_read:END");
+			return;
+		}
 	}
 
 	L_EV_END("BaseClient::io_cb_read:END");
