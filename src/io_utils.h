@@ -74,7 +74,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #elif defined HAVE_FSYNC
 #define __io_fsync ::fsync
 #else
-inline int __noop(int /*unused*/) { return 0; }
+static inline int __noop(int /*unused*/) { return 0; }
 #define __io_fsync io::__noop
 #endif
 
@@ -115,7 +115,7 @@ static inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
 
 
 template <typename Fun, typename... Args>
-inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As...)) {
+static inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As...)) {
 	decltype(F(As...)) _err;
 	do {
 		errno = 0;
@@ -137,104 +137,115 @@ ssize_t read(int fd, void* buf, size_t nbyte);
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 
 
-inline int unlink(const char* path) {
+static inline int mkstemp(char* template_) {
+	int fd = ::mkstemp(template_);
+	CHECK_OPEN(fd);
+	return fd;
+}
+
+static inline char* mkdtemp(char* template_) {
+	return ::mkdtemp(template_);
+}
+
+
+static inline int unlink(const char* path) {
 	return ::unlink(path);
 }
 
 
-inline off_t lseek(int fd, off_t offset, int whence) {
+static inline off_t lseek(int fd, off_t offset, int whence) {
 	CHECK_OPENED("during lseek()", fd);
 	return ::lseek(fd, offset, whence);
 }
 
 
 template <typename... Args>
-inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
+static inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
 	return RetryAfterSignal(::fcntl, fd, cmd, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline int fcntl(int fd, int cmd, Args&&... args) {
+static inline int fcntl(int fd, int cmd, Args&&... args) {
 	CHECK_OPENED("during fcntl()", fd);
 	return io::unchecked_fcntl(fd, cmd, std::forward<Args>(args)...);
 }
 
 
-inline int fstat(int fd, struct stat* buf) {
+static inline int fstat(int fd, struct stat* buf) {
 	CHECK_OPENED("during fstat()", fd);
 	return ::fstat(fd, buf);
 }
 
 
-inline int dup(int fd) {
+static inline int dup(int fd) {
 	CHECK_OPENED("during dup()", fd);
 	return ::dup(fd);
 }
 
 
-inline int dup2(int fd, int fd2) {
+static inline int dup2(int fd, int fd2) {
 	CHECK_OPENED("during dup2()", fd);
 	return ::dup2(fd, fd2);  // RetryAfterSignal?
 }
 
 
-inline int shutdown(int socket, int how) {
+static inline int shutdown(int socket, int how) {
 	CHECK_OPENED_SOCKET("during shutdown()", socket);
 	return ::shutdown(socket, how);
 }
 
 
-inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
+static inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during send()", socket);
 	return RetryAfterSignal(::send, socket, buffer, length, flags);
 }
 
 
-inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
+static inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
 	CHECK_OPENED_SOCKET("during sendto()", socket);
 	return RetryAfterSignal(::sendto, socket, buffer, length, flags, dest_addr, dest_len);
 }
 
 
-inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
+static inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
 	CHECK_OPENED_SOCKET("during recv()", socket);
 	return RetryAfterSignal(::recv, socket, buffer, length, flags);
 }
 
 
-inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
+static inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during recvfrom()", socket);
 	return RetryAfterSignal(::recvfrom, socket, buffer, length, flags, address, address_len);
 }
 
 
-inline int socket(int domain, int type, int protocol) {
+static inline int socket(int domain, int type, int protocol) {
 	int socket = ::socket(domain, type, protocol);
 	CHECK_OPEN_SOCKET(socket);
 	return socket;
 }
 
 
-inline int getsockopt(int socket, int level, int option_name, void* option_value, socklen_t* option_len){
+static inline int getsockopt(int socket, int level, int option_name, void* option_value, socklen_t* option_len){
 	CHECK_OPENED_SOCKET("during getsockopt()", socket);
 	return ::getsockopt(socket, level, option_name, option_value, option_len);
 }
 
 
-inline int setsockopt(int socket, int level, int option_name, const void* option_value, socklen_t option_len){
+static inline int setsockopt(int socket, int level, int option_name, const void* option_value, socklen_t option_len){
 	CHECK_OPENED_SOCKET("during setsockopt()", socket);
 	return ::setsockopt(socket, level, option_name, option_value, option_len);
 }
 
 
-inline int listen(int socket, int backlog) {
+static inline int listen(int socket, int backlog) {
 	CHECK_OPENED_SOCKET("during listen()", socket);
 	return ::listen(socket, backlog);
 }
 
 
-inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
+static inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
 	CHECK_OPENED_SOCKET("during accept()", socket);
 	int new_socket = RetryAfterSignal(::accept, socket, address, address_len);
 	CHECK_OPEN_SOCKET(new_socket);
@@ -242,30 +253,30 @@ inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) 
 }
 
 
-inline int bind(int socket, const struct sockaddr *address, socklen_t address_len) {
+static inline int bind(int socket, const struct sockaddr *address, socklen_t address_len) {
 	CHECK_OPENED_SOCKET("during bind()", socket);
 	return ::bind(socket, address, address_len);
 }
 
 
-inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
+static inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
 	CHECK_OPENED_SOCKET("during connect()", socket);
 	return RetryAfterSignal(::connect, socket, address, address_len);
 }
 
 
-inline int unchecked_fsync(int fd) {
+static inline int unchecked_fsync(int fd) {
 	return RetryAfterSignal(__io_fsync, fd);
 }
 
 
-inline int fsync(int fd) {
+static inline int fsync(int fd) {
 	CHECK_OPENED("during fsync()", fd);
 	return io::unchecked_fsync(fd);
 }
 
 
-inline int unchecked_full_fsync(int fd) {
+static inline int unchecked_full_fsync(int fd) {
 #ifdef F_FULLFSYNC
 	return RetryAfterSignal(::fcntl, fd, F_FULLFSYNC, 0);
 #else
@@ -274,14 +285,14 @@ inline int unchecked_full_fsync(int fd) {
 }
 
 
-inline int full_fsync(int fd) {
+static inline int full_fsync(int fd) {
 	CHECK_OPENED("during full_fsync()", fd);
 	return io::unchecked_full_fsync(fd);
 }
 
 
 #ifdef HAVE_FALLOCATE
-inline int fallocate(int fd, int mode, off_t offset, off_t len) {
+static inline int fallocate(int fd, int mode, off_t offset, off_t len) {
 	CHECK_OPENED("during fallocate()", fd);
 	return RetryAfterSignal(::fallocate, fd, mode, offset, len);
 }
@@ -291,7 +302,7 @@ int fallocate(int fd, int mode, off_t offset, off_t len);
 
 
 #ifdef HAVE_POSIX_FADVISE
-inline int fadvise(int fd, off_t offset, off_t len, int advice) {
+static inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 	CHECK_OPENED("during fadvise()", fd);
 	return ::posix_fadvise(fd, offset, len, advice) == 0;
 }
@@ -303,7 +314,7 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 #define POSIX_FADV_DONTNEED   4
 #define POSIX_FADV_NOREUSE    5
 
-inline int fadvise(int fd, off_t, off_t, int) {
+static inline int fadvise(int fd, off_t, off_t, int) {
 	CHECK_OPENED("during fadvise()", fd);
 	ignore_unused(fd);
 	return 0;
