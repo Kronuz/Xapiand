@@ -205,7 +205,7 @@ protected:
 
 	MODE mode;
 	ssize_t file_size;
-	std::string file_buffer;
+	std::string file_size_buffer;
 	size_t block_size;
 	bool receive_checksum;
 

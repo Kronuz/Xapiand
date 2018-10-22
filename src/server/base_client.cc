@@ -635,11 +635,11 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		return;
 	}
 
-	const char *buf_data = read_buffer;
-	const char *buf_end = read_buffer + received;
+	const char* buf_data = read_buffer;
+	const char* buf_end = read_buffer + received;
 	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500), received);
 
-	while (received > 0) {
+	do {
 		if ((received > 0) && mode == MODE::READ_BUF) {
 			buf_data += on_read(buf_data, received);
 			received = buf_end - buf_data;
@@ -664,78 +664,74 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 					return;
 			}
 			--received;
-			file_buffer.clear();
+			file_size_buffer.clear();
+			receive_checksum = false;
 			mode = MODE::READ_FILE;
 		}
 
 		if ((received > 0) && mode == MODE::READ_FILE) {
-			do {
-				if (file_size == -1) {
-					if (buf_data != nullptr) {
-						file_buffer.append(buf_data, received);
-					}
-					buf_data = file_buffer.data();
-					buf_end = buf_data + file_buffer.size();
-
-					try {
-						file_size = unserialise_length(&buf_data, buf_end, false);
-					} catch (const Xapian::SerialisationError) {
-						break;
-					}
-
-					if (receive_checksum) {
-						receive_checksum = false;
-						if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
-							L_ERR("Data is corrupt!");
-							L_EV_END("BaseClient::io_cb_read:END");
-							return;
-						}
-						on_read_file_done();
-						mode = MODE::READ_BUF;
-						decompressor.reset();
-						break;
-					}
-
-					block_size = file_size;
-					decompressor->clear();
+			if (file_size == -1) {
+				try {
+					auto processed = -file_size_buffer.size();
+					file_size_buffer.append(buf_data, std::min(buf_data + 10, buf_end));  // serialized size is at most 10 bytes
+					const char* o = file_size_buffer.data();
+					const char* p = o;
+					const char* p_end = p + file_size_buffer.size();
+					file_size = unserialise_length(&p, p_end);
+					processed += p - o;
+					file_size_buffer.clear();
+					buf_data += processed;
+					received -= processed;
+				} catch (const Xapian::SerialisationError) {
+					break;
 				}
 
-				const char *file_buf_to_write;
-				size_t block_size_to_write;
-				size_t buf_left_size = buf_end - buf_data;
-				if (block_size < buf_left_size) {
-					file_buf_to_write = buf_data;
-					block_size_to_write = block_size;
-					buf_data += block_size;
-					received = buf_left_size - block_size;
-				} else {
-					file_buf_to_write = buf_data;
-					block_size_to_write = buf_left_size;
-					buf_data = nullptr;
-					received = 0;
-				}
-
-				if (block_size_to_write != 0u) {
-					decompressor->append(file_buf_to_write, block_size_to_write);
-					block_size -= block_size_to_write;
-				}
-
-				if (file_size == 0) {
-					decompressor->clear();
-					decompressor->decompress();
-					receive_checksum = true;
-				} else if (block_size == 0) {
-					decompressor->decompress();
-					if (buf_data != nullptr) {
-						file_buffer.assign(buf_data, received);
-						buf_data = nullptr;
-						received = 0;
-					} else {
-						file_buffer.clear();
+				if (receive_checksum) {
+					receive_checksum = false;
+					if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
+						L_ERR("Data is corrupt!");
+						L_EV_END("BaseClient::io_cb_read:END");
+						return;
 					}
+					on_read_file_done();
+					mode = MODE::READ_BUF;
+					decompressor.reset();
+					continue;
 				}
+
+				block_size = file_size;
+				decompressor->clear();
+			}
+
+			const char *file_buf_to_write;
+			size_t block_size_to_write;
+			size_t buf_left_size = buf_end - buf_data;
+			if (block_size < buf_left_size) {
+				file_buf_to_write = buf_data;
+				block_size_to_write = block_size;
+				buf_data += block_size;
+				received = buf_left_size - block_size;
+			} else {
+				file_buf_to_write = buf_data;
+				block_size_to_write = buf_left_size;
+				buf_data = nullptr;
+				received = 0;
+			}
+
+			if (block_size_to_write) {
+				decompressor->append(file_buf_to_write, block_size_to_write);
+				block_size -= block_size_to_write;
+			}
+
+			if (file_size == 0) {
+				decompressor->clear();
+				decompressor->decompress();
+				receive_checksum = true;
 				file_size = -1;
-			} while (file_size == -1);
+			} else if (block_size == 0) {
+				decompressor->decompress();
+				file_size = -1;
+			}
 		}
 
 		if (closed) {
@@ -744,7 +740,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
-	}
+	} while (received > 0);
 
 	L_EV_END("BaseClient::io_cb_read:END");
 }
