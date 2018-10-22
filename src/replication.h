@@ -33,7 +33,9 @@
 #include "endpoint.h"
 #include "lock_database.h"
 
+
 #define SWITCH_TO_REPL '\xfe'
+
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
@@ -59,7 +61,8 @@ enum class ReplicationReplyType {
 	REPLY_END_OF_CHANGES,       // No more changes to transfer
 	REPLY_FAIL,                 // Couldn't generate full set of changes
 	REPLY_DB_HEADER,            // The start of a whole DB copy
-	REPLY_DB_FILE,              // The name of a file in a DB followed by the data
+	REPLY_DB_FILENAME,          // The name of a file in a DB copy
+	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy
 	REPLY_DB_FOOTER,            // End of a whole DB copy
 	REPLY_CHANGESET,            // A changeset file is being sent
 	REPLY_MAX,
@@ -70,11 +73,11 @@ static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType 
 	static const std::string ReplicationReplyTypeNames[] = {
 		"REPLY_WELCOME",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
-		"REPLY_DB_HEADER", "REPLY_DB_FILE", "REPLY_DB_FOOTER",
+		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
 	};
 	auto type_int = static_cast<int>(type);
-	if (type_int == SWITCH_TO_REPL) {
+	if (type_int == static_cast<int>(SWITCH_TO_REPL)) {
 		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
 		return SWITCH_TO_REPL_NAME;
 	} else if (type_int >= 0 || type_int < static_cast<int>(ReplicationReplyType::REPLY_MAX)) {
@@ -125,7 +128,8 @@ public:
 	void reply_end_of_changes(const std::string& message);
 	void reply_fail(const std::string& message);
 	void reply_db_header(const std::string& message);
-	void reply_db_file(const std::string& message);
+	void reply_db_filename(const std::string& message);
+	void reply_db_filedata(const std::string& message);
 	void reply_db_footer(const std::string& message);
 	void reply_changeset(const std::string& message);
 };

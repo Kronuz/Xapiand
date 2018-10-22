@@ -176,7 +176,7 @@ Replication::msg_get_changesets(const std::string& message)
 				auto path = endpoints[0].path + "/" + filename;
 				int fd = io::open(path.c_str());
 				if (fd != -1) {
-					send_message(ReplicationReplyType::REPLY_DB_FILE, filename);
+					send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
 					client.write_buffer(std::make_shared<Buffer>(fd));
 				}
 			}
@@ -239,7 +239,8 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 		&Replication::reply_end_of_changes,
 		&Replication::reply_fail,
 		&Replication::reply_db_header,
-		&Replication::reply_db_file,
+		&Replication::reply_db_filename,
+		&Replication::reply_db_filedata,
 		&Replication::reply_db_footer,
 		&Replication::reply_changeset,
 	};
@@ -342,16 +343,25 @@ Replication::reply_db_header(const std::string& message)
 
 
 void
-Replication::reply_db_file(const std::string& filename)
+Replication::reply_db_filename(const std::string& filename)
 {
-	L_CALL("Replication::reply_db_file(<filename>)");
+	L_CALL("Replication::reply_db_filename(<filename>)");
 
-	L_REPLICATION("Replication::reply_db_file");
+	L_REPLICATION("Replication::reply_db_filename");
 
 	auto path = endpoints[0].path + "/.tmp/" + filename;
 	file_descriptor = io::open(path.c_str());
 
 	client.read_file();
+}
+
+
+void
+Replication::reply_db_filedata(const std::string&)
+{
+	L_CALL("Replication::reply_db_filedata(<message>)");
+
+	L_REPLICATION("Replication::reply_db_filedata");
 }
 
 
