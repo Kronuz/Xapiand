@@ -255,7 +255,8 @@ BinaryClient::send_file(char type_as_char, int fd)
 	L_CALL("BinaryClient::send_file(<type_as_char>, <fd>)");
 
 	write(std::string(1, FILE_FOLLOWS));
-	write_buffer(std::make_shared<Buffer>(fd));
+
+	BaseClient::send_file(fd);
 
 	std::string buf;
 	buf += type_as_char;
