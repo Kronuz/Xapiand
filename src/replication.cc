@@ -362,8 +362,6 @@ Replication::reply_db_filename(const std::string& filename)
 
 	auto path = endpoints[0].path + "/.tmp/" + filename;
 	file_descriptor = io::open(path.c_str());
-
-	client.read_file();
 }
 
 
