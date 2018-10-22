@@ -28,6 +28,8 @@
 
 #include <string>
 
+#include <xapian.h>
+
 #include "endpoint.h"
 #include "lock_database.h"
 
@@ -57,8 +59,7 @@ enum class ReplicationReplyType {
 	REPLY_END_OF_CHANGES,       // No more changes to transfer
 	REPLY_FAIL,                 // Couldn't generate full set of changes
 	REPLY_DB_HEADER,            // The start of a whole DB copy
-	REPLY_DB_FILENAME,          // The name of a file in a DB copy
-	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy
+	REPLY_DB_FILE,              // The name of a file in a DB followed by the data
 	REPLY_DB_FOOTER,            // End of a whole DB copy
 	REPLY_CHANGESET,            // A changeset file is being sent
 	REPLY_MAX,
@@ -68,8 +69,9 @@ enum class ReplicationReplyType {
 static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 	static const std::string ReplicationReplyTypeNames[] = {
 		"REPLY_WELCOME",
-		"REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
-		"REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
+		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
+		"REPLY_DB_HEADER", "REPLY_DB_FILE", "REPLY_DB_FOOTER",
+		"REPLY_CHANGESET",
 	};
 	auto type_int = static_cast<int>(type);
 	if (type_int == SWITCH_TO_REPL) {
@@ -99,9 +101,17 @@ public:
 	int database_locks;
 	int flags;
 
+	int file_descriptor;
+
+	std::string current_uuid;
+	Xapian::rev current_revision;
+
 public:
 	explicit Replication(BinaryClient& client_);
 	~Replication();
+
+	void on_read_file(const char *buf, ssize_t received);
+	void on_read_file_done();
 
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
@@ -109,15 +119,13 @@ public:
 
 	void replication_server(ReplicationMessageType type, const std::string& message);
 	void replication_client(ReplicationReplyType type, const std::string& message);
-	void replication_client_file_done();
 
 	void msg_get_changesets(const std::string& message);
 	void reply_welcome(const std::string& message);
 	void reply_end_of_changes(const std::string& message);
 	void reply_fail(const std::string& message);
 	void reply_db_header(const std::string& message);
-	void reply_db_filename(const std::string& message);
-	void reply_db_filedata(const std::string& message);
+	void reply_db_file(const std::string& message);
 	void reply_db_footer(const std::string& message);
 	void reply_changeset(const std::string& message);
 };

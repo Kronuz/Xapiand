@@ -45,7 +45,8 @@ using dispatch_func = void (Replication::*)(const std::string&);
 Replication::Replication(BinaryClient& client_)
 	: client(client_),
 	  database_locks(0),
-	  flags(DB_WRITABLE | DB_SPAWN | DB_NOWAL)
+	  flags(DB_OPEN),
+	  file_descriptor(-1)
 {
 	L_OBJ("CREATED REPLICATION OBJ!");
 }
@@ -57,6 +58,27 @@ Replication::~Replication()
 }
 
 
+void
+Replication::on_read_file(const char *buf, ssize_t received)
+{
+	L_CALL("BinaryClient::on_read_file(<buf>, %zu)", received);
+
+	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
+
+	io::write(file_descriptor, buf, received);
+}
+
+
+void
+Replication::on_read_file_done()
+{
+	L_CALL("Replication::on_read_file_done()");
+
+	io::close(file_descriptor);
+	file_descriptor = -1;
+}
+
+
 bool
 Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
@@ -65,6 +87,8 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 	src_endpoints = Endpoints{src_endpoint};
 	endpoints = Endpoints{dst_endpoint};
 	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+
+	flags = DB_WRITABLE | DB_SPAWN | DB_NOWAL;
 
 	return true;
 }
@@ -82,7 +106,7 @@ Replication::send_message(ReplicationReplyType type, const std::string& message)
 
 
 void
-Replication::replication_server(ReplicationMessageType type, const std::string &message)
+Replication::replication_server(ReplicationMessageType type, const std::string& message)
 {
 	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
 
@@ -104,29 +128,70 @@ Replication::replication_server(ReplicationMessageType type, const std::string &
 
 
 void
-Replication::msg_get_changesets(const std::string &)
+Replication::msg_get_changesets(const std::string& message)
 {
 	L_CALL("Replication::msg_get_changesets(<message>)");
 
 	L_REPLICATION("Replication::msg_get_changesets");
 
-	// Xapian::Database *db_;
-	// const char *p = message.c_str();
-	// const char *p_end = p + message.size();
+	const char *p = message.c_str();
+	const char *p_end = p + message.size();
 
-	// size_t len = unserialise_length(&p, p_end, true);
-	// std::string uuid(p, len);
-	// p += len;
+	auto remote_uuid = unserialise_string(&p, p_end);
+	auto from_revision = unserialise_length(&p, p_end);
+	endpoints = Endpoints{Endpoint{unserialise_string(&p, p_end)}};
 
-	// len = unserialise_length(&p, p_end, true);
-	// std::string from_revision(p, len);
-	// p += len;
+	lock_database<Replication> lk_db(this);
+	auto uuid = database->db->get_uuid();
+	auto revision = database->db->get_revision();
+	lk_db.unlock();
 
-	// len = unserialise_length(&p, p_end, true);
-	// std::string index_path(p, len);
-	// p += len;
+	if (uuid != remote_uuid) {
+		from_revision = 0;
+	}
+
+	bool need_whole_db = false;
+	if (from_revision == 0) {
+		need_whole_db = true;
+	}
+
+	if (from_revision < revision) {
+		if (need_whole_db) {
+			// Send the current revision number in the header.
+			send_message(ReplicationReplyType::REPLY_DB_HEADER,
+				serialise_string(uuid) +
+				serialise_length(revision));
+
+			static std::array<const std::string, 7> filenames = {
+				"termlist.glass",
+				"synonym.glass",
+				"spelling.glass",
+				"docdata.glass",
+				"position.glass",
+				"postlist.glass",
+				"iamglass"
+			};
+
+			for (const auto& filename : filenames) {
+				auto path = endpoints[0].path + "/" + filename;
+				int fd = io::open(path.c_str());
+				if (fd != -1) {
+					send_message(ReplicationReplyType::REPLY_DB_FILE, filename);
+					client.write_buffer(std::make_shared<Buffer>(fd));
+				}
+			}
+
+			lk_db.lock();
+			revision = database->db->get_revision();
+			lk_db.unlock();
+
+			send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(revision));
+		}
+	}
+
 
 	// // Select endpoints and get database
+	// Xapian::Database *db_;
 	// try {
 	// 	endpoints.clear();
 	// 	Endpoint endpoint(index_path);
@@ -165,7 +230,7 @@ Replication::msg_get_changesets(const std::string &)
 
 
 void
-Replication::replication_client(ReplicationReplyType type, const std::string &message)
+Replication::replication_client(ReplicationReplyType type, const std::string& message)
 {
 	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
 
@@ -174,8 +239,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 		&Replication::reply_end_of_changes,
 		&Replication::reply_fail,
 		&Replication::reply_db_header,
-		&Replication::reply_db_filename,
-		&Replication::reply_db_filedata,
+		&Replication::reply_db_file,
 		&Replication::reply_db_footer,
 		&Replication::reply_changeset,
 	};
@@ -194,7 +258,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string &me
 
 
 void
-Replication::reply_welcome(const std::string &)
+Replication::reply_welcome(const std::string&)
 {
 	// strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
 	// file_descriptor = mkstemp(file_path);
@@ -217,7 +281,7 @@ Replication::reply_welcome(const std::string &)
 }
 
 void
-Replication::reply_end_of_changes(const std::string &)
+Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
@@ -234,7 +298,7 @@ Replication::reply_end_of_changes(const std::string &)
 
 
 void
-Replication::reply_fail(const std::string &)
+Replication::reply_fail(const std::string&)
 {
 	L_CALL("Replication::reply_fail(<message>)");
 
@@ -248,80 +312,51 @@ Replication::reply_fail(const std::string &)
 
 
 void
-Replication::reply_db_header(const std::string &)
+Replication::reply_db_header(const std::string& message)
 {
 	L_CALL("Replication::reply_db_header(<message>)");
 
 	L_REPLICATION("Replication::reply_db_header");
 
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
-	// size_t length = unserialise_length(&p, p_end, true);
-	// repl_db_uuid.assign(p, length);
-	// p += length;
-	// repl_db_revision = unserialise_length(&p, p_end);
-	// repl_db_filename.clear();
+	const char *p = message.data();
+	const char *p_end = p + message.size();
 
-	// Endpoint& endpoint = endpoints[0];
-	// std::string path_tmp = endpoint.path + "/.tmp";
+	current_uuid = unserialise_string(&p, p_end);
+	current_revision = unserialise_length(&p, p_end);
 
-	// int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	// if (dir == 0) {
-	// 	L_DEBUG("Directory %s created", path_tmp);
-	// } else if (errno == EEXIST) {
-	// 	delete_files(path_tmp.c_str());
-	// 	dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	// 	if (dir == 0) {
-	// 		L_DEBUG("Directory %s created", path_tmp);
-	// 	}
-	// } else {
-	// 	L_ERR("Directory %s not created (%s)", path_tmp, strerror(errno));
-	// }
+	std::string path_tmp = endpoints[0].path + "/.tmp";
+
+	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	if (dir == 0) {
+		L_DEBUG("Directory %s created", path_tmp);
+	} else if (errno == EEXIST) {
+		delete_files(path_tmp.c_str());
+		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (dir == 0) {
+			L_DEBUG("Directory %s created", path_tmp);
+		}
+	} else {
+		L_ERR("Directory %s not created (%s)", path_tmp, strerror(errno));
+	}
 }
 
 
 void
-Replication::reply_db_filename(const std::string &)
+Replication::reply_db_file(const std::string& filename)
 {
-	L_CALL("Replication::reply_db_filename(<message>)");
+	L_CALL("Replication::reply_db_file(<filename>)");
 
-	L_REPLICATION("Replication::reply_db_filename");
+	L_REPLICATION("Replication::reply_db_file");
 
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
-	// repl_db_filename.assign(p, p_end - p);
+	auto path = endpoints[0].path + "/.tmp/" + filename;
+	file_descriptor = io::open(path.c_str());
+
+	client.read_file();
 }
 
 
 void
-Replication::reply_db_filedata(const std::string &)
-{
-	L_CALL("Replication::reply_db_filedata(<message>)");
-
-	L_REPLICATION("Replication::reply_db_filedata");
-
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
-
-	// const Endpoint& endpoint = endpoints[0];
-
-	// std::string path = endpoint.path + "/.tmp/";
-	// std::string path_filename = path + repl_db_filename;
-
-	// int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-	// if (fd != -1) {
-	// 	L_REPLICATION("path_filename %s", path_filename);
-	// 	if (io::write(fd, p, p_end - p) != p_end - p) {
-	// 		L_ERR("Cannot write to %s", repl_db_filename);
-	// 		return;
-	// 	}
-	// 	io::close(fd);
-	// }
-}
-
-
-void
-Replication::reply_db_footer(const std::string &)
+Replication::reply_db_footer(const std::string&)
 {
 	L_CALL("Replication::reply_db_footer(<message>)");
 
@@ -351,7 +386,7 @@ Replication::reply_db_footer(const std::string &)
 
 
 void
-Replication::reply_changeset(const std::string &)
+Replication::reply_changeset(const std::string&)
 {
 	L_CALL("Replication::reply_changeset(<message>)");
 
@@ -408,51 +443,6 @@ Replication::reply_changeset(const std::string &)
 
 	// io::close(fd);
 	// io::unlink(path);
-}
-
-
-void
-Replication::replication_client_file_done()
-{
-	L_CALL("Replication::replication_client_file_done(<message>)");
-
-	L_REPLICATION("Replication::replication_client_file_done");
-
-	char buf[1024];
-	const char *p;
-	const char *p_end;
-	std::string buffer;
-
-	ssize_t size = io::read(client.file_descriptor, buf, sizeof(buf));
-	buffer.append(buf, size);
-	p = buffer.data();
-	p_end = p + buffer.size();
-	const char *s = p;
-
-	while (p != p_end) {
-		ReplicationReplyType type = static_cast<ReplicationReplyType>(*p++);
-		ssize_t len = unserialise_length(&p, p_end);
-		size_t pos = p - s;
-		while (p_end - p < len || static_cast<size_t>(p_end - p) < sizeof(buf) / 2) {
-			size = io::read(client.file_descriptor, buf, sizeof(buf));
-			if (!size) break;
-			buffer.append(buf, size);
-			s = p = buffer.data();
-			p_end = p + buffer.size();
-			p += pos;
-		}
-		if (p_end - p < len) {
-			THROW(Error, "Replication failure!");
-		}
-		std::string msg(p, len);
-		p += len;
-
-		replication_client(type, msg);
-
-		buffer.erase(0, p - s);
-		s = p = buffer.data();
-		p_end = p + buffer.size();
-	}
 }
 
 

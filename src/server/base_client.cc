@@ -466,39 +466,25 @@ BaseClient::write(const char *buf, size_t buf_size)
 {
 	L_CALL("BaseClient::write(<buf>, %zu)", buf_size);
 
-	assert(buf_size);
-
-	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
-		return false;
-	}
-
-	int fd = sock;
-	if (fd == -1) {
-		return false;
-	}
-	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> %s", fd, repr(buf, buf_size));
-
-	written += 1;
-
-	switch (write_from_queue(fd, -1)) {
-		case WR::RETRY:
-		case WR::PENDING:
-			write_start_async.send();
-			/* FALLTHROUGH */
-		case WR::OK:
-			return true;
-		default:
-			return false;
-	}
+	return write_buffer(std::make_shared<Buffer>('\0', buf, buf_size));
 }
 
 
 bool
 BaseClient::write_file(std::string_view path, bool unlink)
 {
-	L_CALL("BaseClient::write_file(%s, %s)", repr(path), unlink ? "true" : "false");
+	L_CALL("BaseClient::write_file(<path>, <unlink>)");
 
-	if (!write_queue.push(std::make_shared<Buffer>(path, unlink))) {
+	return write_buffer(std::make_shared<Buffer>(path, unlink));
+}
+
+
+bool
+BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
+{
+	L_CALL("BaseClient::write_buffer(<buffer>)");
+
+	if (!write_queue.push(buffer)) {
 		return false;
 	}
 
@@ -506,7 +492,7 @@ BaseClient::write_file(std::string_view path, bool unlink)
 	if (fd == -1) {
 		return false;
 	}
-	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> file: '%s", fd, repr(path));
+	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> buffer (%zu bytes)", fd, buffer->full_size());
 
 	written += 1;
 

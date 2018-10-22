@@ -55,7 +55,7 @@ class Buffer {
 	size_t _max_pos;
 
 	void feed() {
-		if (!_path.empty() && _data_view.empty() && pos < _max_pos) {
+		if (_fd != -1 && _data_view.empty() && pos < _max_pos) {
 			_data.resize(4096);
 			io::lseek(_fd, pos, SEEK_SET);
 			auto _read = io::read(_fd, &_data[0], 4096UL);
@@ -77,6 +77,14 @@ public:
 		  _max_pos(0),
 		  pos(0),
 		  type('\xff')
+	{ }
+
+	Buffer(int fd)
+		: _fd(fd),
+		  _unlink(false),
+		  _max_pos(io::lseek(_fd, 0, SEEK_END)),
+		  pos(0),
+		  type('\0')
 	{ }
 
 	Buffer(std::string_view path, bool unlink = false)
@@ -120,6 +128,11 @@ public:
 	size_t size() {
 		feed();
 		return std::min(_max_pos, _data_view.size());
+	}
+
+	size_t full_size() {
+		feed();
+		return std::max(_max_pos, _data_view.size());
 	}
 
 	void remove_prefix(size_t n) {
@@ -175,6 +188,8 @@ public:
 	}
 
 	bool write_file(std::string_view path, bool unlink = false);
+
+	bool write_buffer(const std::shared_ptr<Buffer>& buffer);
 
 protected:
 	ev::io io_read;

@@ -116,54 +116,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 
 void
-BinaryClient::on_read_file_done()
-{
-	L_CALL("BinaryClient::on_read_file_done()");
-
-	L_BINARY_WIRE("BinaryClient::on_read_file_done");
-
-	io::lseek(file_descriptor, 0, SEEK_SET);
-
-	try {
-		switch (state) {
-			case State::REPLICATIONPROTOCOL_CLIENT:
-				replication.replication_client_file_done();
-				break;
-			default:
-				L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
-				destroy();
-				detach();
-		};
-	} catch (const Xapian::NetworkError& exc) {
-		L_EXC("ERROR: %s", exc.get_description());
-		destroy();
-		detach();
-	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
-		destroy();
-		detach();
-	} catch (...) {
-		std::exception exc;
-		L_EXC("ERROR: Unkown error!");
-		destroy();
-		detach();
-	}
-
-	io::unlink(file_path);
-}
-
-
-void
-BinaryClient::on_read_file(const char *buf, ssize_t received)
-{
-	L_CALL("BinaryClient::on_read_file(<buf>, %zu)", received);
-
-	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
-	io::write(file_descriptor, buf, received);
-}
-
-
-void
 BinaryClient::on_read(const char *buf, ssize_t received)
 {
 	L_CALL("BinaryClient::on_read(<buf>, %zu)", received);
@@ -213,6 +165,44 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 }
 
 
+void
+BinaryClient::on_read_file(const char *buf, ssize_t received)
+{
+	L_CALL("BinaryClient::on_read_file(<buf>, %zu)", received);
+
+	L_BINARY_WIRE("BinaryClient::on_read_file: %zd bytes", received);
+
+	switch (state) {
+		case State::REPLICATIONPROTOCOL_CLIENT:
+			replication.on_read_file(buf, received);
+			break;
+		default:
+			L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
+			destroy();
+			detach();
+	};
+}
+
+
+void
+BinaryClient::on_read_file_done()
+{
+	L_CALL("BinaryClient::on_read_file_done()");
+
+	L_BINARY_WIRE("BinaryClient::on_read_file_done");
+
+	switch (state) {
+		case State::REPLICATIONPROTOCOL_CLIENT:
+			replication.on_read_file_done();
+			break;
+		default:
+			L_ERR("ERROR: Invalid on_read_file_done for state: %d", toUType(state));
+			destroy();
+			detach();
+	};
+}
+
+
 char
 BinaryClient::get_message(std::string &result, char max_type)
 {
@@ -252,11 +242,27 @@ BinaryClient::send_message(char type_as_char, const std::string &message)
 
 	std::string buf;
 	buf += type_as_char;
-
 	buf += serialise_length(message.size());
 	buf += message;
 
 	write(buf);
+}
+
+
+void
+BinaryClient::send_file(char type_as_char, std::string_view path, bool unlink)
+{
+	L_CALL("BinaryClient::send_message(<type_as_char>, <message>)");
+
+	auto fbuf = std::make_shared<Buffer>(path, unlink)
+
+	std::string buf;
+	buf += type_as_char;
+	buf += serialise_length(fbuf.full_size());
+
+	write(buf);
+
+	write_buffer(fbuf);
 }
 
 

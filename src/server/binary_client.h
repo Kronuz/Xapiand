@@ -54,9 +54,6 @@ class BinaryClient : public BaseClient {
 
 	State state;
 
-	char file_path[PATH_MAX];
-	int file_descriptor;
-
 	// Buffers that are pending write
 	std::string buffer;
 	queue::Queue<Buffer> messages_queue;
@@ -86,6 +83,7 @@ public:
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);
+	void send_file(char type_as_char, std::string_view path, bool unlink = false);
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
