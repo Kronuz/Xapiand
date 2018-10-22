@@ -117,7 +117,7 @@ class lock_database {
 				}
 			} else if constexpr (!internal) {
 				// internal never throws, just ignores
-				THROW(Error, "lock_database is not locked: %s", repr(db_handler->database->endpoints.to_string()));
+				THROW(Error, "lock_database is not locked: %s", repr(db_handler->endpoints.to_string()));
 			}
 		}
 	}

@@ -130,91 +130,92 @@ Replication::msg_get_changesets(const std::string& message)
 	auto from_revision = unserialise_length(&p, p_end);
 	endpoints = Endpoints{Endpoint{unserialise_string(&p, p_end)}};
 
+	flags = DB_WRITABLE | DB_NOWAL;
 	lock_database<Replication> lk_db(this);
 	auto uuid = database->db->get_uuid();
 	auto revision = database->db->get_revision();
 	lk_db.unlock();
 
-	if (uuid != remote_uuid) {
+	// WAL required on a local writable database, open it.
+	DatabaseWAL wal(endpoints[0].path, nullptr);
+
+	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
 
-	bool need_whole_db = false;
-	if (from_revision == 0) {
-		need_whole_db = true;
-	}
+	// if (from_revision && !wal.has_revision(from_revision)) {
+	// 	from_revision = 0;
+	// }
 
 	if (from_revision < revision) {
-		if (need_whole_db) {
-			// Send the current revision number in the header.
-			send_message(ReplicationReplyType::REPLY_DB_HEADER,
-				serialise_string(uuid) +
-				serialise_length(revision));
+		if (from_revision == 0) {
+			int whole_db_copies_left = 5;
 
-			static std::array<const std::string, 7> filenames = {
-				"termlist.glass",
-				"synonym.glass",
-				"spelling.glass",
-				"docdata.glass",
-				"position.glass",
-				"postlist.glass",
-				"iamglass"
-			};
+			while (true) {
+				// Send the current revision number in the header.
+				send_message(ReplicationReplyType::REPLY_DB_HEADER,
+					serialise_string(uuid) +
+					serialise_length(revision));
 
-			for (const auto& filename : filenames) {
-				auto path = endpoints[0].path + "/" + filename;
-				int fd = io::open(path.c_str());
-				if (fd != -1) {
-					send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
-					send_file(ReplicationReplyType::REPLY_DB_FILEDATA, fd);
+				static std::array<const std::string, 7> filenames = {
+					"termlist.glass",
+					"synonym.glass",
+					"spelling.glass",
+					"docdata.glass",
+					"position.glass",
+					"postlist.glass",
+					"iamglass"
+				};
+
+				for (const auto& filename : filenames) {
+					auto path = endpoints[0].path + "/" + filename;
+					int fd = io::open(path.c_str());
+					if (fd != -1) {
+						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
+						send_file(ReplicationReplyType::REPLY_DB_FILEDATA, fd);
+					}
+				}
+
+				lk_db.lock();
+				auto final_revision = database->db->get_revision();
+				lk_db.unlock();
+
+				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
+
+				if (revision == final_revision) {
+					from_revision = revision;
+					break;
+				}
+
+				if (whole_db_copies_left == 0) {
+					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
+				} else if (--whole_db_copies_left == 0) {
+					lk_db.lock();
+					uuid = database->db->get_uuid();
+					revision = database->db->get_revision();
+				} else {
+					lk_db.lock();
+					uuid = database->db->get_uuid();
+					revision = database->db->get_revision();
+					lk_db.unlock();
 				}
 			}
-
-			lk_db.lock();
-			revision = database->db->get_revision();
 			lk_db.unlock();
-
-			send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(revision));
 		}
+
+		// int wal_iterations = 5;
+		// do {
+		// 	// Send WAL operations.
+		// 	auto wal_it = wal.find(from_revision);
+		// 	for (; wal_it != wal.end(); ++wal_it) {
+		// 		send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it.second);
+		// 	}
+		// 	from_revision = wal_it.first + 1;
+		// 	lk_db.lock();
+		// 	revision = database->db->get_revision();
+		// 	lk_db.unlock();
+		// while (from_revision < revision && --wal_iterations != 0);
 	}
-
-
-	// // Select endpoints and get database
-	// Xapian::Database *db_;
-	// try {
-	// 	endpoints.clear();
-	// 	Endpoint endpoint(index_path);
-	// 	endpoints.add(endpoint);
-	// 	db_ = get_db();
-	// 	if (!db_)
-	// 		THROW(InvalidOperationError, "Server has no open database");
-	// } catch (...) {
-	// 	throw;
-	// }
-
-	// char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
-	// int fd = mkstemp(path);
-	// try {
-	// 	std::string to_revision = databases[db_]->checkout_revision;
-	// 	L_REPLICATION("Replication::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string(), uuid, repr(from_revision, false), repr(to_revision, false), need_whole_db);
-
-	// 	if (fd == -1) {
-	// 		L_ERR("Cannot write to %s (1)", path);
-	// 		return;
-	// 	}
-	// 	// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid().to_string());  // FIXME: Implement Replication
-	// } catch (...) {
-	// 	release_db(db_);
-	// 	io::close(fd);
-	// 	io::unlink(path);
-	// 	throw;
-	// }
-	// release_db(db_);
-
-	// send_file(fd);
-
-	// io::close(fd);
-	// io::unlink(path);
 }
 
 
