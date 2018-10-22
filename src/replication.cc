@@ -54,6 +54,11 @@ Replication::Replication(BinaryClient& client_)
 
 Replication::~Replication()
 {
+	if (file_descriptor != -1) {
+		io::close(file_descriptor);
+		file_descriptor = -1;
+	}
+
 	L_OBJ("DELETED REPLICATION OBJ!");
 }
 
@@ -348,7 +353,7 @@ Replication::reply_db_header(const std::string& message)
 			L_DEBUG("Directory %s created", path_tmp);
 		}
 	} else {
-		L_ERR("Directory %s not created (%s)", path_tmp, strerror(errno));
+		L_ERR("Directory %s not created: %s (%d): %s", path_tmp, io::strerrno(errno), errno, strerror(errno));
 	}
 }
 
@@ -361,7 +366,10 @@ Replication::reply_db_filename(const std::string& filename)
 	L_REPLICATION("Replication::reply_db_filename");
 
 	auto path = endpoints[0].path + "/.tmp/" + filename;
-	file_descriptor = io::open(path.c_str());
+	file_descriptor = io::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
+	if (file_descriptor == -1) {
+		L_ERR("ERROR: Unable to open %s: %s (%d): %s", path, io::strerrno(errno), errno, std::strerror(errno));
+	}
 }
 
 
