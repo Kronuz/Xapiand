@@ -139,6 +139,11 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY("Switched to replication protocol");
 				break;
+			case FILE_FOLLOWS:
+				buffer.clear();
+				read_file();
+				L_BINARY("Start reading file");
+				return p - o;
 		}
 
 		ssize_t len = unserialise_length(&p, p_end, true);
@@ -247,17 +252,15 @@ BinaryClient::send_message(char type_as_char, const std::string &message)
 void
 BinaryClient::send_file(char type_as_char, std::string_view path, bool unlink)
 {
-	L_CALL("BinaryClient::send_message(<type_as_char>, <message>)");
+	L_CALL("BinaryClient::send_file(<type_as_char>, <path>, <unlink>)");
 
-	auto fbuf = std::make_shared<Buffer>(path, unlink)
+	write(std::string(1, FILE_FOLLOWS));
+	write_buffer(std::make_shared<Buffer>(path, unlink));
 
 	std::string buf;
 	buf += type_as_char;
-	buf += serialise_length(fbuf.full_size());
-
+	buf += serialise_length(0);
 	write(buf);
-
-	write_buffer(fbuf);
 }
 
 

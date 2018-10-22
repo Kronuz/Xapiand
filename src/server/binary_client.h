@@ -40,6 +40,9 @@ class RemoteProtocol;
 class Replication;
 
 
+#define FILE_FOLLOWS '\xfd'
+
+
 enum class State {
 	INIT,
 	REMOTEPROTOCOL_SERVER,
