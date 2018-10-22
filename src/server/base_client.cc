@@ -110,9 +110,7 @@ ClientLZ4Compressor::compress()
 		return -1;
 	}
 
-	auto checksum = get_digest();
-	L_DEBUG("checksum: 0x%04x", checksum);
-	if (!client.write(serialise_length(0)) || !client.write(serialise_length(checksum))) {
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(get_digest()))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
@@ -177,9 +175,7 @@ ClientNoCompressor::compress()
 		return -1;
 	}
 
-	auto checksum = XXH32_digest(xxh_state);
-	L_DEBUG("checksum: 0x%04x", checksum);
-	if (!client.write(serialise_length(0)) || !client.write(serialise_length(checksum))) {
+	if (!client.write(serialise_length(0)) || !client.write(serialise_length(XXH32_digest(xxh_state)))) {
 		L_ERR("Write Footer failed!");
 		return -1;
 	}
