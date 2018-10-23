@@ -102,12 +102,6 @@ public:
 };
 
 
-class DummyException : public BaseException, public std::runtime_error {
-public:
-	DummyException() : BaseException(__func__, __FILE__, __LINE__, "DummyException"), std::runtime_error(message) { }
-};
-
-
 class CheckoutError : public Exception {
 public:
 	template<typename... Args>
@@ -126,6 +120,13 @@ class CheckoutErrorBadEndpoint : public CheckoutError {
 public:
 	template<typename... Args>
 	CheckoutErrorBadEndpoint(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
+};
+
+
+class CheckoutErrorEndpointNotAvailable : public CheckoutError {
+public:
+	template<typename... Args>
+	CheckoutErrorEndpointNotAvailable(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
 };
 
 

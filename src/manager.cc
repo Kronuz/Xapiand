@@ -858,7 +858,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 			L_DEBUG("inactive node {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 			consistent_hash = (consistent_hash - 1) % indexed_nodes;
 		} while (replicas-- != 0);
-		THROW(CheckoutErrorBadEndpoint, "Endpoint not available!");
+		THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
 	}
 	else
 #endif
