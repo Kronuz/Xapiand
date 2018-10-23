@@ -150,16 +150,18 @@ class RemoteProtocol : protected LockableDatabase {
 
 	BinaryClient& client;
 
+	// For msg_query and msg_mset:
+	lock_database _msg_query_database_lock;
+	Xapian::Registry _msg_query_reg;
+	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
+	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;
+	void init_msg_query();
+	void reset();
+
 public:
 
 	explicit RemoteProtocol(BinaryClient& client_);
 	~RemoteProtocol();
-
-// For msg_query and msg_mset:
-	Xapian::Registry reg;
-	std::unique_ptr<Xapian::Enquire> enquire;
-	std::vector<Xapian::MatchSpy*> matchspies;
-	lock_database database_lock;
 
 	void send_message(RemoteReplyType type, const std::string& message);
 

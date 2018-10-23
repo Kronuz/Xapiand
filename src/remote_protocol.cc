@@ -86,7 +86,7 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
 RemoteProtocol::RemoteProtocol(BinaryClient& client_)
 	: LockableDatabase(),
 	  client(client_),
-	  database_lock(this)
+	  _msg_query_database_lock(this)
 {
 	L_OBJ("CREATED REMOTE PROTOCOL!");
 }
@@ -201,6 +201,7 @@ RemoteProtocol::msg_allterms(const std::string &message)
 	std::string prev = message;
 	const std::string& prefix = message;
 
+	reset();
 	lock_database lk_db(this);
 
 	const Xapian::TermIterator end = db()->allterms_end(prefix);
@@ -230,6 +231,7 @@ RemoteProtocol::msg_termlist(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db()->get_doclength(did)));
@@ -265,6 +267,7 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 	std::string term(p, p_end - p);
 
+	reset();
 	lock_database lk_db(this);
 
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
@@ -289,6 +292,7 @@ RemoteProtocol::msg_postlist(const std::string &message)
 
 	const std::string & term = message;
 
+	reset();
 	lock_database lk_db(this);
 
 	Xapian::doccount termfreq = db()->get_termfreq(term);
@@ -380,6 +384,7 @@ RemoteProtocol::msg_reopen(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_reopen(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 
 	if (!database()->reopen()) {
@@ -407,6 +412,7 @@ RemoteProtocol::msg_update(const std::string &)
 	std::string message(protocol, 2);
 
 	if (!endpoints.empty()) {
+		reset();
 		lock_database lk_db(this);
 
 		Xapian::doccount num_docs = db()->get_doccount();
@@ -432,6 +438,27 @@ RemoteProtocol::msg_update(const std::string &)
 
 
 void
+RemoteProtocol::init_msg_query()
+{
+	flags = DB_OPEN;
+	_msg_query_database_lock.lock();
+	_msg_query_matchspies.clear();
+	_msg_query_reg = Xapian::Registry{};
+	_msg_query_enquire.reset();
+}
+
+
+void
+RemoteProtocol::reset()
+{
+	_msg_query_matchspies.clear();
+	_msg_query_reg = Xapian::Registry{};
+	_msg_query_enquire.reset();
+	_msg_query_database_lock.unlock();
+}
+
+
+void
 RemoteProtocol::msg_query(const std::string &message_in)
 {
 	L_CALL("RemoteProtocol::msg_query(<message>)");
@@ -439,21 +466,20 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
 
-	flags = DB_OPEN;
-	database_lock.lock();
+	init_msg_query();
 
-	enquire = std::make_unique<Xapian::Enquire>(*db());
+	_msg_query_enquire = std::make_unique<Xapian::Enquire>(*db());
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Query.
 	size_t len = unserialise_length(&p, p_end, true);
-	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), reg));
+	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), _msg_query_reg));
 	p += len;
 
 	// Unserialise assorted Enquire settings.
 	Xapian::termcount qlen = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	enquire->set_query(query, qlen);
+	_msg_query_enquire->set_query(query, qlen);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Collapse key
@@ -464,7 +490,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 		collapse_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 	}
 
-	enquire->set_collapse_key(collapse_key, collapse_max);
+	_msg_query_enquire->set_collapse_key(collapse_key, collapse_max);
 
 	////////////////////////////////////////////////////////////////////////////
 	// docid order
@@ -475,7 +501,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	Xapian::Enquire::docid_order order;
 	order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
 
-	enquire->set_docid_order(order);
+	_msg_query_enquire->set_docid_order(order);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Sort by
@@ -496,16 +522,16 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	switch(sort_by) {
 		case REL:
-			enquire->set_sort_by_relevance();
+			_msg_query_enquire->set_sort_by_relevance();
 			break;
 		case VAL:
-			enquire->set_sort_by_value(sort_key, sort_value_forward);
+			_msg_query_enquire->set_sort_by_value(sort_key, sort_value_forward);
 			break;
 		case VAL_REL:
-			enquire->set_sort_by_value_then_relevance(sort_key, sort_value_forward);
+			_msg_query_enquire->set_sort_by_value_then_relevance(sort_key, sort_value_forward);
 			break;
 		case REL_VAL:
-			enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
+			_msg_query_enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
 			break;
 	}
 
@@ -514,7 +540,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	double time_limit = unserialise_double(&p, p_end);
 
-	enquire->set_time_limit(time_limit);
+	_msg_query_enquire->set_time_limit(time_limit);
 
 	////////////////////////////////////////////////////////////////////////////
 	// cutoff
@@ -529,7 +555,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 		THROW(NetworkError, "bad message (weight_cutoff)");
 	}
 
-	enquire->set_cutoff(percent_cutoff, weight_cutoff);
+	_msg_query_enquire->set_cutoff(percent_cutoff, weight_cutoff);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Weight object.
@@ -537,7 +563,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	std::string wtname(p, len);
 	p += len;
 
-	const Xapian::Weight * wttype = reg.get_weighting_scheme(wtname);
+	const Xapian::Weight * wttype = _msg_query_reg.get_weighting_scheme(wtname);
 	if (wttype == nullptr) {
 		// Note: user weighting schemes should be registered by adding them to
 		// a Registry, and setting the context using
@@ -547,7 +573,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	len = unserialise_length(&p, p_end, true);
 	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
-	enquire->set_weighting_scheme(*wt);
+	_msg_query_enquire->set_weighting_scheme(*wt);
 	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
@@ -561,23 +587,23 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	while (p != p_end) {
 		len = unserialise_length(&p, p_end, true);
 		std::string spytype(p, len);
-		const Xapian::MatchSpy * spyclass = reg.get_match_spy(spytype);
+		const Xapian::MatchSpy * spyclass = _msg_query_reg.get_match_spy(spytype);
 		if (spyclass == nullptr) {
 			THROW(InvalidArgumentError, "Match spy " + spytype + " not registered");
 		}
 		p += len;
 
 		len = unserialise_length(&p, p_end, true);
-		Xapian::MatchSpy *spy = spyclass->unserialise(std::string(p, len), reg);
-		matchspies.push_back(spy);
-		enquire->add_matchspy(spy->release());
+		Xapian::MatchSpy *spy = spyclass->unserialise(std::string(p, len), _msg_query_reg);
+		_msg_query_matchspies.push_back(spy);
+		_msg_query_enquire->add_matchspy(spy->release());
 		p += len;
 	}
 
 	////////////////////////////////////////////////////////////////////////////
-	enquire->prepare_mset(&rset, nullptr);
+	_msg_query_enquire->prepare_mset(&rset, nullptr);
 
-	send_message(RemoteReplyType::REPLY_STATS, enquire->serialise_stats());
+	send_message(RemoteReplyType::REPLY_STATS, _msg_query_enquire->serialise_stats());
 
 	// No checkout for database (it'll still be needed by msg_getmset)
 }
@@ -588,7 +614,7 @@ RemoteProtocol::msg_getmset(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_getmset(<message>)");
 
-	if (!enquire) {
+	if (!_msg_query_enquire) {
 		THROW(NetworkError, "Unexpected MSG_GETMSET");
 	}
 
@@ -600,21 +626,19 @@ RemoteProtocol::msg_getmset(const std::string & message)
 
 	Xapian::termcount check_at_least = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	enquire->unserialise_stats(std::string(p, p_end));
+	_msg_query_enquire->unserialise_stats(std::string(p, p_end));
 
-	Xapian::MSet mset = enquire->get_mset(first, maxitems, check_at_least);
+	Xapian::MSet mset = _msg_query_enquire->get_mset(first, maxitems, check_at_least);
 
 	std::string msg;
-	for (auto& i : matchspies) {
+	for (auto& i : _msg_query_matchspies) {
 		std::string spy_results = i->serialise_results();
 		msg += serialise_length(spy_results.size());
 		msg += spy_results;
 	}
 	msg += mset.serialise();
 
-	database_lock.unlock();
-	matchspies.clear();
-	enquire.reset();
+	reset();
 
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
@@ -629,6 +653,7 @@ RemoteProtocol::msg_document(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 
 	Xapian::Document doc = database()->get_document(did, false, true);
@@ -651,6 +676,7 @@ RemoteProtocol::msg_keepalive(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_keepalive(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 
 	// Ensure *our* database stays alive, as it may contain remote databases!
@@ -667,6 +693,7 @@ RemoteProtocol::msg_termexists(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_termexists(<term>)");
 
+	reset();
 	lock_database lk_db(this);
 	auto reply_type = db()->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST;
 	lk_db.unlock();
@@ -680,6 +707,7 @@ RemoteProtocol::msg_collfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_collfreq(<term>)");
 
+	reset();
 	lock_database lk_db(this);
 	auto collection_freq = db()->get_collection_freq(term);
 	lk_db.unlock();
@@ -693,6 +721,7 @@ RemoteProtocol::msg_termfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_termfreq(<term>)");
 
+	reset();
 	lock_database lk_db(this);
 	auto termfreq = db()->get_termfreq(term);
 	lk_db.unlock();
@@ -706,6 +735,7 @@ RemoteProtocol::msg_freqs(const std::string &term)
 {
 	L_CALL("RemoteProtocol::msg_freqs(<term>)");
 
+	reset();
 	lock_database lk_db(this);
 	auto termfreq = db()->get_termfreq(term);
 	auto collection_freq = db()->get_collection_freq(term);
@@ -722,6 +752,7 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_valuestats(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 
 	const char *p = message.data();
@@ -751,6 +782,7 @@ RemoteProtocol::msg_doclength(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	auto doclength = db()->get_doclength(did);
 	lk_db.unlock();
@@ -768,6 +800,7 @@ RemoteProtocol::msg_uniqueterms(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	auto unique_terms = db()->get_unique_terms(did);
 	lk_db.unlock();
@@ -781,6 +814,7 @@ RemoteProtocol::msg_commit(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_commit(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 	database()->commit();
 	lk_db.unlock();
@@ -794,6 +828,7 @@ RemoteProtocol::msg_cancel(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_cancel(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 	database()->cancel();
 }
@@ -806,6 +841,7 @@ RemoteProtocol::msg_adddocument(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(message);
 
+	reset();
 	lock_database lk_db(this);
 	auto did = database()->add_document(document);
 	lk_db.unlock();
@@ -823,6 +859,7 @@ RemoteProtocol::msg_deletedocument(const std::string & message)
 	const char *p_end = p + message.size();
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	database()->delete_document(did);
 	lk_db.unlock();
@@ -836,6 +873,7 @@ RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_deletedocumentterm(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 	database()->delete_document_term(message);
 }
@@ -852,6 +890,7 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	database()->replace_document(did, document);
 }
@@ -870,6 +909,7 @@ RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	auto did = database()->replace_document_term(unique_term, document);
 	lk_db.unlock();
@@ -883,6 +923,7 @@ RemoteProtocol::msg_getmetadata(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_getmetadata(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 	auto value = database()->get_metadata(message);
 	lk_db.unlock();
@@ -896,6 +937,7 @@ RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_openmetadatakeylist(<message>)");
 
+	reset();
 	lock_database lk_db(this);
 
 	std::string prev = message;
@@ -933,6 +975,7 @@ RemoteProtocol::msg_setmetadata(const std::string & message)
 	p += keylen;
 	std::string val(p, p_end - p);
 
+	reset();
 	lock_database lk_db(this);
 	database()->set_metadata(key, val);
 }
@@ -947,6 +990,7 @@ RemoteProtocol::msg_addspelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	database()->add_spelling(std::string(p, p_end - p), freqinc);
 }
@@ -961,6 +1005,7 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
+	reset();
 	lock_database lk_db(this);
 	database()->remove_spelling(std::string(p, p_end - p), freqdec);
 }
@@ -980,10 +1025,7 @@ RemoteProtocol::select_db(const std::vector<std::string> &dbpaths, bool writable
 {
 	L_CALL("RemoteProtocol::select_db(<dbpaths>, %s, %d)", writable ? "true" : "false", xapian_flags);
 
-	database_lock.unlock();
-	endpoints.clear();
-	matchspies.clear();
-	enquire.reset();
+	reset();
 
 	flags = writable ? DB_WRITABLE : DB_OPEN;
 	if ((xapian_flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
