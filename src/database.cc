@@ -912,6 +912,7 @@ DataStorage::open(std::string_view relative_path)
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_)
 	: weak_queue(queue_),
+	  weak_database_pool(queue_->weak_database_pool.lock()),
 	  endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  hash(endpoints.hash()),
@@ -922,9 +923,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 {
 	reopen();
 
-	if (auto queue = weak_queue.lock()) {
-		queue->inc_count();
-	}
+	queue_->inc_count();
 
 	L_OBJ("CREATED DATABASE!");
 }
@@ -1244,6 +1243,9 @@ Database::commit(bool wal_)
 			if (local) {
 				if (auto queue = weak_queue.lock()) {
 					queue->local_revision = db_pair.first.get_revision();
+				}
+				if (auto database_pool = weak_database_pool.lock()) {
+					database_pool->updated_databases.push(endpoints[0]);
 				}
 			}
 			break;
@@ -2542,72 +2544,56 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL("DatabasePool::checkin(%s)", repr(database->to_string()));
 
-	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()));
-
 	assert(database);
+	auto& endpoints = database->endpoints;
 
-	std::shared_ptr<DatabaseQueue> queue;
-
-	std::unique_lock<std::mutex> lk(qmtx);
-
-	if ((database->flags & DB_WRITABLE) != 0) {
-		auto& endpoint = database->endpoints[0];
-		if (endpoint.is_local()) {
-			auto new_revision = database->get_revision();
-			if (database->reopen_revision != new_revision) {
-				database->reopen_revision = new_revision;
-				updated_databases.push(endpoint);
-			}
-		}
-		queue = writable_databases.get(database->hash, false, database->endpoints);
-	} else {
-		queue = databases.get(database->hash, false, database->endpoints);
-	}
-
-	assert(database->weak_queue.lock() == queue);
+	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 
 	if (database->modified) {
 		DatabaseAutocommit::commit(database);
 	}
 
-	if (!queue->push(database)) {
-		_cleanup(true, true);
-		queue->push(database);
-	}
+	if (auto queue = database->weak_queue.lock()) {
+		std::lock_guard<std::mutex> lk(qmtx);
 
-	auto& endpoints = database->endpoints;
-	bool signal_checkins = false;
-	switch (queue->state) {
-		case DatabaseQueue::replica_state::REPLICA_SWITCH:
-			for (const auto& endpoint : endpoints) {
-				_switch_db(endpoint);
-			}
-			if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
+		if (!queue->push(database)) {
+			_cleanup(true, true);
+			queue->push(database);
+		}
+
+		bool signal_checkins = false;
+		switch (queue->state) {
+			case DatabaseQueue::replica_state::REPLICA_SWITCH:
+				for (const auto& endpoint : endpoints) {
+					_switch_db(endpoint);
+				}
+				if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
+					signal_checkins = true;
+				}
+				break;
+			case DatabaseQueue::replica_state::REPLICA_LOCK:
+				queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
 				signal_checkins = true;
-			}
-			break;
-		case DatabaseQueue::replica_state::REPLICA_LOCK:
-			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-			signal_checkins = true;
-			break;
-		case DatabaseQueue::replica_state::REPLICA_FREE:
-			break;
-	}
+				break;
+			case DatabaseQueue::replica_state::REPLICA_FREE:
+				break;
+		}
 
-	if (queue->count < queue->size()) {
-		L_CRIT("Inconsistency in the number of databases in queue");
-		sig_exit(-EX_SOFTWARE);
+		if (queue->count < queue->size()) {
+			L_CRIT("Inconsistency in the number of databases in queue");
+			sig_exit(-EX_SOFTWARE);
+		}
+
+		database.reset();
+
+		if (signal_checkins) {
+			while (queue->checkin_callbacks.call()) {};
+		}
+	} else {
+		database.reset();
 	}
 
 	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
-
-	database.reset();
-
-	if (signal_checkins) {
-		while (queue->checkin_callbacks.call()) {};
-	}
-
-	lk.unlock();
 }
 
 
