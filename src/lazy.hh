@@ -22,26 +22,39 @@
 
 #pragma once
 
-#include <utility>
-#include <ostream>
+#include <functional>		 // for std::function
+#include <ostream>           // for std::ostream
+#include <type_traits>       // for std::enable_if_t
+#include <utility>           // for std::forward, std::move
+
+
+template <typename F, std::enable_if_t<std::is_invocable<F&>::value, int> = 0>
+auto eval(F&& invocable) {
+	return invocable();
+}
+
+template <typename Val, std::enable_if_t<not std::is_invocable<Val&>::value, int> = 0>
+auto eval(Val&& val) {
+	return std::forward<Val>(val);
+}
 
 template <class L>
 class lazy_eval {
-    const L& lambda;
+	const L& lambda;
 
 public:
-    lazy_eval(const L& lambda) : lambda(lambda) {}
-    lazy_eval(lazy_eval&& other) : lambda(std::move(other.lambda)) { }
-    lazy_eval& operator=(lazy_eval&& other) {
-    	lambda = std::move(other.lambda);
-    }
+	lazy_eval(const L& lambda) : lambda(lambda) {}
+	lazy_eval(lazy_eval&& other) : lambda(std::move(other.lambda)) { }
+	lazy_eval& operator=(lazy_eval&& other) {
+		lambda = std::move(other.lambda);
+	}
 
-    lazy_eval(const lazy_eval&) = delete;
-    lazy_eval& operator=(const lazy_eval&) = delete;
+	lazy_eval(const lazy_eval&) = delete;
+	lazy_eval& operator=(const lazy_eval&) = delete;
 
-    using expression_type = decltype(std::declval<L>()());
+	using expression_type = decltype(std::declval<L>()());
 
-    explicit operator expression_type() const { return lambda(); }
+	explicit operator expression_type() const { return lambda(); }
 	expression_type operator()() const { return lambda(); }
 	friend std::ostream& operator<<(std::ostream& os, const lazy_eval<L> & obj) {
 		return os << obj();
@@ -54,4 +67,4 @@ make_lazy_eval(L&& lambda) {
 	return {std::forward<L>(lambda)};
 }
 
-#define LAZY(Expr) make_lazy_eval([&]() -> decltype((Expr)) { return (Expr); })
+#define LAZY(Expr) make_lazy_eval([&]() { return eval(Expr); })
