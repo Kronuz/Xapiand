@@ -79,6 +79,18 @@ public:
 	size_t hash() const;
 	std::string to_string() const;
 
+	bool empty() const noexcept {
+		return (
+			port == -1 &&
+			user.empty() &&
+			password.empty() &&
+			host.empty() &&
+			path.empty() &&
+			search.empty() &&
+			node_name.empty()
+		);
+	}
+
 	bool operator<(const Endpoint& other) const;
 };
 
@@ -110,6 +122,10 @@ public:
 	void clear() noexcept {
 		endpoints.clear();
 		std::vector<Endpoint>::clear();
+	}
+
+	bool empty() const noexcept {
+		return endpoints.empty();
 	}
 
 	void add(const Endpoint& endpoint) {
