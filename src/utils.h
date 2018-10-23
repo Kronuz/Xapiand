@@ -88,11 +88,6 @@ static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 
 
 std::string name_generator();
-std::int32_t jump_consistent_hash(std::uint64_t key, std::int32_t num_buckets);
-static inline std::int32_t jump_consistent_hash(std::string_view key, std::int32_t num_buckets) {
-	std::hash<std::string_view> hash_fn;
-	return jump_consistent_hash(hash_fn(key), num_buckets);
-}
 
 char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
 char* normalize_path(std::string_view src, char* dst, bool slashed=false);

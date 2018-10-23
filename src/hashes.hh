@@ -287,4 +287,29 @@ using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul s
 #define fhh(s) find(fnv1ah32::hash(s))
 #define fhhl(s) find(fnv1ah32ci::hash(s))
 
+
+//
+
+static inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
+	// Computes the bucket number for key in the range [0, num_buckets).
+	// The algorithm used is the jump consistent hash by Lamping and Veach.
+	// A Fast, Minimal Memory, Consistent Hash Algorithm
+	// [http://arxiv.org/pdf/1406.2294v1.pdf]
+	assert(num_buckets > 0);  // help static code analysis
+	int64_t b = -1, j = 0;
+	while (j < num_buckets) {
+		b = j;
+		key = key * 2862933555777941757ULL + 1;
+		j = static_cast<int64_t>(
+			static_cast<double>(b + 1) * (static_cast<double>(1LL << 31) / static_cast<double>((key >> 33) + 1))
+		);
+	}
+	// b cannot exceed the range of num_buckets, see while condition
+	return static_cast<uint32_t>(b);
+}
+
+static inline uint32_t jump_consistent_hash(std::string_view key, int32_t num_buckets) {
+	return jump_consistent_hash(xxh64::hash(key), num_buckets);
+}
+
 #endif // HASHES_HH

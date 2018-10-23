@@ -143,20 +143,6 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 }
 
 
-int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
-	/* It outputs a bucket number in the range [0, num_buckets).
-	   A Fast, Minimal Memory, Consistent Hash Algorithm
-	   [http://arxiv.org/pdf/1406.2294v1.pdf] */
-	int64_t b = 0, j = 0;
-	while (j < num_buckets) {
-		b = j;
-		key = key * 2862933555777941757ULL + 1;
-		j = (b + 1) * (double(1LL << 31) / double((key >> 33) + 1));
-	}
-	return (int32_t) b;
-}
-
-
 std::string name_generator() {
 	static NameGen::Generator generator("!<s<v|V>(tia|nia|lia|cia|sia)|s<v|V>(os)|B<v|V>c(ios)|B<v|V><c|C>v(ios|os)>");
 	return generator.toString();
