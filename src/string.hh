@@ -200,7 +200,7 @@ inline std::string join(const std::vector<T>& values, std::string_view delimiter
 template <typename T, typename UnaryPredicate, typename = std::enable_if_t<std::is_invocable<UnaryPredicate, T>::value>>
 inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
-	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
+	filtered_values.erase(std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred), filtered_values.end());
 	return join(filtered_values, delimiter, last_delimiter);
 }
 
