@@ -197,15 +197,7 @@ inline std::string join(const std::vector<T>& values, std::string_view delimiter
 }
 
 
-template <class T, class... Args>
-struct _is_callable {
-	template <class U> static auto test(U*p) -> decltype((*p)(std::declval<Args>()...), void(), std::true_type());
-	template <class U> static auto test(...) -> decltype(std::false_type());
-	static constexpr auto value = decltype(test<T>(nullptr))::value;
-};
-
-
-template <typename T, typename UnaryPredicate, typename = std::enable_if_t<_is_callable<UnaryPredicate, T>::value>>
+template <typename T, typename UnaryPredicate, typename = std::enable_if_t<std::is_invocable<UnaryPredicate, T>::value>>
 inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
 	std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred);
@@ -213,7 +205,7 @@ inline std::string join(const std::vector<T>& values, std::string_view delimiter
 }
 
 
-template <typename T, typename UnaryPredicate, typename = std::enable_if_t<_is_callable<UnaryPredicate, T>::value>>
+template <typename T, typename UnaryPredicate, typename = std::enable_if_t<std::is_invocable<UnaryPredicate, T>::value>>
 inline std::string join(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
 	return join(values, delimiter, delimiter, pred);
 }
