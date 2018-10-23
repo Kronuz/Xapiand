@@ -967,28 +967,28 @@ Database::reopen_writable()
 
 	db = std::make_unique<Xapian::WritableDatabase>();
 
-	const auto& e = endpoints.front();
+	const auto& endpoint = endpoints[0];
 	Xapian::WritableDatabase wdb;
 	bool local = false;
 	int _flags = (flags & DB_SPAWN) != 0 ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
-	if (!e.is_local()) {
+	if (!endpoint.is_local()) {
 		// Writable remote databases do not have a local fallback
-		int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
-		wdb = Xapian::Remote::open_writable(e.host, port, 0, 10000, _flags, e.path);
+		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
+		wdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 		try {
-			Xapian::Database tmp = Xapian::Database(e.path, Xapian::DB_OPEN);
+			Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 			if (tmp.get_uuid() == wdb.get_uuid()) {
-				L_DATABASE("Endpoint %s fallback to local database!", repr(e.to_string()));
+				L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
 				// Handle remote endpoints and figure out if the endpoint is a local database
-				build_path_index(e.path);
+				build_path_index(endpoint.path);
 				try {
-					wdb = Xapian::WritableDatabase(e.path, _flags);
+					wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 				} catch (const Xapian::DatabaseOpeningError&) {
-					if ((flags & DB_SPAWN) && !exists(e.path + "/iamglass")) {
+					if ((flags & DB_SPAWN) && !exists(endpoint.path + "/iamglass")) {
 						_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
-						wdb = Xapian::WritableDatabase(e.path, _flags);
+						wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 					} else throw;
 				}
 				local = true;
@@ -1001,16 +1001,16 @@ Database::reopen_writable()
 #endif /* XAPIAND_CLUSTERING */
 	{
 #ifdef XAPIAND_DATABASE_WAL
-		DatabaseWAL tmp_wal(e.path, this);
+		DatabaseWAL tmp_wal(endpoint.path, this);
 		tmp_wal.init_database();
 #endif
-		build_path_index(e.path);
+		build_path_index(endpoint.path);
 		try {
-			wdb = Xapian::WritableDatabase(e.path, _flags);
+			wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 		} catch (const Xapian::DatabaseOpeningError&) {
-			if (((flags & DB_SPAWN) != 0) && !exists(e.path + "/iamglass")) {
+			if (((flags & DB_SPAWN) != 0) && !exists(endpoint.path + "/iamglass")) {
 				_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
-				wdb = Xapian::WritableDatabase(e.path, _flags);
+				wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 			} else { throw; }
 		}
 		local = true;
@@ -1027,10 +1027,10 @@ Database::reopen_writable()
 	if (local) {
 		if ((flags & DB_NOSTORAGE) != 0) {
 			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
+			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		} else {
-			writable_storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
-			storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
+			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
+			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		}
 	} else {
 		writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
@@ -1042,7 +1042,7 @@ Database::reopen_writable()
 	/* If reopen_revision is not available Wal work as a log for the operations */
 	if (local && ((flags & DB_NOWAL) == 0)) {
 		// WAL required on a local writable database, open it.
-		wal = std::make_unique<DatabaseWAL>(e.path, this);
+		wal = std::make_unique<DatabaseWAL>(endpoint.path, this);
 		if (wal->open_current(true)) {
 			if (auto queue = weak_queue.lock()) {
 				modified = true;
@@ -1078,22 +1078,21 @@ Database::reopen_readable()
 
 	db = std::make_unique<Xapian::Database>();
 
-	for (auto i = endpoints.cbegin(); i != endpoints.cend(); ++i) {
-		const auto& e = *i;
+	for (const auto& endpoint : endpoints) {
 		Xapian::Database rdb;
 		bool local = false;
 #ifdef XAPIAND_CLUSTERING
 		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
-		if (!e.is_local()) {
-			int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
-			rdb = Xapian::Remote::open(e.host, port, 10000, 10000, _flags, e.path);
+		if (!endpoint.is_local()) {
+			int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
+			rdb = Xapian::Remote::open(endpoint.host, port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
-				Xapian::Database tmp = Xapian::Database(e.path, Xapian::DB_OPEN);
+				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				if (tmp.get_uuid() == rdb.get_uuid()) {
-					L_DATABASE("Endpoint %s fallback to local database!", repr(e.to_string()));
+					L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
 					// Handle remote endpoints and figure out if the endpoint is a local database
-					rdb = Xapian::Database(e.path, _flags);
+					rdb = Xapian::Database(endpoint.path, _flags);
 					local = true;
 				}
 			} catch (const Xapian::DatabaseOpeningError& exc) { }
@@ -1103,14 +1102,14 @@ Database::reopen_readable()
 #endif /* XAPIAND_CLUSTERING */
 		{
 #ifdef XAPIAND_DATABASE_WAL
-			DatabaseWAL tmp_wal(e.path, this);
+			DatabaseWAL tmp_wal(endpoint.path, this);
 			tmp_wal.init_database();
 #endif
 			try {
-				rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
+				rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
-				fail_db.insert(std::hash<std::string>{}(e.path));
+				fail_db.insert(std::hash<std::string>{}(endpoint.path));
 				if ((flags & DB_SPAWN) == 0)  {
 					if (endpoints.size() == 1 || endpoints.size() == fail_db.size()) {
 						fail_db.clear();
@@ -1120,17 +1119,17 @@ Database::reopen_readable()
 					incomplete = true;
 				} else {
 					{
-						build_path_index(e.path);
+						build_path_index(endpoint.path);
 						try {
-							Xapian::WritableDatabase tmp(e.path, Xapian::DB_CREATE_OR_OPEN);
+							Xapian::WritableDatabase tmp(endpoint.path, Xapian::DB_CREATE_OR_OPEN);
 						} catch (const Xapian::DatabaseOpeningError&) {
-							if (!exists(e.path + "/iamglass")) {
-								Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OVERWRITE);
+							if (!exists(endpoint.path + "/iamglass")) {
+								Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
 							} else { throw; }
 						}
 					}
 
-					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
+					rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 					local = true;
 				}
 			}
@@ -1142,7 +1141,7 @@ Database::reopen_readable()
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
 			// WAL required on a local database, open it.
-			storages.push_back(std::make_unique<DataStorage>(e.path, this, STORAGE_OPEN));
+			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		} else {
 			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 		}
