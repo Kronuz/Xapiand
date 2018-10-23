@@ -138,4 +138,7 @@ public:
 	void unlock() {
 		_unlock<false>();
 	}
+	void unsafe_unlock() {
+		_unlock<true>();
+	}
 };

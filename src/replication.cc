@@ -200,7 +200,7 @@ Replication::msg_get_changesets(const std::string& message)
 					lk_db.unlock();
 				}
 			}
-			lk_db.unlock();
+			lk_db.unsafe_unlock();
 		}
 
 		// TODO: Implement WAL's has_revision() and iterator
