@@ -69,6 +69,7 @@
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"                          // for async, loop_ref (ptr only)
 #include "exception.h"                        // for Exit, ClientError, Excep...
+#include "hashes.hh"                          // for jump_consistent_hash
 #include "http_parser.h"                      // for http_method
 #include "ignore_unused.h"                    // for ignore_unused
 #include "io_utils.h"                         // for close, open, read, write
@@ -839,25 +840,30 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 
 
 Endpoint
-XapiandManager::resolve_index_endpoint(const std::string &path)
+XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 {
 	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		Endpoint endpoint(path);
-		// std::hash<std::string> hash_fn;
-		// Xapian::docid = hash = hash_fn(path);
-		// auto consistent_hash = jump_consistent_hash(hash, all_seen_nodes.size());
-		// node = all_seen_nodes[hash];
-		// endpoint.host = node.host();
-		// endpoint.port = node.binary_port;
-		return endpoint;
+		auto indexed_nodes = Node::indexed_nodes();
+		size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
+		size_t replicas = master ? 0 : 3;
+		consistent_hash = (consistent_hash + replicas) % indexed_nodes;
+		do {
+			auto node = Node::get_node(consistent_hash + 1);
+			if (Node::is_active(node)) {
+				return {path, node.get()};
+			}
+			L_DEBUG("inactive node {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+			consistent_hash = (consistent_hash - 1) % indexed_nodes;
+		} while (replicas-- != 0);
+		THROW(CheckoutErrorBadEndpoint, "Endpoint not available!");
 	}
 	else
 #endif
 	{
-		return Endpoint(path);
+		return {path};
 	}
 }
 

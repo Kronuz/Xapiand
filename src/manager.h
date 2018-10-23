@@ -179,7 +179,7 @@ public:
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
-	Endpoint resolve_index_endpoint(const std::string &path);
+	Endpoint resolve_index_endpoint(const std::string &path, bool master);
 
 	std::string server_metrics();
 };

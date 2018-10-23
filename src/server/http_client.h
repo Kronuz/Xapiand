@@ -303,8 +303,8 @@ class HttpClient : public BaseClient {
 	void _delete(Request& request, Response& response, enum http_method method);
 
 	Command url_resolve(Request& request);
-	void _endpoint_maker(Request& request);
-	void endpoints_maker(Request& request);
+	void _endpoint_maker(Request& request, bool master);
+	void endpoints_maker(Request& request, bool master);
 	query_field_t query_field_maker(Request& request, int flags);
 
 	void log_request(Request& request);

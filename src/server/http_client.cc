@@ -1030,7 +1030,7 @@ HttpClient::metrics_view(Request& request, Response& response, enum http_method 
 {
 	L_CALL("HttpClient::metrics_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1044,7 +1044,7 @@ HttpClient::document_info_view(Request& request, Response& response, enum http_m
 {
 	L_CALL("HttpClient::document_info_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1064,8 +1064,8 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 {
 	L_CALL("HttpClient::delete_document_view()");
 
-	endpoints_maker(request);
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	endpoints_maker(request, true);
 
 	std::string doc_id(request.path_parser.get_id());
 
@@ -1103,7 +1103,7 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1138,8 +1138,8 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 		doc_id = request.path_parser.get_id();
 	}
 
-	endpoints_maker(request);
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1174,7 +1174,7 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1206,8 +1206,8 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 {
 	L_CALL("HttpClient::update_document_view()");
 
-	endpoints_maker(request);
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	endpoints_maker(request, true);
 
 	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
@@ -1270,14 +1270,14 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 
 	enum http_status status_code = HTTP_STATUS_OK;
 
-	endpoints_maker(request);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	endpoints_maker(request, query_field.as_volatile);
 
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 
 	DatabaseHandler db_handler;
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
@@ -1362,12 +1362,12 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 	MsgPack response_obj;
 	auto selector = request.path_parser.get_slc();
 
-	endpoints_maker(request);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	endpoints_maker(request, query_field.as_volatile);
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
@@ -1451,7 +1451,7 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 {
 	L_CALL("HttpClient::touch_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1483,7 +1483,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 {
 	L_CALL("HttpClient::commit_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1515,7 +1515,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 {
 	L_CALL("HttpClient::dump_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1579,7 +1579,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 {
 	L_CALL("HttpClient::restore_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1637,12 +1637,12 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 
 	auto selector = request.path_parser.get_slc();
 
-	endpoints_maker(request);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	endpoints_maker(request, query_field.as_volatile);
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (query_field.as_volatile) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
@@ -1679,7 +1679,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1710,7 +1710,7 @@ HttpClient::check_view(Request& request, Response& response, enum http_method /*
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request);
+	endpoints_maker(request, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1742,7 +1742,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
 
-	endpoints_maker(request);
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
+	endpoints_maker(request, query_field.as_volatile);
 
 	bool single = !id.empty() && !isRange(id);
 
@@ -1753,7 +1754,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 	try {
 		if (query_field.as_volatile) {
 			if (endpoints.size() != 1) {
@@ -2202,19 +2202,19 @@ HttpClient::url_resolve(Request& request)
 
 
 void
-HttpClient::endpoints_maker(Request& request)
+HttpClient::endpoints_maker(Request& request, bool master)
 {
 	endpoints.clear();
 
 	PathParser::State state;
 	while ((state = request.path_parser.next()) < PathParser::State::END) {
-		_endpoint_maker(request);
+		_endpoint_maker(request, master);
 	}
 }
 
 
 void
-HttpClient::_endpoint_maker(Request& request)
+HttpClient::_endpoint_maker(Request& request, bool master)
 {
 	auto ns = request.path_parser.get_nsp();
 	if (string::startswith(ns, "/")) { /* ns without slash */
@@ -2262,7 +2262,7 @@ HttpClient::_endpoint_maker(Request& request)
 #endif
 		endpoints.add(endpoint);
 	} else {
-		endpoints.add(XapiandManager::manager->resolve_index_endpoint(index_path));
+		endpoints.add(XapiandManager::manager->resolve_index_endpoint(index_path, master));
 	}
 	L_HTTP("Endpoint: -> %s", endpoints.to_string());
 }
