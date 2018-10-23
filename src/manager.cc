@@ -848,7 +848,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 	if (!opts.solo) {
 		auto indexed_nodes = Node::indexed_nodes();
 		size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
-		size_t replicas = master ? 0 : 3;
+		size_t replicas = master ? 0 : 0;
 		consistent_hash = (consistent_hash + replicas) % indexed_nodes;
 		do {
 			auto node = Node::get_node(consistent_hash + 1);
