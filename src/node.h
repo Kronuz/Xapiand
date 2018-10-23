@@ -172,19 +172,19 @@ public:
 	}
 
 	static bool is_equal(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
-		return (a == b || *a == *b);
+		return a && b && (a == b || *a == *b);
 	}
 
 	static bool is_local(const std::shared_ptr<const Node>& node) {
-		return is_equal(_local_node.load(), node);
+		return node && is_equal(_local_node.load(), node);
 	}
 
 	static bool is_leader(const std::shared_ptr<const Node>& node) {
-		return is_equal(_leader_node.load(), node);
+		return node && is_equal(_leader_node.load(), node);
 	}
 
 	static bool is_active(const std::shared_ptr<const Node>& node) {
-		return node->touched >= epoch::now<>() - NODE_LIFESPAN || is_local(node);
+		return node && (node->touched >= epoch::now<>() - NODE_LIFESPAN || is_local(node));
 	}
 
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
