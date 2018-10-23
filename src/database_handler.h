@@ -35,6 +35,7 @@
 #include "database_utils.h"                  // for query_field_...
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
+#include "lock_database.h"                   // for LockableDatabase
 #include "msgpack.h"                         // for MsgPack
 
 
@@ -153,19 +154,13 @@ public:
 
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
-class DatabaseHandler {
+class DatabaseHandler : protected LockableDatabase {
 	friend class Document;
-	template<typename T, typename U>
-	friend class lock_database;
 	friend class Schema;
 	friend class SchemasLRU;
 
-	Endpoints endpoints;
-	int flags;
 	enum http_method method;
 	std::shared_ptr<Schema> schema;
-	std::shared_ptr<Database> database;
-	int database_locks;
 
 	std::shared_ptr<std::unordered_set<size_t>> context;
 

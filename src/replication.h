@@ -91,18 +91,11 @@ static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType 
 class BinaryClient;
 
 
-class Replication {
-	template<typename T, typename U>
-	friend class lock_database;
-
+class Replication : protected LockableDatabase {
 	BinaryClient& client;
 
 public:
 	Endpoints src_endpoints;
-	Endpoints endpoints;
-	std::shared_ptr<Database> database;
-	int database_locks;
-	int flags;
 
 	std::string switch_db;
 

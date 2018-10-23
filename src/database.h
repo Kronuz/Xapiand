@@ -437,7 +437,6 @@ class DatabasePool {
 	friend class RemoteProtocol;
 #endif
 	friend class DatabaseQueue;
-	template<typename T, typename U>
 	friend class lock_database;
 
 	std::mutex qmtx;

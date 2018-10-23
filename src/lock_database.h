@@ -22,114 +22,38 @@
 
 #pragma once
 
+#include "database.h"
+#include "endpoint.h"
 #include "manager.h"
 
-#include <type_traits>
+
+class LockableDatabase;
 
 
-/*
-*	Note: HasX checks for any data or function member called x, with arbitrary type.
-*	The sole purpose of introducing the member name is to have a possible ambiguity for member-name lookup
-*	the type of the member isn't important.
-*/
-
-template<typename T> struct HasEndpoints {
-    struct Fallback { int endpoints; };
-    struct Derived : T, Fallback { };
-
-    template<typename C, C> struct ChT;
-
-    template<typename C> static char (&f(ChT<int Fallback::*, &C::endpoints>*))[1];
-    template<typename C> static char (&f(...))[2];
-
-    static bool const value = sizeof(f<Derived>(0)) == 2;
-};
-
-
-template<typename T> struct Hasflags {
-    struct Fallback { int flags; };
-    struct Derived : T, Fallback { };
-
-    template<typename C, C> struct ChT;
-
-    template<typename C> static char (&f(ChT<int Fallback::*, &C::flags>*))[1];
-    template<typename C> static char (&f(...))[2];
-
-    static bool const value = sizeof(f<Derived>(0)) == 2;
-};
-
-
-template<typename T> struct HasDatabase {
-    struct Fallback { int database; };
-    struct Derived : T, Fallback { };
-
-    template<typename C, C> struct ChT;
-
-    template<typename C> static char (&f(ChT<int Fallback::*, &C::database>*))[1];
-    template<typename C> static char (&f(...))[2];
-
-    static bool const value = sizeof(f<Derived>(0)) == 2;
-};
-
-
-template<typename T> struct HasDBLocks {
-    struct Fallback { int database_locks; };
-    struct Derived : T, Fallback { };
-
-    template<typename C, C> struct ChT;
-
-    template<typename C> static char (&f(ChT<int Fallback::*, &C::database_locks>*))[1];
-    template<typename C> static char (&f(...))[2];
-
-    static bool const value = sizeof(f<Derived>(0)) == 2;
-};
-
-
-template <typename T, typename = std::enable_if_t<HasEndpoints<T>::value && Hasflags<T>::value && HasDatabase<T>::value && HasDBLocks<T>::value>>
 class lock_database {
-	T* db_handler;
+	LockableDatabase* lockable;
+	int locks;
 
 	lock_database(const lock_database&) = delete;
 	lock_database& operator=(const lock_database&) = delete;
 
 	template <bool internal>
-	void _lock() {
-		if (db_handler != nullptr) {
-			if (db_handler->database) {
-				if constexpr (internal) {
-					// internal always increments number of locks
-					++db_handler->database_locks;
-				}
-			} else {
-				XapiandManager::manager->database_pool.checkout(db_handler->database, db_handler->endpoints, db_handler->flags);
-				assert(db_handler->database);
-				++db_handler->database_locks;
-			}
-		}
-	}
+	void _lock();
 
 	template <bool internal>
-	void _unlock() {
-		if (db_handler != nullptr) {
-			if (db_handler->database && db_handler->database_locks > 0) {
-				if (--db_handler->database_locks == 0) {
-					XapiandManager::manager->database_pool.checkin(db_handler->database);
-				}
-			} else if constexpr (!internal) {
-				// internal never throws, just ignores
-				THROW(Error, "lock_database is not locked: %s", repr(db_handler->endpoints.to_string()));
-			}
-		}
-	}
+	void _unlock();
 
 public:
-	lock_database(T* db_handler_)
-		: db_handler(db_handler_) {
+	lock_database(LockableDatabase* lockable)
+		: lockable(lockable),
+		  locks(0) {
 			_lock<true>();
 		}
 
 	~lock_database() {
-		_unlock<true>();
+		while (locks) {
+			_unlock<true>();
+		}
 	}
 
 	void lock() {
@@ -138,7 +62,64 @@ public:
 	void unlock() {
 		_unlock<false>();
 	}
-	void unsafe_unlock() {
-		_unlock<true>();
-	}
 };
+
+
+class LockableDatabase {
+	friend lock_database;
+
+protected:
+	Endpoints endpoints;
+	std::shared_ptr<Database> database;
+	int database_locks;
+	int flags;
+
+public:
+	LockableDatabase()
+		: database_locks(0),
+		  flags(DB_OPEN) { }
+
+	LockableDatabase(const Endpoints& endpoints_, int flags_)
+		: endpoints(endpoints_),
+		  database_locks(0),
+		  flags(flags_) { }
+};
+
+
+template <bool internal>
+inline void
+lock_database::_lock()
+{
+	if (lockable != nullptr) {
+		if constexpr (!internal) {
+			if (lockable->endpoints.empty()) {
+				// internal never throws, just ignores
+				THROW(Error, "lock_database cannot lock empty endpoints");
+			}
+		}
+		if (!lockable->database) {
+			assert(locks == 0 && lockable->database_locks == 0);
+			assert(XapiandManager::manager);
+			XapiandManager::manager->database_pool.checkout(lockable->database, lockable->endpoints, lockable->flags);
+		}
+		if (locks++ == 0) {
+			++lockable->database_locks;
+		}
+	}
+}
+
+
+template <bool internal>
+inline void
+lock_database::_unlock()
+{
+	if (lockable != nullptr) {
+		if (locks > 0 && --locks == 0) {
+			if (lockable->database_locks > 0 && --lockable->database_locks == 0) {
+				assert(lockable->database);
+				assert(XapiandManager::manager);
+				XapiandManager::manager->database_pool.checkin(lockable->database);
+			}
+		}
+	}
+}

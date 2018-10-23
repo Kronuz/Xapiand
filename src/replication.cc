@@ -43,9 +43,8 @@ using dispatch_func = void (Replication::*)(const std::string&);
 
 
 Replication::Replication(BinaryClient& client_)
-	: client(client_),
-	  database_locks(0),
-	  flags(DB_OPEN)
+	: LockableDatabase(),
+	  client(client_)
 {
 	L_OBJ("CREATED REPLICATION OBJ!");
 }
@@ -130,7 +129,7 @@ Replication::msg_get_changesets(const std::string& message)
 	endpoints = Endpoints{Endpoint{unserialise_string(&p, p_end)}};
 
 	flags = DB_WRITABLE | DB_NOWAL;
-	lock_database<Replication> lk_db(this);
+	lock_database lk_db(this);
 	auto uuid = database->db->get_uuid();
 	auto revision = database->db->get_revision();
 	lk_db.unlock();
@@ -200,7 +199,7 @@ Replication::msg_get_changesets(const std::string& message)
 					lk_db.unlock();
 				}
 			}
-			lk_db.unsafe_unlock();
+			lk_db.unlock();
 		}
 
 		// TODO: Implement WAL's has_revision() and iterator
@@ -251,7 +250,7 @@ Replication::reply_welcome(const std::string&)
 {
 	std::string message;
 
-	lock_database<Replication> lk_db(this);
+	lock_database lk_db(this);
 	message.append(serialise_string(database->db->get_uuid()));
 	message.append(serialise_length(database->db->get_revision()));
 	message.append(serialise_string(endpoints[0].path));
@@ -269,7 +268,7 @@ Replication::reply_end_of_changes(const std::string&)
 
 	if (switch_db.empty()) {
 		flags = DB_WRITABLE;
-		lock_database<Replication> lk_db(this);
+		lock_database lk_db(this);
 	} else {
 		XapiandManager::manager->database_pool.switch_db(endpoints[0]/*, switch_db*/);  // TODO: pass switch_db
 	}
@@ -383,7 +382,7 @@ Replication::reply_changeset(const std::string& message)
 	} else {
 		// write changeset to WAL in ':tmp' directory (in switch_db)
 		// flags = DB_WRITABLE;
-		// lock_database<Replication> lk_db(this);
+		// lock_database lk_db(this);
 		// DatabaseWAL wal(endpoints[0].path, database.get());
 		// wal.write_line(line);  // TODO: Implement
 	}

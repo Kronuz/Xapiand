@@ -145,18 +145,10 @@ static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 }
 
 
-class RemoteProtocol {
-	template<typename T, typename U>
-	friend class lock_database;
+class RemoteProtocol : protected LockableDatabase {
 	friend class BinaryClient;
 
 	BinaryClient& client;
-
-protected:
-	Endpoints endpoints;
-	std::shared_ptr<Database> database;
-	int database_locks;
-	int flags;
 
 public:
 
