@@ -68,21 +68,32 @@ public:
 class LockableDatabase {
 	friend lock_database;
 
+	std::shared_ptr<Database> _locked_database;
+	int _database_locks;
+
 protected:
-	Endpoints endpoints;
-	std::shared_ptr<Database> database;
-	int database_locks;
 	int flags;
+	Endpoints endpoints;
+
+	std::shared_ptr<Database> database() const noexcept {
+		assert(_locked_database);
+		return _locked_database;
+	}
+
+	Xapian::Database* db() const noexcept {
+		assert(_locked_database);
+		return _locked_database->db.get();
+	}
 
 public:
 	LockableDatabase()
-		: database_locks(0),
+		: _database_locks(0),
 		  flags(DB_OPEN) { }
 
 	LockableDatabase(const Endpoints& endpoints_, int flags_)
-		: endpoints(endpoints_),
-		  database_locks(0),
-		  flags(flags_) { }
+		: _database_locks(0),
+		  flags(flags_),
+		  endpoints(endpoints_) { }
 };
 
 
@@ -97,13 +108,13 @@ lock_database::_lock()
 				THROW(Error, "lock_database cannot lock empty endpoints");
 			}
 		}
-		if (!lockable->database) {
-			assert(locks == 0 && lockable->database_locks == 0);
+		if (!lockable->_locked_database) {
+			assert(locks == 0 && lockable->_database_locks == 0);
 			assert(XapiandManager::manager);
-			XapiandManager::manager->database_pool.checkout(lockable->database, lockable->endpoints, lockable->flags);
+			XapiandManager::manager->database_pool.checkout(lockable->_locked_database, lockable->endpoints, lockable->flags);
 		}
 		if (locks++ == 0) {
-			++lockable->database_locks;
+			++lockable->_database_locks;
 		}
 	}
 }
@@ -115,10 +126,10 @@ lock_database::_unlock()
 {
 	if (lockable != nullptr) {
 		if (locks > 0 && --locks == 0) {
-			if (lockable->database_locks > 0 && --lockable->database_locks == 0) {
-				assert(lockable->database);
+			if (lockable->_database_locks > 0 && --lockable->_database_locks == 0) {
+				assert(lockable->_locked_database);
 				assert(XapiandManager::manager);
-				XapiandManager::manager->database_pool.checkin(lockable->database);
+				XapiandManager::manager->database_pool.checkin(lockable->_locked_database);
 			}
 		}
 	}

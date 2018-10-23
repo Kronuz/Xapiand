@@ -159,9 +159,7 @@ public:
 	Xapian::Registry reg;
 	std::unique_ptr<Xapian::Enquire> enquire;
 	std::vector<Xapian::MatchSpy*> matchspies;
-
-	void checkout_database();
-	void checkin_database();
+	lock_database database_lock;
 
 	void send_message(RemoteReplyType type, const std::string& message);
 
@@ -198,7 +196,7 @@ public:
 	void msg_addspelling(const std::string& message);
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
-	void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_);
+	void select_db(const std::vector<std::string> &dbpaths, bool writable, int xapian_flags);
 };
 
 

@@ -130,8 +130,8 @@ Replication::msg_get_changesets(const std::string& message)
 
 	flags = DB_WRITABLE | DB_NOWAL;
 	lock_database lk_db(this);
-	auto uuid = database->db->get_uuid();
-	auto revision = database->db->get_revision();
+	auto uuid = db()->get_uuid();
+	auto revision = db()->get_revision();
 	lk_db.unlock();
 
 	if (from_revision && uuid != remote_uuid) {
@@ -175,7 +175,7 @@ Replication::msg_get_changesets(const std::string& message)
 				}
 
 				lk_db.lock();
-				auto final_revision = database->db->get_revision();
+				auto final_revision = db()->get_revision();
 				lk_db.unlock();
 
 				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
@@ -190,12 +190,12 @@ Replication::msg_get_changesets(const std::string& message)
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
-					uuid = database->db->get_uuid();
-					revision = database->db->get_revision();
+					uuid = db()->get_uuid();
+					revision = db()->get_revision();
 				} else {
 					lk_db.lock();
-					uuid = database->db->get_uuid();
-					revision = database->db->get_revision();
+					uuid = db()->get_uuid();
+					revision = db()->get_revision();
 					lk_db.unlock();
 				}
 			}
@@ -212,7 +212,7 @@ Replication::msg_get_changesets(const std::string& message)
 		// 	}
 		// 	from_revision = wal_it.first + 1;
 		// 	lk_db.lock();
-		// 	revision = database->db->get_revision();
+		// 	revision = db()->get_revision();
 		// 	lk_db.unlock();
 		// while (from_revision < revision && --wal_iterations != 0);
 	}
@@ -251,8 +251,8 @@ Replication::reply_welcome(const std::string&)
 	std::string message;
 
 	lock_database lk_db(this);
-	message.append(serialise_string(database->db->get_uuid()));
-	message.append(serialise_length(database->db->get_revision()));
+	message.append(serialise_string(db()->get_uuid()));
+	message.append(serialise_length(db()->get_revision()));
 	message.append(serialise_string(endpoints[0].path));
 	lk_db.unlock();
 
