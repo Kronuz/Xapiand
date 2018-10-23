@@ -205,7 +205,7 @@ Node::get_node(std::string_view _node_name)
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 		return node_ref;
 	}
 
