@@ -194,16 +194,31 @@ private:
 	static atomic_shared_ptr<const Node> _local_node;
 	static atomic_shared_ptr<const Node> _leader_node;
 
+	static std::atomic_size_t _total_nodes;
+	static std::atomic_size_t _active_nodes;
+	static std::atomic_size_t _indexed_nodes;
+
 #ifdef XAPIAND_CLUSTERING
 	static std::mutex _nodes_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<const Node>> _nodes;
+	static std::vector<std::shared_ptr<const Node>> _nodes_indexed;
 
 	static void _update_nodes(const std::shared_ptr<const Node>& node);
 
 public:
-	static std::atomic_size_t total_nodes;
-	static std::atomic_size_t active_nodes;
+	static size_t total_nodes() {
+		return _total_nodes.load();
+	}
 
+	static size_t active_nodes() {
+		return _active_nodes.load();
+	}
+
+	static size_t indexed_nodes() {
+		return _indexed_nodes.load();
+	}
+
+	static std::shared_ptr<const Node> get_node(size_t idx);
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
 	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node, bool touch = true);
 	static std::shared_ptr<const Node> touch_node(std::string_view node_name);

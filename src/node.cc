@@ -115,9 +115,11 @@ Node::leader_node(std::shared_ptr<const Node> node)
 
 std::mutex Node::_nodes_mtx;
 std::unordered_map<std::string, std::shared_ptr<const Node>> Node::_nodes;
+std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
 
-std::atomic_size_t Node::total_nodes;
-std::atomic_size_t Node::active_nodes;
+std::atomic_size_t Node::_total_nodes;
+std::atomic_size_t Node::_active_nodes;
+std::atomic_size_t Node::_indexed_nodes;
 
 
 inline void
@@ -150,12 +152,23 @@ Node::local_node(std::shared_ptr<const Node> node)
 		if (node->lower_name() == leader_node_->lower_name()) {
 			_leader_node.store(node);
 		}
+
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
+
 		auto it = _nodes.find(node->lower_name());
 		if (it != _nodes.end()) {
 			auto& node_ref = it->second;
 			node_ref = node;
 		}
+
+		auto idx_ = node->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node;
+		}
+		_indexed_nodes = _nodes_indexed.size();
 
 		L_NODE_NODES("local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 	} else {
@@ -180,12 +193,23 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		if (node->lower_name() == local_node_->lower_name()) {
 			_local_node.store(node);
 		}
+
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
+
 		auto it = _nodes.find(node->lower_name());
 		if (it != _nodes.end()) {
 			auto& node_ref = it->second;
 			node_ref = node;
 		}
+
+		auto idx_ = node->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node;
+		}
+		_indexed_nodes = _nodes_indexed.size();
 
 		L_NODE_NODES("leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 	} else {
@@ -205,6 +229,24 @@ Node::get_node(std::string_view _node_name)
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
+		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		return node_ref;
+	}
+
+	L_NODE_NODES("get_node(%s) -> nullptr", _node_name);
+	return nullptr;
+}
+
+
+std::shared_ptr<const Node>
+Node::get_node(size_t idx)
+{
+	L_CALL("Node::get_node(%zu)", idx);
+
+	std::lock_guard<std::mutex> lk(_nodes_mtx);
+
+	if (idx > 0 && idx <= _nodes_indexed.size()) {
+		auto& node_ref = _nodes_indexed[idx - 1];
 		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 		return node_ref;
 	}
@@ -258,14 +300,23 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	_update_nodes(node);
 
 	size_t cnt = 0;
+	_nodes_indexed.clear();
 	for (const auto& node_pair : _nodes) {
 		const auto& node_ref = node_pair.second;
 		if (is_active(node_ref)) {
 			++cnt;
 		}
+		auto idx_ = node_ref->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node_ref;
+		}
 	}
-	active_nodes = cnt;
-	total_nodes = _nodes.size();
+	_active_nodes = cnt;
+	_total_nodes = _nodes.size();
+	_indexed_nodes = _nodes_indexed.size();
 
 	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> true", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 	return std::make_pair(node, true);
@@ -319,14 +370,23 @@ Node::drop_node(std::string_view _node_name)
 	}
 
 	size_t cnt = 0;
+	_nodes_indexed.clear();
 	for (const auto& node_pair : _nodes) {
 		const auto& node_ref = node_pair.second;
 		if (is_active(node_ref)) {
 			++cnt;
 		}
+		auto idx_ = node_ref->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node_ref;
+		}
 	}
-	active_nodes = cnt;
-	total_nodes = _nodes.size();
+	_active_nodes = cnt;
+	_total_nodes = _nodes.size();
+	_indexed_nodes = _nodes_indexed.size();
 
 	L_NODE_NODES("drop_node(%s)", _node_name);
 }

@@ -35,7 +35,7 @@ using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
 static inline bool has_consensus(size_t votes) {
-	auto active_nodes = Node::active_nodes.load();
+	auto active_nodes = Node::active_nodes();
 	return active_nodes == 1 || votes > active_nodes / 2;
 }
 
@@ -325,7 +325,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 			} else {
 				++votes_denied;
 			}
-			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", Node::active_nodes, votes_granted, votes_denied);
+			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", Node::active_nodes(), votes_granted, votes_denied);
 			if (has_consensus(votes_granted + votes_denied)) {
 				if (votes_granted > votes_denied) {
 					state = State::LEADER;
@@ -666,7 +666,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	auto local_node_ = Node::local_node();
 	L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
-		local_node_->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes, Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+		local_node_->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 	send_message(Message::REQUEST_VOTE,
 		local_node_->serialise() +
 		serialise_length(current_term) +
@@ -837,7 +837,7 @@ Raft::_commit_log()
 			if (has_consensus(matches)) {
 				commit_index = index;
 				L_RAFT("committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
-					matches, Node::active_nodes, commit_index);
+					matches, Node::active_nodes(), commit_index);
 
 				// If commitIndex > lastApplied:
 				while (commit_index > last_applied) {
@@ -849,7 +849,7 @@ Raft::_commit_log()
 				}
 			} else {
 				L_RAFT("not committed {matches:%zu, active_nodes:%zu, commit_index:%zu}",
-					matches, Node::active_nodes, commit_index);
+					matches, Node::active_nodes(), commit_index);
 			}
 		}
 	}
