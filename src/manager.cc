@@ -842,7 +842,7 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 Endpoint
 XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", path);
+	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", repr(path));
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -851,9 +851,10 @@ XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 		for (size_t replicas = master ? 1 : 3; replicas; --replicas) {
 			auto node = Node::get_node(consistent_hash + 1);
 			if (Node::is_active(node)) {
+				L_MANAGER("%zu: Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 				return {path, node.get()};
 			}
-			L_DEBUG("inactive node {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+			L_MANAGER("%zu: Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 			consistent_hash = (consistent_hash + 1) % indexed_nodes;
 		}
 		THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");

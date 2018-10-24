@@ -247,11 +247,11 @@ Node::get_node(size_t idx)
 
 	if (idx > 0 && idx <= _nodes_indexed.size()) {
 		auto& node_ref = _nodes_indexed[idx - 1];
-		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("get_node(%zu) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", idx, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 		return node_ref;
 	}
 
-	L_NODE_NODES("get_node(%s) -> nullptr", _node_name);
+	L_NODE_NODES("get_node(%zu) -> nullptr", idx);
 	return nullptr;
 }
 
