@@ -71,7 +71,11 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
 ## Building sanitized libraries
 
 For building sanitized versions of the library, replace **Configure the Build**
-step above and replace accordingly with:
+step above and replace accordingly with the following:
+
+{: .note}
+**_Sanitized libc++ needed!_**<br>
+Sanitized versions of libc++ are needed for these builds to be reliable.
 
 
 ### Address Sanitizer (ASAN)
