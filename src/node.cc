@@ -134,6 +134,25 @@ Node::_update_nodes(const std::shared_ptr<const Node>& node)
 	if (node->lower_name() == leader_node_->lower_name()) {
 		_leader_node.store(node);
 	}
+
+	size_t cnt = 0;
+	_nodes_indexed.clear();
+	for (const auto& node_pair : _nodes) {
+		const auto& node_ref = node_pair.second;
+		if (is_active(node_ref)) {
+			++cnt;
+		}
+		auto idx_ = node_ref->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node_ref;
+		}
+	}
+	_active_nodes = cnt;
+	_total_nodes = _nodes.size();
+	_indexed_nodes = _nodes_indexed.size();
 }
 
 
@@ -299,25 +318,6 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	_nodes[node->lower_name()] = node;
 	_update_nodes(node);
 
-	size_t cnt = 0;
-	_nodes_indexed.clear();
-	for (const auto& node_pair : _nodes) {
-		const auto& node_ref = node_pair.second;
-		if (is_active(node_ref)) {
-			++cnt;
-		}
-		auto idx_ = node_ref->idx;
-		if (idx_) {
-			if (_nodes_indexed.size() < idx_) {
-				_nodes_indexed.resize(idx_);
-			}
-			_nodes_indexed[idx_ - 1] = node_ref;
-		}
-	}
-	_active_nodes = cnt;
-	_total_nodes = _nodes.size();
-	_indexed_nodes = _nodes_indexed.size();
-
 	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> true", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 	return std::make_pair(node, true);
 }
@@ -368,25 +368,6 @@ Node::drop_node(std::string_view _node_name)
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 	}
-
-	size_t cnt = 0;
-	_nodes_indexed.clear();
-	for (const auto& node_pair : _nodes) {
-		const auto& node_ref = node_pair.second;
-		if (is_active(node_ref)) {
-			++cnt;
-		}
-		auto idx_ = node_ref->idx;
-		if (idx_) {
-			if (_nodes_indexed.size() < idx_) {
-				_nodes_indexed.resize(idx_);
-			}
-			_nodes_indexed[idx_ - 1] = node_ref;
-		}
-	}
-	_active_nodes = cnt;
-	_total_nodes = _nodes.size();
-	_indexed_nodes = _nodes_indexed.size();
 
 	L_NODE_NODES("drop_node(%s)", _node_name);
 }
