@@ -848,16 +848,14 @@ XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 	if (!opts.solo) {
 		auto indexed_nodes = Node::indexed_nodes();
 		size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
-		size_t replicas = master ? 0 : 0;
-		consistent_hash = (consistent_hash + replicas) % indexed_nodes;
-		do {
+		for (size_t replicas = master ? 1 : 3; replicas; --replicas) {
 			auto node = Node::get_node(consistent_hash + 1);
 			if (Node::is_active(node)) {
 				return {path, node.get()};
 			}
 			L_DEBUG("inactive node {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
-			consistent_hash = (consistent_hash - 1) % indexed_nodes;
-		} while (replicas-- != 0);
+			consistent_hash = (consistent_hash + 1) % indexed_nodes;
+		}
 		THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
 	}
 	else
