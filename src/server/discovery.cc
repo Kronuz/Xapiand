@@ -177,17 +177,17 @@ Discovery::hello(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
 
 	auto local_node_ = Node::local_node();
-	if (remote_node != *local_node_) {
-		auto node = Node::touch_node(remote_node.name());
+	if (!Node::is_equal(remote_node, local_node_)) {
+		auto node = Node::touch_node(remote_node);
 		if (node) {
-			if (remote_node == *node) {
+			if (Node::is_equal(remote_node, node)) {
 				send_message(Message::ENTER, local_node_->serialise());
 			} else {
-				send_message(Message::SNEER, remote_node.serialise());
+				send_message(Message::SNEER, remote_node->serialise());
 			}
 		} else {
 			send_message(Message::ENTER, local_node_->serialise());
@@ -300,19 +300,19 @@ Discovery::db_updated(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 
 	auto local_node_ = Node::local_node();
-	if (remote_node == *local_node_) {
+	if (Node::is_equal(remote_node, local_node_)) {
 		// It's just me, do nothing!
 		return;
 	}
 
 	auto index_path = std::string(unserialise_string(&p, p_end));
 
-	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node.name(), repr(index_path));
+	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node->name(), repr(index_path));
 
-	auto node = Node::touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node);
 	if (node) {
 		Endpoint remote_endpoint(index_path, node.get());
 		if (!remote_endpoint.is_local()) {

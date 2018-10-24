@@ -278,7 +278,7 @@ Node::get_node(size_t idx)
 std::pair<std::shared_ptr<const Node>, bool>
 Node::put_node(std::shared_ptr<const Node> node, bool touch)
 {
-	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}, %s)", node->idx, node->name(), node->http_port, node->binary_port, node->touched, touch ? "true" : "false");
 
 	auto now = epoch::now<>();
 
@@ -289,19 +289,21 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	auto it = _nodes.find(node->lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (is_active(node_ref)) {
-			if (node == node_ref || *node == *node_ref) {
-				auto node_copy = std::make_unique<Node>(*node_ref);
-				if (touch) {
-					node_copy->touched = now;
-				}
-				if (!node_copy->idx && node->idx) {
-					node_copy->idx = node->idx;
-				}
-				node_ref = std::shared_ptr<const Node>(node_copy.release());
-				_update_nodes(node_ref);
+		if (is_equal(node_ref, node)) {
+			auto node_copy = std::make_unique<Node>(*node_ref);
+			if (touch) {
+				node_copy->touched = now;
 			}
-			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+			if (!node_copy->idx && node->idx) {
+				node_copy->idx = node->idx;
+			}
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
+			_update_nodes(node_ref);
+
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false (1)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+			return std::make_pair(node_ref, false);
+		} else if (is_active(node_ref)) {
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false (2)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 			return std::make_pair(node_ref, false);
 		}
 		idx = node_ref->idx;
@@ -324,19 +326,19 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 
 
 std::shared_ptr<const Node>
-Node::touch_node(std::string_view _node_name)
+Node::touch_node(std::shared_ptr<const Node> node)
 {
-	L_CALL("Node::touch_node(%s)", repr(_node_name));
+	L_CALL("Node::touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 
 	auto now = epoch::now<>();
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-	auto it = _nodes.find(string::lower(_node_name));
+	auto it = _nodes.find(node->lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (!is_active(node_ref)) {
-			L_NODE_NODES("touch_node(%s) -> nullptr (1)", _node_name);
+		if (!is_active(node_ref) && !is_equal(node_ref, node)) {
+			L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -344,11 +346,11 @@ Node::touch_node(std::string_view _node_name)
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 
-		// L_NODE_NODES("touch_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", node->idx, node->name(), node->http_port, node->binary_port, node->touched, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 		return node_ref;
 	}
 
-	L_NODE_NODES("touch_node(%s) -> nullptr (2)", _node_name);
+	L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> nullptr (2)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 	return nullptr;
 }
 

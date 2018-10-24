@@ -207,11 +207,11 @@ Raft::request_vote(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	auto local_node_ = Node::local_node();
-	auto node = Node::touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
 		return;
 	}
 
@@ -294,11 +294,11 @@ Raft::request_vote_response(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	auto local_node_ = Node::local_node();
-	auto node = Node::touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
 		return;
 	}
 
@@ -377,11 +377,11 @@ Raft::append_entries(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	auto local_node_ = Node::local_node();
-	auto node = Node::touch_node(remote_node.name());
+	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
 		return;
 	}
 
@@ -541,10 +541,10 @@ Raft::append_entries_response(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node.name());
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
 		return;
 	}
 
@@ -570,15 +570,15 @@ Raft::append_entries_response(Message type, const std::string& message)
 			// update nextIndex and matchIndex for follower
 			size_t next_index = unserialise_length(&p, p_end);
 			size_t match_index = unserialise_length(&p, p_end);
-			next_indexes[remote_node.lower_name()] = next_index;
-			match_indexes[remote_node.lower_name()] = match_index;
+			next_indexes[node->lower_name()] = next_index;
+			match_indexes[node->lower_name()] = match_index;
 			L_RAFT("   {success:%s, next_index:%zu, match_index:%zu}", success ? "true" : "false", next_index, match_index);
 		} else {
 			// If AppendEntries fails because of log inconsistency:
 			// decrement nextIndex and retry
-			auto it = next_indexes.find(remote_node.lower_name());
+			auto it = next_indexes.find(node->lower_name());
 			auto& next_index = it == next_indexes.end()
-				? next_indexes[remote_node.lower_name()] = log.size() + 2
+				? next_indexes[node->lower_name()] = log.size() + 2
 				: it->second;
 			if (next_index > 1) {
 				--next_index;
@@ -612,10 +612,10 @@ Raft::add_command(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node.name());
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
 		return;
 	}
 

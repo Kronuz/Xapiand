@@ -2249,7 +2249,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		node_name = index.host.empty() ? node_name : index.host;
 
 		// Convert node to endpoint:
-		auto node = Node::touch_node(node_name);
+		auto node = Node::get_node(node_name);
 		if (!node) {
 			THROW(Error, "Node %s not found", node_name);
 		}
