@@ -165,7 +165,7 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 {
 	L_CALL("DatabaseWAL::open_current(%s)", only_committed ? "true" : "false");
 
-	uint32_t revision = database->reopen_revision;
+	Xapian::rev revision = database->reopen_revision;
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
@@ -173,10 +173,10 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 
 	try {
 		bool end = false;
-		uint32_t end_rev;
+		Xapian::rev end_rev;
 		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 			try {
-				open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
+				open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
 			} catch (const StorageIOError& exc) {
 				if (unsafe) {
 					L_WARNING("Cannot open WAL volume: %s", exc.get_context());
@@ -191,7 +191,7 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 				throw;
 			}
 
-			uint32_t file_rev, begin_rev;
+			Xapian::rev file_rev, begin_rev;
 			file_rev = begin_rev = end_rev;
 			if (file_rev != header.head.revision) {
 				if (unsafe) {
@@ -234,13 +234,14 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 
 			uint32_t start_off;
 			if (file_rev == volumes.first) {
-				auto slot = revision - file_rev - 1;
-				if (slot == static_cast<uint32_t>(-1)) {
+				assert(revision >= file_rev);
+				if (revision == file_rev) {
 					// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 					// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 					begin_rev = file_rev;
 					start_off = STORAGE_START_BLOCK_OFFSET;
 				} else {
+					auto slot = revision - file_rev - 1;
 					begin_rev = file_rev + slot;
 					start_off = header.slot[slot];
 				}
@@ -250,7 +251,7 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 
 			auto end_off = header.slot[high_slot];
 			if (start_off < end_off) {
-				L_INFO("Read and execute operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
+				L_INFO("Read and execute operations WAL file (wal.%llu) from [%llu..%llu] revision", file_rev, begin_rev, end_rev);
 			}
 
 			seek(start_off);
@@ -269,9 +270,9 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 				}
 				L_WARNING("WAL revision not reached");
 			}
-			open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		} else {
-			open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		}
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
@@ -417,9 +418,9 @@ DatabaseWAL::repr_line(std::string_view line, bool unserialised)
 
 
 MsgPack
-DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unserialised)
+DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised)
 {
-	L_CALL("DatabaseWAL::repr(%u, ...)", start_revision);
+	L_CALL("DatabaseWAL::repr(%llu, ...)", start_revision);
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, start_revision, end_revision);
 
@@ -430,29 +431,29 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 	MsgPack repr(MsgPack::Type::ARRAY);
 
 	bool end = false;
-	uint32_t end_rev;
+	Xapian::rev end_rev;
 	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
-			open(string::format(WAL_STORAGE_PATH "%u", end_rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
 		} catch (const StorageIOError& exc) {
-			L_WARNING("wal.%u cannot be opened: %s", end_rev, exc.get_context());
+			L_WARNING("wal.%llu cannot be opened: %s", end_rev, exc.get_context());
 			continue;
 		} catch (const StorageCorruptVolume& exc) {
-			L_WARNING("wal.%u is corrupt: %s", end_rev, exc.get_context());
+			L_WARNING("wal.%llu is corrupt: %s", end_rev, exc.get_context());
 			continue;
 		}
 
-		uint32_t file_rev, begin_rev;
+		Xapian::rev file_rev, begin_rev;
 		file_rev = begin_rev = end_rev;
 		if (file_rev != header.head.revision) {
-			L_WARNING("wal.%u has incorrect revision!", file_rev);
+			L_WARNING("wal.%llu has incorrect revision!", file_rev);
 			continue;
 		}
 
 		auto high_slot = highest_valid_slot();
 		if (high_slot == static_cast<uint32_t>(-1)) {
 			if (start_revision != file_rev) {
-				L_WARNING("wal.%u has no valid slots!", file_rev);
+				L_WARNING("wal.%llu has no valid slots!", file_rev);
 			}
 			continue;
 		}
@@ -468,13 +469,14 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 
 		uint32_t start_off;
 		if (file_rev == volumes.first) {
-			auto slot = start_revision - file_rev - 1;
-			if (slot == static_cast<uint32_t>(-1)) {
+			assert(start_revision >= file_rev);
+			if (start_revision == file_rev) {
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 				begin_rev = file_rev;
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			} else {
+				auto slot = start_revision - file_rev - 1;
 				begin_rev = file_rev + slot;
 				start_off = header.slot[slot];
 			}
@@ -484,7 +486,7 @@ DatabaseWAL::repr(uint32_t start_revision, uint32_t end_revision, bool unseriali
 
 		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
-			L_INFO("Read and repr operations WAL file (wal.%u) from [%u..%u] revision", file_rev, begin_rev, end_rev);
+			L_INFO("Read and repr operations WAL file (wal.%llu) from [%llu..%llu] revision", file_rev, begin_rev, end_rev);
 		}
 
 		seek(start_off);
@@ -637,7 +639,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(string::format(WAL_STORAGE_PATH "%u", 0), STORAGE_OPEN | STORAGE_COMPRESS);
+		open(string::format(WAL_STORAGE_PATH "%llu", 0), STORAGE_OPEN | STORAGE_COMPRESS);
 	} catch (const StorageIOError&) {
 		return true;
 	}
@@ -683,7 +685,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(Type type, std::string_view data)
 {
-	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s, %u)", names[toUType(type)]);
+	L_CALL("DatabaseWAL::write_line(Type::%s, <data>)", names[toUType(type)]);
 	try {
 		assert(database->flags & DB_WRITABLE);
 		assert(!(database->flags & DB_NOWAL));
@@ -706,7 +708,7 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 		uint32_t slot = revision - header.head.revision;
 
 		if (slot >= WAL_SLOTS) {
-			open(string::format(WAL_STORAGE_PATH "%u", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			slot = revision - header.head.revision;
 		}
 
@@ -714,7 +716,7 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 			write(line.data(), line.size());
 		} catch (const StorageClosedError&) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
-			open(string::format(WAL_STORAGE_PATH "%u", (volumes.first <= volumes.second) ? volumes.second : revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", (volumes.first <= volumes.second) ? volumes.second : revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			write(line.data(), line.size());
 		}
 
@@ -722,7 +724,7 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 
 		if (type == Type::COMMIT) {
 			if (slot + 1 >= WAL_SLOTS) {
-				open(string::format(WAL_STORAGE_PATH "%u", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			} else {
 				header.slot[slot + 1] = header.slot[slot];
 			}
@@ -2534,7 +2536,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 	}
 
-	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%u)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->reopen_revision);
+	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->reopen_revision);
 }
 
 

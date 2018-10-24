@@ -844,8 +844,8 @@ public:
 		return ret;
 	}
 
-	std::pair<uint32_t, uint32_t>
-	get_volumes_range(std::string_view pattern, uint32_t min=0, uint32_t max=std::numeric_limits<uint32_t>::max()) {
+	std::pair<unsigned long long, unsigned long long>
+	get_volumes_range(std::string_view pattern, unsigned long long min=0, unsigned long long max=std::numeric_limits<unsigned long long>::max()) {
 		// Figure out highest and lowest volume files available for a given file pattern
 		L_CALL("Storage::get_volumes_range()");
 
@@ -854,8 +854,8 @@ public:
 			THROW(NotFoundError, "Could not open the dir (%s)", strerror(errno));
 		}
 
-		uint32_t first_volume = std::numeric_limits<uint32_t>::max();
-		uint32_t last_volume = 0;
+		unsigned long long first_volume = std::numeric_limits<unsigned long long>::max();
+		unsigned long long last_volume = 0;
 
 		File_ptr fptr;
 		find_file_dir(dir, fptr, pattern, true);
@@ -865,7 +865,7 @@ public:
 			auto found = filename.find_last_of(".");
 			if (found != std::string_view::npos) {
 				int errno_save;
-				uint32_t file_volume = static_cast<uint32_t>(strict_stoul(&errno_save, filename.substr(found + 1)));
+				unsigned long long file_volume = static_cast<unsigned long long>(strict_stoull(&errno_save, filename.substr(found + 1)));
 				if (errno_save == 0) {
 					if (file_volume < first_volume && first_volume >= min) {
 						first_volume = file_volume;

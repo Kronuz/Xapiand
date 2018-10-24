@@ -79,7 +79,7 @@ struct WalHeader {
 	struct StorageHeaderHead {
 		char magic[8];
 		uint32_t offset;
-		uint32_t revision;
+		Xapian::rev revision;
 		std::array<unsigned char, 16> uuid;
 	} head;
 
@@ -186,7 +186,7 @@ public:
 	~DatabaseWAL();
 
 	bool open_current(bool only_committed, bool unsafe = false);
-	MsgPack repr(uint32_t start_revision, uint32_t end_revision, bool unserialised);
+	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
 
 	const UUID& uuid() const;
 	const UUID& uuid_le() const;
@@ -298,7 +298,7 @@ public:
 	size_t hash;
 	bool modified;
 	std::chrono::system_clock::time_point reopen_time;
-	uint32_t reopen_revision;
+	Xapian::rev reopen_revision;
 	bool incomplete;
 	std::set<std::size_t> fail_db;
 
@@ -371,7 +371,7 @@ private:
 	};
 
 	replica_state state;
-	std::atomic_uint32_t local_revision;
+	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;
 
