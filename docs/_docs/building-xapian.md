@@ -82,21 +82,8 @@ step above and replace accordingly with:
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/ASAN' || echo '/usr/local')" \
-  CXXFLAGS="-fsanitize=address -fno-omit-frame-pointer -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
-  LDFLAGS="-fsanitize=address -fno-omit-frame-pointer $LDFLAGS"
-```
-
-
-### Thread Sanitizer (TSAN)
-
-```sh
-~/xapian/xapian-core $ ./configure \
-  --disable-dependency-tracking \
-  --disable-documentation \
-  --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/TSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fsanitize=thread -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
-  LDFLAGS="-fsanitize=thread $LDFLAGS"
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address $LDFLAGS"
 ```
 
 
@@ -108,8 +95,8 @@ step above and replace accordingly with:
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/MSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
-  LDFLAGS="-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer $LDFLAGS"
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
 ```
 
 
@@ -121,6 +108,19 @@ step above and replace accordingly with:
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/UBSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fsanitize=undefined -fno-omit-frame-pointer -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
-  LDFLAGS="-fsanitize=undefined -fno-omit-frame-pointer $LDFLAGS"
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
+```
+
+
+### Thread Sanitizer (TSAN)
+
+```sh
+~/xapian/xapian-core $ ./configure \
+  --disable-dependency-tracking \
+  --disable-documentation \
+  --enable-maintainer-mode \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/TSAN' || echo '/usr/local')" \
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread $LDFLAGS"
 ```

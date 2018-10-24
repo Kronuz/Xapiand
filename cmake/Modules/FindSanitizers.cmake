@@ -60,8 +60,24 @@ if (ASAN)
 	endif ()
 
 	set (ASAN_DESCRIPTION "AddressSanitizer")
-	set (ASAN_FLAGS  "-fsanitize=address -fno-omit-frame-pointer")
+	set (ASAN_FLAGS  "-fno-omit-frame-pointer -gline-tables-only -fsanitize=address")
 	check_sanitizer_flags(${ASAN_DESCRIPTION} ${ASAN_FLAGS})
+endif ()
+
+
+# Check for Memory Sanitizer.
+if (MSAN)
+	set (MSAN_DESCRIPTION "MemorySanitizer")
+	set (MSAN_FLAGS  "-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins")
+	check_sanitizer_flags(${MSAN_DESCRIPTION} ${MSAN_FLAGS})
+endif ()
+
+
+# Check for Undefined Behavior Sanitizer.
+if (UBSAN)
+	set (UBSAN_DESCRIPTION "UndefinedBehaviorSanitizer")
+	set (UBSAN_FLAGS  "-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+	check_sanitizer_flags(${UBSAN_DESCRIPTION} ${UBSAN_FLAGS})
 endif ()
 
 
@@ -72,22 +88,6 @@ if (TSAN)
 	endif ()
 
 	set (TSAN_DESCRIPTION "ThreadSanitizer")
-	set (TSAN_FLAGS  "-fsanitize=thread")
+	set (TSAN_FLAGS  "-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread")
 	check_sanitizer_flags(${TSAN_DESCRIPTION} ${TSAN_FLAGS})
-endif ()
-
-
-# Check for Memory Sanitizer.
-if (MSAN)
-	set (MSAN_DESCRIPTION "MemorySanitizer")
-	set (MSAN_FLAGS  "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer")
-	check_sanitizer_flags(${MSAN_DESCRIPTION} ${MSAN_FLAGS})
-endif ()
-
-
-# Check for Undefined Behavior Sanitizer.
-if (UBSAN)
-	set (UBSAN_DESCRIPTION "UndefinedBehaviorSanitizer")
-	set (UBSAN_FLAGS  "-fsanitize=undefined -fno-omit-frame-pointer")
-	check_sanitizer_flags(${UBSAN_DESCRIPTION} ${UBSAN_FLAGS})
 endif ()
