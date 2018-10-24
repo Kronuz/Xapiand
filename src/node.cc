@@ -301,7 +301,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 				node_ref = std::shared_ptr<const Node>(node_copy.release());
 				_update_nodes(node_ref);
 			}
-			// L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> false", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
 			return std::make_pair(node_ref, false);
 		}
 		idx = node_ref->idx;
