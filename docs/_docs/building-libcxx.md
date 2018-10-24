@@ -130,8 +130,8 @@ cat <<"__EOF__" | patch -sup0
 +    set(LIBCXXABI_SANITIZER_LIBRARY "${LIBDIR}/${LIBFILE}")
 +    set(LIBCXXABI_SANITIZER_LIBRARY "${LIBCXXABI_SANITIZER_LIBRARY}" PARENT_SCOPE)
 +    message(STATUS "Manually linking compiler-rt library: ${LIBCXXABI_SANITIZER_LIBRARY}")
-+    list(APPEND LIBCXXABI_LIBRARIES "${LIBCXXABI_SANITIZER_LIBRARY}")
-+    list(APPEND LIBCXXABI_LINK_FLAGS "-Wl,-rpath,${LIBDIR}")
++    add_library_flags("${LIBCXXABI_SANITIZER_LIBRARY}")
++    add_link_flags("-Wl,-rpath,${LIBDIR}")
 +  endif()
 +endif()
 +
@@ -146,6 +146,7 @@ __EOF__
 
 ```sh
 ~/llvm $ mkdir -p build/asan && cd build/asan
+~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-asan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-asan/lib"
 ~/llvm/build/asan $ cmake ../../llvm \
   -GNinja \
   -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-asan" \
@@ -161,6 +162,7 @@ __EOF__
 
 ```sh
 ~/llvm $ mkdir -p build/msan && cd build/msan
+~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-msan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-msan/lib"
 ~/llvm/build/msan $ cmake ../../llvm \
   -GNinja \
   -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-msan" \
@@ -176,6 +178,7 @@ __EOF__
 
 ```sh
 ~/llvm $ mkdir -p build/ubsan && cd build/ubsan
+~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-ubsan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-ubsan/lib"
 ~/llvm/build/ubsan $ cmake ../../llvm \
   -GNinja \
   -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-ubsan" \
@@ -191,6 +194,7 @@ __EOF__
 
 ```sh
 ~/llvm $ mkdir -p build/tsan && cd build/tsan
+~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-tsan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-tsan/lib"
 ~/llvm/build/tsan $ cmake ../../llvm \
   -GNinja \
   -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-tsan" \
@@ -207,5 +211,5 @@ __EOF__
 Use by setting LDFLAGS, ex.:
 
 ```sh
-LDFLAGS='-L/usr/local/opt/llvm@7-tsan/lib -Wl,-rpath,/usr/local/opt/llvm@7-tsan/lib -L/usr/local/opt/llvm@7/lib -Wl,-rpath,/usr/local/opt/llvm@7/lib'
+export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-tsan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-tsan/lib"
 ```
