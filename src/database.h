@@ -291,7 +291,6 @@ class Database {
 	void reopen_readable();
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
-	std::weak_ptr<DatabasePool> weak_database_pool;
 
 	Endpoints endpoints;
 	int flags;

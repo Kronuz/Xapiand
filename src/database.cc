@@ -739,6 +739,12 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 		}
 
 		commit();
+
+		// On COMMIT, add to updated databases queue so replicators do their job
+		if (type == Type::COMMIT) {
+			XapiandManager::manager->database_pool.updated_databases.push(endpoint);
+		}
+
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
 		database->wal.reset();
@@ -922,7 +928,6 @@ DataStorage::open(std::string_view relative_path)
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_)
 	: weak_queue(queue_),
-	  weak_database_pool(queue_->weak_database_pool.lock()),
 	  endpoints(std::move(endpoints_)),
 	  flags(flags_),
 	  hash(endpoints.hash()),
@@ -1255,9 +1260,6 @@ Database::commit(bool wal_)
 			if (local) {
 				if (auto queue = weak_queue.lock()) {
 					queue->local_revision = db_pair.first.get_revision();
-				}
-				if (auto database_pool = weak_database_pool.lock()) {
-					database_pool->updated_databases.push(endpoints[0]);
 				}
 			}
 			break;
