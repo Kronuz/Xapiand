@@ -362,13 +362,28 @@ Logging::run()
 	std::string msg;
 
 	if (info && priority <= LOG_DEBUG) {
-		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
+		auto tm = Datetime::to_tm_t(Datetime::timestamp(time_point_from_ullong(created_at)));
 
+#ifdef NDEBUG
+		msg.append(std::string_view(rgb(60, 60, 60)));
+		msg.append(string::format("%04d", tm.year));
+		msg.append(std::string_view(rgb(94, 94, 94)));
+		msg.append(string::format("%02d", tm.mon));
+		msg.append(std::string_view(rgb(162, 162, 162)));
+		msg.append(string::format("%02d", tm.day));
+		msg.append(std::string_view(rgb(230, 230, 230)));
+		msg.append(string::format("%02d", tm.hour));
+		msg.append(std::string_view(rgb(162, 162, 162)));
+		msg.append(string::format("%02d", tm.min));
+		msg.append(std::string_view(rgb(94, 94, 94)));
+		msg.append(string::format("%02d", tm.sec));
+		msg.push_back(' ');
+#else
+		msg.append(std::string_view(rgb(162, 162, 162)));
 		msg.push_back('[');
-		msg.append(Datetime::iso8601(time_point_from_ullong(created_at), false, ' '));
+		msg.append(Datetime::iso8601(tm, false, ' '));
 		msg.append("] ");
 
-#ifndef NDEBUG
 		msg.push_back('(');
 		msg.append(get_thread_name(thread_id));
 		msg.append(") ");
