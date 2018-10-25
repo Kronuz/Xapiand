@@ -577,6 +577,12 @@ struct printf_context {
     std::back_insert_iterator<Buffer>, typename Buffer::value_type> type;
 };
 
+template <typename ...Args>
+inline format_arg_store<printf_context<internal::buffer>::type, Args...>
+make_printf_args(const Args & ... args) {
+  return format_arg_store<printf_context<internal::buffer>::type, Args...>(args...);
+}
+
 typedef basic_format_args<printf_context<internal::buffer>::type> printf_args;
 typedef basic_format_args<printf_context<internal::wbuffer>::type> wprintf_args;
 
