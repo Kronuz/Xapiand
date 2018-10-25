@@ -226,9 +226,7 @@ Replication::msg_get_changesets(const std::string& message)
 			// Send WAL operations.
 			auto wal_it = wal.find(from_revision);
 			for (; wal_it != wal.end(); ++wal_it) {
-				send_message(ReplicationReplyType::REPLY_CHANGESET,
-					serialise_string(wal_it->second)
-				);
+				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			from_revision = wal_it->first + 1;
 			lk_db.lock();
