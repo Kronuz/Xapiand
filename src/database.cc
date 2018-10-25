@@ -2589,6 +2589,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 								break;
 							}
 						} while ((wq = has_locked_endpoints()));
+						continue;
 					}
 				} else if (db_exclusive) {
 					assert(queue->locked == false);
@@ -2609,7 +2610,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				}
 			}
 
-		} while (!database);
+			break;
+		};
 
 	}
 
