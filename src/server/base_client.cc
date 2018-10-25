@@ -46,6 +46,19 @@
 #include "base_server.h"         // for BaseServer
 #include "utils.h"               // for readable_revents, repr
 
+
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_CONN
+// #define L_CONN L_GREEN
+// #undef L_TCP_ENQUEUE
+// #define L_TCP_ENQUEUE L_GREEN
+// #undef L_TCP_WIRE
+// #define L_TCP_WIRE L_WHITE
+
+
 #define BUF_SIZE 4096
 
 #define NO_COMPRESSOR "\01"

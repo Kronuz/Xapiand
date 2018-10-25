@@ -51,6 +51,14 @@
 #include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_DATABASE
+// #define L_DATABASE L_SLATE_BLUE
+
+
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
 #define REMOTE_DATABASE_UPDATE_TIME 3

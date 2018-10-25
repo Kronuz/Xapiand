@@ -94,14 +94,18 @@
 #endif
 
 
+#define L_MANAGER L_NOTHING
+
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_MANAGER
+// #define L_MANAGER L_DARK_CYAN
+
+
 #define NODE_LABEL "node"
 #define CLUSTER_LABEL "cluster"
-
-
-#ifndef L_MANAGER
-#define L_MANAGER_DEFINED
-#define L_MANAGER L_NOTHING
-#endif
 
 
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
@@ -936,10 +940,3 @@ XapiandManager::server_metrics()
 
 	return metrics.serialise();
 }
-
-
-
-#ifdef L_MANAGER_DEFINED
-#undef L_MANAGER_DEFINED
-#undef L_MANAGER
-#endif

@@ -31,6 +31,16 @@
 #include "node.h"                             // for Node, local_node
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_DISCOVERY
+// #define L_DISCOVERY L_SALMON
+// #undef L_RAFT
+// #define L_RAFT L_SEA_GREEN
+
+
 using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
 
 
