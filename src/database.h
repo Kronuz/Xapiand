@@ -506,12 +506,7 @@ public:
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
-#ifdef XAPIAND_CLUSTERING
-	friend class BinaryClient;
-	friend class RemoteProtocol;
-#endif
 	friend class DatabaseQueue;
-	friend class lock_database;
 
 	std::mutex qmtx;
 	std::atomic_bool finished;
@@ -551,14 +546,13 @@ class DatabasePool {
 		}
 	}
 
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
-
-	void checkin(std::shared_ptr<Database>& database);
-
 	bool _switch_db(const Endpoint& endpoint);
 	void _cleanup(bool writable, bool readable);
 
 public:
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
+	void checkin(std::shared_ptr<Database>& database);
+
 #ifdef XAPIAND_CLUSTERING
 	queue::QueueSet<Endpoint> updated_databases;
 #endif
