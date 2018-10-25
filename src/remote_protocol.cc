@@ -27,20 +27,20 @@
 #include "database.h"
 #include "length.h"
 
-#undef L_DEBUG
-#define L_DEBUG L_GREY
-#undef L_CALL
-#define L_CALL L_STACKED_DIM_GREY
-#undef L_REPLICATION
-#define L_REPLICATION L_RED
-#undef L_CONN
-#define L_CONN L_GREEN
-#undef L_BINARY_WIRE
-#define L_BINARY_WIRE L_ORANGE
-#undef L_BINARY
-#define L_BINARY L_TEAL
-#undef L_BINARY_PROTO
-#define L_BINARY_PROTO L_TEAL
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_REPLICATION
+// #define L_REPLICATION L_RED
+// #undef L_CONN
+// #define L_CONN L_GREEN
+// #undef L_BINARY_WIRE
+// #define L_BINARY_WIRE L_ORANGE
+// #undef L_BINARY
+// #define L_BINARY L_TEAL
+// #undef L_BINARY_PROTO
+// #define L_BINARY_PROTO L_TEAL
 
 
 /*  ____                      _       ____            _                  _
