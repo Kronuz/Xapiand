@@ -2669,10 +2669,6 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 			L_CRIT("Inconsistency in the number of databases in queue");
 			sig_exit(-EX_SOFTWARE);
 		}
-
-		if (signal_checkins) {
-			while (queue->checkin_callbacks.call()) {};
-		}
 	} else {
 		database.reset();
 	}
