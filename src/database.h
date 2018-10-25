@@ -135,8 +135,7 @@ struct WalBinFooter {
 
 
 class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
-	template <typename T>
-	class Iterator;
+	class iterator;
 
 	friend WalHeader;
 
@@ -181,9 +180,6 @@ public:
 		MAX,
 	};
 
-	using iterator = Iterator<DatabaseWAL>;
-	using const_iterator = Iterator<const DatabaseWAL>;
-
 	mutable UUID _uuid;
 	mutable UUID _uuid_le;
 	Database* database;
@@ -192,11 +188,7 @@ public:
 	~DatabaseWAL();
 
 	iterator begin();
-	const_iterator begin() const;
-	const_iterator cbegin() const;
 	iterator end();
-	const_iterator end() const;
-	const_iterator cend() const;
 
 	bool open_current(bool only_committed, bool unsafe = false);
 	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
@@ -221,10 +213,11 @@ public:
 	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
 };
 
-class DatabaseWAL::Iterator {
+
+class DatabaseWAL::iterator {
 	friend DatabaseWAL;
 
-	DatabaseWAL& wal;
+	DatabaseWAL* wal;
 	std::pair<Xapian::rev, std::string> item;
 	uint32_t end_off;
 
@@ -235,22 +228,17 @@ public:
 	using pointer = std::pair<Xapian::rev, std::string>*;
 	using reference = std::pair<Xapian::rev, std::string>&;
 
-	Iterator(DatabaseWAL& wal_, std::pair<Xapian::rev, std::string>&& item_, uint32_t end_off_)
+	iterator(DatabaseWAL* wal_, std::pair<Xapian::rev, std::string>&& item_, uint32_t end_off_)
 		: wal(wal_),
 		  item(item_),
 		  end_off(end_off_) { }
 
-	Iterator& operator++() {
+	iterator& operator++() {
 		item = wal->get_current_line(end_off);
 		return *this;
 	}
 
-	const Iterator& operator++() const {
-		item = wal->get_current_line(end_off);
-		return *this;
-	}
-
-	Iterator operator=(const Iterator& other) {
+	iterator operator=(const iterator& other) {
 		wal = other.wal;
 		item = other.item;
 		return *this;
@@ -264,27 +252,15 @@ public:
 		return &operator*();
 	}
 
-	std::pair<Xapian::rev, std::string>& operator*() const {
-		return item;
-	}
-
-	std::pair<Xapian::rev, std::string>* operator->() const {
-		return &operator*();
-	}
-
 	std::pair<Xapian::rev, std::string>& value() {
 		return item;
 	}
 
-	std::pair<Xapian::rev, std::string>& value() const {
-		return item;
-	}
-
-	bool operator==(const Iterator& other) const {
+	bool operator==(const iterator& other) const {
 		return this == &other || item == other.item;
 	}
 
-	bool operator!=(const Iterator& other) const {
+	bool operator!=(const iterator& other) const {
 		return !operator==(other);
 	}
 
@@ -296,29 +272,10 @@ inline DatabaseWAL::iterator DatabaseWAL::begin() {
 }
 
 
-inline DatabaseWAL::const_iterator DatabaseWAL::begin() const {
-	return find(0);
-}
-
-
-inline DatabaseWAL::const_iterator DatabaseWAL::cbegin() const {
-	return find(0);
-}
-
-
 inline DatabaseWAL::iterator DatabaseWAL::end() {
-	return iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
+	return iterator(this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
 }
 
-
-inline DatabaseWAL::const_iterator DatabaseWAL::end() const {
-	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
-}
-
-
-inline DatabaseWAL::const_iterator DatabaseWAL::cend() const {
-	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
-}
 #endif /* XAPIAND_DATABASE_WAL */
 
 

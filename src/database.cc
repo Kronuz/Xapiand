@@ -894,7 +894,7 @@ DatabaseWAL::find(Xapian::rev revision)
 	auto end_off = header.slot[high_slot];
 
 	seek(header.slot[revision - volume_traits]); /* putting us in revision position for get wal lines */
-	return iterator(*this, get_current_line(end_off), end_off);
+	return iterator(this, get_current_line(end_off), end_off);
 }
 
 
