@@ -2750,7 +2750,7 @@ DatabasePool::finish()
 void
 DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path)
 {
-	L_CALL("DatabasePool::switch_db(%s)", repr(endpoint.to_string()));
+	L_CALL("DatabasePool::switch_db(%s, %s)", repr(tmp), repr(endpoint_path));
 
 	std::shared_ptr<Database> database;
 	checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
