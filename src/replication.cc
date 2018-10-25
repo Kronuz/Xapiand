@@ -68,8 +68,16 @@ Replication::Replication(BinaryClient& client_)
 
 Replication::~Replication()
 {
-	if (!switch_db.empty()) {
-		delete_files(switch_db.c_str());
+	if (!switch_database_path.empty()) {
+		if (slave_database) {
+			slave_database->close();
+			XapiandManager::manager->database_pool.checkin(slave_database);
+		}
+		delete_files(switch_database_path.c_str());
+	} else {
+		if (slave_database) {
+			XapiandManager::manager->database_pool.checkin(slave_database);
+		}
 	}
 
 	L_OBJ("DELETED REPLICATION OBJ!");
@@ -84,8 +92,6 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 	src_endpoints = Endpoints{src_endpoint};
 	endpoints = Endpoints{dst_endpoint};
 	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
-
-	flags = DB_WRITABLE | DB_SPAWN | DB_NOWAL;
 
 	return true;
 }
@@ -144,7 +150,7 @@ Replication::msg_get_changesets(const std::string& message)
 	auto from_revision = unserialise_length(&p, p_end);
 	endpoints = Endpoints{Endpoint{unserialise_string(&p, p_end)}};
 
-	flags = DB_WRITABLE | DB_NOWAL;
+	flags = DB_WRITABLE;
 	lock_database lk_db(this);
 	auto uuid = db()->get_uuid();
 	auto revision = db()->get_revision();
@@ -156,12 +162,10 @@ Replication::msg_get_changesets(const std::string& message)
 
 	// TODO: Implement WAL's has_revision() and iterator
 	// WAL required on a local writable database, open it.
-	lk_db.lock();
-	DatabaseWAL wal(endpoints[0].path, database().get());
+	DatabaseWAL wal(endpoints[0].path, nullptr);
 	if (from_revision && !wal.has_revision(from_revision).first) {
 		from_revision = 0;
 	}
-	lk_db.unlock();
 
 	if (from_revision < revision) {
 		if (from_revision == 0) {
@@ -268,6 +272,7 @@ Replication::reply_welcome(const std::string&)
 {
 	std::string message;
 
+	flags = DB_WRITABLE;
 	lock_database lk_db(this);
 	message.append(serialise_string(db()->get_uuid()));
 	message.append(serialise_length(db()->get_revision()));
@@ -277,6 +282,7 @@ Replication::reply_welcome(const std::string&)
 	send_message(static_cast<ReplicationReplyType>(SWITCH_TO_REPL), message);
 }
 
+
 void
 Replication::reply_end_of_changes(const std::string&)
 {
@@ -284,11 +290,16 @@ Replication::reply_end_of_changes(const std::string&)
 
 	L_REPLICATION("Replication::reply_end_of_changes");
 
-	if (switch_db.empty()) {
-		flags = DB_WRITABLE;
-		lock_database lk_db(this);
+	if (!switch_database_path.empty()) {
+		if (slave_database) {
+			slave_database->close();
+			XapiandManager::manager->database_pool.checkin(slave_database);
+		}
+		XapiandManager::manager->database_pool.switch_db(Endpoint{switch_database_path});
 	} else {
-		XapiandManager::manager->database_pool.switch_db(endpoints[0]/*, switch_db*/);  // TODO: pass switch_db
+		if (slave_database) {
+			XapiandManager::manager->database_pool.checkin(slave_database);
+		}
 	}
 
 	client.destroy();
@@ -322,18 +333,20 @@ Replication::reply_db_header(const std::string& message)
 	current_uuid = unserialise_string(&p, p_end);
 	current_revision = unserialise_length(&p, p_end);
 
-	char switch_db_path[PATH_MAX];
-	snprintf(switch_db_path, PATH_MAX, "%s/.tmp.XXXXXX", endpoints[0].path.c_str());
-	if (io::mkdtemp(switch_db_path) == nullptr) {
-		L_ERR("Directory %s not created: %s (%d): %s", switch_db, io::strerrno(errno), errno, strerror(errno));
+	char path[PATH_MAX];
+	snprintf(path, PATH_MAX, "%s/.tmp.XXXXXX", endpoints[0].path.c_str());
+	if (io::mkdtemp(path) == nullptr) {
+		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
 		client.destroy();
 		client.detach();
 		return;
 	}
 
-	switch_db = switch_db_path;
+	assert(switch_database_path.empty());
 
-	L_REPLICATION("Replication::reply_db_header %s", repr(switch_db));
+	switch_database_path = path;
+
+	L_REPLICATION("Replication::reply_db_header %s", repr(switch_database_path);
 }
 
 
@@ -344,7 +357,9 @@ Replication::reply_db_filename(const std::string& filename)
 
 	L_REPLICATION("Replication::reply_db_filename");
 
-	file_path = switch_db + "/" + filename;
+	assert(!switch_database_path.empty());
+
+	file_path = switch_database_path + "/" + filename;
 }
 
 
@@ -354,6 +369,8 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 	L_CALL("Replication::reply_db_filedata(<tmp_file>)");
 
 	L_REPLICATION("Replication::reply_db_filedata %s -> %s", repr(tmp_file), repr(file_path));
+
+	assert(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
@@ -375,37 +392,32 @@ Replication::reply_db_footer(const std::string& message)
 	const char *p_end = p + message.size();
 	size_t revision = unserialise_length(&p, p_end);
 
+	assert(!switch_database_path.empty());
+
 	if (revision != current_revision) {
-		delete_files(switch_db.c_str());
-		switch_db.clear();
+		delete_files(switch_database_path.c_str());
+		switch_database_path.clear();
 	}
 }
 
 
 void
-Replication::reply_changeset(const std::string& message)
+Replication::reply_changeset(const std::string& line)
 {
-	L_CALL("Replication::reply_changeset(<message>)");
+	L_CALL("Replication::reply_changeset(<line>)");
 
 	L_REPLICATION("Replication::reply_changeset");
 
-	ignore_unused(message);
-
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
-	// auto line = unserialise_string(&p, p_end);
-
-	if (switch_db.empty()) {
-		// write changeset to WAL in endpoints[0] directory
-		// DatabaseWAL wal(switch_db, nullptr);
-		// wal.write_line(line);  // TODO: Implement
-	} else {
-		// write changeset to WAL in '.tmp' directory (in switch_db)
-		// flags = DB_WRITABLE;
-		// lock_database lk_db(this);
-		// DatabaseWAL wal(endpoints[0].path, database.get());
-		// wal.write_line(line);  // TODO: Implement
+	if (!slave_database) {
+		if (!switch_database_path.empty()) {
+			XapiandManager::manager->database_pool.checkout(slave_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_VOLATILE);
+		} else {
+			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE | DB_VOLATILE);
+		}
+		wal = std::make_unique<DatabaseWAL>(slave_database->endpoints[0].path, slave_database.get());
 	}
+
+	wal.execute(line, true);
 }
 
 
