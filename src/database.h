@@ -292,17 +292,17 @@ public:
 
 
 inline DatabaseWAL::iterator DatabaseWAL::begin() {
-	return iterator(*this, std::make_pair(0, std::string("")), 0);
+	return find(0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::begin() const {
-	return const_iterator(*this, std::make_pair(0, std::string("")), 0);
+	return find(0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::cbegin() const {
-	return const_iterator(*this, std::make_pair(0, std::string("")), 0);
+	return find(0);
 }
 
 

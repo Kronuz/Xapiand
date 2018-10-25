@@ -904,13 +904,12 @@ DatabaseWAL::get_current_line(uint32_t end_off)
 	L_CALL("DatabaseWAL::get_current_line(...)");
 
 	try {
-			std::string line = read(end_off);
-			const char* p = line.data();
-			const char *p_end = p + line.size();
-			auto revision = static_cast<Xapian::rev>(unserialise_length(&p, p_end));
-			auto type = static_cast<Type>(unserialise_length(&p, p_end));
-			return std::make_pair(revision, std::string(p, p_end));
-		}  catch (const StorageEOF& exc) { }
+		std::string line = read(end_off);
+		const char* p = line.data();
+		const char *p_end = p + line.size();
+		auto revision = static_cast<Xapian::rev>(unserialise_length(&p, p_end));
+		return std::make_pair(revision, line);
+	}  catch (const StorageEOF& exc) { }
 
 	return std::make_pair(std::numeric_limits<Xapian::rev>::max(), "");
 }

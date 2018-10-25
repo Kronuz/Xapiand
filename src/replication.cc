@@ -226,7 +226,9 @@ Replication::msg_get_changesets(const std::string& message)
 			// Send WAL operations.
 			auto wal_it = wal.find(from_revision);
 			for (; wal_it != wal.end(); ++wal_it) {
-				send_message(ReplicationReplyType::REPLY_CHANGESET, serialise_string(wal_it->second));
+				send_message(ReplicationReplyType::REPLY_CHANGESET,
+					serialise_string(wal_it->second)
+				);
 			}
 			if (wal_it->first != std::numeric_limits<Xapian::rev>::max()) {
 				from_revision = wal_it->first + 1;
