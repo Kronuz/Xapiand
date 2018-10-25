@@ -272,12 +272,17 @@ Replication::reply_welcome(const std::string&)
 {
 	std::string message;
 
-	flags = DB_WRITABLE;
-	lock_database lk_db(this);
-	message.append(serialise_string(db()->get_uuid()));
-	message.append(serialise_length(db()->get_revision()));
-	message.append(serialise_string(endpoints[0].path));
-	lk_db.unlock();
+	try {
+		flags = DB_WRITABLE;
+		lock_database lk_db(this);
+		message.append(serialise_string(db()->get_uuid()));
+		message.append(serialise_length(db()->get_revision()));
+		message.append(serialise_string(endpoints[0].path));
+	} catch (const NotFoundError&) {
+		message.append(serialise_string(""));
+		message.append(serialise_length(0));
+		message.append(serialise_string(endpoints[0].path));
+	}
 
 	send_message(static_cast<ReplicationReplyType>(SWITCH_TO_REPL), message);
 }
