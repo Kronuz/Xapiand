@@ -850,6 +850,9 @@ XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		auto indexed_nodes = Node::indexed_nodes();
+		if (!indexed_nodes) {
+			THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
+		}
 		size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
 		for (size_t replicas = master ? 1 : 3; replicas; --replicas) {
 			auto node = Node::get_node(consistent_hash + 1);
