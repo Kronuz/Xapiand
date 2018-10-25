@@ -233,10 +233,10 @@ Worker::__repr__(const std::string& name) const
 {
 	return string::format("<%s at %p, %s of %s %p%s>",
 		name,
-		this,
+		static_cast<const void *>(this),
 		_runner ? "runner" : "worker",
 		ev_loop->depth() != 0u ? "running loop" : "loop",
-		ev_loop->raw_loop,
+		static_cast<const void *>(ev_loop->raw_loop),
 		_detaching ? " (deteaching)" : ""
 	);
 }

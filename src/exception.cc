@@ -71,7 +71,7 @@ atos(const void* address)
 		}
 
 		if (childpid == 0) {
-			snprintf(tmp, sizeof(tmp), "%p", info.dli_fbase);
+			snprintf(tmp, sizeof(tmp), "%p", static_cast<const void *>(info.dli_fbase));
 			execlp("/usr/bin/atos", "atos", "-o", info.dli_fname, "-l", tmp, nullptr);
 			fprintf(stderr,"Could not exec `atos` for stack trace!\n");
 			exit(1);

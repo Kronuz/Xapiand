@@ -54,7 +54,7 @@ ScheduledTask::clear()
 std::string
 ScheduledTask::__repr__(const std::string& name) const
 {
-	return string::format("<%s at %p>", name, this);
+	return string::format("<%s at %p>", name, static_cast<const void *>(this));
 }
 
 
