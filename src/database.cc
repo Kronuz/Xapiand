@@ -862,6 +862,59 @@ DatabaseWAL::write_remove_spelling(std::string_view word, Xapian::termcount freq
 	write_line(Type::REMOVE_SPELLING, line);
 }
 
+
+std::pair<bool, uint32_t>
+DatabaseWAL::has_revision(uint32_t revision)
+{
+	L_CALL("DatabaseWAL::has_revision(...)");
+
+	uint32_t volume;
+	auto volumes = get_volumes_range(WAL_STORAGE_PATH, 0, revision);
+	if (volumes.second == std::numeric_limits<uint32_t>::max()) {
+		volume = 0;
+	} else if (volumes.second + WAL_SLOTS <= revision) {
+		return std::make_pair(false, std::numeric_limits<uint32_t>::max());
+	} else {
+		volume = volumes.second;
+	}
+	open(string::format(WAL_STORAGE_PATH "%u", volume), STORAGE_OPEN);
+
+	return std::make_pair(header.slot[revision - volume] != 0, volume);
+}
+
+DatabaseWAL::iterator
+DatabaseWAL::find(uint32_t revision)
+{
+	L_CALL("DatabaseWAL::find(...)");
+
+	auto volume_traits = has_revision(revision).second;
+	open(string::format(WAL_STORAGE_PATH "%u", volume_traits), STORAGE_OPEN);
+
+	auto high_slot = highest_valid_slot();
+	auto end_off = header.slot[high_slot];
+
+	seek(header.slot[revision - volume_traits]); /* putting us in revision position for get wal lines */
+	return iterator(this, get_current_line(end_off), end_off);
+}
+
+
+std::pair<uint32_t, std::string>
+DatabaseWAL::get_current_line(uint32_t end_off)
+{
+	L_CALL("DatabaseWAL::get_current_line(...)");
+
+	try {
+			std::string line = read(end_off);
+			const char* p = line.data();
+			const char *p_end = p + line.size();
+			auto revision = unserialise_length(&p, p_end);
+			auto type = static_cast<Type>(unserialise_length(&p, p_end));
+			return std::make_pair(revision, std::string(p, p_end));
+		}  catch (const StorageEOF& exc) { }
+
+	return std::make_pair(std::numeric_limits<uint32_t>::max(), "");
+}
+
 #endif
 
 

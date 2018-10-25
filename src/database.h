@@ -135,6 +135,9 @@ struct WalBinFooter {
 
 
 class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
+	template <typename T>
+	class Iterator;
+
 	friend WalHeader;
 
 	static constexpr const char* const names[] = {
@@ -178,12 +181,22 @@ public:
 		MAX,
 	};
 
+	using iterator = Iterator<DatabaseWAL>;
+	using const_iterator = Iterator<const DatabaseWAL>;
+
 	mutable UUID _uuid;
 	mutable UUID _uuid_le;
 	Database* database;
 
 	DatabaseWAL(std::string_view base_path_, Database* database_);
 	~DatabaseWAL();
+
+	iterator begin();
+	const_iterator begin() const;
+	const_iterator cbegin() const;
+	iterator end();
+	const_iterator end() const;
+	const_iterator cend() const;
 
 	bool open_current(bool only_committed, bool unsafe = false);
 	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
@@ -203,7 +216,110 @@ public:
 	void write_set_metadata(std::string_view key, std::string_view val);
 	void write_add_spelling(std::string_view word, Xapian::termcount freqinc);
 	void write_remove_spelling(std::string_view word, Xapian::termcount freqdec);
+	std::pair<bool, uint32_t> has_revision(uint32_t revision);
+	iterator find(uint32_t revision);
+	std::pair<uint32_t, std::string> get_current_line(uint32_t end_off);
 };
+
+template <typename T>
+class DatabaseWAL::Iterator {
+	friend DatabaseWAL;
+
+	T* wal;
+	std::pair<uint32_t, std::string> item;
+	uint32_t end_off;
+
+public:
+	using iterator_category = std::forward_iterator_tag;
+	using value_type = std::pair<uint32_t, std::string>;
+	using difference_type = std::pair<uint32_t, std::string>;
+	using pointer = std::pair<uint32_t, std::string>*;
+	using reference = std::pair<uint32_t, std::string>&;
+
+	Iterator(T* wal_, std::pair<uint32_t, std::string> item_, uint32_t end_off_)
+		: wal(wal_),
+		  item(item_),
+		  end_off(end_off_) { }
+
+	Iterator& operator++() {
+		item = wal->get_current_line(end_off);
+		return *this;
+	}
+
+	const Iterator& operator++() const {
+		item = wal->get_current_line(end_off);
+		return *this;
+	}
+
+	Iterator operator=(const Iterator& other) {
+		wal = other.wal;
+		item = other.item;
+		return *this;
+	}
+
+	std::pair<uint32_t, std::string>& operator*() {
+		return item;
+	}
+
+	std::pair<uint32_t, std::string>* operator->() {
+		return &operator*();
+	}
+
+	std::pair<uint32_t, std::string>& operator*() const {
+		return item;
+	}
+
+	std::pair<uint32_t, std::string>* operator->() const {
+		return &operator*();
+	}
+
+	std::pair<uint32_t, std::string>& value() {
+		return item;
+	}
+
+	std::pair<uint32_t, std::string>& value() const {
+		return item;
+	}
+
+	bool operator==(const Iterator& other) const {
+		return this == &other || item == other.item;
+	}
+
+	bool operator!=(const Iterator& other) const {
+		return !operator==(other);
+	}
+
+};
+
+
+inline DatabaseWAL::iterator DatabaseWAL::begin() {
+	return iterator(this, std::make_pair(0, std::string("")), 0);
+}
+
+
+inline DatabaseWAL::const_iterator DatabaseWAL::begin() const {
+	return const_iterator(this, std::make_pair(0, std::string("")), 0);
+}
+
+
+inline DatabaseWAL::const_iterator DatabaseWAL::cbegin() const {
+	return const_iterator(this, std::make_pair(0, std::string("")), 0);
+}
+
+
+inline DatabaseWAL::iterator DatabaseWAL::end() {
+	return iterator(this, std::make_pair(std::numeric_limits<uint32_t>::max(), ""), 0);
+}
+
+
+inline DatabaseWAL::const_iterator DatabaseWAL::end() const {
+	return const_iterator(this, std::make_pair(std::numeric_limits<uint32_t>::max(), ""), 0);
+}
+
+
+inline DatabaseWAL::const_iterator DatabaseWAL::cend() const {
+	return const_iterator(this, std::make_pair(std::numeric_limits<uint32_t>::max(), ""), 0);
+}
 #endif /* XAPIAND_DATABASE_WAL */
 
 

@@ -155,11 +155,13 @@ Replication::msg_get_changesets(const std::string& message)
 	}
 
 	// TODO: Implement WAL's has_revision() and iterator
-	// // WAL required on a local writable database, open it.
-	// DatabaseWAL wal(endpoints[0].path, nullptr);
-	// if (from_revision && !wal.has_revision(from_revision)) {
-	// 	from_revision = 0;
-	// }
+	// WAL required on a local writable database, open it.
+	lk_db.lock();
+	DatabaseWAL wal(endpoints[0].path, database().get());
+	if (from_revision && !wal.has_revision(from_revision).first) {
+		from_revision = 0;
+	}
+	lk_db.unlock();
 
 	if (from_revision < revision) {
 		if (from_revision == 0) {
@@ -219,18 +221,20 @@ Replication::msg_get_changesets(const std::string& message)
 		}
 
 		// TODO: Implement WAL's has_revision() and iterator
-		// int wal_iterations = 5;
-		// do {
-		// 	// Send WAL operations.
-		// 	auto wal_it = wal.find(from_revision);
-		// 	for (; wal_it != wal.end(); ++wal_it) {
-		// 		send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it.second);
-		// 	}
-		// 	from_revision = wal_it.first + 1;
-		// 	lk_db.lock();
-		// 	revision = db()->get_revision();
-		// 	lk_db.unlock();
-		// while (from_revision < revision && --wal_iterations != 0);
+		int wal_iterations = 5;
+		do {
+			// Send WAL operations.
+			auto wal_it = wal.find(from_revision);
+			for (; wal_it != wal.end(); ++wal_it) {
+				send_message(ReplicationReplyType::REPLY_CHANGESET, serialise_string(wal_it->second));
+			}
+			if (wal_it->first != std::numeric_limits<uint32_t>::max()) {
+				from_revision = wal_it->first + 1;
+			}
+			lk_db.lock();
+			revision = db()->get_revision();
+			lk_db.unlock();
+		} while (from_revision < revision && --wal_iterations != 0);
 	}
 
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
