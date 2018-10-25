@@ -158,7 +158,6 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	MsgPack repr_document(std::string_view document, bool unserialised);
 	MsgPack repr_metadata(std::string_view document, bool unserialised);
 	MsgPack repr_line(std::string_view line, bool unserialised);
-	bool execute(std::string_view line, bool wal_ = false, bool unsafe = false);
 	uint32_t highest_valid_slot();
 
 	inline bool open(std::string_view path, int flags, bool commit_eof=false) {
@@ -197,6 +196,7 @@ public:
 	const UUID& uuid_le() const;
 
 	bool init_database();
+	bool execute(std::string_view line, bool wal_ = false, bool unsafe = false);
 	void write_line(Type type, std::string_view data);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
@@ -363,6 +363,7 @@ class Database {
 	void reopen_readable();
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
+	std::weak_ptr<DatabaseQueue> weak_readable_queue;
 
 	Endpoints endpoints;
 	int flags;
@@ -438,20 +439,15 @@ class DatabaseQueue : public queue::Queue<std::shared_ptr<Database>>,
 	friend class DatabasesLRU;
 
 private:
-	enum class replica_state : uint8_t {
-		REPLICA_FREE,
-		REPLICA_LOCK,
-		REPLICA_SWITCH,
-	};
-
-	replica_state state;
+	bool locked;
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 	bool persistent;
 
 	size_t count;
 
-	std::condition_variable switch_cond;
+	std::condition_variable unlock_cond;
+	std::condition_variable exclusive_cond;
 
 	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
@@ -508,6 +504,7 @@ class DatabasePool {
 
 	std::mutex qmtx;
 	std::atomic_bool finished;
+	size_t locks;
 
 	const std::shared_ptr<queue::QueueState> queue_state;
 
@@ -524,7 +521,6 @@ class DatabasePool {
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
-	bool _switch_db(const Endpoint& endpoint);
 	void _cleanup(bool writable, bool readable);
 
 public:
@@ -543,7 +539,7 @@ public:
 	~DatabasePool();
 
 	void finish();
-	bool switch_db(const Endpoint& endpoint);
+	void switch_db(const std::string& tmp, const std::string& endpoint_path);
 	void cleanup();
 
 	DatabaseCount total_writable_databases();

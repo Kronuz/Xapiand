@@ -295,7 +295,7 @@ Replication::reply_end_of_changes(const std::string&)
 			slave_database->close();
 			XapiandManager::manager->database_pool.checkin(slave_database);
 		}
-		XapiandManager::manager->database_pool.switch_db(Endpoint{switch_database_path});
+		XapiandManager::manager->database_pool.switch_db(switch_database_path, endpoints[0].path);
 	} else {
 		if (slave_database) {
 			XapiandManager::manager->database_pool.checkin(slave_database);

@@ -2216,7 +2216,7 @@ Database::dump_documents()
 template <typename... Args>
 DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	: Queue(std::forward<Args>(args)...),
-	  state(replica_state::REPLICA_FREE),
+	  locked(false),
 	  persistent(false),
 	  count(0),
 	  endpoints(endpoints_) {
@@ -2333,9 +2333,9 @@ DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
 			val->size() < val->count ||
-			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+			val->locked) {
 			val->renew_time = now;
-			L_DATABASE("Renew %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->state != DatabaseQueue::replica_state::REPLICA_FREE ? "replicating" : "??", repr(val->endpoints.to_string()));
+			L_DATABASE("Renew %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->locked ? "locked" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
@@ -2372,8 +2372,8 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
 		if (val->persistent ||
 			val->size() < val->count ||
-			val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-			L_DATABASE("Leave %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->state != DatabaseQueue::replica_state::REPLICA_FREE ? "replicating" : "??", repr(val->endpoints.to_string()));
+			val->locked) {
+			L_DATABASE("Leave %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->locked ? "locked" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
@@ -2417,6 +2417,7 @@ DatabasesLRU::finish()
 
 DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases)
 	: finished(false),
+	  locks(0),
 	  queue_state(std::make_shared<queue::QueueState>(-1, max_databases, -1)),
 	  databases(dbpool_size, queue_state),
 	  writable_databases(dbpool_size, queue_state)
@@ -2489,12 +2490,18 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()));
 	}
 
+	if (db_exclusive && !db_writable) {
+		L_ERR("ERROR: Exclusive access can be granted only for writable databases");
+		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (non-exclusive)", repr(endpoints.to_string()));
+	}
+
 	if (!finished) {
 		size_t hash = endpoints.hash();
 
 		std::unique_lock<std::mutex> lk(qmtx);
 
 		std::shared_ptr<DatabaseQueue> queue;
+
 		if (db_writable) {
 			queue = writable_databases.get(hash, db_volatile, endpoints);
 			_cleanup(false, true);
@@ -2503,75 +2510,107 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			_cleanup(true, false);
 		}
 
-		auto old_state = queue->state;
-
-		if (db_exclusive) {
-			switch (queue->state) {
-				case DatabaseQueue::replica_state::REPLICA_FREE:
-					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
-					break;
-				case DatabaseQueue::replica_state::REPLICA_LOCK:
-				case DatabaseQueue::replica_state::REPLICA_SWITCH:
-					L_REPLICATION("A replication task is already waiting");
-					L_DATABASE_END("!! ABORTED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
-					THROW(CheckoutErrorReplicating, "Cannot checkout database: %s (aborted)", repr(endpoints.to_string()));
-			}
-		} else {
-			if (queue->state == DatabaseQueue::replica_state::REPLICA_SWITCH) {
-				queue->switch_cond.wait(lk);
-			}
-		}
-
 		bool old_persistent = queue->persistent;
 		queue->persistent = db_persistent;
 
-		if (!queue->pop(database, 0)) {
-			// Increment so other threads don't delete the queue
-			if (queue->inc_count(db_writable ? 1 : -1)) {
-				lk.unlock();
-				try {
-					database = std::make_shared<Database>(queue, endpoints, flags);
-				} catch (const Xapian::DatabaseOpeningError& exc) {
-					L_DATABASE("ERROR: %s", exc.get_description());
-				} catch (...) {
-					lk.lock();
-					database.reset();
-					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
-					if (queue->count == 0) {
-						// There is a error, the queue ended up being empty, remove it
-						if (db_writable) {
-							writable_databases.erase(hash);
-						} else {
-							databases.erase(hash);
+		int retries = 10;
+		while (true) {
+			if (!queue->pop(database, 0)) {
+				// Increment so other threads don't delete the queue
+				if (queue->inc_count(db_writable ? 1 : -1)) {
+					lk.unlock();
+					try {
+						database = std::make_shared<Database>(queue, endpoints, flags);
+					} catch (const Xapian::DatabaseOpeningError& exc) {
+						L_DATABASE("ERROR: %s", exc.get_description());
+					} catch (...) {
+						lk.lock();
+						database.reset();
+						queue->dec_count();  // Decrement, count should have been already incremented if Database was created
+						if (queue->count == 0) {
+							// There is a error, the queue ended up being empty, remove it
+							if (db_writable) {
+								writable_databases.erase(hash);
+							} else {
+								databases.erase(hash);
+							}
 						}
+						throw;
 					}
-					throw;
-				}
-				lk.lock();
-				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
-			} else {
-				// Lock until a database is available if it can't get one.
-				lk.unlock();
-				auto s = static_cast<int>(queue->pop(database, DB_TIMEOUT));
-				if (s == 0) {
-					THROW(TimeOutError, "Database is not available");
-				}
-				lk.lock();
-			}
-		}
-		if (!database || !database->db) {
-			database.reset();
-			queue->state = old_state;
-			queue->persistent = old_persistent;
-			if (queue->count == 0) {
-				// There is a error, the queue ended up being empty, remove it
-				if (db_writable) {
-					writable_databases.erase(hash);
+					lk.lock();
+					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 				} else {
-					databases.erase(hash);
+					// Lock until a database is available if it can't get one.
+					lk.unlock();
+					auto s = static_cast<int>(queue->pop(database, DB_TIMEOUT));
+					if (s == 0) {
+						THROW(TimeOutError, "Database is not available");
+					}
+					lk.lock();
 				}
 			}
-		}
+
+			if (!database || !database->db) {
+				database.reset();
+				queue->persistent = old_persistent;
+				if (queue->count == 0) {
+					// There is a error, the queue ended up being empty, remove it
+					if (db_writable) {
+						writable_databases.erase(hash);
+					} else {
+						databases.erase(hash);
+					}
+				}
+			}
+
+			if (locks) {
+				if (!db_writable) {
+					auto has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
+						for (auto& e : database->endpoints) {
+							auto wq = writable_databases.get(e.hash());
+							if (wq && wq->locked) {
+								return wq;
+							}
+						}
+						return nullptr;
+					};
+					auto timeout_tp = std::chrono::system_clock::now() + 1s;
+					auto wq = has_locked_endpoints();
+					if (wq) {
+						database.reset();
+						if (--retries == 0) {
+							THROW(TimeOutError, "Database is not available");
+						}
+						do {
+							if (wq->unlock_cond.wait_until(lk, timeout_tp) == std::cv_status::timeout) {
+								if (has_locked_endpoints()) {
+									THROW(TimeOutError, "Database is not available");
+								}
+								break;
+							}
+						} while ((wq = has_locked_endpoints()));
+					}
+				} else if (db_exclusive) {
+					assert(queue->locked == false);
+					++locks;
+					queue->locked = true;
+					auto is_ready_to_lock = [&] {
+						for (auto& q : queues[hash]) {
+							if (q != queue && q->size() < q->count) {
+								return false;
+							}
+						}
+						return true;
+					};
+					auto timeout_tp = std::chrono::system_clock::now() + 1s;
+					if (!queue->exclusive_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
+						THROW(TimeOutError, "Database is not available");
+					}
+				}
+			}
+
+		} while (!database);
+
 	}
 
 	if (!database) {
@@ -2628,8 +2667,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	assert(database);
 	auto& endpoints = database->endpoints;
+	int flags = database->flags;
 
-	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 
 	if (database->modified) {
 		DatabaseAutocommit::commit(database);
@@ -2638,29 +2678,45 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
+		if (locks) {
+			bool db_writable = (flags & DB_WRITABLE) != 0;
+			if (db_writable) {
+				if (queue->locked) {
+					queue->locked = false;
+					assert(locks > 0);
+					--locks;
+					queue->unlock_cond.notify_all();
+				}
+			} else {
+				bool was_locked = false;
+				for (auto& e : endpoints) {
+					auto hash = e.hash();
+					auto wq = writable_databases.get(hash);
+					if (wq && wq->locked) {
+						bool unlock = true;
+						for (auto& q : queues[hash]) {
+							if (q != wq && q->size() < q->count) {
+								unlock = false;
+								break;
+							}
+						}
+						if (unlock) {
+							wq->exclusive_cond.notify_one();
+							was_locked = true;
+						}
+					}
+				}
+				if (was_locked) {
+					database->close();
+				}
+			}
+		}
+
 		if (!database->closed) {
 			if (!queue->push(database)) {
 				_cleanup(true, true);
 				queue->push(database);
 			}
-		}
-
-		bool signal_checkins = false;
-		switch (queue->state) {
-			case DatabaseQueue::replica_state::REPLICA_SWITCH:
-				for (const auto& endpoint : endpoints) {
-					_switch_db(endpoint);
-				}
-				if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
-					signal_checkins = true;
-				}
-				break;
-			case DatabaseQueue::replica_state::REPLICA_LOCK:
-				queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-				signal_checkins = true;
-				break;
-			case DatabaseQueue::replica_state::REPLICA_FREE:
-				break;
 		}
 
 		database.reset();
@@ -2673,7 +2729,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		database.reset();
 	}
 
-	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 }
 
 
@@ -2691,44 +2747,17 @@ DatabasePool::finish()
 }
 
 
-bool
-DatabasePool::_switch_db(const Endpoint& endpoint)
-{
-	L_CALL("DatabasePool::_switch_db(%s)", repr(endpoint.to_string()));
-
-	auto& queues_set = queues[endpoint.hash()];
-
-	bool switched = true;
-	for (auto& queue : queues_set) {
-		queue->state = DatabaseQueue::replica_state::REPLICA_SWITCH;
-		if (queue->count != queue->size()) {
-			switched = false;
-			break;
-		}
-	}
-
-	if (switched) {
-		move_files(endpoint.path + "/.tmp", endpoint.path);
-
-		for (auto& queue : queues_set) {
-			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-			queue->switch_cond.notify_all();
-		}
-	} else {
-		L_CRIT("Inside switch_db, but not all queues have (queue->count == queue->size())");
-	}
-
-	return switched;
-}
-
-
-bool
-DatabasePool::switch_db(const Endpoint& endpoint)
+void
+DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path)
 {
 	L_CALL("DatabasePool::switch_db(%s)", repr(endpoint.to_string()));
 
-	std::lock_guard<std::mutex> lk(qmtx);
-	return _switch_db(endpoint);
+	std::shared_ptr<Database> database;
+	checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
+
+	database->close();
+
+	move_files(tmp, endpoint_path);
 }
 
 
