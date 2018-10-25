@@ -162,6 +162,7 @@ Discovery::discovery_server(Message type, const std::string& message)
 
 	static const dispatch_func dispatch[] = {
 		&Discovery::hello,
+		&Discovery::wave,
 		&Discovery::sneer,
 		&Discovery::enter,
 		&Discovery::bye,
@@ -193,13 +194,40 @@ Discovery::hello(Message type, const std::string& message)
 		auto node = Node::touch_node(remote_node);
 		if (node) {
 			if (Node::is_equal(remote_node, node)) {
-				send_message(Message::ENTER, local_node_->serialise());
+				send_message(Message::WAVE, local_node_->serialise());
 			} else {
 				send_message(Message::SNEER, remote_node->serialise());
 			}
 		} else {
-			send_message(Message::ENTER, local_node_->serialise());
+			send_message(Message::WAVE, local_node_->serialise());
 		}
+	}
+}
+
+
+void
+Discovery::wave(Message type, const std::string& message)
+{
+	L_CALL("Discovery::wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	ignore_unused(type);
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
+
+	auto put = Node::put_node(remote_node);
+	remote_node = put.first;
+	if (put.second) {
+		L_INFO("Node %s is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	}
+
+	// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
+	// (prevent it from switching to slow waiting)
+	auto waiting = XapiandManager::State::WAITING;
+	if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	}
 }
 
@@ -255,13 +283,6 @@ Discovery::enter(Message type, const std::string& message)
 	remote_node = put.first;
 	if (put.second) {
 		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-	}
-
-	// After receiving ENTER, flag as WAITING_MORE so it waits just a little longer
-	// (prevent it from switching to slow waiting)
-	auto waiting = XapiandManager::State::WAITING;
-	if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
-		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	}
 }
 

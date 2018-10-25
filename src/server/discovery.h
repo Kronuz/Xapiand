@@ -45,7 +45,8 @@ class Discovery : public UDP, public Worker {
 public:
 	enum class Message {
 		HELLO,         // New node saying hello
-		SNEER,         // Nodes telling the client they don't agree on the new node's name
+		WAVE,          // Nodes telling the client they do agree with the new node's name
+		SNEER,         // Nodes telling the client they don't agree with the new node's name
 		ENTER,         // Node enters the room
 		BYE,           // Node says goodbye
 		DB_UPDATED,    //
@@ -54,7 +55,7 @@ public:
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string MessageNames[] = {
-			"HELLO", "SNEER", "ENTER", "BYE", "DB_UPDATED",
+			"HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
 		};
 
 		auto type_int = static_cast<int>(type);
@@ -74,6 +75,7 @@ private:
 	void discovery_server(Discovery::Message type, const std::string& message);
 
 	void hello(Message type, const std::string& message);
+	void wave(Message type, const std::string& message);
 	void sneer(Message type, const std::string& message);
 	void enter(Message type, const std::string& message);
 	void bye(Message type, const std::string& message);
