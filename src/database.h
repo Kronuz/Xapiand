@@ -484,7 +484,9 @@ class DatabasePool {
 	void _cleanup(bool writable, bool readable);
 
 public:
+#ifdef XAPIAND_CLUSTERING
 	queue::QueueSet<Endpoint> updated_databases;
+#endif
 
 	DatabasePool(size_t dbpool_size, size_t max_databases);
 	DatabasePool(const DatabasePool&) = delete;

@@ -45,6 +45,7 @@
 #include "manager.h"              // for sig_exit
 #include "msgpack.h"              // for MsgPack
 #include "msgpack/unpack.hpp"     // for unpack_error
+#include "opts.h"                 // for opts
 #include "schema.h"               // for FieldType, FieldType::KEYWORD
 #include "serialise.h"            // for uuid
 #include "string.hh"              // for string::from_delta
@@ -740,10 +741,14 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 
 		commit();
 
-		// On COMMIT, add to updated databases queue so replicators do their job
-		if (type == Type::COMMIT) {
-			XapiandManager::manager->database_pool.updated_databases.push(endpoint);
+#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			// On COMMIT, add to updated databases queue so replicators do their job
+			if (type == Type::COMMIT) {
+				XapiandManager::manager->database_pool.updated_databases.push(endpoint);
+			}
 		}
+#endif
 
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
