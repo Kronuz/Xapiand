@@ -49,7 +49,7 @@ class DatabaseAutocommit : public ScheduledTask {
 
 public:
 	static Scheduler& scheduler(size_t num_threads=0) {
-		static Scheduler scheduler("C--", "C%02zu", num_threads);
+		static Scheduler scheduler("A--", "A%02zu", num_threads);
 		return scheduler;
 	}
 
