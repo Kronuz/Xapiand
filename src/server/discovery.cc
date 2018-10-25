@@ -306,12 +306,15 @@ Discovery::bye(Message type, const std::string& message)
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 	Node::drop_node(remote_node.name());
-	L_INFO("Node %s left the party!", remote_node.name());
 
 	auto leader_node_ = Node::leader_node();
 	if (*leader_node_ == remote_node) {
+		L_INFO("Leader node %s left the party!", remote_node.name());
+
 		Node::leader_node(std::make_shared<const Node>());
 		XapiandManager::manager->renew_leader();
+	} else {
+		L_INFO("Node %s left the party!", remote_node.name());
 	}
 }
 

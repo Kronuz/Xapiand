@@ -218,7 +218,6 @@ Raft::request_vote(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	auto local_node_ = Node::local_node();
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
@@ -243,7 +242,7 @@ Raft::request_vote(Message type, const std::string& message)
 	auto granted = false;
 	if (term == current_term) {
 		if (voted_for.empty()) {
-			if (node == local_node_ || *node == *local_node_) {
+			if (Node::is_local(node)) {
 				voted_for = *node;
 				L_RAFT("I vote for %s (1)", voted_for.name());
 			} else if (state == State::FOLLOWER) {
@@ -328,7 +327,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
-		if (node == local_node_ || *node == *local_node_) {
+		if (Node::is_equal(node, local_node_)) {
 			bool granted = unserialise_length(&p, p_end);
 			if (granted) {
 				++votes_granted;
@@ -788,11 +787,12 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 	L_CALL("Raft::_set_leader_node(%s)", repr(node->name()));
 
 	auto leader_node_ = Node::leader_node();
-	if (leader_node_ != node && *leader_node_ != *node) {
+	L_CALL("leader_node_ -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node_->idx, leader_node_->name(), leader_node_->http_port, leader_node_->binary_port, leader_node_->touched);
+	if (!Node::is_equal(node, leader_node_)) {
 		if (leader_node_->empty()) {
-			L_INFO("Cluster %s leader is %s", opts.cluster_name, node->name());
+			L_INFO("Leader of cluster %s is %s", opts.cluster_name, node->name());
 		} else {
-			L_INFO("Cluster %s new leader is %s", opts.cluster_name, node->name());
+			L_INFO("New leader of cluster %s is %s", opts.cluster_name, node->name());
 		}
 		Node::leader_node(node);
 	}
