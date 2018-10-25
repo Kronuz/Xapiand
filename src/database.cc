@@ -1061,10 +1061,15 @@ Database::reopen_writable()
 				try {
 					wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 				} catch (const Xapian::DatabaseOpeningError&) {
-					if ((flags & DB_SPAWN) && !exists(endpoint.path + "/iamglass")) {
+					if (!exists(endpoint.path + "/iamglass")) {
+						if ((flags & DB_SPAWN) == 0) {
+							L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
+							THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+						}
 						_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
 						wdb = Xapian::WritableDatabase(endpoint.path, _flags);
-					} else throw;
+					}
+					throw;
 				}
 				local = true;
 			}
@@ -1083,10 +1088,15 @@ Database::reopen_writable()
 		try {
 			wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 		} catch (const Xapian::DatabaseOpeningError&) {
-			if (((flags & DB_SPAWN) != 0) && !exists(endpoint.path + "/iamglass")) {
+			if (!exists(endpoint.path + "/iamglass")) {
+				if ((flags & DB_SPAWN) == 0) {
+					L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
+					THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+				}
 				_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
 				wdb = Xapian::WritableDatabase(endpoint.path, _flags);
-			} else { throw; }
+			}
+			throw;
 		}
 		local = true;
 	}
@@ -2758,8 +2768,6 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 		std::shared_ptr<Database> database;
 		checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
 		database->close();
-	} catch (const Xapian::DatabaseOpeningError&) {
-		// Database has errors, but i'll get overwriten anyway, so ignore
 	} catch (const NotFoundError&) {
 		// Database still doesn't exist, just move files
 	}
