@@ -2469,7 +2469,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
 		if ((flags & DB_PERSISTENT) == DB_PERSISTENT) values.push_back("DB_PERSISTENT");
 		if ((flags & DB_VOLATILE) == DB_VOLATILE) values.push_back("DB_VOLATILE");
-		if ((flags & DB_REPLICATION) == DB_REPLICATION) values.push_back("DB_REPLICATION");
+		if ((flags & DB_EXCLUSIVE) == DB_EXCLUSIVE) values.push_back("DB_EXCLUSIVE");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
 		return string::join(values, " | ");
@@ -2477,7 +2477,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	bool db_writable = (flags & DB_WRITABLE) != 0;
 	bool db_persistent = (flags & DB_PERSISTENT) != 0;
-	bool db_replication = (flags & DB_REPLICATION) != 0;
+	bool db_exclusive = (flags & DB_EXCLUSIVE) != 0;
 	bool db_volatile = (flags & DB_VOLATILE) != 0;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
@@ -2505,7 +2505,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		auto old_state = queue->state;
 
-		if (db_replication) {
+		if (db_exclusive) {
 			switch (queue->state) {
 				case DatabaseQueue::replica_state::REPLICA_FREE:
 					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
