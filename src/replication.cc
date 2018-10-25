@@ -162,8 +162,8 @@ Replication::msg_get_changesets(const std::string& message)
 
 	// TODO: Implement WAL's has_revision() and iterator
 	// WAL required on a local writable database, open it.
-	DatabaseWAL wal(endpoints[0].path, nullptr);
-	if (from_revision && !wal.has_revision(from_revision).first) {
+	wal = std::make_unique<DatabaseWAL>(endpoints[0].path, nullptr);
+	if (from_revision && !wal->has_revision(from_revision).first) {
 		from_revision = 0;
 	}
 
@@ -228,8 +228,8 @@ Replication::msg_get_changesets(const std::string& message)
 		int wal_iterations = 5;
 		do {
 			// Send WAL operations.
-			auto wal_it = wal.find(from_revision);
-			for (; wal_it != wal.end(); ++wal_it) {
+			auto wal_it = wal->find(from_revision);
+			for (; wal_it != wal->end(); ++wal_it) {
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			from_revision = wal_it->first + 1;
@@ -346,7 +346,7 @@ Replication::reply_db_header(const std::string& message)
 
 	switch_database_path = path;
 
-	L_REPLICATION("Replication::reply_db_header %s", repr(switch_database_path);
+	L_REPLICATION("Replication::reply_db_header %s", repr(switch_database_path));
 }
 
 
@@ -417,7 +417,7 @@ Replication::reply_changeset(const std::string& line)
 		wal = std::make_unique<DatabaseWAL>(slave_database->endpoints[0].path, slave_database.get());
 	}
 
-	wal.execute(line, true);
+	wal->execute(line, true);
 }
 
 
