@@ -1388,6 +1388,17 @@ Database::cancel(bool wal_)
 
 
 void
+Database::close()
+{
+	L_CALL("Database::close()");
+
+	closed = true;
+	db->close();
+	modified = false;
+}
+
+
+void
 Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document(%d, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
@@ -2627,9 +2638,11 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
-		if (!queue->push(database)) {
-			_cleanup(true, true);
-			queue->push(database);
+		if (!database->closed) {
+			if (!queue->push(database)) {
+				_cleanup(true, true);
+				queue->push(database);
+			}
 		}
 
 		bool signal_checkins = false;
@@ -2650,12 +2663,12 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				break;
 		}
 
+		database.reset();
+
 		if (queue->count < queue->size()) {
 			L_CRIT("Inconsistency in the number of databases in queue");
 			sig_exit(-EX_SOFTWARE);
 		}
-
-		database.reset();
 
 		if (signal_checkins) {
 			while (queue->checkin_callbacks.call()) {};

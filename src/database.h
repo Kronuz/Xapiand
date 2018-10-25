@@ -414,6 +414,7 @@ public:
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 	bool incomplete;
+	bool closed;
 	std::set<std::size_t> fail_db;
 
 	std::unique_ptr<Xapian::Database> db;
@@ -442,6 +443,8 @@ public:
 
 	bool commit(bool wal_=true);
 	void cancel(bool wal_=true);
+
+	void close();
 
 	void delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
 	void delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
