@@ -221,11 +221,10 @@ public:
 	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
 };
 
-template <typename T>
 class DatabaseWAL::Iterator {
 	friend DatabaseWAL;
 
-	T* wal;
+	DatabaseWAL& wal;
 	std::pair<Xapian::rev, std::string> item;
 	uint32_t end_off;
 
@@ -236,7 +235,7 @@ public:
 	using pointer = std::pair<Xapian::rev, std::string>*;
 	using reference = std::pair<Xapian::rev, std::string>&;
 
-	Iterator(T* wal_, std::pair<Xapian::rev, std::string>&& item_, uint32_t end_off_)
+	Iterator(DatabaseWAL& wal_, std::pair<Xapian::rev, std::string>&& item_, uint32_t end_off_)
 		: wal(wal_),
 		  item(item_),
 		  end_off(end_off_) { }
@@ -293,32 +292,32 @@ public:
 
 
 inline DatabaseWAL::iterator DatabaseWAL::begin() {
-	return iterator(this, std::make_pair(0, std::string("")), 0);
+	return iterator(*this, std::make_pair(0, std::string("")), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::begin() const {
-	return const_iterator(this, std::make_pair(0, std::string("")), 0);
+	return const_iterator(*this, std::make_pair(0, std::string("")), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::cbegin() const {
-	return const_iterator(this, std::make_pair(0, std::string("")), 0);
+	return const_iterator(*this, std::make_pair(0, std::string("")), 0);
 }
 
 
 inline DatabaseWAL::iterator DatabaseWAL::end() {
-	return iterator(this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::end() const {
-	return const_iterator(this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::cend() const {
-	return const_iterator(this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
 }
 #endif /* XAPIAND_DATABASE_WAL */
 
