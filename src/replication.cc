@@ -321,7 +321,7 @@ Replication::reply_db_header(const std::string& message)
 	current_revision = unserialise_length(&p, p_end);
 
 	char switch_db_path[PATH_MAX];
-	snprintf(switch_db_path, PATH_MAX, "%s/:tmp.XXXXXX", endpoints[0].path.c_str());
+	snprintf(switch_db_path, PATH_MAX, "%s/.tmp.XXXXXX", endpoints[0].path.c_str());
 	if (io::mkdtemp(switch_db_path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", switch_db, io::strerrno(errno), errno, strerror(errno));
 		client.destroy();
@@ -330,6 +330,8 @@ Replication::reply_db_header(const std::string& message)
 	}
 
 	switch_db = switch_db_path;
+
+	L_REPLICATION("Replication::reply_db_header %s", repr(switch_db));
 }
 
 
@@ -349,7 +351,7 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 {
 	L_CALL("Replication::reply_db_filedata(<tmp_file>)");
 
-	L_REPLICATION("Replication::reply_db_filedata");
+	L_REPLICATION("Replication::reply_db_filedata %s -> %s", repr(tmp_file), repr(file_path));
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
@@ -396,7 +398,7 @@ Replication::reply_changeset(const std::string& message)
 		// DatabaseWAL wal(switch_db, nullptr);
 		// wal.write_line(line);  // TODO: Implement
 	} else {
-		// write changeset to WAL in ':tmp' directory (in switch_db)
+		// write changeset to WAL in '.tmp' directory (in switch_db)
 		// flags = DB_WRITABLE;
 		// lock_database lk_db(this);
 		// DatabaseWAL wal(endpoints[0].path, database.get());
