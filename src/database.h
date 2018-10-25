@@ -307,17 +307,17 @@ inline DatabaseWAL::const_iterator DatabaseWAL::cbegin() const {
 
 
 inline DatabaseWAL::iterator DatabaseWAL::end() {
-	return iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::end() const {
-	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
 }
 
 
 inline DatabaseWAL::const_iterator DatabaseWAL::cend() const {
-	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max(), ""), 0);
+	return const_iterator(*this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
 }
 #endif /* XAPIAND_DATABASE_WAL */
 

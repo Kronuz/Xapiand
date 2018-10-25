@@ -230,9 +230,7 @@ Replication::msg_get_changesets(const std::string& message)
 					serialise_string(wal_it->second)
 				);
 			}
-			if (wal_it->first != std::numeric_limits<Xapian::rev>::max()) {
-				from_revision = wal_it->first + 1;
-			}
+			from_revision = wal_it->first + 1;
 			lk_db.lock();
 			revision = db()->get_revision();
 			lk_db.unlock();

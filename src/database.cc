@@ -911,7 +911,7 @@ DatabaseWAL::get_current_line(uint32_t end_off)
 		return std::make_pair(revision, line);
 	}  catch (const StorageEOF& exc) { }
 
-	return std::make_pair(std::numeric_limits<Xapian::rev>::max(), "");
+	return std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, "");
 }
 
 #endif
