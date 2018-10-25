@@ -528,7 +528,7 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute(std::string_view line, bool unsafe)
+DatabaseWAL::execute(std::string_view line, bool wal_, bool unsafe)
 {
 	L_CALL("DatabaseWAL::execute(<line>, %s)", unsafe ? "true" : "false");
 
@@ -571,36 +571,36 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 	switch (type) {
 		case Type::ADD_DOCUMENT:
 			doc = Xapian::Document::unserialise(data);
-			database->add_document(doc, false, false);
+			database->add_document(doc, false, wal_);
 			break;
 		case Type::CANCEL:
-			database->cancel(false);
+			database->cancel(wal_);
 			modified = false;
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
-			database->delete_document_term(term, false, false);
+			database->delete_document_term(term, false, wal_);
 			break;
 		case Type::COMMIT:
-			database->commit(false);
+			database->commit(wal_);
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			doc = Xapian::Document::unserialise(std::string(p, p_end - p));
-			database->replace_document(did, doc, false, false);
+			database->replace_document(did, doc, false, wal_);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
-			database->replace_document_term(term, doc, false, false);
+			database->replace_document_term(term, doc, false, wal_);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {
 				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-				database->delete_document(did, false, false);
+				database->delete_document(did, false, wal_);
 			} catch (const NotFoundError& exc) {
 				if (!unsafe) {
 					throw;
@@ -610,15 +610,15 @@ DatabaseWAL::execute(std::string_view line, bool unsafe)
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length(&p, p_end, true);
-			database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, false);
+			database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			database->add_spelling(std::string(p, p_end - p), freq, false, false);
+			database->add_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		case Type::REMOVE_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			database->remove_spelling(std::string(p, p_end - p), freq, false, false);
+			database->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
