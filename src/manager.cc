@@ -373,7 +373,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		local_node_ = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
 	}
 
-	L_INFO("Node %s accepted to the party!", node_name);
 	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
 	#ifdef XAPIAND_CLUSTERING
