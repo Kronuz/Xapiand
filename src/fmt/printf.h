@@ -586,12 +586,14 @@ make_printf_args(const Args & ... args) {
 typedef basic_format_args<printf_context<internal::buffer>::type> printf_args;
 typedef basic_format_args<printf_context<internal::wbuffer>::type> wprintf_args;
 
-template <typename Char>
-inline std::basic_string<Char>
-vsprintf(basic_string_view<Char> format,
-         basic_format_args<typename printf_context<
-           internal::basic_buffer<Char>>::type> args) {
-  basic_memory_buffer<Char> buffer;
+inline std::string vsprintf(string_view format, printf_args args) {
+  memory_buffer buffer;
+  printf(buffer, format, args);
+  return to_string(buffer);
+}
+
+inline std::wstring vsprintf(wstring_view format, wprintf_args args) {
+  wmemory_buffer buffer;
   printf(buffer, format, args);
   return to_string(buffer);
 }
