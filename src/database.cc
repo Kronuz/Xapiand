@@ -2754,9 +2754,15 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 {
 	L_CALL("DatabasePool::switch_db(%s, %s)", repr(tmp), repr(endpoint_path));
 
-	std::shared_ptr<Database> database;
-	checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_SPAWN | DB_EXCLUSIVE);
-	database->close();
+	try {
+		std::shared_ptr<Database> database;
+		checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
+		database->close();
+	} catch (const Xapian::DatabaseOpeningError&) {
+		// Database has errors, but i'll get overwriten anyway, so ignore
+	} catch (const NotFoundError&) {
+		// Database still doesn't exist, just move files
+	}
 
 	move_files(tmp, endpoint_path);
 }
