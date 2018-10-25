@@ -27,7 +27,6 @@
 #include <functional>                       // for __base, function
 #include <regex>                            // for regex_iterator, match_res...
 #include <stdexcept>                        // for invalid_argument, range_e...
-#include <cstdlib>                          // for mkstemp
 #include <cstring>                          // for strerror, strcpy
 #include <errno.h>                          // for __error, errno
 #include <sysexits.h>                       // for EX_SOFTWARE
@@ -1537,8 +1536,9 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 			return;
 		}
 
-		char path[] = "/tmp/xapian_dump.XXXXXX";
-		int file_descriptor = mkstemp(path);
+		::mkdir(".tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		char path[] = ".tmp/xapian_dump.XXXXXX";
+		int file_descriptor = io::mkstemp(path);
 		try {
 			db_handler.dump_documents(file_descriptor);
 		} catch (...) {
@@ -1587,8 +1587,9 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	auto& decoded_body = request.decoded_body();
 	if (decoded_body.is_string()) {
-		char path[] = "/tmp/xapian_dump.XXXXXX";
-		int file_descriptor = mkstemp(path);
+		::mkdir(".tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		char path[] = ".tmp/xapian_dump.XXXXXX";
+		int file_descriptor = io::mkstemp(path);
 		try {
 			auto body = decoded_body.str_view();
 			io::write(file_descriptor, body.data(), body.size());
