@@ -353,12 +353,12 @@ namespace queue {
 	};
 
 	// A Queue with unique values
-	template<typename T>
-	class QueueSet : public Queue<T, std::list<T>> {
-		using Queue_t = Queue<T, std::list<T>>;
+	template<typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+	class QueueSet : public Queue<Key, std::list<Key>> {
+		using Queue_t = Queue<Key, std::list<Key>>;
 
 	protected:
-		std::unordered_map<T, typename std::list<T>::iterator> _items_map;
+		std::unordered_map<Key, typename std::list<Key>::iterator, Hash, KeyEqual> _items_map;
 
 		template<typename E>
 		bool _push(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
@@ -386,7 +386,7 @@ namespace queue {
 
 	public:
 		QueueSet(size_t hard_limit=-1, size_t soft_limit=-1, size_t threshold=-1)
-			: Queue<T, std::list<T>>(hard_limit, soft_limit, threshold) { }
+			: Queue<Key, std::list<Key>>(hard_limit, soft_limit, threshold) { }
 
 		template<typename E, typename OnDup>
 		bool push(E&& element, double timeout, OnDup on_dup) {
@@ -434,7 +434,7 @@ namespace queue {
 			return _push(std::forward<E>(element), timeout, lk);
 		}
 
-		bool pop(T& element, double timeout=-1.0) {
+		bool pop(Key& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(Queue_t::_state->_mutex);
 			bool popped = Queue_t::_pop_back_impl(element, timeout, lk);
 
@@ -481,7 +481,7 @@ namespace queue {
 			}
 		}
 
-		size_t erase(const T& key) {
+		size_t erase(const Key& key) {
 			std::lock_guard<std::mutex> lk(Queue_t::_state->_mutex);
 			auto it = _items_map.find(key);
 			if (it == _items_map.end()) {
