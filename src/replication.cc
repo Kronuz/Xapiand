@@ -295,7 +295,7 @@ Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
-	L_REPLICATION("Replication::reply_end_of_changes");
+	L_REPLICATION("Replication::reply_end_of_changes%s", switch_database_path.empty() ? " (switching database)" : "");
 
 	if (!switch_database_path.empty()) {
 		if (slave_database) {
@@ -392,8 +392,6 @@ Replication::reply_db_footer(const std::string& message)
 {
 	L_CALL("Replication::reply_db_footer(<message>)");
 
-	L_REPLICATION("Replication::reply_db_footer");
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t revision = unserialise_length(&p, p_end);
@@ -404,6 +402,8 @@ Replication::reply_db_footer(const std::string& message)
 		delete_files(switch_database_path.c_str());
 		switch_database_path.clear();
 	}
+
+	L_REPLICATION("Replication::reply_db_footer%s", revision != current_revision ? " (ignored files)" : "");
 }
 
 
@@ -412,7 +412,7 @@ Replication::reply_changeset(const std::string& line)
 {
 	L_CALL("Replication::reply_changeset(<line>)");
 
-	L_REPLICATION("Replication::reply_changeset");
+	L_REPLICATION("Replication::reply_changeset%s", slave_database ? "" : " (checking out slave database)");
 
 	if (!slave_database) {
 		if (!switch_database_path.empty()) {
