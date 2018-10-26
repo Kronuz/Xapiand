@@ -2594,7 +2594,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						}
 						return nullptr;
 					};
-					auto timeout_tp = std::chrono::system_clock::now() + 1s;
+					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
 					auto wq = has_locked_endpoints();
 					if (wq) {
 						database.reset();
@@ -2623,7 +2623,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						}
 						return true;
 					};
-					auto timeout_tp = std::chrono::system_clock::now() + 1s;
+					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
 					if (!queue->exclusive_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
 						THROW(TimeOutError, "Database is not available");
 					}
