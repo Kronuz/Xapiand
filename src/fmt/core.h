@@ -8,12 +8,13 @@
 #ifndef FMT_CORE_H_
 #define FMT_CORE_H_
 
-#include <cassert>
 #include <cstdio>  // std::FILE
 #include <cstring>
 #include <iterator>
 #include <string>
 #include <type_traits>
+
+#include "cassert.hh"
 
 // The fmt library version in the form major * 10000 + minor * 100 + patch.
 #define FMT_VERSION 50201

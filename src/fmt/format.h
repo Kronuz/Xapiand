@@ -29,13 +29,14 @@
 #define FMT_FORMAT_H_
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <stdexcept>
 #include <stdint.h>
+
+#include "cassert.hh"
 
 #ifdef __clang__
 # define FMT_CLANG_VERSION (__clang_major__ * 100 + __clang_minor__)
