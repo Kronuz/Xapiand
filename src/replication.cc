@@ -295,7 +295,7 @@ Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
-	L_REPLICATION("Replication::reply_end_of_changes%s", switch_database_path.empty() ? " (switching database)" : "");
+	L_REPLICATION("Replication::reply_end_of_changes%s%s", slave_database ? " (checking in slave database)" : "", !switch_database_path.empty() ? " (switching database)" : "");
 
 	if (!switch_database_path.empty()) {
 		if (slave_database) {
