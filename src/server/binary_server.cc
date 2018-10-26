@@ -28,6 +28,8 @@
 #include "binary_client.h"
 #include "endpoint.h"
 #include "ignore_unused.h"
+#include "readable_revents.hh"   // for readable_revents
+#include "repr.hh"               // for repr
 
 
 BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)

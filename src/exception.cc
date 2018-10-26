@@ -22,6 +22,8 @@
 
 #include "exception.h"
 
+#include "config.h"
+
 #include <cstdlib>            // for free
 #include <cstring>            // for strtok_r
 #include <cxxabi.h>           // for abi::__cxa_demangle
@@ -32,6 +34,8 @@
 #else
 static inline int backtrace(void**, int) { return 0; }
 #endif
+
+#include "likely.h"
 
 #define BUFFER_SIZE 1024
 

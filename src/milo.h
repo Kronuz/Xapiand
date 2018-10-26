@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -36,6 +35,8 @@
 #pragma intrinsic(_BitScanReverse64)
 #pragma intrinsic(_umul128)
 #endif
+
+#include "cassert.hh"
 
 namespace fmt {
 namespace internal {

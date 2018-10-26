@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <string>
 #include <memory>
 

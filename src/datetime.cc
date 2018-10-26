@@ -22,18 +22,22 @@
 
 #include "datetime.h"
 
-#include <cctype>           // for std::isdigit
-#include <cmath>            // for ceil
-#include <exception>        // for exception
-#include <stdexcept>        // for invalid_argument, out_of_range
-#include <cstdio>           // for snprintf
-#include "string_view.hh"   // for std::string_view
+#include <cctype>                // for std::isdigit
+#include <cmath>                 // for ceil
+#include <exception>             // for exception
+#include <stdexcept>             // for invalid_argument, out_of_range
+#include <cstdio>                // for snprintf
+#include "string_view.hh"        // for std::string_view
 
-#include "log.h"            // for L_ERR
-#include "msgpack.h"        // for MsgPack
-#include "utils.h"          // for stox
-#include "hashes.hh"        // for fnv1ah32
-#include "phf.hh"           // for phf
+#include "cassert.hh"            // for assert
+
+#include "hashes.hh"             // for fnv1ah32
+#include "log.h"                 // for L_ERR
+#include "msgpack.h"             // for MsgPack
+#include "phf.hh"                // for phf
+#include "repr.hh"               // for repr
+#include "strict_stox.hh"        // for strict_stoull
+
 
 constexpr const char RESERVED_YEAR[]                = "_year";
 constexpr const char RESERVED_MONTH[]               = "_month";

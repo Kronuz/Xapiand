@@ -40,7 +40,8 @@
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
 #include "ignore_unused.h"    // for ignore_unused
-#include "utils.h"            // for get_thread_name
+#include "thread.hh"          // for get_thread_name
+#include "time_point.hh"      // for time_point_to_ullong
 
 
 #define STACKED_INDENT "<indent>"

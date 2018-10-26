@@ -24,7 +24,7 @@
 
 #include "../src/geospatial/ewkt.h"
 #include "../src/log.h"
-#include "../src/fs.h"
+#include "../src/fs.hh"
 #include "utils.h"
 
 

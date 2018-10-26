@@ -29,7 +29,7 @@
 #include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_EV, L_OBJ, L_CALL, L_EV_BEGIN
 #include "manager.h"             // for XapiandManager, XapiandManager::manager
-#include "utils.h"               // for readable_revents
+#include "readable_revents.hh"   // for readable_revents
 
 
 std::atomic_int XapiandServer::total_clients(0);

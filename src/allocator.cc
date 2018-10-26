@@ -20,14 +20,13 @@
  * THE SOFTWARE.
  */
 
-#include "xapiand.h"
+#include "config.h"
 
 #include "allocator.h"
 
 #ifdef XAPIAND_TRACKED_MEM
 
 #include <atomic>         // for std::atomic_llong
-#include <cassert>        // for assert
 #include <cstdlib>        // for std::malloc, std::free
 #include <functional>     // for std::hash
 #include <mutex>          // for std::mutex

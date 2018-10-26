@@ -26,7 +26,9 @@
 #include <unordered_set>      // for unordered_set
 
 #include "datetime.h"         // for tm_t, timegm, to_tm_t
-#include "utils.h"            // for toUType
+#include "reversed.hh"        // for reversed
+#include "schema.h"           // for required_spc_t, FieldType, UnitTime
+#include "utype.hh"           // for toUType
 
 
 const char ctype_date    = required_spc_t::get_ctype(FieldType::DATE);
@@ -63,7 +65,7 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 {
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
-		switch ((UnitTime)acc) {
+		switch (static_cast<UnitTime>(acc)) {
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
@@ -189,7 +191,7 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 	auto it = acc_prefix.begin();
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
-		switch ((UnitTime)acc) {
+		switch (static_cast<UnitTime>(acc)) {
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
@@ -346,7 +348,7 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	if (pos < len) {
 		auto c_tm_s = tm_s;
 		auto c_tm_e = tm_e;
-		switch ((UnitTime)accuracy[pos]) {
+		switch (static_cast<UnitTime>(accuracy[pos])) {
 			case UnitTime::MILLENNIUM:
 				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
@@ -381,7 +383,7 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 
 	// If there is the needed accuracy.
 	if (pos > 0 && acc == accuracy[--pos]) {
-		switch ((UnitTime)accuracy[pos]) {
+		switch (static_cast<UnitTime>(accuracy[pos])) {
 			case UnitTime::MILLENNIUM:
 				query_needed = millennium(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;

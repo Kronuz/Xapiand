@@ -22,7 +22,7 @@
 
 #include "utils.h"
 
-#include "../src/fs.h"
+#include "../src/fs.hh"
 #include "../src/opts.h"
 #include "../src/hashes.hh"                 // for fnv1ah32
 

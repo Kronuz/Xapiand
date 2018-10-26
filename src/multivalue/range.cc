@@ -36,7 +36,6 @@
 #include "query_dsl.h"              // for QUERYDSL_FROM, QUERYDSL_TO
 #include "schema.h"                 // for required_spc_t, FieldType
 #include "serialise_list.h"         // for StringList
-#include "utils.h"                  // for stox
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>

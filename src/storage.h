@@ -22,16 +22,15 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <limits>                // for std::numeric_limits
 #include <memory>
 #include "string_view.hh"        // for std::string_view
 #include <unistd.h>
 
 #include "async_fsync.h"         // for AsyncFsync
-#include "fs.h"                  // for opendir, find_file_dir, closedir
-#include "io.h"                  // for io::*
+#include "fs.hh"                 // for opendir, find_file_dir, closedir
+#include "io.hh"                 // for io::*
+#include "likely.h"              // for likely, unlikely
 #include "logger.h"
 #include "lz4_compressor.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "strict_stox.hh"        // for strict_stoull

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"
 
 #include <list>
 #include <mutex>

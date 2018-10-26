@@ -22,13 +22,14 @@
 
 #pragma once
 
-#include "xapiand.h"      // for unlikely
+#include <stddef.h>               // for size_t, NULL
+#include <string>                 // for string
+#include "string_view.hh"         // for std::string_view
 
-#include <stddef.h>       // for size_t, NULL
-#include <string>         // for string
-#include "string_view.hh" // for std::string_view
+#include "cassert.hh"            // for assert
 
-#include "exception.h"    // for MSG_SerialisationError, SerialisationError
+#include "exception.h"           // for MSG_SerialisationError, SerialisationError
+#include "likely.h"              // for likely, unlikely
 
 
 /** Serialise a length as a variable-length string.

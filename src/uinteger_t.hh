@@ -40,7 +40,6 @@ to header-only and extended to arbitrary bit length.
 
 #include <vector>
 #include <string>
-#include <cassert>
 #include <utility>
 #include <cstring>
 #include <cstdint>
@@ -49,6 +48,8 @@ to header-only and extended to arbitrary bit length.
 #include <stdexcept>
 #include <functional>
 #include <type_traits>
+
+#include "cassert.hh"
 
 // Compatibility inlines
 #ifndef __has_builtin         // Optional of course

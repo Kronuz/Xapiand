@@ -28,7 +28,7 @@
 
 #include "stash.h"
 #include "threadpool.h"
-#include "xapiand.h"
+#include "time_point.hh"    // for time_point_to_ullong
 
 
 using namespace std::chrono_literals;

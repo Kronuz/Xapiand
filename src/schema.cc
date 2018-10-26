@@ -43,9 +43,11 @@
 #include "ignore_unused.h"                 // for ignore_unused
 #include "manager.h"                       // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"     // for integer, geo, date, positive
+#include "random.hh"                       // for random_int
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
+#include "string.hh"                       // for string::tolower
 #include "static_string.hh"                // for static_string
 
 #ifndef L_SCHEMA
@@ -4516,7 +4518,7 @@ Schema::validate_required_namespace_data()
 			}
 
 			if (!specification.flags.has_bool_term) {
-				specification.flags.bool_term = strhasupper(specification.meta_name);
+				specification.flags.bool_term = string::hasupper(specification.meta_name);
 				specification.flags.has_bool_term = specification.flags.bool_term;
 			}
 			specification.flags.concrete = true;
@@ -4709,7 +4711,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
-				const auto bool_term = strhasupper(specification.meta_name);
+				const auto bool_term = string::hasupper(specification.meta_name);
 				if (specification.flags.bool_term != bool_term) {
 					specification.flags.bool_term = bool_term;
 					mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
@@ -5263,7 +5265,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 		case FieldType::KEYWORD:
 			if (!field_spc.flags.bool_term) {
-				string::to_lower(serialise_val);
+				string::tolower(serialise_val);
 			}
 			/* FALLTHROUGH */
 

@@ -398,7 +398,7 @@ RAPIDJSON_NAMESPACE_END
           \ref RAPIDJSON_ERRORS APIs.
 */
 #ifndef RAPIDJSON_ASSERT
-#include <cassert>
+#include "cassert.hh"
 #define RAPIDJSON_ASSERT(x) assert(x)
 #endif // RAPIDJSON_ASSERT
 

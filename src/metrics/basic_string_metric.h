@@ -22,7 +22,10 @@
 
 #pragma once
 
-#include "utils.h"
+#include <string>                // for std::string
+#include <utility>               // for std::forward
+
+#include "string.hh"             // for string::upper
 
 
 /*

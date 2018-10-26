@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <memory>                 // for shared_ptr
 #include <string>                 // for string
 #include "string_view.hh"         // for std::string_view
@@ -34,7 +32,6 @@
 #include "msgpack.h"              // for MsgPack
 #include "schema.h"               // for Schema, FieldType, required_spc_t
 #include "multivalue/keymaker.h"  // for Multi_MultiValueKeyMaker"
-#include "utils.h"
 
 
 constexpr const char QUERYDSL_FROM[]   = "_from";

@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cstdint>                          // for int64_t, uint64_t
 #include <limits>                           // for numeric_limits
 #include <math.h>                           // for fmod
@@ -39,8 +37,8 @@
 
 #include "aggregation.h"                    // for Aggregation
 #include "msgpack.h"                        // for MsgPack, object::object, ...
-#include "multivalue/aggregation_metric.h"  // for AGGREGATION_INTERVAL, AGG...
-#include "multivalue/exception.h"           // for AggregationError, MSG_Agg...
+#include "aggregation_metric.h"             // for AGGREGATION_INTERVAL, AGG...
+#include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "serialise.h"                      // for _float
 #include "string.hh"                        // for string::format, string::Number
 #include "hashes.hh"                        // for xxh64

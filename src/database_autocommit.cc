@@ -30,6 +30,7 @@
 #include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "manager.h"           // for XapiandManager
 #include "string.hh"           // for string::from_delta
+#include "time_point.hh"       // for time_point_to_ullong
 
 
 std::mutex DatabaseAutocommit::statuses_mtx;

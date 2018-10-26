@@ -71,7 +71,7 @@ You can contact the author at :
 *  Debug
 **************************************/
 #if defined(LZ4_DEBUG) && (LZ4_DEBUG>=1)
-#  include <assert.h>
+#  include "cassert.hh"
 #else
 #  ifndef assert
 #    define assert(condition) ((void)0)

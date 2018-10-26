@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"               // for HAVE_CLOCK_GETTIME
+#include "config.h"                // for HAVE_CLOCK_GETTIME
 
 #include <sys/time.h>
 #include <time.h>                  // for clock_gettime, CLOCK_REALTIME

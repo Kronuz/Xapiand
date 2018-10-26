@@ -22,6 +22,8 @@
 
 #include "http.h"
 
+#include "config.h"             // for XAPIAND_HTTP_SERVERPORT, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION
+
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "endpoint.h"           // for Node, local_node
 #include "log.h"                // for L_OBJ

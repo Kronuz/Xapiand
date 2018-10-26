@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <atomic>        // for atomic_bool, atomic_int
 #include <memory>        // for shared_ptr, unique_ptr
 #include <string.h>      // for size_t, memcpy, strlen
@@ -31,8 +29,10 @@
 #include <sys/types.h>   // for ssize_t
 #include <time.h>        // for time_t
 
+#include "cassert.hh"    // for assert
+
 #include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
-#include "io.h"          // for io::*
+#include "io.hh"         // for io::*
 #include "queue.h"       // for Queue
 #include "worker.h"      // for Worker
 

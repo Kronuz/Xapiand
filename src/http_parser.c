@@ -31,6 +31,10 @@
 #include <string.h>          // for memset, memchr
 #include <limits.h>          // for ULLONG_MAX
 
+#include "cassert.hh"        // for assert
+
+#include "likely.h"          // for likely, unlikely
+
 
 #ifndef ULLONG_MAX
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */

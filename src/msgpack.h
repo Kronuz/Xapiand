@@ -22,12 +22,16 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"              // for XAPIAND_CHAISCRIPT
+
+#include "likely.h"              // for likely, unlikely
 
 #include <memory>
 #include <sstream>
 #include "string_view.hh"        // for std::string_view
 #include <unordered_map>         // for std::unordered_map
+
+#include "cassert.hh"            // for ASSERT
 
 #include "atomic_shared_ptr.h"
 #include "exception.h"

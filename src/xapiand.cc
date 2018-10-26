@@ -22,6 +22,8 @@
 
 #include "xapiand.h"
 
+#include "config.h"                  // for XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_UUID...
+
 #include <algorithm>                 // for min
 #include <chrono>                    // for system_clock, time_point
 #include <clocale>                   // for std::setlocale, LC_CTYPE
@@ -58,15 +60,16 @@
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
-#include "fs.h"                      // for build_path
+#include "fs.hh"                     // for build_path
 #include "hashes.hh"                 // for fnv1ah32
 #include "ignore_unused.h"           // for ignore_unused
-#include "io.h"                      // for io::close, io::open, io::write, io::strerrno
+#include "io.hh"                     // for io::close, io::open, io::write, io::strerrno
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for XapiandManager, XapiandM...
 #include "opts.h"                    // for opts_t
 #include "schema.h"                  // for default_spc
 #include "string.hh"                 // for string::format, string::center
+#include "system.hh"                 // for get_max_files_per_proc, get_open_files_system_wide
 #include "worker.h"                  // for Worker
 
 #if defined(__linux__) && !defined(__GLIBC__)

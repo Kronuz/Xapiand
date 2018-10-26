@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <stdio.h>              // for snprintf
 #include <time.h>               // for time_t
 #include <atomic>               // for atomic_int

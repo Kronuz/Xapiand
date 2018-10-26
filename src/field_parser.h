@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cstdio>           // for size_t
 #include <string>           // for string, allocator, operator+, basic_string
 #include "string_view.hh"   // for std::string_view

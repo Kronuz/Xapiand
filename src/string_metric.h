@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include "metrics/basic_string_metric.h"
 #include "metrics/jaccard.h"
 #include "metrics/jaro.h"

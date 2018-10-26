@@ -66,21 +66,26 @@
 #include "database_handler.h"                 // for DatabaseHandler
 #include "database_utils.h"                   // for RESERVED_TYPE, DB_NOWAL
 #include "endpoint.h"                         // for Endpoint
+#include "epoch.hh"                           // for epoch::now
 #include "ev/ev++.h"                          // for async, loop_ref (ptr only)
 #include "exception.h"                        // for Exit, ClientError, Excep...
 #include "hashes.hh"                          // for jump_consistent_hash
 #include "http_parser.h"                      // for http_method
 #include "ignore_unused.h"                    // for ignore_unused
-#include "io.h"                               // for close, open, read, write
+#include "io.hh"                              // for close, open, read, write
 #include "length.h"                           // for serialise_length
 #include "log.h"                              // for L_CALL, L_DEBUG
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "msgpack.h"                          // for MsgPack, object::object
+#include "namegen.h"                          // for name_generator
+#include "net.hh"                             // for fast_inet_ntop4
 #include "node.h"                             // for Node, local_node
+#include "readable_revents.hh"                // for readable_revents
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
 #include "server/http_server.h"               // for HttpServer
 #include "server/server.h"                    // for XapiandServer, XapiandSe...
+#include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
 #include "threadpool.h"                       // for ThreadPool
 #include "worker.h"                           // for Worker, enable_make_shared
 

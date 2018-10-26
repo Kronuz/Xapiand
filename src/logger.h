@@ -40,7 +40,6 @@
 
 #include "logger_fwd.h"
 #include "scheduler.h"
-#include "xapiand.h"
 
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)

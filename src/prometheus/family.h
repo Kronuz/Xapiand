@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <functional>
 #include <map>
 #include <memory>
@@ -9,6 +8,8 @@
 #include <numeric>
 #include <string>
 #include <unordered_map>
+
+#include "cassert.hh"
 
 #include "check_names.h"
 #include "collectable.h"

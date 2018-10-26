@@ -24,9 +24,10 @@
 
 #include <thread>
 
+#include "epoch.hh"             // for epoch::now
 #include "ignore_unused.h"
 #include "log.h"
-#include "utils.h"
+#include "readable_revents.hh"   // for readable_revents
 
 #undef L_CALL
 #define L_CALL L_NOTHING

@@ -30,13 +30,14 @@
 #ifndef STATIC_STRING_HH
 #define STATIC_STRING_HH
 
-#include <cassert>            // for assert
 #include <cstddef>            // for std::size_t
 #include <iostream>
 #include <string>             // for std::string
 #include "string_view.hh"     // for std::string_view
 #include <type_traits>
 #include <utility>
+
+#include "cassert.hh"         // for assert
 
 
 namespace static_string {

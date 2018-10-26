@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"
 
 #include <memory>                            // for shared_ptr, make_shared
 #include <stddef.h>                          // for size_t

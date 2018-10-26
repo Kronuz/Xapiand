@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include <atomic>	    // for std::atomic_bool
+#include <list>         // for list
+#include <memory>       // for shared_ptr, enable_shared_from_this
+#include <mutex>        // for mutex
+#include <string>	    // for string
+#include <vector>       // for vector
 
-#include <atomic>	 // for std::atomic_bool
-#include <list>      // for list
-#include <memory>    // for shared_ptr, enable_shared_from_this
-#include <mutex>     // for mutex
-#include <string>	 // for string
-#include <vector>    // for vector
+#include "cassert.hh"   // for assert
 
 #include "ev/ev++.h"
 

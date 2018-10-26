@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"                // for XAPIAND_CHAISCRIPT, XAPIAND_V8
 
 #include <array>                   // for array
 #include <future>                  // for future
@@ -44,7 +44,8 @@
 #include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
 #include "phf.hh"                  // for phf
-#include "utils.h"                 // for repr, toUType, string::lower
+#include "repr.hh"                 // for repr
+#include "utype.hh"                // for toUType
 
 
 enum class TypeIndex : uint8_t {

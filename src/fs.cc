@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "fs.h"
+#include "fs.hh"
 
 #include <fnmatch.h>             // for fnmatch
 #include <stdio.h>               // for rename
@@ -29,9 +29,10 @@
 #include <unistd.h>              // for rmdir
 #include <vector>                // for std::vector
 
-#include "io.h"                  // for io::*
+#include "io.hh"                 // for io::*
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "split.h"               // for Split
+#include "string.hh"             // for string::startswith, string::endswith
 #include "stringified.hh"        // for stringified
 
 

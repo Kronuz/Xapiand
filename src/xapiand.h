@@ -22,28 +22,6 @@
 
 #pragma once
 
-#include "config.h"
-
-#if defined(__cplusplus)
-#include <cassert>           // for assert
-#include <cstdio>            // for fprintf
-#else
-#include <assert.h>           // for assert
-#include <stdio.h>            // for fprintf
-#endif
-
-
-#define XAPIAND_CLUSTER_NAME         "Xapiand"
-#define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
-#define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
-#define XAPIAND_RAFT_GROUP           "224.2.2.89"   /* Gossip group */
-#define XAPIAND_RAFT_SERVERPORT      58880          /* Gossip port */
-#define XAPIAND_HTTP_SERVERPORT      8880           /* HTTP TCP port */
-#define XAPIAND_BINARY_SERVERPORT    8890           /* Binary TCP port */
-#ifndef XAPIAND_BINARY_PROXY
-#define XAPIAND_BINARY_PROXY         XAPIAND_BINARY_SERVERPORT
-#endif
-
 #define XAPIAND_PID_FILE             "xapiand.pid"
 #define XAPIAND_LOG_FILE             "xapiand.log"
 
@@ -58,45 +36,3 @@
 #define TASKS_SIZE               100     /* Client tasks threadpool's size. */
 #define CONCURRENCY_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE       10      /* Endpoints List's size. */
-#define SCRIPTS_CACHE_SIZE       100     /* Size of each script processor LRU. */
-
-#if !defined(_WIN32) && \
-	!defined(__linux__) && \
-	(defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)))
-#define XAPIAND_TCP_BACKLOG       -1      /* TCP listen backlog */
-#else
-#define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
-#endif
-
-
-#ifdef HAVE___BUILTIN_EXPECT
-#define likely(x) (__builtin_expect(!!(x), 1))
-#define unlikely(x) (__builtin_expect(!!(x), 0))
-#else
-#define likely(x) (x)
-#define unlikely(x) (x)
-#endif
-
-
-#ifdef XAPIAND_UUID_ENCODED
-	#define UUID_ENCODER (Base59::dubaluchk())
-#endif
-
-
-#ifdef XAPIAND_TRACEBACKS
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
-#ifdef __cplusplus
-}
-#endif // __cplusplus
-#define ASSERT(e) \
-	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
-#ifdef assert
-#undef assert
-#define assert ASSERT
-#endif // ASSERT
-#else // XAPIAND_TRACEBACKS
-#define ASSERT assert
-#endif // XAPIAND_TRACEBACKS

@@ -27,21 +27,26 @@
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
+#include "cuuid/uuid.h"                               // for UUID
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
-#include "cuuid/uuid.h"                               // for UUID
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
+#include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
+#include "repr.hh"                                    // for repr
 #include "schema.h"                                   // for FieldType, FieldType::KEYWORD, Fiel...
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "split.h"                                    // for Split
-#include "utils.h"                                    // for toUType, stox, repr
-#include "phf.hh"                                     // for phf
+#include "utype.hh"                                   // for toUType
 
 
 constexpr char UUID_SEPARATOR_LIST = ';';
+
+#ifdef XAPIAND_UUID_ENCODED
+#define UUID_ENCODER (Base59::dubaluchk())
+#endif
 
 
 bool

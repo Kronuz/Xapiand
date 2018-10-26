@@ -24,10 +24,17 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "cassert.hh"            // for assert
+
 #include "database_handler.h"
+#include "epoch.hh"              // for epoch::now
 #include "ignore_unused.h"
 #include "manager.h"
-#include "node.h"                             // for Node, local_node
+#include "namegen.h"             // for name_generator
+#include "node.h"                // for Node, local_node
+#include "readable_revents.hh"   // for readable_revents
+#include "repr.hh"               // for repr
+#include "utype.hh"              // for toUType
 
 
 // #undef L_DEBUG

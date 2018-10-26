@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
+#include "config.h"             // for XAPIAND_CLUSTERING
 
 #include <atomic>               // for std::atomic_size_t
 #include <cstddef>              // for size_t
@@ -39,7 +39,9 @@
 #include <vector>               // for std::vector
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "utils.h"              // for fast_inet_ntop4, string::lower
+#include "epoch.hh"             // for epoch::now
+#include "net.hh"               // for fast_inet_ntop4
+#include "string.hh"            // for string::lower
 
 
 constexpr double NODE_LIFESPAN = 120.0;

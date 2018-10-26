@@ -25,6 +25,8 @@
 #include <cstring>
 #include <string>
 
+#include "cassert.hh"
+
 
 size_t
 sortable_serialise_(long double value, char * buf)

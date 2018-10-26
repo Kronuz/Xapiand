@@ -22,11 +22,7 @@
 
 #pragma once
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
-
-#include "xapiand.h"
-#include "ignore_unused.h"       // for ignore_unused
+#include "config.h"              // for HAVE_PWRITE, HAVE_FSYNC
 
 #include <atomic>                // for std::atomic_bool
 #include <errno.h>               // for errno, EINTR
@@ -37,6 +33,11 @@
 #include <unistd.h>              // for off_t, ssize_t, close, lseek, unlink
 #include <type_traits>           // for std::forward
 
+#include "ignore_unused.h"       // for ignore_unused
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
 
 // Do not accept any file descriptor less than this value, in order to avoid
 // opening database file using file descriptors that are commonly used for

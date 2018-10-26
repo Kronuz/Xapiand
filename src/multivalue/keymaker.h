@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cfloat>                         // for DBL_MAX
 #include <cmath>                          // for fabs
 #include <cstdlib>                        // for llabs
@@ -35,12 +33,12 @@
 
 #include "database_utils.h"               // for query_field_t
 #include "datetime.h"                     // for timestamp
+#include "hashes.hh"                      // for fnv1ah32
 #include "phonetic.h"                     // for SoundexEnglish, SoundexFrench...
 #include "schema.h"                       // for required_spc_t, required_sp...
 #include "serialise_list.h"               // for StringList, ...
+#include "strict_stox.hh"                 // for strict_stoull
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
-#include "utils.h"                        // for stox
-#include "hashes.hh"                      // for fnv1ah32
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));

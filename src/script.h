@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
-
+#include "config.h"                // for XAPIAND_CHAISCRIPT, XAPIAND_V8
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 

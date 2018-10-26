@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
-
+#include "config.h"          // for XAPIAND_CHAISCRIPT
 
 #if XAPIAND_CHAISCRIPT
 

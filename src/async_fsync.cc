@@ -22,9 +22,10 @@
 
 #include "async_fsync.h"
 
-#include "io.h"         // for fsync, full_fsync
-#include "log.h"        // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "string.hh"    // for string::from_delta
+#include "io.hh"            // for fsync, full_fsync
+#include "log.h"            // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "string.hh"        // for string::from_delta
+#include "time_point.hh"    // for time_point_to_ullong
 
 
 std::mutex AsyncFsync::statuses_mtx;

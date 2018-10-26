@@ -1,7 +1,8 @@
 #include <algorithm>
-#include <cassert>
 #include <iterator>
 #include <numeric>
+
+#include "cassert.hh"
 
 #include "histogram.h"
 

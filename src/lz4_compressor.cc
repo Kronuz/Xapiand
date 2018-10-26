@@ -22,8 +22,10 @@
 
 #include "lz4_compressor.h"
 
-#include <cstdio>    // for SEEK_SET
-#include <cstring>   // for size_t, memcpy
+#include <cstdio>                // for SEEK_SET
+#include <cstring>               // for size_t, memcpy
+
+#include "likely.h"              // for likely, unlikely
 
 
 static void read_uint16(const void* blockStream, uint16_t* i) {

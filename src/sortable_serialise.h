@@ -20,8 +20,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <string>                // for std::string
 #include "string_view.hh"        // for std::string_view
 

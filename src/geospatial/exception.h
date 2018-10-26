@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../exception.h"
+#include "../exception.h"                   // for ClientError
 
 
 class GeoSpatialError : public ClientError {

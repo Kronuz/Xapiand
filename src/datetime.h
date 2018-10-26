@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <chrono>          // for system_clock, time_point
 #include <cmath>           // for std::round
 #include <ctime>           // for time_t

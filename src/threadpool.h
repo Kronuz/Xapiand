@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <atomic>         // for std::atomic
 #include <cstddef>        // for std::size_t
 #include <functional>     // for std::function
@@ -34,11 +32,15 @@
 #include <tuple>          // for std::make_tuple, std::apply
 #include <vector>         // for std::vector
 
+#include "cassert.hh"     // for assert
+
 #include "blocking_concurrent_queue.h"
 #include "exception.h"    // for Exception
+#include "likely.h"       // for likely, unlikely
 #include "log.h"          // for L_DEBUG, L_EXC, L_NOTHING
 #include "string.hh"      // for string::format
-#include "utils.h"        // for set_thread_name
+#include "thread.hh"      // for set_thread_name
+
 
 /* Since std::packaged_task cannot be copied, and std::function requires it can,
  * we add a dummy copy constructor to std::packaged_task. (We need to make sure

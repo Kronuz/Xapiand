@@ -22,12 +22,13 @@
 
 #include "msgpack_patcher.h"
 
-#include <exception>    // for exception
+#include <exception>             // for exception
 
-#include "exception.h"  // for ClientError, MSG_ClientError, Error, MSG_Error
-#include "utils.h"      // for repr, stox
-#include "hashes.hh"    // for fnv1ah32
-#include "phf.hh"       // for phf
+#include "exception.h"           // for ClientError, MSG_ClientError, Error, MSG_Error
+#include "hashes.hh"             // for fnv1ah32
+#include "phf.hh"                // for phf
+#include "repr.hh"               // for repr
+#include "strict_stox.hh"        // for strict_stoull
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {

@@ -20,12 +20,15 @@
  * THE SOFTWARE.
  */
 
-#include "io.h"
+#include "io.hh"
 
-#include <cstring>     // for strerror, size_t
+#include <cstring>               // for strerror, size_t
 
-#include "config.h"     // for HAVE_PWRITE, HAVE_FSYNC
-#include "log.h"        // for L_CALL, L_ERRNO
+#include "cassert.hh"            // for assert
+
+#include "likely.h"              // for likely, unlikely
+#include "log.h"                 // for L_CALL, L_ERRNO
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-statement-expression"

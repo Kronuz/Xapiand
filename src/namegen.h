@@ -71,8 +71,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <iosfwd>         // for wstring
 #include <memory>         // for unique_ptr
 #include <stack>          // for stack
@@ -267,3 +265,10 @@ public:
 
 std::wstring towstring(const std::string& s);
 std::string tostring(const std::wstring& s);
+
+
+// Custom name_generator()
+static inline std::string name_generator() {
+	static NameGen::Generator generator("!<s<v|V>(tia|nia|lia|cia|sia)|s<v|V>(os)|B<v|V>c(ios)|B<v|V><c|C>v(ios|os)>");
+	return generator.toString();
+}

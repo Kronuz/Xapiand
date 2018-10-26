@@ -24,17 +24,19 @@
 
 #include <cstring>           // for strncmp
 
-#include "utils.h"           // for hexdec
+#include "cassert.hh"        // for assert
+
+#include "chars.hh"          // for chars::hexdec
 #include "log.h"
 
 
 #ifndef L_URL_PARSER
-#define L_URL_PARSER_DEFINED
 #define L_URL_PARSER L_NOTHING
 #endif
 
 
 constexpr const char cmd_prefix = COMMAND_PREFIX[0];
+
 
 std::string
 urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
@@ -59,7 +61,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 				buf.push_back(eq);
 				break;
 			case '%': {
-				auto dec = hexdec(&q);
+				auto dec = chars::hexdec(&q);
 				if (dec != -1) {
 					c = dec; /* Reset c, try the special characters again */
 				}
@@ -648,11 +650,3 @@ PathParser::get_slc()
 	if (off_slc == nullptr) { return ""; }
 	return std::string_view(off_slc, len_slc);
 }
-
-
-
-
-#ifdef L_URL_PARSER_DEFINED
-#undef L_URL_PARSER_DEFINED
-#undef L_URL_PARSER
-#endif

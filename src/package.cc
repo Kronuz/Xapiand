@@ -22,7 +22,6 @@
 
 #include "package.h"
 #include "package_config.h"
-#include "xapiand.h"
 
 #ifndef PACKAGE_REVISION
 #define PACKAGE_REVISION ""

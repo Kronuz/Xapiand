@@ -24,9 +24,11 @@
 
 #include "soundex.h"
 
-#include <unordered_map>
+#include <string>                // for std::string
+#include <unordered_map>         // for std::unordered_map
+#include <utility>               // for std::forward
 
-#include "utils.h"
+#include "string.hh"             // for string::toupper
 
 
 static const std::unordered_map<std::string, std::string> german_accents({
@@ -63,7 +65,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 		replace(str, 0, german_accents);
 
 		// 2. Pass to upper case.
-		string::to_upper(str);
+		string::toupper(str);
 
 		// 3. Remove all non alphabetic characters at the begin.
 		auto it = str.begin();

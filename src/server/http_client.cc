@@ -22,6 +22,8 @@
 
 #include "http_client.h"
 
+#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
+
 #include <algorithm>                        // for move
 #include <exception>                        // for exception
 #include <functional>                       // for __base, function
@@ -45,11 +47,13 @@
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "cuuid/uuid.h"                     // for UUIDGenerator, UUID
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
+#include "epoch.hh"                         // for epoch::now
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
+#include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for fnv1ah32
 #include "http_server.h"                    // for HttpServer
-#include "io.h"                             // for close, write, unlink
+#include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_D...
 #include "manager.h"                        // for XapiandManager, XapiandMa...
 #include "msgpack.h"                        // for MsgPack, object::object, ...
@@ -104,6 +108,17 @@ static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\
 static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
 
 static const std::string eol("\r\n");
+
+
+bool is_range(std::string_view str) {
+	try {
+		FieldParser fieldparser(str);
+		fieldparser.parse();
+		return fieldparser.is_range();
+	} catch (const FieldParserError&) {
+		return false;
+	}
+}
 
 
 bool can_preview(const ct_type_t& ct_type) {
@@ -1746,7 +1761,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 	endpoints_maker(request, query_field.as_volatile);
 
-	bool single = !id.empty() && !isRange(id);
+	bool single = !id.empty() && !is_range(id);
 
 	MSet mset{};
 	MsgPack aggregations;

@@ -25,9 +25,8 @@
 
 #include "scheduler.h"
 
-#include "log.h"         // for L_*
-#include "utils.h"       // for time_point_to_ullong
-#include "string.hh"     // for string::format
+#include "log.h"            // for L_*
+#include "string.hh"        // for string::format
 
 
 // #define L_SCHEDULER L_COLLECT

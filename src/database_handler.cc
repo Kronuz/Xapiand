@@ -48,7 +48,7 @@
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
-#include "utils.h"                          // for repr
+#include "repr.hh"                          // for repr
 
 #if defined(XAPIAND_V8)
 #include "v8pp/v8pp.h"                      // for v8pp namespace

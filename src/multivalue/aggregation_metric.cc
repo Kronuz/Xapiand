@@ -24,8 +24,9 @@
 
 #include "msgpack/object_fwd.hpp"  // for type_error
 #include "multivalue/exception.h"  // for AggregationError, MSG_AggregationE...
+#include "repr.hh"                 // for repr
 #include "schema.h"                // for FieldType, required_spc_t, FieldTy...
-#include "utils.h"                 // for repr, toUType
+#include "utype.hh"                // for toUType
 
 
 static func_value_handle get_func_value_handle(FieldType type, std::string_view field_name) {

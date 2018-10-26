@@ -22,6 +22,8 @@
 
 #include "memory_stats.h"
 
+#include "config.h"
+
 #include "log.h"                 // for L_ERR
 
 #include <errno.h>               // for errno, strerror

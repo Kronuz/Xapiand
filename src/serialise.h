@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"                 // for XAPIAND_UUID_ENCODED, XAPIAND_UUID_GUID, XAPIAND_UUID_URN
 
 #include <string>                   // for std::string
 #include "string_view.hh"           // for std::string_view

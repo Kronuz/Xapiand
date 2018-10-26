@@ -23,13 +23,13 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cstddef>
 #include <cstdint>
 #include <list>
 #include <stdexcept>
 #include <unordered_map>
+
+#include "cassert.hh"
 
 
 namespace lru {

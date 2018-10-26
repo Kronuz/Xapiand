@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <stdexcept>    // for runtime_error
 #include <string>       // for string
 

@@ -22,7 +22,6 @@
 
 #include "field_parser.h"
 
-#include <cassert>
 #include <cstring>  // for memset
 #include <cctype>  // for isspace
 

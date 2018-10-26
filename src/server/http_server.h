@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <stdio.h>        // for snprintf
 #include <memory>         // for shared_ptr
 #include <string>         // for string

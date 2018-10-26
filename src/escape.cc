@@ -20,91 +20,9 @@
  * THE SOFTWARE.
  */
 
-#include "escape.h"
+#include "escape.hh"
 
-std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {
-	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
-	const auto* q = static_cast<const char *>(p);
-	const char *p_end = q + size;
-	const char *max_a = max_size != 0u ? q + (max_size * 2 / 3) : p_end + 1;
-	const char *max_b = max_size != 0u ? p_end - (max_size / 3) : q - 1;
-	if (max_size != 0u) {
-		size = ((max_a - q) + (p_end - max_b) - 1) * 4 + 2 + 3;  // Consider "\xNN", two quotes and '...'
-	} else {
-		size = size * 4 + 2;  // Consider "\xNN" and two quotes
-	}
-	std::string ret;
-	ret.resize(size);
-	char *buff = &ret[0];
-	char *d = buff;
-	if (quote == '\1') { quote = '\''; }
-	if (quote != '\0') { *d++ = quote; }
-	while (q != p_end) {
-		unsigned char c = *q++;
-		if (q >= max_a && q <= max_b) {
-			if (q == max_a) {
-				*d++ = '.';
-				*d++ = '.';
-				*d++ = '.';
-			}
-		} else if (friendly) {
-			switch (c) {
-				// case '\a':
-				// 	*d++ = '\\';
-				// 	*d++ = 'a';
-				// 	break;
-				// case '\b':
-				// 	*d++ = '\\';
-				// 	*d++ = 'b';
-				// 	break;
-				// case '\f':
-				// 	*d++ = '\\';
-				// 	*d++ = 'f';
-				// 	break;
-				// case '\v':
-				// 	*d++ = '\\';
-				// 	*d++ = 'v';
-				// 	break;
-				case '\n':
-					*d++ = '\\';
-					*d++ = 'n';
-					break;
-				case '\r':
-					*d++ = '\\';
-					*d++ = 'r';
-					break;
-				case '\t':
-					*d++ = '\\';
-					*d++ = 't';
-					break;
-				case '\\':
-					*d++ = '\\';
-					*d++ = '\\';
-					break;
-				default:
-					if (quote != '\0' && c == quote) {
-						*d++ = '\\';
-						*d++ = quote;
-					} else if (c < ' ' || c >= 0x7f) {
-						*d++ = '\\';
-						*d++ = 'x';
-						char_repr(c, &d);
-					} else {
-						*d++ = c;
-					}
-					break;
-			}
-		} else {
-			*d++ = '\\';
-			*d++ = 'x';
-			char_repr(c, &d);
-		}
-		// fprintf(stderr, "%02x: %ld < %ld\n", c, (unsigned long)(d - buff), (unsigned long)(size));
-	}
-	if (quote != '\0') { *d++ = quote; }
-	ret.resize(d - buff);
-	return ret;
-}
+#include "chars.hh"           // for chars::char_repr
 
 
 std::string escape(const void* p, size_t size, char quote) {
@@ -160,7 +78,7 @@ std::string escape(const void* p, size_t size, char quote) {
 				} else if (c < ' ' || c >= 0x7f) {
 					*d++ = '\\';
 					*d++ = 'x';
-					char_repr(c, &d);
+					chars::char_repr(c, &d);
 				} else {
 					*d++ = c;
 				}

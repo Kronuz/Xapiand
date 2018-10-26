@@ -28,8 +28,6 @@
 #include <sstream>
 #include <vector>
 
-#include "../src/utils.h"
-
 #include "../src/manager.h"
 struct Initializer {
 	Initializer();
@@ -78,6 +76,11 @@ inline void log(std::string fmt, Args&&... args) {
 #  define RETURN(x) { return x; }
 #  define INIT_LOG
 #endif
+
+template<typename T, std::size_t N>
+static inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
+	return N;
+}
 
 constexpr const char   TEST_CLUSTER_NAME[]  = "cluster_test";
 constexpr const char   TEST_NODE_NAME[]     = "node_test";

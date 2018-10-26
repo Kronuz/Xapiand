@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cmath>              // for M_PI
 #include <string>             // for string
 #include <xapian.h>           // for docid, valueno, Query, ValuePostingSource

@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"            // for XAPIAND_BINARY_SERVERPORT
-
 #include <unordered_set>        // for unordered_set
 #include <vector>               // for vector
 
@@ -69,12 +67,7 @@ public:
 	Endpoint();
 	Endpoint(std::string_view uri, const Node* node_=nullptr, std::string_view node_name_="");
 
-	bool is_local() const {
-		auto local_node_ = Node::local_node();
-		int binary_port = local_node_->binary_port;
-		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
-	}
+	bool is_local() const;
 
 	size_t hash() const;
 	std::string to_string() const;

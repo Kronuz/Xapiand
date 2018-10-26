@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <mutex>          // for mutex
 #include <unordered_map>  // for unordered_map
 

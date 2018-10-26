@@ -24,11 +24,17 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "cassert.hh"            // for assert
+
 #include "ignore_unused.h"
 #include "length.h"
 #include "log.h"
 #include "manager.h"
-#include "node.h"                             // for Node, local_node
+#include "node.h"                // for Node, local_node
+#include "readable_revents.hh"   // for readable_revents
+#include "repr.hh"               // for repr
+#include "random.hh"             // for random_real
+#include "utype.hh"              // for toUType
 
 
 // #undef L_DEBUG

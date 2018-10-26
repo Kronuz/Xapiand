@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include <cstring>          // for string and memcpy
-#include <stdlib.h>         // for malloc, free
-#include "string_view.hh"   // for std::string_view
-#include <zlib.h>           // for z_stream
+#include <cstring>               // for string and memcpy
+#include <stdlib.h>              // for malloc, free
+#include "string_view.hh"        // for std::string_view
+#include <zlib.h>                // for z_stream
 
-#include "exception.h"      // for Error
-#include "io.h"             // for close, open
-#include "stringified.hh"   // for stringified
+#include "exception.h"           // for Error
+#include "io.hh"                 // for close, open
+#include "stringified.hh"        // for stringified
+#include "likely.h"              // for likely, unlikely
+
 
 #define DEFLATE_BLOCK_SIZE 16384
 

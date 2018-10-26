@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"    // for XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION, XAPIAND_HTTP_PROTOCOL_MINOR_VERSION
 
 #include <stdio.h>     // for snprintf
 #include <memory>      // for shared_ptr

@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <atomic>
 #include <cerrno>
 #include <condition_variable>
@@ -32,6 +30,8 @@
 #include <list>
 #include <mutex>
 #include <unordered_map>
+
+#include "cassert.hh"
 
 
 namespace queue {

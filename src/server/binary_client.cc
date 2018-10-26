@@ -33,11 +33,12 @@
 #include "base_tcp.h"
 #include "binary_server.h"
 #include "database.h"
-#include "io.h"
+#include "io.hh"
 #include "length.h"
 #include "manager.h"
+#include "repr.hh"                 // for repr
 #include "server.h"
-#include "utils.h"
+#include "utype.hh"                // for toUType
 
 
 // #undef L_DEBUG

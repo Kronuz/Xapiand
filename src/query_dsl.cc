@@ -22,7 +22,10 @@
 
 #include "query_dsl.h"
 
+#include <strings.h>                           // for strncasecmp
 #include <utility>
+
+#include "cassert.hh"                          // for ASSERT
 
 #include "booleanParser/BooleanParser.h"       // for BooleanTree
 #include "booleanParser/LexicalException.h"    // for LexicalException
@@ -31,15 +34,15 @@
 #include "database_utils.h"                    // for prefixed, RESERVED_VALUE
 #include "exception.h"                         // for THROW, QueryDslError
 #include "field_parser.h"                      // for FieldParser
+#include "hashes.hh"                           // for fnv1ah32
 #include "log.h"                               // for L_CALL, L
+#include "modulus.hh"                          // for modulus
 #include "multivalue/generate_terms.h"         // for GenerateTerms
 #include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
 #include "multivalue/range.h"                  // for MultipleValueRange
+#include "repr.hh"                             // for repr
 #include "serialise.h"                         // for MsgPack, get_range_type...
-#include <strings.h>                           // for strncasecmp
-#include "utils.h"                             // for repr
 #include "string.hh"                           // for string::startswith
-#include "hashes.hh"                           // for fnv1ah32
 
 
 #ifndef L_QUERY

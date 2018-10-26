@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cstdint>           // for uint64_t
 #include <stddef.h>          // for size_t
 #include <string>            // for string
@@ -34,7 +32,7 @@
 
 #include "database_utils.h"  // for prefixed
 #include "geospatial/htm.h"  // for HTM_BITS_ID, range_t (ptr only)
-#include "schema.h"
+#include "modulus.hh"        // for modulus
 #include "serialise.h"       // for serialise
 
 

@@ -269,7 +269,33 @@
 #cmakedefine XAPIAND_UUID_GUID @XAPIAND_UUID_GUID@
 #cmakedefine XAPIAND_UUID_URN @XAPIAND_UUID_URN@
 
+
+////////////////////////////////////////////////////////////////////////////////
+
+#define XAPIAND_CLUSTER_NAME         "Xapiand"
+#define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
+#define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
+#define XAPIAND_RAFT_GROUP           "224.2.2.89"   /* Gossip group */
+#define XAPIAND_RAFT_SERVERPORT      58880          /* Gossip port */
+#define XAPIAND_HTTP_SERVERPORT      8880           /* HTTP TCP port */
+#define XAPIAND_BINARY_SERVERPORT    8890           /* Binary TCP port */
+#ifndef XAPIAND_BINARY_PROXY
+#define XAPIAND_BINARY_PROXY         XAPIAND_BINARY_SERVERPORT
+#endif
+
 /* Enable xxh static linking structures */
 #define XXH_STATIC_LINKING_ONLY 1
+
+/* Size of each script processor LRU. */
+#define SCRIPTS_CACHE_SIZE       100
+
+/* TCP listen backlog */
+#if !defined(_WIN32) && \
+	!defined(__linux__) && \
+	(defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)))
+#define XAPIAND_TCP_BACKLOG       -1
+#else
+#define XAPIAND_TCP_BACKLOG       511
+#endif
 
 #endif /*  _CONFIG_H_ */

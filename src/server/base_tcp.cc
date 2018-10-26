@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#include "config.h"                 // for HAVE_SYS_SYSCTL_H, XAPIAND_TCP_BACKLOG
+
 #include "base_tcp.h"
 
 #include <arpa/inet.h>              // for htonl, htons
@@ -36,7 +38,7 @@
 #endif
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
-#include "io.h"                     // for close, ignored_errno
+#include "io.hh"                    // for close, ignored_errno
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
 #include "manager.h"                // for sig_exit
 

@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <cstdio>
 #include <string>
 #include "string_view.hh"    // for std::string_view

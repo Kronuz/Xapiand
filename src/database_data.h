@@ -22,17 +22,14 @@
 
 #pragma once
 
-#include "xapiand.h"
-
-
 #include <string>
 #include "string_view.hh"
 #include <vector>                  // for std::vector
 
 #include "length.h"                // for serialise_length()
-#include "utils.h"                 // for toUType
-#include "string.hh"               // for string::*
 #include "msgpack.h"               // for MsgPack
+#include "string.hh"               // for string::*
+#include "utype.hh"                // for toUType
 
 
 constexpr int STORED_CONTENT_TYPE  = 0;

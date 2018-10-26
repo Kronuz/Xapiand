@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <netinet/in.h>  // for sockaddr_in
 #include <sys/types.h>   // for uint16_t
 #include <time.h>        // for time_t

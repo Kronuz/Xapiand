@@ -20,39 +20,24 @@
  * THE SOFTWARE.
  */
 
-#include "utils.h"
+#include "system.hh"
+
+#include "config.h"              // for HAVE_SYS_SYSCTL_H
 
 #include <array>                 // for std::array
-#include <algorithm>             // for equal, uniform_int_distribution
-#include <cstdint>               // for uint64_t
-#include <functional>            // for function, __base
-#include <memory>                // for allocator
-#include <mutex>                 // for std::mutex
-#include <netinet/in.h>          // for IPPROTO_TCP
-#include <netinet/tcp.h>         // for TCP_NOPUSH
-#include <random>                // for mt19937_64, random_device, uniform_r...
-#include <cstdio>                // for size_t
-#include <cstring>               // for strerror
-#include <string>                // for string, operator+, char_traits, basi...
 #include <fcntl.h>               // for O_CREAT, O_RDONLY, O_WRONLY
 #include <poll.h>                // for poll, pollfd, POLLNVAL
-#include <sys/resource.h>        // for rlimit, RLIMIT_NOFILE, getrl...
-#include <unistd.h>              // for ssize_t
-#include <unordered_map>         // for std::unordered_map
-
-#include "field_parser.h"        // for FieldParser, FieldParserError
-#include "io.h"                  // for io::open, io::read, io::setsockopt
-#include "log.h"                 // for L_ERR, L_WARNING, L_INFO
-#include "namegen.h"             // for Generator
-#include "stringified.hh"        // for stringified
-
-#ifdef HAVE_PTHREADS
-#include <pthread.h>             // for pthread_self
-#endif
+#include <sys/resource.h>        // for getrlimit, rlimit, RLIMIT_NOFILE...
+#include <unistd.h>              // for sysconf
 
 #ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>          // for sysctl, sysctlnametomib...
 #endif
+
+#include "io.hh"                 // for io::*
+#include "log.h"                 // for L_ERR, L_WARNING, L_INFO
+#include "likely.h"              // for likely, unlikely
+
 
 #ifndef OPEN_MAX
 #define OPEN_MAX 10240
@@ -82,118 +67,24 @@
 #define STATE_HST 5
 
 
-static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
-
-static std::unordered_map<std::thread::id, std::string> thread_names;
-static std::mutex thread_names_mutex;
-
-
-void set_thread_name(const std::string& name) {
-#if defined(HAVE_PTHREAD_SETNAME_NP) && defined(__linux__)
-	pthread_setname_np(pthread_self(), stringified(name).c_str());
-	// pthread_setname_np(pthread_self(), stringified(name).c_str(), nullptr);
-#elif defined(HAVE_PTHREAD_SETNAME_NP)
-	pthread_setname_np(stringified(name).c_str());
-#elif defined(HAVE_PTHREAD_SET_NAME_NP)
-	pthread_set_name_np(pthread_self(), stringified(name).c_str());
-#endif
-	std::lock_guard<std::mutex> lk(thread_names_mutex);
-	thread_names.emplace(std::piecewise_construct,
-		std::forward_as_tuple(std::this_thread::get_id()),
-		std::forward_as_tuple(name));
-}
-
-
-const std::string& get_thread_name(std::thread::id thread_id) {
-	std::lock_guard<std::mutex> lk(thread_names_mutex);
-	auto thread = thread_names.find(thread_id);
-	if (thread == thread_names.end()) {
-		static std::string _ = "???";
-		return _;
-	}
-	return thread->second;
-}
-
-
-const std::string& get_thread_name() {
-	return get_thread_name(std::this_thread::get_id());
-}
-
-
-double random_real(double initial, double last) {
-	std::uniform_real_distribution<double> distribution(initial, last);
-	return distribution(rng);  // Use rng as a generator
-}
-
-
-uint64_t random_int(uint64_t initial, uint64_t last) {
-	std::uniform_int_distribution<uint64_t> distribution(initial, last);
-	return distribution(rng);  // Use rng as a generator
-}
-
-
-std::string name_generator() {
-	static NameGen::Generator generator("!<s<v|V>(tia|nia|lia|cia|sia)|s<v|V>(os)|B<v|V>c(ios)|B<v|V><c|C>v(ios|os)>");
-	return generator.toString();
-}
-
-
-bool strhasupper(std::string_view str) {
-	for (const auto& c : str) {
-		if (isupper(c) != 0) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-
-bool isRange(std::string_view str) {
-	try {
-		FieldParser fieldparser(str);
-		fieldparser.parse();
-		return fieldparser.is_range();
-	} catch (const FieldParserError&) {
-		return false;
-	}
-}
-
-
-void _tcp_nopush(int sock, int optval) {
-#ifdef TCP_NOPUSH
-	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
-	}
-#endif
-
-#ifdef TCP_CORK
-	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
-	}
-#endif
-}
-
-
-size_t get_max_files_per_proc()
+std::size_t get_max_files_per_proc()
 {
-	size_t rlimit_max_files;
+	std::size_t rlimit_max_files;
 	struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) == -1) {
+    if (::getrlimit(RLIMIT_NOFILE, &rl) == -1) {
         rlimit_max_files = 2;
     } else {
-        rlimit_max_files = static_cast<size_t>(rl.rlim_cur);
+        rlimit_max_files = static_cast<std::size_t>(rl.rlim_cur);
     }
-	long sysconf_max_files = sysconf(_SC_OPEN_MAX);
-	if (sysconf_max_files == -1 || static_cast<size_t>(sysconf_max_files) < rlimit_max_files) {
+	long sysconf_max_files = ::sysconf(_SC_OPEN_MAX);
+	if (sysconf_max_files == -1 || static_cast<std::size_t>(sysconf_max_files) < rlimit_max_files) {
 		return rlimit_max_files;
 	}
 	return sysconf_max_files;
 }
 
 
-size_t get_open_max_fd()
+std::size_t get_open_max_fd()
 {
 #ifdef F_MAXFD
 	int fcntl_open_max = io::unchecked_fcntl(0, F_MAXFD);
@@ -205,22 +96,22 @@ size_t get_open_max_fd()
 }
 
 
-size_t get_open_files_per_proc()
+std::size_t get_open_files_per_proc()
 {
 	std::array<struct pollfd, OPEN_MAX> fds;
-	size_t open_max_fd = get_open_max_fd();
+	std::size_t open_max_fd = get_open_max_fd();
 	off_t off = 0;
-	size_t cnt = 0;
+	std::size_t cnt = 0;
 	while (open_max_fd) {
-		size_t nfds = (open_max_fd > OPEN_MAX) ? OPEN_MAX : open_max_fd;
-		for (size_t idx = 0; idx < nfds; ++idx) {
+		std::size_t nfds = (open_max_fd > OPEN_MAX) ? OPEN_MAX : open_max_fd;
+		for (std::size_t idx = 0; idx < nfds; ++idx) {
 			fds[idx].events = POLLSTANDARD;
 			fds[idx].revents = 0;
 			fds[idx].fd = idx + off;
 		}
 		int err = io::RetryAfterSignal(::poll, fds.data(), nfds, 0);
 		if likely(err != -1) {
-			for (size_t idx = 0; idx < nfds; ++idx) {
+			for (std::size_t idx = 0; idx < nfds; ++idx) {
 				if likely((fds[idx].revents & POLLNVAL) == 0) {
 					++cnt;
 					// char filePath[PATH_MAX];
@@ -239,9 +130,9 @@ size_t get_open_files_per_proc()
 }
 
 
-size_t get_open_files_system_wide()
+std::size_t get_open_files_system_wide()
 {
-	size_t max_files_per_proc = 0;
+	std::size_t max_files_per_proc = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_OPENFILES)

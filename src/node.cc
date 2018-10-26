@@ -22,14 +22,14 @@
 
 #include "endpoint.h"
 
-#include <cstdlib>          // for atoi
-#include <xapian.h>         // for SerialisationError
+#include <cstdlib>              // for atoi
+#include <xapian.h>             // for SerialisationError
 
-#include "length.h"         // for serialise_length, unserialise_length, ser...
+#include "length.h"             // for serialise_length, unserialise_length, ser...
 #include "log.h"
-#include "opts.h"           // for opts
-#include "serialise.h"      // for Serialise
-#include "string.hh"        // for string::Number
+#include "opts.h"               // for opts
+#include "serialise.h"          // for Serialise
+#include "string.hh"            // for string::Number
 
 
 #define L_NODE_NODES(args...)

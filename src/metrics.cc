@@ -27,7 +27,7 @@
 #include "prometheus/handler.h"               // for SerializeGet
 
 #include "package.h"                          // for Package::FULLVERSION Package::HASH
-#include "utils.h"                            // for check_compiler, check_OS
+#include "system.hh"                          // for check_compiler, check_OS
 
 
 Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)

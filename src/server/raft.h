@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"    // for XAPIAND_CLUSTERING
 
 
 #ifdef XAPIAND_CLUSTERING

@@ -22,11 +22,12 @@
 
 #include "ewkt.h"
 
-#include "../split.h"           // for Split
-#include "../utils.h"           // for toUType, repr
-#include "../hashes.hh"         // for fnv1ah32
-#include "../strict_stox.hh"    // for strict_sto*
-#include "../phf.hh"            // for phf
+#include "hashes.hh"         // for fnv1ah32
+#include "phf.hh"            // for phf
+#include "repr.hh"           // for repr
+#include "split.h"           // for Split
+#include "strict_stox.hh"    // for strict_sto*
+#include "utype.hh"          // for toUType
 
 
 inline Geometry::Type

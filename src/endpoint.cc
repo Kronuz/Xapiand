@@ -22,8 +22,11 @@
 
 #include "endpoint.h"
 
+#include "config.h"         // for XAPIAND_BINARY_SERVERPORT
+
 #include <xapian.h>         // for SerialisationError
 
+#include "fs.hh"            // for normalize_path
 #include "opts.h"           // for opts
 #include "serialise.h"      // for UUIDRepr, Serialise
 #include "string.hh"        // for string::Number
@@ -311,6 +314,16 @@ bool
 Endpoint::operator<(const Endpoint& other) const
 {
 	return hash() < other.hash();
+}
+
+
+bool
+Endpoint::is_local() const
+{
+	auto local_node_ = Node::local_node();
+	int binary_port = local_node_->binary_port;
+	if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
+	return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 }
 
 

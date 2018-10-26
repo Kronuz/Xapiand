@@ -36,11 +36,11 @@
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
-#include "escape.h"               // for repr
+#include "repr.hh"               // for repr
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
-#include "fs.h"                   // for move_files, exists, build_path_index
+#include "fs.hh"                  // for move_files, exists, build_path_index
 #include "ignore_unused.h"        // for ignore_unused
-#include "io.h"                   // for close, strerrno, write, open
+#include "io.hh"                  // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
 #include "log.h"                  // for L_OBJ, L_CALL
 #include "manager.h"              // for sig_exit

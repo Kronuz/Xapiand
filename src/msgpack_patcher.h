@@ -34,7 +34,7 @@
 #include "rapidjson/document.h"             // for GenericValue
 #include "rapidjson/encodings.h"            // for UTF8
 #include "rapidjson/pointer.h"              // for GenericPointer, GenericPo...
-#include "utils.h"                          // for stox
+#include "strict_stox.hh"                   // for strict_stoull
 
 
 constexpr const char PATCH_PATH[]                   = "path";

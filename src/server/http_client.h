@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "config.h"             // for XAPIAND_DATABASE_WAL
 
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, time_point, duration

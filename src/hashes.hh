@@ -30,7 +30,7 @@
 
 #include "lz4/xxhash.h"
 #include "static_string.hh"  // for static_string::
-#include "string.hh"         // for string::
+#include "chars.hh"          // for chars::tolower
 
 
 /*               _               _
@@ -174,7 +174,7 @@ struct case_sensitive {
 
 struct case_insensitive {
 	constexpr static char op(char c) {
-		return string::tolower(c);
+		return chars::tolower(c);
 	}
 };
 

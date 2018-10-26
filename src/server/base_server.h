@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <time.h>     // for time_t
 #include <memory>     // for shared_ptr
 

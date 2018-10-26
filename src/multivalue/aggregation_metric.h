@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include <algorithm>           // for nth_element, max_element
 #include <cfloat>              // for DBL_MAX
 #include <cmath>               // for sqrt
