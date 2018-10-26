@@ -267,7 +267,7 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 			try {
 				while (true) {
 					std::string line = read(end_off);
-					modified = execute(line, unsafe);
+					modified = execute(line, false, false, unsafe);
 				}
 			} catch (const StorageEOF& exc) { }
 		}
@@ -528,9 +528,9 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute(std::string_view line, bool wal_, bool unsafe)
+DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute(<line>, %s)", unsafe ? "true" : "false");
+	L_CALL("DatabaseWAL::execute(<line>, %s, %s, %s)", wal_ ? "true" : "false", send_update ? "true" : "false", unsafe ? "true" : "false");
 
 	const char *p = line.data();
 	const char *p_end = p + line.size();
@@ -583,7 +583,7 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool unsafe)
 			database->delete_document_term(term, false, wal_);
 			break;
 		case Type::COMMIT:
-			database->commit(wal_);
+			database->commit(wal_, send_update);
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
@@ -692,9 +692,9 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(Type type, std::string_view data)
+DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line(Type::%s, <data>)", names[toUType(type)]);
+	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s)", names[toUType(type)], send_update ? "true" : "false");
 	try {
 		assert(database->flags & DB_WRITABLE);
 		assert(!(database->flags & DB_NOWAL));
@@ -746,7 +746,7 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			// On COMMIT, add to updated databases queue so replicators do their job
-			if (type == Type::COMMIT) {
+			if (send_update) {
 				XapiandManager::manager->database_pool.updated_databases.push(DatabaseUpdate(endpoint, uuid, revision + 1));
 			}
 		}
@@ -768,7 +768,7 @@ DatabaseWAL::write_add_document(const Xapian::Document& doc)
 	L_CALL("DatabaseWAL::write_add_document(<doc>)");
 
 	auto line = doc.serialise();
-	write_line(Type::ADD_DOCUMENT, line);
+	write_line(Type::ADD_DOCUMENT, line, false);
 }
 
 
@@ -777,7 +777,7 @@ DatabaseWAL::write_cancel()
 {
 	L_CALL("DatabaseWAL::write_cancel()");
 
-	write_line(Type::CANCEL, "");
+	write_line(Type::CANCEL, "", false);
 }
 
 
@@ -787,16 +787,16 @@ DatabaseWAL::write_delete_document_term(std::string_view term)
 	L_CALL("DatabaseWAL::write_delete_document_term(<term>)");
 
 	auto line = serialise_string(term);
-	write_line(Type::DELETE_DOCUMENT_TERM, line);
+	write_line(Type::DELETE_DOCUMENT_TERM, line, false);
 }
 
 
 void
-DatabaseWAL::write_commit()
+DatabaseWAL::write_commit(bool send_update)
 {
-	L_CALL("DatabaseWAL::write_commit()");
+	L_CALL("DatabaseWAL::write_commit(%s)", send_update ? "true" : "false");
 
-	write_line(Type::COMMIT, "");
+	write_line(Type::COMMIT, "", send_update);
 }
 
 
@@ -807,7 +807,7 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 
 	auto line = serialise_length(did);
 	line.append(doc.serialise());
-	write_line(Type::REPLACE_DOCUMENT, line);
+	write_line(Type::REPLACE_DOCUMENT, line, false);
 }
 
 
@@ -818,7 +818,7 @@ DatabaseWAL::write_replace_document_term(std::string_view term, const Xapian::Do
 
 	auto line = serialise_string(term);
 	line.append(doc.serialise());
-	write_line(Type::REPLACE_DOCUMENT_TERM, line);
+	write_line(Type::REPLACE_DOCUMENT_TERM, line, false);
 }
 
 
@@ -828,7 +828,7 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 	L_CALL("DatabaseWAL::write_delete_document(<did>)");
 
 	auto line = serialise_length(did);
-	write_line(Type::DELETE_DOCUMENT, line);
+	write_line(Type::DELETE_DOCUMENT, line, false);
 }
 
 
@@ -839,7 +839,7 @@ DatabaseWAL::write_set_metadata(std::string_view key, std::string_view val)
 
 	auto line = serialise_string(key);
 	line.append(val);
-	write_line(Type::SET_METADATA, line);
+	write_line(Type::SET_METADATA, line, false);
 }
 
 
@@ -850,7 +850,7 @@ DatabaseWAL::write_add_spelling(std::string_view word, Xapian::termcount freqinc
 
 	auto line = serialise_length(freqinc);
 	line.append(word);
-	write_line(Type::ADD_SPELLING, line);
+	write_line(Type::ADD_SPELLING, line, false);
 }
 
 
@@ -861,7 +861,7 @@ DatabaseWAL::write_remove_spelling(std::string_view word, Xapian::termcount freq
 
 	auto line = serialise_length(freqdec);
 	line.append(word);
-	write_line(Type::REMOVE_SPELLING, line);
+	write_line(Type::REMOVE_SPELLING, line, false);
 }
 
 
@@ -1308,7 +1308,7 @@ Database::get_revision() const
 
 
 bool
-Database::commit(bool wal_)
+Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit(%s)", wal_ ? "true" : "false");
 
@@ -1358,7 +1358,7 @@ Database::commit(bool wal_)
 	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_commit(); }
+	if (wal_ && wal) { wal->write_commit(send_update); }
 #else
 	ignore_unused(wal_);
 #endif

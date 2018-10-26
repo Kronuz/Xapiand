@@ -423,7 +423,7 @@ Replication::reply_changeset(const std::string& line)
 		wal = std::make_unique<DatabaseWAL>(slave_database->endpoints[0].path, slave_database.get());
 	}
 
-	wal->execute(line, true);
+	wal->execute(line, true, false, false);
 }
 
 

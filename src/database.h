@@ -160,7 +160,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	MsgPack repr_line(std::string_view line, bool unserialised);
 	uint32_t highest_valid_slot();
 
-	inline bool open(std::string_view path, int flags, bool commit_eof=false) {
+	inline bool open(std::string_view path, int flags, bool commit_eof = false) {
 		return Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, reinterpret_cast<void*>(commit_eof));
 	}
 
@@ -196,12 +196,12 @@ public:
 	const UUID& uuid_le() const;
 
 	bool init_database();
-	bool execute(std::string_view line, bool wal_ = false, bool unsafe = false);
-	void write_line(Type type, std::string_view data);
+	bool execute(std::string_view line, bool wal_, bool send_update, bool unsafe);
+	void write_line(Type type, std::string_view data, bool send_update);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
 	void write_delete_document_term(std::string_view term);
-	void write_commit();
+	void write_commit(bool send_update);
 	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
 	void write_replace_document_term(std::string_view term, const Xapian::Document& doc);
 	void write_delete_document(Xapian::docid did);
@@ -399,26 +399,26 @@ public:
 	UUID get_uuid() const;
 	Xapian::rev get_revision() const;
 
-	bool commit(bool wal_=true);
-	void cancel(bool wal_=true);
+	bool commit(bool wal_ = true, bool send_update = true);
+	void cancel(bool wal_ = true);
 
 	void close();
 
-	void delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
-	void delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
-	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
-	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
-	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
+	void delete_document(Xapian::docid did, bool commit_ = false, bool wal_ = true);
+	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true);
+	Xapian::docid add_document(const Xapian::Document& doc, bool commit_ = false, bool wal_ = true);
+	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_ = false, bool wal_ = true);
+	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_ = false, bool wal_ = true);
 
-	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
-	void remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
+	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_ = false, bool wal_ = true);
+	void remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
 
 	Xapian::docid find_document(const std::string& term_id);
-	Xapian::Document get_document(const Xapian::docid& did, bool assume_valid_=false, bool pull_=false);
+	Xapian::Document get_document(const Xapian::docid& did, bool assume_valid_ = false, bool pull_ = false);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
-	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
+	void set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
 
 	void dump_metadata(int fd, XXH32_state_t* xxh_state);
 	void dump_documents(int fd, XXH32_state_t* xxh_state);
