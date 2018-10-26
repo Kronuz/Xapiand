@@ -39,7 +39,8 @@
 
 #include <stddef.h>
 #include <stdlib.h>
-#include <assert.h>
+
+#include "cassert.hh"
 
 #ifdef EV_EVENT_H
 # include EV_EVENT_H

@@ -178,7 +178,6 @@
 
 #include <stdio.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <time.h>
@@ -1847,6 +1846,8 @@ typedef struct
   static int ev_default_loop_ptr;
 
 #endif
+
+#include "cassert.hh"
 
 #if EV_FEATURE_API
 # define EV_RELEASE_CB if (expect_false (release_cb)) release_cb (EV_A)
