@@ -1551,8 +1551,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 			return;
 		}
 
-		::mkdir(".tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		char path[] = ".tmp/xapian_dump.XXXXXX";
+		char path[] = "/tmp/xapian_dump.XXXXXX";
 		int file_descriptor = io::mkstemp(path);
 		try {
 			db_handler.dump_documents(file_descriptor);
@@ -1602,8 +1601,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	auto& decoded_body = request.decoded_body();
 	if (decoded_body.is_string()) {
-		::mkdir(".tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		char path[] = ".tmp/xapian_dump.XXXXXX";
+		char path[] = "/tmp/xapian_dump.XXXXXX";
 		int file_descriptor = io::mkstemp(path);
 		try {
 			auto body = decoded_body.str_view();

@@ -105,6 +105,10 @@ BinaryClient::~BinaryClient()
 		io::unlink(filename.c_str());
 	}
 
+	if (!temp_directory.empty()) {
+		delete_files(temp_directory.c_str());
+	}
+
 	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
 
@@ -170,9 +174,12 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				break;
 			}
 			case FILE_FOLLOWS: {
-				::mkdir(".tmp", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 				char file_path[PATH_MAX];
-				strcpy(file_path, ".tmp/xapiand.XXXXXX");
+				if (temp_directory.empty()) {
+					strncpy(file_path, "/tmp/xapiand.XXXXXX", PATH_MAX);
+				} else {
+					strncpy(file_path, (temp_directory + "/xapiand.XXXXXX").c_str(), PATH_MAX);
+				}
 				file_descriptor = io::mkstemp(file_path);
 				temp_files.push_back(file_path);
 				file_message_type = *p++;
