@@ -2780,6 +2780,7 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 		// Database still doesn't exist, just move files
 	}
 
+	delete_files(endpoint_path);
 	move_files(tmp, endpoint_path);
 }
 
