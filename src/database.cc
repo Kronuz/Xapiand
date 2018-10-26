@@ -2562,8 +2562,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				} else {
 					// Lock until a database is available if it can't get one.
 					lk.unlock();
-					auto s = static_cast<int>(queue->pop(database, DB_TIMEOUT));
-					if (s == 0) {
+					if (!queue->pop(database, DB_TIMEOUT)) {
 						THROW(TimeOutError, "Database is not available");
 					}
 					lk.lock();
