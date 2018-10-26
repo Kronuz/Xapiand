@@ -893,7 +893,15 @@ DatabaseWAL::find(Xapian::rev revision)
 	auto high_slot = highest_valid_slot();
 	auto end_off = header.slot[high_slot];
 
-	seek(header.slot[revision - volume_traits]); /* putting us in revision position for get wal lines */
+	assert(volume_traits <= revision);
+
+	uint32_t start_off;
+	if (revision == volume_traits) {
+		start_off = STORAGE_START_BLOCK_OFFSET;
+	} else {
+		start_off = header.slot[(revision - volume_traits) - 1];
+	}
+	seek(start_off); /* putting us in revision position for get wal lines */
 	return iterator(this, get_current_line(end_off), end_off);
 }
 
