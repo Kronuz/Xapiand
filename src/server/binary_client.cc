@@ -200,7 +200,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 					detach();
 					return processed;
 				} else {
-					L_BINARY("Start reading file: %s (%d)", file_path, file_descriptor);
+					L_BINARY("Start reading file: %s (%d)", path, file_descriptor);
 				}
 				read_file();
 				processed += p - o;

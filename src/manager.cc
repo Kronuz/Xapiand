@@ -48,7 +48,6 @@
 #include <unistd.h>                           // for ssize_t, getpid
 #include <unordered_map>                      // for __hash_map_const_iterator
 #include <utility>                            // for pair
-#include <vector>                             // for vector
 #include <xapian.h>                           // for Error
 
 #if defined(XAPIAND_V8)
@@ -65,7 +64,6 @@
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
 #include "database_utils.h"                   // for RESERVED_TYPE, DB_NOWAL
-#include "endpoint.h"                         // for Endpoint
 #include "epoch.hh"                           // for epoch::now
 #include "ev/ev++.h"                          // for async, loop_ref (ptr only)
 #include "exception.h"                        // for Exit, ClientError, Excep...
@@ -79,7 +77,6 @@
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "namegen.h"                          // for name_generator
 #include "net.hh"                             // for fast_inet_ntop4
-#include "node.h"                             // for Node, local_node
 #include "readable_revents.hh"                // for readable_revents
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
@@ -845,34 +842,52 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 #endif
 
 
-Endpoint
-XapiandManager::resolve_index_endpoint(const std::string &path, bool master)
+std::vector<std::shared_ptr<const Node>>
+XapiandManager::resolve_index_nodes(std::string_view path)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint(%s, ...)", repr(path));
+	L_CALL("XapiandManager::resolve_index_nodes(%s)", repr(path));
+
+	std::vector<std::shared_ptr<const Node>> nodes;
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		auto indexed_nodes = Node::indexed_nodes();
-		if (!indexed_nodes) {
-			THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
-		}
-		size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
-		for (size_t replicas = master ? 1 : 3; replicas; --replicas) {
-			auto node = Node::get_node(consistent_hash + 1);
-			if (Node::is_active(node)) {
-				L_MANAGER("%zu: Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
-				return {path, node.get()};
+		if (indexed_nodes) {
+			size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
+			for (size_t replicas = 3; replicas; --replicas) {
+				auto node = Node::get_node(consistent_hash + 1);
+				assert(node);
+				nodes.push_back(node);
+				consistent_hash = (consistent_hash + 1) % indexed_nodes;
 			}
-			L_MANAGER("%zu: Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
-			consistent_hash = (consistent_hash + 1) % indexed_nodes;
 		}
-		THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
 	}
 	else
 #endif
 	{
-		return {path};
+		nodes.push_back(Node::local_node());
 	}
+
+	return nodes;
+}
+
+
+Endpoint
+XapiandManager::resolve_index_endpoint(std::string_view path, bool master)
+{
+	L_CALL("XapiandManager::resolve_index_endpoint(%s, %s)", repr(path), master ? "true" : "false");
+
+	for (const auto& node : resolve_index_nodes(path)) {
+		if (Node::is_active(node)) {
+			L_MANAGER("%zu: Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+			return {path, node.get()};
+		}
+		L_MANAGER("%zu: Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+		if (master) {
+			break;
+		}
+	}
+	THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
 }
 
 

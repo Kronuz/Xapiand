@@ -28,17 +28,20 @@
 #include <mutex>
 #include <regex>
 #include <unordered_map>
+#include <vector>                             // for std::vector
 
 #include "base_x.hh"
 #include "database.h"
+#include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"
 #include "length.h"
+#include "metrics.h"
+#include "node.h"                             // for Node, local_node
 #include "opts.h"
 #include "schemas_lru.h"
-#include "metrics.h"
+#include "serialise.h"
 #include "threadpool.h"
 #include "worker.h"
-#include "serialise.h"
 
 
 class Http;
@@ -179,7 +182,8 @@ public:
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
-	Endpoint resolve_index_endpoint(const std::string &path, bool master);
+	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);
+	Endpoint resolve_index_endpoint(std::string_view path, bool master);
 
 	std::string server_metrics();
 };
