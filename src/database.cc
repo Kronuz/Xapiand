@@ -1071,7 +1071,7 @@ Database::reopen_writable()
 				} catch (const Xapian::DatabaseOpeningError&) {
 					if (!exists(endpoint.path + "/iamglass")) {
 						if ((flags & DB_SPAWN) == 0) {
-							L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
+							// L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
 							THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
 						_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
@@ -1098,7 +1098,7 @@ Database::reopen_writable()
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
 				if ((flags & DB_SPAWN) == 0) {
-					L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
+					// L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
 					THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
 				_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
