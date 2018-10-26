@@ -33,8 +33,6 @@
 #endif
 
 
-#define XAPIAND_TAGLINE              "You Know, Also for Search"
-
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
 #define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
