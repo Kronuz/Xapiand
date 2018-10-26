@@ -102,11 +102,12 @@ inline void
 lock_database::_lock()
 {
 	if (lockable != nullptr) {
-		if constexpr (!internal) {
-			if (lockable->endpoints.empty()) {
+		if (lockable->endpoints.empty()) {
+			if constexpr (internal) {
 				// internal never throws, just ignores
-				THROW(Error, "lock_database cannot lock empty endpoints");
+				return;
 			}
+			THROW(Error, "lock_database cannot lock empty endpoints");
 		}
 		if (!lockable->_locked_database) {
 			assert(locks == 0 && lockable->_database_locks == 0);
