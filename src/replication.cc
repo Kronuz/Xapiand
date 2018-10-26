@@ -94,6 +94,8 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 	endpoints = Endpoints{dst_endpoint};
 	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 
+	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
+
 	return true;
 }
 
@@ -339,17 +341,16 @@ Replication::reply_db_header(const std::string& message)
 	current_uuid = unserialise_string(&p, p_end);
 	current_revision = unserialise_length(&p, p_end);
 
+	assert(switch_database_path.empty());
+
 	char path[PATH_MAX];
-	snprintf(path, PATH_MAX, "%s/.tmp.XXXXXX", endpoints[0].path.c_str());
+	strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 	if (io::mkdtemp(path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
 		client.destroy();
 		client.detach();
 		return;
 	}
-
-	assert(switch_database_path.empty());
-
 	switch_database_path = path;
 
 	L_REPLICATION("Replication::reply_db_header %s", repr(switch_database_path));

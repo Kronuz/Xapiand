@@ -66,6 +66,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
+	  temp_file_template("xapiand.XXXXXX"),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -174,17 +175,30 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				break;
 			}
 			case FILE_FOLLOWS: {
-				char file_path[PATH_MAX];
+				char path[PATH_MAX];
 				if (temp_directory.empty()) {
-					strncpy(file_path, "/tmp/xapiand.XXXXXX", PATH_MAX);
-				} else {
-					strncpy(file_path, (temp_directory + "/xapiand.XXXXXX").c_str(), PATH_MAX);
+					if (temp_directory_template.empty()) {
+						temp_directory = "/tmp";
+					} else {
+						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+						if (io::mkdtemp(path) == nullptr) {
+							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, io::strerrno(errno), errno, strerror(errno));
+							destroy();
+							detach();
+							return processed;
+						}
+						temp_directory = path;
+					}
 				}
-				file_descriptor = io::mkstemp(file_path);
-				temp_files.push_back(file_path);
+				strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
+				file_descriptor = io::mkstemp(path);
+				temp_files.push_back(path);
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
 					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
+					destroy();
+					detach();
+					return processed;
 				} else {
 					L_BINARY("Start reading file: %s (%d)", file_path, file_descriptor);
 				}

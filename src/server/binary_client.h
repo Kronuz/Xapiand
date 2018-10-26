@@ -73,6 +73,8 @@ class BinaryClient : public BaseClient {
 	int file_descriptor;
 	char file_message_type;
 	std::string temp_directory;
+	std::string temp_directory_template;
+	std::string temp_file_template;
 	std::vector<std::string> temp_files;
 
 	// Buffers that are pending write
