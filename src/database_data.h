@@ -123,7 +123,8 @@ struct Accept {
 	ct_type_t ct_type;
 	int indent;
 
-	Accept(int position, double priority, ct_type_t ct_type, int indent) : position(position), priority(priority), ct_type(ct_type), indent(indent) { }
+	Accept(int position, double priority, ct_type_t ct_type, int indent)
+		: position(position), priority(priority), ct_type(ct_type), indent(indent) { }
 };
 using accept_set_t = std::set<Accept, accept_preference_comp<Accept>>;
 
