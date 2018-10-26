@@ -22,18 +22,18 @@
 
 #include "http_server.h"
 
-#include <cstring>               // for strerror
+#include <cstring>                // for strerror
 #include <errno.h>                // for __error, errno
 #include <chrono>                 // for operator""ms
 #include <utility>
 
 #include "base_server.h"          // for BaseServer
-#include "http_client.h"          // for HttpClient
 #include "ev/ev++.h"              // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                 // for Http
+#include "http_client.h"          // for HttpClient
 #include "ignore_unused.h"        // for ignore_unused
+#include "io.h"                   // for ignored_errno
 #include "log.h"                  // for L_EV, L_OBJ, L_CALL, L_ERR
-#include "io_utils.h"             // for ignored_errno
 #include "utils.h"                // for readable_revents
 #include "worker.h"               // for Worker
 

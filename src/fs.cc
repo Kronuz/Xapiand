@@ -29,7 +29,7 @@
 #include <unistd.h>              // for rmdir
 #include <vector>                // for std::vector
 
-#include "io_utils.h"            // for io::*
+#include "io.h"                  // for io::*
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "split.h"               // for Split
 #include "stringified.hh"        // for stringified

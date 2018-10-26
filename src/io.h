@@ -19,11 +19,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+#pragma once
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-statement-expression"
-
-#ifndef IO_UTILS_H
-#define IO_UTILS_H
 
 #include "xapiand.h"
 #include "ignore_unused.h"       // for ignore_unused
@@ -323,5 +323,4 @@ static inline int fadvise(int fd, off_t, off_t, int) {
 
 } /* namespace io */
 
-#endif // IO_UTILS_H
 #pragma GCC diagnostic pop

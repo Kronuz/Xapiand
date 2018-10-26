@@ -61,7 +61,7 @@
 #include "fs.h"                      // for build_path
 #include "hashes.hh"                 // for fnv1ah32
 #include "ignore_unused.h"           // for ignore_unused
-#include "io_utils.h"                // for io::close, io::open, io::write, io::strerrno
+#include "io.h"                      // for io::close, io::open, io::write, io::strerrno
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
 #include "manager.h"                 // for XapiandManager, XapiandM...
 #include "opts.h"                    // for opts_t

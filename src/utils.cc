@@ -41,7 +41,7 @@
 #include <unordered_map>         // for std::unordered_map
 
 #include "field_parser.h"        // for FieldParser, FieldParserError
-#include "io_utils.h"            // for io::open, io::read, io::setsockopt
+#include "io.h"                  // for io::open, io::read, io::setsockopt
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "namegen.h"             // for Generator
 #include "stringified.hh"        // for stringified

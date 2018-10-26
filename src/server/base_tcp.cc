@@ -36,7 +36,7 @@
 #endif
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
-#include "io_utils.h"               // for close, ignored_errno
+#include "io.h"                     // for close, ignored_errno
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
 #include "manager.h"                // for sig_exit
 

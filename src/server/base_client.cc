@@ -33,16 +33,16 @@
 #include <type_traits>           // for remove_reference<>::type
 #include <xapian.h>              // for SerialisationError
 
+#include "base_server.h"         // for BaseServer
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "ignore_unused.h"       // for ignore_unused
-#include "io_utils.h"            // for read, close, lseek, write, ignored_errno
+#include "io.h"                  // for read, close, lseek, write, ignored_errno
 #include "length.h"              // for serialise_length, unserialise_length
 #include "log.h"                 // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
 #include "lz4/xxhash.h"          // for XXH32_createState, XXH32_digest, XXH...
 #include "lz4_compressor.h"      // for LZ4BlockStreaming<>::iterator, LZ4Co...
 #include "manager.h"             // for sig_exit
 #include "server.h"              // for XapiandServer, XapiandServer::max_to...
-#include "base_server.h"         // for BaseServer
 #include "utils.h"               // for readable_revents, repr
 
 

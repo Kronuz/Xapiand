@@ -40,7 +40,7 @@
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
 #include "fs.h"                   // for move_files, exists, build_path_index
 #include "ignore_unused.h"        // for ignore_unused
-#include "io_utils.h"             // for close, strerrno, write, open
+#include "io.h"                   // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
 #include "log.h"                  // for L_OBJ, L_CALL
 #include "manager.h"              // for sig_exit

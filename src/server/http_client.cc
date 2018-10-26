@@ -43,27 +43,27 @@
 #endif
 
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
+#include "cuuid/uuid.h"                     // for UUIDGenerator, UUID
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
-#include "cuuid/uuid.h"                     // for UUIDGenerator, UUID
-#include "io_utils.h"                       // for close, write, unlink
+#include "hashes.hh"                        // for fnv1ah32
+#include "http_server.h"                    // for HttpServer
+#include "io.h"                             // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_D...
 #include "manager.h"                        // for XapiandManager, XapiandMa...
 #include "msgpack.h"                        // for MsgPack, object::object, ...
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
 #include "opts.h"                           // for opts
+#include "package.h"                        // for Package
 #include "queue.h"                          // for Queue
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for boolean
 #include "server.h"                         // for XapiandServer, XapiandSer...
-#include "http_server.h"                    // for HttpServer
-#include "threadpool.h"                     // for ThreadPool
 #include "string.hh"                        // for string::from_delta
-#include "package.h"                        // for Package
-#include "hashes.hh"                        // for fnv1ah32
+#include "threadpool.h"                     // for ThreadPool
 
 
 #define QUERY_FIELD_COMMIT     (1 << 0)

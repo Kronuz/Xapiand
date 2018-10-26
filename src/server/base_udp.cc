@@ -31,11 +31,11 @@
 #include <sysexits.h>               // for EX_CONFIG
 
 #include "exception.h"              // for MSG_NetworkError, NetworkError
-#include "io_utils.h"               // for close, ignored_errno
+#include "io.h"                     // for close, ignored_errno
 #include "length.h"                 // for serialise_string, unserialise_string
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
-#include "opts.h"                   // for opts
 #include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
+#include "opts.h"                   // for opts
 
 
 UDP::UDP(int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)

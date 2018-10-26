@@ -28,7 +28,7 @@
 #include <cmath>        // for scalbn, frexp, HUGE_VAL
 #include <functional>   // for std::reference_wrapper
 
-#include "io_utils.h"   // for io::read and io::write
+#include "io.h"         // for io::read and io::write
 
 
 // The serialisation we use for doubles is inspired by a comp.lang.c post

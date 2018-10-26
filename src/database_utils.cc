@@ -32,7 +32,7 @@
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
 #include "exception.h"                               // for ClientError, MSG_ClientError
-#include "io_utils.h"                                // for close, open, read, write
+#include "io.h"                                      // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
 #include "log.h"                                     // for L_DATABASE
 #include "opts.h"                                    // for opts

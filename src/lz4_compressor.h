@@ -40,7 +40,7 @@
 #include <type_traits>      // for forward
 
 #include "exception.h"      // for Error
-#include "io_utils.h"       // for close, open
+#include "io.h"             // for close, open
 #include "lz4/lz4.h"        // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
 #include "lz4/xxhash.h"     // for XXH32_createState, XXH32_reset, XXH32_digest
 #include "stringified.hh"   // for stringified

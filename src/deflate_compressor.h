@@ -28,7 +28,7 @@
 #include <zlib.h>           // for z_stream
 
 #include "exception.h"      // for Error
-#include "io_utils.h"       // for close, open
+#include "io.h"             // for close, open
 #include "stringified.hh"   // for stringified
 
 #define DEFLATE_BLOCK_SIZE 16384

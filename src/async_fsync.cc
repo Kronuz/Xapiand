@@ -22,7 +22,7 @@
 
 #include "async_fsync.h"
 
-#include "io_utils.h"   // for fsync, full_fsync
+#include "io.h"         // for fsync, full_fsync
 #include "log.h"        // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "string.hh"    // for string::from_delta
 

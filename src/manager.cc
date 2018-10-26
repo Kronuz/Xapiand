@@ -24,11 +24,15 @@
 
 #include <algorithm>                          // for move
 #include <atomic>                             // for atomic, atomic_int
+#include <cctype>                             // for isspace
 #include <chrono>                             // for duration, system_clock
 #include <cstdint>                            // for uint64_t, UINT64_MAX
+#include <cstdlib>                            // for size_t, exit
+#include <cstring>                            // for strerror
 #include <ctime>                              // for time_t, ctime, NULL
-#include <cctype>                             // for isspace
+#include <errno.h>                            // for __error, errno
 #include <exception>                          // for exception
+#include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
 #include <functional>                         // for __base
 #include <ifaddrs.h>                          // for ifaddrs, freeifaddrs
 #include <memory>                             // for allocator, shared_ptr
@@ -36,12 +40,8 @@
 #include <net/if.h>                           // for IFF_LOOPBACK
 #include <netinet/in.h>                       // for sockaddr_in, INET_ADDRST...
 #include <regex>                              // for smatch, regex, operator|
-#include <cstdlib>                            // for size_t, exit
-#include <cstring>                            // for strerror
-#include <string>                             // for string, basic_string
-#include <errno.h>                            // for __error, errno
-#include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
 #include <signal.h>                           // for SIGTERM, SIGINT
+#include <string>                             // for string, basic_string
 #include <sys/socket.h>                       // for AF_INET, sockaddr
 #include <sys/types.h>                        // for uint64_t
 #include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT
@@ -71,7 +71,7 @@
 #include "hashes.hh"                          // for jump_consistent_hash
 #include "http_parser.h"                      // for http_method
 #include "ignore_unused.h"                    // for ignore_unused
-#include "io_utils.h"                         // for close, open, read, write
+#include "io.h"                               // for close, open, read, write
 #include "length.h"                           // for serialise_length
 #include "log.h"                              // for L_CALL, L_DEBUG
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
@@ -79,8 +79,8 @@
 #include "node.h"                             // for Node, local_node
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
-#include "server/server.h"                    // for XapiandServer, XapiandSe...
 #include "server/http_server.h"               // for HttpServer
+#include "server/server.h"                    // for XapiandServer, XapiandSe...
 #include "threadpool.h"                       // for ThreadPool
 #include "worker.h"                           // for Worker, enable_make_shared
 

@@ -30,9 +30,9 @@
 #include <unistd.h>
 
 #include "async_fsync.h"         // for AsyncFsync
-#include "io_utils.h"            // for io::*
-#include "logger.h"
 #include "fs.h"                  // for opendir, find_file_dir, closedir
+#include "io.h"                  // for io::*
+#include "logger.h"
 #include "lz4_compressor.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified

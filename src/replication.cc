@@ -25,7 +25,8 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "database_handler.h"
-#include "io_utils.h"
+#include "fs.h"                      // for delete_files
+#include "io.h"
 #include "length.h"
 #include "server/binary_client.h"
 
