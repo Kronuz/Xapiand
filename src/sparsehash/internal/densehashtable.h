@@ -90,7 +90,6 @@
 #define _DENSEHASHTABLE_H_
 
 #include <sparsehash/internal/sparseconfig.h>
-#include <assert.h>
 #include <stdio.h>              // for FILE, fwrite, fread
 #include <algorithm>            // For swap(), eg
 #include <iterator>             // For iterator tags
@@ -101,6 +100,8 @@
 #include <sparsehash/internal/libc_allocator_with_realloc.h>
 #include <sparsehash/type_traits.h>
 #include <stdexcept>                 // For length_error
+
+#include "cassert.hh"
 
 _START_GOOGLE_NAMESPACE_
 

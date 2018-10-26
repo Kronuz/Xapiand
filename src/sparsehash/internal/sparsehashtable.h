@@ -96,7 +96,6 @@
 #define _SPARSEHASHTABLE_H_
 
 #include <sparsehash/internal/sparseconfig.h>
-#include <assert.h>
 #include <algorithm>                 // For swap(), eg
 #include <iterator>                  // for iterator tags
 #include <limits>                    // for numeric_limits
@@ -105,6 +104,8 @@
 #include <sparsehash/internal/hashtable-common.h>
 #include <sparsehash/sparsetable>    // IWYU pragma: export
 #include <stdexcept>                 // For length_error
+
+#include "cassert.hh"
 
 _START_GOOGLE_NAMESPACE_
 

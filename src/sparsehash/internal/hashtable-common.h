@@ -41,11 +41,12 @@
 #define UTIL_GTL_HASHTABLE_COMMON_H_
 
 #include <sparsehash/internal/sparseconfig.h>
-#include <assert.h>
 #include <stdio.h>
 #include <stddef.h>                  // for size_t
 #include <iosfwd>
 #include <stdexcept>                 // For length_error
+
+#include "cassert.hh"
 
 _START_GOOGLE_NAMESPACE_
 
