@@ -344,7 +344,7 @@ Replication::reply_db_header(const std::string& message)
 	assert(switch_database_path.empty());
 
 	char path[PATH_MAX];
-	strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
 	if (io::mkdtemp(path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
 		client.destroy();
