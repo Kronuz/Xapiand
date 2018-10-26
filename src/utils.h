@@ -30,7 +30,6 @@
 #include <cmath>              // for std::log10, std::floor, std::pow
 #include <cstddef>            // for std::size_t
 #include <cstdint>            // for std::uint64_t, std::int32_t
-#include <dirent.h>           // for DIR
 #include <string>             // for std::string
 #include "string_view.hh"     // for std::string_view
 #include <thread>             // for std::thread, std::this_thread
@@ -40,21 +39,15 @@
 
 #include "ev/ev++.h"          // for ::EV_ASYNC, ::EV_CHECK, ::EV_CHILD, ::EV_EMBED
 #include "escape.h"           // for repr() and escape()
+
 #include "string.hh"
+#include "fs.h"
 
 // Reversed iterable
 template <typename T> struct reversion_wrapper { T& iterable; };
 template <typename T> auto begin (reversion_wrapper<T> w) { return std::rbegin(w.iterable); }
 template <typename T> auto end (reversion_wrapper<T> w) { return std::rend(w.iterable); }
 template <typename T> reversion_wrapper<T> reversed(T&& iterable) { return { iterable }; }
-
-struct File_ptr {
-	struct dirent *ent;
-
-	File_ptr()
-		: ent(nullptr) { }
-};
-
 
 // It'll return the enum's underlying type.
 template<typename E>
@@ -89,25 +82,9 @@ static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 
 std::string name_generator();
 
-char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
-char* normalize_path(std::string_view src, char* dst, bool slashed=false);
-std::string normalize_path(std::string_view src, bool slashed=false);
-int url_qs(const char *, const char *, std::size_t);
-
 bool strhasupper(std::string_view str);
 
 bool isRange(std::string_view str);
-
-void delete_files(std::string_view path);
-void move_files(std::string_view src, std::string_view dst);
-bool exists(std::string_view path);
-bool build_path(std::string_view path);
-bool build_path_index(std::string_view path_index);
-
-DIR* opendir(std::string_view path, bool create);
-void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix);
-// Copy all directory if file_name and new_name are empty
-int copy_file(std::string_view src, std::string_view dst, bool create=true, std::string_view file_name="", std::string_view new_name="");
 
 void _tcp_nopush(int sock, int optval);
 

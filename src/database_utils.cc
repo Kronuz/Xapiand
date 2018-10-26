@@ -24,7 +24,6 @@
 
 #include <algorithm>                                 // for count, replace
 #include <chrono>                                    // for seconds, duration_cast
-#include <ratio>                                     // for ratio
 #include <cstdio>                                    // for snprintf, size_t
 #include <cstring>                                   // for strlen
 #include <fcntl.h>                                   // for O_CLOEXEC, O_CREAT, O_RDONLY

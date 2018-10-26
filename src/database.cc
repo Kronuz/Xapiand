@@ -27,7 +27,6 @@
 #include <dirent.h>               // for closedir, DIR
 #include <iterator>               // for distance
 #include <limits>                 // for numeric_limits
-#include <ratio>                  // for ratio
 #include <utility>
 #include <strings.h>              // for strncasecmp
 #include <errno.h>                // for __error, errno

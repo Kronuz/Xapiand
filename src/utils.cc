@@ -26,38 +26,28 @@
 #include <algorithm>             // for equal, uniform_int_distribution
 #include <cstdint>               // for uint64_t
 #include <functional>            // for function, __base
-#include <cmath>                 // for powl, logl, floorl, roundl
 #include <memory>                // for allocator
 #include <mutex>                 // for std::mutex
 #include <netinet/in.h>          // for IPPROTO_TCP
 #include <netinet/tcp.h>         // for TCP_NOPUSH
 #include <random>                // for mt19937_64, random_device, uniform_r...
-#include <ratio>                 // for ratio
-#include <cstdio>                // for size_t, sprintf, remove, rename, snp...
-#include <cstring>               // for strerror, strcmp
+#include <cstdio>                // for size_t
+#include <cstring>               // for strerror
 #include <string>                // for string, operator+, char_traits, basi...
 #include <fcntl.h>               // for O_CREAT, O_RDONLY, O_WRONLY
 #include <poll.h>                // for poll, pollfd, POLLNVAL
-#include <sys/resource.h>        // for rlim_t, rlimit, RLIMIT_NOFILE, getrl...
-#include <sys/socket.h>          // for setsockopt
-#include <sys/stat.h>            // for mkdir, stat
-#include <sysexits.h>            // for EX_OSFILE
-#include <unistd.h>              // for close, rmdir, write, ssize_t
+#include <sys/resource.h>        // for rlimit, RLIMIT_NOFILE, getrl...
+#include <unistd.h>              // for ssize_t
 #include <unordered_map>         // for std::unordered_map
 
-#include "config.h"              // for HAVE_PTHREAD_GETNAME_NP, HAVE_PTHR...
-#include "exception.h"           // for Exit
 #include "field_parser.h"        // for FieldParser, FieldParserError
-#include "io_utils.h"            // for open, read
+#include "io_utils.h"            // for io::open, io::read, io::setsockopt
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "namegen.h"             // for Generator
 #include "stringified.hh"        // for stringified
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
-#ifdef HAVE_PTHREAD_NP_H
-#include <pthread_np.h>          // for pthread_getname_np
-#endif
 #endif
 
 #ifdef HAVE_SYS_SYSCTL_H
@@ -149,53 +139,6 @@ std::string name_generator() {
 }
 
 
-char* normalize_path(const char* src, const char* end, char* dst, bool slashed) {
-	int levels = 0;
-	char* ret = dst;
-	char ch = '\0';
-	while (*src != '\0' && src < end) {
-		ch = *src++;
-		if (ch == '.' && (levels != 0 || dst == ret || *(dst - 1) == '/' )) {
-			*dst++ = ch;
-			++levels;
-		} else if (ch == '/') {
-			while (levels != 0 && dst > ret) {
-				if (*--dst == '/') {
-					levels -= 1;
-				}
-			}
-			if (dst == ret || *(dst - 1) != '/') {
-				*dst++ = ch;
-			}
-		} else {
-			*dst++ = ch;
-			levels = 0;
-		}
-	}
-	if (slashed && ch != '/') {
-		*dst++ = '/';
-	}
-	*dst++ = '\0';
-	return ret;
-}
-
-
-char* normalize_path(std::string_view src, char* dst, bool slashed) {
-	size_t src_size = src.size();
-	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src_size, dst, slashed);
-}
-
-
-std::string normalize_path(std::string_view src, bool slashed) {
-	size_t src_size = src.size();
-	const char* src_str = src.data();
-	std::vector<char> dst;
-	dst.resize(src_size + 2);
-	return normalize_path(src_str, src_str + src_size, &dst[0], slashed);
-}
-
-
 bool strhasupper(std::string_view str) {
 	for (const auto& c : str) {
 		if (isupper(c) != 0) {
@@ -215,233 +158,6 @@ bool isRange(std::string_view str) {
 	} catch (const FieldParserError&) {
 		return false;
 	}
-}
-
-
-void delete_files(std::string_view path) {
-	stringified path_string(path);
-	DIR *dirp = ::opendir(path_string.c_str());
-	if (dirp == nullptr) {
-		return;
-	}
-
-	bool contains_folder = false;
-	struct dirent *ent;
-	while ((ent = ::readdir(dirp)) != nullptr) {
-		const char *s = ent->d_name;
-		if (ent->d_type == DT_DIR) {
-			if (s[0] == '.' && (s[1] == '\0' || (s[1] == '.' && s[2] == '\0'))) {
-				continue;
-			}
-			contains_folder = true;
-		}
-		if (ent->d_type == DT_REG) {
-			std::string file(path);
-			file.push_back('/');
-			file.append(ent->d_name);
-			if (::remove(file.c_str()) != 0) {
-				L_ERR("File %s could not be deleted", ent->d_name);
-			}
-		}
-	}
-
-	closedir(dirp);
-	if (!contains_folder) {
-		if (::rmdir(path_string.c_str()) != 0) {
-			L_ERR("Directory %s could not be deleted", path_string);
-		}
-	}
-}
-
-
-void move_files(std::string_view src, std::string_view dst) {
-	stringified src_string(src);
-	DIR *dirp = ::opendir(src_string.c_str());
-	if (dirp == nullptr) {
-		return;
-	}
-
-	struct dirent *ent;
-	while ((ent = ::readdir(dirp)) != nullptr) {
-		if (ent->d_type == DT_REG) {
-			std::string old_name(src);
-			old_name.push_back('/');
-			old_name.append(ent->d_name);
-			std::string new_name(dst);
-			new_name.push_back('/');
-			new_name.append(ent->d_name);
-			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
-				L_ERR("Couldn't rename %s to %s", old_name, new_name);
-			}
-		}
-	}
-
-	closedir(dirp);
-	if (::rmdir(src_string.c_str()) != 0) {
-		L_ERR("Directory %s could not be deleted", src_string);
-	}
-}
-
-
-bool exists(std::string_view path) {
-	struct stat buf;
-	return ::stat(stringified(path).c_str(), &buf) == 0;
-}
-
-
-bool build_path(std::string_view path) {
-	if (exists(path)) {
-		return true;
-	}
-	Split<char> directories(path, '/');
-	std::string dir;
-	dir.reserve(path.size());
-	if (path.front() == '/') {
-		dir.push_back('/');
-	}
-	for (const auto& _dir : directories) {
-		dir.append(_dir).push_back('/');
-		if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
-			return false;
-		}
-	}
-	return true;
-}
-
-
-bool build_path_index(std::string_view path_index) {
-	size_t found = path_index.find_last_of('/');
-	if (found == std::string_view::npos) {
-		return build_path(path_index);
-	}
-	return build_path(path_index.substr(0, found));
-}
-
-
-DIR* opendir(std::string_view path, bool create) {
-	stringified path_string(path);
-	DIR* dirp = ::opendir(path_string.c_str());
-	if (dirp == nullptr && errno == ENOENT && create) {
-		if (::mkdir(path_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
-			dirp = ::opendir(path_string.c_str());
-		}
-	}
-	return dirp;
-}
-
-
-void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix) {
-	bool(*match_pattern)(std::string_view, std::string_view);
-	if (pre_suf_fix) {
-		match_pattern = string::startswith;
-	} else {
-		match_pattern = string::endswith;
-	}
-
-	if (fptr.ent != nullptr) {
-#if defined(__APPLE__) && defined(__MACH__)
-		seekdir(dir, fptr.ent->d_seekoff);
-#elif defined(__FreeBSD__)
-		seekdir(dir, telldir(dir));
-#else
-		seekdir(dir, fptr.ent->d_off);
-#endif
-	}
-
-	while ((fptr.ent = ::readdir(dir)) != nullptr) {
-		if (fptr.ent->d_type == DT_REG) {
-			std::string_view filename(fptr.ent->d_name);
-			if (match_pattern(filename, pattern)) {
-				return;
-			}
-		}
-	}
-}
-
-
-int copy_file(std::string_view src, std::string_view dst, bool create, std::string_view file_name, std::string_view new_name) {
-	stringified src_string(src);
-	DIR* dir_src = ::opendir(src_string.c_str());
-	if (dir_src == nullptr) {
-		L_ERR("ERROR: couldn't open directory %s: %s", strerror(errno));
-		return -1;
-	}
-
-	struct stat buf;
-	stringified dst_string(dst);
-	int err = ::stat(dst_string.c_str(), &buf);
-
-	if (err == -1) {
-		if (ENOENT == errno && create) {
-			if (::mkdir(dst_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s: %s", dst_string, strerror(errno));
-				return -1;
-			}
-		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s: %s", dst_string, strerror(errno));
-			return -1;
-		}
-	}
-
-	bool ended = false;
-	struct dirent *ent;
-	unsigned char buffer[4096];
-
-	while ((ent = ::readdir(dir_src)) != nullptr and not ended) {
-		if (ent->d_type == DT_REG) {
-
-			if (not file_name.empty()) {
-				if (file_name == ent->d_name) {
-					ended = true;
-				} else {
-					continue;
-				}
-			}
-
-			std::string src_path(src);
-			src_path.push_back('/');
-			src_path.append(ent->d_name);
-			std::string dst_path(dst);
-			dst_path.push_back('/');
-			if (new_name.empty()) {
-				dst_path.append(ent->d_name);
-			} else {
-				dst_path.append(new_name.data(), new_name.size());
-			}
-
-			int src_fd = io::open(src_path.c_str(), O_RDONLY);
-			if (src_fd == -1) {
-				L_ERR("ERROR: opening file. %s\n", src_path);
-				return -1;
-			}
-
-			int dst_fd = io::open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
-			if (src_fd == -1) {
-				L_ERR("ERROR: opening file. %s\n", dst_path);
-				return -1;
-			}
-
-			while (true) {
-				ssize_t bytes = io::read(src_fd, buffer, 4096);
-				if (bytes == -1) {
-					L_ERR("ERROR: reading file. %s: %s\n", src_path, strerror(errno));
-					return -1;
-				}
-
-				if (bytes == 0) { break; }
-
-				bytes = io::write(dst_fd, buffer, bytes);
-				if (bytes == -1) {
-					L_ERR("ERROR: writing file. %s: %s\n", dst_path, strerror(errno));
-					return -1;
-				}
-			}
-			io::close(src_fd);
-			io::close(dst_fd);
-		}
-	}
-	closedir(dir_src);
-	return 0;
 }
 
 

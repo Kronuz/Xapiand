@@ -28,7 +28,6 @@
 #include <chrono>               // for system_clock, time_point, duration
 #include <memory>               // for shared_ptr, unique_ptr
 #include <mutex>                // for mutex, lock_guard
-#include <ratio>                // for milli
 #include <set>                  // for set
 #include <stdio.h>              // for size_t, snprintf
 #include <string>               // for string, operator==

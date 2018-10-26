@@ -24,7 +24,7 @@
 
 #include "colors.h"
 
-#include <cmath>              // for std::log, std::floorl, std::pow
+#include <cmath>              // for std::log, std::pow
 
 
 static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* prefix, const char* const units[], const long double scaling[], const char* const colors[], long double rounding) {

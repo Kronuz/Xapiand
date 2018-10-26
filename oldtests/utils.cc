@@ -21,6 +21,8 @@
  */
 
 #include "utils.h"
+
+#include "../src/fs.h"
 #include "../src/opts.h"
 #include "../src/hashes.hh"                 // for fnv1ah32
 

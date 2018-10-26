@@ -25,7 +25,6 @@
 #include <cstring>               // for strerror
 #include <errno.h>                // for __error, errno
 #include <chrono>                 // for operator""ms
-#include <ratio>                  // for ratio
 #include <utility>
 
 #include "base_server.h"          // for BaseServer

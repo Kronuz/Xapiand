@@ -24,7 +24,6 @@
 
 #include <algorithm>             // for move
 #include <chrono>                // for operator""ms
-#include <ratio>                 // for ratio
 #include <type_traits>           // for remove_reference<>::type
 
 #include "ignore_unused.h"       // for ignore_unused

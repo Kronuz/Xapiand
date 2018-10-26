@@ -26,7 +26,6 @@
 #include <chrono>                // for operator""ms
 #include <exception>             // for exception
 #include <memory>                // for shared_ptr, unique_ptr, default_delete
-#include <ratio>                 // for ratio
 #include <cstdio>                // for SEEK_SET
 #include <errno.h>               // for __error, errno, ECONNRESET
 #include <sys/socket.h>          // for shutdown, SHUT_RDWR

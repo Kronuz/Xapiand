@@ -35,7 +35,6 @@
 #include <mutex>                              // for mutex, lock_guard, uniqu...
 #include <net/if.h>                           // for IFF_LOOPBACK
 #include <netinet/in.h>                       // for sockaddr_in, INET_ADDRST...
-#include <ratio>                              // for milli
 #include <regex>                              // for smatch, regex, operator|
 #include <cstdlib>                            // for size_t, exit
 #include <cstring>                            // for strerror

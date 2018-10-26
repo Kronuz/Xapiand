@@ -40,7 +40,7 @@
 #include <fcntl.h>                   // for O_RDWR, O_CREAT
 #include <sys/resource.h>            // for rlimit
 #include <signal.h>                  // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
-#include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_O...
+#include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_OSFILE
 #include <thread>                    // for thread
 #include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
 #include <vector>                    // for vector
