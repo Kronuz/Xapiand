@@ -22,17 +22,17 @@
 
 #include "fs.h"
 
-#include <vector>                // for std::vector
+#include <fnmatch.h>             // for fnmatch
 #include <stdio.h>               // for rename
 #include <string>                // for std::string
 #include <sys/stat.h>            // for stat, mkdir
 #include <unistd.h>              // for rmdir
-#include <fnmatch.h>             // for fnmatch
+#include <vector>                // for std::vector
 
+#include "io_utils.h"            // for io::*
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
 #include "split.h"               // for Split
 #include "stringified.hh"        // for stringified
-#include "io_utils.h"            // for io::*
 
 
 void delete_files(std::string_view path, std::string_view pattern) {

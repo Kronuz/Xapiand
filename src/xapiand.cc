@@ -58,6 +58,8 @@
 #include "endpoint.h"                // for Endpoint, Endpoint::cwd
 #include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"               // for Exit
+#include "fs.h"                      // for build_path
+#include "hashes.hh"                 // for fnv1ah32
 #include "ignore_unused.h"           // for ignore_unused
 #include "io_utils.h"                // for io::close, io::open, io::write, io::strerrno
 #include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
@@ -66,7 +68,6 @@
 #include "schema.h"                  // for default_spc
 #include "string.hh"                 // for string::format, string::center
 #include "worker.h"                  // for Worker
-#include "hashes.hh"                 // for fnv1ah32
 
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np

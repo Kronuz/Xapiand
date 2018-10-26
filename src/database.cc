@@ -36,7 +36,9 @@
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
+#include "escape.h"               // for repr
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
+#include "fs.h"                   // for move_files, exists, build_path_index
 #include "ignore_unused.h"        // for ignore_unused
 #include "io_utils.h"             // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
@@ -48,7 +50,6 @@
 #include "schema.h"               // for FieldType, FieldType::KEYWORD
 #include "serialise.h"            // for uuid
 #include "string.hh"              // for string::from_delta
-#include "utils.h"                // for repr, to_string, File_ptr, find_fil...
 
 
 // #undef L_DEBUG

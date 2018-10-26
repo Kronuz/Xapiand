@@ -24,16 +24,17 @@
 
 #include "xapiand.h"
 
-#include <limits>
+#include <limits>                // for std::numeric_limits
 #include <memory>
 #include "string_view.hh"        // for std::string_view
 #include <unistd.h>
 
-#include "async_fsync.h"
-#include "io_utils.h"
+#include "async_fsync.h"         // for AsyncFsync
+#include "io_utils.h"            // for io::*
 #include "logger.h"
-#include "lz4_compressor.h"
-#include "strict_stox.hh"
+#include "fs.h"                  // for opendir, find_file_dir, closedir
+#include "lz4_compressor.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
+#include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified
 
 
@@ -849,7 +850,7 @@ public:
 		// Figure out highest and lowest volume files available for a given file pattern
 		L_CALL("Storage::get_volumes_range()");
 
-		DIR *dir = opendir(base_path.c_str(), false);
+		DIR *dir = opendir(base_path, false);
 		if (dir == nullptr) {
 			THROW(NotFoundError, "Could not open the dir (%s)", strerror(errno));
 		}
