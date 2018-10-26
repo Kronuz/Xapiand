@@ -702,9 +702,11 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 		auto endpoint = database->endpoints[0];
 		assert(endpoint.is_local());
 
+		std::string uuid;
 		auto revision = database->get_revision();
 		if (type == Type::COMMIT) {
 			--revision;
+			uuid = database->db->get_uuid();
 		}
 
 		std::string line;
@@ -745,7 +747,7 @@ DatabaseWAL::write_line(Type type, std::string_view data)
 		if (!opts.solo) {
 			// On COMMIT, add to updated databases queue so replicators do their job
 			if (type == Type::COMMIT) {
-				XapiandManager::manager->database_pool.updated_databases.push(endpoint);
+				XapiandManager::manager->database_pool.updated_databases.push(DatabaseUpdate(endpoint, uuid, revision + 1));
 			}
 		}
 #endif

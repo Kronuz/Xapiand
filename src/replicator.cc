@@ -24,6 +24,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "database.h"
+#include "manager.h"
 #include "server/discovery.h"
 
 
@@ -76,10 +78,10 @@ XapiandReplicator::run()
 	L_CALL("XapiandReplicator::run()");
 
 	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-		Endpoint endpoint;
-		while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
-			L_DEBUG("Replicator was informed database was updated: %s", repr(endpoint.to_string()));
-			discovery->signal_db_update(endpoint);
+		DatabaseUpdate update;
+		while (XapiandManager::manager->database_pool.updated_databases.pop(update)) {
+			L_DEBUG("Replicator was informed database was updated: %s", repr(update.endpoint.to_string()));
+			discovery->signal_db_update(update);
 		}
 	}
 

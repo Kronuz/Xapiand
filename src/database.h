@@ -497,6 +497,33 @@ public:
 };
 
 
+#ifdef XAPIAND_CLUSTERING
+struct DatabaseUpdate {
+	Endpoint endpoint;
+	std::string uuid;
+	Xapian::rev revision;
+
+	DatabaseUpdate() = default;
+
+	DatabaseUpdate(Endpoint endpoint_, const std::string& uuid_, Xapian::rev revision_)
+		: endpoint(endpoint_), uuid(uuid_), revision(revision_) { }
+
+	bool operator==(const DatabaseUpdate &other) const {
+		return endpoint == other.endpoint;
+	}
+};
+
+namespace std {
+	template <>
+	struct hash<DatabaseUpdate> {
+		std::size_t operator()(const DatabaseUpdate& k) const {
+			return std::hash<Endpoint>()(k.endpoint);
+		};
+	};
+}
+#endif
+
+
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
@@ -528,7 +555,7 @@ public:
 	void checkin(std::shared_ptr<Database>& database);
 
 #ifdef XAPIAND_CLUSTERING
-	queue::QueueSet<Endpoint> updated_databases;
+	queue::QueueSet<DatabaseUpdate> updated_databases;
 #endif
 
 	DatabasePool(size_t dbpool_size, size_t max_databases);

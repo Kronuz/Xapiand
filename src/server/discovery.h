@@ -27,7 +27,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "base_udp.h"
-#include "endpoint.h"
+#include "database.h"
 
 
 // Values in seconds
@@ -99,7 +99,7 @@ public:
 	void start();
 	void stop();
 
-	void signal_db_update(const Endpoint& endpoint);
+	void signal_db_update(const DatabaseUpdate& update);
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Discovery");

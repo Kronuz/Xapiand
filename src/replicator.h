@@ -26,11 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "database.h"
 #include "ev/ev++.h"
-#include "length.h"
-#include "manager.h"
-#include "threadpool.h"
 #include "worker.h"
 
 

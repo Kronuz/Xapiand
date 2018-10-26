@@ -347,9 +347,13 @@ Discovery::db_updated(Message type, const std::string& message)
 		return;
 	}
 
-	auto index_path = std::string(unserialise_string(&p, p_end));
+	auto index_path = unserialise_string(&p, p_end);
+	auto uuid = unserialise_string(&p, p_end);
+	auto revision = static_cast<Xapian::rev>(unserialise_length(&p, p_end));
 
-	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node->name(), repr(index_path));
+	L_DISCOVERY(">> %s [from %s]: %s (%s @ %llu)", MessageNames(type), remote_node->name(), repr(index_path), uuid, revision);
+	ignore_unused(uuid);
+	ignore_unused(revision);
 
 	auto node = Node::touch_node(remote_node);
 	if (node) {
@@ -442,14 +446,16 @@ Discovery::discovery_cb(ev::timer&, int revents)
 }
 
 void
-Discovery::signal_db_update(const Endpoint& endpoint)
+Discovery::signal_db_update(const DatabaseUpdate& update)
 {
 	L_CALL("Discovery::signal_db_update(%s)", repr(endpoint.to_string()));
 
 	auto local_node_ = Node::local_node();
 	send_message(Message::DB_UPDATED,
 		local_node_->serialise() +   // The node where the index is at
-		serialise_string(endpoint.path));  // The path of the index
+		serialise_string(update.endpoint.path) +
+		serialise_string(update.uuid) +
+		serialise_length(update.revision));  // The path of the index
 }
 
 

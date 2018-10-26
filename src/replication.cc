@@ -92,10 +92,9 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 
 	src_endpoints = Endpoints{src_endpoint};
 	endpoints = Endpoints{dst_endpoint};
-	L_REPLICATION("init_replication: %s  -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
-
 	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
+	L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	return true;
 }
 
