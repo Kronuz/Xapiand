@@ -1059,34 +1059,9 @@ Database::reopen_writable()
 	int _flags = (flags & DB_SPAWN) != 0 ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
-		// Writable remote databases do not have a local fallback
 		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
 		wdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags, endpoint.path);
-#ifdef XAPIAN_LOCAL_DB_FALLBACK
-		try {
-			Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-			if (tmp.get_uuid() == wdb.get_uuid()) {
-				L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
-				// Handle remote endpoints and figure out if the endpoint is a local database
-				build_path_index(endpoint.path);
-				try {
-					wdb = Xapian::WritableDatabase(endpoint.path, _flags);
-				} catch (const Xapian::DatabaseOpeningError&) {
-					if (!exists(endpoint.path + "/iamglass")) {
-						if ((flags & DB_SPAWN) == 0) {
-							// L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoint.to_string()));
-							THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
-						}
-						_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
-						wdb = Xapian::WritableDatabase(endpoint.path, _flags);
-					}
-					throw;
-				}
-				local = true;
-			}
-		} catch (const Xapian::DatabaseOpeningError&) { }
-#endif /* XAPIAN_LOCAL_DB_FALLBACK */
-
+		// Writable remote databases do not have a local fallback
 	}
 	else
 #endif /* XAPIAND_CLUSTERING */
