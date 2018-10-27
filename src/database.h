@@ -463,8 +463,8 @@ public:
 	DatabaseQueue& operator=(DatabaseQueue&&) = delete;
 	~DatabaseQueue();
 
-	bool inc_count(int max=-1);
-	bool dec_count();
+	size_t inc_count();
+	size_t dec_count();
 
 	template <typename... Args>
 	static std::shared_ptr<DatabaseQueue> make_shared(Args&&... args) {

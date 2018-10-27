@@ -2230,14 +2230,14 @@ DatabaseQueue::~DatabaseQueue()
 }
 
 
-bool
-DatabaseQueue::inc_count(int max)
+size_t
+DatabaseQueue::inc_count()
 {
-	L_CALL("DatabaseQueue::inc_count(%d)", max);
+	L_CALL("DatabaseQueue::inc_count()");
 
 	std::lock_guard<std::mutex> lk(_state->_mutex);
 
-	if (count == 0) {
+	if (count++ == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
 			for (const auto& endpoint : endpoints) {
 				database_pool->add_endpoint_queue(endpoint, shared_from_this());
@@ -2245,39 +2245,32 @@ DatabaseQueue::inc_count(int max)
 		}
 	}
 
-	if (max == -1 || count < static_cast<size_t>(max)) {
-		++count;
-		return true;
-	}
-
-	return false;
+	return count;
 }
 
 
-bool
+size_t
 DatabaseQueue::dec_count()
 {
 	L_CALL("DatabaseQueue::dec_count()");
 
 	std::lock_guard<std::mutex> lk(_state->_mutex);
 
-	if (count <= 0) {
+	if (count == 0) {
 		L_CRIT("Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
+		return count;
 	}
 
-	if (count > 0) {
-		--count;
-		return true;
-	}
-
-	if (auto database_pool = weak_database_pool.lock()) {
-		for (const auto& endpoint : endpoints) {
-			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
+	if (--count == 0) {
+		if (auto database_pool = weak_database_pool.lock()) {
+			for (const auto& endpoint : endpoints) {
+				database_pool->drop_endpoint_queue(endpoint, shared_from_this());
+			}
 		}
 	}
 
-	return false;
+	return count;
 }
 
 
@@ -2512,36 +2505,41 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		while (true) {
 			if (!queue->pop(database, 0)) {
 				// Increment so other threads don't delete the queue
-				if (queue->inc_count(db_writable ? 1 : -1)) {
+				auto count = queue->inc_count();
+				try {
 					lk.unlock();
-					try {
-						database = std::make_shared<Database>(queue, endpoints, flags);
-					} catch (const Xapian::DatabaseOpeningError& exc) {
-						L_DATABASE("ERROR: %s", exc.get_description());
-					} catch (...) {
-						lk.lock();
-						database.reset();
-						queue->dec_count();  // Decrement, count should have been already incremented if Database was created
-						if (queue->count == 0) {
-							// There is a error, the queue ended up being empty, remove it
-							if (db_writable) {
-								writable_databases.erase(hash);
-							} else {
-								databases.erase(hash);
-							}
+					if (
+						(db_writable && count > 1) ||
+						(!db_writable && count > 1000)
+					) {
+						// Lock until a database is available if it can't get one.
+						if (!queue->pop(database, DB_TIMEOUT)) {
+							THROW(TimeOutError, "Database is not available");
 						}
-						throw;
+					} else {
+						database = std::make_shared<Database>(queue, endpoints, flags);
 					}
 					lk.lock();
-					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
-				} else {
-					// Lock until a database is available if it can't get one.
-					lk.unlock();
-					if (!queue->pop(database, DB_TIMEOUT)) {
-						THROW(TimeOutError, "Database is not available");
-					}
+				} catch (const Xapian::DatabaseOpeningError& exc) {
 					lk.lock();
+					L_DATABASE("ERROR: %s", exc.get_description());
+				} catch (...) {
+					lk.lock();
+					database.reset();
+					queue->persistent = old_persistent;
+					count = queue->dec_count();
+					if (count == 0) {
+						// There is a error, the queue ended up being empty, remove it
+						if (db_writable) {
+							writable_databases.erase(hash);
+						} else {
+							databases.erase(hash);
+						}
+					}
+					throw;
 				}
+				// Decrement, count should have been already incremented if Database was created
+				queue->dec_count();
 			}
 
 			if (!database || !database->db) {
