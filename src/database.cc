@@ -1001,7 +1001,8 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  modified(false),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
-	  incomplete(false)
+	  incomplete(false),
+	  closed(false)
 {
 	reopen();
 
