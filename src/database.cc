@@ -1288,7 +1288,7 @@ Database::commit(bool wal_, bool send_update)
 #endif /* XAPIAND_DATA_STORAGE */
 			if (transaction) {
 				wdb->commit_transaction();
-				wdb->begin_transaction(false);
+				wdb->begin_transaction();
 			} else {
 				wdb->commit();
 			}
