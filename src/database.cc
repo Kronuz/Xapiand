@@ -702,12 +702,16 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 
 		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path, repr(line, quote));
 
+		assert(revision >= header.head.revision);
 		uint32_t slot = revision - header.head.revision;
 
 		if (slot >= WAL_SLOTS) {
 			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			assert(revision >= header.head.revision);
 			slot = revision - header.head.revision;
 		}
+
+		assert(slot >= 0 && slot < WAL_SLOTS);
 
 		try {
 			write(line.data(), line.size());
