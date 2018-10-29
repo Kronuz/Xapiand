@@ -349,45 +349,17 @@ Discovery::db_updated(Message type, const std::string& message)
 	}
 
 	auto path = std::string(p, p_end);
+	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node->name(), repr(path));
 
-	bool replicated = false;
-
-	if (path == ".") {
-		// Cluster database is always updated
-		replicated = true;
-	}
-
-	if (!replicated && exists(std::string(path) + "/iamglass")) {
-		// If database is already there, its also always updated
-		replicated = true;
-	}
-
-	if (!replicated) {
-		// Otherwise, check if the local node resolves as replicator
-		auto nodes = XapiandManager::manager->resolve_index_nodes(path);
-		for (const auto& node : nodes) {
-			if (Node::is_equal(node, local_node_)) {
-				replicated = true;
-				break;
-			}
-		}
-	}
-
-	if (replicated) {
-		L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node->name(), repr(path));
-
-		auto node = Node::touch_node(remote_node);
-		if (node) {
-			Endpoint remote_endpoint(path, node.get());
-			if (!remote_endpoint.is_local()) {
-				Endpoint local_endpoint(path);
-				// Replicate database from the other node
-				L_INFO("Request syncing database [%s]...", node->name());
-				auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
-				if (ret.get()) {
-					L_INFO("Replication triggered!");
-				}
-			}
+	auto node = Node::touch_node(remote_node);
+	if (node) {
+		// Replicate database from the other node
+		Endpoint remote_endpoint(path, node.get());
+		Endpoint local_endpoint(path);
+		L_INFO("Request syncing database [%s]...", node->name());
+		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+		if (ret.get()) {
+			L_INFO("Replication triggered!");
 		}
 	}
 }
