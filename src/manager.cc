@@ -852,15 +852,36 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto indexed_nodes = Node::indexed_nodes();
-		if (indexed_nodes) {
-			size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
-			for (size_t replicas = std::min(num_replicas, indexed_nodes); replicas; --replicas) {
-				auto node = Node::get_node(consistent_hash + 1);
-				assert(node);
-				nodes.push_back(node);
-				consistent_hash = (consistent_hash + 1) % indexed_nodes;
+		auto path_hash = xxh64::hash(path);
+		DatabaseHandler db_handler(Endpoints{Endpoint{"."}});
+		auto serialised_path_hash = serialise_length(path_hash);
+		auto serialised = db_handler.get_metadata(serialised_path_hash);
+		if (serialised.empty()) {
+			auto indexed_nodes = Node::indexed_nodes();
+			if (indexed_nodes) {
+				size_t consistent_hash = jump_consistent_hash(path_hash, indexed_nodes);
+				for (size_t replicas = std::min(num_replicas, indexed_nodes); replicas; --replicas) {
+					auto idx = consistent_hash + 1;
+					auto node = Node::get_node(idx);
+					assert(node);
+					nodes.push_back(std::move(node));
+					consistent_hash = idx % indexed_nodes;
+					serialised.append(serialise_length(idx));
+				}
+				auto leader_node_ = Node::leader_node();
+				Endpoint cluster_endpoint(".", leader_node_.get());
+				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
+				db_handler.set_metadata(serialised_path_hash, serialised);
 			}
+		} else {
+			const char *p = serialised.data();
+			const char *p_end = p + serialised.size();
+			do {
+				auto idx = unserialise_length(&p, p_end);
+				auto node = Node::get_node(idx);
+				assert(node);
+				nodes.push_back(std::move(node));
+			} while (p != p_end);
 		}
 	}
 	else
