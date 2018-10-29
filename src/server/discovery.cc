@@ -26,6 +26,7 @@
 
 #include "cassert.hh"            // for assert
 
+#include "database.h"            // for DatabaseUpdate
 #include "database_handler.h"
 #include "epoch.hh"              // for epoch::now
 #include "ignore_unused.h"

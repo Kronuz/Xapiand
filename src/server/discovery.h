@@ -27,7 +27,6 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "base_udp.h"
-#include "database.h"
 
 
 // Values in seconds
@@ -39,6 +38,7 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
+struct DatabaseUpdate;
 
 // Discovery for nodes and databases
 class Discovery : public UDP, public Worker {

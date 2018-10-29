@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"
-#include "database.h"
+#include "database.h"                         // for DatabasePool
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"
 #include "length.h"
@@ -50,8 +50,8 @@ class Binary;
 class Discovery;
 class Raft;
 #endif
-class XapiandServer;
 
+class XapiandServer;
 
 extern void sig_exit(int sig);
 
