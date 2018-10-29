@@ -376,8 +376,8 @@ DatabaseWAL::repr_line(std::string_view line, bool unserialised)
 			repr["op"] = "ADD_DOCUMENT";
 			repr["document"] = repr_document(data, unserialised);
 			break;
-		case Type::CANCEL:
-			repr["op"] = "CANCEL";
+		case Type::CANCEL_TRANSACTION:
+			repr["op"] = "CANCEL_TRANSACTION";
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			repr["op"] = "DELETE_DOCUMENT_TERM";
@@ -417,6 +417,13 @@ DatabaseWAL::repr_line(std::string_view line, bool unserialised)
 			repr["op"] = "REMOVE_SPELLING";
 			repr["term"] = std::string(p, p_end - p);
 			repr["freq"] = unserialise_length(&p, p_end);
+			break;
+		case Type::BEGIN_TRANSACTION:
+			repr["op"] = "BEGIN_TRANSACTION";
+			repr["flushed"] = static_cast<bool>(unserialise_length(&p, p_end));
+			break;
+		case Type::COMMIT_TRANSACTION:
+			repr["op"] = "COMMIT_TRANSACTION";
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
@@ -562,6 +569,7 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 	Xapian::termcount freq;
 	std::string term;
 	size_t size;
+	bool flushed;
 
 	p = data.data();
 	p_end = p + data.size();
@@ -573,8 +581,8 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 			doc = Xapian::Document::unserialise(data);
 			database->add_document(doc, false, wal_);
 			break;
-		case Type::CANCEL:
-			database->cancel(wal_);
+		case Type::CANCEL_TRANSACTION:
+			database->cancel_transaction(wal_);
 			modified = false;
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
@@ -619,6 +627,15 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 		case Type::REMOVE_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 			database->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
+			break;
+		case Type::BEGIN_TRANSACTION:
+			flushed = static_cast<bool>(unserialise_length(&p, p_end));
+			database->begin_transaction(flushed, wal_);
+			modified = false;
+			break;
+		case Type::COMMIT_TRANSACTION:
+			database->commit_transaction(wal_);
+			modified = false;
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
@@ -773,11 +790,11 @@ DatabaseWAL::write_add_document(const Xapian::Document& doc)
 
 
 void
-DatabaseWAL::write_cancel()
+DatabaseWAL::write_cancel_transaction()
 {
-	L_CALL("DatabaseWAL::write_cancel()");
+	L_CALL("DatabaseWAL::write_cancel_transaction()");
 
-	write_line(Type::CANCEL, "", false);
+	write_line(Type::CANCEL_TRANSACTION, "", false);
 }
 
 
@@ -862,6 +879,25 @@ DatabaseWAL::write_remove_spelling(std::string_view word, Xapian::termcount freq
 	auto line = serialise_length(freqdec);
 	line.append(word);
 	write_line(Type::REMOVE_SPELLING, line, false);
+}
+
+
+void
+DatabaseWAL::write_begin_transaction(bool flushed)
+{
+	L_CALL("DatabaseWAL::write_begin_transaction(...)");
+
+	auto line = serialise_length(flushed ? 1 : 0);
+	write_line(Type::BEGIN_TRANSACTION, line, false);
+}
+
+
+void
+DatabaseWAL::write_commit_transaction()
+{
+	L_CALL("DatabaseWAL::write_commit_transaction()");
+
+	write_line(Type::COMMIT_TRANSACTION, "", false);
 }
 
 
@@ -1002,6 +1038,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  modified(false),
+	  transaction(false),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
 	  incomplete(false),
@@ -1294,6 +1331,10 @@ Database::commit(bool wal_, bool send_update)
 		THROW(Error, "database is read-only");
 	}
 
+	if (transaction) {
+		return false;
+	}
+
 	if (!modified) {
 		L_DATABASE_WRAP("Do not commit, because there are not changes");
 		return false;
@@ -1344,44 +1385,6 @@ Database::commit(bool wal_, bool send_update)
 
 
 void
-Database::cancel(bool wal_)
-{
-	L_CALL("Database::cancel(%s)", wal_ ? "true" : "false");
-
-	if ((flags & DB_WRITABLE) == 0) {
-		THROW(Error, "database is read-only");
-	}
-
-	L_DATABASE_WRAP_INIT();
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE_WRAP("Cancel: t: %d", t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->begin_transaction(false);
-			wdb->cancel_transaction();
-			break;
-		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
-		} catch (const Xapian::Error& exc) {
-			THROW(Error, exc.get_description());
-		}
-		reopen();
-	}
-
-	L_DATABASE_WRAP("Cancel made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_cancel(); }
-#else
-	ignore_unused(wal_);
-#endif
-}
-
-
-void
 Database::close()
 {
 	L_CALL("Database::close()");
@@ -1389,6 +1392,69 @@ Database::close()
 	closed = true;
 	db->close();
 	modified = false;
+}
+
+
+void
+Database::begin_transaction(bool flushed, bool wal_)
+{
+	L_CALL("Database::begin_transaction(%s)", flushed ? "true" : "false");
+
+	if ((flags & DB_WRITABLE) == 0) {
+		THROW(Error, "database is read-only");
+	}
+
+	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+	wdb->begin_transaction(flushed);
+	transaction = true;
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_begin_transaction(flushed); }
+#else
+	ignore_unused(wal_);
+#endif
+}
+
+
+void
+Database::commit_transaction(bool wal_)
+{
+	L_CALL("Database::commit_transaction()");
+
+	if ((flags & DB_WRITABLE) == 0) {
+		THROW(Error, "database is read-only");
+	}
+
+	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+	wdb->commit_transaction();
+	transaction = false;
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_commit_transaction(); }
+#else
+	ignore_unused(wal_);
+#endif
+}
+
+
+void
+Database::cancel_transaction(bool wal_)
+{
+	L_CALL("Database::cancel_transaction()");
+
+	if ((flags & DB_WRITABLE) == 0) {
+		THROW(Error, "database is read-only");
+	}
+
+	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+	wdb->cancel_transaction();
+	transaction = false;
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) { wal->write_cancel_transaction(); }
+#else
+	ignore_unused(wal_);
+#endif
 }
 
 
@@ -2648,7 +2714,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 
-	if (database->modified) {
+	if (database->modified && !database->transaction) {
 		DatabaseAutocommit::commit(database);
 	}
 

@@ -830,7 +830,10 @@ RemoteProtocol::msg_cancel(const std::string &)
 
 	reset();
 	lock_database lk_db(this);
-	database()->cancel();
+    // We can't call cancel since that's an internal method, but this
+    // has the same effect with minimal additional overhead.
+	database()->begin_transaction(false);
+	database()->cancel_transaction();
 }
 
 

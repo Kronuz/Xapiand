@@ -141,7 +141,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	static constexpr const char* const names[] = {
 		"ADD_DOCUMENT",
-		"CANCEL",
+		"CANCEL_TRANSACTION",
 		"DELETE_DOCUMENT_TERM",
 		"COMMIT",
 		"REPLACE_DOCUMENT",
@@ -150,6 +150,8 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"SET_METADATA",
 		"ADD_SPELLING",
 		"REMOVE_SPELLING",
+		"BEGIN_TRANSACTION",
+		"COMMIT_TRANSACTION",
 		"MAX",
 	};
 
@@ -167,7 +169,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 public:
 	enum class Type : uint8_t {
 		ADD_DOCUMENT,
-		CANCEL,
+		CANCEL_TRANSACTION,
 		DELETE_DOCUMENT_TERM,
 		COMMIT,
 		REPLACE_DOCUMENT,
@@ -176,6 +178,8 @@ public:
 		SET_METADATA,
 		ADD_SPELLING,
 		REMOVE_SPELLING,
+		BEGIN_TRANSACTION,
+		COMMIT_TRANSACTION,
 		MAX,
 	};
 
@@ -199,7 +203,7 @@ public:
 	bool execute(std::string_view line, bool wal_, bool send_update, bool unsafe);
 	void write_line(Type type, std::string_view data, bool send_update);
 	void write_add_document(const Xapian::Document& doc);
-	void write_cancel();
+	void write_cancel_transaction();
 	void write_delete_document_term(std::string_view term);
 	void write_commit(bool send_update);
 	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
@@ -208,6 +212,8 @@ public:
 	void write_set_metadata(std::string_view key, std::string_view val);
 	void write_add_spelling(std::string_view word, Xapian::termcount freqinc);
 	void write_remove_spelling(std::string_view word, Xapian::termcount freqdec);
+	void write_begin_transaction(bool flushed);
+	void write_commit_transaction();
 	std::pair<bool, unsigned long long> has_revision(Xapian::rev revision);
 	iterator find(Xapian::rev revision);
 	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
@@ -369,6 +375,7 @@ public:
 	int flags;
 	size_t hash;
 	bool modified;
+	bool transaction;
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 	bool incomplete;
@@ -400,7 +407,10 @@ public:
 	Xapian::rev get_revision() const;
 
 	bool commit(bool wal_ = true, bool send_update = true);
-	void cancel(bool wal_ = true);
+
+	void begin_transaction(bool flushed = true, bool wal_ = true);
+	void commit_transaction(bool wal_ = true);
+	void cancel_transaction(bool wal_ = true);
 
 	void close();
 
