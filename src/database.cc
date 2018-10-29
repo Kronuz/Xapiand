@@ -2464,10 +2464,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		if (db_writable) {
 			queue = writable_databases.get(hash, endpoints);
-			_cleanup(false, true);
 		} else {
 			queue = databases.get(hash, endpoints);
-			_cleanup(true, false);
 		}
 
 		bool old_persistent = queue->persistent;
