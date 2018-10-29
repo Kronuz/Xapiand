@@ -348,7 +348,7 @@ Discovery::db_updated(Message type, const std::string& message)
 		return;
 	}
 
-	auto path = unserialise_string(&p, p_end);
+	auto path = std::string(p, p_end);
 
 	bool replicated = false;
 
@@ -475,7 +475,7 @@ Discovery::signal_db_update(const DatabaseUpdate& update)
 	auto local_node_ = Node::local_node();
 	send_message(Message::DB_UPDATED,
 		local_node_->serialise() +   // The node where the index is at
-		serialise_string(update.endpoint.path));  // The path of the index
+		update.endpoint.path);  // The path of the index
 }
 
 
