@@ -852,14 +852,12 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto path_hash = xxh64::hash(path);
 		DatabaseHandler db_handler(Endpoints{Endpoint{"."}});
-		auto serialised_path_hash = serialise_length(path_hash);
-		auto serialised = db_handler.get_metadata(serialised_path_hash);
+		auto serialised = db_handler.get_metadata(path);
 		if (serialised.empty()) {
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
-				size_t consistent_hash = jump_consistent_hash(path_hash, indexed_nodes);
+				size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
 				for (size_t replicas = std::min(num_replicas, indexed_nodes); replicas; --replicas) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
@@ -871,7 +869,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				auto leader_node_ = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node_.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
-				db_handler.set_metadata(serialised_path_hash, serialised);
+				db_handler.set_metadata(path, serialised);
 			}
 		} else {
 			const char *p = serialised.data();
