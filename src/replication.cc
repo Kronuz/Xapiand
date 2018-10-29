@@ -71,12 +71,14 @@ Replication::~Replication()
 {
 	if (!switch_database_path.empty()) {
 		if (slave_database) {
+			slave_database->cancel_transaction();
 			slave_database->close();
 			XapiandManager::manager->database_pool.checkin(slave_database);
 		}
 		delete_files(switch_database_path.c_str());
 	} else {
 		if (slave_database) {
+			slave_database->cancel_transaction();
 			XapiandManager::manager->database_pool.checkin(slave_database);
 		}
 	}
@@ -296,12 +298,14 @@ Replication::reply_end_of_changes(const std::string&)
 
 	if (!switch_database_path.empty()) {
 		if (slave_database) {
+			slave_database->cancel_transaction();
 			slave_database->close();
 			XapiandManager::manager->database_pool.checkin(slave_database);
 		}
 		XapiandManager::manager->database_pool.switch_db(switch_database_path, endpoints[0].path);
 	} else {
 		if (slave_database) {
+			slave_database->cancel_transaction();
 			XapiandManager::manager->database_pool.checkin(slave_database);
 		}
 	}
