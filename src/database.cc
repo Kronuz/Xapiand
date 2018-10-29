@@ -2304,14 +2304,14 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
-			if (val->renew_time < now - 500ms) {
+			if (val->renew_time < now - 60s) {
 				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
 			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
-		if (val->renew_time < now - 60s) {
+		if (val->renew_time < now - 3600s) {
 			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
@@ -2334,14 +2334,14 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
-			if (val->renew_time < now - 500ms) {
+			if (val->renew_time < now - 60s) {
 				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
 			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
-		if (val->renew_time < now - 60s) {
+		if (val->renew_time < now - 3600s) {
 			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
