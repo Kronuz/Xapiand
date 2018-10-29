@@ -370,7 +370,6 @@ public:
 	Xapian::rev reopen_revision;
 	bool incomplete;
 	bool closed;
-	std::set<std::size_t> fail_db;
 
 	std::unique_ptr<Xapian::Database> db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;

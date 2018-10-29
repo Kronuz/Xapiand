@@ -1059,8 +1059,7 @@ Database::reopen_writable()
 				if ((flags & DB_SPAWN) == 0) {
 					THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
-				_flags = Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE;
-				wdb = Xapian::WritableDatabase(endpoint.path, _flags);
+				wdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
 			}
 			throw;
 		}
@@ -1129,6 +1128,8 @@ Database::reopen_readable()
 
 	db = std::make_unique<Xapian::Database>();
 
+	size_t failures = 0;
+
 	for (const auto& endpoint : endpoints) {
 		Xapian::Database rdb;
 		bool local = false;
@@ -1160,29 +1161,24 @@ Database::reopen_readable()
 				rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
-				fail_db.insert(std::hash<std::string>{}(endpoint.path));
-				if ((flags & DB_SPAWN) == 0)  {
-					if (endpoints.size() == 1 || endpoints.size() == fail_db.size()) {
-						fail_db.clear();
-						db.reset();
-						throw;
-					}
-					incomplete = true;
-				} else {
-					{
-						build_path_index(endpoint.path);
-						try {
-							Xapian::WritableDatabase tmp(endpoint.path, Xapian::DB_CREATE_OR_OPEN);
-						} catch (const Xapian::DatabaseOpeningError&) {
-							if (!exists(endpoint.path + "/iamglass")) {
-								Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
-							} else { throw; }
+				if (!exists(endpoint.path + "/iamglass")) {
+					++failures;
+					if ((flags & DB_SPAWN) == 0)  {
+						if (endpoints.size() == failures) {
+							db.reset();
+							THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
+						incomplete = true;
+					} else {
+						{
+							build_path_index(endpoint.path);
+							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
+						}
+						rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+						local = true;
 					}
-
-					rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-					local = true;
 				}
+				throw;
 			}
 		}
 
