@@ -1240,6 +1240,12 @@ Database::reopen()
 				return ret;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				L_EXC("ERROR: %s", exc.get_description());
+			} catch (const Xapian::DatabaseError& exc) {
+				const auto& exc_msg = exc.get_msg();
+				L_EXC("ERROR: %s", exc.get_description());
+				if (exc_msg != "Database has been closed") {
+					throw;
+				}
 			} catch (const Xapian::Error& exc) {
 				L_EXC("ERROR: %s", exc.get_description());
 				throw;
