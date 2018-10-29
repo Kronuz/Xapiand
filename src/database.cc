@@ -1152,7 +1152,10 @@ Database::reopen_readable()
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
 				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				if (tmp.get_uuid() == rdb.get_uuid()) {
+				if (
+					tmp.get_uuid() == rdb.get_uuid() &&
+					tmp.get_revision() == rdb.get_revision()
+				) {
 					L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					rdb = Xapian::Database(endpoint.path, _flags);
