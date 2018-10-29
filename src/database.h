@@ -489,7 +489,7 @@ public:
 	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
-	std::shared_ptr<DatabaseQueue> get(size_t hash, const Endpoints& endpoints);
+	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(size_t hash, const Endpoints& endpoints);
 
 	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
@@ -544,9 +544,6 @@ class DatabasePool {
 	std::chrono::time_point<std::chrono::system_clock> cleanup_writable_time;
 
 	std::condition_variable checkin_cond;
-
-	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
-	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 	void _cleanup(bool writable, bool readable);
 

@@ -2216,15 +2216,7 @@ DatabaseQueue::inc_count()
 
 	std::lock_guard<std::mutex> lk(_state->_mutex);
 
-	if (count++ == 0) {
-		if (auto database_pool = weak_database_pool.lock()) {
-			for (const auto& endpoint : endpoints) {
-				database_pool->add_endpoint_queue(endpoint, shared_from_this());
-			}
-		}
-	}
-
-	return count;
+	return ++count;
 }
 
 
@@ -2241,15 +2233,7 @@ DatabaseQueue::dec_count()
 		return count;
 	}
 
-	if (--count == 0) {
-		if (auto database_pool = weak_database_pool.lock()) {
-			for (const auto& endpoint : endpoints) {
-				database_pool->drop_endpoint_queue(endpoint, shared_from_this());
-			}
-		}
-	}
-
-	return count;
+	return --count;
 }
 
 
@@ -2280,7 +2264,7 @@ DatabasesLRU::get(size_t hash)
 }
 
 
-std::shared_ptr<DatabaseQueue>
+std::pair<std::shared_ptr<DatabaseQueue>, bool>
 DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 {
 	L_CALL("DatabasesLRU::get(%zx, %s)", hash, repr(endpoints.to_string()));
@@ -2294,7 +2278,7 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 
 	auto it = find_and(on_get, hash);
 	if (it != end()) {
-		return it->second;
+		return std::make_pair(it->second, false);
 	}
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
@@ -2324,7 +2308,8 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 		return lru::DropAction::stop;
 	};
 
-	return emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state)).first->second;
+	auto emplaced = emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state));
+	return std::make_pair(emplaced.first->second, emplaced.second);
 }
 
 
@@ -2401,32 +2386,6 @@ DatabasePool::~DatabasePool()
 
 
 void
-DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
-{
-	L_CALL("DatabasePool::add_endpoint_queue(%s, <queue>)", repr(endpoint.to_string()));
-
-	size_t hash = endpoint.hash();
-	auto& queues_set = queues[hash];
-	queues_set.insert(queue);
-}
-
-
-void
-DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
-{
-	L_CALL("DatabasePool::drop_endpoint_queue(%s, <queue>)", repr(endpoint.to_string()));
-
-	size_t hash = endpoint.hash();
-	auto& queues_set = queues[hash];
-	queues_set.erase(queue);
-
-	if (queues_set.empty()) {
-		queues.erase(hash);
-	}
-}
-
-
-void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
 	L_CALL("DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()), flags, [&flags]() {
@@ -2462,12 +2421,17 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 		std::unique_lock<std::mutex> lk(qmtx);
 
-		std::shared_ptr<DatabaseQueue> queue;
+		auto queue_pair = db_writable ? writable_databases.get(hash, endpoints) : databases.get(hash, endpoints);
 
-		if (db_writable) {
-			queue = writable_databases.get(hash, endpoints);
-		} else {
-			queue = databases.get(hash, endpoints);
+		auto queue = queue_pair.first;
+
+		if (queue_pair.second) {
+			// Queue was just created, add as used queue to the endpoint -> queues map
+			for (const auto& endpoint : endpoints) {
+				auto endpoint_hash = endpoint.hash();
+				auto& queues_set = queues[endpoint_hash];
+				queues_set.insert(queue);
+			}
 		}
 
 		int retries = 10;
@@ -2503,6 +2467,15 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						} else {
 							databases.erase(hash);
 						}
+						// Queue was just erased, remove as used queue to the endpoint -> queues map
+						for (const auto& endpoint : endpoints) {
+							auto endpoint_hash = endpoint.hash();
+							auto& queues_set = queues[endpoint_hash];
+							queues_set.erase(queue);
+							if (queues_set.empty()) {
+								queues.erase(endpoint_hash);
+							}
+						}
 					}
 					throw;
 				}
@@ -2519,7 +2492,18 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					} else {
 						databases.erase(hash);
 					}
+					// Queue was just erased, remove as used queue to the endpoint -> queues map
+					for (const auto& endpoint : endpoints) {
+						auto endpoint_hash = endpoint.hash();
+						auto& queues_set = queues[endpoint_hash];
+						queues_set.erase(queue);
+						if (queues_set.empty()) {
+							queues.erase(endpoint_hash);
+						}
+					}
 				}
+				L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
+				THROW(NotFoundError, "Database not found: %s", repr(endpoints.to_string()));
 			}
 
 			if (locks) {
@@ -2689,11 +2673,21 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		}
 
 		if (queue->count == 0) {
+			// The queue ended up being empty, remove it
 			size_t hash = endpoints.hash();
 			if (db_writable) {
 				writable_databases.erase(hash);
 			} else {
 				databases.erase(hash);
+			}
+			// Queue was just erased, remove as used queue to the endpoint -> queues map
+			for (const auto& endpoint : endpoints) {
+				auto endpoint_hash = endpoint.hash();
+				auto& queues_set = queues[endpoint_hash];
+				queues_set.erase(queue);
+				if (queues_set.empty()) {
+					queues.erase(endpoint_hash);
+				}
 			}
 		}
 	} else {
