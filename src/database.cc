@@ -1327,8 +1327,12 @@ Database::commit(bool wal_, bool send_update)
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseError& exc) {
-			L_WARNING("ERROR: %s", exc.get_description());
-			throw;
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1425,6 +1429,13 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::Error& exc) {
@@ -1469,6 +1480,13 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::Error& exc) {
@@ -1616,6 +1634,13 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1661,6 +1686,13 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1708,6 +1740,13 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, "Database %s error: %s", repr(endpoints.to_string()), exc.get_description());
 		}
@@ -1747,6 +1786,13 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1784,6 +1830,13 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1827,6 +1880,13 @@ Database::find_document(const std::string& term_id)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::InvalidArgumentError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::DocNotFoundError&) {
@@ -1878,6 +1938,13 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::InvalidArgumentError&) {
 			THROW(DocNotFoundError, "Document not found");
 		} catch (const Xapian::DocNotFoundError&) {
@@ -1913,6 +1980,13 @@ Database::get_metadata(const std::string& key)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -1950,6 +2024,13 @@ Database::get_metadata_keys()
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -1982,6 +2063,13 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -2036,6 +2124,13 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const Xapian::InvalidArgumentError&) {
 			break;
 		} catch (const Xapian::Error& exc) {
@@ -2111,6 +2206,13 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const SerialisationError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const Xapian::Error& exc) {
@@ -2179,6 +2281,13 @@ Database::dump_documents()
 			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { THROW(Error, "Problem opening the database: %s", exc.get_description()); }
+		} catch (const Xapian::DatabaseError& exc) {
+			const auto& exc_msg = exc.get_msg();
+			if (exc_msg == "Database has been closed") {
+				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+			} else {
+				THROW(Error, exc_msg);
+			}
 		} catch (const SerialisationError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const Xapian::Error& exc) {
