@@ -100,7 +100,6 @@ public:
 	std::string switch_database_path;
 
 	std::shared_ptr<Database> slave_database;
-	std::unique_ptr<DatabaseWAL> wal;
 
 	std::string file_path;
 

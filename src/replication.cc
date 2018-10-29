@@ -162,10 +162,8 @@ Replication::msg_get_changesets(const std::string& message)
 		from_revision = 0;
 	}
 
-	// TODO: Implement WAL's has_revision() and iterator
-	// WAL required on a local writable database, open it.
-	wal = std::make_unique<DatabaseWAL>(endpoints[0].path, nullptr);
-	if (from_revision && !wal->has_revision(from_revision).first) {
+	DatabaseWAL wal(endpoints[0].path, nullptr);
+	if (from_revision && !wal.has_revision(from_revision).first) {
 		from_revision = 0;
 	}
 
@@ -226,12 +224,11 @@ Replication::msg_get_changesets(const std::string& message)
 			lk_db.unlock();
 		}
 
-		// TODO: Implement WAL's has_revision() and iterator
 		int wal_iterations = 5;
 		do {
 			// Send WAL operations.
-			auto wal_it = wal->find(from_revision);
-			for (; wal_it != wal->end(); ++wal_it) {
+			auto wal_it = wal.find(from_revision);
+			for (; wal_it != wal.end(); ++wal_it) {
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			from_revision = wal_it->first + 1;
@@ -421,10 +418,9 @@ Replication::reply_changeset(const std::string& line)
 			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE);
 		}
 		slave_database->begin_transaction(false);
-		wal = std::make_unique<DatabaseWAL>(slave_database->endpoints[0].path, slave_database.get());
 	}
 
-	wal->execute(line, true, false, false);
+	slave_database->wal->execute(line, true, false, false);
 }
 
 
