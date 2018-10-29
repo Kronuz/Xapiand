@@ -349,8 +349,6 @@ Discovery::db_updated(Message type, const std::string& message)
 	}
 
 	auto path = unserialise_string(&p, p_end);
-	auto uuid = unserialise_string(&p, p_end);
-	auto revision = static_cast<Xapian::rev>(unserialise_length(&p, p_end));
 
 	bool replicated = false;
 
@@ -376,11 +374,7 @@ Discovery::db_updated(Message type, const std::string& message)
 	}
 
 	if (replicated) {
-		L_DISCOVERY(">> %s [from %s]: %s (%s @ %llu)", MessageNames(type), remote_node->name(), repr(path), uuid, revision);
-
-		// TODO: Maybe further check the local database needs to be updated
-		ignore_unused(uuid);
-		ignore_unused(revision);
+		L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node->name(), repr(path));
 
 		auto node = Node::touch_node(remote_node);
 		if (node) {
@@ -481,9 +475,7 @@ Discovery::signal_db_update(const DatabaseUpdate& update)
 	auto local_node_ = Node::local_node();
 	send_message(Message::DB_UPDATED,
 		local_node_->serialise() +   // The node where the index is at
-		serialise_string(update.endpoint.path) +
-		serialise_string(update.uuid) +
-		serialise_length(update.revision));  // The path of the index
+		serialise_string(update.endpoint.path));  // The path of the index
 }
 
 
