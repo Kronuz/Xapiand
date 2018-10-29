@@ -1330,6 +1330,7 @@ Database::commit(bool wal_, bool send_update)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1433,6 +1434,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1484,6 +1486,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1638,6 +1641,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1690,6 +1694,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1744,6 +1749,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1790,6 +1796,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1834,6 +1841,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1884,6 +1892,7 @@ Database::find_document(const std::string& term_id)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1942,6 +1951,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -1984,6 +1994,7 @@ Database::get_metadata(const std::string& key)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -2028,6 +2039,7 @@ Database::get_metadata_keys()
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -2067,6 +2079,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -2128,6 +2141,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -2210,6 +2224,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
@@ -2285,6 +2300,7 @@ Database::dump_documents()
 			const auto& exc_msg = exc.get_msg();
 			if (exc_msg == "Database has been closed") {
 				if (t == 0) { THROW(Error, "Problem with closed database: %s", exc_msg); }
+				db.reset();
 			} else {
 				THROW(Error, exc_msg);
 			}
