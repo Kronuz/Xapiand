@@ -852,8 +852,10 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
+		auto key = std::string(path);
+		key.push_back('/');
 		DatabaseHandler db_handler(Endpoints{Endpoint{"."}});
-		auto serialised = db_handler.get_metadata(path);
+		auto serialised = db_handler.get_metadata(key);
 		if (serialised.empty()) {
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
@@ -869,7 +871,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				auto leader_node_ = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node_.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
-				db_handler.set_metadata(path, serialised);
+				db_handler.set_metadata(key, serialised);
 			}
 		} else {
 			const char *p = serialised.data();
