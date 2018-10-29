@@ -37,7 +37,7 @@
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
-#include "fs.hh"                  // for move_files, exists, build_path
+#include "fs.hh"                  // for move_files, exists, build_path_index
 #include "ignore_unused.h"        // for ignore_unused
 #include "io.hh"                  // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
@@ -1060,7 +1060,9 @@ Database::reopen_writable()
 		DatabaseWAL tmp_wal(endpoint.path, this);
 		tmp_wal.init_database();
 #endif
-		build_path(endpoint.path);
+		if (flags & DB_SPAWN) {
+			build_path_index(endpoint.path);
+		}
 		try {
 			wdb = Xapian::WritableDatabase(endpoint.path, _flags);
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1180,7 +1182,7 @@ Database::reopen_readable()
 						incomplete = true;
 					} else {
 						{
-							build_path(endpoint.path);
+							build_path_index(endpoint.path);
 							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
 						}
 						rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
