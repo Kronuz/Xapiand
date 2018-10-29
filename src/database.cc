@@ -893,6 +893,9 @@ DatabaseWAL::find(Xapian::rev revision)
 	open(string::format(WAL_STORAGE_PATH "%u", volume_traits), STORAGE_OPEN);
 
 	auto high_slot = highest_valid_slot();
+
+	assert(0 <= high_slot && high_slot < WAL_SLOTS);
+
 	auto end_off = header.slot[high_slot];
 
 	assert(volume_traits <= revision);
