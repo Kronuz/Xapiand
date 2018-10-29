@@ -2192,7 +2192,6 @@ template <typename... Args>
 DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	: Queue(std::forward<Args>(args)...),
 	  locked(false),
-	  persistent(false),
 	  count(0),
 	  endpoints(endpoints_) {
 	L_OBJ("CREATED DATABASE QUEUE FOR %s!", repr(endpoints.to_string()));
@@ -2299,11 +2298,9 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 	}
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->persistent ||
-			val->size() < val->count ||
-			val->locked) {
+		if (val->locked || val->size() < val->count) {
 			val->renew_time = now;
-			L_DATABASE("Renew %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->locked ? "locked" : "??", repr(val->endpoints.to_string()));
+			L_DATABASE("Renew %s queue: %s", val->locked ? "locked" : val->size() < val->count ? "occupied" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
@@ -2332,10 +2329,8 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 	L_CALL("DatabasesLRU::cleanup()");
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->persistent ||
-			val->size() < val->count ||
-			val->locked) {
-			L_DATABASE("Leave %s queue: %s", val->persistent ? "persistent" : val->size() < val->count ? "occupied" : val->locked ? "locked" : "??", repr(val->endpoints.to_string()));
+		if (val->locked || val->size() < val->count) {
+			L_DATABASE("Leave %s queue: %s", val->locked ? "locked" : val->size() < val->count ? "occupied" : "??", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
@@ -2430,7 +2425,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if (flags == DB_OPEN) values.push_back("DB_OPEN");
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
-		if ((flags & DB_PERSISTENT) == DB_PERSISTENT) values.push_back("DB_PERSISTENT");
 		if ((flags & DB_EXCLUSIVE) == DB_EXCLUSIVE) values.push_back("DB_EXCLUSIVE");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
@@ -2438,7 +2432,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}());
 
 	bool db_writable = (flags & DB_WRITABLE) != 0;
-	bool db_persistent = (flags & DB_PERSISTENT) != 0;
 	bool db_exclusive = (flags & DB_EXCLUSIVE) != 0;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
@@ -2468,9 +2461,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			queue = databases.get(hash, endpoints);
 		}
 
-		bool old_persistent = queue->persistent;
-		queue->persistent = db_persistent;
-
 		int retries = 10;
 		while (true) {
 			if (!queue->pop(database, 0)) {
@@ -2496,7 +2486,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				} catch (...) {
 					lk.lock();
 					database.reset();
-					queue->persistent = old_persistent;
 					count = queue->dec_count();
 					if (count == 0) {
 						// There is a error, the queue ended up being empty, remove it
@@ -2514,7 +2503,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 			if (!database || !database->db) {
 				database.reset();
-				queue->persistent = old_persistent;
 				if (queue->count == 0) {
 					// There is a error, the queue ended up being empty, remove it
 					if (db_writable) {

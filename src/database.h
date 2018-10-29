@@ -443,7 +443,6 @@ private:
 	bool locked;
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
-	bool persistent;
 
 	size_t count;
 
