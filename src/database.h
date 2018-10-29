@@ -77,7 +77,6 @@ struct DatabaseCount {
 #if XAPIAND_DATABASE_WAL
 struct WalHeader {
 	struct StorageHeaderHead {
-		char magic[8];
 		uint32_t offset;
 		Xapian::rev revision;
 		std::array<unsigned char, 16> uuid;

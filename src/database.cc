@@ -69,8 +69,6 @@
 
 #define WAL_STORAGE_PATH "wal."
 
-#define MAGIC "X-WAL-00"  // 8 bytes only
-
 #define WAL_SYNC_MODE     STORAGE_ASYNC_SYNC
 #define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
@@ -95,7 +93,6 @@ WalHeader::init(void* param, void* /*unused*/)
 {
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 
-	memcpy(head.magic, MAGIC, sizeof(head.magic));
 	memcpy(&head.uuid[0], wal->database->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	head.revision = wal->database->get_revision();
@@ -105,10 +102,6 @@ WalHeader::init(void* param, void* /*unused*/)
 void
 WalHeader::validate(void* param, void* /*unused*/)
 {
-	if (strncmp(head.magic, MAGIC, sizeof(head.magic)) != 0) {
-		THROW(StorageCorruptVolume, "Bad WAL header magic number");
-	}
-
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
 	if (wal->validate_uuid) {
 		UUID uuid(head.uuid);
