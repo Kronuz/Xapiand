@@ -1293,7 +1293,12 @@ Database::commit(bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
-			wdb->commit();
+			if (transaction) {
+				wdb->commit_transaction();
+				wdb->begin_transaction(false);
+			} else {
+				wdb->commit();
+			}
 			modified = false;
 			const auto& db_pair = dbs[0]; // writable database, only one db in dbs
 			bool local = db_pair.second;
