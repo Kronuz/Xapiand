@@ -24,10 +24,9 @@
 
 #include "config.h"
 
-#include <list>
-#include <mutex>
-#include <regex>
-#include <unordered_map>
+#include <mutex>                              // for std::mutex
+#include <string>                             // for std::string
+#include "string_view.hh"                     // for std::string_view
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"

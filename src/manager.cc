@@ -22,33 +22,32 @@
 
 #include "manager.h"
 
-#include <algorithm>                          // for move
-#include <atomic>                             // for atomic, atomic_int
+#include <algorithm>                          // for std::move, std::min
+#include <atomic>                             // for std::atomic, std::atomic_int
 #include <cctype>                             // for isspace
-#include <chrono>                             // for duration, system_clock
+#include <chrono>                             // for std::chrono, std::chrono::system_clock
 #include <cstdint>                            // for uint64_t, UINT64_MAX
 #include <cstdlib>                            // for size_t, exit
 #include <cstring>                            // for strerror
 #include <ctime>                              // for time_t, ctime, NULL
-#include <errno.h>                            // for __error, errno
+#include <errno.h>                            // for errno
 #include <exception>                          // for exception
 #include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
-#include <functional>                         // for __base
+#include <future>                             // for std::future, std::promise
 #include <ifaddrs.h>                          // for ifaddrs, freeifaddrs
-#include <memory>                             // for allocator, shared_ptr
+#include <memory>                             // for std::shared_ptr
 #include <mutex>                              // for mutex, lock_guard, uniqu...
 #include <net/if.h>                           // for IFF_LOOPBACK
 #include <netinet/in.h>                       // for sockaddr_in, INET_ADDRST...
-#include <regex>                              // for smatch, regex, operator|
+#include <regex>                              // for std::regex
 #include <signal.h>                           // for SIGTERM, SIGINT
-#include <string>                             // for string, basic_string
+#include <string>                             // for std::string, std::to_string
 #include <sys/socket.h>                       // for AF_INET, sockaddr
 #include <sys/types.h>                        // for uint64_t
 #include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT
 #include <unistd.h>                           // for ssize_t, getpid
-#include <unordered_map>                      // for __hash_map_const_iterator
-#include <utility>                            // for pair
-#include <xapian.h>                           // for Error
+#include <utility>                            // for std::pair
+#include <vector>                             // for std::vector
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
