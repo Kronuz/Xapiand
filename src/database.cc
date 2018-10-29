@@ -2298,9 +2298,14 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 	}
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->locked || val->size() < val->count) {
+		if (val->locked) {
 			val->renew_time = now;
-			L_DATABASE("Renew %s queue: %s", val->locked ? "locked" : val->size() < val->count ? "occupied" : "??", repr(val->endpoints.to_string()));
+			L_DATABASE("Renew locked queue: %s", repr(val->endpoints.to_string()));
+			return lru::DropAction::renew;
+		}
+		if (val->size() < val->count) {
+			val->renew_time = now;
+			L_DATABASE("Renew occupied queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
@@ -2329,8 +2334,12 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 	L_CALL("DatabasesLRU::cleanup()");
 
 	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->locked || val->size() < val->count) {
-			L_DATABASE("Leave %s queue: %s", val->locked ? "locked" : val->size() < val->count ? "occupied" : "??", repr(val->endpoints.to_string()));
+		if (val->locked) {
+			L_DATABASE("Leave locked queue: %s", repr(val->endpoints.to_string()));
+			return lru::DropAction::leave;
+		}
+		if (val->size() < val->count) {
+			L_DATABASE("Leave occupied queue: %s", repr(val->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
