@@ -33,6 +33,7 @@
 #include "base_tcp.h"
 #include "binary_server.h"
 #include "database.h"
+#include "fs.hh"                   // for delete_files, build_path_index
 #include "io.hh"
 #include "length.h"
 #include "manager.h"
@@ -181,6 +182,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 						temp_directory = "/tmp";
 					} else {
 						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
 							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, io::strerrno(errno), errno, strerror(errno));
 							destroy();

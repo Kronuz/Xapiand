@@ -25,7 +25,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "database_handler.h"
-#include "fs.hh"                      // for delete_files
+#include "fs.hh"                      // for delete_files, build_path_index
 #include "io.hh"
 #include "length.h"
 #include "server/binary_client.h"
@@ -341,6 +341,7 @@ Replication::reply_db_header(const std::string& message)
 
 	char path[PATH_MAX];
 	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
+	build_path_index(client.temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
 		client.destroy();
