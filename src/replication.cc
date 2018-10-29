@@ -416,9 +416,9 @@ Replication::reply_changeset(const std::string& line)
 
 	if (!slave_database) {
 		if (!switch_database_path.empty()) {
-			XapiandManager::manager->database_pool.checkout(slave_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_VOLATILE);
+			XapiandManager::manager->database_pool.checkout(slave_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE);
 		} else {
-			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE | DB_VOLATILE);
+			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE);
 		}
 		wal = std::make_unique<DatabaseWAL>(slave_database->endpoints[0].path, slave_database.get());
 	}

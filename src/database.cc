@@ -2282,9 +2282,9 @@ DatabasesLRU::get(size_t hash)
 
 
 std::shared_ptr<DatabaseQueue>
-DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
+DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 {
-	L_CALL("DatabasesLRU::get(%zx, %s, %s)", hash, db_volatile ? "true" : "false", repr(endpoints.to_string()));
+	L_CALL("DatabasesLRU::get(%zx, %s)", hash, repr(endpoints.to_string()));
 
 	const auto now = std::chrono::system_clock::now();
 
@@ -2322,12 +2322,6 @@ DatabasesLRU::get(size_t hash, bool db_volatile, const Endpoints& endpoints)
 		return lru::DropAction::stop;
 	};
 
-	if (db_volatile) {
-		// Volatile, insert default on the back
-		return emplace_back_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state)).first->second;
-	}
-
-	// Non-volatile, insert default on the front
 	return emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state)).first->second;
 }
 
@@ -2437,7 +2431,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
 		if ((flags & DB_PERSISTENT) == DB_PERSISTENT) values.push_back("DB_PERSISTENT");
-		if ((flags & DB_VOLATILE) == DB_VOLATILE) values.push_back("DB_VOLATILE");
 		if ((flags & DB_EXCLUSIVE) == DB_EXCLUSIVE) values.push_back("DB_EXCLUSIVE");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
@@ -2447,7 +2440,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool db_writable = (flags & DB_WRITABLE) != 0;
 	bool db_persistent = (flags & DB_PERSISTENT) != 0;
 	bool db_exclusive = (flags & DB_EXCLUSIVE) != 0;
-	bool db_volatile = (flags & DB_VOLATILE) != 0;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
@@ -2471,10 +2463,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		std::shared_ptr<DatabaseQueue> queue;
 
 		if (db_writable) {
-			queue = writable_databases.get(hash, db_volatile, endpoints);
+			queue = writable_databases.get(hash, endpoints);
 			_cleanup(false, true);
 		} else {
-			queue = databases.get(hash, db_volatile, endpoints);
+			queue = databases.get(hash, endpoints);
 			_cleanup(true, false);
 		}
 
@@ -2652,8 +2644,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);
 
+		bool db_writable = (flags & DB_WRITABLE) != 0;
+
 		if (locks) {
-			bool db_writable = (flags & DB_WRITABLE) != 0;
 			if (db_writable) {
 				if (queue->locked) {
 					queue->locked = false;
@@ -2698,6 +2691,15 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		if (queue->count < queue->size()) {
 			L_CRIT("Inconsistency in the number of databases in queue");
 			sig_exit(-EX_SOFTWARE);
+		}
+
+		if (queue->count == 0) {
+			size_t hash = endpoints.hash();
+			if (db_writable) {
+				writable_databases.erase(hash);
+			} else {
+				databases.erase(hash);
+			}
 		}
 	} else {
 		database.reset();

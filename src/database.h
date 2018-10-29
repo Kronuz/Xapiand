@@ -490,7 +490,7 @@ public:
 	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
-	std::shared_ptr<DatabaseQueue> get(size_t hash, bool db_volatile, const Endpoints& endpoints);
+	std::shared_ptr<DatabaseQueue> get(size_t hash, const Endpoints& endpoints);
 
 	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
