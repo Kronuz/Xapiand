@@ -38,7 +38,6 @@
 
 // #define L_CONN L_DEBUG
 
-class BaseServer;
 class LZ4CompressFile;
 
 //
@@ -170,7 +169,7 @@ class BaseClient : public Worker {
 	std::mutex _mutex;
 
 protected:
-	BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
+	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 
 public:
 	virtual ~BaseClient();

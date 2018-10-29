@@ -31,7 +31,6 @@
 #include <unistd.h>
 
 #include "base_tcp.h"
-#include "binary_server.h"
 #include "database.h"
 #include "fs.hh"                   // for delete_files, build_path_index
 #include "io.hh"
@@ -62,8 +61,8 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
-	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
+BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
+	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),

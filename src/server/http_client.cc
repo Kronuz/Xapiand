@@ -52,7 +52,6 @@
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for fnv1ah32
-#include "http_server.h"                    // for HttpServer
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_D...
 #include "manager.h"                        // for XapiandManager, XapiandMa...
@@ -242,8 +241,8 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 }
 
 
-HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
-	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
+HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
+	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  new_request(this)
 {
 	int http_clients = ++XapiandServer::http_clients;

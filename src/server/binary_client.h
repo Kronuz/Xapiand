@@ -35,7 +35,6 @@
 #include "replication.h"
 #include "threadpool.h"         // for Task
 
-class BinaryServer;
 class Database;
 class RemoteProtocol;
 class Replication;
@@ -81,7 +80,7 @@ class BinaryClient : public BaseClient {
 	std::string buffer;
 	queue::Queue<Buffer> messages_queue;
 
-	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
+	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
 
 	ssize_t on_read(const char *buf, ssize_t received) override;
 	void on_read_file(const char *buf, ssize_t received) override;

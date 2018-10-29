@@ -53,7 +53,6 @@
 // #define L_CONN L_DEBUG
 
 class UUIDGenerator;
-class HttpServer;
 class Logging;
 class Worker;
 
@@ -332,7 +331,7 @@ public:
 		return Worker::__repr__("HttpClient");
 	}
 
-	HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
+	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 
 	~HttpClient();
 

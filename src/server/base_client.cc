@@ -35,7 +35,6 @@
 
 #include "cassert.hh"            // for assert
 
-#include "base_server.h"         // for BaseServer
 #include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "ignore_unused.h"       // for ignore_unused
 #include "io.hh"                 // for read, close, lseek, write, ignored_errno
@@ -297,8 +296,8 @@ ClientNoDecompressor::decompress()
 }
 
 
-BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
-	: Worker(std::move(server_), ev_loop_, ev_flags_),
+BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
+	: Worker(std::move(parent_), ev_loop_, ev_flags_),
 	  io_read(*ev_loop),
 	  io_write(*ev_loop),
 	  write_start_async(*ev_loop),
