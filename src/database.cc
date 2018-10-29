@@ -1160,6 +1160,12 @@ Database::reopen_readable()
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					rdb = Xapian::Database(endpoint.path, _flags);
 					local = true;
+				} else {
+					try {
+						// If remote is master (it should be), try triggering replication
+						XapiandManager::manager->trigger_replication(endpoint, Endpoint{endpoint.path});
+						incomplete = true;
+					} catch (...) { }
 				}
 			} catch (const Xapian::DatabaseOpeningError& exc) { }
 #endif /* XAPIAN_LOCAL_DB_FALLBACK */
