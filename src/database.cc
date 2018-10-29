@@ -36,17 +36,18 @@
 #include "atomic_shared_ptr.h"    // for atomic_shared_ptr
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_handler.h"     // for DatabaseHandler
-#include "repr.hh"               // for repr
 #include "exception.h"            // for Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for move_files, exists, build_path
 #include "ignore_unused.h"        // for ignore_unused
 #include "io.hh"                  // for close, strerrno, write, open
 #include "length.h"               // for serialise_length, unserialise_length
 #include "log.h"                  // for L_OBJ, L_CALL
+#include "lz4_compressor.h"       // for compress_lz4, decompress_lz4
 #include "manager.h"              // for sig_exit
 #include "msgpack.h"              // for MsgPack
 #include "msgpack/unpack.hpp"     // for unpack_error
 #include "opts.h"                 // for opts
+#include "repr.hh"                // for repr
 #include "schema.h"               // for FieldType, FieldType::KEYWORD
 #include "serialise.h"            // for uuid
 #include "string.hh"              // for string::from_delta
@@ -272,9 +273,9 @@ DatabaseWAL::open_current(bool only_committed, bool unsafe)
 				}
 				L_WARNING("WAL revision not reached");
 			}
-			open(string::format(WAL_STORAGE_PATH "%llu", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", volumes.second), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 		} else {
-			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 		}
 	} catch (const StorageException& exc) {
 		L_ERR("WAL ERROR in %s: %s", ::repr(database->endpoints.to_string()), exc.get_message());
@@ -357,7 +358,7 @@ DatabaseWAL::repr_line(std::string_view line, bool unserialised)
 
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
-	std::string data(p, p_end);
+	auto data = decompress_lz4(std::string_view(p, p_end - p));
 
 	size_t size;
 
@@ -545,7 +546,7 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
-	std::string data(p, p_end);
+	auto data = decompress_lz4(std::string_view(p, p_end - p));
 
 	Xapian::docid did;
 	Xapian::Document doc;
@@ -634,7 +635,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(string::format(WAL_STORAGE_PATH "%llu", 0), STORAGE_OPEN | STORAGE_COMPRESS);
+		open(string::format(WAL_STORAGE_PATH "%llu", 0), STORAGE_OPEN);
 	} catch (const StorageIOError&) {
 		return true;
 	}
@@ -698,7 +699,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 		std::string line;
 		line.append(serialise_length(revision));
 		line.append(serialise_length(toUType(type)));
-		line.append(data);
+		line.append(compress_lz4(data));
 
 		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], endpoint.path, repr(line, quote));
 
@@ -706,7 +707,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 		uint32_t slot = revision - header.head.revision;
 
 		if (slot >= WAL_SLOTS) {
-			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			assert(revision >= header.head.revision);
 			slot = revision - header.head.revision;
 		}
@@ -717,7 +718,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 			write(line.data(), line.size());
 		} catch (const StorageClosedError&) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
-			open(string::format(WAL_STORAGE_PATH "%llu", (volumes.first <= volumes.second) ? volumes.second : revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "%llu", (volumes.first <= volumes.second) ? volumes.second : revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			write(line.data(), line.size());
 		}
 
@@ -725,7 +726,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 
 		if (type == Type::COMMIT) {
 			if (slot + 1 >= WAL_SLOTS) {
-				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
+				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			} else {
 				header.slot[slot + 1] = header.slot[slot];
 			}
