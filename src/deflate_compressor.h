@@ -130,7 +130,7 @@ public:
 			return *this;
 		}
 
-		std::string operator*() const noexcept {
+		const std::string& operator*() const noexcept {
 			return current_str;
 		}
 
@@ -390,3 +390,27 @@ public:
 		open(filename);
 	}
 };
+
+
+static inline std::string
+compress_deflate(std::string_view uncompressed)
+{
+	std::string compressed;
+	DeflateCompressData compressor(uncompressed.data(), uncompressed.size());
+	for (auto it = compressor.begin(); it; ++it) {
+		compressed.append(*it);
+	}
+	return compressed;
+}
+
+
+static inline std::string
+decompress_deflate(std::string_view compressed)
+{
+	std::string decompressed;
+	DeflateDecompressData decompressor(compressed.data(), compressed.size());
+	for (auto it = decompressor.begin(); it; ++it) {
+		decompressed.append(*it);
+	}
+	return decompressed;
+}
