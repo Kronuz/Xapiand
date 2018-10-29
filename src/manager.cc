@@ -832,36 +832,8 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 {
 	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	assert(!src_endpoint.is_local());
-
-	bool replicated = false;
-
-	if (src_endpoint.path == ".") {
-		// Cluster database is always updated
-		replicated = true;
-	}
-
-	if (!replicated && exists(std::string(src_endpoint.path) + "/iamglass")) {
-		// If database is already there, its also always updated
-		replicated = true;
-	}
-
-	if (!replicated) {
-		// Otherwise, check if the local node resolves as replicator
-		auto local_node_ = Node::local_node();
-		auto nodes = resolve_index_nodes(src_endpoint.path);
-		for (const auto& node : nodes) {
-			if (Node::is_equal(node, local_node_)) {
-				replicated = true;
-				break;
-			}
-		}
-	}
-
-	if (replicated) {
-		if (auto binary = weak_binary.lock()) {
-			return binary->trigger_replication(src_endpoint, dst_endpoint);
-		}
+	if (auto binary = weak_binary.lock()) {
+		return binary->trigger_replication(src_endpoint, dst_endpoint);
 	}
 
 	std::promise<bool> promise;

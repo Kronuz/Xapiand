@@ -116,6 +116,38 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 bool
 BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
+	if (src_endpoint.is_local()) {
+		return false;
+	}
+
+	bool replicated = false;
+
+	if (src_endpoint.path == ".") {
+		// Cluster database is always updated
+		replicated = true;
+	}
+
+	if (!replicated && exists(std::string(src_endpoint.path) + "/iamglass")) {
+		// If database is already there, its also always updated
+		replicated = true;
+	}
+
+	if (!replicated) {
+		// Otherwise, check if the local node resolves as replicator
+		auto local_node_ = Node::local_node();
+		auto nodes = XapiandManager::manager->resolve_index_nodes(src_endpoint.path);
+		for (const auto& node : nodes) {
+			if (Node::is_equal(node, local_node_)) {
+				replicated = true;
+				break;
+			}
+		}
+	}
+
+	if (!replicated) {
+		return false;
+	}
+
 	int client_sock = binary->connection_socket();
 	if (client_sock < 0) {
 		return false;

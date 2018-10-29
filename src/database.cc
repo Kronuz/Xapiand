@@ -1164,7 +1164,15 @@ Database::reopen_readable()
 						incomplete = true;
 					} catch (...) { }
 				}
-			} catch (const Xapian::DatabaseOpeningError& exc) { }
+			} catch (const Xapian::DatabaseOpeningError& exc) {
+				if (!exists(endpoint.path + "/iamglass")) {
+					try {
+						// If remote is master (it should be), try triggering replication
+						XapiandManager::manager->trigger_replication(endpoint, Endpoint{endpoint.path});
+						incomplete = true;
+					} catch (...) { }
+				}
+			}
 #endif /* XAPIAN_LOCAL_DB_FALLBACK */
 		}
 		else
