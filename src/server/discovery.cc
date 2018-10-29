@@ -359,7 +359,7 @@ Discovery::db_updated(Message type, const std::string& message)
 		replicated = true;
 	}
 
-	if (exists(std::string(path) + "/iamglass")) {
+	if (!replicated && exists(std::string(path) + "/iamglass")) {
 		// If database is already there, its also always updated
 		replicated = true;
 	}

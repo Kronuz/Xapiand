@@ -107,6 +107,8 @@
 #define NODE_LABEL "node"
 #define CLUSTER_LABEL "cluster"
 
+constexpr size_t num_replicas = 3;
+
 
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
@@ -853,7 +855,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 		auto indexed_nodes = Node::indexed_nodes();
 		if (indexed_nodes) {
 			size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
-			for (size_t replicas = 3; replicas; --replicas) {
+			for (size_t replicas = std::min(num_replicas, indexed_nodes); replicas; --replicas) {
 				auto node = Node::get_node(consistent_hash + 1);
 				assert(node);
 				nodes.push_back(node);
