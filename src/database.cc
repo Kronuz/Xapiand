@@ -1300,7 +1300,7 @@ Database::commit(bool wal_, bool send_update)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Commit: t: %d", t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1416,7 +1416,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Deleting document: %d  t: %d", did, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1465,7 +1465,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Deleting document: '%s'  t: %d", term, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1617,7 +1617,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Adding new document.  t: %d", t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1667,7 +1667,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Replacing: %d  t: %d", did, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1719,7 +1719,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Replacing: '%s'  t: %d", term, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1764,7 +1764,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->add_spelling(word, freqinc);
@@ -1806,7 +1806,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->remove_spelling(word, freqdec);
@@ -1850,7 +1850,7 @@ Database::find_document(const std::string& term_id)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		try {
 			Xapian::PostingIterator it = db->postlist_begin(term_id);
 			if (it == db->postlist_end(term_id)) {
@@ -1894,7 +1894,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		try {
 #ifdef HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS
 			if (assume_valid_) {
@@ -1950,7 +1950,7 @@ Database::get_metadata(const std::string& key)
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		try {
 			value = db->get_metadata(key);
 			break;
@@ -1988,7 +1988,7 @@ Database::get_metadata_keys()
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		try {
 			auto it = db->metadata_keys_begin();
 			auto it_e = db->metadata_keys_end();
@@ -2029,7 +2029,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 	L_DATABASE_WRAP_INIT();
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
@@ -2072,7 +2072,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 	L_DATABASE_WRAP_INIT();
 
 	std::string initial;
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		std::string key;
 		try {
 			auto it = db->metadata_keys_begin();
@@ -2124,7 +2124,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 	L_DATABASE_WRAP_INIT();
 
 	Xapian::docid initial = 1;
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		Xapian::docid did = initial;
 		try {
 			auto it = db->postlist_begin("");
@@ -2205,7 +2205,7 @@ Database::dump_documents()
 
 	MsgPack docs(MsgPack::Type::ARRAY);
 	Xapian::docid initial = 1;
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	for (int t = DB_RETRIES; t; --t) {
 		Xapian::docid did = initial;
 		try {
 			auto it = db->postlist_begin("");
