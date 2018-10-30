@@ -487,7 +487,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
 
-	if (database->modified && !database->transaction) {
+	if (database->modified && !database->transaction && !database->closed) {
 		DatabaseAutocommit::commit(database);
 	}
 
