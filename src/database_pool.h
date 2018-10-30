@@ -213,6 +213,8 @@ public:
 	void switch_db(const std::string& tmp, const std::string& endpoint_path);
 	void cleanup();
 
+	void clear();
+
 	DatabaseCount total_writable_databases();
 	DatabaseCount total_readable_databases();
 };

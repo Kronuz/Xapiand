@@ -638,6 +638,20 @@ DatabasePool::cleanup()
 }
 
 
+void
+DatabasePool::clear()
+{
+	L_CALL("DatabasePool::clear()");
+
+	std::lock_guard<std::mutex> lk(qmtx);
+
+	writable_databases.clear();
+	databases.clear();
+	queues.clear();
+}
+
+
+
 DatabaseCount
 DatabasePool::total_writable_databases()
 {
