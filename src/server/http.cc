@@ -22,12 +22,12 @@
 
 #include "http.h"
 
-#include "config.h"             // for XAPIAND_HTTP_SERVERPORT, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION
+#include "config.h"                         // for XAPIAND_HTTP_SERVERPORT, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION
 
-#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "endpoint.h"           // for Node, local_node
-#include "log.h"                // for L_OBJ
-#include "base_tcp.h"           // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
+#include "atomic_shared_ptr.h"              // for atomic_shared_ptr
+#include "log.h"                            // for L_OBJ
+#include "node.h"                           // for Node::local_node
+#include "base_tcp.h"                       // for BaseTCP, CONN_TCP_DEFER_ACCEPT, CONN_...
 
 
 Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)

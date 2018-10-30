@@ -45,7 +45,7 @@
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database_handler.h"               // for DatabaseHandler
 #include "database_utils.h"                 // for query_field_t
-#include "endpoint.h"                       // for Endpoints, Node, Endpoint
+#include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
@@ -57,6 +57,7 @@
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
+#include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "rapidjson/document.h"             // for Document
