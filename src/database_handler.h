@@ -203,6 +203,8 @@ public:
 
 	MsgPack check();
 
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+
 	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
 	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
 	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
@@ -232,13 +234,15 @@ public:
 	bool set_metadata(const std::string& key, const std::string& value, bool overwrite=true);
 	bool set_metadata(std::string_view key, std::string_view value, bool overwrite=true);
 
-	Document get_document(const Xapian::docid& did);
+	Document get_document(Xapian::docid did);
 	Document get_document(std::string_view document_id);
 	Document get_document_term(const std::string& term_id);
 	Document get_document_term(std::string_view term_id);
 	Xapian::docid get_docid(std::string_view document_id);
 
-	void delete_document(std::string_view document_id, bool commit_=false, bool wal_=true);
+	void delete_document(std::string_view document_id, bool commit_=false);
+
+	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false);
 
 	MsgPack get_document_info(std::string_view document_id, bool raw_data);
 	MsgPack get_database_info();

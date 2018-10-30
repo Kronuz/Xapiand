@@ -485,6 +485,49 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 }
 
 
+std::tuple<std::string, Xapian::Document, MsgPack>
+DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type)
+{
+	L_CALL("DatabaseHandler::prepare(%s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), ct_type.first, ct_type.second);
+
+	if ((flags & DB_WRITABLE) == 0) {
+		THROW(Error, "Database is read-only");
+	}
+
+	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	try {
+		Data data;
+		switch (body.getType()) {
+			case MsgPack::Type::STR:
+				if (stored) {
+					data.update(ct_type, -1, 0, 0, body.str_view());
+				} else {
+					auto blob = body.str_view();
+					if (blob.size() > NON_STORED_SIZE_LIMIT) {
+						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					}
+					data.update(ct_type, blob);
+				}
+				return prepare(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair);
+			case MsgPack::Type::NIL:
+			case MsgPack::Type::UNDEFINED:
+				data.erase(ct_type);
+				return prepare(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair);
+			case MsgPack::Type::MAP:
+				inject_data(data, body);
+				return prepare(document_id, body, data, old_document_pair);
+			default:
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+		}
+	} catch (...) {
+		if (old_document_pair != nullptr) {
+			dec_document_change_cnt(old_document_pair);
+		}
+		throw;
+	}
+}
+
+
 DataType
 DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_)
 {
@@ -1570,7 +1613,7 @@ DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool
 
 
 Document
-DatabaseHandler::get_document(const Xapian::docid& did)
+DatabaseHandler::get_document(Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::get_document((Xapian::docid)%d)", did);
 
@@ -1615,20 +1658,30 @@ DatabaseHandler::get_docid(std::string_view document_id)
 
 
 void
-DatabaseHandler::delete_document(std::string_view document_id, bool commit_, bool wal_)
+DatabaseHandler::delete_document(std::string_view document_id, bool commit_)
 {
 	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		database()->delete_document(did, commit_, wal_);
+		database()->delete_document(did, commit_);
 		return;
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
-	database()->delete_document(database()->find_document(term_id), commit_, wal_);
+	database()->delete_document(database()->find_document(term_id), commit_);
+}
+
+
+Xapian::docid
+DatabaseHandler::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_)
+{
+	L_CALL("Database::replace_document(%d, <doc>)", did);
+
+	lock_database lk_db(this);
+	return database()->replace_document(did, doc, commit_);
 }
 
 
