@@ -823,9 +823,15 @@ Raft::_apply(const std::string& command)
 		node_copy->idx = idx;
 		node = std::shared_ptr<const Node>(node_copy.release());
 	}
-	Node::put_node(node, false);
 
-	L_RED("APPLY: %s", repr(command));
+	auto put = Node::put_node(node, false);
+
+	if (put.first == nullptr) {
+		L_RED("Denied node: [%zu] %s", node->idx, node->name());
+	} else {
+		node = put.first;
+		L_GREEN("Added node: [%zu] %s", node->idx, node->name());
+	}
 }
 
 
