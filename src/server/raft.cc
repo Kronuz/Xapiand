@@ -827,10 +827,10 @@ Raft::_apply(const std::string& command)
 	auto put = Node::put_node(node, false);
 
 	if (put.first == nullptr) {
-		L_RED("Denied node: [%zu] %s", node->idx, node->name());
+		L_DEBUG("Denied node: [%zu] %s", node->idx, node->name());
 	} else {
 		node = put.first;
-		L_GREEN("Added node: [%zu] %s", node->idx, node->name());
+		L_DEBUG("Added node: [%zu] %s", node->idx, node->name());
 	}
 }
 
