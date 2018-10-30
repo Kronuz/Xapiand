@@ -1127,6 +1127,7 @@ int main(int argc, char **argv) {
 #endif
 
 	try {
+
 		parseOptions(argc, argv);
 
 		if (opts.detach) {
@@ -1189,32 +1190,35 @@ int main(int argc, char **argv) {
 			} else {
 				server(process_start);
 			}
-		} catch (const Exit&) {
-			throw;
+		} catch (const Exit& exc) {
+			exit_code = exc.code;
 		} catch (const BaseException& exc) {
 			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-			throw Exit(EX_SOFTWARE);
+			exit_code = EX_SOFTWARE;
 		} catch (const Xapian::Error& exc) {
 			L_CRIT(exc.get_description());
-			throw Exit(EX_SOFTWARE);
+			exit_code = EX_SOFTWARE;
 		} catch (const std::exception& exc) {
 			L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
-			throw Exit(EX_SOFTWARE);
+			exit_code = EX_SOFTWARE;
 		} catch (...) {
 			L_CRIT("Uncaught exception!");
-			throw Exit(EX_SOFTWARE);
+			exit_code = EX_SOFTWARE;
 		}
 
 		XapiandManager::manager->database_pool.clear();
 		XapiandManager::manager.reset();
 
-		if (opts.detach && !opts.pidfile.empty()) {
-			L_INFO("Removing the pid file.");
-			unlink(opts.pidfile.c_str());
-		}
-
 	} catch (const Exit& exc) {
 		exit_code = exc.code;
+	} catch (...) {
+		L_CRIT("Uncaught exception!!");
+		exit_code = EX_SOFTWARE;
+	}
+
+	if (opts.detach && !opts.pidfile.empty()) {
+		L_INFO("Removing the pid file.");
+		unlink(opts.pidfile.c_str());
 	}
 
 	Logging::finish();
