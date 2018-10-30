@@ -27,17 +27,17 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <unordered_map>
+#include <deque>                // for std::deque
+#include <memory>               // for shared_ptr
+#include <mutex>                // for std::mutex
+#include <string>               // for std::string
+#include <vector>               // for std::vector
 #include <xapian.h>
 
-#include "base_client.h"
-#include "remote_protocol.h"
-#include "replication.h"
+#include "base_client.h"        // for BaseClient
+#include "remote_protocol.h"    // for RemoteProtocol
+#include "replication.h"        // for Replication
 #include "threadpool.h"         // for Task
-
-class Database;
-class RemoteProtocol;
-class Replication;
 
 
 #define FILE_FOLLOWS '\xfd'
@@ -65,7 +65,7 @@ static inline const std::string& StateNames(State type) {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient {
-	std::mutex running_mutex;
+	std::mutex messages_mutex;
 
 	State state;
 
@@ -78,7 +78,7 @@ class BinaryClient : public BaseClient {
 
 	// Buffers that are pending write
 	std::string buffer;
-	queue::Queue<Buffer> messages_queue;
+	std::deque<Buffer> messages;
 
 	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
 
@@ -111,7 +111,6 @@ public:
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void run();
-	void _run();
 };
 
 

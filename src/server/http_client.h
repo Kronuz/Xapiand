@@ -26,6 +26,7 @@
 
 #include <atomic>               // for atomic_bool
 #include <chrono>               // for system_clock, time_point, duration
+#include <deque>                // for std::deque
 #include <memory>               // for shared_ptr, unique_ptr
 #include <mutex>                // for mutex, lock_guard
 #include <set>                  // for set

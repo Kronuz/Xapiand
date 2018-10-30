@@ -221,16 +221,19 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 			return received;
 		}
 
-		if (messages_queue.empty()) {
-			// Enqueue message...
-			messages_queue.push(Buffer(type, p, len));
-			// And start a runner.
-			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-				task->run();
-			});
-		} else {
-			// There should be a runner, just enqueue message.
-			messages_queue.push(Buffer(type, p, len));
+		if (!closed) {
+			std::lock_guard<std::mutex> lk(messages_mutex);
+			if (messages.empty()) {
+				// Enqueue message...
+				messages.push_back(Buffer(type, p, len));
+				// And start a runner.
+				XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
+					task->run();
+				});
+			} else {
+				// There should be a runner, just enqueue message.
+				messages.push_back(Buffer(type, p, len));
+			}
 		}
 
 		buffer.erase(0, p - o + len);
@@ -264,16 +267,19 @@ BinaryClient::on_read_file_done()
 
 	const auto& temp_file = temp_files.back();
 
-	if (messages_queue.empty()) {
-		// Enqueue message...
-		messages_queue.push(Buffer(file_message_type, temp_file.data(), temp_file.size()));
-		// And start a runner.
-		XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-			task->run();
-		});
-	} else {
-		// There should be a runner, just enqueue message.
-		messages_queue.push(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+	if (!closed) {
+		std::lock_guard<std::mutex> lk(messages_mutex);
+		if (messages.empty()) {
+			// Enqueue message...
+			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+			// And start a runner.
+			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
+				task->run();
+			});
+		} else {
+			// There should be a runner, just enqueue message.
+			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+		}
 	}
 }
 
@@ -283,10 +289,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 {
 	L_CALL("BinaryClient::get_message(<result>, <max_type>)");
 
-	Buffer msg;
-	if (!messages_queue.pop(msg)) {
-		THROW(NetworkError, "No message available");
-	}
+	auto& msg = messages.front();
 
 	char type = msg.type;
 
@@ -300,11 +303,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 	size_t msg_size = msg.nbytes();
 	result.assign(msg_str, msg_size);
 
-	std::string buf;
-	buf += type;
-
-	buf += serialise_length(msg_size);
-	buf += result;
+	messages.pop_front();
 
 	return type;
 }
@@ -342,66 +341,72 @@ BinaryClient::run()
 {
 	L_CALL("BinaryClient::run()");
 
-	std::lock_guard<std::mutex> lk(running_mutex);
 	L_CONN("Start running in binary worker...");
 
+	std::unique_lock<std::mutex> lk(messages_mutex);
+
 	idle = false;
-	try {
-		_run();
-
-		if (shutting_down && write_queue.empty()) {
-			L_WARNING("Programmed shut down!");
-			destroy();
-			detach();
-		}
-
-	} catch (...) {
-		idle = true;
-		L_CONN("Running in binary worker ended with an exception.");
-		detach();
-		throw;
-	}
-	idle = true;
-	L_CONN("Running in binary worker ended.");
-	redetach();  // try re-detaching if already detaching
-}
-
-
-void
-BinaryClient::_run()
-{
-	L_CALL("BinaryClient::_run()");
-
-	L_OBJ_BEGIN("BinaryClient::run:BEGIN");
 
 	if (state == State::INIT) {
 		state = State::REMOTEPROTOCOL_SERVER;
+		lk.unlock();
 		remote_protocol.msg_update(std::string());
+		lk.lock();
 	}
 
-	while (!messages_queue.empty() && !closed) {
+	while (!messages.empty() && !closed) {
 		switch (state) {
 			case State::REMOTEPROTOCOL_SERVER: {
 				std::string message;
 				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-				L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
-				remote_protocol.remote_server(type, message);
+				lk.unlock();
+				try {
+					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
+					remote_protocol.remote_server(type, message);
+				} catch (...) {
+					lk.lock();
+					idle = true;
+					L_CONN("Running in worker ended with an exception.");
+					detach();  // try re-detaching if already flagged as detaching
+					throw;
+				}
+				lk.lock();
 				break;
 			}
 
 			case State::REPLICATIONPROTOCOL_SERVER: {
 				std::string message;
 				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-				L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
-				replication.replication_server(type, message);
+				lk.unlock();
+				try {
+					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
+					replication.replication_server(type, message);
+				} catch (...) {
+					lk.lock();
+					idle = true;
+					L_CONN("Running in worker ended with an exception.");
+					detach();  // try re-detaching if already flagged as detaching
+					throw;
+				}
+				lk.lock();
 				break;
 			}
 
 			case State::REPLICATIONPROTOCOL_CLIENT: {
 				std::string message;
 				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-				L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
-				replication.replication_client(type, message);
+				lk.unlock();
+				try {
+					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+					replication.replication_client(type, message);
+				} catch (...) {
+					lk.lock();
+					idle = true;
+					L_CONN("Running in worker ended with an exception.");
+					detach();  // try re-detaching if already flagged as detaching
+					throw;
+				}
+				lk.lock();
 				break;
 			}
 
@@ -415,7 +420,15 @@ BinaryClient::_run()
 		}
 	}
 
-	L_OBJ_END("BinaryClient::run:END");
+	if (shutting_down && write_queue.empty()) {
+		L_WARNING("Programmed shut down!");
+		destroy();
+		detach();
+	}
+
+	idle = true;
+	L_CONN("Running in binary worker ended.");
+	redetach();  // try re-detaching if already flagged as detaching
 }
 
 #endif  /* XAPIAND_CLUSTERING */
