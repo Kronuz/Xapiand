@@ -296,7 +296,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 			}
 			if (!node_copy->idx && node->idx) {
 				node_copy->idx = node->idx;
-				if (node_copy->idx <= _nodes_indexed.size()) {
+				if (node_copy->idx >= 1 && node_copy->idx <= _nodes_indexed.size()) {
 					if (node_copy->lower_name() != _nodes_indexed[node_copy->idx - 1]->lower_name()) {
 						L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 						return std::make_pair(nullptr, false);
@@ -321,7 +321,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	}
 	if (!node_copy->idx && idx) {
 		node_copy->idx = idx;
-		if (node_copy->idx <= _nodes_indexed.size()) {
+		if (node_copy->idx >= 1 && node_copy->idx <= _nodes_indexed.size()) {
 			if (node_copy->lower_name() != _nodes_indexed[node_copy->idx - 1]->lower_name()) {
 				L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
 				return std::make_pair(nullptr, false);
