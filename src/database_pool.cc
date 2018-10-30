@@ -286,10 +286,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (non-exclusive)", repr(endpoints.to_string()));
 	}
 
+	std::unique_lock<std::mutex> lk(qmtx);
+
 	if (!finished) {
 		size_t hash = endpoints.hash();
-
-		std::unique_lock<std::mutex> lk(qmtx);
 
 		auto queue_pair = db_writable ? writable_databases.get(hash, endpoints) : databases.get(hash, endpoints);
 
@@ -425,8 +425,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 			break;
 		};
-
 	}
+	lk.unlock();
 
 	if (!database) {
 		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
@@ -446,8 +446,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				bool local = db_pair.second;
 				auto hash = endpoints[i].hash();
 				if (local) {
-					std::lock_guard<std::mutex> lk(qmtx);
+					lk.lock();
 					auto queue = writable_databases.get(hash);
+					lk.unlock();
 					if (queue) {
 						auto revision = queue->local_revision.load();
 						if (revision != db_pair.first.get_revision()) {
@@ -572,6 +573,8 @@ void
 DatabasePool::finish()
 {
 	L_CALL("DatabasePool::finish()");
+
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	finished = true;
 
