@@ -995,15 +995,15 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	L_CALL("HttpClient::home_view()");
 
 	endpoints.clear();
-	auto leader_node_ = Node::leader_node();
-	endpoints.add(Endpoint(".", leader_node_.get()));
+	auto leader_node = Node::leader_node();
+	endpoints.add(Endpoint(".", leader_node.get()));
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
 
-	auto local_node_ = Node::local_node();
-	auto document = db_handler.get_document(local_node_->name());
+	auto local_node = Node::local_node();
+	auto document = db_handler.get_document(local_node->name());
 
 	auto obj = document.get_obj();
 	if (obj.find(ID_FIELD_NAME) == obj.end()) {

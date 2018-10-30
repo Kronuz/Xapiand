@@ -164,8 +164,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  cleanup(*ev_loop)
 {
 	// Set the id in local node.
-	auto local_node_ = Node::local_node();
-	auto node_copy = std::make_unique<Node>(*local_node_);
+	auto local_node = Node::local_node();
+	auto node_copy = std::make_unique<Node>(*local_node);
 
 	// Setup node from node database directory
 	std::string node_name_(load_node_name());
@@ -186,11 +186,11 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	// Set addr in local node
 	node_copy->addr(host_address());
 
-	local_node_ = std::shared_ptr<const Node>(node_copy.release());
-	local_node_ = Node::local_node(local_node_);
+	local_node = std::shared_ptr<const Node>(node_copy.release());
+	local_node = Node::local_node(local_node);
 
 	if (opts.solo) {
-		Node::leader_node(local_node_);
+		Node::leader_node(local_node);
 	}
 
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
@@ -303,12 +303,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 	#endif
 
-	auto leader_node_ = Node::leader_node();
-	auto local_node_ = Node::local_node();
-	auto is_leader = Node::is_equal(leader_node_, local_node_);
+	auto leader_node = Node::leader_node();
+	auto local_node = Node::local_node();
+	auto is_leader = Node::is_equal(leader_node, local_node);
 
 	int new_cluster = 0;
-	Endpoint cluster_endpoint(".", leader_node_.get());
+	Endpoint cluster_endpoint(".", leader_node.get());
 	try {
 		bool found = false;
 		if (is_leader) {
@@ -319,7 +319,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				auto did = *m;
 				auto document = db_handler.get_document(did);
 				auto obj = document.get_obj();
-				if (obj[ID_FIELD_NAME] == local_node_->lower_name()) {
+				if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
 					found = true;
 				}
 				#ifdef XAPIAND_CLUSTERING
@@ -329,7 +329,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 				#endif
 			}
 		} else {
-			auto node = Node::get_node(local_node_->lower_name());
+			auto node = Node::get_node(local_node->lower_name());
 			found = node && !!node->idx;
 		}
 		if (!found) {
@@ -339,15 +339,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			L_INFO("Cluster database doesn't exist. Generating database...");
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
-			auto did = db_handler.index(local_node_->lower_name(), false, {
+			auto did = db_handler.index(local_node->lower_name(), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node_->name() } } },
+				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
 			}, true, msgpack_type).first;
 			new_cluster = 1;
 			#ifdef XAPIAND_CLUSTERING
 			if (!opts.solo) {
-				raft->add_command(serialise_length(did) + serialise_string(local_node_->name()));
+				raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
 			}
 			#endif
 		} catch (const CheckoutError&) {
@@ -362,11 +362,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	node_name = set_node_name(local_node_->name());
-	if (string::lower(node_name) != local_node_->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node_);
+	node_name = set_node_name(local_node->name());
+	if (string::lower(node_name) != local_node->lower_name()) {
+		auto local_node_copy = std::make_unique<Node>(*local_node);
 		local_node_copy->name(node_name);
-		local_node_ = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+		local_node = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
 	}
 
 	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
@@ -381,11 +381,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			Endpoint local_endpoint(".");
 			auto ret = trigger_replication(cluster_endpoint, local_endpoint);
 			if (!ret.get()) {
-				L_CRIT("Cannot synchronize cluster database from %s", leader_node_->name());
+				L_CRIT("Cannot synchronize cluster database from %s", leader_node->name());
 				sig_exit(-EX_CANTCREAT);
 				return;
 			}
-			L_INFO("Cluster data being synchronized from %s...", leader_node_->name());
+			L_INFO("Cluster data being synchronized from %s...", leader_node->name());
 			new_cluster = 2;
 			state = State::READY;  // TODO: Set this state only when cluster replication finishes!
 		}
@@ -398,22 +398,22 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("%s using solo cluster %s", local_node_->name(), opts.cluster_name);
+				L_NOTICE("%s using solo cluster %s", local_node->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("%s using new solo cluster %s", local_node_->name(), opts.cluster_name);
+				L_NOTICE("%s using new solo cluster %s", local_node->name(), opts.cluster_name);
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("%s joined cluster %s (it is now online!)", local_node_->name(), opts.cluster_name);
+				L_NOTICE("%s joined cluster %s (it is now online!)", local_node->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("%s joined new cluster %s (it is now online!)", local_node_->name(), opts.cluster_name);
+				L_NOTICE("%s joined new cluster %s (it is now online!)", local_node->name(), opts.cluster_name);
 				break;
 			case 2:
-				L_NOTICE("%s joined cluster %s (it was already online!)", local_node_->name(), opts.cluster_name);
+				L_NOTICE("%s joined cluster %s (it was already online!)", local_node->name(), opts.cluster_name);
 				break;
 		}
 	}
@@ -862,8 +862,8 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 					consistent_hash = idx % indexed_nodes;
 					serialised.append(serialise_length(idx));
 				}
-				auto leader_node_ = Node::leader_node();
-				Endpoint cluster_endpoint(".", leader_node_.get());
+				auto leader_node = Node::leader_node();
+				Endpoint cluster_endpoint(".", leader_node.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
 				db_handler.set_metadata(key, serialised);
 			}

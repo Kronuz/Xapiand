@@ -130,10 +130,10 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
-		auto local_node_ = Node::local_node();
+		auto local_node = Node::local_node();
 		auto nodes = XapiandManager::manager->resolve_index_nodes(src_endpoint.path);
 		for (const auto& node : nodes) {
-			if (Node::is_equal(node, local_node_)) {
+			if (Node::is_equal(node, local_node)) {
 				replicated = true;
 				break;
 			}

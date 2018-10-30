@@ -198,17 +198,17 @@ Discovery::hello(Message type, const std::string& message)
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
 
-	auto local_node_ = Node::local_node();
-	if (!Node::is_equal(remote_node, local_node_)) {
+	auto local_node = Node::local_node();
+	if (!Node::is_equal(remote_node, local_node)) {
 		auto node = Node::touch_node(remote_node);
 		if (node) {
 			if (Node::is_equal(remote_node, node)) {
-				send_message(Message::WAVE, local_node_->serialise());
+				send_message(Message::WAVE, local_node->serialise());
 			} else {
 				send_message(Message::SNEER, remote_node->serialise());
 			}
 		} else {
-			send_message(Message::WAVE, local_node_->serialise());
+			send_message(Message::WAVE, local_node->serialise());
 		}
 	}
 }
@@ -260,14 +260,14 @@ Discovery::sneer(Message type, const std::string& message)
 	Node remote_node = Node::unserialise(&p, p_end);
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
-	auto local_node_ = Node::local_node();
-	if (remote_node == *local_node_) {
+	auto local_node = Node::local_node();
+	if (remote_node == *local_node) {
 		if (XapiandManager::manager->node_name.empty()) {
-			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node_->name());
+			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node->name());
 			XapiandManager::manager->reset_state();
 		} else {
 			XapiandManager::manager->state.store(XapiandManager::State::BAD);
-			L_WARNING("Cannot join the party. Node name %s already taken!", local_node_->name());
+			L_WARNING("Cannot join the party. Node name %s already taken!", local_node->name());
 			Node::local_node(std::make_shared<const Node>());
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
 			XapiandManager::manager->shutdown_sig(0);
@@ -316,8 +316,8 @@ Discovery::bye(Message type, const std::string& message)
 
 	Node::drop_node(remote_node.name());
 
-	auto leader_node_ = Node::leader_node();
-	if (*leader_node_ == remote_node) {
+	auto leader_node = Node::leader_node();
+	if (*leader_node == remote_node) {
 		L_INFO("Leader node %s left the party!", remote_node.name());
 
 		Node::leader_node(std::make_shared<const Node>());
@@ -343,8 +343,8 @@ Discovery::db_updated(Message type, const std::string& message)
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 
-	auto local_node_ = Node::local_node();
-	if (Node::is_equal(remote_node, local_node_)) {
+	auto local_node = Node::local_node();
+	if (Node::is_equal(remote_node, local_node)) {
 		// It's just me, do nothing!
 		return;
 	}
@@ -379,8 +379,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 	switch (state) {
 		case XapiandManager::State::RESET: {
-			auto local_node_ = Node::local_node();
-			auto node_copy = std::make_unique<Node>(*local_node_);
+			auto local_node = Node::local_node();
+			auto node_copy = std::make_unique<Node>(*local_node);
 			std::string drop = node_copy->name();
 
 			if (XapiandManager::manager->node_name.empty()) {
@@ -394,13 +394,13 @@ Discovery::discovery_cb(ev::timer&, int revents)
 				Node::drop_node(drop);
 			}
 
-			local_node_ = Node::local_node();
+			local_node = Node::local_node();
 			auto reset = XapiandManager::State::RESET;
 			if (XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 			}
-			L_INFO("Advertising as %s...", local_node_->name());
-			send_message(Message::HELLO, local_node_->serialise());
+			L_INFO("Advertising as %s...", local_node->name());
+			send_message(Message::HELLO, local_node->serialise());
 			break;
 		}
 		case XapiandManager::State::WAITING: {
@@ -426,8 +426,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 			}
 
-			auto local_node_ = Node::local_node();
-			send_message(Message::ENTER, local_node_->serialise());
+			auto local_node = Node::local_node();
+			send_message(Message::ENTER, local_node->serialise());
 
 			XapiandManager::manager->join_cluster();
 			break;
@@ -445,9 +445,9 @@ Discovery::signal_db_update(const DatabaseUpdate& update)
 {
 	L_CALL("Discovery::signal_db_update(%s)", repr(endpoint.to_string()));
 
-	auto local_node_ = Node::local_node();
+	auto local_node = Node::local_node();
 	send_message(Message::DB_UPDATED,
-		local_node_->serialise() +   // The node where the index is at
+		local_node->serialise() +   // The node where the index is at
 		update.endpoint.path);  // The path of the index
 }
 
@@ -473,8 +473,8 @@ Discovery::stop()
 	L_CALL("Discovery::stop()");
 
 	if (io.is_active()) {
-		auto local_node_ = Node::local_node();
-		send_message(Message::BYE, local_node_->serialise());
+		auto local_node = Node::local_node();
+		send_message(Message::BYE, local_node->serialise());
 		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 	}
 

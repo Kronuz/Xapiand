@@ -236,9 +236,9 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	}
 
 	if (protocol == "file") {
-		auto local_node_ = Node::local_node();
+		auto local_node = Node::local_node();
 		if (node_ == nullptr) {
-			node_ = local_node_.get();
+			node_ = local_node.get();
 		}
 		host = node_->host();
 		port = node_->binary_port;
@@ -320,10 +320,10 @@ Endpoint::operator<(const Endpoint& other) const
 bool
 Endpoint::is_local() const
 {
-	auto local_node_ = Node::local_node();
-	int binary_port = local_node_->binary_port;
+	auto local_node = Node::local_node();
+	int binary_port = local_node->binary_port;
 	if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-	return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+	return (host == local_node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 }
 
 

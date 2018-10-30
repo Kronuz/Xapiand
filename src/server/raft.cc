@@ -311,7 +311,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	auto local_node_ = Node::local_node();
+	auto local_node = Node::local_node();
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
@@ -334,7 +334,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == current_term ? "" : " (wrong term)");
 
 	if (term == current_term) {
-		if (Node::is_equal(node, local_node_)) {
+		if (Node::is_equal(node, local_node)) {
 			bool granted = unserialise_length(&p, p_end);
 			if (granted) {
 				++votes_granted;
@@ -357,9 +357,9 @@ Raft::request_vote_response(Message type, const std::string& message)
 					auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 
 					L_RAFT("   << HEARTBEAT {node:%s, term:%llu, prev_log_term:%llu, prev_log_index:%zu, commit_index:%zu}",
-						local_node_->name(), current_term, prev_log_term, prev_log_index, commit_index);
+						local_node->name(), current_term, prev_log_term, prev_log_index, commit_index);
 					send_message(Message::HEARTBEAT,
-						local_node_->serialise() +
+						local_node->serialise() +
 						serialise_length(current_term) +
 						serialise_length(prev_log_index) +
 						serialise_length(prev_log_term) +
@@ -394,7 +394,7 @@ Raft::append_entries(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	auto local_node_ = Node::local_node();
+	auto local_node = Node::local_node();
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
@@ -518,9 +518,9 @@ Raft::append_entries(Message type, const std::string& message)
 		response_type = Message::HEARTBEAT_RESPONSE;
 	}
 	L_RAFT("   << %s {node:%s, term:%llu, success:%s}",
-		MessageNames(response_type), local_node_->name(), term, success ? "true" : "false");
+		MessageNames(response_type), local_node->name(), term, success ? "true" : "false");
 	send_message(response_type,
-		local_node_->serialise() +
+		local_node->serialise() +
 		serialise_length(term) +
 		serialise_length(success) +
 		(success
@@ -680,11 +680,11 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	auto last_log_index = log.size();
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 
-	auto local_node_ = Node::local_node();
+	auto local_node = Node::local_node();
 	L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
-		local_node_->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+		local_node->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 	send_message(Message::REQUEST_VOTE,
-		local_node_->serialise() +
+		local_node->serialise() +
 		serialise_length(current_term) +
 		serialise_length(last_log_term) +
 		serialise_length(last_log_index));
@@ -724,7 +724,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 			}
 		}
 		if (entry_index > 0 && entry_index <= last_log_index) {
-			auto local_node_ = Node::local_node();
+			auto local_node = Node::local_node();
 			auto prev_log_index = entry_index - 1;
 			auto prev_log_term = entry_index > 1 ? log[prev_log_index - 1].term : 0;
 			auto entry_term = log[entry_index - 1].term;
@@ -732,7 +732,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 			L_RAFT("   << APPEND_ENTRIES {current_term:%llu, prev_log_index:%zu, prev_log_term:%llu, last_log_index:%zu, entry_term:%llu, entry_command:%s, commit_index:%zu}",
 				current_term, prev_log_index, prev_log_term, last_log_index, entry_term, repr(entry_command), commit_index);
 			send_message(Message::APPEND_ENTRIES,
-				local_node_->serialise() +
+				local_node->serialise() +
 				serialise_length(current_term) +
 				serialise_length(prev_log_index) +
 				serialise_length(prev_log_term) +
@@ -746,11 +746,11 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		}
 	}
 
-	auto local_node_ = Node::local_node();
+	auto local_node = Node::local_node();
 	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
 	L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, commit_index:%zu}", last_log_term, last_log_index, commit_index);
 	send_message(Message::HEARTBEAT,
-		local_node_->serialise() +
+		local_node->serialise() +
 		serialise_length(current_term) +
 		serialise_length(last_log_index) +
 		serialise_length(last_log_term) +
@@ -793,15 +793,18 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 {
 	L_CALL("Raft::_set_leader_node(%s)", repr(node->name()));
 
-	auto leader_node_ = Node::leader_node();
-	L_CALL("leader_node_ -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node_->idx, leader_node_->name(), leader_node_->http_port, leader_node_->binary_port, leader_node_->touched);
-	if (!Node::is_equal(node, leader_node_)) {
-		if (leader_node_->empty()) {
+	auto leader_node = Node::leader_node();
+	L_CALL("leader_node -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node->idx, leader_node->name(), leader_node->http_port, leader_node->binary_port, leader_node->touched);
+	if (!Node::is_equal(node, leader_node)) {
+		if (leader_node->empty()) {
 			L_INFO("Leader of cluster %s is %s", opts.cluster_name, node->name());
 		} else {
 			L_INFO("New leader of cluster %s is %s", opts.cluster_name, node->name());
 		}
-		Node::leader_node(node);
+		leader_node = Node::leader_node(node);
+		if (Node::is_local(leader_node)) {
+			XapiandManager::manager->new_leader(std::move(leader_node));
+		}
 	}
 }
 
@@ -892,9 +895,9 @@ Raft::add_command(const std::string& command)
 		}
 #endif
 	} else {
-		auto local_node_ = Node::local_node();
+		auto local_node = Node::local_node();
 		send_message(Message::ADD_COMMAND,
-			local_node_->serialise() +
+			local_node->serialise() +
 			serialise_string(command));
 	}
 }
