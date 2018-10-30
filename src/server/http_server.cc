@@ -86,5 +86,6 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
 	}
+
 	L_EV_END("HttpServer::io_accept_cb:END");
 }

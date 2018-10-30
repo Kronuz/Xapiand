@@ -95,19 +95,12 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		if (!io::ignored_errno(errno, true, true, false)) {
 			L_ERR("ERROR: accept binary error {fd:%d}: %s", fd, strerror(errno));
 		}
-		L_EV_END("BinaryServer::io_accept_cb:END");
-		return;
+	} else {
+		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+		if (!client->init_remote()) {
+			client->destroy();
+		}
 	}
-
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
-
-	if (!client->init_remote()) {
-		client->destroy();
-		L_EV_END("BinaryServer::io_accept_cb:END");
-		return;
-	}
-
-	L_INFO("Accepted new client! (client_sock=%d)", client_sock);
 
 	L_EV_END("BinaryServer::io_accept_cb:END");
 }
