@@ -374,21 +374,20 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		// Replicate database from the leader
-		if (is_leader) {
-			state = State::READY;
-		} else {
+		if (!is_leader) {
 			assert(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
-			auto future = trigger_replication(cluster_endpoint, local_endpoint);
-			if (!future.get()) {
+			auto futures = trigger_replication(cluster_endpoint, local_endpoint);
+			if (!futures.first.get() || !futures.second.get()) {
 				L_CRIT("Cannot synchronize cluster database!");
 				sig_exit(-EX_CANTCREAT);
 				return;
 			}
+			L_INFO("Synchronization completed!");
 			new_cluster = 2;
-			state = State::READY;  // TODO: Set this state only when cluster replication finishes!
 		}
+		state = State::READY;
 	} else
 	#endif
 	{
@@ -867,7 +866,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 }
 
 
-std::future<bool>
+std::pair<std::future<bool>, std::future<bool>>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
@@ -876,9 +875,15 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 		return binary->trigger_replication(src_endpoint, dst_endpoint);
 	}
 
-	std::promise<bool> promise;
-	promise.set_value(false);
-	return promise.get_future();
+	std::promise<bool> triggered_promise;
+	triggered_promise.set_value(false);
+	auto triggered = triggered_promise.get_future();
+
+	std::promise<bool> finished_promise;
+	finished_promise.set_value(false);
+	auto finished = finished_promise.get_future();
+
+	return std::make_pair(std::move(triggered), std::move(finished));
 }
 
 #endif

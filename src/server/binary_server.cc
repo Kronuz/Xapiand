@@ -110,7 +110,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 
 bool
-BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
+BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>&& promise)
 {
 	if (src_endpoint.is_local()) {
 		return false;
@@ -149,7 +149,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 		return false;
 	}
 
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, std::move(promise));
 
 	if (!client->init_replication(src_endpoint, dst_endpoint)) {
 		client->destroy();

@@ -22,9 +22,11 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_CLUSTERING
+#include "config.h"                           // for XAPIAND_CLUSTERING
 
 #ifdef XAPIAND_CLUSTERING
+
+#include <future>                             // for std::future, std::promise
 
 #include "base_server.h"
 
@@ -54,7 +56,7 @@ public:
 
 	void io_accept_cb(ev::io& watcher, int revents) override;
 
-	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>&& promise);
 };
 
 

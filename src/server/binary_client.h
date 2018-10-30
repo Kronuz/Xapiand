@@ -27,17 +27,18 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <deque>                // for std::deque
-#include <memory>               // for shared_ptr
-#include <mutex>                // for std::mutex
-#include <string>               // for std::string
-#include <vector>               // for std::vector
+#include <deque>                              // for std::deque
+#include <memory>                             // for shared_ptr
+#include <mutex>                              // for std::mutex
+#include <future>                             // for std::future, std::promise
+#include <string>                             // for std::string
+#include <vector>                             // for std::vector
 #include <xapian.h>
 
-#include "base_client.h"        // for BaseClient
-#include "remote_protocol.h"    // for RemoteProtocol
-#include "replication.h"        // for Replication
-#include "threadpool.h"         // for Task
+#include "base_client.h"                      // for BaseClient
+#include "remote_protocol.h"                  // for RemoteProtocol
+#include "replication.h"                      // for Replication
+#include "threadpool.h"                       // for Task
 
 
 #define FILE_FOLLOWS '\xfd'
@@ -79,8 +80,9 @@ class BinaryClient : public BaseClient {
 	// Buffers that are pending write
 	std::string buffer;
 	std::deque<Buffer> messages;
+	std::promise<bool> promise;
 
-	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
+	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>&& promise_ = std::promise<bool>{});
 
 	ssize_t on_read(const char *buf, ssize_t received) override;
 	void on_read_file(const char *buf, ssize_t received) override;

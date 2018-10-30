@@ -26,7 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <future>            // for std::shared_future
+#include <future>            // for std::future
 #include <memory>            // for std::shared_ptr, std::weak_ptr
 #include <string>            // for std::string
 #include <vector>            // for std::vector
@@ -63,7 +63,7 @@ public:
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 
-	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	std::pair<std::future<bool>, std::future<bool>> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
 

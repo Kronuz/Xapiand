@@ -177,7 +177,7 @@ public:
 	void renew_leader();
 	void new_leader(std::shared_ptr<const Node>&& leader_node);
 
-	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	std::pair<std::future<bool>, std::future<bool>> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 
 	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);
