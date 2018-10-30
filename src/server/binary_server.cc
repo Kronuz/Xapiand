@@ -156,7 +156,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 		return false;
 	}
 
-	L_INFO("Database being synchronized from %s...", repr(src_endpoint.to_string()));
+	L_INFO("Database being synchronized from %s (%s)...", src_endpoint.node_name, repr(src_endpoint.to_string()));
 
 	return true;
 }

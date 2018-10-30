@@ -357,11 +357,7 @@ Discovery::db_updated(Message type, const std::string& message)
 		// Replicate database from the other node
 		Endpoint remote_endpoint(path, node.get());
 		Endpoint local_endpoint(path);
-		L_INFO("Request syncing database [%s]...", node->name());
-		auto ret = XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
-		if (ret.get()) {
-			L_INFO("Replication triggered!");
-		}
+		XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
 	}
 }
 
