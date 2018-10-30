@@ -379,13 +379,13 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		} else {
 			assert(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
-			auto ret = trigger_replication(cluster_endpoint, local_endpoint);
-			if (!ret.get()) {
-				L_CRIT("Cannot synchronize cluster database from %s", leader_node->name());
+			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
+			auto future = trigger_replication(cluster_endpoint, local_endpoint);
+			if (!future.get()) {
+				L_CRIT("Cannot synchronize cluster database!");
 				sig_exit(-EX_CANTCREAT);
 				return;
 			}
-			L_INFO("Cluster data being synchronized from %s...", leader_node->name());
 			new_cluster = 2;
 			state = State::READY;  // TODO: Set this state only when cluster replication finishes!
 		}
