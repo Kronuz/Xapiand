@@ -71,18 +71,13 @@ Replication::Replication(BinaryClient& client_)
 
 Replication::~Replication()
 {
+	if (slave_database) {
+		slave_database->close();
+		XapiandManager::manager->database_pool.checkin(slave_database);
+	}
+
 	if (!switch_database_path.empty()) {
-		if (slave_database) {
-			slave_database->cancel_transaction();
-			slave_database->close();
-			XapiandManager::manager->database_pool.checkin(slave_database);
-		}
 		delete_files(switch_database_path.c_str());
-	} else {
-		if (slave_database) {
-			slave_database->cancel_transaction();
-			XapiandManager::manager->database_pool.checkin(slave_database);
-		}
 	}
 
 	L_OBJ("DELETED REPLICATION OBJ!");
@@ -298,18 +293,13 @@ Replication::reply_end_of_changes(const std::string&)
 
 	L_REPLICATION("Replication::reply_end_of_changes%s%s", slave_database ? " (checking in slave database)" : "", !switch_database_path.empty() ? " (switching database)" : "");
 
+	if (slave_database) {
+		slave_database->close();
+		XapiandManager::manager->database_pool.checkin(slave_database);
+	}
+
 	if (!switch_database_path.empty()) {
-		if (slave_database) {
-			slave_database->cancel_transaction();
-			slave_database->close();
-			XapiandManager::manager->database_pool.checkin(slave_database);
-		}
 		XapiandManager::manager->database_pool.switch_db(switch_database_path, endpoints[0].path);
-	} else {
-		if (slave_database) {
-			slave_database->cancel_transaction();
-			XapiandManager::manager->database_pool.checkin(slave_database);
-		}
 	}
 
 	L_REPLICATION("Replication completed!");
