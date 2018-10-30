@@ -1205,6 +1205,7 @@ int main(int argc, char **argv) {
 			throw Exit(EX_SOFTWARE);
 		}
 
+		XapiandManager::manager->database_pool.clear();
 		XapiandManager::manager.reset();
 
 		if (opts.detach && !opts.pidfile.empty()) {
