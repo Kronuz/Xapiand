@@ -113,6 +113,8 @@ DatabaseAutocommit::run()
 			db_handler.commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();
+		} catch (const Xapian::Error& exc) {
+			error = exc.get_description();
 		}
 
 		auto end = std::chrono::system_clock::now();
