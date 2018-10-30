@@ -215,7 +215,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 Database::~Database()
 {
 	if ((flags & DB_WRITABLE) != 0) {
-		if (dbs[0].second) {
+		if (!dbs.empty() && dbs[0].second) {
 			// Commit only local writable databases
 			commit();
 		}
