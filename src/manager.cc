@@ -569,7 +569,6 @@ XapiandManager::destroyer() {
 		raft->stop();
 	}
 	if (auto discovery = weak_discovery.lock()) {
-		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 		discovery->stop();
 	}
 #endif

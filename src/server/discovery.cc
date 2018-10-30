@@ -471,11 +471,14 @@ Discovery::stop()
 {
 	L_CALL("Discovery::stop()");
 
+	if (io.is_active()) {
+		auto local_node_ = Node::local_node();
+		send_message(Message::BYE, local_node_->serialise());
+		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
+	}
+
 	discovery.stop();
 	L_EV("Stop discovery's discovery event");
-
-	auto local_node_ = Node::local_node();
-	send_message(Message::BYE, local_node_->serialise());
 
 	io.stop();
 	L_EV("Stop discovery's server accept event");
