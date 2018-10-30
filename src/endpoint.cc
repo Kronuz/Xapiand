@@ -240,6 +240,7 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 		if (node_ == nullptr) {
 			node_ = local_node.get();
 		}
+		node_name = node_->name();
 		host = node_->host();
 		port = node_->binary_port;
 		if (port == 0) {
