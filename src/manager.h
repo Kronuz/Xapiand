@@ -175,6 +175,7 @@ public:
 	void join_cluster();
 
 	void renew_leader();
+	void new_leader(std::shared_ptr<const Node>&& leader_node);
 
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif

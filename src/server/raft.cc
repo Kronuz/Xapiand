@@ -796,15 +796,7 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 	auto leader_node = Node::leader_node();
 	L_CALL("leader_node -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node->idx, leader_node->name(), leader_node->http_port, leader_node->binary_port, leader_node->touched);
 	if (!Node::is_equal(node, leader_node)) {
-		if (leader_node->empty()) {
-			L_INFO("Leader of cluster %s is %s", opts.cluster_name, node->name());
-		} else {
-			L_INFO("New leader of cluster %s is %s", opts.cluster_name, node->name());
-		}
-		leader_node = Node::leader_node(node);
-		if (Node::is_local(leader_node)) {
-			XapiandManager::manager->new_leader(std::move(leader_node));
-		}
+		XapiandManager::manager->new_leader(Node::leader_node(node));
 	}
 }
 

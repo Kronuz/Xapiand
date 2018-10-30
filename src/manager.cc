@@ -814,9 +814,19 @@ void
 XapiandManager::renew_leader()
 {
 	L_CALL("XapiandManager::renew_leader()");
+
 	if (auto raft = weak_raft.lock()) {
 		raft->request_vote();
 	}
+}
+
+
+void
+XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
+{
+	L_CALL("XapiandManager::new_leader(%s)", repr(leader_node->name()));
+
+	L_INFO("New leader of cluster %s is %s", opts.cluster_name, leader_node->name());
 }
 
 
