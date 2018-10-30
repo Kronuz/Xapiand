@@ -110,6 +110,10 @@ BinaryClient::~BinaryClient()
 		delete_files(temp_directory.c_str());
 	}
 
+	if (shutting_down || !(idle && write_queue.empty())) {
+		L_WARNING("Binary client killed!");
+	}
+
 	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
 
