@@ -348,6 +348,13 @@ BinaryClient::run()
 	idle = false;
 	try {
 		_run();
+
+		if (shutting_down && write_queue.empty()) {
+			L_WARNING("Programmed shut down!");
+			destroy();
+			detach();
+		}
+
 	} catch (...) {
 		idle = true;
 		L_CONN("Running in binary worker ended with an exception.");

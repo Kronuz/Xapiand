@@ -545,7 +545,7 @@ XapiandManager::shutdown_sig(int sig)
 		shutdown_asap = now;
 	}
 
-	if (XapiandServer::http_clients <= 0) {
+	if (XapiandServer::total_clients <= 0) {
 		shutdown_now = now;
 	}
 

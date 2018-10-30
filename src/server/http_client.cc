@@ -272,14 +272,6 @@ HttpClient::~HttpClient()
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	// If shutting down and there are no more HTTP clients connected,
-	// continue shutdown.
-	if (XapiandManager::manager->shutdown_asap.load() != 0) {
-		if (http_clients <= 0) {
-			XapiandManager::manager->shutdown_sig(0);
-		}
-	}
-
 	if (shutting_down || !(idle && write_queue.empty())) {
 		L_WARNING("Client killed!");
 	}

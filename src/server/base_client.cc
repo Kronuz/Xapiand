@@ -345,6 +345,14 @@ BaseClient::~BaseClient()
 		sig_exit(-EX_SOFTWARE);
 	}
 
+	// If shutting down and there are no more clients connected,
+	// continue shutdown.
+	if (XapiandManager::manager->shutdown_asap.load() != 0) {
+		if (total_clients <= 0) {
+			XapiandManager::manager->shutdown_sig(0);
+		}
+	}
+
 	L_OBJ("DELETED BASE CLIENT! (%d clients left)", total_clients);
 }
 
