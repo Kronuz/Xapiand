@@ -379,7 +379,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
 			auto futures = trigger_replication(cluster_endpoint, local_endpoint);
-			if (!futures.first.get() || !futures.second.get()) {
+			auto wait = [] (std::future<bool>& future) {
+				switch (future.wait_for(10s)) {
+					case std::future_status::ready:
+						return future.get();
+					default:
+						return false;
+				}
+			};
+			if (!wait(futures.first) || !wait(futures.second)) {
 				L_CRIT("Cannot synchronize cluster database!");
 				sig_exit(-EX_CANTCREAT);
 				return;
