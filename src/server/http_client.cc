@@ -60,7 +60,6 @@
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
 #include "opts.h"                           // for opts
 #include "package.h"                        // for Package
-#include "queue.h"                          // for Queue
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for boolean
