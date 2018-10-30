@@ -30,13 +30,13 @@
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"
-#include "database.h"                         // for DatabasePool
+#include "database_pool.h"                    // for DatabasePool
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"
 #include "length.h"
 #include "metrics.h"
 #include "node.h"                             // for Node, local_node
-#include "opts.h"
+#include "opts.h"                             // for opts::*
 #include "schemas_lru.h"
 #include "serialise.h"
 #include "threadpool.h"

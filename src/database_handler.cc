@@ -24,21 +24,21 @@
 
 #include <algorithm>                        // for min, move
 #include <array>                            // for std::array
-#include <cctype>                           // for isupper, tolower
-#include <exception>                        // for exception
-#include <stdexcept>                        // for out_of_range
-#include <utility>
+#include <cctype>                           // for tolower
+#include <exception>                        // for std::exception
+#include <utility>                          // for std::move
 
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cast.h"                           // for Cast
-#include "database.h"                       // for DatabasePool, Database
-#include "exception.h"                      // for CheckoutError, ClientError
-#include "length.h"                         // for unserialise_length, seria...
+#include "database.h"                       // for Database
+#include "database_wal.h"                   // for DatabaseWAL
+#include "exception.h"                      // for ClientError
+#include "length.h"                         // for serialise_string, unserialise_string
 #include "lightweight_semaphore.h"          // for LightweightSemaphore
 #include "log.h"                            // for L_CALL
 #include "lock_database.h"                  // for lock_database
-#include "manager.h"                        // for XapiandManager, XapiandM...
-#include "msgpack.h"                        // for MsgPack, object::object, ...
+#include "manager.h"                        // for XapiandManager
+#include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
@@ -208,6 +208,13 @@ public:
 	}
 };
 
+
+//  ____        _        _                    _   _                 _ _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| | | | __ _ _ __   __| | | ___ _ __
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |_| |/ _` | '_ \ / _` | |/ _ \ '__|
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/  _  | (_| | | | | (_| | |  __/ |
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_| |_|\__,_|_| |_|\__,_|_|\___|_|
+//
 
 DatabaseHandler::DatabaseHandler()
 	: LockableDatabase(),
@@ -1852,14 +1859,12 @@ DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, 
 #endif
 
 
-
-/*  ____                                        _
- * |  _ \  ___   ___ _   _ _ __ ___   ___ _ __ | |_
- * | | | |/ _ \ / __| | | | '_ ` _ \ / _ \ '_ \| __|
- * | |_| | (_) | (__| |_| | | | | | |  __/ | | | |_
- * |____/ \___/ \___|\__,_|_| |_| |_|\___|_| |_|\__|
- *
- */
+//  ____                                        _
+// |  _ \  ___   ___ _   _ _ __ ___   ___ _ __ | |_
+// | | | |/ _ \ / __| | | | '_ ` _ \ / _ \ '_ \| __|
+// | |_| | (_) | (__| |_| | | | | | |  __/ | | | |_
+// |____/ \___/ \___|\__,_|_| |_| |_|\___|_| |_|\__|
+//
 
 Document::Document()
 	: did(0),

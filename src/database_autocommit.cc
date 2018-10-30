@@ -22,16 +22,16 @@
 
 #include "database_autocommit.h"
 
-#include <utility>
+#include <utility>             // for std::move
 
-#include "database.h"          // for Database, DatabasePool
 #include "database_handler.h"  // for DatabaseHandler
 #include "endpoint.h"          // for Endpoints
 #include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "manager.h"           // for XapiandManager
 #include "string.hh"           // for string::from_delta
 #include "time_point.hh"       // for time_point_to_ullong
 
+
+class Database;
 
 std::mutex DatabaseAutocommit::statuses_mtx;
 std::unordered_map<Endpoints, DatabaseAutocommit::Status> DatabaseAutocommit::statuses;

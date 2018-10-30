@@ -24,10 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "database_handler.h"
+#include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for delete_files, build_path_index
-#include "io.hh"
-#include "length.h"
+#include "io.hh"                      // for io::*
+#include "length.h"                   // for serialise_string, unserialise_string
 #include "server/binary_client.h"
 
 
