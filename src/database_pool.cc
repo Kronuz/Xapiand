@@ -409,8 +409,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					++locks;
 					queue->locked = true;
 					auto is_ready_to_lock = [&] {
-						for (auto& q : queues[hash]) {
-							if (q != queue && q->size() < q->count) {
+						for (auto& endpoint_queue : queues[hash]) {
+							if (endpoint_queue != queue && endpoint_queue->size() < endpoint_queue->count) {
 								return false;
 							}
 						}
@@ -507,17 +507,17 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				bool was_locked = false;
 				for (auto& e : endpoints) {
 					auto hash = e.hash();
-					auto wq = writable_databases.get(hash);
-					if (wq && wq->locked) {
+					auto writable_queue = writable_databases.get(hash);
+					if (writable_queue && writable_queue->locked) {
 						bool unlock = true;
-						for (auto& q : queues[hash]) {
-							if (q != wq && q->size() < q->count) {
+						for (auto& endpoint_queue : queues[hash]) {
+							if (endpoint_queue != writable_queue && endpoint_queue->size() < endpoint_queue->count) {
 								unlock = false;
 								break;
 							}
 						}
 						if (unlock) {
-							wq->exclusive_cond.notify_one();
+							writable_queue->exclusive_cond.notify_one();
 							was_locked = true;
 						}
 					}

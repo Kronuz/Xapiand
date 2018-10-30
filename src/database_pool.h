@@ -177,7 +177,7 @@ class DatabasePool {
 	friend class DatabaseQueue;
 
 	std::mutex qmtx;
-	std::atomic_bool finished;
+	bool finished;
 	size_t locks;
 
 	const std::shared_ptr<queue::QueueState> queue_state;
