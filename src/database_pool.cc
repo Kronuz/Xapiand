@@ -482,7 +482,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	L_CALL("DatabasePool::checkin(%s)", repr(database->to_string()));
 
 	assert(database);
-	auto& endpoints = database->endpoints;
+	auto endpoints = database->endpoints;
 	int flags = database->flags;
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
