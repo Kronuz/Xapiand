@@ -27,8 +27,8 @@
 
 #include "cassert.hh"             // for assert
 
+#include "database_flags.h"       // DB_*
 #include "database_pool.h"        // for DatabaseQueue
-#include "database_utils.h"       // for DB_WRITABLE
 #include "database_wal.h"         // for DatabaseWAL
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for exists, build_path_index

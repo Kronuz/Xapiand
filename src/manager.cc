@@ -22,11 +22,9 @@
 
 #include "manager.h"
 
-#include <algorithm>                          // for std::move, std::min
-#include <atomic>                             // for std::atomic, std::atomic_int
+#include <algorithm>                          // for std::min
 #include <cctype>                             // for isspace
 #include <chrono>                             // for std::chrono, std::chrono::system_clock
-#include <cstdint>                            // for uint64_t, UINT64_MAX
 #include <cstdlib>                            // for size_t, exit
 #include <cstring>                            // for strerror
 #include <ctime>                              // for time_t, ctime, NULL
@@ -43,10 +41,9 @@
 #include <signal.h>                           // for SIGTERM, SIGINT
 #include <string>                             // for std::string, std::to_string
 #include <sys/socket.h>                       // for AF_INET, sockaddr
-#include <sys/types.h>                        // for uint64_t
 #include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT
 #include <unistd.h>                           // for ssize_t, getpid
-#include <utility>                            // for std::pair
+#include <utility>                            // for std::move
 #include <vector>                             // for std::vector
 
 #if defined(XAPIAND_V8)
@@ -56,35 +53,32 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
-#include "allocator.h"
+#include "allocator.h"                        // for allocator::total_allocated
 #include "async_fsync.h"                      // for AsyncFsync
-#include "atomic_shared_ptr.h"                // for atomic_shared_ptr
-#include "database.h"                         // for DatabasePool
+#include "database_pool.h"                    // for DatabasePool
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
-#include "database_utils.h"                   // for RESERVED_TYPE, DB_NOWAL
+#include "database_utils.h"                   // for RESERVED_TYPE
 #include "epoch.hh"                           // for epoch::now
-#include "ev/ev++.h"                          // for async, loop_ref (ptr only)
-#include "exception.h"                        // for Exit, ClientError, Excep...
-#include "fs.hh"                              // for exists
+#include "ev/ev++.h"                          // for ev::async, ev::loop_ref
+#include "exception.h"                        // for Exit, Excep...
 #include "hashes.hh"                          // for jump_consistent_hash
-#include "http_parser.h"                      // for http_method
 #include "ignore_unused.h"                    // for ignore_unused
-#include "io.hh"                              // for close, open, read, write
+#include "io.hh"                              // for io::*
 #include "length.h"                           // for serialise_length
 #include "log.h"                              // for L_CALL, L_DEBUG
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
+#include "metrics.h"                          // for Metrics::metrics
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "namegen.h"                          // for name_generator
 #include "net.hh"                             // for fast_inet_ntop4
+#include "opts.h"                             // for opts::*
 #include "readable_revents.hh"                // for readable_revents
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
 #include "server/http_server.h"               // for HttpServer
-#include "server/server.h"                    // for XapiandServer, XapiandSe...
+#include "server/server.h"                    // for XapiandServer, XapiandServer::total_clients
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
-#include "threadpool.h"                       // for ThreadPool
-#include "worker.h"                           // for Worker, enable_make_shared
 
 #ifdef XAPIAND_CLUSTERING
 #include "replicator.h"                       // for XapiandReplicator

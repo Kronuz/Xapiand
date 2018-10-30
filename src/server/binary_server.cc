@@ -24,12 +24,15 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "binary.h"
-#include "binary_client.h"
-#include "endpoint.h"
-#include "ignore_unused.h"
-#include "readable_revents.hh"   // for readable_revents
-#include "repr.hh"               // for repr
+
+#include "binary.h"                         // for Binary
+#include "binary_client.h"                  // for BinaryClient
+#include "endpoint.h"                       // for Endpoints
+#include "fs.hh"                            // for exists
+#include "ignore_unused.h"                  // for ignore_unused
+#include "readable_revents.hh"              // for readable_revents
+#include "manager.h"                        // for XapiandManager::manager
+#include "repr.hh"                          // for repr
 
 
 BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)

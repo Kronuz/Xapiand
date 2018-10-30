@@ -24,18 +24,19 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "cassert.hh"            // for assert
+#include "cassert.hh"                       // for assert
 
-#include "database.h"            // for DatabaseUpdate
-#include "database_handler.h"
-#include "epoch.hh"              // for epoch::now
-#include "ignore_unused.h"
-#include "manager.h"
-#include "namegen.h"             // for name_generator
-#include "node.h"                // for Node, local_node
-#include "readable_revents.hh"   // for readable_revents
-#include "repr.hh"               // for repr
-#include "utype.hh"              // for toUType
+#include "database_pool.h"                  // for DatabaseUpdate
+// #include "database_handler.h"
+#include "epoch.hh"                         // for epoch::now
+#include "ignore_unused.h"                  // for ignore_unused
+#include "manager.h"                        // for XapiandManager::manager, XapiandManager::StateNames, XapiandManager::State
+#include "namegen.h"                        // for name_generator
+#include "node.h"                           // for Node, local_node
+#include "opts.h"                           // for opts::*
+#include "readable_revents.hh"              // for readable_revents
+#include "repr.hh"                          // for repr
+#include "utype.hh"                         // for toUType
 
 
 // #undef L_DEBUG

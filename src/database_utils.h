@@ -125,7 +125,6 @@ constexpr const char VERSION_FIELD_NAME[]           = "version";
 
 constexpr char DB_OFFSPRING_UNION  = '.';
 constexpr double DB_VERSION_SCHEMA = 2.0;
-constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
 
 constexpr Xapian::valueno DB_SLOT_RESERVED     = 20; // Reserved slots by special data
 constexpr Xapian::valueno DB_SLOT_ID           = 0;  // Slot for document ID
@@ -147,14 +146,6 @@ constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[] = "C";
 
 constexpr const char DOCUMENT_DB_MASTER[] = "M";
 constexpr const char DOCUMENT_DB_SLAVE[]  = "S";
-
-constexpr int DB_OPEN         = 0x0000; // Opens a database
-constexpr int DB_WRITABLE     = 0x0001; // Opens as writable
-constexpr int DB_SPAWN        = 0x0002; // Automatically creates the database if it doesn't exist
-constexpr int DB_EXCLUSIVE    = 0x0004; // Ensure no others have the database checked out
-constexpr int DB_NOWAL        = 0x0008; // Disable open wal file
-constexpr int DB_NOSTORAGE    = 0x0040; // Disable separate data storage file for the database
-
 
 enum class FieldType : uint8_t;
 

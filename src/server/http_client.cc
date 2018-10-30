@@ -24,17 +24,15 @@
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
 
-#include <algorithm>                        // for move
-#include <exception>                        // for exception
-#include <functional>                       // for __base, function
-#include <regex>                            // for regex_iterator, match_res...
-#include <stdexcept>                        // for invalid_argument, range_e...
-#include <cstring>                          // for strerror, strcpy
-#include <errno.h>                          // for __error, errno
+#include <exception>                        // for std::exception
+#include <functional>                       // for std::function
+#include <regex>                            // for std::regex, std::regex_constants
+#include <cstring>                          // for strerror
+#include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
-#include <type_traits>                      // for enable_if<>::type
-#include <xapian.h>                         // for version_string, MSetIterator
+#include <utility>                          // for std::move
+#include <xapian.h>                         // for Xapian::major_version, Xapian::minor_version
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
@@ -45,27 +43,27 @@
 #endif
 
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
-#include "cuuid/uuid.h"                     // for UUIDGenerator, UUID
+#include "database_handler.h"               // for DatabaseHandler
+#include "database_utils.h"                 // for query_field_t
 #include "endpoint.h"                       // for Endpoints, Node, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
-#include "hashes.hh"                        // for fnv1ah32
 #include "io.hh"                            // for close, write, unlink
-#include "log.h"                            // for L_CALL, L_ERR, LOG_D...
-#include "manager.h"                        // for XapiandManager, XapiandMa...
-#include "msgpack.h"                        // for MsgPack, object::object, ...
+#include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
+#include "manager.h"                        // for XapiandManager::manager
+#include "metrics.h"                        // for Metrics::metrics
+#include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
-#include "opts.h"                           // for opts
-#include "package.h"                        // for Package
+#include "opts.h"                           // for opts::*
+#include "package.h"                        // for Package::*
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
-#include "serialise.h"                      // for boolean
-#include "server.h"                         // for XapiandServer, XapiandSer...
+#include "serialise.h"                      // for Serialise::boolean
+#include "server.h"                         // for XapiandServer::*
 #include "string.hh"                        // for string::from_delta
-#include "threadpool.h"                     // for ThreadPool
 
 
 #define QUERY_FIELD_COMMIT     (1 << 0)

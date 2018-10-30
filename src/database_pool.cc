@@ -28,7 +28,6 @@
 #include "cassert.hh"             // for assert
 
 #include "database.h"             // for Database
-#include "database_utils.h"       // for DB_WRITABLE
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for move_files, exists, build_path_index

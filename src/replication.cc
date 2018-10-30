@@ -24,11 +24,13 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "database.h"                 // for DatabaseWAL
 #include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for delete_files, build_path_index
 #include "io.hh"                      // for io::*
 #include "length.h"                   // for serialise_string, unserialise_string
-#include "server/binary_client.h"
+#include "manager.h"                  // for XapiandManager::manager
+#include "server/binary_client.h"     // for BinaryClient
 
 
 // #undef L_DEBUG

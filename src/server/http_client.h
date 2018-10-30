@@ -22,40 +22,35 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_DATABASE_WAL
+#include "config.h"                         // for XAPIAND_DATABASE_WAL
 
-#include <atomic>               // for atomic_bool
-#include <chrono>               // for system_clock, time_point, duration
-#include <deque>                // for std::deque
-#include <memory>               // for shared_ptr, unique_ptr
-#include <mutex>                // for mutex, lock_guard
-#include <set>                  // for set
-#include <stdio.h>              // for size_t, snprintf
-#include <string>               // for string, operator==
-#include <sys/types.h>          // for ssize_t
-#include <tuple>                // for get, tuple
-#include <utility>              // for pair
-#include <vector>               // for vector
+#include <chrono>                           // for std::chrono, std::chrono::system_clock, std::chrono::time_point
+#include <deque>                            // for std::deque
+#include <memory>                           // for shared_ptr
+#include <mutex>                            // for std::mutex, std::lock_guard
+#include <set>                              // for std::set
+#include <stdio.h>                          // for size_t
+#include <string>                           // for std::string
+#include <sys/types.h>                      // for ssize_t
+#include <utility>                          // for std::pair
+#include <vector>                           // for std::vector
 
-#include "atomic_shared_ptr.h"  // for atomic_shared_ptr
-#include "base_client.h"        // for BaseClient
-#include "cuuid/uuid.h"         // for UUIDGenerator
-#include "database_handler.h"   // for DatabaseHandler
-#include "database_utils.h"     // for query_field_t (ptr only)
-#include "deflate_compressor.h" // for DeflateCompressData
-#include "http_parser.h"        // for http_parser, http_parser_settings
-#include "lru.h"                // for LRU
-#include "phf.hh"               // for phf::make_phf
-#include "msgpack.h"            // for MsgPack
-#include "threadpool.h"         // for Task
-#include "url_parser.h"         // for PathParser, QueryParser
-#include "hashes.hh"            // for fnv1ah32
+#include "base_client.h"                    // for BaseClient
+#include "database_data.h"                  // for ct_type_t, accept_set_t
+#include "deflate_compressor.h"             // for DeflateCompressData
+#include "endpoint.h"                       // for Endpoints, Node, Endpoint
+#include "hashes.hh"                        // for hhl
+#include "http_parser.h"                    // for http_parser, http_parser_settings
+#include "lru.h"                            // for LRU
+#include "msgpack.h"                        // for MsgPack
+#include "phf.hh"                           // for phf::make_phf
+#include "url_parser.h"                     // for PathParser, QueryParser
 
-// #define L_CONN L_DEBUG
 
 class UUIDGenerator;
 class Logging;
 class Worker;
+struct query_field_t;
 
 
 #define HTTP_STATUS_RESPONSE            (1 << 0)
@@ -88,6 +83,7 @@ public:
 		return LRU::emplace(key, set);
 	}
 };
+
 
 struct AcceptEncoding {
 	int position;

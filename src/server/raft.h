@@ -27,14 +27,13 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <mutex>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include <string>          // for std::string
+#include <unordered_map>   // for std::unordered_map
+#include <vector>          // for std::vector
 
-#include "base_udp.h"  // for UDP
-#include "endpoint.h"  // for Node
-#include "worker.h"    // for Worker
+#include "base_udp.h"      // for UDP
+#include "endpoint.h"      // for Node
+#include "worker.h"        // for Worker
 
 
 // Values in seconds

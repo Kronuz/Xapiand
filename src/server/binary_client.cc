@@ -31,11 +31,10 @@
 #include <unistd.h>
 
 #include "base_tcp.h"
-#include "database.h"
 #include "fs.hh"                   // for delete_files, build_path_index
-#include "io.hh"
+#include "io.hh"                   // for io::*
 #include "length.h"
-#include "manager.h"
+#include "manager.h"               // XapiandManager::manager
 #include "repr.hh"                 // for repr
 #include "server.h"
 #include "utype.hh"                // for toUType

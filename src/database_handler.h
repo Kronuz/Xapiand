@@ -29,23 +29,28 @@
 #include <string>                            // for string
 #include "string_view.hh"                    // for std::string_view
 #include <unordered_map>                     // for unordered_map
+#include <utility>                           // for std::pair
 #include <vector>                            // for vector
 #include <xapian.h>                          // for Document, docid, MSet
 
-#include "database_utils.h"                  // for query_field_...
-#include "endpoint.h"                        // for Endpoints
+#include "database_flags.h"                  // for DB_*
 #include "http_parser.h"                     // for http_method
 #include "lock_database.h"                   // for LockableDatabase
-#include "msgpack.h"                         // for MsgPack
 
 
 class AggregationMatchSpy;
+class Data;
 class Database;
 class DatabaseHandler;
 class Document;
+class Endpoints;
+class MsgPack;
 class Multi_MultiValueKeyMaker;
 class Schema;
 class SchemasLRU;
+struct ct_type_t;
+struct query_field_t;
+struct similar_field_t;
 
 
 Xapian::docid to_docid(std::string_view document_id);
@@ -155,9 +160,9 @@ public:
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
 class DatabaseHandler : protected LockableDatabase {
-	friend class Document;
-	friend class Schema;
-	friend class SchemasLRU;
+	friend Document;
+	friend Schema;
+	friend SchemasLRU;
 
 	enum http_method method;
 	std::shared_ptr<Schema> schema;

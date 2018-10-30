@@ -24,6 +24,7 @@
 
 #include <utility>             // for std::move
 
+#include "database.h"          // for Database
 #include "database_handler.h"  // for DatabaseHandler
 #include "endpoint.h"          // for Endpoints
 #include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING

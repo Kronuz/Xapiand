@@ -43,6 +43,7 @@
 #include "cassert.hh"             // for assert
 
 #include "database.h"             // for Database
+#include "database_pool.h"        // for DatabasePool, DatabaseUpdate
 #include "database_utils.h"       // for read_uuid
 #include "exception.h"            // for THROW, Error
 #include "fs.hh"                  // for exists
@@ -52,6 +53,7 @@
 #include "manager.h"              // for XapiandManager::manager
 #include "metrics.h"              // for Metrics::metrics
 #include "msgpack.h"              // for MsgPack
+#include "opts.h"                 // for opts::*
 #include "repr.hh"                // for repr
 #include "string.hh"              // for string::format
 
@@ -121,7 +123,7 @@ DatabaseWAL::uuid() const
 {
 	if (_uuid.empty()) {
 		std::array<unsigned char, 16> uuid_data;
-		if (::read_uuid(base_path, uuid_data) != -1) {
+		if (read_uuid(base_path, uuid_data) != -1) {
 			_uuid = UUID(uuid_data);
 			_uuid_le = UUID(uuid_data, true);
 		}

@@ -22,43 +22,11 @@
 
 #pragma once
 
-#include "endpoint.h"           // for Endpoints
+constexpr int DB_OPEN         = 0x0000;  // Opens a database
+constexpr int DB_WRITABLE     = 0x0001;  // Opens as writable
+constexpr int DB_SPAWN        = 0x0002;  // Automatically creates the database if it doesn't exist
+constexpr int DB_EXCLUSIVE    = 0x0004;  // Ensure no others have the database checked out
+constexpr int DB_NOWAL        = 0x0008;  // Disable open wal file
+constexpr int DB_NOSTORAGE    = 0x0040;  // Disable separate data storage file for the database
 
-
-class Database;
-class LockableDatabase;
-
-
-class lock_database {
-	LockableDatabase* lockable;
-	int locks;
-
-	lock_database(const lock_database&) = delete;
-	lock_database& operator=(const lock_database&) = delete;
-
-public:
-	lock_database(LockableDatabase* lockable);
-	~lock_database();
-
-	void lock();
-	void unlock();
-};
-
-
-class LockableDatabase {
-	friend lock_database;
-
-	std::shared_ptr<Database> _locked_database;
-	int _database_locks;
-
-protected:
-	int flags;
-	Endpoints endpoints;
-
-	std::shared_ptr<Database> database() const noexcept;
-	Xapian::Database* db() const noexcept;
-
-public:
-	LockableDatabase();
-	LockableDatabase(const Endpoints& endpoints_, int flags_);
-};
+constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document

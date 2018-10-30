@@ -26,11 +26,12 @@
 
 #include "cassert.hh"            // for assert
 
-#include "ignore_unused.h"
-#include "length.h"
-#include "log.h"
-#include "manager.h"
+#include "ignore_unused.h"       // for ignore_unused
+#include "length.h"              // for serialise_length, unserialise_length
+#include "log.h"                 // for L_CALL, L_EV
+#include "manager.h"             // for XapiandManager::manager
 #include "node.h"                // for Node, local_node
+#include "opts.h"                // for opts::*
 #include "readable_revents.hh"   // for readable_revents
 #include "repr.hh"               // for repr
 #include "random.hh"             // for random_real

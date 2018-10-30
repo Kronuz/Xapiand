@@ -22,26 +22,22 @@
 
 #pragma once
 
-#include <stdio.h>              // for snprintf
 #include <time.h>               // for time_t
-#include <atomic>               // for atomic_int
-#include <memory>               // for shared_ptr
-#include <mutex>                // for mutex
-#include <string>               // for string
+#include <atomic>               // for std::atomic_int
+#include <memory>               // for std::shared_ptr
+#include <mutex>                // for std::mutex
+#include <string>               // for std::string
 
-#include "ev/ev++.h"            // for async, loop_ref (ptr only)
+#include "ev/ev++.h"            // for ev::async, ev::loop_ref
 #include "worker.h"             // for Worker
-#include "threadpool.h"         // for Task
 
-class BaseServer;
-class BinaryServer;
-class DiscoveryServer;
-class HttpServer;
+
+class XapiandManager;
 
 
 class XapiandServer : public Worker {
 	friend Worker;
-	friend class XapiandManager;
+	friend XapiandManager;
 
 	std::mutex qmtx;
 

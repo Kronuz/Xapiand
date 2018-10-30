@@ -22,19 +22,20 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
+#include "config.h"               // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
 
-#include <chrono>               // for system_clock, system_clock::time_point
-#include <cstring>              // for size_t
-#include <memory>               // for std::shared_ptr
-#include <string>               // for std::string
-#include <utility>              // for std::pair
-#include <vector>               // for std::vector
-#include <xapian.h>             // for Xapian::docid, Xapian::termcount, Xapian::Document
+#include <chrono>                 // for system_clock, system_clock::time_point
+#include <cstring>                // for size_t
+#include <memory>                 // for std::shared_ptr
+#include <string>                 // for std::string
+#include <utility>                // for std::pair
+#include <vector>                 // for std::vector
+#include <xapian.h>               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
-#include "cuuid/uuid.h"         // for UUID, UUID_LENGTH
-#include "database_data.h"      // for Data::Locator
-#include "endpoint.h"           // for Endpoints, Endpoint
+#include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
+#include "database_flags.h"       // for Data::Locator
+#include "database_data.h"        // for Data::Locator
+#include "endpoint.h"             // for Endpoints, Endpoint
 
 
 class DatabaseWAL;

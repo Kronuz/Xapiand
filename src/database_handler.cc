@@ -35,20 +35,21 @@
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
 #include "lightweight_semaphore.h"          // for LightweightSemaphore
-#include "log.h"                            // for L_CALL
 #include "lock_database.h"                  // for lock_database
+#include "log.h"                            // for L_CALL
 #include "manager.h"                        // for XapiandManager
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
+#include "opts.h"                           // for opts::
 #include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
 #include "rapidjson/document.h"             // for Document
+#include "repr.hh"                          // for repr
 #include "schema.h"                         // for Schema, required_spc_t
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
-#include "repr.hh"                          // for repr
 
 #if defined(XAPIAND_V8)
 #include "v8pp/v8pp.h"                      // for v8pp namespace

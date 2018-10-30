@@ -24,23 +24,21 @@
 
 #include "config.h"
 
+#include <atomic>                             // for std::atomic, std::atomic_int
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include "string_view.hh"                     // for std::string_view
 #include <vector>                             // for std::vector
 
-#include "base_x.hh"
+#include "base_x.hh"                          // for Base62
 #include "database_pool.h"                    // for DatabasePool
 #include "endpoint.h"                         // for Endpoint
-#include "ev/ev++.h"
-#include "length.h"
-#include "metrics.h"
+#include "ev/ev++.h"                          // for ev::loop_ref
+#include "length.h"                           // for serialise_length
 #include "node.h"                             // for Node, local_node
-#include "opts.h"                             // for opts::*
-#include "schemas_lru.h"
-#include "serialise.h"
-#include "threadpool.h"
-#include "worker.h"
+#include "schemas_lru.h"                      // for SchemasLRU
+#include "threadpool.h"                       // for ThreadPool
+#include "worker.h"                           // for Worker
 
 
 class Http;

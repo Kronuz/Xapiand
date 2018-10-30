@@ -23,9 +23,9 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "database.h"                         // for Database
+#include "length.h"                           // for serialise_length, unserialise_length
 #include "server/binary_client.h"
-#include "database.h"
-#include "length.h"
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
