@@ -26,7 +26,7 @@
 
 #include <chrono>                 // for system_clock, system_clock::time_point
 #include <cstring>                // for size_t
-#include <memory>                 // for std::shared_ptr
+#include <memory>                 // for std::shared_ptr, std::enable_shared_from_this
 #include <string>                 // for std::string
 #include <utility>                // for std::pair
 #include <vector>                 // for std::vector
@@ -50,7 +50,15 @@ class DataStorage;
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
-class Database {
+class Database : std::enable_shared_from_this<Database> {
+public:
+	enum class Transaction : uint8_t {
+		none,
+		flushed,
+		unflushed,
+	};
+
+private:
 #ifdef XAPIAND_DATA_STORAGE
 	void storage_pull_blobs(Xapian::Document& doc, const Xapian::docid& did) const;
 	void storage_push_blobs(Xapian::Document& doc, const Xapian::docid& did) const;
@@ -59,6 +67,9 @@ class Database {
 
 	void reopen_writable();
 	void reopen_readable();
+
+	void do_close(bool commit_, bool closed_, Transaction transaction_);
+
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	std::weak_ptr<DatabaseQueue> weak_readable_queue;
@@ -67,11 +78,7 @@ public:
 	int flags;
 	size_t hash;
 	bool modified;
-	enum class Transaction : uint8_t {
-		none,
-		flushed,
-		unflushed,
-	} transaction;
+	Transaction transaction;
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 	bool incomplete;
@@ -103,6 +110,7 @@ public:
 
 	void close();
 
+	void autocommit();
 	bool commit(bool wal_ = true, bool send_update = true);
 
 	void begin_transaction(bool flushed = true);

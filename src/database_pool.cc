@@ -28,7 +28,6 @@
 #include "cassert.hh"             // for assert
 
 #include "database.h"             // for Database
-#include "database_autocommit.h"  // for DatabaseAutocommit
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for move_files, exists, build_path_index
 #include "log.h"                  // for L_OBJ, L_CALL
@@ -488,16 +487,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
-	if (db_writable &&
-		database->modified &&
-		database->transaction == Database::Transaction::none &&
-		!database->closed &&
-		!database->dbs.empty() &&
-		database->dbs[0].second
-	) {
-		// Auto commit only local writable databases
-		DatabaseAutocommit::commit(database);
-	}
+	database->autocommit();
 
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);

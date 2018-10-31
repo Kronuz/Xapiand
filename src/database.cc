@@ -28,6 +28,7 @@
 #include "cassert.hh"             // for assert
 
 #include "database_flags.h"       // DB_*
+#include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_pool.h"        // for DatabaseQueue
 #include "database_wal.h"         // for DatabaseWAL
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -214,18 +215,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 
 Database::~Database()
 {
-	bool db_writable = (flags & DB_WRITABLE) != 0;
-	if (
-		db_writable &&
-		modified &&
-		transaction == Database::Transaction::none &&
-		!closed &&
-		!dbs.empty() &&
-		dbs[0].second
-	) {
-		// Commit only local writable databases
-		commit();
-	}
+	do_close(true, true, Database::Transaction::none);
 
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
@@ -469,9 +459,7 @@ Database::reopen()
 			}
 		}
 
-		db->close();
-		db.reset();
-		modified = false;
+		do_close(true, closed, transaction);
 	}
 
 	if ((flags & DB_WRITABLE) != 0) {
@@ -509,13 +497,32 @@ Database::get_revision() const
 
 
 void
-Database::close()
+Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
-	L_CALL("Database::close()");
+	L_CALL("Database::do_close(...)");
 
-	closed = true;
-	db->close();
-	db.reset();
+	bool db_writable = (flags & DB_WRITABLE) != 0;
+	if (
+		commit_ &&
+		db &&
+		db_writable &&
+		modified &&
+		transaction == Database::Transaction::none &&
+		!closed &&
+		!dbs.empty() &&
+		dbs[0].second
+	) {
+		// Commit only local writable databases
+		commit();
+	}
+
+	if (db) {
+		db->close();
+		db.reset();
+	}
+
+	closed = closed_;
+	transaction = transaction_;
 	incomplete = false;
 	modified = false;
 	dbs.clear();
@@ -523,7 +530,38 @@ Database::close()
 	storages.clear();
 	writable_storages.clear();
 #endif  // XAPIAND_DATA_STORAGE
-	transaction = Transaction::none;
+}
+
+
+void
+Database::close()
+{
+	L_CALL("Database::close()");
+
+	if (closed) {
+		return;
+	}
+
+	do_close(true, true, Transaction::none);
+}
+
+
+void
+Database::autocommit()
+{
+	bool db_writable = (flags & DB_WRITABLE) != 0;
+	if (
+		db &&
+		db_writable &&
+		modified &&
+		transaction == Database::Transaction::none &&
+		!closed &&
+		!dbs.empty() &&
+		dbs[0].second
+	) {
+		// Auto commit only local writable databases
+		DatabaseAutocommit::commit(shared_from_this());
+	}
 }
 
 
@@ -570,13 +608,13 @@ Database::commit(bool wal_, bool send_update)
 			}
 			break;
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { close(); throw; }
+			if (t == 0) { do_close(false, true, Transaction::none); throw; }
 		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { close(); throw; }
+			if (t == 0) { do_close(false, true, Transaction::none); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
-				if (t == 0) { close(); throw; }
-				db.reset();
+				if (t == 0) { do_close(false, true, Transaction::none); throw; }
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -672,7 +710,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -721,7 +759,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -873,7 +911,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -923,7 +961,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -975,7 +1013,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1019,7 +1057,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1061,7 +1099,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1109,7 +1147,7 @@ Database::find_document(const std::string& term_id)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1165,7 +1203,7 @@ Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1205,7 +1243,7 @@ Database::get_metadata(const std::string& key)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1247,7 +1285,7 @@ Database::get_metadata_keys()
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1284,7 +1322,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1343,7 +1381,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1423,7 +1461,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
@@ -1496,7 +1534,7 @@ Database::dump_documents()
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { close(); throw; }
-				db.reset();
+				do_close(false, closed, transaction);
 			} else {
 				throw;
 			}
