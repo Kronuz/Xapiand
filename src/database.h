@@ -50,7 +50,7 @@ class DataStorage;
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
-class Database : std::enable_shared_from_this<Database> {
+class Database {
 public:
 	enum class Transaction : uint8_t {
 		none,
@@ -110,7 +110,7 @@ public:
 
 	void close();
 
-	void autocommit();
+	static void autocommit(const std::shared_ptr<Database>& database);
 	bool commit(bool wal_ = true, bool send_update = true);
 
 	void begin_transaction(bool flushed = true);

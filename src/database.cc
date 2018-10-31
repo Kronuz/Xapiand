@@ -556,20 +556,20 @@ Database::close()
 
 
 void
-Database::autocommit()
+Database::autocommit(const std::shared_ptr<Database>& database)
 {
-	bool db_writable = (flags & DB_WRITABLE) != 0;
+	bool db_writable = (database->flags & DB_WRITABLE) != 0;
 	if (
-		db &&
+		database->db &&
 		db_writable &&
-		modified &&
-		transaction == Database::Transaction::none &&
-		!closed &&
-		!dbs.empty() &&
-		dbs[0].second
+		database->modified &&
+		database->transaction == Database::Transaction::none &&
+		!database->closed &&
+		!database->dbs.empty() &&
+		database->dbs[0].second
 	) {
 		// Auto commit only local writable databases
-		DatabaseAutocommit::commit(shared_from_this());
+		DatabaseAutocommit::commit(database);
 	}
 }
 

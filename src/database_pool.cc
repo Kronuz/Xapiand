@@ -487,7 +487,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
-	database->autocommit();
+	Database::autocommit(database);
 
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);
