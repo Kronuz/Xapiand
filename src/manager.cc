@@ -405,6 +405,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		state = State::READY;
 	}
 
+	if (auto binary = weak_binary.lock()) {
+		binary->start();
+	}
+
+	if (auto http = weak_http.lock()) {
+		http->start();
+	}
+
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
