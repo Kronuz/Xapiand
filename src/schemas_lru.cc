@@ -145,7 +145,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 				}
 				try {
 					// Try writing (only if there's no metadata there alrady)
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
 						// or fallback to load from metadata (again).
 						local_schema_ptr = schema_ptr;
 						str_schema = db_handler->get_metadata(reserved_schema);
@@ -187,7 +187,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 		if (exchanged) {
 			if (write) {
 				try {
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
 						// It doesn't matter if new metadata cannot be set
 						// it should continue with newly created foreign
 						// schema, as requested by user.
@@ -323,7 +323,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 			if (new_metadata) {
 				try {
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
 							THROW(Error, "Cannot set metadata: %s", repr(reserved_schema));

@@ -180,7 +180,7 @@ class DatabaseHandler : protected LockableDatabase {
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);
 
-	DataType index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_);
+	DataType index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -205,9 +205,9 @@ public:
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
-	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& ct_type);
-	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type);
+	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& ct_type);
+	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();
@@ -231,8 +231,8 @@ public:
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
 	std::string get_metadata(std::string_view key);
-	bool set_metadata(const std::string& key, const std::string& value, bool overwrite=true);
-	bool set_metadata(std::string_view key, std::string_view value, bool overwrite=true);
+	bool set_metadata(const std::string& key, const std::string& value, bool commit = false, bool overwrite = true);
+	bool set_metadata(std::string_view key, std::string_view value, bool commit = false, bool overwrite = true);
 
 	Document get_document(Xapian::docid did);
 	Document get_document(std::string_view document_id);
@@ -240,14 +240,14 @@ public:
 	Document get_document_term(std::string_view term_id);
 	Xapian::docid get_docid(std::string_view document_id);
 
-	void delete_document(std::string_view document_id, bool commit_=false);
+	void delete_document(std::string_view document_id, bool commit = false);
 
-	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false);
+	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit = false);
 
 	MsgPack get_document_info(std::string_view document_id, bool raw_data);
 	MsgPack get_database_info();
 
-	bool commit(bool _wal=true);
+	bool commit(bool wal = true);
 	bool reopen();
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)

@@ -529,9 +529,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit_)
+DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id.to_string()), repr(obj.to_string()), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id.to_string()), repr(obj.to_string()), commit ? "true" : "false");
 
 	auto prepared = prepare(document_id, obj, data, old_document_pair);
 	auto& term_id = std::get<0>(prepared);
@@ -539,15 +539,15 @@ DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& dat
 	auto& data_obj = std::get<2>(prepared);
 
 	lock_database lk_db(this);
-	auto did = database()->replace_document_term(term_id, doc, commit_);
+	auto did = database()->replace_document_term(term_id, doc, commit);
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit_ ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "Database is read-only");
@@ -567,14 +567,14 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 					}
 					data.update(ct_type, blob);
 				}
-				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit_);
+				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit_);
+				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit);
 			case MsgPack::Type::MAP:
 				inject_data(data, body);
-				return index(document_id, body, data, old_document_pair, commit_);
+				return index(document_id, body, data, old_document_pair, commit);
 			default:
 				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 		}
@@ -588,9 +588,9 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 
 
 DataType
-DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit_, const ct_type_t& /*ct_type*/)
+DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
 {
-	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id.to_string()), commit_ ? "true" : "false");
+	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id.to_string()), commit ? "true" : "false");
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
@@ -619,7 +619,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 
 		apply_patch(patches, obj);
 
-		return index(document_id, obj, data, old_document_pair, commit_);
+		return index(document_id, obj, data, old_document_pair, commit);
 	} catch (...) {
 		if (old_document_pair != nullptr) {
 			dec_document_change_cnt(old_document_pair);
@@ -630,9 +630,9 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 
 
 DataType
-DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit_, const ct_type_t& ct_type)
+DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", commit_ ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", commit ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) == 0) {
 		THROW(Error, "database is read-only");
@@ -666,28 +666,28 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 					}
 					data.update(ct_type, blob);
 				}
-				return index(document_id, obj, data, old_document_pair, commit_);
+				return index(document_id, obj, data, old_document_pair, commit);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return index(document_id, obj, data, old_document_pair, commit_);
+				return index(document_id, obj, data, old_document_pair, commit);
 			case MsgPack::Type::MAP:
 				if (stored) {
 					THROW(ClientError, "Objects of this type cannot be put in storage");
 				}
 				if (obj.empty()) {
 					inject_data(data, body);
-					return index(document_id, body, data, old_document_pair, commit_);
+					return index(document_id, body, data, old_document_pair, commit);
 				} else {
 					obj.update(body);
 					inject_data(data, obj);
-					return index(document_id, obj, data, old_document_pair, commit_);
+					return index(document_id, obj, data, old_document_pair, commit);
 				}
 			default:
 				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
 		}
 
-		return index(document_id, obj, data, old_document_pair, commit_);
+		return index(document_id, obj, data, old_document_pair, commit);
 	} catch (...) {
 		if (old_document_pair != nullptr) {
 			dec_document_change_cnt(old_document_pair);
@@ -1589,9 +1589,9 @@ DatabaseHandler::get_metadata(std::string_view key)
 
 
 bool
-DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool overwrite)
+DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool overwrite)
 {
-	L_CALL("DatabaseHandler::set_metadata(%s, %s, %s)", repr(key), repr(value), overwrite ? "true" : "false");
+	L_CALL("DatabaseHandler::set_metadata(%s, %s, %s, %s)", repr(key), repr(value), commit ? "true" : "false", overwrite ? "true" : "false");
 
 	lock_database lk_db(this);
 	if (!overwrite) {
@@ -1600,15 +1600,15 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 			return (old_value == value);
 		}
 	}
-	database()->set_metadata(key, value);
+	database()->set_metadata(key, value, commit);
 	return true;
 }
 
 
 bool
-DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool overwrite)
+DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool overwrite)
 {
-	return set_metadata(std::string(key), std::string(value), overwrite);
+	return set_metadata(std::string(key), std::string(value), commit, overwrite);
 }
 
 
@@ -1658,30 +1658,30 @@ DatabaseHandler::get_docid(std::string_view document_id)
 
 
 void
-DatabaseHandler::delete_document(std::string_view document_id, bool commit_)
+DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 {
 	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		database()->delete_document(did, commit_);
+		database()->delete_document(did, commit);
 		return;
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
-	database()->delete_document(database()->find_document(term_id), commit_);
+	database()->delete_document(database()->find_document(term_id), commit);
 }
 
 
 Xapian::docid
-DatabaseHandler::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_)
+DatabaseHandler::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit)
 {
 	L_CALL("Database::replace_document(%d, <doc>)", did);
 
 	lock_database lk_db(this);
-	return database()->replace_document(did, doc, commit_);
+	return database()->replace_document(did, doc, commit);
 }
 
 
@@ -1764,12 +1764,12 @@ DatabaseHandler::get_database_info()
 
 
 bool
-DatabaseHandler::commit(bool _wal)
+DatabaseHandler::commit(bool wal)
 {
-	L_CALL("DatabaseHandler::commit(%s)", _wal ? "true" : "false");
+	L_CALL("DatabaseHandler::commit(%s)", wal ? "true" : "false");
 
 	lock_database lk_db(this);
-	return database()->commit(_wal);
+	return database()->commit(wal);
 }
 
 
