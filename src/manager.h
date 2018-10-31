@@ -25,6 +25,7 @@
 #include "config.h"
 
 #include <atomic>                             // for std::atomic, std::atomic_int
+#include <future>                             // for std::future, std::promise
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include "string_view.hh"                     // for std::string_view
@@ -177,7 +178,7 @@ public:
 	void renew_leader();
 	void new_leader(std::shared_ptr<const Node>&& leader_node);
 
-	std::pair<std::future<bool>, std::future<bool>> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise = nullptr);
 #endif
 
 	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);

@@ -27,10 +27,11 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <atomic>                             // for std::atomic
 #include <deque>                              // for std::deque
+#include <future>                             // for std::future, std::promise
 #include <memory>                             // for shared_ptr
 #include <mutex>                              // for std::mutex
-#include <future>                             // for std::future, std::promise
 #include <string>                             // for std::string
 #include <vector>                             // for std::vector
 #include <xapian.h>
@@ -80,9 +81,9 @@ class BinaryClient : public BaseClient {
 	// Buffers that are pending write
 	std::string buffer;
 	std::deque<Buffer> messages;
-	std::promise<bool> promise;
+	std::atomic<std::promise<bool>*> atomic_promise;
 
-	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>&& promise_ = std::promise<bool>{});
+	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>* promise = nullptr);
 
 	ssize_t on_read(const char *buf, ssize_t received) override;
 	void on_read_file(const char *buf, ssize_t received) override;
@@ -104,6 +105,8 @@ public:
 	}
 
 	~BinaryClient();
+
+	void fulfill_promise(bool value);
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);

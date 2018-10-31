@@ -56,7 +56,7 @@ public:
 
 	void io_accept_cb(ev::io& watcher, int revents) override;
 
-	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>&& promise);
+	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise);
 };
 
 

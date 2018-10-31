@@ -24,7 +24,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-
 #include "binary.h"                         // for Binary
 #include "binary_client.h"                  // for BinaryClient
 #include "endpoint.h"                       // for Endpoints
@@ -109,11 +108,14 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 }
 
 
-bool
-BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>&& promise)
+void
+BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
 {
 	if (src_endpoint.is_local()) {
-		return false;
+		if (promise) {
+			promise->set_value(false);
+		}
+		return;
 	}
 
 	bool replicated = false;
@@ -141,24 +143,28 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 	}
 
 	if (!replicated) {
-		return false;
+		if (promise) {
+			promise->set_value(false);
+		}
+		return;
 	}
 
 	int client_sock = binary->connection_socket();
 	if (client_sock < 0) {
-		return false;
+		if (promise) {
+			promise->set_value(false);
+		}
+		return;
 	}
 
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, std::move(promise));
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, promise);
 
 	if (!client->init_replication(src_endpoint, dst_endpoint)) {
 		client->destroy();
-		return false;
+		return;
 	}
 
 	L_INFO("Database being synchronized from %s (%s)...", src_endpoint.node_name, repr(src_endpoint.to_string()));
-
-	return true;
 }
 
 #endif /* XAPIAND_CLUSTERING */

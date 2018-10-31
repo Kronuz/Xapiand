@@ -24,7 +24,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <future>                             // for std::future, std::promise
 #include <netinet/tcp.h>                      // for TCP_NODELAY
 
 #include "endpoint.h"                         // for Endpoint
@@ -121,23 +120,18 @@ Binary::signal_send_async()
 }
 
 
-std::pair<std::future<bool>, std::future<bool>>
-Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
+void
+Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
 {
-	std::promise<bool> promise;
-	auto finished = promise.get_future();
-
-	auto triggered = tasks.enqueue([
+	tasks.enqueue([
 		src_endpoint,
 		dst_endpoint,
-		promise = std::move(promise)
+		promise
 	] (const std::shared_ptr<BinaryServer>& server) mutable {
-		return server->trigger_replication(src_endpoint, dst_endpoint, std::move(promise));
+		server->trigger_replication(src_endpoint, dst_endpoint, promise);
 	});
 
 	signal_send_async();
-
-	return std::make_pair(std::move(triggered), std::move(finished));
 }
 
 

@@ -31,13 +31,13 @@
 #include <unistd.h>
 
 #include "base_tcp.h"
-#include "fs.hh"                   // for delete_files, build_path_index
-#include "io.hh"                   // for io::*
+#include "fs.hh"                              // for delete_files, build_path_index
+#include "io.hh"                              // for io::*
 #include "length.h"
-#include "manager.h"               // XapiandManager::manager
-#include "repr.hh"                 // for repr
+#include "manager.h"                          // XapiandManager::manager
+#include "repr.hh"                            // for repr
 #include "server.h"
-#include "utype.hh"                // for toUType
+#include "utype.hh"                           // for toUType
 
 
 // #undef L_DEBUG
@@ -60,13 +60,13 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, std::promise<bool>&& promise_)
+BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, std::promise<bool>* promise)
 	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
-	  promise(std::move(promise_)),
+	  atomic_promise(promise),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -113,6 +113,8 @@ BinaryClient::~BinaryClient()
 	if (shutting_down || !(idle && write_queue.empty())) {
 		L_WARNING("Binary client killed!");
 	}
+
+	fulfill_promise(false);
 
 	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
@@ -193,7 +195,6 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
 							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, io::strerrno(errno), errno, strerror(errno));
-							promise.set_value(false);
 							destroy();
 							detach();
 							return processed;
@@ -207,7 +208,6 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
 					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
-					promise.set_value(false);
 					destroy();
 					detach();
 					return processed;
@@ -291,6 +291,20 @@ BinaryClient::on_read_file_done()
 }
 
 
+void
+BinaryClient::fulfill_promise(bool value)
+{
+	L_CALL("BinaryClient::fulfill_promise(%s)", value ? "true" : "false");
+
+	if (atomic_promise) {
+		auto promise = atomic_promise.exchange(nullptr);
+		if (promise) {
+			promise->set_value(value);
+		}
+	}
+}
+
+
 char
 BinaryClient::get_message(std::string &result, char max_type)
 {
@@ -362,7 +376,6 @@ BinaryClient::run()
 		} catch (...) {
 			lk.lock();
 			idle = true;
-			promise.set_value(false);
 			L_CONN("Running in worker ended with an exception.");
 			detach();  // try re-detaching if already flagged as detaching
 			throw;
@@ -382,7 +395,6 @@ BinaryClient::run()
 				} catch (...) {
 					lk.lock();
 					idle = true;
-					promise.set_value(false);
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -401,7 +413,6 @@ BinaryClient::run()
 				} catch (...) {
 					lk.lock();
 					idle = true;
-					promise.set_value(false);
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -420,7 +431,6 @@ BinaryClient::run()
 				} catch (...) {
 					lk.lock();
 					idle = true;
-					promise.set_value(false);
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -441,7 +451,6 @@ BinaryClient::run()
 
 	if (shutting_down && write_queue.empty()) {
 		L_WARNING("Programmed shut down!");
-		promise.set_value(false);
 		destroy();
 		detach();
 	}

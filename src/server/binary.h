@@ -22,17 +22,17 @@
 
 #pragma once
 
-#include "config.h"          // for XAPIAND_CLUSTERING
+#include "config.h"                           // for XAPIAND_CLUSTERING
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <future>            // for std::future
-#include <memory>            // for std::shared_ptr, std::weak_ptr
-#include <string>            // for std::string
-#include <vector>            // for std::vector
+#include <future>                             // for std::future, std::promise
+#include <memory>                             // for std::shared_ptr, std::weak_ptr
+#include <string>                             // for std::string
+#include <vector>                             // for std::vector
 
-#include "base_tcp.h"        // for BaseTCP
-#include "threadpool.h"      // for TaskQueue
+#include "base_tcp.h"                         // for BaseTCP
+#include "threadpool.h"                       // for TaskQueue
 
 
 class Endpoint;
@@ -47,7 +47,7 @@ class Binary : public BaseTCP {
 	void signal_send_async();
 
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
-	TaskQueue<bool(const std::shared_ptr<BinaryServer>&)> tasks;
+	TaskQueue<void(const std::shared_ptr<BinaryServer>&)> tasks;
 
 public:
 	std::string __repr__() const override {
@@ -63,7 +63,7 @@ public:
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 
-	std::pair<std::future<bool>, std::future<bool>> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise);
 };
 
 

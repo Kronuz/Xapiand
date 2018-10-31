@@ -31,7 +31,6 @@
 #include <errno.h>                            // for errno
 #include <exception>                          // for exception
 #include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
-#include <future>                             // for std::future, std::promise
 #include <ifaddrs.h>                          // for ifaddrs, freeifaddrs
 #include <memory>                             // for std::shared_ptr
 #include <mutex>                              // for mutex, lock_guard, uniqu...
@@ -378,19 +377,19 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			assert(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
-			auto futures = trigger_replication(cluster_endpoint, local_endpoint);
-			auto wait = [] (std::future<bool>& future) {
-				switch (future.wait_for(10s)) {
-					case std::future_status::ready:
-						return future.get();
-					default:
-						return false;
-				}
-			};
-			if (!wait(futures.first) || !wait(futures.second)) {
-				L_CRIT("Cannot synchronize cluster database!");
-				sig_exit(-EX_CANTCREAT);
-				return;
+			std::promise<bool> promise;
+			auto future = promise.get_future();
+			trigger_replication(cluster_endpoint, local_endpoint, &promise);
+			switch (future.wait_for(60s)) {
+				case std::future_status::ready:
+					if (future.get()) {
+						break;
+					}
+					/* FALLTHROUGH */
+				default:
+					L_CRIT("Cannot synchronize cluster database!");
+					sig_exit(-EX_CANTCREAT);
+					return;
 			}
 			L_INFO("Synchronization completed!");
 			new_cluster = 2;
@@ -874,24 +873,14 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 }
 
 
-std::pair<std::future<bool>, std::future<bool>>
-XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
+void
+XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
 {
-	L_CALL("XapiandManager::trigger_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), promise == nullptr : "null" : "<promise>");
 
 	if (auto binary = weak_binary.lock()) {
-		return binary->trigger_replication(src_endpoint, dst_endpoint);
+		binary->trigger_replication(src_endpoint, dst_endpoint, promise);
 	}
-
-	std::promise<bool> triggered_promise;
-	triggered_promise.set_value(false);
-	auto triggered = triggered_promise.get_future();
-
-	std::promise<bool> finished_promise;
-	finished_promise.set_value(false);
-	auto finished = finished_promise.get_future();
-
-	return std::make_pair(std::move(triggered), std::move(finished));
 }
 
 #endif
