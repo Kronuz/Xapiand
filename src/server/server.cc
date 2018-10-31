@@ -80,12 +80,12 @@ XapiandServer::setup_node_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("XapiandServer::setup_async_cb:BEGIN");
+	L_EV_BEGIN("XapiandServer::setup_node_async_cb:BEGIN");
 	XapiandManager::manager->setup_node(share_this<XapiandServer>());
 
 	setup_node_async.stop();
 	L_EV("Stop server's async setup node event");
-	L_EV_END("XapiandServer::setup_async_cb:END");
+	L_EV_END("XapiandServer::setup_node_async_cb:END");
 }
 
 
