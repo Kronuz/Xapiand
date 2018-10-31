@@ -65,6 +65,7 @@ template <typename... Args>
 DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	: Queue(std::forward<Args>(args)...),
 	  locked(false),
+	  renew_time(std::chrono::system_clock::now()),
 	  count(0),
 	  endpoints(endpoints_) {
 	L_OBJ("CREATED DATABASE QUEUE FOR %s!", repr(endpoints.to_string()));
