@@ -142,8 +142,8 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 
 	const auto now = std::chrono::system_clock::now();
 
-	const auto on_get = [now](std::shared_ptr<DatabaseQueue>& val) {
-		val->renew_time = now;
+	const auto on_get = [now](std::shared_ptr<DatabaseQueue>& queue) {
+		queue->renew_time = now;
 		return lru::GetAction::renew;
 	};
 
@@ -152,30 +152,30 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 		return std::make_pair(it->second, false);
 	}
 
-	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->locked) {
-			val->renew_time = now;
-			L_DATABASE("Renew locked queue: %s", repr(val->endpoints.to_string()));
+	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& queue, ssize_t size, ssize_t max_size) {
+		if (queue->locked) {
+			queue->renew_time = now;
+			L_DATABASE("Renew locked queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
-		if (val->size() < val->count) {
-			val->renew_time = now;
-			L_DATABASE("Renew occupied queue: %s", repr(val->endpoints.to_string()));
+		if (queue->size() < queue->count) {
+			queue->renew_time = now;
+			L_DATABASE("Renew occupied queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::renew;
 		}
 		if (size > max_size) {
-			if (val->renew_time < now - 60s) {
-				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
+			if (queue->renew_time < now - 60s) {
+				L_DATABASE("Evict queue from full LRU: %s", repr(queue->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
-			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
+			L_DATABASE("Leave recently used queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
-		if (val->renew_time < now - 3600s) {
-			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
+		if (queue->renew_time < now - 3600s) {
+			L_DATABASE("Evict queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
-		L_DATABASE("Stop at queue: %s", repr(val->endpoints.to_string()));
+		L_DATABASE("Stop at queue: %s", repr(queue->endpoints.to_string()));
 		return lru::DropAction::stop;
 	};
 
@@ -189,28 +189,28 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 {
 	L_CALL("DatabasesLRU::cleanup()");
 
-	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& val, ssize_t size, ssize_t max_size) {
-		if (val->locked) {
-			L_DATABASE("Leave locked queue: %s", repr(val->endpoints.to_string()));
+	const auto on_drop = [now](std::shared_ptr<DatabaseQueue>& queue, ssize_t size, ssize_t max_size) {
+		if (queue->locked) {
+			L_DATABASE("Leave locked queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
-		if (val->size() < val->count) {
-			L_DATABASE("Leave occupied queue: %s", repr(val->endpoints.to_string()));
+		if (queue->size() < queue->count) {
+			L_DATABASE("Leave occupied queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
-			if (val->renew_time < now - 60s) {
-				L_DATABASE("Evict queue from full LRU: %s", repr(val->endpoints.to_string()));
+			if (queue->renew_time < now - 60s) {
+				L_DATABASE("Evict queue from full LRU: %s", repr(queue->endpoints.to_string()));
 				return lru::DropAction::evict;
 			}
-			L_DATABASE("Leave recently used queue: %s", repr(val->endpoints.to_string()));
+			L_DATABASE("Leave recently used queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::leave;
 		}
-		if (val->renew_time < now - 3600s) {
-			L_DATABASE("Evict queue: %s", repr(val->endpoints.to_string()));
+		if (queue->renew_time < now - 3600s) {
+			L_DATABASE("Evict queue: %s", repr(queue->endpoints.to_string()));
 			return lru::DropAction::evict;
 		}
-		L_DATABASE("Stop at queue: %s", repr(val->endpoints.to_string()));
+		L_DATABASE("Stop at queue: %s", repr(queue->endpoints.to_string()));
 		return lru::DropAction::stop;
 	};
 	trim(on_drop);
