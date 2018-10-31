@@ -274,8 +274,6 @@ XapiandManager::setup_node()
 {
 	L_CALL("XapiandManager::setup_node()");
 
-	std::lock_guard<std::mutex> lk(qmtx);
-
 	L_MANAGER("Setup Node!");
 
 	#ifdef XAPIAND_CLUSTERING

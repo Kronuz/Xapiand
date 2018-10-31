@@ -70,8 +70,6 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 class XapiandManager : public Worker  {
 	friend Worker;
 
-	std::mutex qmtx;
-
 	XapiandManager();
 	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_ = std::chrono::system_clock::now());
 
