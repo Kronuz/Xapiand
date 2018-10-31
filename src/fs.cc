@@ -22,6 +22,7 @@
 
 #include "fs.hh"
 
+#include <algorithm>             // for std::any_of
 #include <fnmatch.h>             // for fnmatch
 #include <stdio.h>               // for rename
 #include <sys/stat.h>            // for stat, mkdir
@@ -46,8 +47,8 @@
 // #define L_FS L_WHITE
 
 
-void delete_files(std::string_view path, const std::string& include_pattern, const std::string& exclude_pattern) {
-	L_CALL("delete_files(%s, %s)", repr(path), repr(include_pattern), repr(exclude_pattern));
+void delete_files(std::string_view path, const std::vector<const std::string>& patterns) {
+	L_CALL("delete_files(%s, <patterns>)", repr(path));
 
 	stringified path_string(path);
 
@@ -70,9 +71,9 @@ void delete_files(std::string_view path, const std::string& include_pattern, con
 				empty = false;
 				break;
 			case DT_REG:  //  This is a regular file.
-				if (!exclude_pattern.empty() && ::fnmatch(exclude_pattern.c_str(), n, 0) == 0) {
-					L_FS("File %s was excluded", n);
-				} else if (::fnmatch(include_pattern.c_str(), n, 0) == 0) {
+				if (std::any_of(patterns.cbegin(), patterns.cend(), [&](const std::string& pattern){
+					return ::fnmatch(pattern.c_str(), n, 0) == 0;
+				})) {
 					std::string file(path);
 					file.push_back('/');
 					file.append(n);

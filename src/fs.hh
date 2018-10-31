@@ -25,6 +25,7 @@
 #include <dirent.h>              // for DIR, readdir, opendir, closedir
 #include <string>                // for std::string
 #include "string_view.hh"        // for std::string_view
+#include <vector>                // for std::vector
 
 
 struct File_ptr {
@@ -35,7 +36,7 @@ struct File_ptr {
 };
 
 
-void delete_files(std::string_view path, const std::string& include_pattern = "*", const std::string& exclude_pattern = "");
+void delete_files(std::string_view path, const std::vector<const std::string>& patterns = {"*"});
 
 void move_files(std::string_view src, std::string_view dst);
 
