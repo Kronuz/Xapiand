@@ -882,7 +882,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 void
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
 {
-	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), promise == nullptr : "null" : "<promise>");
+	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), promise == nullptr ? "null" : "<promise>");
 
 	if (auto binary = weak_binary.lock()) {
 		binary->trigger_replication(src_endpoint, dst_endpoint, promise);
@@ -950,10 +950,10 @@ XapiandManager::resolve_index_endpoint(std::string_view path, bool master)
 
 	for (const auto& node : resolve_index_nodes(path)) {
 		if (Node::is_active(node)) {
-			L_MANAGER("%zu: Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+			L_MANAGER("Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", Node::indexed_nodes, node ? node->idx : 0, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 			return {path, node.get()};
 		}
-		L_MANAGER("%zu: Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", replicas, indexed_nodes, consistent_hash + 1, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+		L_MANAGER("Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", Node::indexed_nodes, node ? node->idx : 0, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 		if (master) {
 			break;
 		}
