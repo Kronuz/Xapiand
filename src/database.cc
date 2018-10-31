@@ -513,11 +513,17 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		dbs[0].second
 	) {
 		// Commit only local writable databases
-		commit();
+		try {
+			commit();
+		} catch (...) {
+		}
 	}
 
 	if (db) {
-		db->close();
+		try {
+			db->close();
+		} catch (...) {
+		}
 		db.reset();
 	}
 
