@@ -24,11 +24,12 @@
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
 
+#include <cstring>                          // for strerror
+#include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
 #include <regex>                            // for std::regex, std::regex_constants
-#include <cstring>                          // for strerror
-#include <errno.h>                          // for errno
+#include <signal.h>                         // for SIGTERM
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <utility>                          // for std::move
@@ -955,8 +956,9 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
-			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
-			XapiandManager::manager->shutdown_sig(0);
+			XapiandManager::manager->shutdown_sig(SIGTERM);
+			destroy();
+			detach();
 			break;
 #endif
 		default:
