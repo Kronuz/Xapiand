@@ -129,7 +129,7 @@ public:
 	virtual ~Worker();
 
 	virtual void shutdown_impl(time_t asap, time_t now);
-	virtual void destroy_impl() = 0;
+	virtual void destroy_impl() {}
 
 	void break_loop_impl();
 	void detach_children_impl();
