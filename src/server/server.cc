@@ -49,8 +49,6 @@ XapiandServer::XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_re
 
 XapiandServer::~XapiandServer()
 {
-	destroyer();
-
 	L_OBJ("DELETED XAPIAN SERVER!");
 }
 
@@ -65,22 +63,6 @@ XapiandServer::run()
 	L_EV("Server loop ended!");
 
 	detach();
-}
-
-
-void
-XapiandServer::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-XapiandServer::destroyer()
-{
-	L_CALL("XapiandServer::destroyer()");
-
-	std::lock_guard<std::mutex> lk(qmtx);
 }
 
 
