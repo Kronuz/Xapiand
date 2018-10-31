@@ -2716,6 +2716,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 	L_CALL("HttpClient::clean_http_request()");
 
 	request.ends = std::chrono::system_clock::now();
+	waiting = false;
 
 	request.log->clear();
 	if (request.parser.http_errno != 0u) {
