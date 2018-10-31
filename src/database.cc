@@ -215,7 +215,10 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 
 Database::~Database()
 {
-	do_close(true, true, Database::Transaction::none);
+	try {
+		do_close(true, true, Database::Transaction::none);
+	} catch (...) {
+	}
 
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
