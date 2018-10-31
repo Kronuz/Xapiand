@@ -143,6 +143,7 @@ void
 DataHeader::init(void* param, void* /*unused*/)
 {
 	const auto* database = static_cast<const Database*>(param);
+	assert(database);
 
 	head.magic = STORAGE_MAGIC;
 	strncpy(head.uuid, database->get_uuid().to_string().c_str(), sizeof(head.uuid));

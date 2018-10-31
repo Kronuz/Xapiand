@@ -78,6 +78,7 @@ void
 WalHeader::init(void* param, void* /*unused*/)
 {
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
+	assert(wal && wal->database);
 
 	memcpy(&head.uuid[0], wal->database->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -152,6 +153,8 @@ bool
 DatabaseWAL::open_current(bool only_committed, bool unsafe)
 {
 	L_CALL("DatabaseWAL::open_current(%s)", only_committed ? "true" : "false");
+
+	assert(database);
 
 	Xapian::rev revision = database->reopen_revision;
 
@@ -532,6 +535,8 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
+	assert(database);
+
 	if ((database->flags & DB_WRITABLE) == 0) {
 		THROW(Error, "Database is read-only");
 	}
@@ -692,6 +697,7 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 {
 	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s)", names[toUType(type)], send_update ? "true" : "false");
 	try {
+		assert(database);
 		assert(database->flags & DB_WRITABLE);
 		assert(!(database->flags & DB_NOWAL));
 
