@@ -998,6 +998,7 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	} else {
 		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
 	}
+	XapiandManager::manager.reset();
 }
 
 
@@ -1013,6 +1014,8 @@ void dump_metadata() {
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_metadata(fd);
 			L_NOTICE("Dump finished!");
+			XapiandManager::manager->join();
+			XapiandManager::manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1041,6 +1044,8 @@ void dump_schema() {
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_schema(fd);
 			L_NOTICE("Dump finished!");
+			XapiandManager::manager->join();
+			XapiandManager::manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1069,6 +1074,8 @@ void dump_documents() {
 			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
 			db_handler.dump_documents(fd);
 			L_NOTICE("Dump finished!");
+			XapiandManager::manager->join();
+			XapiandManager::manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1097,6 +1104,8 @@ void restore() {
 			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
+			XapiandManager::manager->join();
+			XapiandManager::manager.reset();
 		} catch (...) {
 			if (fd != STDIN_FILENO) {
 				io::close(fd);
@@ -1205,9 +1214,6 @@ int main(int argc, char **argv) {
 			L_CRIT("Uncaught exception!");
 			exit_code = EX_SOFTWARE;
 		}
-
-		XapiandManager::manager->database_pool.clear();
-		XapiandManager::manager.reset();
 
 	} catch (const Exit& exc) {
 		exit_code = exc.code;

@@ -81,7 +81,6 @@ class XapiandManager : public Worker  {
 	void shutdown_impl(time_t asap, time_t now) override;
 
 	void finish();
-	void join();
 
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
@@ -168,6 +167,7 @@ public:
 	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
 	void run();
+	void join();
 
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();

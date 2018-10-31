@@ -206,7 +206,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 XapiandManager::~XapiandManager()
 {
 	destroyer();
-	join();
 
 	L_OBJ("DELETED XAPIAN MANAGER!");
 }
@@ -711,6 +710,7 @@ XapiandManager::run()
 		throw Exit(-sig);
 	}
 
+	destroyer();
 	join();
 
 	detach();
@@ -778,6 +778,9 @@ XapiandManager::join()
 
 	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
 	AsyncFsync::join();
+
+	L_MANAGER("Clearing database pool!");
+	database_pool.clear();
 
 	L_MANAGER("Server ended!");
 }
