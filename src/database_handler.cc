@@ -1930,7 +1930,7 @@ Document::Document(const Xapian::Document& doc_)
 	  db_handler(nullptr) { }
 
 
-Document::Document(const Xapian::docid& did_, DatabaseHandler* db_handler_)
+Document::Document(Xapian::docid did_, DatabaseHandler* db_handler_)
 	: did(did_),
 	  db_handler(db_handler_) { }
 

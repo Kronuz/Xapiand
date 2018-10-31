@@ -72,7 +72,7 @@ class MSet {
 			weight{it.get_weight()},
 			percent{it.get_percent()} { }
 
-		MSetItem(const Xapian::docid& did) :
+		MSetItem(Xapian::docid did) :
 			did{did},
 			rank{0},
 			weight{0},
@@ -129,7 +129,7 @@ public:
 		}
 	}
 
-	MSet(const Xapian::docid& did) :
+	MSet(Xapian::docid did) :
 		matches_estimated{1}
 	{
 		items.push_back(did);
@@ -151,7 +151,7 @@ public:
 		return MSetIterator(items.end());
 	}
 
-	void push_back(const Xapian::docid& did) {
+	void push_back(Xapian::docid did) {
 		items.push_back(did);
 		++matches_estimated;
 	}
@@ -268,7 +268,7 @@ class Document {
 public:
 	Document();
 	Document(const Xapian::Document& doc_);
-	Document(const Xapian::docid& did_, DatabaseHandler* db_handler_);
+	Document(Xapian::docid did_, DatabaseHandler* db_handler_);
 
 	Document(const Document& doc_) = default;
 	Document& operator=(const Document& doc_) = default;

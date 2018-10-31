@@ -794,7 +794,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(const Xapian::docid& did, const Data::Locator& locator) const
+Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) const
 {
 	L_CALL("Database::storage_get_stored()");
 
@@ -814,7 +814,7 @@ Database::storage_get_stored(const Xapian::docid& did, const Data::Locator& loca
 
 
 void
-Database::storage_pull_blobs(Xapian::Document& doc, const Xapian::docid& did) const
+Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
 {
 	L_CALL("Database::storage_pull_blobs()");
 
@@ -838,7 +838,7 @@ Database::storage_pull_blobs(Xapian::Document& doc, const Xapian::docid& did) co
 
 
 void
-Database::storage_push_blobs(Xapian::Document& doc, const Xapian::docid& did) const
+Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid did) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
@@ -1175,7 +1175,7 @@ Database::find_document(const std::string& term_id)
 
 
 Xapian::Document
-Database::get_document(const Xapian::docid& did, bool assume_valid_, bool pull_)
+Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 {
 	L_CALL("Database::get_document(%d)", did);
 
