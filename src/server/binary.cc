@@ -109,9 +109,13 @@ Binary::start()
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
-		// TODO: Start servers
-		// auto server = it->lock();
-		// server->start();
+		auto server = it->lock();
+		if (server) {
+			server->start();
+			++it;
+		} else {
+			it = servers_weak.erase(it);
+		}
 	}
 }
 
