@@ -55,7 +55,7 @@ protected:
 	int flags;
 	Endpoints endpoints;
 
-	std::shared_ptr<Database> database() const noexcept;
+	const std::shared_ptr<Database>& database() const noexcept;
 	Xapian::Database* db() const noexcept;
 
 public:

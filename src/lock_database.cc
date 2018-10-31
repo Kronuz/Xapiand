@@ -42,7 +42,7 @@ LockableDatabase::LockableDatabase(const Endpoints& endpoints_, int flags_) :
 }
 
 
-std::shared_ptr<Database>
+const std::shared_ptr<Database>&
 LockableDatabase::database() const noexcept
 {
 	assert(_locked_database);
@@ -54,7 +54,7 @@ Xapian::Database*
 LockableDatabase::db() const noexcept
 {
 	assert(_locked_database);
-	return _locked_database->db.get();
+	return _locked_database ? _locked_database->db.get() : nullptr;
 }
 
 
