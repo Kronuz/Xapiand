@@ -31,12 +31,25 @@
 
 #include "io.hh"                 // for io::*
 #include "log.h"                 // for L_ERR, L_WARNING, L_INFO
+#include "repr.hh"               // for repr
 #include "split.h"               // for Split
 #include "string.hh"             // for string::startswith, string::endswith
 #include "stringified.hh"        // for stringified
 
+#define L_FS L_NOTHING
+
+
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_FS
+// #define L_FS L_WHITE
+
 
 void delete_files(std::string_view path, std::string_view pattern) {
+	L_CALL("delete_files(%s, %s)", repr(path), repr(pattern));
+
 	stringified path_string(path);
 	stringified pattern_string(pattern);
 
@@ -49,6 +62,7 @@ void delete_files(std::string_view path, std::string_view pattern) {
 	struct dirent *ent;
 	while ((ent = ::readdir(dirp)) != nullptr) {
 		const char *n = ent->d_name;
+		L_FS("delete_files -> Entry %s (0x%x)", ent->d_name, static_cast<int>(ent->d_type));
 		switch (ent->d_type) {
 			case DT_DIR:  // This is a directory.
 				if (n[0] == '.' && (n[1] == '\0' || (n[1] == '.' && n[2] == '\0'))) {
@@ -62,8 +76,12 @@ void delete_files(std::string_view path, std::string_view pattern) {
 					file.push_back('/');
 					file.append(n);
 					if (::remove(file.c_str()) != 0) {
-						L_ERR("File %s could not be deleted", ent->d_name);
+						L_ERR("File %s could not be deleted", n);
+					} else {
+						L_FS("File %s deleted", n);
 					}
+				} else {
+					L_FS("File %s did not match pattern %s", n, repr(pattern));
 				}
 				/* FALLTHROUGH */
 			case DT_LNK:  // This is a symbolic link.
@@ -83,6 +101,8 @@ void delete_files(std::string_view path, std::string_view pattern) {
 
 
 void move_files(std::string_view src, std::string_view dst) {
+	L_CALL("move_files(%s, %s)", repr(src), repr(dst));
+
 	stringified src_string(src);
 	DIR *dirp = ::opendir(src_string.c_str());
 	if (dirp == nullptr) {
@@ -112,12 +132,16 @@ void move_files(std::string_view src, std::string_view dst) {
 
 
 bool exists(std::string_view path) {
+	L_CALL("exists(%s)", repr(path));
+
 	struct stat buf;
 	return ::stat(stringified(path).c_str(), &buf) == 0;
 }
 
 
 bool build_path(std::string_view path) {
+	L_CALL("build_path(%s)", repr(path));
+
 	if (exists(path)) {
 		return true;
 	}
@@ -138,6 +162,8 @@ bool build_path(std::string_view path) {
 
 
 bool build_path_index(std::string_view path_index) {
+	L_CALL("build_path_index(%s)", repr(path_index));
+
 	size_t found = path_index.find_last_of('/');
 	if (found == std::string_view::npos) {
 		return build_path(path_index);
@@ -147,6 +173,8 @@ bool build_path_index(std::string_view path_index) {
 
 
 DIR* opendir(std::string_view path, bool create) {
+	L_CALL("opendir(%s, %s)", repr(path), create ? "true" : "false");
+
 	stringified path_string(path);
 	DIR* dirp = ::opendir(path_string.c_str());
 	if (dirp == nullptr && errno == ENOENT && create) {
