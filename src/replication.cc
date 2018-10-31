@@ -316,6 +316,11 @@ Replication::reply_fail(const std::string&)
 
 	L_REPLICATION("Replication::reply_fail");
 
+	if (slave_database) {
+		slave_database->close();
+		XapiandManager::manager->database_pool.checkin(slave_database);
+	}
+
 	L_ERR("Replication failure!");
 	client.destroy();
 	client.detach();
@@ -335,7 +340,15 @@ Replication::reply_db_header(const std::string& message)
 	current_uuid = unserialise_string(&p, p_end);
 	current_revision = unserialise_length(&p, p_end);
 
-	assert(switch_database_path.empty());
+	if (slave_database) {
+		slave_database->close();
+		XapiandManager::manager->database_pool.checkin(slave_database);
+	}
+
+	if (!switch_database_path.empty()) {
+		delete_files(switch_database_path.c_str());
+		switch_database_path.clear();
+	}
 
 	char path[PATH_MAX];
 	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
