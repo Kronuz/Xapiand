@@ -484,17 +484,23 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	assert(database);
 	auto endpoints = database->endpoints;
 	int flags = database->flags;
+	bool db_writable = (flags & DB_WRITABLE) != 0;
 
-	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
-	if (database->modified && !database->transaction && !database->closed) {
+	if (db_writable &&
+		database->modified &&
+		database->transaction == Database::Transaction::none &&
+		!database->closed &&
+		!database->dbs.empty() &&
+		database->dbs[0].second
+	) {
+		// Auto commit only local writable databases
 		DatabaseAutocommit::commit(database);
 	}
 
 	if (auto queue = database->weak_queue.lock()) {
 		std::lock_guard<std::mutex> lk(qmtx);
-
-		bool db_writable = (flags & DB_WRITABLE) != 0;
 
 		if (locks) {
 			if (db_writable) {

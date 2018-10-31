@@ -214,11 +214,17 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 
 Database::~Database()
 {
-	if ((flags & DB_WRITABLE) != 0) {
-		if (!dbs.empty() && dbs[0].second) {
-			// Commit only local writable databases
-			commit();
-		}
+	bool db_writable = (flags & DB_WRITABLE) != 0;
+	if (
+		db_writable &&
+		modified &&
+		transaction == Database::Transaction::none &&
+		!closed &&
+		!dbs.empty() &&
+		dbs[0].second
+	) {
+		// Commit only local writable databases
+		commit();
 	}
 
 	if (auto queue = weak_queue.lock()) {
@@ -510,7 +516,14 @@ Database::close()
 	closed = true;
 	db->close();
 	db.reset();
+	incomplete = false;
 	modified = false;
+	dbs.clear();
+#ifdef XAPIAND_DATA_STORAGE
+	storages.clear();
+	writable_storages.clear();
+#endif  // XAPIAND_DATA_STORAGE
+	transaction = Transaction::none;
 }
 
 
