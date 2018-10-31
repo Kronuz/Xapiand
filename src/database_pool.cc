@@ -586,8 +586,9 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 {
 	L_CALL("DatabasePool::switch_db(%s, %s)", repr(tmp), repr(endpoint_path));
 
+	std::shared_ptr<Database> database;
+
 	try {
-		std::shared_ptr<Database> database;
 		checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
 		database->close();
 	} catch (const NotFoundError&) {
@@ -596,6 +597,10 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 
 	delete_files(endpoint_path);
 	move_files(tmp, endpoint_path);
+
+	if (database) {
+		checkin(database);
+	}
 }
 
 
