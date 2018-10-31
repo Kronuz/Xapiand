@@ -701,9 +701,9 @@ XapiandManager::run()
 		setup_node();
 	}
 
-	L_EV("Entered manager loop...");
+	L_MANAGER("Entered manager loop...");
 	run_loop();
-	L_EV("Manager loop ended!");
+	L_MANAGER("Manager loop ended!");
 
 	int sig = atom_sig;
 	if (sig < 0) {
