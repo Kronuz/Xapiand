@@ -923,7 +923,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
-				db_handler.set_metadata(key, serialised);
+				db_handler.set_metadata(key, serialised, true);
 			}
 		} else {
 			const char *p = serialised.data();
