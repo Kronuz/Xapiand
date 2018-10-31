@@ -66,7 +66,7 @@ static inline const std::string& StateNames(State type) {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient {
-	std::mutex messages_mutex;
+	std::mutex runner_mutex;
 
 	State state;
 
@@ -83,6 +83,8 @@ class BinaryClient : public BaseClient {
 	std::promise<bool>* promise;
 
 	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>* promise_ = nullptr);
+
+	bool is_idle() override;
 
 	ssize_t on_read(const char *buf, ssize_t received) override;
 	void on_read_file(const char *buf, ssize_t received) override;

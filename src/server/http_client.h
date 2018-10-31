@@ -244,6 +244,8 @@ class HttpClient : public BaseClient {
 		BAD_QUERY,
 	};
 
+	bool is_idle() override;
+
 	Command getCommand(std::string_view command_name);
 
 	ssize_t on_read(const char* buf, ssize_t received) override;
@@ -253,7 +255,7 @@ class HttpClient : public BaseClient {
 	static const http_parser_settings settings;
 
 	Request new_request;
-	std::mutex requests_mutex;
+	std::mutex runner_mutex;
 	std::deque<Request> requests;
 	Endpoints endpoints;
 
@@ -307,7 +309,6 @@ class HttpClient : public BaseClient {
 
 	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void clean_http_request(Request& request, Response& response);
-	void set_idle();
 	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
 	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);

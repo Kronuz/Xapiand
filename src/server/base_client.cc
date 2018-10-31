@@ -302,7 +302,8 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  io_write(*ev_loop),
 	  write_start_async(*ev_loop),
 	  read_start_async(*ev_loop),
-	  idle(false),
+	  waiting(false),
+	  running(false),
 	  shutting_down(false),
 	  closed(false),
 	  sock(sock_),
@@ -354,6 +355,13 @@ BaseClient::~BaseClient()
 	}
 
 	L_OBJ("DELETED BASE CLIENT! (%d clients left)", total_clients);
+}
+
+
+bool
+BaseClient::is_idle()
+{
+	return !waiting && !running && write_queue.empty();
 }
 
 
@@ -818,7 +826,7 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	if ((now != 0) || (idle && write_queue.empty())) {
+	if (now != 0 || is_idle()) {
 		destroy();
 		detach();
 	}

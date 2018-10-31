@@ -82,8 +82,6 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 
 	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
 
-	idle = true;
-
 	L_OBJ("CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
 
@@ -110,7 +108,7 @@ BinaryClient::~BinaryClient()
 		delete_files(temp_directory.c_str());
 	}
 
-	if (shutting_down || !(idle && write_queue.empty())) {
+	if (shutting_down && !is_idle()) {
 		L_WARNING("Binary client killed!");
 	}
 
@@ -121,19 +119,36 @@ BinaryClient::~BinaryClient()
 
 
 bool
+BinaryClient::is_idle()
+{
+	if (!waiting && !running && write_queue.empty()) {
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		return messages.empty();
+	}
+	return false;
+}
+
+
+bool
 BinaryClient::init_remote()
 {
 	L_CALL("BinaryClient::init_remote()");
 
-	std::lock_guard<std::mutex> lk(messages_mutex);
+	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	state = State::INIT;
+	if (!running) {
+		// Setup state...
+		state = State::INIT;
+		// And start a runner.
+		running = true;
+		XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
+			task->run();
+		});
 
-	XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-		task->run();
-	});
+		return true;
+	}
 
-	return true;
+	return false;
 }
 
 
@@ -142,7 +157,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 {
 	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	std::lock_guard<std::mutex> lk(messages_mutex);
+	std::lock_guard<std::mutex> lk(runner_mutex);
 
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
@@ -179,7 +194,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
 			case SWITCH_TO_REPL: {
-				std::lock_guard<std::mutex> lk(messages_mutex);
+				std::lock_guard<std::mutex> lk(runner_mutex);
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY("Switched to replication protocol");
@@ -229,11 +244,12 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		}
 
 		if (!closed) {
-			std::lock_guard<std::mutex> lk(messages_mutex);
-			if (messages.empty()) {
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (!running) {
 				// Enqueue message...
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
+				running = true;
 				XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 					task->run();
 				});
@@ -275,11 +291,12 @@ BinaryClient::on_read_file_done()
 	const auto& temp_file = temp_files.back();
 
 	if (!closed) {
-		std::lock_guard<std::mutex> lk(messages_mutex);
-		if (messages.empty()) {
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		if (!running) {
 			// Enqueue message...
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
+			running = true;
 			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
 				task->run();
 			});
@@ -362,9 +379,7 @@ BinaryClient::run()
 
 	L_CONN("Start running in binary worker...");
 
-	std::unique_lock<std::mutex> lk(messages_mutex);
-
-	idle = false;
+	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	if (state == State::INIT) {
 		state = State::REMOTEPROTOCOL_SERVER;
@@ -373,7 +388,7 @@ BinaryClient::run()
 			remote_protocol.msg_update(std::string());
 		} catch (...) {
 			lk.lock();
-			idle = true;
+			running = false;
 			L_CONN("Running in worker ended with an exception.");
 			detach();  // try re-detaching if already flagged as detaching
 			throw;
@@ -392,7 +407,7 @@ BinaryClient::run()
 					remote_protocol.remote_server(type, message);
 				} catch (...) {
 					lk.lock();
-					idle = true;
+					running = false;
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -410,7 +425,7 @@ BinaryClient::run()
 					replication.replication_server(type, message);
 				} catch (...) {
 					lk.lock();
-					idle = true;
+					running = false;
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -428,7 +443,7 @@ BinaryClient::run()
 					replication.replication_client(type, message);
 				} catch (...) {
 					lk.lock();
-					idle = true;
+					running = false;
 					L_CONN("Running in worker ended with an exception.");
 					detach();  // try re-detaching if already flagged as detaching
 					throw;
@@ -447,13 +462,14 @@ BinaryClient::run()
 		}
 	}
 
-	if (shutting_down && write_queue.empty()) {
+	running = false;
+
+	if (shutting_down && is_idle()) {
 		L_WARNING("Programmed shut down!");
 		destroy();
 		detach();
 	}
 
-	idle = true;
 	L_CONN("Running in binary worker ended.");
 	redetach();  // try re-detaching if already flagged as detaching
 }

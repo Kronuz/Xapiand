@@ -195,7 +195,8 @@ protected:
 	ev::async write_start_async;
 	ev::async read_start_async;
 
-	std::atomic_bool idle;
+	std::atomic_bool waiting;
+	std::atomic_bool running;
 	std::atomic_bool shutting_down;
 	std::atomic_bool closed;
 	std::atomic_int sock;
@@ -210,6 +211,8 @@ protected:
 	bool receive_checksum;
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
+
+	virtual bool is_idle();
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);

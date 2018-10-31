@@ -255,8 +255,6 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 
 	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
 
-	idle = true;
-
 	L_OBJ("CREATED HTTP CLIENT! (%d clients)", http_clients);
 }
 
@@ -270,11 +268,22 @@ HttpClient::~HttpClient()
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	if (shutting_down || !(idle && write_queue.empty())) {
-		L_WARNING("Client killed!");
+	if (shutting_down && !is_idle()) {
+		L_WARNING("HTTP client killed!");
 	}
 
 	L_OBJ("DELETED HTTP CLIENT! (%d clients left)", http_clients);
+}
+
+
+bool
+HttpClient::is_idle()
+{
+	if (!waiting && !running && write_queue.empty()) {
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		return requests.empty();
+	}
+	return false;
 }
 
 
@@ -290,7 +299,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_WARNING("Connection unexpectedly closed after %s: %d - %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), errno, strerror(errno));
 		} else if (init_state != 18) {
 			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
-		} else if (!write_queue.empty()) {
+		} else if (!is_idle()) {
 			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		}
 		return received;
@@ -387,11 +396,12 @@ HttpClient::on_info(http_parser* parser)
 					}
 					new_request.accept_set.emplace(1, 1.0, any_type, 0);
 				}
-				std::lock_guard<std::mutex> lk(requests_mutex);
-				if (requests.empty()) {
+				std::lock_guard<std::mutex> lk(runner_mutex);
+				if (!running) {
 					// Enqueue request...
 					requests.push_back(std::move(new_request));
 					// And start a runner.
+					running = true;
 					XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
 						task->run();
 					});
@@ -401,9 +411,10 @@ HttpClient::on_info(http_parser* parser)
 				}
 			}
 			new_request = Request(this);
+			waiting = false;
 			break;
 		case 19:  // message_begin
-			idle = false;
+			waiting = true;
 			new_request.begins = std::chrono::system_clock::now();
 			new_request.log->clear();
 			new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
@@ -716,9 +727,7 @@ HttpClient::run()
 
 	L_CONN("Start running in worker...");
 
-	std::unique_lock<std::mutex> lk(requests_mutex);
-
-	idle = false;
+	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	while (!requests.empty() && !closed) {
 		auto& request = requests.front();
@@ -729,7 +738,7 @@ HttpClient::run()
 			run_one(request, response);
 		} catch (...) {
 			lk.lock();
-			idle = true;
+			running = false;
 			L_CONN("Running in worker ended with an exception.");
 			detach();  // try re-detaching if already flagged as detaching
 			throw;
@@ -739,13 +748,14 @@ HttpClient::run()
 		requests.pop_front();
 	}
 
-	if (shutting_down && write_queue.empty()) {
+	running = false;
+
+	if (shutting_down && is_idle()) {
 		L_WARNING("Programmed shut down!");
 		destroy();
 		detach();
 	}
 
-	idle = true;
 	L_CONN("Running in worker ended.");
 	redetach();  // try re-detaching if already flagged as detaching
 }
