@@ -27,7 +27,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <atomic>                             // for std::atomic
 #include <deque>                              // for std::deque
 #include <future>                             // for std::future, std::promise
 #include <memory>                             // for shared_ptr
@@ -81,9 +80,9 @@ class BinaryClient : public BaseClient {
 	// Buffers that are pending write
 	std::string buffer;
 	std::deque<Buffer> messages;
-	std::atomic<std::promise<bool>*> atomic_promise;
+	std::promise<bool>* promise;
 
-	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>* promise = nullptr);
+	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, std::promise<bool>* promise_ = nullptr);
 
 	ssize_t on_read(const char *buf, ssize_t received) override;
 	void on_read_file(const char *buf, ssize_t received) override;

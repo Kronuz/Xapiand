@@ -60,13 +60,13 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, std::promise<bool>* promise)
+BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, std::promise<bool>* promise_)
 	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
-	  atomic_promise(promise),
+	  promise(promise_),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -296,11 +296,9 @@ BinaryClient::fulfill_promise(bool value)
 {
 	L_CALL("BinaryClient::fulfill_promise(%s)", value ? "true" : "false");
 
-	if (atomic_promise) {
-		auto promise = atomic_promise.exchange(nullptr);
-		if (promise) {
-			promise->set_value(value);
-		}
+	if (promise) {
+		promise->set_value(value);
+		promise = nullptr;
 	}
 }
 
