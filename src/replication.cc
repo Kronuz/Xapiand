@@ -162,7 +162,7 @@ Replication::msg_get_changesets(const std::string& message)
 	}
 
 	DatabaseWAL wal(endpoints[0].path, nullptr);
-	if (from_revision && !wal.has_revision(from_revision).first) {
+	if (from_revision && wal.locate_revision(from_revision).first == DatabaseWAL::max_rev) {
 		from_revision = 0;
 	}
 

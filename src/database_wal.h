@@ -132,6 +132,9 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	}
 
 public:
+	static constexpr Xapian::rev max_rev = std::numeric_limits<Xapian::rev>::max() - 1;
+	static constexpr uint32_t max_slot = std::numeric_limits<uint32_t>::max();
+
 	enum class Type : uint8_t {
 		ADD_DOCUMENT,
 		DELETE_DOCUMENT_TERM,
@@ -173,7 +176,7 @@ public:
 	void write_set_metadata(std::string_view key, std::string_view val);
 	void write_add_spelling(std::string_view word, Xapian::termcount freqinc);
 	void write_remove_spelling(std::string_view word, Xapian::termcount freqdec);
-	std::pair<bool, unsigned long long> has_revision(Xapian::rev revision);
+	std::pair<Xapian::rev, uint32_t> locate_revision(Xapian::rev revision);
 	iterator find(Xapian::rev revision);
 	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
 };
@@ -238,7 +241,7 @@ inline DatabaseWAL::iterator DatabaseWAL::begin() {
 
 
 inline DatabaseWAL::iterator DatabaseWAL::end() {
-	return iterator(this, std::make_pair(std::numeric_limits<Xapian::rev>::max() - 1, ""), 0);
+	return iterator(this, std::make_pair(DatabaseWAL::max_rev, ""), 0);
 }
 
 #endif /* XAPIAND_DATABASE_WAL */
