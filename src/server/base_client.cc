@@ -313,19 +313,19 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 {
 	write_start_async.set<BaseClient, &BaseClient::write_start_async_cb>(this);
 	write_start_async.start();
-	L_EV("Start async update event");
+	L_EV("Start client's async update event");
 
 	read_start_async.set<BaseClient, &BaseClient::read_start_async_cb>(this);
 	read_start_async.start();
-	L_EV("Start async read start event");
+	L_EV("Start client's async read start event");
 
 	io_read.set<BaseClient, &BaseClient::io_cb_read>(this);
 	io_read.start(sock, ev::READ);
-	L_EV("Start read event");
+	L_EV("Start client's read event (sock=%d)", sock.load());
 
 	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
-	L_EV("Setup write event");
+	L_EV("Start client's write event (sock=%d)", sock.load());
 
 	int total_clients = ++XapiandServer::total_clients;
 	if (total_clients > XapiandServer::max_total_clients) {
@@ -399,16 +399,16 @@ BaseClient::stop()
 
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
-	L_EV("Stop read event");
+	L_EV("Stop client's read event");
 
 	io_write.stop();
-	L_EV("Stop write event");
+	L_EV("Stop client's write event");
 
 	read_start_async.stop();
-	L_EV("Stop async read start event");
+	L_EV("Stop client's async read start event");
 
 	write_start_async.stop();
-	L_EV("Stop async update event");
+	L_EV("Stop client's async update event");
 
 	write_queue.finish();
 	write_queue.clear();
