@@ -123,6 +123,8 @@ BinaryClient::init_remote()
 {
 	L_CALL("BinaryClient::init_remote()");
 
+	std::lock_guard<std::mutex> lk(messages_mutex);
+
 	state = State::INIT;
 
 	XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
@@ -137,6 +139,8 @@ bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+
+	std::lock_guard<std::mutex> lk(messages_mutex);
 
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
@@ -173,6 +177,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
 			case SWITCH_TO_REPL: {
+				std::lock_guard<std::mutex> lk(messages_mutex);
 				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY("Switched to replication protocol");
@@ -352,7 +357,16 @@ BinaryClient::run()
 	if (state == State::INIT) {
 		state = State::REMOTEPROTOCOL_SERVER;
 		lk.unlock();
-		remote_protocol.msg_update(std::string());
+		try {
+			remote_protocol.msg_update(std::string());
+		} catch (...) {
+			lk.lock();
+			idle = true;
+			promise.set_value(false);
+			L_CONN("Running in worker ended with an exception.");
+			detach();  // try re-detaching if already flagged as detaching
+			throw;
+		}
 		lk.lock();
 	}
 
