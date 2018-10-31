@@ -26,12 +26,11 @@
 
 #include <netinet/tcp.h>                      // for TCP_NODELAY
 
+#include "binary_server.h"                    // For BinaryServer
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
 #include "node.h"                             // for Node, local_node
-
-#include "remote_protocol.h"
-#include "binary_server.h"
+#include "remote_protocol.h"                  // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 
 
 Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
