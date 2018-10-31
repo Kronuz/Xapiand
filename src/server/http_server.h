@@ -37,6 +37,8 @@ class HttpServer : public BaseServer {
 
 	std::shared_ptr<Http> http;
 
+	void start_impl() override;
+
 public:
 	std::string __repr__() const override {
 		return Worker::__repr__("HttpServer");

@@ -39,9 +39,6 @@ BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	  binary(binary_),
 	  signal_async(*ev_loop)
 {
-	io.start(binary->sock, ev::READ);
-	L_EV("Start binary's server accept event (sock=%d)", binary->sock);
-
 	signal_async.set<BinaryServer, &BinaryServer::signal_async_cb>(this);
 	signal_async.start();
 	L_EV("Start binary's async signal event");
@@ -53,6 +50,16 @@ BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 BinaryServer::~BinaryServer()
 {
 	L_OBJ("DELETED BINARY SERVER!");
+}
+
+
+void
+BinaryServer::start_impl()
+{
+	L_CALL("BinaryServer::start_impl()");
+
+	io.start(binary->sock, ev::READ);
+	L_EV("Start binary's server accept event (sock=%d)", binary->sock);
 }
 
 

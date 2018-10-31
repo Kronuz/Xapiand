@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include <time.h>     // for time_t
-#include <memory>     // for shared_ptr
+#include <time.h>                             // for time_t
+#include <memory>                             // for std::shared_ptr
 
-#include "ev/ev++.h"  // for io, loop_ref (ptr only)
-#include "worker.h"   // for Worker
+#include "ev/ev++.h"                          // for ev::io, ev::loop_ref
+#include "worker.h"                           // for Worker
 
 
 // This class lets make different types of servers.
@@ -35,6 +35,7 @@ class BaseServer : public Worker {
 
 protected:
 	ev::io io;
+	ev::async start_async;
 
 	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
@@ -43,7 +44,12 @@ protected:
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 
+	void start_async_cb(ev::async &watcher, int revents);
+	virtual void start_impl() = 0;
+
 public:
+	void start();
+
 	virtual ~BaseServer();
 
 	virtual void io_accept_cb(ev::io& watcher, int revents) = 0;

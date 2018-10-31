@@ -22,14 +22,21 @@
 
 #include "base_server.h"
 
-#include "log.h"             // for L_OBJ
+#include "ignore_unused.h"                    // for ignore_unused
+#include "log.h"                              // for L_OBJ
+#include "readable_revents.hh"                // for readable_revents
 
 
 BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(parent_, ev_loop_, ev_flags_),
-	  io(*ev_loop)
+	  io(*ev_loop),
+	  start_async(*ev_loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
+
+	start_async.set<BaseServer, &BaseServer::start_async_cb>(this);
+	start_async.start();
+	L_EV("Start async start event");
 
 	L_OBJ("CREATED BASE SERVER!");
 }
@@ -40,6 +47,26 @@ BaseServer::~BaseServer()
 	destroyer();
 
 	L_OBJ("DELETED BASE SERVER!");
+}
+
+
+void
+BaseServer::start_async_cb(ev::async& /*unused*/, int revents)
+{
+	L_CALL("BaseServer::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	ignore_unused(revents);
+
+	start_impl();
+}
+
+
+void
+BaseServer::start()
+{
+	L_CALL("BaseServer::start()");
+
+	start_async.send();
 }
 
 
@@ -71,4 +98,8 @@ BaseServer::destroyer()
 	L_CALL("BaseServer::destroyer()");
 
 	io.stop();
+	L_EV("Stop io accept event");
+
+	start_async.stop();
+	L_EV("Stop async start event");
 }

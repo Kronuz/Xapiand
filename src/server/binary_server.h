@@ -28,7 +28,7 @@
 
 #include <future>                             // for std::future, std::promise
 
-#include "base_server.h"
+#include "base_server.h"                      // for BaseServer
 
 
 class Binary;
@@ -42,6 +42,8 @@ class BinaryServer : public BaseServer {
 	std::shared_ptr<Binary> binary;
 
 	ev::async signal_async;
+
+	void start_impl() override;
 
 	void signal_async_cb(ev::async& watcher, int revents);
 
