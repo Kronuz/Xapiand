@@ -60,17 +60,18 @@ void delete_files(std::string_view path, const std::string& include_pattern, con
 	struct dirent *ent;
 	while ((ent = ::readdir(dirp)) != nullptr) {
 		const char *n = ent->d_name;
-		L_FS("delete_files -> Entry %s (0x%x)", ent->d_name, static_cast<int>(ent->d_type));
 		switch (ent->d_type) {
 			case DT_DIR:  // This is a directory.
 				if (n[0] == '.' && (n[1] == '\0' || (n[1] == '.' && n[2] == '\0'))) {
+					L_FS("Directory %s is ignored", n);
 					continue;
 				}
+				L_FS("Directory %s is observed", n);
 				empty = false;
 				break;
 			case DT_REG:  //  This is a regular file.
 				if (!exclude_pattern.empty() && ::fnmatch(exclude_pattern.c_str(), n, 0) == 0) {
-					L_FS("File %s was excluded by %s", n, repr(exclude_pattern));
+					L_FS("File %s was excluded", n);
 				} else if (::fnmatch(include_pattern.c_str(), n, 0) == 0) {
 					std::string file(path);
 					file.push_back('/');
@@ -82,12 +83,18 @@ void delete_files(std::string_view path, const std::string& include_pattern, con
 						L_FS("File %s deleted", n);
 					}
 				} else {
-					L_FS("File %s did not match pattern %s", n, repr(include_pattern));
+					L_FS("File %s did not match", n);
 				}
-				/* FALLTHROUGH */
-			case DT_LNK:  // This is a symbolic link.
-			default:
 				empty = false;
+				break;
+			case DT_LNK:  // This is a symbolic link.
+				L_FS("Symbolic link %s is observed", n);
+				empty = false;
+				break;
+			default:
+				L_FS("Entry (%d) %s is observed", static_cast<int>(ent->d_type), n);
+				empty = false;
+				break;
 		}
 	}
 
@@ -96,6 +103,8 @@ void delete_files(std::string_view path, const std::string& include_pattern, con
 	if (empty) {
 		if (::rmdir(path_string.c_str()) != 0) {
 			L_ERR("Directory %s could not be deleted", path_string);
+		} else {
+			L_FS("Directory %s deleted", path_string);
 		}
 	}
 }
