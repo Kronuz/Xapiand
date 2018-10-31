@@ -299,8 +299,17 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_WARNING("Connection unexpectedly closed after %s: %d - %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), errno, strerror(errno));
 		} else if (init_state != 18) {
 			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
-		} else if (!is_idle()) {
+		} else if (waiting) {
+			L_WARNING("Client unexpectedly closed the other end after %s: There was still a request in progress", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+		// } else if (running) {
+		// 	L_WARNING("Client unexpectedly closed the other end after %s: There was still a worker running", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+		} else if (!write_queue.empty()) {
 			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+		} else {
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (requests.empty()) {
+				L_WARNING("Client unexpectedly closed the other end after %s: There was still pending requests", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+			}
 		}
 		return received;
 	}
