@@ -47,11 +47,10 @@
 // #define L_FS L_WHITE
 
 
-void delete_files(std::string_view path, std::string_view pattern) {
-	L_CALL("delete_files(%s, %s)", repr(path), repr(pattern));
+void delete_files(std::string_view path, const std::string& include_pattern, const std::string& exclude_pattern) {
+	L_CALL("delete_files(%s, %s)", repr(path), repr(include));
 
 	stringified path_string(path);
-	stringified pattern_string(pattern);
 
 	DIR *dirp = ::opendir(path_string.c_str());
 	if (dirp == nullptr) {
@@ -71,7 +70,9 @@ void delete_files(std::string_view path, std::string_view pattern) {
 				empty = false;
 				break;
 			case DT_REG:  //  This is a regular file.
-				if (::fnmatch(n, pattern_string.c_str(), 0) == 0) {
+				if (!exclude_pattern.empty() && ::fnmatch(exclude_pattern.c_str(), n, 0) == 0) {
+					L_FS("File %s was excluded by %s", n, repr(exclude_pattern));
+				} else if (::fnmatch(include_pattern.c_str(), n, 0) == 0) {
 					std::string file(path);
 					file.push_back('/');
 					file.append(n);
@@ -81,7 +82,7 @@ void delete_files(std::string_view path, std::string_view pattern) {
 						L_FS("File %s deleted", n);
 					}
 				} else {
-					L_FS("File %s did not match pattern %s", n, repr(pattern));
+					L_FS("File %s did not match pattern %s", n, repr(include_pattern));
 				}
 				/* FALLTHROUGH */
 			case DT_LNK:  // This is a symbolic link.

@@ -34,7 +34,7 @@ struct File_ptr {
 };
 
 
-void delete_files(std::string_view path, std::string_view pattern = "*");
+void delete_files(std::string_view path, const std::string& include_pattern = "*", const std::string& exclude_pattern = "");
 
 void move_files(std::string_view src, std::string_view dst);
 
