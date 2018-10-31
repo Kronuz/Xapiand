@@ -77,6 +77,7 @@ void delete_files(std::string_view path, const std::string& include_pattern, con
 					file.append(n);
 					if (::remove(file.c_str()) != 0) {
 						L_ERR("File %s could not be deleted", n);
+						break;
 					} else {
 						L_FS("File %s deleted", n);
 					}
