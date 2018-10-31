@@ -631,7 +631,8 @@ XapiandManager::make_servers()
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
 
-		Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
+		auto http_server = Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
+		http->add_server(http_server);
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {

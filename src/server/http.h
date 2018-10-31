@@ -22,13 +22,14 @@
 
 #pragma once
 
-#include "config.h"    // for XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION, XAPIAND_HTTP_PROTOCOL_MINOR_VERSION
+#include "config.h"                           // for XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION, XAPIAND_HTTP_PROTOCOL_MINOR_VERSION
 
-#include <stdio.h>     // for snprintf
-#include <memory>      // for shared_ptr
-#include <string>      // for string
+#include <stdio.h>                            // for snprintf
+#include <memory>                             // for std::shared_ptr, std::weak_ptr
+#include <string>                             // for std::string
+#include <vector>                             // for std::vector
 
-#include "base_tcp.h"  // for BaseTCP
+#include "base_tcp.h"                         // for BaseTCP
 
 class HttpServer;
 
@@ -41,6 +42,9 @@ constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MINOR_VERSION = 1;
 class Http : public BaseTCP {
 	friend HttpServer;
 
+	std::mutex bsmtx;
+	std::vector<std::weak_ptr<HttpServer>> servers_weak;
+
 public:
 	std::string __repr__() const override {
 		return Worker::__repr__("Http");
@@ -50,4 +54,7 @@ public:
 	~Http();
 
 	std::string getDescription() const noexcept override;
+
+	void add_server(const std::shared_ptr<HttpServer>& server);
+	void start();
 };

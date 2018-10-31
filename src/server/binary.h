@@ -44,10 +44,10 @@ class Binary : public BaseTCP {
 	friend BinaryServer;
 
 	std::mutex bsmtx;
-	void signal_send_async();
-
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
 	TaskQueue<void(const std::shared_ptr<BinaryServer>&)> tasks;
+
+	void signal_send_async();
 
 public:
 	std::string __repr__() const override {
@@ -62,6 +62,7 @@ public:
 	int connection_socket();
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
+	void start();
 
 	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise);
 };

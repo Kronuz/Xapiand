@@ -53,3 +53,23 @@ Http::getDescription() const noexcept
 {
 	return "TCP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_HTTP_PROTOCOL_MINOR_VERSION) + ")";
 }
+
+
+void
+Http::add_server(const std::shared_ptr<HttpServer>& server)
+{
+	std::lock_guard<std::mutex> lk(bsmtx);
+	servers_weak.push_back(server);
+}
+
+
+void
+Http::start()
+{
+	std::lock_guard<std::mutex> lk(bsmtx);
+	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
+		// TODO: Start servers
+		// auto server = it->lock();
+		// server->start();
+	}
+}
