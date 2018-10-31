@@ -24,7 +24,6 @@
 
 #include <fnmatch.h>             // for fnmatch
 #include <stdio.h>               // for rename
-#include <string>                // for std::string
 #include <sys/stat.h>            // for stat, mkdir
 #include <unistd.h>              // for rmdir
 #include <vector>                // for std::vector
@@ -48,7 +47,7 @@
 
 
 void delete_files(std::string_view path, const std::string& include_pattern, const std::string& exclude_pattern) {
-	L_CALL("delete_files(%s, %s)", repr(path), repr(include));
+	L_CALL("delete_files(%s, %s)", repr(path), repr(include_pattern), repr(exclude_pattern));
 
 	stringified path_string(path);
 

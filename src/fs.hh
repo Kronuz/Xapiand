@@ -23,6 +23,7 @@
 #pragma once
 
 #include <dirent.h>              // for DIR, readdir, opendir, closedir
+#include <string>                // for std::string
 #include "string_view.hh"        // for std::string_view
 
 
