@@ -120,13 +120,13 @@ Binary::start()
 
 
 void
-Binary::signal_send_async()
+Binary::process_tasks()
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = it->lock();
 		if (server) {
-			server->signal_async.send();
+			server->process_tasks();
 			++it;
 		} else {
 			it = servers_weak.erase(it);
@@ -146,7 +146,7 @@ Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_en
 		server->trigger_replication(src_endpoint, dst_endpoint, promise);
 	});
 
-	signal_send_async();
+	process_tasks();
 }
 
 

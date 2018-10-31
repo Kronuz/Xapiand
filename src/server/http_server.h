@@ -30,11 +30,8 @@
 
 class Http;
 
-
 // Http Server
 class HttpServer : public BaseServer {
-	friend Http;
-
 	std::shared_ptr<Http> http;
 
 	void start_impl() override;

@@ -34,18 +34,15 @@
 class Binary;
 class Endpoint;
 
-
 // Binary Server
 class BinaryServer : public BaseServer {
-	friend Binary;
-
 	std::shared_ptr<Binary> binary;
 
-	ev::async signal_async;
+	ev::async process_tasks_async;
 
 	void start_impl() override;
 
-	void signal_async_cb(ev::async& watcher, int revents);
+	void process_tasks_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {
@@ -59,6 +56,8 @@ public:
 	void io_accept_cb(ev::io& watcher, int revents) override;
 
 	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise);
+
+	void process_tasks();
 };
 
 

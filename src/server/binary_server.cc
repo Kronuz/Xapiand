@@ -37,10 +37,10 @@
 BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)
 	: BaseServer(parent_, ev_loop_, ev_flags_),
 	  binary(binary_),
-	  signal_async(*ev_loop)
+	  process_tasks_async(*ev_loop)
 {
-	signal_async.set<BinaryServer, &BinaryServer::signal_async_cb>(this);
-	signal_async.start();
+	process_tasks_async.set<BinaryServer, &BinaryServer::process_tasks_async_cb>(this);
+	process_tasks_async.start();
 	L_EV("Start binary's async signal event");
 
 	L_OBJ("CREATED BINARY SERVER!");
@@ -64,17 +64,26 @@ BinaryServer::start_impl()
 
 
 void
-BinaryServer::signal_async_cb(ev::async&, int revents)
+BinaryServer::process_tasks()
 {
-	L_CALL("BinaryServer::signal_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("BinaryServer::process_tasks()");
+
+	process_tasks_async.send();
+}
+
+
+void
+BinaryServer::process_tasks_async_cb(ev::async&, int revents)
+{
+	L_CALL("BinaryServer::process_tasks_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("BinaryServer::signal_async_cb:BEGIN");
+	L_EV_BEGIN("BinaryServer::process_tasks_async_cb:BEGIN");
 
 	while (binary->tasks.call(share_this<BinaryServer>())) {};
 
-	L_EV_END("BinaryServer::signal_async_cb:END");
+	L_EV_END("BinaryServer::process_tasks_async_cb:END");
 }
 
 

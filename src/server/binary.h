@@ -47,7 +47,7 @@ class Binary : public BaseTCP {
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
 	TaskQueue<void(const std::shared_ptr<BinaryServer>&)> tasks;
 
-	void signal_send_async();
+	void process_tasks();
 
 public:
 	std::string __repr__() const override {
