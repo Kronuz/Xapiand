@@ -1019,7 +1019,8 @@ RemoteProtocol::msg_shutdown(const std::string &)
 {
 	L_CALL("RemoteProtocol::msg_shutdown(<message>)");
 
-	client.shutdown();
+	client.destroy();
+	client.detach();
 }
 
 
