@@ -274,21 +274,6 @@ XapiandManager::setup_node()
 {
 	L_CALL("XapiandManager::setup_node()");
 
-	for (const auto& weak_server : servers_weak) {
-		if (auto server = weak_server.lock()) {
-			server->setup_node();
-			return;
-		}
-	}
-	L_WARNING("Cannot setup node: No servers!");
-}
-
-
-void
-XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
-{
-	L_CALL("XapiandManager::setup_node(...)");
-
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	L_MANAGER("Setup Node!");

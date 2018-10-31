@@ -41,16 +41,12 @@ class XapiandServer : public Worker {
 
 	std::mutex qmtx;
 
-	ev::async setup_node_async;
-
 	XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	void destroyer();
 
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
-
-	void setup_node_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {
@@ -66,10 +62,6 @@ public:
 	static std::atomic_int max_binary_clients;
 
 	~XapiandServer();
-
-	void setup_node() {
-		setup_node_async.send();
-	}
 
 	void run();
 };

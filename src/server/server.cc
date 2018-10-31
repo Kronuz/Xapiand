@@ -41,13 +41,8 @@ std::atomic_int XapiandServer::max_binary_clients(0);
 
 
 XapiandServer::XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: Worker(std::move(parent_), ev_loop_, ev_flags_),
-	  setup_node_async(*ev_loop)
+	: Worker(std::move(parent_), ev_loop_, ev_flags_)
 {
-	setup_node_async.set<XapiandServer, &XapiandServer::setup_node_async_cb>(this);
-	setup_node_async.start();
-	L_EV("Start server's async setup node event");
-
 	L_OBJ("CREATED XAPIAN SERVER!");
 }
 
@@ -74,22 +69,6 @@ XapiandServer::run()
 
 
 void
-XapiandServer::setup_node_async_cb(ev::async& /*unused*/, int revents)
-{
-	L_CALL("XapiandServer::setup_node_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	L_EV_BEGIN("XapiandServer::setup_node_async_cb:BEGIN");
-	XapiandManager::manager->setup_node(share_this<XapiandServer>());
-
-	setup_node_async.stop();
-	L_EV("Stop server's async setup node event");
-	L_EV_END("XapiandServer::setup_node_async_cb:END");
-}
-
-
-void
 XapiandServer::destroy_impl()
 {
 	destroyer();
@@ -102,9 +81,6 @@ XapiandServer::destroyer()
 	L_CALL("XapiandServer::destroyer()");
 
 	std::lock_guard<std::mutex> lk(qmtx);
-
-	setup_node_async.stop();
-	L_EV("Stop server's async setup node event");
 }
 
 
