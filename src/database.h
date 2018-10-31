@@ -67,7 +67,11 @@ public:
 	int flags;
 	size_t hash;
 	bool modified;
-	bool transaction;
+	enum class Transaction : uint8_t {
+		none,
+		flushed,
+		unflushed,
+	} transaction;
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 	bool incomplete;

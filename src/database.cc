@@ -198,7 +198,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  modified(false),
-	  transaction(false),
+	  transaction(Transaction::none),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
 	  incomplete(false),
@@ -241,6 +241,7 @@ Database::reopen_writable()
 	//
 
 	incomplete = false;
+	modified = false;
 	dbs.clear();
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
@@ -254,13 +255,13 @@ Database::reopen_writable()
 	db = std::make_unique<Xapian::WritableDatabase>();
 
 	const auto& endpoint = endpoints[0];
-	Xapian::WritableDatabase wdb;
+	Xapian::WritableDatabase wsdb;
 	bool local = false;
 	int _flags = (flags & DB_SPAWN) != 0 ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
-		wdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags, endpoint.path);
+		wsdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -274,24 +275,29 @@ Database::reopen_writable()
 			build_path_index(endpoint.path);
 		}
 		try {
-			wdb = Xapian::WritableDatabase(endpoint.path, _flags);
+			wsdb = Xapian::WritableDatabase(endpoint.path, _flags);
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
 				if ((flags & DB_SPAWN) == 0) {
 					THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
-				wdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
+				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
 			}
 			throw;
 		}
 		local = true;
 	}
 
-	db->add_database(wdb);
-	dbs.emplace_back(wdb, local);
+	db->add_database(wsdb);
+	dbs.emplace_back(wsdb, local);
 
 	if (local) {
 		reopen_revision = get_revision();
+	}
+
+	if (transaction != Transaction::none) {
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		wdb->begin_transaction(transaction == Transaction::flushed);
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -337,6 +343,7 @@ Database::reopen_readable()
 	//
 
 	incomplete = false;
+	modified = false;
 	dbs.clear();
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
@@ -352,20 +359,20 @@ Database::reopen_readable()
 	size_t failures = 0;
 
 	for (const auto& endpoint : endpoints) {
-		Xapian::Database rdb;
+		Xapian::Database rsdb;
 		bool local = false;
 #ifdef XAPIAND_CLUSTERING
 		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
 			int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
-			rdb = Xapian::Remote::open(endpoint.host, port, 10000, 10000, _flags, endpoint.path);
+			rsdb = Xapian::Remote::open(endpoint.host, port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
 				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				if (tmp.get_uuid() == rdb.get_uuid()) {
+				if (tmp.get_uuid() == rsdb.get_uuid()) {
 					L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
 					// Handle remote endpoints and figure out if the endpoint is a local database
-					rdb = Xapian::Database(endpoint.path, _flags);
+					rsdb = Xapian::Database(endpoint.path, _flags);
 					local = true;
 				} else {
 					try {
@@ -393,7 +400,7 @@ Database::reopen_readable()
 			tmp_wal.init_database();
 #endif
 			try {
-				rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				if (!exists(endpoint.path + "/iamglass")) {
@@ -409,7 +416,7 @@ Database::reopen_readable()
 							build_path_index(endpoint.path);
 							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
 						}
-						rdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+						rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 						local = true;
 					}
 				}
@@ -417,8 +424,8 @@ Database::reopen_readable()
 			}
 		}
 
-		db->add_database(rdb);
-		dbs.emplace_back(rdb, local);
+		db->add_database(rsdb);
+		dbs.emplace_back(rsdb, local);
 
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
@@ -458,6 +465,7 @@ Database::reopen()
 
 		db->close();
 		db.reset();
+		modified = false;
 	}
 
 	if ((flags & DB_WRITABLE) != 0) {
@@ -501,6 +509,7 @@ Database::close()
 
 	closed = true;
 	db->close();
+	db.reset();
 	modified = false;
 }
 
@@ -528,9 +537,13 @@ Database::commit(bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			if (transaction) {
+			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
-				wdb->begin_transaction();
+				wdb->begin_transaction(true);
+			} else if (transaction == Transaction::unflushed) {
+				wdb->commit_transaction();
+				wdb->commit();
+				wdb->begin_transaction(false);
 			} else {
 				wdb->commit();
 			}
@@ -579,9 +592,11 @@ Database::begin_transaction(bool flushed)
 		THROW(Error, "database is read-only");
 	}
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-	wdb->begin_transaction(flushed);
-	transaction = true;
+	if (transaction == Transaction::none) {
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		wdb->begin_transaction(flushed);
+		transaction = flushed ? Transaction::flushed : Transaction::unflushed;
+	}
 }
 
 
@@ -594,9 +609,11 @@ Database::commit_transaction()
 		THROW(Error, "database is read-only");
 	}
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-	wdb->commit_transaction();
-	transaction = false;
+	if (transaction != Transaction::none) {
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		wdb->commit_transaction();
+		transaction = Transaction::none;
+	}
 }
 
 
@@ -609,9 +626,11 @@ Database::cancel_transaction()
 		THROW(Error, "database is read-only");
 	}
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-	wdb->cancel_transaction();
-	transaction = false;
+	if (transaction != Transaction::none) {
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		wdb->cancel_transaction();
+		transaction = Transaction::none;
+	}
 }
 
 
