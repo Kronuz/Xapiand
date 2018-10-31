@@ -86,7 +86,6 @@ private:
 	std::condition_variable unlock_cond;
 	std::condition_variable exclusive_cond;
 
-	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
 protected:
@@ -126,8 +125,10 @@ class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 
 	const std::shared_ptr<queue::QueueState> _queue_state;
 
+	DatabasePool& database_pool;
+
 public:
-	DatabasesLRU(size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
+	DatabasesLRU(DatabasePool& database_pool_, size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
 	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(size_t hash, const Endpoints& endpoints);
@@ -174,7 +175,8 @@ namespace std {
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
-	friend class DatabaseQueue;
+	friend DatabaseQueue;
+	friend DatabasesLRU;
 
 	std::mutex qmtx;
 	bool finished;
@@ -193,6 +195,8 @@ class DatabasePool {
 	std::condition_variable checkin_cond;
 
 	void _cleanup(bool writable, bool readable);
+
+	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
