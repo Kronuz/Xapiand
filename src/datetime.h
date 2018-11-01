@@ -36,7 +36,9 @@
 constexpr int DATETIME_EPOCH            = 1970;
 constexpr int DATETIME_START_YEAR       = 1900;
 constexpr int DATETIME_EPOCH_ORD        = 719163;  /* toordinal(DATETIME_EPOCH, 1, 1) */
-constexpr double DATETIME_MICROSECONDS  = 1e-6;
+constexpr double DATETIME_NANOSECONDS   = 1e9;
+constexpr double DATETIME_MICROSECONDS  = 1e6;
+constexpr double DATETIME_MILLISECONDS  = 1e3;
 constexpr double DATETIME_MAX_FSEC      = 0.999999;
 
 
@@ -78,7 +80,7 @@ namespace Datetime {
 		} else if (fsec < 0.0) {
 			return 0.0;
 		} else {
-			return std::round(fsec / DATETIME_MICROSECONDS) * DATETIME_MICROSECONDS;
+			return std::round(fsec * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS;
 		}
 	}
 
@@ -127,7 +129,7 @@ namespace Datetime {
 	tm_t to_tm_t(double timestamp);
 	double timestamp(const tm_t& tm);
 	inline double timestamp(const std::chrono::time_point<std::chrono::system_clock>& tp) {
-		return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * DATETIME_MICROSECONDS;
+		return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() / DATETIME_MICROSECONDS;
 	}
 	bool isvalidDate(int year, int month, int day);
 	std::string iso8601(const std::tm& tm, bool trim=true, char sep='T');
@@ -171,7 +173,7 @@ namespace Datetime {
 	inline bool isvalidTime(double t) {
 		static const long long min = -362339LL;       // 00:00:00+99:99
 		static const long long max =  724779999999LL; // 99:99:99.9999...-99:99
-		long long scaled = static_cast<long long>(t / DATETIME_MICROSECONDS);
+		long long scaled = static_cast<long long>(t * DATETIME_MICROSECONDS);
 		return scaled >= min && scaled <= max;
 	}
 
@@ -191,7 +193,7 @@ namespace Datetime {
 	inline bool isvalidTimedelta(double t) {
 		static const long long min = -362439999999LL; // -99:99:99.999...
 		static const long long max =  362439999999LL; // +99:99:99.999...
-		long long scaled = static_cast<long long>(t / DATETIME_MICROSECONDS);
+		long long scaled = static_cast<long long>(t * DATETIME_MICROSECONDS);
 		return scaled >= min && scaled <= max;
 	}
 }

@@ -368,7 +368,7 @@ Logging::run()
 
 		if (opts.log_epoch) {
 			msg.append(std::string_view(rgb(94, 94, 94)));
-			msg.append(string::Number(static_cast<unsigned long long>(timestamp * 1000)));
+			msg.append(string::Number(static_cast<unsigned long long>(timestamp * DATETIME_MILLISECONDS)));
 			msg.push_back(' ');
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
@@ -398,7 +398,7 @@ Logging::run()
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back('.');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%06d", static_cast<int>(tm.fsec / DATETIME_MICROSECONDS)));
+				msg.append(string::format("%06d", static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
 				msg.push_back(' ');
 			} else if (opts.log_timeless) {
 				// No timestamp

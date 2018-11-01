@@ -138,7 +138,7 @@ namespace Serialise {
 	std::string date(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
-		return sortable_serialise(std::round(field_value / DATETIME_MICROSECONDS) * DATETIME_MICROSECONDS);
+		return sortable_serialise(std::round(field_value * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS);
 	}
 
 	// Serialise value like date and fill tm.

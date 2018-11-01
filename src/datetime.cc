@@ -1189,7 +1189,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 			res.resize(27);
 			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.%06d",
 				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS)));
+				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1208,7 +1208,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 			res.resize(27);
 			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.%06d",
 				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec / DATETIME_MICROSECONDS)));
+				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
 		} else {
 			res.resize(27);
 			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.000000",
@@ -1487,7 +1487,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 		if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
 			res.resize(16);
 			res.resize(snprintf(&res[0], 16, "%02d:%02d:%02d.%06d",
-				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS)));
+				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS)));
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1498,7 +1498,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 		} else {
 			res.resize(23);
 			res.resize(snprintf(&res[0], 23, "%02d:%02d:%02d.%06d%c%02d:%02d",
-				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS),
+				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS),
 				clk.tz_s, clk.tz_h, clk.tz_m));
 			auto it_e = res.begin() + 15;
 			auto it = it_e - 1;
@@ -1735,7 +1735,7 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 	if (clk.fsec > 0 || !trim) {
 		res.resize(17);
 		res.resize(snprintf(&res[0], 17, "%c%02d:%02d:%02d.%06d",
-			clk.tz_s, clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec / DATETIME_MICROSECONDS)));
+			clk.tz_s, clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS)));
 		if (trim) {
 			auto it_e = res.end();
 			auto it = it_e - 1;
