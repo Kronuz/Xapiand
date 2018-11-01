@@ -386,7 +386,7 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 
 		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
-		ValueArg<std::size_t> max_files("", "max-files", "Max number of files to open.", false, 0, "files", cmd);
+		ValueArg<std::size_t> max_files("", "max-files", "Maximum number of files to open.", false, 0, "files", cmd);
 		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
 
 		ValueArg<std::size_t> threadpool_size("", "threads", "Worker threads.", false, nthreads, "threads", cmd);

@@ -24,16 +24,3 @@
 
 #define XAPIAND_PID_FILE             "xapiand.pid"
 #define XAPIAND_LOG_FILE             "xapiand.log"
-
-#define DBPOOL_SIZE              300     /* Maximum number of database endpoints in database pool. */
-#define MAX_CLIENTS              1000    /* Maximum number of open client connections */
-#define MAX_DATABASES            400     /* Maximum number of open databases */
-#define NUM_SERVERS              10      /* Number of servers. */
-#define NUM_UPDATERS             3       /* Number of database updaters. */
-#define NUM_COMMITTERS           10      /* Number of threads handling the commits. */
-#define NUM_FSYNCHERS            10      /* Number of threads handling the fsyncs. */
-#define FLUSH_THRESHOLD          100000  /* Database flush threshold (default for xapian is 10000) */
-#define TASKS_SIZE               100     /* Client tasks threadpool's size. */
-#define CONCURRENCY_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
-#define ENDPOINT_LIST_SIZE       10      /* Endpoints List's size. */
-#define NUM_REPLICAS             3       /* Default number of database replicas per index. */

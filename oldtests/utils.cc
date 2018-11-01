@@ -31,58 +31,16 @@ opts_t opts;
 Initializer::Initializer()
 {
 	if (!XapiandManager::manager) {
-		opts = opts_t{
-			/* int verbosity = */ 3,
-			/* bool detach = */ false,
-			/* bool chert = */ false,
-			/* bool solo = */ true,
-			/* bool strict = */ false,
-			/* bool force = */ false,
-			/* bool optimal = */ false,
-			/* bool foreign = */ false,
-			/* bool colors = */ false,
-			/* bool no_colors = */ false,
-			/* std::string database = */ "",
-			/* std::string cluster_name = */ TEST_CLUSTER_NAME,
-			/* std::string node_name = */ TEST_NODE_NAME,
-			/* unsigned int http_port = */ XAPIAND_HTTP_SERVERPORT,
-			/* unsigned int binary_port = */ XAPIAND_BINARY_SERVERPORT,
-			/* unsigned int discovery_port = */ XAPIAND_DISCOVERY_SERVERPORT,
-			/* unsigned int raft_port = */ XAPIAND_RAFT_SERVERPORT,
-			/* std::string pidfile = */ "",
-			/* std::string logfile = */ "",
-			/* std::string uid = */ "",
-			/* std::string gid = */ "",
-			/* std::string discovery_group = */ "",
-			/* std::string raft_group = */ "",
-			/* ssize_t num_servers = */ 1,
-			/* ssize_t dbpool_size = */ 1,
-			/* ssize_t num_updaters = */ 1,
-			/* ssize_t threadpool_size = */ 1,
-			/* ssize_t tasks_size = */ 1,
-			/* ssize_t endpoints_list_size = */ 1,
-			/* ssize_t num_committers = */ 1,
-			/* ssize_t num_fsynchers = */ NUM_FSYNCHERS,
-			/* ssize_t max_clients = */ 100,
-			/* ssize_t max_databases = */ MAX_DATABASES,
-			/* ssize_t max_files = */ 1000,
-			/* int flush_threshold = */ FLUSH_THRESHOLD,
-			/* unsigned int ev_flags = */ 0,
-			/* bool uuid_compact = */ true,
-			/* UUIDRepr uuid_repr = */ fnv1ah32::hash("simple"),
-			/* bool uuid_partition = */ true,
-			/* std::string dump_metadata = */ "",
-			/* std::string dump_schema = */ "",
-			/* std::string dump_documents = */ "",
-			/* std::string restore = */ "",
-			/* std::string filename = */ "",
-			/* size_t num_replicas = */ 1,
-			/* bool log_epoch = */ true,
-			/* bool log_iso8601 = */ false,
-			/* bool log_timeless = */ false,
-			/* bool log_threads = */ true,
-			/* bool log_location = */ false,
-		};
+
+		// And some defaults for testing:
+		opts.verbosity = 3;
+		opts.cluster_name = TEST_CLUSTER_NAME;
+		opts.node_name = TEST_NODE_NAME;
+		opts.solo = true;
+		opts.uuid_compact = true;
+		opts.uuid_partition = true;
+		opts.log_epoch = true;
+		opts.log_threads = true;
 
 		static ev::default_loop default_loop(opts.ev_flags);
 		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);

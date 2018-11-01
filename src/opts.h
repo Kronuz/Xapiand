@@ -22,59 +22,78 @@
 
 #pragma once
 
-#include <string>
-#include <cstdint>
+#include "config.h"
+
+#include <cstdint>                       // for std::uint32_t
+#include <cstdlib>                       // for std::size_t
+#include <string>                        // for std::string
+#include <sys/types.h>                   // for ssize_t
+
+
+#define CONCURRENCY_MULTIPLIER   4       // Server workers multiplier (by number of CPUs)
+
+#define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool.
+#define MAX_CLIENTS              1000    // Maximum number of open client connections
+#define MAX_DATABASES            400     // Maximum number of open databases
+#define NUM_SERVERS              10      // Number of servers.
+#define NUM_UPDATERS             3       // Number of database updaters.
+#define NUM_COMMITTERS           10      // Number of threads handling the commits.
+#define NUM_FSYNCHERS            10      // Number of threads handling the fsyncs.
+#define FLUSH_THRESHOLD          100000  // Database flush threshold (default for xapian is 10000)
+#define TASKS_SIZE               100     // Client tasks threadpool's size.
+#define ENDPOINT_LIST_SIZE       10      // Endpoints List's size.
+#define NUM_REPLICAS             3       // Default number of database replicas per index.
 
 
 extern struct opts_t {
-	int verbosity;
-	bool detach;
-	bool chert;
-	bool solo;
-	bool strict;
-	bool force;
-	bool optimal;
-	bool foreign;
-	bool colors;
-	bool no_colors;
-	std::string database;
-	std::string cluster_name;
-	std::string node_name;
-	unsigned int http_port;
-	unsigned int binary_port;
-	unsigned int discovery_port;
-	unsigned int raft_port;
-	std::string pidfile;
-	std::string logfile;
-	std::string uid;
-	std::string gid;
-	std::string discovery_group;
-	std::string raft_group;
-	ssize_t num_servers;
-	ssize_t dbpool_size;
-	ssize_t num_updaters;
-	ssize_t threadpool_size;
-	ssize_t tasks_size;
-	ssize_t endpoints_list_size;
-	ssize_t num_committers;
-	ssize_t num_fsynchers;
-	ssize_t max_clients;
-	ssize_t max_databases;
-	ssize_t max_files;
-	int flush_threshold;
-	unsigned int ev_flags;
-	bool uuid_compact;
-	uint32_t uuid_repr;
-	bool uuid_partition;
-	std::string dump_metadata;
-	std::string dump_schema;
-	std::string dump_documents;
-	std::string restore;
-	std::string filename;
-	size_t num_replicas;
-	bool log_epoch;
-	bool log_iso8601;
-	bool log_timeless;
-	bool log_threads;
-	bool log_location;
+	int verbosity = 0;
+	bool detach = false;
+	bool chert = false;
+	bool solo = false;
+	bool strict = false;
+	bool force = false;
+	bool optimal = false;
+	bool foreign = false;
+	bool colors = false;
+	bool no_colors = false;
+	std::string database = ".";
+	std::string cluster_name = XAPIAND_CLUSTER_NAME;
+	std::string node_name = "";
+	unsigned int http_port = XAPIAND_HTTP_SERVERPORT;
+	unsigned int binary_port = XAPIAND_BINARY_SERVERPORT;
+	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
+	unsigned int raft_port = XAPIAND_RAFT_SERVERPORT;
+	std::string pidfile = "";
+	std::string logfile = "";
+	std::string uid = "";
+	std::string gid = "";
+	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
+	std::string raft_group = XAPIAND_RAFT_GROUP;
+	ssize_t num_servers = NUM_SERVERS;
+	ssize_t dbpool_size = DBPOOL_SIZE;
+	ssize_t num_updaters = NUM_UPDATERS;
+	ssize_t threadpool_size = CONCURRENCY_MULTIPLIER;
+	ssize_t tasks_size = TASKS_SIZE;
+	ssize_t endpoints_list_size = ENDPOINT_LIST_SIZE;
+	ssize_t num_committers = NUM_COMMITTERS;
+	ssize_t num_fsynchers = NUM_FSYNCHERS;
+	ssize_t max_clients = MAX_CLIENTS;
+	ssize_t max_databases = MAX_DATABASES;
+	ssize_t max_files = 0;  // (0 = automatic)
+	int flush_threshold = FLUSH_THRESHOLD;
+	unsigned int ev_flags = 0;
+	bool uuid_compact = false;
+	std::uint32_t uuid_repr = 0;
+	bool uuid_partition = false;
+	std::string dump_metadata = "";
+	std::string dump_schema = "";
+	std::string dump_documents = "";
+	std::string restore = "";
+	std::string filename = "";
+	std::size_t num_replicas = NUM_REPLICAS;
+	bool log_epoch = false;
+	bool log_iso8601 = false;
+	bool log_timeless = false;
+	bool log_threads = false;
+	bool log_location = false;
 } opts;
