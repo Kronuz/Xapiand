@@ -26,7 +26,6 @@
 #include <cmath>                 // for ceil
 #include <exception>             // for exception
 #include <stdexcept>             // for invalid_argument, out_of_range
-#include <cstdio>                // for snprintf
 #include "string_view.hh"        // for std::string_view
 
 #include "cassert.hh"            // for assert
@@ -37,6 +36,7 @@
 #include "phf.hh"                // for phf
 #include "repr.hh"               // for repr
 #include "strict_stox.hh"        // for strict_stoull
+#include "string.hh"             // for string::format
 
 
 constexpr const char RESERVED_YEAR[]                = "_year";
@@ -1163,15 +1163,13 @@ Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 {
 	std::string res;
 	if (trim) {
-		res.resize(20);
-		res.resize(snprintf(&res[0], 20, "%04d-%02d-%02d%c%02d:%02d:%02d",
+		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-			sep, tm.tm_hour, tm.tm_min, tm.tm_sec));
+			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	} else {
-		res.resize(27);
-		res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-			sep, tm.tm_hour, tm.tm_min, tm.tm_sec));
+			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 	return res;
 }
@@ -1185,11 +1183,11 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	std::string res;
 	if (trim) {
+		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+			tm.year, tm.mon, tm.day, sep,
+			tm.hour, tm.min, tm.sec);
 		if (tm.fsec > 0.0) {
-			res.resize(27);
-			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.%06d",
-				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
+			res += string::format("%.6f", tm.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1197,23 +1195,17 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 				++it;
 			}
 			res.erase(it, it_e);
-		} else {
-			res.resize(20);
-			res.resize(snprintf(&res[0], 20, "%04d-%02d-%02d%c%02d:%02d:%02d",
-				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec));
 		}
 	} else {
 		if (tm.fsec > 0.0) {
-			res.resize(27);
-			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.%06d",
+			res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
 				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec, static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
+				tm.hour, tm.min, tm.sec);
+			res += string::format("%.6f", tm.fsec).erase(0, 1);
 		} else {
-			res.resize(27);
-			res.resize(snprintf(&res[0], 27, "%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+			res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
 				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec));
+				tm.hour, tm.min, tm.sec);
 		}
 	}
 	return res;
@@ -1485,9 +1477,9 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 	std::string res;
 	if (clk.fsec > 0 || !trim) {
 		if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
-			res.resize(16);
-			res.resize(snprintf(&res[0], 16, "%02d:%02d:%02d.%06d",
-				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS)));
+			res = string::format("%02d:%02d:%02d",
+				clk.hour, clk.min, clk.sec);
+			res += string::format("%.6f", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1496,10 +1488,11 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 			}
 			res.erase(it, it_e);
 		} else {
-			res.resize(23);
-			res.resize(snprintf(&res[0], 23, "%02d:%02d:%02d.%06d%c%02d:%02d",
-				clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS),
-				clk.tz_s, clk.tz_h, clk.tz_m));
+			res = string::format("%02d:%02d:%02d",
+				clk.hour, clk.min, clk.sec);
+			res += string::format("%.6f", clk.fsec).erase(0, 1);
+			res += string::format("%c%02d:%02d",
+				clk.tz_s, clk.tz_h, clk.tz_m);
 			auto it_e = res.begin() + 15;
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1509,14 +1502,12 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 			res.erase(it, it_e);
 		}
 	} else if (clk.tz_h == 0 && clk.tz_m == 0) {
-		res.resize(9);
-		res.resize(snprintf(&res[0], 9, "%02d:%02d:%02d",
-			clk.hour, clk.min, clk.sec));
+		res = string::format("%02d:%02d:%02d",
+			clk.hour, clk.min, clk.sec);
 	} else {
-		res.resize(15);
-		res.resize(snprintf(&res[0], 15, "%02d:%02d:%02d%c%02d:%02d",
+		res = string::format("%02d:%02d:%02d%c%02d:%02d",
 			clk.hour, clk.min, clk.sec,
-			clk.tz_s, clk.tz_h, clk.tz_m));
+			clk.tz_s, clk.tz_h, clk.tz_m);
 	}
 	return res;
 }
@@ -1733,9 +1724,9 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 {
 	std::string res;
 	if (clk.fsec > 0 || !trim) {
-		res.resize(17);
-		res.resize(snprintf(&res[0], 17, "%c%02d:%02d:%02d.%06d",
-			clk.tz_s, clk.hour, clk.min, clk.sec, static_cast<int>(clk.fsec * DATETIME_MICROSECONDS)));
+		res = string::format("%c%02d:%02d:%02d",
+			clk.tz_s, clk.hour, clk.min, clk.sec);
+		res += string::format("%.6f", clk.fsec).erase(0, 1);
 		if (trim) {
 			auto it_e = res.end();
 			auto it = it_e - 1;
@@ -1746,9 +1737,8 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 			res.erase(it, it_e);
 		}
 	} else {
-		res.resize(10);
-		res.resize(snprintf(&res[0], 10, "%c%02d:%02d:%02d",
-			clk.tz_s, clk.hour, clk.min, clk.sec));
+		res = string::format("%c%02d:%02d:%02d",
+			clk.tz_s, clk.hour, clk.min, clk.sec);
 	}
 	return res;
 }
