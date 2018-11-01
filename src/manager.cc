@@ -66,6 +66,7 @@
 #include "io.hh"                              // for io::*
 #include "length.h"                           // for serialise_length
 #include "log.h"                              // for L_CALL, L_DEBUG
+#include "lru.h"                              // for LRU
 #include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
 #include "metrics.h"                          // for Metrics::metrics
 #include "msgpack.h"                          // for MsgPack, object::object
@@ -883,10 +884,31 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
+		static std::mutex lru_mtx;
+		static lru::LRU<std::string, std::string> lru(1000);
+
+		DatabaseHandler db_handler;
+
+		std::string serialised;
 		auto key = std::string(path);
 		key.push_back('/');
-		DatabaseHandler db_handler(Endpoints{Endpoint{"."}});
-		auto serialised = db_handler.get_metadata(key);
+
+		std::unique_lock<std::mutex> lk(lru_mtx);
+		auto it = lru.find(key);
+		if (it != lru.end()) {
+			serialised = it->second;
+			lk.unlock();
+		} else {
+			lk.unlock();
+			db_handler.reset(Endpoints{Endpoint{"."}});
+			serialised = db_handler.get_metadata(key);
+			if (!serialised.empty()) {
+				lk.lock();
+				lru.insert(std::make_pair(key, serialised));
+				lk.unlock();
+			}
+		}
+
 		if (serialised.empty()) {
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
@@ -899,6 +921,10 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 					consistent_hash = idx % indexed_nodes;
 					serialised.append(serialise_length(idx));
 				}
+				assert(!serialised.empty());
+				lk.lock();
+				lru.insert(std::make_pair(key, serialised));
+				lk.unlock();
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
