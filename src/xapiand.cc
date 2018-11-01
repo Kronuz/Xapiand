@@ -404,6 +404,9 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
 		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
 		SwitchArg log_timeless("", "log-timeless", "Logs without timestamp.", cmd, false);
+		SwitchArg log_plainseconds("", "log-seconds", "Log timestamps with plain seconds.", cmd, false);
+		SwitchArg log_milliseconds("", "log-milliseconds", "Log timestamps with milliseconds.", cmd, false);
+		SwitchArg log_microseconds("", "log-microseconds", "Log timestamps with microseconds.", cmd, false);
 		SwitchArg log_threads("", "log-threads", "Logs thread names.", cmd, false);
 #ifndef NDEBUG
 		SwitchArg log_location("", "log-location", "Logs log location.", cmd, false);
@@ -487,6 +490,9 @@ void parseOptions(int argc, char** argv) {
 		opts.log_epoch = log_epoch.getValue();
 		opts.log_iso8601 = log_iso8601.getValue();
 		opts.log_timeless = log_timeless.getValue();
+		opts.log_plainseconds = log_plainseconds.getValue();
+		opts.log_milliseconds = log_milliseconds.getValue();
+		opts.log_microseconds = log_microseconds.getValue();
 		opts.log_threads = log_threads.getValue();
 #ifndef NDEBUG
 		opts.log_location = log_location.getValue();

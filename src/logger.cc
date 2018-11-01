@@ -367,8 +367,22 @@ Logging::run()
 		auto timestamp = Datetime::timestamp(time_point_from_ullong(created_at));
 
 		if (opts.log_epoch) {
+			auto epoch = static_cast<int>(timestamp);
 			msg.append(std::string_view(rgb(94, 94, 94)));
-			msg.append(string::Number(static_cast<unsigned long long>(timestamp * DATETIME_MILLISECONDS)));
+			msg.append(string::format("%010d", epoch));
+			if (opts.log_plainseconds) {
+					// Use plain seconds only
+			} else if (opts.log_milliseconds) {
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back('.');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%.3f", timestamp - epoch).erase(0, 2));
+			} else if (opts.log_microseconds) {
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back('.');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%.6f", timestamp - epoch).erase(0, 2));
+			}
 			msg.push_back(' ');
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
@@ -395,10 +409,19 @@ Logging::run()
 				msg.push_back(':');
 				msg.append(std::string_view(rgb(94, 94, 94)));
 				msg.append(string::format("%02d", tm.sec));
-				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.push_back('.');
-				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%06d", static_cast<int>(tm.fsec * DATETIME_MICROSECONDS)));
+				if (opts.log_plainseconds) {
+					// Use plain seconds only
+				} else if (opts.log_milliseconds) {
+					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.push_back('.');
+					msg.append(std::string_view(rgb(94, 94, 94)));
+					msg.append(string::format("%.3f", tm.fsec).erase(0, 2));
+				} else if (opts.log_microseconds) {
+					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.push_back('.');
+					msg.append(std::string_view(rgb(94, 94, 94)));
+					msg.append(string::format("%.6f", tm.fsec).erase(0, 2));
+				}
 				msg.push_back(' ');
 			} else if (opts.log_timeless) {
 				// No timestamp
@@ -415,6 +438,19 @@ Logging::run()
 				msg.append(string::format("%02d", tm.min));
 				msg.append(std::string_view(rgb(94, 94, 94)));
 				msg.append(string::format("%02d", tm.sec));
+				if (opts.log_plainseconds) {
+					// Use plain seconds only
+				} else if (opts.log_milliseconds) {
+					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.push_back('.');
+					msg.append(std::string_view(rgb(94, 94, 94)));
+					msg.append(string::format("%.3f", tm.fsec).erase(0, 2));
+				} else if (opts.log_microseconds) {
+					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.push_back('.');
+					msg.append(std::string_view(rgb(94, 94, 94)));
+					msg.append(string::format("%.6f", tm.fsec).erase(0, 2));
+				}
 				msg.push_back(' ');
 			}
 		}

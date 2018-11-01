@@ -94,6 +94,13 @@ extern struct opts_t {
 	bool log_epoch = false;
 	bool log_iso8601 = false;
 	bool log_timeless = false;
+	bool log_plainseconds = false;
+	bool log_milliseconds = false;
+#ifndef NDEBUG
+	bool log_microseconds = false;
+#else
+	bool log_microseconds = true;
+#endif
 	bool log_threads = false;
 	bool log_location = false;
 } opts;
