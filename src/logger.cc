@@ -367,14 +367,38 @@ Logging::run()
 		auto timestamp = Datetime::timestamp(time_point_from_ullong(created_at));
 
 		if (opts.log_epoch) {
-			msg.append(std::string_view(rgb(162, 162, 162)));
+			msg.append(std::string_view(rgb(94, 94, 94)));
 			msg.append(string::Number(static_cast<unsigned long long>(timestamp * 1000)));
 			msg.push_back(' ');
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
 			if (opts.log_iso8601) {
-				msg.append(std::string_view(rgb(162, 162, 162)));
-				msg.append(Datetime::iso8601(tm, false, ' '));
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%04d", tm.year));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back('-');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.mon));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back('-');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.day));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back(' ');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.hour));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back(':');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.min));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back(':');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.sec));
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.push_back('.');
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%06d", static_cast<int>(tm.fsec / DATETIME_MICROSECONDS)));
 				msg.push_back(' ');
 			} else if (opts.log_timeless) {
 				// No timestamp
