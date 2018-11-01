@@ -329,26 +329,44 @@ RemoteProtocol::msg_readaccess(const std::string &message)
 {
 	L_CALL("RemoteProtocol::msg_readaccess(<message>)");
 
-	int xapian_flags = Xapian::DB_OPEN;
+	reset();
+
+	flags = DB_OPEN;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 	if (p != p_end) {
-		unsigned flag_bits;
-		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
+		auto xapian_flags = static_cast<unsigned>(unserialise_length(&p, p_end));
+		switch (xapian_flags & DB_ACTION_MASK_) {
+			case Xapian::DB_CREATE_OR_OPEN:
+				// Create database if it doesn't already exist.
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_CREATE_OR_OVERWRITE:
+				// Create database if it doesn't already exist, or overwrite if it does.
+				// TODO: Add DB_OVERWRITE
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_CREATE:
+				// If the database already exists, an exception will be thrown.
+				// TODO: Add DB_CREATE
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_OPEN:
+				// Open an existing database.
+				flags |= DB_OPEN;
+				break;
+		}
 	}
 
-	std::vector<std::string> dbpaths;
 	if (p != p_end) {
 		while (p != p_end) {
 			size_t len;
 			len = unserialise_length(&p, p_end, true);
-			std::string dbpath(p, len);
-			dbpaths.push_back(dbpath);
+			std::string path(p, len);
+			endpoints.add(Endpoint{path});
 			p += len;
 		}
 	}
-	select_db(dbpaths, false, xapian_flags);
 
 	msg_update(message);
 }
@@ -359,27 +377,45 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 {
 	L_CALL("RemoteProtocol::msg_writeaccess(<message>)");
 
-	int xapian_flags = Xapian::DB_OPEN;
+	reset();
+
+	flags = DB_WRITABLE;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 	if (p != p_end) {
-		unsigned flag_bits;
-		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
+		auto xapian_flags = static_cast<unsigned>(unserialise_length(&p, p_end));
+		switch (xapian_flags & DB_ACTION_MASK_) {
+			case Xapian::DB_CREATE_OR_OPEN:
+				// Create database if it doesn't already exist.
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_CREATE_OR_OVERWRITE:
+				// Create database if it doesn't already exist, or overwrite if it does.
+				// TODO: Add DB_OVERWRITE
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_CREATE:
+				// If the database already exists, an exception will be thrown.
+				// TODO: Add DB_CREATE
+				flags |= DB_CREATE_OR_OPEN;
+				break;
+			case Xapian::DB_OPEN:
+				// Open an existing database.
+				flags |= DB_OPEN;
+				break;
+		}
 	}
 
-	std::vector<std::string> dbpaths;
 	if (p != p_end) {
 		size_t len;
 		len = unserialise_length(&p, p_end, true);
-		std::string dbpath(p, len);
-		dbpaths.push_back(dbpath);
+		std::string path(p, len);
+		endpoints.add(Endpoint{path});
 		p += len;
 		if (p != p_end) {
 			THROW(NetworkError, "only one database directory allowed on writable databases");
 		}
 	}
-	select_db(dbpaths, true, xapian_flags);
 
 	msg_update(message);
 }
@@ -1027,52 +1063,6 @@ RemoteProtocol::msg_shutdown(const std::string &)
 
 	client.destroy();
 	client.detach();
-}
-
-
-void
-RemoteProtocol::select_db(const std::vector<std::string> &dbpaths, bool writable, int xapian_flags)
-{
-	L_CALL("RemoteProtocol::select_db(<dbpaths>, %s, %d)", writable ? "true" : "false", xapian_flags);
-
-	reset();
-
-	flags = 0;
-	switch (xapian_flags & DB_ACTION_MASK_) {
-		case Xapian::DB_CREATE_OR_OPEN:
-			// Create database if it doesn't already exist.
-			// TODO: Rename DB_CREATE_OR_OPEN to DB_CREATE_OR_OPEN
-			flags |= DB_CREATE_OR_OPEN;
-			break;
-		case Xapian::DB_CREATE_OR_OVERWRITE:
-			// Create database if it doesn't already exist, or overwrite if it does.
-			// TODO: Add DB_OVERWRITE
-			flags |= DB_CREATE_OR_OPEN;
-			break;
-		case Xapian::DB_CREATE:
-			// If the database already exists, an exception will be thrown.
-			// TODO: Add DB_CREATE
-			flags |= DB_CREATE_OR_OPEN;
-			break;
-		case Xapian::DB_OPEN:
-			// Open an existing database.
-			flags |= DB_OPEN;
-			break;
-	}
-	if (writable) {
-		flags |= DB_WRITABLE;
-	}
-
-	if (!dbpaths.empty()) {
-		if (writable) {
-			assert(dbpaths.size() == 1); // Expecting exactly one database.
-			endpoints.add(Endpoint(dbpaths[0]));
-		} else {
-			for (auto& path : dbpaths) {
-				endpoints.add(Endpoint(path));
-			}
-		}
-	}
 }
 
 

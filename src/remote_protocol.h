@@ -197,7 +197,6 @@ public:
 	void msg_addspelling(const std::string& message);
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
-	void select_db(const std::vector<std::string> &dbpaths, bool writable, int xapian_flags);
 };
 
 
