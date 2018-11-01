@@ -369,7 +369,7 @@ Logging::run()
 		if (opts.log_epoch) {
 			msg.append(std::string_view(rgb(162, 162, 162)));
 			msg.push_back('[');
-			msg.append(string::Number(static_cast<unsigned long long>(timestamp)));
+			msg.append(string::Number(static_cast<unsigned long long>(timestamp * 1000)));
 			msg.append("] ");
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
