@@ -374,14 +374,10 @@ Logging::run()
 					// Use plain seconds only
 			} else if (opts.log_milliseconds) {
 				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.push_back('.');
-				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%.3f", timestamp - epoch).erase(0, 2));
+				msg.append(string::format("%.3f", timestamp - epoch).erase(0, 1));
 			} else if (opts.log_microseconds) {
 				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.push_back('.');
-				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%.6f", timestamp - epoch).erase(0, 2));
+				msg.append(string::format("%.6f", timestamp - epoch).erase(0, 1));
 			}
 			msg.push_back(' ');
 		} else {
@@ -413,14 +409,10 @@ Logging::run()
 					// Use plain seconds only
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.push_back('.');
-					msg.append(std::string_view(rgb(94, 94, 94)));
-					msg.append(string::format("%.3f", tm.fsec).erase(0, 2));
+					msg.append(string::format("%.3f", tm.fsec).erase(0, 1));
 				} else if (opts.log_microseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.push_back('.');
-					msg.append(std::string_view(rgb(94, 94, 94)));
-					msg.append(string::format("%.6f", tm.fsec).erase(0, 2));
+					msg.append(string::format("%.6f", tm.fsec).erase(0, 1));
 				}
 				msg.push_back(' ');
 			} else if (opts.log_timeless) {
@@ -442,14 +434,10 @@ Logging::run()
 					// Use plain seconds only
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.push_back('.');
-					msg.append(std::string_view(rgb(94, 94, 94)));
-					msg.append(string::format("%.3f", tm.fsec).erase(0, 2));
+					msg.append(string::format("%.3f", tm.fsec).erase(0, 1));
 				} else if (opts.log_microseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.push_back('.');
-					msg.append(std::string_view(rgb(94, 94, 94)));
-					msg.append(string::format("%.6f", tm.fsec).erase(0, 2));
+					msg.append(string::format("%.6f", tm.fsec).erase(0, 1));
 				}
 				msg.push_back(' ');
 			}
