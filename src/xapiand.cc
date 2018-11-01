@@ -378,7 +378,7 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
+		ValueArg<std::size_t> num_updaters("", "updaters", "Number of database updaters.", false, NUM_UPDATERS, "updaters", cmd);
 #endif
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
@@ -492,7 +492,7 @@ void parseOptions(int argc, char** argv) {
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
 #ifdef XAPIAND_CLUSTERING
-		opts.num_replicators = opts.solo ? 0 : num_replicators.getValue();
+		opts.num_updaters = opts.solo ? 0 : num_updaters.getValue();
 #endif
 		opts.num_committers = num_committers.getValue();
 		opts.num_fsynchers = num_fsynchers.getValue();

@@ -43,7 +43,8 @@
 #include "cassert.hh"             // for assert
 
 #include "database.h"             // for Database
-#include "database_pool.h"        // for DatabasePool, DatabaseUpdate
+#include "database_pool.h"        // for DatabasePool
+#include "database_updater.h"     // for DatabaseUpdater, DatabaseUpdate
 #include "database_utils.h"       // for read_uuid
 #include "exception.h"            // for THROW, Error
 #include "fs.hh"                  // for exists
@@ -766,9 +767,9 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			// On COMMIT, add to updated databases queue so replicators do their job
+			// On COMMIT, let the updaters do their job
 			if (send_update) {
-				XapiandManager::manager->database_pool.updated_databases.push(DatabaseUpdate(endpoint, uuid, revision + 1));
+				DatabaseUpdater::send({endpoint, uuid, revision + 1});
 			}
 		}
 #endif

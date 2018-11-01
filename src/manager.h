@@ -90,7 +90,6 @@ protected:
 	std::string set_node_name(std::string_view node_name_);
 
 	void make_servers();
-	void make_replicators();
 
 public:
 	std::string __repr__() const override {
@@ -137,9 +136,6 @@ public:
 	ThreadPool thread_pool;
 	ThreadPool client_pool;
 	ThreadPool server_pool;
-#ifdef XAPIAND_CLUSTERING
-	ThreadPool replicator_pool;
-#endif
 
 	std::atomic<time_t> shutdown_asap;
 	std::atomic<time_t> shutdown_now;

@@ -139,33 +139,6 @@ public:
 };
 
 
-#ifdef XAPIAND_CLUSTERING
-struct DatabaseUpdate {
-	Endpoint endpoint;
-	std::string uuid;
-	Xapian::rev revision;
-
-	DatabaseUpdate() = default;
-
-	DatabaseUpdate(Endpoint endpoint_, const std::string& uuid_, Xapian::rev revision_)
-		: endpoint(endpoint_), uuid(uuid_), revision(revision_) { }
-
-	bool operator==(const DatabaseUpdate &other) const {
-		return endpoint == other.endpoint;
-	}
-};
-
-namespace std {
-	template <>
-	struct hash<DatabaseUpdate> {
-		std::size_t operator()(const DatabaseUpdate& k) const {
-			return std::hash<Endpoint>()(k.endpoint);
-		};
-	};
-}
-#endif
-
-
 //  ____        _        _                    ____             _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___|  _ \ ___   ___ | |
 // | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |_) / _ \ / _ \| |
@@ -201,10 +174,6 @@ class DatabasePool {
 public:
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 	void checkin(std::shared_ptr<Database>& database);
-
-#ifdef XAPIAND_CLUSTERING
-	queue::QueueSet<DatabaseUpdate> updated_databases;
-#endif
 
 	DatabasePool(size_t dbpool_size, size_t max_databases);
 	DatabasePool(const DatabasePool&) = delete;

@@ -52,7 +52,7 @@ extern struct opts_t {
 	std::string raft_group;
 	ssize_t num_servers;
 	ssize_t dbpool_size;
-	ssize_t num_replicators;
+	ssize_t num_updaters;
 	ssize_t threadpool_size;
 	ssize_t tasks_size;
 	ssize_t endpoints_list_size;

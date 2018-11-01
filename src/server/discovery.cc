@@ -26,8 +26,7 @@
 
 #include "cassert.hh"                       // for assert
 
-#include "database_pool.h"                  // for DatabaseUpdate
-// #include "database_handler.h"
+#include "database_updater.h"               // for DatabaseUpdate
 #include "epoch.hh"                         // for epoch::now
 #include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager::manager, XapiandManager::StateNames, XapiandManager::State

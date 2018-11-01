@@ -57,7 +57,7 @@ Initializer::Initializer()
 			/* std::string raft_group = */ "",
 			/* ssize_t num_servers = */ 1,
 			/* ssize_t dbpool_size = */ 1,
-			/* ssize_t num_replicators = */ 1,
+			/* ssize_t num_updaters = */ 1,
 			/* ssize_t threadpool_size = */ 1,
 			/* ssize_t tasks_size = */ 1,
 			/* ssize_t endpoints_list_size = */ 1,

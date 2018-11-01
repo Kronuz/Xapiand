@@ -29,7 +29,7 @@
 #define MAX_CLIENTS              1000    /* Maximum number of open client connections */
 #define MAX_DATABASES            400     /* Maximum number of open databases */
 #define NUM_SERVERS              10      /* Number of servers. */
-#define NUM_REPLICATORS          3       /* Number of replicators. */
+#define NUM_UPDATERS             3       /* Number of database updaters. */
 #define NUM_COMMITTERS           10      /* Number of threads handling the commits. */
 #define NUM_FSYNCHERS            10      /* Number of threads handling the fsyncs. */
 #define FLUSH_THRESHOLD          100000  /* Database flush threshold (default for xapian is 10000) */
