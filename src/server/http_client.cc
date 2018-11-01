@@ -322,7 +322,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_WARNING("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (requests.empty()) {
+			if (!requests.empty()) {
 				L_WARNING("Client unexpectedly closed the other end after %s: There was still pending requests", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 			}
 		}
