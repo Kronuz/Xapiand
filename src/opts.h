@@ -71,4 +71,5 @@ extern struct opts_t {
 	std::string dump_documents;
 	std::string restore;
 	std::string filename;
+	size_t num_replicas;
 } opts;

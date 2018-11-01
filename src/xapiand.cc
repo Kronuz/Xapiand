@@ -379,6 +379,7 @@ void parseOptions(int argc, char** argv) {
 
 #ifdef XAPIAND_CLUSTERING
 		ValueArg<std::size_t> num_updaters("", "updaters", "Number of database updaters.", false, NUM_UPDATERS, "updaters", cmd);
+		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 #endif
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
@@ -493,6 +494,7 @@ void parseOptions(int argc, char** argv) {
 		opts.dbpool_size = dbpool_size.getValue();
 #ifdef XAPIAND_CLUSTERING
 		opts.num_updaters = opts.solo ? 0 : num_updaters.getValue();
+		opts.num_replicas = opts.solo ? 0 : num_replicas.getValue();
 #endif
 		opts.num_committers = num_committers.getValue();
 		opts.num_fsynchers = num_fsynchers.getValue();

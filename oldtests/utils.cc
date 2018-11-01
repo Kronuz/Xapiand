@@ -76,6 +76,7 @@ Initializer::Initializer()
 			/* std::string dump_documents = */ "",
 			/* std::string restore = */ "",
 			/* std::string filename = */ "",
+			/* size_t num_replicas = */ 1,
 		};
 
 		static ev::default_loop default_loop(opts.ev_flags);

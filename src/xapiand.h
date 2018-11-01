@@ -36,3 +36,4 @@
 #define TASKS_SIZE               100     /* Client tasks threadpool's size. */
 #define CONCURRENCY_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE       10      /* Endpoints List's size. */
+#define NUM_REPLICAS             3       /* Default number of database replicas per index. */
