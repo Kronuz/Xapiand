@@ -225,8 +225,9 @@ public:
 	std::chrono::time_point<std::chrono::system_clock> ready;
 	std::chrono::time_point<std::chrono::system_clock> ends;
 
-	~Request();
+	Request() = default;
 	Request(class HttpClient* client);
+	~Request();
 
 	const MsgPack& decoded_body() {
 		_decode();

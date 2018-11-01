@@ -755,8 +755,11 @@ HttpClient::run()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	while (!requests.empty() && !closed) {
-		auto& request = requests.front();
+		Request request;
 		Response response;
+
+		std::swap(request, requests.front());
+		requests.pop_front();
 
 		lk.unlock();
 		try {
@@ -769,8 +772,6 @@ HttpClient::run()
 			throw;
 		}
 		lk.lock();
-
-		requests.pop_front();
 	}
 
 	running = false;
@@ -2909,7 +2910,9 @@ Request::Request(HttpClient* client)
 
 Request::~Request()
 {
-	log->clear();
+	if (log) {
+		log->clear();
+	}
 }
 
 
