@@ -68,6 +68,20 @@
 #include "string.hh"                        // for string::from_delta
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_CONN
+// #define L_CONN L_GREEN
+// #undef L_HTTP
+// #define L_HTTP L_RED
+// #undef L_HTTP_WIRE
+// #define L_HTTP_WIRE L_ORANGE
+// #undef L_HTTP_PROTO
+// #define L_HTTP_PROTO L_TEAL
+
+
 #define QUERY_FIELD_COMMIT     (1 << 0)
 #define QUERY_FIELD_SEARCH     (1 << 1)
 #define QUERY_FIELD_ID         (1 << 2)
@@ -395,7 +409,7 @@ HttpClient::on_info(http_parser* parser)
 
 	int state = parser->state;
 
-	L_HTTP_PROTO_PARSER("%4d - (INFO)", state);
+	L_HTTP_PROTO("%4d - (INFO)", state);
 
 	switch (state) {
 		case 18:  // message_complete
@@ -407,6 +421,7 @@ HttpClient::on_info(http_parser* parser)
 					new_request.accept_set.emplace(1, 1.0, any_type, 0);
 				}
 				std::lock_guard<std::mutex> lk(runner_mutex);
+				L_HTTP_PROTO("New request added:\n%s", string::indent(new_request.to_text(false), ' ', 8));
 				if (!running) {
 					// Enqueue request...
 					requests.push_back(std::move(new_request));
@@ -452,7 +467,7 @@ HttpClient::on_data(http_parser* parser, const char* at, size_t length)
 
 	int state = parser->state;
 
-	L_HTTP_PROTO_PARSER("%4d - %s", state, repr(at, length));
+	L_HTTP_PROTO("%4d - %s", state, repr(at, length));
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
@@ -2180,7 +2195,7 @@ HttpClient::url_resolve(Request& request)
 	L_HTTP("URL: %s", b);
 
 	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) == 0) {
-		L_HTTP_PROTO_PARSER("HTTP parsing done!");
+		L_HTTP_PROTO("HTTP parsing done!");
 
 		if ((u.field_set & (1 << UF_PATH )) != 0) {
 			size_t path_size = u.field_data[3].len;
@@ -2223,7 +2238,7 @@ HttpClient::url_resolve(Request& request)
 		return Command::NO_CMD_NO_ID;
 	}
 
-	L_HTTP_PROTO_PARSER("Parsing not done");
+	L_HTTP_PROTO("Parsing not done");
 	// Bad query
 	return Command::BAD_QUERY;
 }
