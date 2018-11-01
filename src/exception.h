@@ -219,6 +219,13 @@ public:
 };
 
 
+class DatabaseNotFoundError : public NotFoundError, public Xapian::DatabaseOpeningError {
+public:
+	template<typename... Args>
+	DatabaseNotFoundError(Args&&... args) : NotFoundError(std::forward<Args>(args)...), Xapian::DatabaseOpeningError(message) { }
+};
+
+
 class DocNotFoundError : public NotFoundError, public Xapian::DocNotFoundError {
 public:
 	template<typename... Args>
