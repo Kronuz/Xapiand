@@ -25,7 +25,9 @@
 
 #include "database.h"                         // for Database
 #include "length.h"                           // for serialise_length, unserialise_length
-#include "server/binary_client.h"
+#include "repr.hh"                            // for repr
+#include "server/binary_client.h"             // for BinaryClient
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -333,7 +335,7 @@ RemoteProtocol::msg_readaccess(const std::string &message)
 	if (p != p_end) {
 		unsigned flag_bits;
 		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		 xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
+		xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
 	}
 
 	std::vector<std::string> dbpaths;
@@ -363,7 +365,7 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 	if (p != p_end) {
 		unsigned flag_bits;
 		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		 xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
+		xapian_flags |= flag_bits &~ DB_ACTION_MASK_;
 	}
 
 	std::vector<std::string> dbpaths;
