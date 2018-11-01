@@ -243,28 +243,6 @@ static const std::string& HttpParserHeaderStateNames(int type) {
 }
 
 
-static const std::string& HttpParserCallbackTypeNames(HttpClient::HttpParserCallbackType type) {
-	static const std::string _[] = {
-		"on_message_begin",
-		"on_url",
-		"on_status",
-		"on_header_field",
-		"on_header_value",
-		"on_headers_complete",
-		"on_body",
-		"on_message_complete",
-		"on_chunk_header",
-		"on_chunk_complete",
-	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
-		return _[type_int];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
-
 bool can_preview(const ct_type_t& ct_type) {
 	#define CONTENT_TYPE_OPTIONS() \
 		OPTION("application/eps") \
@@ -507,308 +485,367 @@ HttpClient::on_read_file_done()
 
 // HTTP parser callbacks.
 const http_parser_settings HttpClient::settings = {
-	HttpClient::on_message_begin,
-	HttpClient::on_url,
-	HttpClient::on_status,
-	HttpClient::on_header_field,
-	HttpClient::on_header_value,
-	HttpClient::on_headers_complete,
-	HttpClient::on_body,
-	HttpClient::on_message_complete,
-	HttpClient::on_chunk_header,
-	HttpClient::on_chunk_complete,
+	HttpClient::message_begin_cb,
+	HttpClient::url_cb,
+	HttpClient::status_cb,
+	HttpClient::header_field_cb,
+	HttpClient::header_value_cb,
+	HttpClient::headers_complete_cb,
+	HttpClient::body_cb,
+	HttpClient::message_complete_cb,
+	HttpClient::chunk_header_cb,
+	HttpClient::chunk_complete_cb,
 };
+
+int
+HttpClient::message_begin_cb(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->on_message_begin(parser);
+}
+
+int
+HttpClient::url_cb(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->on_url(parser, at, length);
+}
+
+int
+HttpClient::status_cb(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->on_status(parser, at, length);
+}
+
+int
+HttpClient::header_field_cb(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->on_header_field(parser, at, length);
+}
+
+int
+HttpClient::header_value_cb(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->on_header_value(parser, at, length);
+}
+
+int
+HttpClient::headers_complete_cb(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->on_headers_complete(parser);
+}
+
+int
+HttpClient::body_cb(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->on_body(parser, at, length);
+}
+
+int
+HttpClient::message_complete_cb(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->on_message_complete(parser);
+}
+
+int
+HttpClient::chunk_header_cb(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->on_chunk_header(parser);
+}
+
+int
+HttpClient::chunk_complete_cb(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->on_chunk_complete(parser);
+}
+
 
 int
 HttpClient::on_message_begin(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_message_begin, parser);
+	L_CALL("HttpClient::on_message_begin(<parser>)");
+
+	L_HTTP_PROTO("on_message_begin {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+
+	waiting = true;
+	new_request.begins = std::chrono::system_clock::now();
+	new_request.log->clear();
+	new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
+
+	return 0;
 }
 
 int
 HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_url, parser, at, length);
+	L_CALL("HttpClient::on_url(<parser>, <at>, <length>)");
+
+	L_HTTP_PROTO("on_url {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	new_request.path.append(at, length);
+
+	return 0;
 }
 
 int
 HttpClient::on_status(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_status, parser, at, length);
+	L_CALL("HttpClient::on_status(<parser>, <at>, <length>)");
+
+	L_HTTP_PROTO("on_status {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	return 0;
 }
 
 int
 HttpClient::on_header_field(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_header_field, parser, at, length);
+	L_CALL("HttpClient::on_header_field(<parser>, <at>, <length>)");
+
+	L_HTTP_PROTO("on_header_field {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	new_request._header_name.append(at, length);
+
+	return 0;
 }
 
 int
 HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_header_value, parser, at, length);
+	L_CALL("HttpClient::on_header_value(<parser>, <at>, <length>)");
+
+	L_HTTP_PROTO("on_header_value {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	new_request._header_value.append(at, length);
+	if (Logging::log_level > LOG_DEBUG) {
+		new_request.headers += new_request._header_name + ": " + new_request._header_value + eol;
+	}
+
+	constexpr static auto _ = phf::make_phf({
+		hhl("host"),
+		hhl("expect"),
+		hhl("100-continue"),
+		hhl("content-type"),
+		hhl("content-length"),
+		hhl("accept"),
+		hhl("accept-encoding"),
+		hhl("http-method-override"),
+		hhl("x-http-method-override"),
+	});
+
+	switch (_.fhhl(new_request._header_name)) {
+		case _.fhhl("host"):
+			new_request.host = new_request._header_value;
+			break;
+		case _.fhhl("expect"):
+		case _.fhhl("100-continue"):
+			// Respond with HTTP/1.1 100 Continue
+			new_request.expect_100 = true;
+			break;
+
+		case _.fhhl("content-type"):
+			new_request.ct_type = ct_type_t(new_request._header_value);
+			break;
+		case _.fhhl("content-length"):
+			new_request.content_length = new_request._header_value;
+			break;
+		case _.fhhl("accept"): {
+			static AcceptLRU accept_sets;
+			auto value = string::lower(new_request._header_value);
+			try {
+				new_request.accept_set = accept_sets.at(value);
+			} catch (const std::out_of_range&) {
+				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
+				std::sregex_iterator end;
+				int i = 0;
+				while (next != end) {
+					int indent = -1;
+					double q = 1.0;
+					if (next->length(3) != 0) {
+						auto param = next->str(3);
+						std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+						while (next_param != end) {
+							if (next_param->str(1) == "q") {
+								q = strict_stod(next_param->str(2));
+							} else if (next_param->str(1) == "indent") {
+								indent = strict_stoi(next_param->str(2));
+								if (indent < 0) { indent = 0;
+								} else if (indent > 16) { indent = 16; }
+							}
+							++next_param;
+						}
+					}
+					new_request.accept_set.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
+					++next;
+					++i;
+				}
+				accept_sets.emplace(value, new_request.accept_set);
+			}
+			break;
+		}
+
+		case _.fhhl("accept-encoding"): {
+			static AcceptEncodingLRU accept_encoding_sets;
+			auto value = string::lower(new_request._header_value);
+			try {
+				new_request.accept_encoding_set = accept_encoding_sets.at(value);
+			} catch (const std::out_of_range&) {
+				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
+				std::sregex_iterator end;
+				int i = 0;
+				while (next != end) {
+					double q = 1.0;
+					if (next->length(2) != 0) {
+						auto param = next->str(2);
+						std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+						while (next_param != end) {
+							if (next_param->str(1) == "q") {
+								q = strict_stod(next_param->str(2));
+							}
+							++next_param;
+						}
+					} else {
+					}
+					new_request.accept_encoding_set.emplace(i, q, next->str(1));
+					++next;
+					++i;
+				}
+				accept_encoding_sets.emplace(value, new_request.accept_encoding_set);
+			}
+			break;
+		}
+
+		case _.fhhl("x-http-method-override"):
+		case _.fhhl("http-method-override"): {
+			if (parser->method != HTTP_POST) {
+				THROW(ClientError, "%s header must use the POST method", repr(new_request._header_name));
+			}
+
+			constexpr static auto __ = phf::make_phf({
+				hhl("PUT"),
+				hhl("PATCH"),
+				hhl("MERGE"),
+				hhl("STORE"),
+				hhl("DELETE"),
+				hhl("GET"),
+				hhl("POST"),
+			});
+
+			switch (__.fhhl(new_request._header_value)) {
+				case __.fhhl("PUT"):
+					parser->method = HTTP_PUT;
+					break;
+				case __.fhhl("PATCH"):
+					parser->method = HTTP_PATCH;
+					break;
+				case __.fhhl("MERGE"):
+					parser->method = HTTP_MERGE;
+					break;
+				case __.fhhl("STORE"):
+					parser->method = HTTP_STORE;
+					break;
+				case __.fhhl("DELETE"):
+					parser->method = HTTP_DELETE;
+					break;
+				case __.fhhl("GET"):
+					parser->method = HTTP_GET;
+					break;
+				case __.fhhl("POST"):
+					parser->method = HTTP_POST;
+					break;
+				default:
+					parser->http_errno = HPE_INVALID_METHOD;
+					break;
+			}
+			break;
+		}
+	}
+
+	// header used, expect next header
+	new_request._header_name.clear();
+	new_request._header_value.clear();
+
+	return 0;
 }
 
 int
 HttpClient::on_headers_complete(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_headers_complete, parser);
-}
+	L_CALL("HttpClient::on_headers_complete(<parser>)");
 
-int
-HttpClient::on_body(http_parser* parser, const char* at, size_t length)
-{
-	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_body, parser, at, length);
-}
+	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 
-int
-HttpClient::on_message_complete(http_parser* parser)
-{
-	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_message_complete, parser);
-}
-
-int
-HttpClient::on_chunk_header(http_parser* parser)
-{
-	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_chunk_header, parser);
-}
-
-int
-HttpClient::on_chunk_complete(http_parser* parser)
-{
-	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_chunk_complete, parser);
-}
-
-
-int
-HttpClient::http_cb(HttpParserCallbackType type, http_parser* parser)
-{
-	L_CALL("HttpClient::http_cb(%s, <parser>)", HttpParserCallbackTypeNames(type));
-
-	int state = parser->state;
-	int header_state = parser->header_state;
-
-	L_HTTP_PROTO("%s {state:%s, header_state:%s}", HttpParserCallbackTypeNames(type), HttpParserStateNames(state), HttpParserHeaderStateNames(header_state));
-
-	switch (state) {
-		case 18:  // message_complete
-			if (!closed) {
-				if (new_request.accept_set.empty()) {
-					if (!new_request.ct_type.empty()) {
-						new_request.accept_set.emplace(0, 1.0, new_request.ct_type, 0);
-					}
-					new_request.accept_set.emplace(1, 1.0, any_type, 0);
-				}
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				L_HTTP_PROTO("New request added:\n%s", string::indent(new_request.to_text(false), ' ', 8));
-				if (!running) {
-					// Enqueue request...
-					requests.push_back(std::move(new_request));
-					// And start a runner.
-					running = true;
-					XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
-						task->run();
-					});
-				} else {
-					// There should be a runner, just enqueue request.
-					requests.push_back(std::move(new_request));
-				}
-			}
-			new_request = Request(this);
-			waiting = false;
-			break;
-		case 19:  // message_begin
-			waiting = true;
-			new_request.begins = std::chrono::system_clock::now();
-			new_request.log->clear();
-			new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
-			break;
-		case 50:  // headers done
-			new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path, parser->http_major, parser->http_minor);
-			if (new_request.expect_100) {
-				// Return 100 if client is expecting it
-				Response response;
-				write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
-			}
-			break;
-		case 57: //s_chunk_data begin chunk
-			break;
+	new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path, parser->http_major, parser->http_minor);
+	if (new_request.expect_100) {
+		// Return 100 if client is expecting it
+		Response response;
+		write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
 	return 0;
 }
 
+int
+HttpClient::on_body(http_parser* parser, const char* at, size_t length)
+{
+	L_CALL("HttpClient::on_body(<parser>, <at>, <length>)");
+
+	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	new_request.raw.append(at, length);
+
+	return 0;
+}
 
 int
-HttpClient::http_data_cb(HttpParserCallbackType type, http_parser* parser, const char* at, size_t length)
+HttpClient::on_message_complete(http_parser* parser)
 {
-	L_CALL("HttpClient::http_data_cb(%s, <parser>, <at>, <length>)", HttpParserCallbackTypeNames(type));
+	L_CALL("HttpClient::on_message_complete(<parser>)");
 
-	int state = parser->state;
-	int header_state = parser->header_state;
+	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 
-	L_HTTP_PROTO("%s {state:%s, header_state:%s}: %s", HttpParserCallbackTypeNames(type), HttpParserStateNames(state), HttpParserHeaderStateNames(header_state), repr(at, length));
-
-	if (state > 26 && state <= 32) {
-		// s_req_path  ->  s_req_http_start
-		new_request.path.append(at, length);
-	} else if (state >= 43 && state <= 44) {
-		// s_header_field  ->  s_header_value_discard_ws
-		new_request._header_name.append(at, length);
-	} else if (state >= 45 && state <= 50) {
-		// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
-		new_request._header_value.append(at, length);
-		if (Logging::log_level > LOG_DEBUG) {
-			new_request.headers += new_request._header_name + ": " + new_request._header_value + eol;
-		}
-		if (state == 50) {
-			constexpr static auto _ = phf::make_phf({
-				hhl("host"),
-				hhl("expect"),
-				hhl("100-continue"),
-				hhl("content-type"),
-				hhl("content-length"),
-				hhl("accept"),
-				hhl("accept-encoding"),
-				hhl("http-method-override"),
-				hhl("x-http-method-override"),
-			});
-
-			switch (_.fhhl(new_request._header_name)) {
-				case _.fhhl("host"):
-					new_request.host = new_request._header_value;
-					break;
-				case _.fhhl("expect"):
-				case _.fhhl("100-continue"):
-					// Respond with HTTP/1.1 100 Continue
-					new_request.expect_100 = true;
-					break;
-
-				case _.fhhl("content-type"):
-					new_request.ct_type = ct_type_t(new_request._header_value);
-					break;
-				case _.fhhl("content-length"):
-					new_request.content_length = new_request._header_value;
-					break;
-				case _.fhhl("accept"): {
-					static AcceptLRU accept_sets;
-					auto value = string::lower(new_request._header_value);
-					try {
-						new_request.accept_set = accept_sets.at(value);
-					} catch (const std::out_of_range&) {
-						std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
-						std::sregex_iterator end;
-						int i = 0;
-						while (next != end) {
-							int indent = -1;
-							double q = 1.0;
-							if (next->length(3) != 0) {
-								auto param = next->str(3);
-								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-								while (next_param != end) {
-									if (next_param->str(1) == "q") {
-										q = strict_stod(next_param->str(2));
-									} else if (next_param->str(1) == "indent") {
-										indent = strict_stoi(next_param->str(2));
-										if (indent < 0) { indent = 0;
-										} else if (indent > 16) { indent = 16; }
-									}
-									++next_param;
-								}
-							}
-							new_request.accept_set.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
-							++next;
-							++i;
-						}
-						accept_sets.emplace(value, new_request.accept_set);
-					}
-					break;
-				}
-
-				case _.fhhl("accept-encoding"): {
-					static AcceptEncodingLRU accept_encoding_sets;
-					auto value = string::lower(new_request._header_value);
-					try {
-						new_request.accept_encoding_set = accept_encoding_sets.at(value);
-					} catch (const std::out_of_range&) {
-						std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
-						std::sregex_iterator end;
-						int i = 0;
-						while (next != end) {
-							double q = 1.0;
-							if (next->length(2) != 0) {
-								auto param = next->str(2);
-								std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-								while (next_param != end) {
-									if (next_param->str(1) == "q") {
-										q = strict_stod(next_param->str(2));
-									}
-									++next_param;
-								}
-							} else {
-							}
-							new_request.accept_encoding_set.emplace(i, q, next->str(1));
-							++next;
-							++i;
-						}
-						accept_encoding_sets.emplace(value, new_request.accept_encoding_set);
-					}
-					break;
-				}
-
-				case _.fhhl("x-http-method-override"):
-				case _.fhhl("http-method-override"): {
-					if (parser->method != HTTP_POST) {
-						THROW(ClientError, "%s header must use the POST method", repr(new_request._header_name));
-					}
-
-					constexpr static auto __ = phf::make_phf({
-						hhl("PUT"),
-						hhl("PATCH"),
-						hhl("MERGE"),
-						hhl("STORE"),
-						hhl("DELETE"),
-						hhl("GET"),
-						hhl("POST"),
-					});
-
-					switch (__.fhhl(new_request._header_value)) {
-						case __.fhhl("PUT"):
-							parser->method = HTTP_PUT;
-							break;
-						case __.fhhl("PATCH"):
-							parser->method = HTTP_PATCH;
-							break;
-						case __.fhhl("MERGE"):
-							parser->method = HTTP_MERGE;
-							break;
-						case __.fhhl("STORE"):
-							parser->method = HTTP_STORE;
-							break;
-						case __.fhhl("DELETE"):
-							parser->method = HTTP_DELETE;
-							break;
-						case __.fhhl("GET"):
-							parser->method = HTTP_GET;
-							break;
-						case __.fhhl("POST"):
-							parser->method = HTTP_POST;
-							break;
-						default:
-							parser->http_errno = HPE_INVALID_METHOD;
-							break;
-					}
-					break;
-				}
+	if (!closed) {
+		if (new_request.accept_set.empty()) {
+			if (!new_request.ct_type.empty()) {
+				new_request.accept_set.emplace(0, 1.0, new_request.ct_type, 0);
 			}
-
-			// header used, expect next header
-			new_request._header_name.clear();
-			new_request._header_value.clear();
+			new_request.accept_set.emplace(1, 1.0, any_type, 0);
 		}
-	} else if (state >= 59 && state <= 62) { // s_chunk_data_done, s_body_identity  ->  s_message_done
-		new_request.raw.append(at, length);
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		L_HTTP_PROTO("New request added:\n%s", string::indent(new_request.to_text(false), ' ', 8));
+		if (!running) {
+			// Enqueue request...
+			requests.push_back(std::move(new_request));
+			// And start a runner.
+			running = true;
+			XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
+				task->run();
+			});
+		} else {
+			// There should be a runner, just enqueue request.
+			requests.push_back(std::move(new_request));
+		}
+		new_request = Request(this);
 	}
+	waiting = false;
+
+	return 0;
+}
+
+int
+HttpClient::on_chunk_header(http_parser* parser)
+{
+	L_CALL("HttpClient::on_chunk_header(<parser>)");
+
+	L_HTTP_PROTO("on_chunk_header {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+
+	return 0;
+}
+
+int
+HttpClient::on_chunk_complete(http_parser* parser)
+{
+	L_CALL("HttpClient::on_chunk_complete(<parser>)");
+
+	L_HTTP_PROTO("on_chunk_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 
 	return 0;
 }

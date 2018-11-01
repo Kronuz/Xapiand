@@ -240,7 +240,6 @@ public:
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
-public:
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
@@ -250,20 +249,6 @@ public:
 		BAD_QUERY,
 	};
 
-	enum class HttpParserCallbackType {
-		on_message_begin,
-		on_url,
-		on_status,
-		on_header_field,
-		on_header_value,
-		on_headers_complete,
-		on_body,
-		on_message_complete,
-		on_chunk_header,
-		on_chunk_complete,
-	};
-
-private:
 	bool is_idle() override;
 
 	Command getCommand(std::string_view command_name);
@@ -280,19 +265,27 @@ private:
 	Endpoints endpoints;
 
 
-	static int on_message_begin(http_parser* parser);
-	static int on_url(http_parser* parser, const char* at, size_t length);
-	static int on_status(http_parser* parser, const char* at, size_t length);
-	static int on_header_field(http_parser* parser, const char* at, size_t length);
-	static int on_header_value(http_parser* parser, const char* at, size_t length);
-	static int on_headers_complete(http_parser* parser);
-	static int on_body(http_parser* parser, const char* at, size_t length);
-	static int on_message_complete(http_parser* parser);
-	static int on_chunk_header(http_parser* parser);
-	static int on_chunk_complete(http_parser* parser);
+	static int message_begin_cb(http_parser* parser);
+	static int url_cb(http_parser* parser, const char* at, size_t length);
+	static int status_cb(http_parser* parser, const char* at, size_t length);
+	static int header_field_cb(http_parser* parser, const char* at, size_t length);
+	static int header_value_cb(http_parser* parser, const char* at, size_t length);
+	static int headers_complete_cb(http_parser* parser);
+	static int body_cb(http_parser* parser, const char* at, size_t length);
+	static int message_complete_cb(http_parser* parser);
+	static int chunk_header_cb(http_parser* parser);
+	static int chunk_complete_cb(http_parser* parser);
 
-	int http_cb(HttpParserCallbackType type, http_parser* parser);
-	int http_data_cb(HttpParserCallbackType type, http_parser* parser, const char* at, size_t length);
+	int on_message_begin(http_parser* parser);
+	int on_url(http_parser* parser, const char* at, size_t length);
+	int on_status(http_parser* parser, const char* at, size_t length);
+	int on_header_field(http_parser* parser, const char* at, size_t length);
+	int on_header_value(http_parser* parser, const char* at, size_t length);
+	int on_headers_complete(http_parser* parser);
+	int on_body(http_parser* parser, const char* at, size_t length);
+	int on_message_complete(http_parser* parser);
+	int on_chunk_header(http_parser* parser);
+	int on_chunk_complete(http_parser* parser);
 
 	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void metrics_view(Request& request, Response& response, enum http_method method, Command cmd);
