@@ -22,17 +22,20 @@
 
 #include "database_autocommit.h"
 
-#include <utility>             // for std::move
+#include <utility>                           // for std::move
 
-#include "database.h"          // for Database
-#include "database_handler.h"  // for DatabaseHandler
-#include "endpoint.h"          // for Endpoints
-#include "log.h"               // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "string.hh"           // for string::from_delta
-#include "time_point.hh"       // for time_point_to_ullong
+#include "database.h"                        // for Database
+#include "database_handler.h"                // for DatabaseHandler
+#include "endpoint.h"                        // for Endpoints
+#include "log.h"                             // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "string.hh"                         // for string::from_delta
+#include "time_point.hh"                     // for time_point_to_ullong
 
 
-class Database;
+#define NORMALY_AUTOCOMMIT_AFTER       1s
+#define WHEN_BUSY_AUTOCOMMIT_AFTER     3s
+#define FORCE_AUTOCOMMIT_AFTER         9s
+
 
 std::mutex DatabaseAutocommit::statuses_mtx;
 std::unordered_map<Endpoints, DatabaseAutocommit::Status> DatabaseAutocommit::statuses;
@@ -62,13 +65,13 @@ DatabaseAutocommit::commit(const std::shared_ptr<Database>& database)
 		if (it == DatabaseAutocommit::statuses.end()) {
 			auto& status_ref = DatabaseAutocommit::statuses[database->endpoints] = {
 				nullptr,
-				time_point_to_ullong(now + 9s)
+				time_point_to_ullong(now + FORCE_AUTOCOMMIT_AFTER)
 			};
 			status = &status_ref;
-			next_wakeup_time = time_point_to_ullong(now + 1s);
+			next_wakeup_time = time_point_to_ullong(now + NORMALY_AUTOCOMMIT_AFTER);
 		} else {
 			status = &(it->second);
-			next_wakeup_time = time_point_to_ullong(now + 3s);
+			next_wakeup_time = time_point_to_ullong(now + WHEN_BUSY_AUTOCOMMIT_AFTER);
 		}
 
 		bool forced;
@@ -109,8 +112,10 @@ DatabaseAutocommit::run()
 
 		std::string error;
 		try {
+
 			DatabaseHandler db_handler(endpoints, DB_WRITABLE);
 			db_handler.commit();
+
 		} catch (const Exception& exc) {
 			error = exc.get_message();
 		} catch (const Xapian::Error& exc) {
