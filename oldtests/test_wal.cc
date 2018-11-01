@@ -98,7 +98,7 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 
 int create_db_wal() {
-	static DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
+	static DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");

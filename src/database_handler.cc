@@ -490,7 +490,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 {
 	L_CALL("DatabaseHandler::prepare(%s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -549,7 +549,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 {
 	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit ? "true" : "false", ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -592,7 +592,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 {
 	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id.to_string()), commit ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -634,7 +634,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 {
 	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", commit ? "true" : "false", ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 

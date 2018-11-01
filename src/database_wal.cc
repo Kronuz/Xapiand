@@ -538,7 +538,7 @@ DatabaseWAL::execute(std::string_view line, bool wal_, bool send_update, bool un
 
 	assert(database);
 
-	if ((database->flags & DB_WRITABLE) == 0) {
+	if ((database->flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -699,8 +699,8 @@ DatabaseWAL::write_line(Type type, std::string_view data, bool send_update)
 	L_CALL("DatabaseWAL::write_line(Type::%s, <data>, %s)", names[toUType(type)], send_update ? "true" : "false");
 	try {
 		assert(database);
-		assert(database->flags & DB_WRITABLE);
-		assert(!(database->flags & DB_NOWAL));
+		assert((database->flags & DB_WRITABLE) == DB_WRITABLE);
+		assert((database->flags & DB_NOWAL) != DB_NOWAL);
 
 		auto endpoint = database->endpoints[0];
 		assert(endpoint.is_local());

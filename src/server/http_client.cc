@@ -1264,7 +1264,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, method);
 
 	auto local_node = Node::local_node();
 	auto document = db_handler.get_document(local_node->name());
@@ -1319,7 +1319,7 @@ HttpClient::document_info_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, method);
 
 	MsgPack response_obj;
 	response_obj[RESPONSE_DOCID] = db_handler.get_docid(request.path_parser.get_id());
@@ -1344,7 +1344,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 
 	enum http_status status_code;
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 
 	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
@@ -1378,7 +1378,7 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 	db_handler.delete_schema();
 
 	request.ready = std::chrono::system_clock::now();
@@ -1415,7 +1415,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 	auto& decoded_body = request.decoded_body();
 	response_obj = db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 
@@ -1449,7 +1449,7 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 	db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
@@ -1486,7 +1486,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 	auto& decoded_body = request.decoded_body();
 	if (method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
@@ -1726,7 +1726,7 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 
 	db_handler.reopen();  // Ensure touch.
 
@@ -1758,7 +1758,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
 
 	db_handler.commit();  // Ensure touch.
 
@@ -1854,7 +1854,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL, method);
 
 	auto& decoded_body = request.decoded_body();
 	if (decoded_body.is_string()) {

@@ -457,7 +457,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (exchanged) {
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
-					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_SPAWN | DB_NOWAL, HTTP_PUT, db_handler->context);
+					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL, HTTP_PUT, db_handler->context);
 					if (_db_handler.get_metadata(reserved_schema).empty()) {
 						_db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 					}

@@ -163,7 +163,7 @@ static int make_search(const std::vector<test_query_t> _tests) {
 			// Search examples.
 			path_test_query + "json/example_1.txt",
 			path_test_query + "json/example_2.txt"
-		}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		}), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL);
 
 	int cont = 0;
 	query_field_t query;

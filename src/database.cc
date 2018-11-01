@@ -257,7 +257,7 @@ Database::reopen_writable()
 	const auto& endpoint = endpoints[0];
 	Xapian::WritableDatabase wsdb;
 	bool local = false;
-	int _flags = (flags & DB_SPAWN) != 0
+	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE
 		: Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
@@ -273,14 +273,14 @@ Database::reopen_writable()
 		DatabaseWAL tmp_wal(endpoint.path, this);
 		tmp_wal.init_database();
 #endif
-		if (flags & DB_SPAWN) {
+		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) {
 			build_path_index(endpoint.path);
 		}
 		try {
 			wsdb = Xapian::WritableDatabase(endpoint.path, _flags);
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
-				if ((flags & DB_SPAWN) == 0) {
+				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 					THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
 				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
@@ -304,11 +304,11 @@ Database::reopen_writable()
 
 #ifdef XAPIAND_DATA_STORAGE
 	if (local) {
-		if ((flags & DB_NOSTORAGE) != 0) {
-			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) {
+			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
 			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		} else {
-			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
+			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		}
 	} else {
@@ -319,7 +319,7 @@ Database::reopen_writable()
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
-	if (local && ((flags & DB_NOWAL) == 0)) {
+	if (local && ((flags & DB_NOWAL) != DB_NOWAL)) {
 		// WAL required on a local writable database, open it.
 		wal = std::make_unique<DatabaseWAL>(endpoint.path, this);
 		if (wal->open_current(true)) {
@@ -364,7 +364,7 @@ Database::reopen_readable()
 		Xapian::Database rsdb;
 		bool local = false;
 #ifdef XAPIAND_CLUSTERING
-		int _flags = (flags & DB_SPAWN) != 0
+		int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 			? Xapian::DB_CREATE_OR_OPEN
 			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
@@ -409,7 +409,7 @@ Database::reopen_readable()
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				if (!exists(endpoint.path + "/iamglass")) {
 					++failures;
-					if ((flags & DB_SPAWN) == 0)  {
+					if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 						if (endpoints.size() == failures) {
 							db.reset();
 							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
@@ -470,7 +470,7 @@ Database::reopen()
 		do_close(true, closed, transaction);
 	}
 
-	if ((flags & DB_WRITABLE) != 0) {
+	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
 		reopen_writable();
 	} else {
 		reopen_readable();
@@ -509,7 +509,7 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
 	L_CALL("Database::do_close(...)");
 
-	bool db_writable = (flags & DB_WRITABLE) != 0;
+	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 	if (
 		commit_ &&
 		db &&
@@ -563,7 +563,7 @@ Database::close()
 void
 Database::autocommit(const std::shared_ptr<Database>& database)
 {
-	bool db_writable = (database->flags & DB_WRITABLE) != 0;
+	bool db_writable = (database->flags & DB_WRITABLE) == DB_WRITABLE;
 	if (
 		database->db &&
 		db_writable &&
@@ -584,7 +584,7 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit(%s)", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -653,7 +653,7 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction(%s)", flushed ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -670,7 +670,7 @@ Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -687,7 +687,7 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -704,7 +704,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document(%d, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -753,7 +753,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document_term(%s, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) == 0) {
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
 	}
 

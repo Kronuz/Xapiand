@@ -259,17 +259,17 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 {
 	L_CALL("DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()), flags, [&flags]() {
 		std::vector<std::string> values;
-		if (flags == DB_OPEN) values.push_back("DB_OPEN");
+		if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
-		if ((flags & DB_SPAWN) == DB_SPAWN) values.push_back("DB_SPAWN");
+		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
 		if ((flags & DB_EXCLUSIVE) == DB_EXCLUSIVE) values.push_back("DB_EXCLUSIVE");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
 		return string::join(values, " | ");
 	}());
 
-	bool db_writable = (flags & DB_WRITABLE) != 0;
-	bool db_exclusive = (flags & DB_EXCLUSIVE) != 0;
+	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
+	bool db_exclusive = (flags & DB_EXCLUSIVE) == DB_EXCLUSIVE;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
@@ -453,7 +453,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 		if (reopen) {
 			database->reopen();
-			L_DATABASE("== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", repr(database->endpoints.to_string()));
+			L_DATABASE("== REOPEN DB [%s]: %s", db_writable ? "WR" : "RO", repr(database->endpoints.to_string()));
 		}
 	}
 
@@ -469,7 +469,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	assert(database);
 	auto endpoints = database->endpoints;
 	int flags = database->flags;
-	bool db_writable = (flags & DB_WRITABLE) != 0;
+	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
@@ -539,7 +539,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		database.reset();
 	}
 
-	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 }
 
 

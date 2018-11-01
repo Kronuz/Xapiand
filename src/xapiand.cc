@@ -1131,7 +1131,7 @@ void restore() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
 			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
 			XapiandManager::manager->join();

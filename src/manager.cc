@@ -312,7 +312,7 @@ XapiandManager::setup_node()
 	} catch (const NotFoundError&) {
 		try {
 			L_INFO("Cluster database doesn't exist. Generating database...");
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			auto did = db_handler.index(local_node->lower_name(), false, {
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
@@ -820,7 +820,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 
 		Endpoint cluster_endpoint(".");
 		try {
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			auto mset = db_handler.get_all_mset();
 			const auto m_e = mset.end();
 
@@ -927,7 +927,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				lk.unlock();
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
-				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_SPAWN);
+				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				db_handler.set_metadata(key, serialised, true);
 			}
 		} else {

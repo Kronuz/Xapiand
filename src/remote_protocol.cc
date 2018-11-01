@@ -1041,18 +1041,18 @@ RemoteProtocol::select_db(const std::vector<std::string> &dbpaths, bool writable
 	switch (xapian_flags & DB_ACTION_MASK_) {
 		case Xapian::DB_CREATE_OR_OPEN:
 			// Create database if it doesn't already exist.
-			// TODO: Rename DB_SPAWN to DB_CREATE_OR_OPEN
-			flags |= DB_SPAWN;
+			// TODO: Rename DB_CREATE_OR_OPEN to DB_CREATE_OR_OPEN
+			flags |= DB_CREATE_OR_OPEN;
 			break;
 		case Xapian::DB_CREATE_OR_OVERWRITE:
 			// Create database if it doesn't already exist, or overwrite if it does.
 			// TODO: Add DB_OVERWRITE
-			flags |= DB_SPAWN;
+			flags |= DB_CREATE_OR_OPEN;
 			break;
 		case Xapian::DB_CREATE:
 			// If the database already exists, an exception will be thrown.
 			// TODO: Add DB_CREATE
-			flags |= DB_SPAWN;
+			flags |= DB_CREATE_OR_OPEN;
 			break;
 		case Xapian::DB_OPEN:
 			// Open an existing database.
