@@ -493,7 +493,16 @@ void parseOptions(int argc, char** argv) {
 		opts.log_plainseconds = log_plainseconds.getValue();
 		opts.log_milliseconds = log_milliseconds.getValue();
 		opts.log_microseconds = log_microseconds.getValue();
+		if (!opts.log_plainseconds && !opts.log_milliseconds && !opts.log_microseconds) {
+#ifndef NDEBUG
+			opts.log_microseconds = true;
+#else
+			opts.log_milliseconds = true;
+#endif
+		}
+
 		opts.log_threads = log_threads.getValue();
+
 #ifndef NDEBUG
 		opts.log_location = log_location.getValue();
 #endif
