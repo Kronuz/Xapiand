@@ -180,6 +180,7 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 		if (size > max_size) {
 			if (queue->renew_time < now - 60s) {
 				L_DATABASE("Evict queue from full LRU: %s", repr(queue->endpoints.to_string()));
+				queue->clear();
 				database_pool._drop_queue(queue);
 				return lru::DropAction::evict;
 			}
@@ -188,6 +189,7 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 		}
 		if (queue->renew_time < now - 3600s) {
 			L_DATABASE("Evict queue: %s", repr(queue->endpoints.to_string()));
+			queue->clear();
 			database_pool._drop_queue(queue);
 			return lru::DropAction::evict;
 		}
