@@ -240,6 +240,7 @@ public:
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
+public:
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
@@ -249,6 +250,20 @@ class HttpClient : public BaseClient {
 		BAD_QUERY,
 	};
 
+	enum class HttpParserCallbackType {
+		on_message_begin,
+		on_url,
+		on_status,
+		on_header_field,
+		on_header_value,
+		on_headers_complete,
+		on_body,
+		on_message_complete,
+		on_chunk_header,
+		on_chunk_complete,
+	};
+
+private:
 	bool is_idle() override;
 
 	Command getCommand(std::string_view command_name);
@@ -264,10 +279,20 @@ class HttpClient : public BaseClient {
 	std::deque<Request> requests;
 	Endpoints endpoints;
 
-	static int _on_info(http_parser* parser);
-	int on_info(http_parser* parser);
-	static int _on_data(http_parser* parser, const char* at, size_t length);
-	int on_data(http_parser* parser, const char* at, size_t length);
+
+	static int on_message_begin(http_parser* parser);
+	static int on_url(http_parser* parser, const char* at, size_t length);
+	static int on_status(http_parser* parser, const char* at, size_t length);
+	static int on_header_field(http_parser* parser, const char* at, size_t length);
+	static int on_header_value(http_parser* parser, const char* at, size_t length);
+	static int on_headers_complete(http_parser* parser);
+	static int on_body(http_parser* parser, const char* at, size_t length);
+	static int on_message_complete(http_parser* parser);
+	static int on_chunk_header(http_parser* parser);
+	static int on_chunk_complete(http_parser* parser);
+
+	int http_cb(HttpParserCallbackType type, http_parser* parser);
+	int http_data_cb(HttpParserCallbackType type, http_parser* parser, const char* at, size_t length);
 
 	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void metrics_view(Request& request, Response& response, enum http_method method, Command cmd);

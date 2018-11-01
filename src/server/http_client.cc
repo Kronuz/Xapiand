@@ -133,6 +133,138 @@ bool is_range(std::string_view str) {
 }
 
 
+static const std::string& HttpParserStateNames(int type) {
+	static const std::string _[] = {
+		"s_none",
+		"s_dead",
+		"s_start_req_or_res",
+		"s_res_or_resp_H",
+		"s_start_res",
+		"s_res_H",
+		"s_res_HT",
+		"s_res_HTT",
+		"s_res_HTTP",
+		"s_res_first_http_major",
+		"s_res_http_major",
+		"s_res_first_http_minor",
+		"s_res_http_minor",
+		"s_res_first_status_code",
+		"s_res_status_code",
+		"s_res_status_start",
+		"s_res_status",
+		"s_res_line_almost_done",
+		"s_start_req",
+		"s_req_method",
+		"s_req_spaces_before_url",
+		"s_req_schema",
+		"s_req_schema_slash",
+		"s_req_schema_slash_slash",
+		"s_req_server_start",
+		"s_req_server",
+		"s_req_server_with_at",
+		"s_req_path",
+		"s_req_query_string_start",
+		"s_req_query_string",
+		"s_req_fragment_start",
+		"s_req_fragment",
+		"s_req_http_start",
+		"s_req_http_H",
+		"s_req_http_HT",
+		"s_req_http_HTT",
+		"s_req_http_HTTP",
+		"s_req_first_http_major",
+		"s_req_http_major",
+		"s_req_first_http_minor",
+		"s_req_http_minor",
+		"s_req_line_almost_done",
+		"s_header_field_start",
+		"s_header_field",
+		"s_header_value_discard_ws",
+		"s_header_value_discard_ws_almost_done",
+		"s_header_value_discard_lws",
+		"s_header_value_start",
+		"s_header_value",
+		"s_header_value_lws",
+		"s_header_almost_done",
+		"s_chunk_size_start",
+		"s_chunk_size",
+		"s_chunk_parameters",
+		"s_chunk_size_almost_done",
+		"s_headers_almost_done",
+		"s_headers_done",
+		"s_chunk_data",
+		"s_chunk_data_almost_done",
+		"s_chunk_data_done",
+		"s_body_identity",
+		"s_body_identity_eof",
+		"s_message_done",
+	};
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
+		return _[type_int];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
+}
+
+
+static const std::string& HttpParserHeaderStateNames(int type) {
+	static const std::string _[] = {
+		"h_general",
+		"h_C",
+		"h_CO",
+		"h_CON",
+		"h_matching_connection",
+		"h_matching_proxy_connection",
+		"h_matching_content_length",
+		"h_matching_transfer_encoding",
+		"h_matching_upgrade",
+		"h_connection",
+		"h_content_length",
+		"h_transfer_encoding",
+		"h_upgrade",
+		"h_matching_transfer_encoding_chunked",
+		"h_matching_connection_token_start",
+		"h_matching_connection_keep_alive",
+		"h_matching_connection_close",
+		"h_matching_connection_upgrade",
+		"h_matching_connection_token",
+		"h_transfer_encoding_chunked",
+		"h_connection_keep_alive",
+		"h_connection_close",
+		"h_connection_upgrade",
+	};
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
+		return _[type_int];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
+}
+
+
+static const std::string& HttpParserCallbackTypeNames(HttpClient::HttpParserCallbackType type) {
+	static const std::string _[] = {
+		"on_message_begin",
+		"on_url",
+		"on_status",
+		"on_header_field",
+		"on_header_value",
+		"on_headers_complete",
+		"on_body",
+		"on_message_complete",
+		"on_chunk_header",
+		"on_chunk_complete",
+	};
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
+		return _[type_int];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
+}
+
+
 bool can_preview(const ct_type_t& ct_type) {
 	#define CONTENT_TYPE_OPTIONS() \
 		OPTION("application/eps") \
@@ -375,41 +507,88 @@ HttpClient::on_read_file_done()
 
 // HTTP parser callbacks.
 const http_parser_settings HttpClient::settings = {
-	HttpClient::_on_info,  // on_message_begin
-	HttpClient::_on_data,  // on_url
-	HttpClient::_on_data,  // on_status
-	HttpClient::_on_data,  // on_header_field
-	HttpClient::_on_data,  // on_header_value
-	HttpClient::_on_info,  // on_headers_complete
-	HttpClient::_on_data,  // on_body
-	HttpClient::_on_info,  // on_message_complete
-	HttpClient::_on_info,  // on_chunk_header
-	HttpClient::_on_info   // on_chunk_complete
+	HttpClient::on_message_begin,
+	HttpClient::on_url,
+	HttpClient::on_status,
+	HttpClient::on_header_field,
+	HttpClient::on_header_value,
+	HttpClient::on_headers_complete,
+	HttpClient::on_body,
+	HttpClient::on_message_complete,
+	HttpClient::on_chunk_header,
+	HttpClient::on_chunk_complete,
 };
 
+int
+HttpClient::on_message_begin(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_message_begin, parser);
+}
 
 int
-HttpClient::_on_info(http_parser* parser)
+HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_info(parser);
+	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_url, parser, at, length);
+}
+
+int
+HttpClient::on_status(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_status, parser, at, length);
+}
+
+int
+HttpClient::on_header_field(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_header_field, parser, at, length);
+}
+
+int
+HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_header_value, parser, at, length);
+}
+
+int
+HttpClient::on_headers_complete(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_headers_complete, parser);
+}
+
+int
+HttpClient::on_body(http_parser* parser, const char* at, size_t length)
+{
+	return static_cast<HttpClient *>(parser->data)->http_data_cb(HttpParserCallbackType::on_body, parser, at, length);
+}
+
+int
+HttpClient::on_message_complete(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_message_complete, parser);
+}
+
+int
+HttpClient::on_chunk_header(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_chunk_header, parser);
+}
+
+int
+HttpClient::on_chunk_complete(http_parser* parser)
+{
+	return static_cast<HttpClient *>(parser->data)->http_cb(HttpParserCallbackType::on_chunk_complete, parser);
 }
 
 
 int
-HttpClient::_on_data(http_parser* parser, const char* at, size_t length)
+HttpClient::http_cb(HttpParserCallbackType type, http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_data(parser, at, length);
-}
-
-
-int
-HttpClient::on_info(http_parser* parser)
-{
-	L_CALL("HttpClient::on_info(...)");
+	L_CALL("HttpClient::http_cb(%s, <parser>)", HttpParserCallbackTypeNames(type));
 
 	int state = parser->state;
+	int header_state = parser->header_state;
 
-	L_HTTP_PROTO("%4d - (INFO)", state);
+	L_HTTP_PROTO("%s {state:%s, header_state:%s}", HttpParserCallbackTypeNames(type), HttpParserStateNames(state), HttpParserHeaderStateNames(header_state));
 
 	switch (state) {
 		case 18:  // message_complete
@@ -461,13 +640,14 @@ HttpClient::on_info(http_parser* parser)
 
 
 int
-HttpClient::on_data(http_parser* parser, const char* at, size_t length)
+HttpClient::http_data_cb(HttpParserCallbackType type, http_parser* parser, const char* at, size_t length)
 {
-	L_CALL("HttpClient::on_data(...)");
+	L_CALL("HttpClient::http_data_cb(%s, <parser>, <at>, <length>)", HttpParserCallbackTypeNames(type));
 
 	int state = parser->state;
+	int header_state = parser->header_state;
 
-	L_HTTP_PROTO("%4d - %s", state, repr(at, length));
+	L_HTTP_PROTO("%s {state:%s, header_state:%s}: %s", HttpParserCallbackTypeNames(type), HttpParserStateNames(state), HttpParserHeaderStateNames(header_state), repr(at, length));
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
