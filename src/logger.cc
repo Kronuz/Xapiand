@@ -368,16 +368,14 @@ Logging::run()
 
 		if (opts.log_epoch) {
 			msg.append(std::string_view(rgb(162, 162, 162)));
-			msg.push_back('[');
 			msg.append(string::Number(static_cast<unsigned long long>(timestamp * 1000)));
-			msg.append("] ");
+			msg.push_back(' ');
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
 			if (opts.log_iso8601) {
 				msg.append(std::string_view(rgb(162, 162, 162)));
-				msg.push_back('[');
 				msg.append(Datetime::iso8601(tm, false, ' '));
-				msg.append("] ");
+				msg.push_back(' ');
 			} else if (opts.log_timeless) {
 				// No timestamp
 			} else {
