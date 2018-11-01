@@ -1161,17 +1161,15 @@ Datetime::isvalidDate(int year, int month, int day)
 std::string
 Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 {
-	std::string res;
 	if (trim) {
-		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
-			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
-			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	} else {
-		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+		return string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
-	return res;
+
+	return string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+		tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
+		sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 
@@ -1181,9 +1179,8 @@ Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
-	std::string res;
 	if (trim) {
-		res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+		auto res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
 		if (tm.fsec > 0.0) {
@@ -1196,19 +1193,20 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 			}
 			res.erase(it, it_e);
 		}
-	} else {
-		if (tm.fsec > 0.0) {
-			res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
-				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec);
-			res += string::format("%.6f", tm.fsec).erase(0, 1);
-		} else {
-			res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
-				tm.year, tm.mon, tm.day, sep,
-				tm.hour, tm.min, tm.sec);
-		}
+		return res;
 	}
-	return res;
+
+	if (tm.fsec > 0.0) {
+		auto res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+			tm.year, tm.mon, tm.day, sep,
+			tm.hour, tm.min, tm.sec);
+		res += string::format("%.6f", tm.fsec).erase(0, 1);
+		return res;
+	}
+
+	return string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+		tm.year, tm.mon, tm.day, sep,
+		tm.hour, tm.min, tm.sec);
 }
 
 
@@ -1474,11 +1472,10 @@ Datetime::time_to_double(const clk_t& clk)
 std::string
 Datetime::time_to_string(const clk_t& clk, bool trim)
 {
-	std::string res;
-	if (clk.fsec > 0 || !trim) {
-		if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
-			res = string::format("%02d:%02d:%02d",
-				clk.hour, clk.min, clk.sec);
+	if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
+		auto res = string::format("%02d:%02d:%02d",
+			clk.hour, clk.min, clk.sec);
+		if (clk.fsec > 0) {
 			res += string::format("%.6f", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
@@ -1487,29 +1484,21 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 				++it;
 			}
 			res.erase(it, it_e);
-		} else {
-			res = string::format("%02d:%02d:%02d",
-				clk.hour, clk.min, clk.sec);
-			res += string::format("%.6f", clk.fsec).erase(0, 1);
-			res += string::format("%c%02d:%02d",
-				clk.tz_s, clk.tz_h, clk.tz_m);
-			auto it_e = res.begin() + 15;
-			auto it = it_e - 1;
-			for (; *it == '0'; --it) { }
-			if (*it != '.') {
-				++it;
-			}
-			res.erase(it, it_e);
 		}
-	} else if (clk.tz_h == 0 && clk.tz_m == 0) {
-		res = string::format("%02d:%02d:%02d",
-			clk.hour, clk.min, clk.sec);
-	} else {
-		res = string::format("%02d:%02d:%02d%c%02d:%02d",
-			clk.hour, clk.min, clk.sec,
-			clk.tz_s, clk.tz_h, clk.tz_m);
+		return res;
 	}
-	return res;
+
+	if (clk.fsec > 0) {
+		auto res = string::format("%02d:%02d:%02d",
+			clk.hour, clk.min, clk.sec);
+		res += string::format("%.6f%c%02d:%02d", clk.fsec,
+			clk.tz_s, clk.tz_h, clk.tz_m).erase(0, 1);
+		return res;
+	}
+
+	return string::format("%02d:%02d:%02d.000000%c%02d:%02d",
+		clk.hour, clk.min, clk.sec,
+		clk.tz_s, clk.tz_h, clk.tz_m);
 }
 
 
@@ -1722,12 +1711,11 @@ Datetime::timedelta_to_double(const clk_t& clk)
 std::string
 Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 {
-	std::string res;
-	if (clk.fsec > 0 || !trim) {
-		res = string::format("%c%02d:%02d:%02d",
+	if (trim) {
+		auto res = string::format("%c%02d:%02d:%02d",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
-		res += string::format("%.6f", clk.fsec).erase(0, 1);
-		if (trim) {
+		if (clk.fsec > 0) {
+			res += string::format("%.6f", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1736,11 +1724,16 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 			}
 			res.erase(it, it_e);
 		}
-	} else {
-		res = string::format("%c%02d:%02d:%02d",
+		return res;
+	}
+
+	if (clk.fsec > 0) {
+		return string::format("%c%02d:%02d:%02d",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 	}
-	return res;
+
+	return string::format("%c%02d:%02d:%02d.000000",
+		clk.tz_s, clk.hour, clk.min, clk.sec);
 }
 
 
