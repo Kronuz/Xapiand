@@ -257,7 +257,9 @@ Database::reopen_writable()
 	const auto& endpoint = endpoints[0];
 	Xapian::WritableDatabase wsdb;
 	bool local = false;
-	int _flags = (flags & DB_SPAWN) != 0 ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
+	int _flags = (flags & DB_SPAWN) != 0
+		? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE
+		: Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
@@ -362,7 +364,9 @@ Database::reopen_readable()
 		Xapian::Database rsdb;
 		bool local = false;
 #ifdef XAPIAND_CLUSTERING
-		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
+		int _flags = (flags & DB_SPAWN) != 0
+			? Xapian::DB_CREATE_OR_OPEN
+			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
 			int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
 			rsdb = Xapian::Remote::open(endpoint.host, port, 10000, 10000, _flags, endpoint.path);
