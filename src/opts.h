@@ -72,4 +72,9 @@ extern struct opts_t {
 	std::string restore;
 	std::string filename;
 	size_t num_replicas;
+	bool log_epoch;
+	bool log_iso8601;
+	bool log_timeless;
+	bool log_threads;
+	bool log_location;
 } opts;

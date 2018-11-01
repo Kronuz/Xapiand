@@ -401,6 +401,13 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
 		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
 
+		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
+		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
+		SwitchArg log_timeless("", "log-timeless", "Logs without timestamp.", cmd, false);
+		SwitchArg log_threads("", "log-threads", "Logs thread names.", cmd, false);
+#ifndef NDEBUG
+		SwitchArg log_location("", "log-location", "Logs log location.", cmd, false);
+#endif
 		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
 
@@ -476,6 +483,14 @@ void parseOptions(int argc, char** argv) {
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
+
+		opts.log_epoch = log_epoch.getValue();
+		opts.log_iso8601 = log_iso8601.getValue();
+		opts.log_timeless = log_timeless.getValue();
+		opts.log_threads = log_threads.getValue();
+#ifndef NDEBUG
+		opts.log_location = log_location.getValue();
+#endif
 
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();

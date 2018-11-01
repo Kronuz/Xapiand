@@ -40,6 +40,7 @@
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
 #include "ignore_unused.h"    // for ignore_unused
+#include "opts.h"             // for opts
 #include "thread.hh"          // for get_thread_name
 #include "time_point.hh"      // for time_point_to_ullong
 
@@ -363,44 +364,54 @@ Logging::run()
 	std::string msg;
 
 	if (info && priority <= LOG_DEBUG) {
-		auto tm = Datetime::to_tm_t(Datetime::timestamp(time_point_from_ullong(created_at)));
+		auto timestamp = Datetime::timestamp(time_point_from_ullong(created_at));
 
-#ifdef NDEBUG
-		msg.append(std::string_view(rgb(60, 60, 60)));
-		msg.append(string::format("%04d", tm.year));
-		msg.append(std::string_view(rgb(94, 94, 94)));
-		msg.append(string::format("%02d", tm.mon));
-		msg.append(std::string_view(rgb(162, 162, 162)));
-		msg.append(string::format("%02d", tm.day));
-		msg.append(std::string_view(rgb(230, 230, 230)));
-		msg.append(string::format("%02d", tm.hour));
-		msg.append(std::string_view(rgb(162, 162, 162)));
-		msg.append(string::format("%02d", tm.min));
-		msg.append(std::string_view(rgb(94, 94, 94)));
-		msg.append(string::format("%02d", tm.sec));
-		msg.push_back(' ');
-#else
-		msg.append(std::string_view(rgb(162, 162, 162)));
-		msg.push_back('[');
-		msg.append(Datetime::iso8601(tm, false, ' '));
-		msg.append("] ");
+		if (opts.log_epoch) {
+			msg.append(std::string_view(rgb(162, 162, 162)));
+			msg.push_back('[');
+			msg.append(string::Number(static_cast<unsigned long long>(timestamp)));
+			msg.append("] ");
+		} else {
+			auto tm = Datetime::to_tm_t(timestamp);
+			if (opts.log_iso8601) {
+				msg.append(std::string_view(rgb(162, 162, 162)));
+				msg.push_back('[');
+				msg.append(Datetime::iso8601(tm, false, ' '));
+				msg.append("] ");
+			} else if (opts.log_timeless) {
+				// No timestamp
+			} else {
+				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(string::format("%04d", tm.year));
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.mon));
+				msg.append(std::string_view(rgb(162, 162, 162)));
+				msg.append(string::format("%02d", tm.day));
+				msg.append(std::string_view(rgb(230, 230, 230)));
+				msg.append(string::format("%02d", tm.hour));
+				msg.append(std::string_view(rgb(162, 162, 162)));
+				msg.append(string::format("%02d", tm.min));
+				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(string::format("%02d", tm.sec));
+				msg.push_back(' ');
+			}
+		}
 
-		msg.push_back('(');
-		msg.append(get_thread_name(thread_id));
-		msg.append(") ");
-#endif
+		if (opts.log_threads) {
+			msg.push_back('(');
+			msg.append(get_thread_name(thread_id));
+			msg.append(") ");
+		}
 
-#ifdef LOG_LOCATION
-		msg.append(filename);
-		msg.push_back(':');
-		msg.append(string::Number(line));
-		msg.append(" at ");
-		msg.append(function);
-		msg.append(": ");
-#else
-		ignore_unused(function);
-		ignore_unused(filename);
-		ignore_unused(line);
+#ifndef NDEBUG
+		if (opts.log_location) {
+			msg.append(filename);
+			msg.push_back(':');
+			msg.append(string::Number(line));
+			msg.append(" at ");
+			msg.append(function);
+			msg.append(": ");
+		}
 #endif
 
 		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());

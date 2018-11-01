@@ -77,6 +77,11 @@ Initializer::Initializer()
 			/* std::string restore = */ "",
 			/* std::string filename = */ "",
 			/* size_t num_replicas = */ 1,
+			/* bool log_epoch = */ true,
+			/* bool log_iso8601 = */ false,
+			/* bool log_timeless = */ false,
+			/* bool log_threads = */ true,
+			/* bool log_location = */ false,
 		};
 
 		static ev::default_loop default_loop(opts.ev_flags);
