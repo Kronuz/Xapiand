@@ -780,7 +780,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 		write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
-	if (parser->http_major == 1 && parser->http_minor == 0) {
+	if (parser->http_major == 0 || (parser->http_major == 1 && parser->http_minor == 0)) {
 		new_request.closing = true;
 	}
 
