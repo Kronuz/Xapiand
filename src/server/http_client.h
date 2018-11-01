@@ -180,6 +180,8 @@ public:
 	DeflateCompressData::iterator it_compressor;
 
 	Response();
+
+	std::string to_text(bool decode);
 };
 
 
@@ -230,6 +232,8 @@ public:
 		_decode();
 		return _decoded_body;
 	}
+
+	std::string to_text(bool decode);
 };
 
 

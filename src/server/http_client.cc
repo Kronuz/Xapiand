@@ -2502,138 +2502,8 @@ void
 HttpClient::log_request(Request& request)
 {
 	std::string request_prefix = " 🌎  ";
-
-	static constexpr auto no_col = NO_COLOR;
-	auto request_headers_color = no_col.c_str();
-	auto request_head_color = no_col.c_str();
-	auto request_body_color = no_col.c_str();
 	int priority = -LOG_DEBUG;
-
-	switch (HTTP_PARSER_METHOD(&request.parser)) {
-		case HTTP_OPTIONS: {
-			// rgb(13, 90, 167)
-			static constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(30, 77, 124);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(30, 77, 124);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_HEAD: {
-			// rgb(144, 18, 254)
-			static constexpr auto _request_headers_color = rgba(100, 64, 131, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(100, 64, 131);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(100, 64, 131);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_GET: {
-			// rgb(101, 177, 251)
-			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(34, 113, 191);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(34, 113, 191);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_POST: {
-			// rgb(80, 203, 146)
-			static constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(55, 100, 79);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(55, 100, 79);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_PATCH: {
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_MERGE: {
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_STORE: {
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_PUT: {
-			// rgb(250, 160, 63)
-			static constexpr auto _request_headers_color = rgba(158, 95, 28, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 95, 28);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(158, 95, 28);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		case HTTP_DELETE: {
-			// rgb(246, 64, 68)
-			static constexpr auto _request_headers_color = rgba(151, 31, 34, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(151, 31, 34);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(151, 31, 34);
-			request_body_color = _request_body_color.c_str();
-			break;
-		}
-		default:
-			break;
-	};
-
-	auto request_text = request_head_color + request.head + "\n" + request_headers_color + request.headers + request_body_color;
-	if (!request.raw.empty()) {
-		if (Logging::log_level > LOG_DEBUG + 1 && can_preview(request.ct_type)) {
-			// From [https://www.iterm2.com/documentation-images.html]
-			std::string b64_name = cppcodec::base64_rfc4648::encode("");
-			std::string b64_data = cppcodec::base64_rfc4648::encode(request.raw);
-			request_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-				b64_name,
-				b64_data.size());
-			request_text += b64_data;
-			request_text += '\a';
-		} else {
-			if (request.raw.size() > 1024 * 10) {
-				request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
-			} else {
-				auto& decoded_body = request.decoded_body();
-				if (request.ct_type == json_type || request.ct_type == msgpack_type) {
-					request_text += decoded_body.to_string(4);
-				} else {
-					request_text += "<body " + string::from_bytes(request.raw.size()) + ">";
-				}
-			}
-		}
-	} else if (!request.body.empty()) {
-		if (request.body.size() > 1024 * 10) {
-			request_text += "<body " + string::from_bytes(request.body.size()) + ">";
-		} else {
-			request_text += request.body;
-		}
-	}
+	auto request_text = request.to_text(true);
 	L(priority, NO_COLOR, "%s%s", request_prefix, string::indent(request_text, ' ', 4, false));
 }
 
@@ -2642,81 +2512,19 @@ void
 HttpClient::log_response(Response& response)
 {
 	std::string response_prefix = " 💊  ";
-
-	static constexpr auto no_col = NO_COLOR;
-	auto response_headers_color = no_col.c_str();
-	auto response_head_color = no_col.c_str();
-	auto response_body_color = no_col.c_str();
 	int priority = -LOG_DEBUG;
-
-	if ((int)response.status >= 200 && (int)response.status <= 299) {
-		static constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(68, 136, 68);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(68, 136, 68);
-		response_body_color = _response_body_color.c_str();
-	} else if ((int)response.status >= 300 && (int)response.status <= 399) {
+	if ((int)response.status >= 300 && (int)response.status <= 399) {
 		response_prefix = " 💫  ";
-		static constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(68, 136, 120);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(68, 136, 120);
-		response_body_color = _response_body_color.c_str();
 	} else if ((int)response.status == 404) {
 		response_prefix = " 🕸  ";
-		static constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(116, 100, 77);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(116, 100, 77);
-		response_body_color = _response_body_color.c_str();
 		priority = -LOG_INFO;
 	} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 		response_prefix = " 💥  ";
-		static constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(183, 70, 17);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(183, 70, 17);
-		response_body_color = _response_body_color.c_str();
 	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 		response_prefix = " 🔥  ";
-		static constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(190, 30, 10);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(190, 30, 10);
-		response_body_color = _response_body_color.c_str();
 		priority = -LOG_ERR;
 	}
-
-	auto response_text = response_head_color + response.head + "\n" + response_headers_color + response.headers + response_body_color;
-	if (!response.blob.empty()) {
-		if (Logging::log_level > LOG_DEBUG + 1 && can_preview(response.ct_type)) {
-			// From [https://www.iterm2.com/documentation-images.html]
-			std::string b64_name = cppcodec::base64_rfc4648::encode("");
-			std::string b64_data = cppcodec::base64_rfc4648::encode(response.blob);
-			response_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
-				b64_name,
-				b64_data.size());
-			response_text += b64_data;
-			response_text += '\a';
-		} else {
-			if (response.blob.size() > 1024 * 10) {
-				response_text += "<blob " + string::from_bytes(response.blob.size()) + ">";
-			} else {
-				response_text += "<blob " + string::from_bytes(response.blob.size()) + ">";
-			}
-		}
-	} else if (!response.body.empty()) {
-		if (response.size > 1024 * 10) {
-			response_text += "<body " + string::from_bytes(response.size) + ">";
-		} else {
-			response_text += response.body;
-		}
-	}
+	auto response_text = response.to_text(true);
 	L(priority, NO_COLOR, "%s%s", response_prefix, string::indent(response_text, ' ', 4, false));
 }
 
@@ -3142,8 +2950,245 @@ Request::_decode()
 }
 
 
+std::string
+Request::to_text(bool decode)
+{
+	static constexpr auto no_col = NO_COLOR;
+	auto request_headers_color = no_col.c_str();
+	auto request_head_color = no_col.c_str();
+	auto request_body_color = no_col.c_str();
+
+	switch (HTTP_PARSER_METHOD(&parser)) {
+		case HTTP_OPTIONS: {
+			// rgb(13, 90, 167)
+			static constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(30, 77, 124);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(30, 77, 124);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_HEAD: {
+			// rgb(144, 18, 254)
+			static constexpr auto _request_headers_color = rgba(100, 64, 131, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(100, 64, 131);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(100, 64, 131);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_GET: {
+			// rgb(101, 177, 251)
+			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(34, 113, 191);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(34, 113, 191);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_POST: {
+			// rgb(80, 203, 146)
+			static constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(55, 100, 79);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(55, 100, 79);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_PATCH: {
+			// rgb(88, 226, 194)
+			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_MERGE: {
+			// rgb(88, 226, 194)
+			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_STORE: {
+			// rgb(88, 226, 194)
+			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(51, 136, 116);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(51, 136, 116);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_PUT: {
+			// rgb(250, 160, 63)
+			static constexpr auto _request_headers_color = rgba(158, 95, 28, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(158, 95, 28);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(158, 95, 28);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		case HTTP_DELETE: {
+			// rgb(246, 64, 68)
+			static constexpr auto _request_headers_color = rgba(151, 31, 34, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(151, 31, 34);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_body_color = rgb(151, 31, 34);
+			request_body_color = _request_body_color.c_str();
+			break;
+		}
+		default:
+			break;
+	};
+
+	auto request_text = request_head_color + head + "\n" + request_headers_color + headers + request_body_color;
+	if (!raw.empty()) {
+		if (!decode) {
+			if (raw.size() > 1024 * 10) {
+				request_text += "<body " + string::from_bytes(raw.size()) + ">";
+			} else {
+				request_text += "<body " + repr(raw, true, true, 500) + ">";
+			}
+		} else if (Logging::log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
+			// From [https://www.iterm2.com/documentation-images.html]
+			std::string b64_name = cppcodec::base64_rfc4648::encode("");
+			std::string b64_data = cppcodec::base64_rfc4648::encode(raw);
+			request_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				b64_name,
+				b64_data.size());
+			request_text += b64_data;
+			request_text += '\a';
+		} else {
+			if (raw.size() > 1024 * 10) {
+				request_text += "<body " + string::from_bytes(raw.size()) + ">";
+			} else {
+				auto& decoded = decoded_body();
+				if (ct_type == json_type || ct_type == msgpack_type) {
+					request_text += decoded.to_string(4);
+				} else {
+					request_text += "<body " + string::from_bytes(raw.size()) + ">";
+				}
+			}
+		}
+	} else if (!body.empty()) {
+		if (!decode) {
+			if (body.size() > 1024 * 10) {
+				request_text += "<body " + string::from_bytes(body.size()) + ">";
+			} else {
+				request_text += "<body " + repr(body, true, true, 500) + ">";
+			}
+		} else if (body.size() > 1024 * 10) {
+			request_text += "<body " + string::from_bytes(body.size()) + ">";
+		} else {
+			request_text += body;
+		}
+	}
+
+	return request_text;
+}
+
+
 Response::Response()
 	: status{HTTP_STATUS_OK},
 	  size{0}
 {
+}
+
+
+std::string
+Response::to_text(bool decode)
+{
+	static constexpr auto no_col = NO_COLOR;
+	auto response_headers_color = no_col.c_str();
+	auto response_head_color = no_col.c_str();
+	auto response_body_color = no_col.c_str();
+
+	if ((int)status >= 200 && (int)status <= 299) {
+		static constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		static constexpr auto _response_head_color = brgb(68, 136, 68);
+		response_head_color = _response_head_color.c_str();
+		static constexpr auto _response_body_color = rgb(68, 136, 68);
+		response_body_color = _response_body_color.c_str();
+	} else if ((int)status >= 300 && (int)status <= 399) {
+		static constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		static constexpr auto _response_head_color = brgb(68, 136, 120);
+		response_head_color = _response_head_color.c_str();
+		static constexpr auto _response_body_color = rgb(68, 136, 120);
+		response_body_color = _response_body_color.c_str();
+	} else if ((int)status == 404) {
+		static constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		static constexpr auto _response_head_color = brgb(116, 100, 77);
+		response_head_color = _response_head_color.c_str();
+		static constexpr auto _response_body_color = rgb(116, 100, 77);
+		response_body_color = _response_body_color.c_str();
+	} else if ((int)status >= 400 && (int)status <= 499) {
+		static constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		static constexpr auto _response_head_color = brgb(183, 70, 17);
+		response_head_color = _response_head_color.c_str();
+		static constexpr auto _response_body_color = rgb(183, 70, 17);
+		response_body_color = _response_body_color.c_str();
+	} else if ((int)status >= 500 && (int)status <= 599) {
+		static constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
+		response_headers_color = _response_headers_color.c_str();
+		static constexpr auto _response_head_color = brgb(190, 30, 10);
+		response_head_color = _response_head_color.c_str();
+		static constexpr auto _response_body_color = rgb(190, 30, 10);
+		response_body_color = _response_body_color.c_str();
+	}
+
+	auto response_text = response_head_color + head + "\n" + response_headers_color + headers + response_body_color;
+	if (!blob.empty()) {
+		if (!decode) {
+			if (blob.size() > 1024 * 10) {
+				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+			} else {
+				response_text += "<blob " + repr(blob, true, true, 500) + ">";
+			}
+		} else if (Logging::log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
+			// From [https://www.iterm2.com/documentation-images.html]
+			std::string b64_name = cppcodec::base64_rfc4648::encode("");
+			std::string b64_data = cppcodec::base64_rfc4648::encode(blob);
+			response_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+				b64_name,
+				b64_data.size());
+			response_text += b64_data;
+			response_text += '\a';
+		} else {
+			if (blob.size() > 1024 * 10) {
+				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+			} else {
+				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+			}
+		}
+	} else if (!body.empty()) {
+		if (!decode) {
+			if (size > 1024 * 10) {
+				response_text += "<body " + string::from_bytes(size) + ">";
+			} else {
+				response_text += "<body " + repr(body, true, true, 500) + ">";
+			}
+		} else if (size > 1024 * 10) {
+			response_text += "<body " + string::from_bytes(size) + ">";
+		} else {
+			response_text += body;
+		}
+	}
+
+	return response_text;
 }
