@@ -358,7 +358,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 				}
 				L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-				THROW(NotFoundError, "Database not found: %s", repr(endpoints.to_string()));
+				THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoints.to_string()));
 			}
 
 			if (locks) {
@@ -415,7 +415,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	if (!database) {
 		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-		THROW(NotFoundError, "Database not found: %s", repr(endpoints.to_string()));
+		THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoints.to_string()));
 	}
 
 	// Reopening of old/outdated databases:
@@ -569,7 +569,7 @@ DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path
 	try {
 		checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
 		database->close();
-	} catch (const NotFoundError&) {
+	} catch (const DatabaseNotFoundError&) {
 		// Database still doesn't exist, just move files
 	}
 

@@ -279,7 +279,7 @@ Database::reopen_writable()
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
 				if ((flags & DB_SPAWN) == 0) {
-					THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+					THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
 				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
 			}
@@ -408,7 +408,7 @@ Database::reopen_readable()
 					if ((flags & DB_SPAWN) == 0)  {
 						if (endpoints.size() == failures) {
 							db.reset();
-							THROW(NotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
 						incomplete = true;
 					} else {

@@ -276,7 +276,7 @@ Replication::reply_welcome(const std::string&)
 		message.append(serialise_string(db()->get_uuid()));
 		message.append(serialise_length(db()->get_revision()));
 		message.append(serialise_string(endpoints[0].path));
-	} catch (const NotFoundError&) {
+	} catch (const DatabaseNotFoundError&) {
 		message.append(serialise_string(""));
 		message.append(serialise_length(0));
 		message.append(serialise_string(endpoints[0].path));
