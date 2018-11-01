@@ -211,6 +211,7 @@ public:
 
 	int indented;
 	bool expect_100;
+	bool closing;
 
 	std::string host;
 
@@ -263,7 +264,6 @@ class HttpClient : public BaseClient {
 	std::mutex runner_mutex;
 	std::deque<Request> requests;
 	Endpoints endpoints;
-
 
 	static int message_begin_cb(http_parser* parser);
 	static int url_cb(http_parser* parser, const char* at, size_t length);

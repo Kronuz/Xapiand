@@ -780,6 +780,10 @@ HttpClient::on_headers_complete(http_parser* parser)
 		write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
+	if (parser->http_major == 1 && parser->http_minor == 0) {
+		new_request.closing = true;
+	}
+
 	return 0;
 }
 
@@ -989,6 +993,12 @@ HttpClient::run()
 			throw;
 		}
 		lk.lock();
+
+		if (request.closing) {
+			destroy();
+			detach();
+			break;
+		}
 	}
 
 	running = false;
@@ -3117,6 +3127,7 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 Request::Request(HttpClient* client)
 	: indented{-1},
 	  expect_100{false},
+	  closing{false},
 	  log{L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release()},
 	  begins{std::chrono::system_clock::now()}
 {
