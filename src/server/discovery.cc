@@ -396,7 +396,7 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			if (XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 			}
-			L_INFO("Advertising as %s...", local_node->name());
+			L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
 			send_message(Message::HELLO, local_node->serialise());
 			break;
 		}

@@ -812,7 +812,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 {
 	L_CALL("XapiandManager::new_leader(%s)", repr(leader_node->name()));
 
-	L_INFO("New leader of cluster %s is %s", opts.cluster_name, leader_node->name());
+	L_INFO("New leader of cluster %s is %s%s", opts.cluster_name, leader_node->col().ansi(), leader_node->name());
 
 	if (Node::is_local(leader_node)) {
 		// If we get promoted to leader, we immediately try to sync the known nodes:
