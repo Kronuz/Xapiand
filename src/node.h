@@ -47,6 +47,8 @@
 constexpr double NODE_LIFESPAN = 120.0;
 
 
+class color;
+
 class Node {
 	std::string _host;
 	std::string _name;
@@ -172,6 +174,8 @@ public:
 	std::string to_string() const {
 		return _name;
 	}
+
+	color col() const;
 
 	static bool is_equal(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
 		return a && b && (a == b || *a == *b);

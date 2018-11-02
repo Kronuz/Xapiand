@@ -62,13 +62,8 @@ set_as_title(const std::shared_ptr<const Node>& node)
 		Logging::badge(node->name());
 
 		// Set tab color
-		double hue = fnv1ah64::hash(node->name());
-		hue = hue + (hue / 0.618033988749895);
-		double saturation = 0.6;
-		double value = 0.75;
-		double red, green, blue;
-		hsv2rgb(hue, saturation, value, red, green, blue);
-		Logging::tab_rgb(red * 255, green * 255, blue * 255);
+		auto col = node->col();
+		Logging::tab_rgb(col.red(), col.green(), col.blue());
 	}
 }
 
@@ -451,3 +446,16 @@ Node::nodes()
 }
 
 #endif
+
+
+color
+Node::col() const
+{
+	double hue = fnv1ah64::hash(_name);
+	hue = hue + (hue / 0.618033988749895);
+	double saturation = 0.6;
+	double value = 0.75;
+	double red, green, blue;
+	hsv2rgb(hue, saturation, value, red, green, blue);
+	return color(red * 255, green * 255, blue * 255);
+}
