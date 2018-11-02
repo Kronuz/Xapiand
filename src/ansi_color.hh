@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#pragma once
+
 #include <string>             // for string
 #include <stdlib.h>           // for getenv
 
@@ -111,13 +113,13 @@ class ansi_color {
 	}
 
 public:
-	static constexpr auto col() {
-		constexpr auto col = (
+	static constexpr auto ansi() {
+		constexpr auto ansi = (
 			trueColor() +
 			standard256() +
 			standard16()
 		);
-		return col;
+		return ansi;
 	}
 
 	static constexpr auto clear_color() {
@@ -136,9 +138,9 @@ public:
 };
 
 
-#define rgb(r, g, b)      (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::col())
-#define rgba(r, g, b, a)  (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::col())
-#define brgb(r, g, b)     (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::col())
-#define brgba(r, g, b, a) (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::col())
+#define rgb(r, g, b)      (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b)>::ansi())
+#define rgba(r, g, b, a)  (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f)>::ansi())
+#define brgb(r, g, b)     (ansi_color<static_cast<int>(r), static_cast<int>(g), static_cast<int>(b), true>::ansi())
+#define brgba(r, g, b, a) (ansi_color<static_cast<int>(r * a + 0.5f), static_cast<int>(g * a + 0.5f), static_cast<int>(b * a + 0.5f), true>::ansi())
 #define clear_color()     (ansi_color<0, 0, 0>::clear_color())
 #define no_color()        (ansi_color<0, 0, 0>::no_color())
