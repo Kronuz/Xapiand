@@ -135,7 +135,7 @@ public:
 	// iTerm2
 	static void set_mark();
 	static void tab_rgb(int red, int green, int blue);
-	static void tab_title(std::string_view title, bool colorized = false);
+	static void tab_title(std::string_view title);
 	static void badge(std::string_view badge);
 	static void growl(std::string_view text);
 	static void reset();

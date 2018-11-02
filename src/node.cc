@@ -25,6 +25,8 @@
 #include <cstdlib>              // for atoi
 #include <xapian.h>             // for SerialisationError
 
+#include "color_tools.hh"       // for hsv2rgb
+#include "hashes.hh"            // for fnv1ah32::hash
 #include "length.h"             // for serialise_length, unserialise_length, ser...
 #include "log.h"                // for L_CALL
 #include "logger.h"             // for Logging::tab_title, Logging::badge
@@ -51,11 +53,23 @@ static inline void
 set_as_title(const std::shared_ptr<const Node>& node)
 {
 	if (node && !node->name().empty()) {
-		auto title = node->idx
+		// Set window title
+		Logging::tab_title(node->idx
 			? string::format("[%d] %s", node->idx, node->name())
-			: node->name();
+			: node->name());
+
+		// Set iTerm2 badge
 		Logging::badge(node->name());
-		Logging::tab_title(title, !!node->idx);
+
+		// Set tab color
+		double PHI = 0.618033988749895;
+		auto random_hue = fnv1ah32::hash(node->name()) % 360;
+		double hue = static_cast<int>(random_hue + (random_hue / PHI)) % 360;
+		double saturation = 0.6;
+		double value = 0.75;
+		double red, green, blue;
+		hsv2rgb(hue, saturation, value, red, green, blue);
+		Logging::tab_rgb(red * 255, green * 255, blue * 255);
 	}
 }
 

@@ -38,10 +38,8 @@
 
 #include "base_x.hh"          // for Base64
 #include "bloom_filter.hh"    // for BloomFilter
-#include "color_tools.hh"     // for hsv2rgb
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
-#include "hashes.hh"          // for fnv1ah32::hash
 #include "ignore_unused.h"    // for ignore_unused
 #include "opts.h"             // for opts
 #include "thread.hh"          // for get_thread_name
@@ -372,20 +370,10 @@ Logging::tab_rgb(int red, int green, int blue)
 }
 
 void
-Logging::tab_title(std::string_view title, bool colorized)
+Logging::tab_title(std::string_view title)
 {
 	if (is_tty()) {
 		std::cerr << string::format("\033]0;%s\a", title);
-		if (colorized) {
-			double PHI = 0.618033988749895;
-			auto random_hue = fnv1ah32::hash(title) % 360;
-			double hue = static_cast<int>(random_hue + (random_hue / PHI)) % 360;
-			double saturation = 0.6;
-			double value = 0.75;
-			double red, green, blue;
-			hsv2rgb(hue, saturation, value, red, green, blue);
-			tab_rgb(red * 255, green * 255, blue * 255);
-		}
 	}
 }
 
