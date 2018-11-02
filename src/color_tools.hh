@@ -24,6 +24,9 @@
 
 #include <cmath>             // for std::fmod
 
+#include "ansi_color.hh"
+#include "string.hh"
+
 
 static inline void
 hsv2rgb(
@@ -89,3 +92,82 @@ hsv2rgb(
 	}
 	return;
 }
+
+
+class color {
+	// non-constexpr version of ansi_color
+
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+
+	auto trueColor(bool bold) {
+		auto trueColor = string::format(ESC "[%d;38;2;%d;%d;%dm", bold ? 1 : 0, r, g, b);
+		return trueColor;
+	}
+
+	auto standard256(bool bold) {
+		uint8_t color = static_cast<uint8_t>((r == g && g == b) ? (
+			r < 6 ? 16 :
+			r > 249 ? 231 :
+			231 + static_cast<int>((r * 25.0f / 255.0f) + 0.5f)
+		) : (
+			16 +
+			(static_cast<int>(r / 255.0f * 5.0f + 0.5f) * 36) +
+			(static_cast<int>(g / 255.0f * 5.0f + 0.5f) * 6) +
+			(static_cast<int>(b / 255.0f * 5.0f + 0.5f))
+		));
+		auto standard256 = string::format(ESC "[%d;38;5;%dm", bold ? 1 : 0, color);
+		return standard256;
+	}
+
+	auto standard16(bool bold) {
+		auto _min = r < g ? r : g;
+		auto min = _min < b ? _min : b;
+		auto _max = r > g ? r : g;
+		auto max = _max > b ? _max : b;
+		uint8_t color = static_cast<uint8_t>((r == g && g == b) ? (
+			r > 192 ? 15 :
+			r > 128 ? 7 :
+			r > 32 ? 8 :
+			0
+		) : (
+			(max <= 32) ? (
+				0
+			) : (
+				(
+					((static_cast<int>((b - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 2) |
+					((static_cast<int>((g - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0) << 1) |
+					((static_cast<int>((r - min) * 255.0f / (max - min) + 0.5f) > 128 ? 1 : 0))
+				) + (max > 192 ? 8 : 0)
+			)
+		));
+		auto standard16 = string::format(ESC "[%d;38;5;%dm", bold ? 1 : 0, color);
+		return standard16;
+	}
+
+public:
+	color(uint8_t red, uint8_t green, uint8_t blue) :
+		r(red), g(green), b(blue) {}
+
+	auto red() {
+		return r;
+	}
+
+	auto green() {
+		return g;
+	}
+
+	auto blue() {
+		return b;
+	}
+
+	auto ansi(bool bold) {
+		auto ansi = (
+			trueColor(bold) +
+			standard256(bold) +
+			standard16(bold)
+		);
+		return ansi;
+	}
+};
