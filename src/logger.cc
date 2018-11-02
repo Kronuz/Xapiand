@@ -40,6 +40,7 @@
 #include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
+#include "hashes.hh"          // for fnv1ah32::hash
 #include "ignore_unused.h"    // for ignore_unused
 #include "opts.h"             // for opts
 #include "thread.hh"          // for get_thread_name
@@ -371,10 +372,25 @@ Logging::tab_rgb(int red, int green, int blue)
 
 
 void
-Logging::tab_title(std::string_view title)
+Logging::tab_title(std::string_view title, bool colorized)
 {
 	if (is_tty()) {
 		std::cerr << string::format("\033]0;%s\a", title);
+		if (colorized) {
+			auto title_hash = fnv1ah32::hash(title);
+			auto a = (title_hash >> 24) & 0xff;
+			auto r = ((((title_hash >> 16) & 0xff) * a) / 0xff) & 0xff;
+			auto g = ((((title_hash >> 8) & 0xff) * a) / 0xff) & 0xff;
+			auto b = (((title_hash & 0xff) * a) / 0xff) & 0xff;
+			if (r < g && g < b) {
+				r /= 2;
+			} else if (g < b && b < r) {
+				g /= 2;
+			} else if (b < r && r < g) {
+				b /= 2;
+			}
+			tab_rgb(r, g, b);
+		}
 	}
 }
 
