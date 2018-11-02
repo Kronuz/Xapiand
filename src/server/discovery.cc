@@ -24,6 +24,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <sysexits.h>                       // for EX_SOFTWARE
+
 #include "cassert.hh"                       // for assert
 
 #include "color_tools.hh"                   // for color
@@ -267,10 +269,9 @@ Discovery::sneer(Message type, const std::string& message)
 			XapiandManager::manager->reset_state();
 		} else {
 			XapiandManager::manager->state.store(XapiandManager::State::BAD);
-			L_WARNING("Cannot join the party. Node name %s already taken!", local_node->name());
 			Node::local_node(std::make_shared<const Node>());
-			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
-			XapiandManager::manager->shutdown_sig(0);
+			L_CRIT("Cannot join the party. Node name %s already taken!", local_node->name());
+			sig_exit(-EX_SOFTWARE);
 		}
 	}
 }
