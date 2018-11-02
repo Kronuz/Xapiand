@@ -54,6 +54,7 @@
 
 #include "allocator.h"                        // for allocator::total_allocated
 #include "async_fsync.h"                      // for AsyncFsync
+#include "color_tools.hh"                     // for color
 #include "database_pool.h"                    // for DatabasePool
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
@@ -391,22 +392,22 @@ XapiandManager::setup_node()
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("%s using solo cluster %s", local_node->name(), opts.cluster_name);
+				L_NOTICE("%s%s" + NOTICE_COL + " using solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("%s using new solo cluster %s", local_node->name(), opts.cluster_name);
+				L_NOTICE("%s%s" + NOTICE_COL + " using new solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
 				break;
 		}
 	} else {
 		switch (new_cluster) {
 			case 0:
-				L_NOTICE("%s joined cluster %s (it is now online!)", local_node->name(), opts.cluster_name);
+				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("%s joined new cluster %s (it is now online!)", local_node->name(), opts.cluster_name);
+				L_NOTICE("%s%s" + NOTICE_COL + " joined new cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
 				break;
 			case 2:
-				L_NOTICE("%s joined cluster %s (it was already online!)", local_node->name(), opts.cluster_name);
+				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it was already online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
 				break;
 		}
 	}

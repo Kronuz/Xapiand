@@ -26,6 +26,7 @@
 
 #include "cassert.hh"                       // for assert
 
+#include "color_tools.hh"                   // for color
 #include "ignore_unused.h"                  // for ignore_unused
 #include "length.h"                         // for serialise_length, unserialise_length
 #include "log.h"                            // for L_CALL, L_EV
@@ -827,10 +828,10 @@ Raft::_apply(const std::string& command)
 	auto put = Node::put_node(node, false);
 
 	if (put.first == nullptr) {
-		L_DEBUG("Denied node: [%zu] %s", node->idx, node->name());
+		L_DEBUG("Denied node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
 	} else {
 		node = put.first;
-		L_DEBUG("Added node: [%zu] %s", node->idx, node->name());
+		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
 	}
 }
 

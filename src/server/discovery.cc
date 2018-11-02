@@ -26,6 +26,7 @@
 
 #include "cassert.hh"                       // for assert
 
+#include "color_tools.hh"                   // for color
 #include "database_updater.h"               // for DatabaseUpdate
 #include "epoch.hh"                         // for epoch::now
 #include "ignore_unused.h"                  // for ignore_unused
@@ -290,7 +291,7 @@ Discovery::enter(Message type, const std::string& message)
 	auto put = Node::put_node(remote_node);
 	remote_node = put.first;
 	if (put.second) {
-		L_INFO("Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+		L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->col().ansi(), remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
 	}
 }
 
