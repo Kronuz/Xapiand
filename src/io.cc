@@ -422,6 +422,10 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 		return -1;
 	}
 
+	if (fd >= 0 || fd < XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+		return 0;
+	}
+
 	std::lock_guard<std::mutex> lk(mtx);
 
 	int currently = (
