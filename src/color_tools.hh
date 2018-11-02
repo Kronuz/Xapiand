@@ -22,10 +22,19 @@
 
 #pragma once
 
+#include <cmath>             // for std::fmod
+
+
 static inline void
 hsv2rgb(
-	double hue, double saturation, double value,
-	double& red, double& green, double& blue
+	// input:
+	double hue,        // angle in degrees between 0 and 360
+	double saturation, // a fraction between 0 and 1
+	double value,      // a fraction between 0 and 1
+	// output:
+	double& red,       // a fraction between 0 and 1
+	double& green,     // a fraction between 0 and 1
+	double& blue       // a fraction between 0 and 1
 ) {
 	if (saturation <= 0.0) {
 		red = value;
@@ -34,16 +43,16 @@ hsv2rgb(
 		return;
 	}
 
-	auto hh = hue;
-	if (hh >= 360.0) {
-		hh = 0.0;
+	if (hue >= 360.0) {
+		hue = std::fmod(hue, 360.0);
 	}
-	hh /= 60.0;
-	auto i = static_cast<long>(hh);
-	auto ff = hh - i;
+
+	hue /= 60.0;
+	auto i = static_cast<long>(hue);
+	auto f = hue - i;
 	auto p = value * (1.0 - saturation);
-	auto q = value * (1.0 - (saturation * ff));
-	auto t = value * (1.0 - (saturation * (1.0 - ff)));
+	auto q = value * (1.0 - (saturation * f));
+	auto t = value * (1.0 - (saturation * (1.0 - f)));
 
 	switch (i) {
 		case 0:
