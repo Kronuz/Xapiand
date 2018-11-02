@@ -62,9 +62,8 @@ set_as_title(const std::shared_ptr<const Node>& node)
 		Logging::badge(node->name());
 
 		// Set tab color
-		double PHI = 0.618033988749895;
-		auto random_hue = fnv1ah32::hash(node->name()) % 360;
-		double hue = static_cast<int>(random_hue + (random_hue / PHI)) % 360;
+		double hue = fnv1ah32::hash(node->name()) % 360;
+		// hue = static_cast<int>(hue + (hue / 0.618033988749895)) % 360;
 		double saturation = 0.6;
 		double value = 0.75;
 		double red, green, blue;
