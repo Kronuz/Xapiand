@@ -965,6 +965,7 @@ void banner() {
 	}
 }
 
+
 void setup() {
 	// Flush threshold:
 	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");

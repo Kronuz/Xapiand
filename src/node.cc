@@ -26,7 +26,8 @@
 #include <xapian.h>             // for SerialisationError
 
 #include "length.h"             // for serialise_length, unserialise_length, ser...
-#include "log.h"
+#include "log.h"                // for L_CALL
+#include "logger.h"             // for Logging::tab_title, Logging::badge
 #include "opts.h"               // for opts
 #include "serialise.h"          // for Serialise
 #include "string.hh"            // for string::Number
@@ -44,6 +45,19 @@
 			Node::is_leader(_.second) ? " (leader)" : ""); \
 	}
 #endif
+
+
+static inline void
+set_as_title(const std::shared_ptr<const Node>& node)
+{
+	if (node && !node->name().empty()) {
+		auto title = node->idx
+			? string::format("[%d] %s", node->idx, node->name())
+			: node->name();
+		Logging::badge(node->name());
+		Logging::tab_title(title, !!node->idx);
+	}
+}
 
 
 std::string
@@ -95,6 +109,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 {
 	atomic_shared_ptr<const Node> _local_node{std::make_shared<const Node>()};
 	if (node) {
+		set_as_title(node);
 		_local_node.store(node);
 	}
 	return _local_node.load();
@@ -127,6 +142,9 @@ Node::_update_nodes(const std::shared_ptr<const Node>& node)
 {
 	auto local_node_ = _local_node.load();
 	if (node->lower_name() == local_node_->lower_name()) {
+		if (node->idx != local_node_->idx) {
+			set_as_title(node);
+		}
 		_local_node.store(node);
 	}
 
@@ -166,6 +184,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
 		node = std::shared_ptr<const Node>(node_copy.release());
+		set_as_title(node);
 		_local_node.store(node);
 		auto leader_node_ = _leader_node.load();
 		if (node->lower_name() == leader_node_->lower_name()) {
@@ -210,6 +229,9 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		_leader_node.store(node);
 		auto local_node_ = _local_node.load();
 		if (node->lower_name() == local_node_->lower_name()) {
+			if (node->idx != local_node_->idx) {
+				set_as_title(node);
+			}
 			_local_node.store(node);
 		}
 
