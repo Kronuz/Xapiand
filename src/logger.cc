@@ -36,6 +36,7 @@
 #include <utility>
 #include <vector>             // for vector
 
+#include "base_x.hh"          // for Base64
 #include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
@@ -75,6 +76,14 @@ static const std::string priorities[MAX_PRIORITY + 1] = {
 
 
 const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)", std::regex::optimize);
+
+
+static inline bool
+is_tty()
+{
+	static const bool is_tty = ::isatty(STDERR_FILENO) != 0;
+	return is_tty;
+}
 
 
 static inline const std::string&
@@ -211,8 +220,7 @@ StreamLogger::log(int priority, std::string_view str, bool with_priority, bool w
 void
 StderrLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
-	static const bool is_tty = ::isatty(STDERR_FILENO) != 0;
-	bool colorized = (is_tty || Logging::colors) && !Logging::no_colors;
+	bool colorized = (is_tty() || Logging::colors) && !Logging::no_colors;
 	std::cerr << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
 	std::cerr << Logging::colorized(str, colorized);
 	if (with_endl) {
@@ -338,6 +346,64 @@ Logging::finish(int wait)
 {
 	scheduler().finish(wait);
 	dump_collected();
+	reset();
+}
+
+
+void
+Logging::set_mark()
+{
+	if (is_tty()) {
+		std::cerr << std::string("\033]1337;SetMark\a");
+	}
+}
+
+
+void
+Logging::tab_rgb(int red, int green, int blue)
+{
+	if (is_tty()) {
+		std::cerr << string::format("\033]6;1;bg;red;brightness;%d\a", red);
+		std::cerr << string::format("\033]6;1;bg;green;brightness;%d\a", green);
+		std::cerr << string::format("\033]6;1;bg;blue;brightness;%d\a", blue);
+	}
+}
+
+
+void
+Logging::tab_title(std::string_view title)
+{
+	if (is_tty()) {
+		std::cerr << string::format("\033]0;%s\a", title);
+	}
+}
+
+
+void
+Logging::badge(std::string_view badge)
+{
+	if (is_tty()) {
+		std::cerr << string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
+	}
+}
+
+
+void
+Logging::growl(std::string_view text)
+{
+	if (is_tty()) {
+		std::cerr << string::format("\033]9;%s\a", text);
+	}
+}
+
+
+void
+Logging::reset()
+{
+	if (is_tty()) {
+		std::cerr << std::string("\033]1337;SetBadgeFormat=\a");
+		std::cerr << std::string("\033]6;1;bg;*;default\a");
+	}
 }
 
 

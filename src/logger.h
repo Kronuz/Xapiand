@@ -132,6 +132,14 @@ public:
 	static void join();
 	static void dump_collected();
 
+	// iTerm2
+	static void set_mark();
+	static void tab_rgb(int red, int green, int blue);
+	static void tab_title(std::string_view title);
+	static void badge(std::string_view badge);
+	static void growl(std::string_view text);
+	static void reset();
+
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
 	static Log do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
