@@ -162,7 +162,7 @@ public:
 		return b;
 	}
 
-	auto ansi(bool bold) {
+	auto ansi(bool bold = false) {
 		auto ansi = (
 			trueColor(bold) +
 			standard256(bold) +
