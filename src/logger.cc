@@ -548,6 +548,11 @@ Logging::run()
 		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
 	}
 
+	if (priority >= -LOG_ERR && priority <= LOG_ERR) {
+		Logging::growl(Logging::colorized(str, false));
+		Logging::set_mark();
+	}
+
 	log(priority, msg, stack_level * 2);
 }
 
