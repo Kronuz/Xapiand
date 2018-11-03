@@ -59,6 +59,10 @@
 // #define L_TCP_ENQUEUE L_GREEN
 // #undef L_TCP_WIRE
 // #define L_TCP_WIRE L_WHITE
+// #undef L_EV_BEGIN
+// #define L_EV_BEGIN L_DELAYED_200
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 #define BUF_SIZE 4096

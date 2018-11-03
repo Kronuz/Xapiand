@@ -47,6 +47,10 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DISCOVERY
 // #define L_DISCOVERY L_SALMON
+// #undef L_EV_BEGIN
+// #define L_EV_BEGIN L_DELAYED_200
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&);
