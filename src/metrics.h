@@ -77,9 +77,13 @@ public:
 	// connections:
 	prometheus::Gauge& xapiand_http_current_connections;
 	prometheus::Gauge& xapiand_http_peak_connections;
+	prometheus::Counter& xapiand_http_sent_bytes;
+	prometheus::Counter& xapiand_http_received_bytes;
 
 	prometheus::Gauge& xapiand_binary_current_connections;
 	prometheus::Gauge& xapiand_binary_peak_connections;
+	prometheus::Counter& xapiand_binary_sent_bytes;
+	prometheus::Counter& xapiand_binary_received_bytes;
 
 	// file_descriptors:
 	prometheus::Gauge& xapiand_file_descriptors;

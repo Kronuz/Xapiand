@@ -30,42 +30,42 @@
 #include "system.hh"                          // for check_compiler, check_OS
 
 
-Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)
-	: constant_labels{constant_labels_},
-	  xapiand_operations_summary{
+Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
+	constant_labels{constant_labels_},
+	xapiand_operations_summary{
 		registry.AddSummary(
 			"xapiand_operations_summary",
 			"Operations summary",
 			constant_labels)
-	  },
-	  xapiand_http_requests_summary{
+	},
+	xapiand_http_requests_summary{
 		registry.AddSummary(
 			"xapiand_http_requests_summary",
 			"HTTP requests summary",
 			constant_labels)
-	  },
-	  xapiand_wal_errors{
+	},
+	xapiand_wal_errors{
 		registry.AddCounter(
 			"xapiand_wal_errors",
 			"WAL errors",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_uptime{
+	},
+	xapiand_uptime{
 		registry.AddGauge(
 			"xapiand_uptime",
 			"Server uptime in seconds",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_running{
+	},
+	xapiand_running{
 		registry.AddGauge(
 			"xapiand_running",
 			"If the node is actually running",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_info{
+	},
+	xapiand_info{
 		registry.AddGauge(
 			"xapiand_info",
 			"Version string as reported by Xapiand",
@@ -82,266 +82,294 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_)
 			{"os", check_OS()},
 			{"arch", check_architecture()},
 		})
-	  },
-	  xapiand_clients_running{
+	},
+	xapiand_clients_running{
 		registry.AddGauge(
 			"xapiand_clients_running",
 			"Amount of clients running",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_clients_queue_size{
+	},
+	xapiand_clients_queue_size{
 		registry.AddGauge(
 			"xapiand_clients_queue_size",
 			"Clients in the queue",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_clients_capacity{
+	},
+	xapiand_clients_capacity{
 		registry.AddGauge(
 			"xapiand_clients_capacity",
 			"Client queue capacity",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_clients_pool_size{
+	},
+	xapiand_clients_pool_size{
 		registry.AddGauge(
 			"xapiand_clients_pool_size",
 			"Client total pool size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_servers_running{
+	},
+	xapiand_servers_running{
 		registry.AddGauge(
 			"xapiand_servers_running",
 			"Amount of servers running",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_servers_queue_size{
+	},
+	xapiand_servers_queue_size{
 		registry.AddGauge(
 			"xapiand_servers_queue_size",
 			"Servers in the queue",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_servers_capacity{
+	},
+	xapiand_servers_capacity{
 		registry.AddGauge(
 			"xapiand_servers_capacity",
 			"Server queue capacity",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_servers_pool_size{
+	},
+	xapiand_servers_pool_size{
 		registry.AddGauge(
 			"xapiand_servers_pool_size",
 			"Server pool size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_committers_running{
+	},
+	xapiand_committers_running{
 		registry.AddGauge(
 			"xapiand_committers_running",
 			"Amount of committers running",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_committers_queue_size{
+	},
+	xapiand_committers_queue_size{
 		registry.AddGauge(
 			"xapiand_committers_queue_size",
 			"Committers in the queue",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_committers_capacity{
+	},
+	xapiand_committers_capacity{
 		registry.AddGauge(
 			"xapiand_committers_capacity",
 			"Committers queue capacity",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_committers_pool_size{
+	},
+	xapiand_committers_pool_size{
 		registry.AddGauge(
 			"xapiand_committers_pool_size",
 			"Server pool size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_fsync_running{
+	},
+	xapiand_fsync_running{
 		registry.AddGauge(
 			"xapiand_fsync_running",
 			"Amount of fsync running",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_fsync_queue_size{
+	},
+	xapiand_fsync_queue_size{
 		registry.AddGauge(
 			"xapiand_fsync_queue",
 			"Fsync in the queue",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_fsync_capacity{
+	},
+	xapiand_fsync_capacity{
 		registry.AddGauge(
 			"xapiand_fsync_capacity",
 			"Fsync queue capacity",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_fsync_pool_size{
+	},
+	xapiand_fsync_pool_size{
 		registry.AddGauge(
 			"xapiand_fsync_pool_size",
 			"Fsync pool size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_http_current_connections{
+	},
+	xapiand_http_current_connections{
 		registry.AddGauge(
 			"xapiand_http_current_connections",
 			"Current http connections",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_http_peak_connections{
+	},
+	xapiand_http_peak_connections{
 		registry.AddGauge(
 			"xapiand_http_peak_connections",
 			"Max http connections",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_binary_current_connections{
+	},
+	xapiand_http_sent_bytes{
+		registry.AddCounter(
+			"xapiand_http_sent_bytes",
+			"Bytes sent by http connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_http_received_bytes{
+		registry.AddCounter(
+			"xapiand_http_received_bytes",
+			"Bytes received by http connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_binary_current_connections{
 		registry.AddGauge(
 			"xapiand_binary_current_connections",
 			"Current binary connections",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_binary_peak_connections{
+	},
+	xapiand_binary_peak_connections{
 		registry.AddGauge(
 			"xapiand_binary_peak_connections",
 			"Max binary connections",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_file_descriptors{
+	},
+	xapiand_binary_sent_bytes{
+		registry.AddCounter(
+			"xapiand_binary_sent_bytes",
+			"Bytes sent by binary connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_binary_received_bytes{
+		registry.AddCounter(
+			"xapiand_binary_received_bytes",
+			"Bytes received by binary connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_file_descriptors{
 		registry.AddGauge(
 			"xapiand_file_descriptors",
 			"Amount of file descriptors in use",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_max_file_descriptors{
+	},
+	xapiand_max_file_descriptors{
 		registry.AddGauge(
 			"xapiand_max_file_descriptors",
 			"Maximum number of file descriptors",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_free_inodes{
+	},
+	xapiand_free_inodes{
 		registry.AddGauge(
 			"xapiand_free_inodes",
 			"Free inodes",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_max_inodes{
+	},
+	xapiand_max_inodes{
 		registry.AddGauge(
 			"xapiand_max_inodes",
 			"Maximum inodes",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_resident_memory_bytes{
+	},
+	xapiand_resident_memory_bytes{
 		registry.AddGauge(
 			"xapiand_resident_memory_bytes",
 			"Memory in use",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_virtual_memory_bytes{
+	},
+	xapiand_virtual_memory_bytes{
 		registry.AddGauge(
 			"xapiand_virtual_memory_bytes",
 			"Virtual memory in use",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_used_memory_bytes{
+	},
+	xapiand_used_memory_bytes{
 		registry.AddGauge(
 			"xapiand_used_memory_bytes",
 			"Total memory currently allocated",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_total_memory_system_bytes{
+	},
+	xapiand_total_memory_system_bytes{
 		registry.AddGauge(
 			"xapiand_total_memory_system_bytes",
 			"Total memory used",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_total_virtual_memory_used{
+	},
+	xapiand_total_virtual_memory_used{
 		registry.AddGauge(
 			"xapiand_total_virtual_memory_used",
 			"Total virtual memory used",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_total_disk_bytes{
+	},
+	xapiand_total_disk_bytes{
 		registry.AddGauge(
 			"xapiand_total_disk_bytes",
 			"Total disk size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_free_disk_bytes{
+	},
+	xapiand_free_disk_bytes{
 		registry.AddGauge(
 			"xapiand_free_disk_bytes",
 			"Free disk size",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_readable_db_queues{
+	},
+	xapiand_readable_db_queues{
 		registry.AddGauge(
 			"xapiand_readable_db_queues",
 			"Readable database queues",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_readable_db{
+	},
+	xapiand_readable_db{
 		registry.AddGauge(
 			"xapiand_readable_db",
 			"Open databases",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_writable_db_queues{
+	},
+	xapiand_writable_db_queues{
 		registry.AddGauge(
 			"xapiand_writable_db_queues",
 			"Writable database queues",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_writable_db{
+	},
+	xapiand_writable_db{
 		registry.AddGauge(
 			"xapiand_writable_db",
 			"Open writable databases",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_db_queues{
+	},
+	xapiand_db_queues{
 		registry.AddGauge(
 			"xapiand_db_queues",
 			"Total database queues",
 			constant_labels)
 		.Add({})
-	  },
-	  xapiand_db{
+	},
+	xapiand_db{
 		registry.AddGauge(
 			"xapiand_db",
 			"Open databases",
 			constant_labels)
 		.Add({})
-	  }
+	}
 {
 	xapiand_running.Set(1);
 	xapiand_info.Set(1);
