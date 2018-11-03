@@ -311,7 +311,9 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  shutting_down(false),
 	  closed(false),
 	  sock(sock_),
-	  written(0),
+	  writes(0),
+	  total_received_bytes(0),
+	  total_sent_bytes(0),
 	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
@@ -457,12 +459,12 @@ BaseClient::write_from_queue(int fd)
 		const char *buf_data = buffer->data();
 
 #ifdef MSG_NOSIGNAL
-		ssize_t _written = io::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
+		ssize_t sent = io::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
 #else
-		ssize_t _written = io::write(fd, buf_data, buf_size);
+		ssize_t sent = io::write(fd, buf_data, buf_size);
 #endif
 
-		if (_written < 0) {
+		if (sent < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
 				L_CONN("WR:RETRY: {fd:%d} - %d: %s", fd, errno, strerror(errno));
 				return WR::RETRY;
@@ -474,8 +476,10 @@ BaseClient::write_from_queue(int fd)
 			return WR::ERROR;
 		}
 
-		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, _written, true, true, 500), _written);
-		buffer->remove_prefix(_written);
+		total_sent_bytes += sent;
+		L_TCP_WIRE("{fd:%d} <<-- %s (%zu bytes)", fd, repr(buf_data, sent, true, true, 500), sent);
+
+		buffer->remove_prefix(sent);
 		if (buffer->size() == 0) {
 			if (write_queue.pop(buffer)) {
 				if (write_queue.empty()) {
@@ -543,9 +547,9 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 	if (fd == -1) {
 		return false;
 	}
-	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> buffer (%zu bytes)", fd, buffer->full_size());
 
-	written += 1;
+	writes += 1;
+	L_TCP_ENQUEUE("{fd:%d} <ENQUEUE> buffer (%zu bytes)", fd, buffer->full_size());
 
 	switch (write_from_queue(fd, -1)) {
 		case WR::RETRY:
@@ -672,6 +676,8 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 	const char* buf_data = read_buffer;
 	const char* buf_end = read_buffer + received;
+
+	total_received_bytes += received;
 	L_TCP_WIRE("{fd:%d} -->> %s (%zu bytes)", fd, repr(buf_data, received, true, true, 500), received);
 
 	do {

@@ -872,7 +872,7 @@ HttpClient::on_chunk_complete(http_parser* parser)
 void
 HttpClient::run_one(Request& request, Response& response)
 {
-	written = 0;
+	writes = 0;
 	L_OBJ_BEGIN("HttpClient::run:BEGIN");
 
 	request.log->clear();
@@ -961,7 +961,7 @@ HttpClient::run_one(Request& request, Response& response)
 	}
 
 	if (error_code != HTTP_STATUS_OK) {
-		if (written != 0) {
+		if (writes != 0) {
 			destroy();
 			detach();
 		} else {

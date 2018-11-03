@@ -200,7 +200,11 @@ protected:
 	std::atomic_bool shutting_down;
 	std::atomic_bool closed;
 	std::atomic_int sock;
-	int written;
+
+	size_t writes;
+
+	size_t total_received_bytes;
+	size_t total_sent_bytes;
 
 	std::unique_ptr<ClientDecompressor> decompressor;
 
