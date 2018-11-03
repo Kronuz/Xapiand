@@ -372,7 +372,7 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Discovery::discovery_cb:BEGIN");
+	L_EV_BEGIN("Discovery::discovery_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
 
 	switch (state) {
 		case XapiandManager::State::RESET: {
