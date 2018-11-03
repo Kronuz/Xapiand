@@ -40,7 +40,7 @@
 #include <signal.h>                           // for SIGTERM, SIGINT
 #include <string>                             // for std::string, std::to_string
 #include <sys/socket.h>                       // for AF_INET, sockaddr
-#include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT
+#include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
 #include <unistd.h>                           // for ssize_t, getpid
 #include <utility>                            // for std::move
 #include <vector>                             // for std::vector
@@ -153,6 +153,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  node_name(opts.node_name),
 	  atom_sig(0),
 	  signal_sig_async(*ev_loop),
+	  setup_node_async(*ev_loop),
+	  cluster_database_ready_async(*ev_loop),
 	  process_start(process_start_),
 	  cleanup(*ev_loop)
 {
@@ -188,6 +190,12 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
+
+	setup_node_async.set<XapiandManager, &XapiandManager::setup_node_async_cb>(this);
+	setup_node_async.start();
+
+	cluster_database_ready_async.set<XapiandManager, &XapiandManager::cluster_database_ready_async_cb>(this);
+	cluster_database_ready_async.start();
 
 	cleanup.set<XapiandManager, &XapiandManager::cleanup_cb>(this);
 	cleanup.repeat = 60.0;
@@ -265,7 +273,14 @@ XapiandManager::set_node_name(std::string_view node_name_)
 void
 XapiandManager::setup_node()
 {
-	L_CALL("XapiandManager::setup_node()");
+	setup_node_async.send();
+}
+
+
+void
+XapiandManager::setup_node_async_cb(ev::async&, int)
+{
+	L_CALL("XapiandManager::setup_node_async_cb(...)");
 
 	L_MANAGER("Setup Node!");
 
@@ -282,7 +297,7 @@ XapiandManager::setup_node()
 	auto local_node = Node::local_node();
 	auto is_leader = Node::is_equal(leader_node, local_node);
 
-	int new_cluster = 0;
+	new_cluster = 0;
 	Endpoint cluster_endpoint(".", leader_node.get());
 	try {
 		bool found = false;
@@ -357,29 +372,32 @@ XapiandManager::setup_node()
 			assert(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
-			std::promise<bool> promise;
-			auto future = promise.get_future();
-			trigger_replication(cluster_endpoint, local_endpoint, &promise);
-			switch (future.wait_for(60s)) {
-				case std::future_status::ready:
-					if (future.get()) {
-						break;
-					}
-					/* FALLTHROUGH */
-				default:
-					L_CRIT("Cannot synchronize cluster database!");
-					sig_exit(-EX_CANTCREAT);
-					return;
-			}
-			L_INFO("Synchronization completed!");
 			new_cluster = 2;
+			trigger_replication(cluster_endpoint, local_endpoint, true);
+		} else {
+			cluster_database_ready();
 		}
-		state = State::READY;
 	} else
 	#endif
 	{
-		state = State::READY;
+		cluster_database_ready();
 	}
+}
+
+
+void
+XapiandManager::cluster_database_ready()
+{
+	cluster_database_ready_async.send();
+}
+
+
+void
+XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
+{
+	L_CALL("XapiandManager::cluster_database_ready_async_cb(...)");
+
+	state = State::READY;
 
 	if (auto binary = weak_binary.lock()) {
 		binary->start();
@@ -389,6 +407,7 @@ XapiandManager::setup_node()
 		http->start();
 	}
 
+	auto local_node = Node::local_node();
 	if (opts.solo) {
 		switch (new_cluster) {
 			case 0:
@@ -864,12 +883,12 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 
 
 void
-XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
+XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
 {
-	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), promise == nullptr ? "null" : "<promise>");
+	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
 
 	if (auto binary = weak_binary.lock()) {
-		binary->trigger_replication(src_endpoint, dst_endpoint, promise);
+		binary->trigger_replication(src_endpoint, dst_endpoint, cluster_database);
 	}
 }
 

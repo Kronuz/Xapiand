@@ -25,7 +25,6 @@
 #include "config.h"
 
 #include <atomic>                             // for std::atomic, std::atomic_int
-#include <future>                             // for std::future, std::promise
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include "string_view.hh"                     // for std::string_view
@@ -142,9 +141,12 @@ public:
 
 	std::atomic<State> state;
 	std::string node_name;
+	int new_cluster;
 
 	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
+	ev::async setup_node_async;
+	ev::async cluster_database_ready_async;
 	ev::async shutdown_sig_async;
 	std::chrono::time_point<std::chrono::system_clock> process_start;
 
@@ -159,8 +161,10 @@ public:
 	~XapiandManager();
 
 	void setup_node();
+	void setup_node_async_cb(ev::async&, int);
 
-	void setup_node(std::shared_ptr<XapiandServer>&& server);
+	void cluster_database_ready();
+	void cluster_database_ready_async_cb(ev::async&, int);
 
 	void run();
 	void join();
@@ -172,7 +176,7 @@ public:
 	void renew_leader();
 	void new_leader(std::shared_ptr<const Node>&& leader_node);
 
-	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise = nullptr);
+	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database = false);
 #endif
 
 	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);

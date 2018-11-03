@@ -136,14 +136,14 @@ Binary::process_tasks()
 
 
 void
-Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise)
+Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
 {
 	tasks.enqueue([
 		src_endpoint,
 		dst_endpoint,
-		promise
+		cluster_database
 	] (const std::shared_ptr<BinaryServer>& server) mutable {
-		server->trigger_replication(src_endpoint, dst_endpoint, promise);
+		server->trigger_replication(src_endpoint, dst_endpoint, cluster_database);
 	});
 
 	process_tasks();

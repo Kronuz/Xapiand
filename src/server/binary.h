@@ -26,7 +26,6 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <future>                             // for std::future, std::promise
 #include <memory>                             // for std::shared_ptr, std::weak_ptr
 #include <string>                             // for std::string
 #include <vector>                             // for std::vector
@@ -64,7 +63,7 @@ public:
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();
 
-	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, std::promise<bool>* promise);
+	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database);
 };
 
 

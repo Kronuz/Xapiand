@@ -303,7 +303,11 @@ Replication::reply_end_of_changes(const std::string&)
 	}
 
 	L_REPLICATION("Replication completed!");
-	client.fulfill_promise(true);
+	if (client.cluster_database) {
+		client.cluster_database = false;
+		XapiandManager::manager->cluster_database_ready();
+	}
+
 	client.destroy();
 	client.detach();
 }

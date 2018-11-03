@@ -60,13 +60,13 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, std::promise<bool>* promise_)
+BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
-	  promise(promise_),
+	  cluster_database(cluster_database_),
 	  remote_protocol(*this),
 	  replication(*this)
 {
@@ -112,7 +112,10 @@ BinaryClient::~BinaryClient()
 		L_WARNING("Binary client killed!");
 	}
 
-	fulfill_promise(false);
+	if (cluster_database) {
+		L_CRIT("Cannot synchronize cluster database!");
+		sig_exit(-EX_CANTCREAT);
+	}
 
 	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
@@ -304,18 +307,6 @@ BinaryClient::on_read_file_done()
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 		}
-	}
-}
-
-
-void
-BinaryClient::fulfill_promise(bool value)
-{
-	L_CALL("BinaryClient::fulfill_promise(%s)", value ? "true" : "false");
-
-	if (promise) {
-		promise->set_value(value);
-		promise = nullptr;
 	}
 }
 
