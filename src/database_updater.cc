@@ -113,8 +113,8 @@ DatabaseUpdater::run()
 	try {
 
 		if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-			L_DEBUG("Replicator was informed database was updated: %s", repr(update.endpoint.to_string()));
 			discovery->signal_db_update(update);
+			L_DEBUG("Replicators where informed about the database update: %s", repr(update.endpoint.to_string()));
 		}
 
 	} catch (const Exception& exc) {
