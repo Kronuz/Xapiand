@@ -63,7 +63,7 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
-	  state(State::FOLLOWER),
+	  role(Role::FOLLOWER),
 	  votes_granted(0),
 	  votes_denied(0),
 	  current_term(0),
@@ -139,7 +139,7 @@ Raft::send_message(Message type, const std::string& message)
 void
 Raft::io_accept_cb(ev::io& watcher, int revents)
 {
-	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock, watcher.fd);
+	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d, state:%s}", revents, readable_revents(revents), sock, watcher.fd, XapiandManager::StateNames(XapiandManager::manager->state));
 
 	int fd = sock;
 	if (fd == -1) {
@@ -155,7 +155,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	L_EV_BEGIN("Raft::io_accept_cb:BEGIN");
+	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	if (revents & EV_READ) {
 		while (
@@ -238,7 +238,7 @@ Raft::request_vote(Message type, const std::string& message)
 		// set currentTerm = T,
 		current_term = term;
 		// convert to follower
-		state = State::FOLLOWER;
+		role = Role::FOLLOWER;
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
@@ -253,7 +253,7 @@ Raft::request_vote(Message type, const std::string& message)
 			if (Node::is_local(node)) {
 				voted_for = *node;
 				L_RAFT("I vote for %s (1)", voted_for.name());
-			} else if (state == State::FOLLOWER) {
+			} else if (role == Role::FOLLOWER) {
 				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
 				size_t remote_last_log_index = unserialise_length(&p, p_end);
 				// §5.4.1
@@ -297,7 +297,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 	L_CALL("Raft::request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
-	if (state != State::CANDIDATE) {
+	if (role != Role::CANDIDATE) {
 		return;
 	}
 
@@ -325,7 +325,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 		// set currentTerm = T,
 		current_term = term;
 		// convert to follower
-		state = State::FOLLOWER;
+		role = Role::FOLLOWER;
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
@@ -345,7 +345,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", Node::active_nodes(), votes_granted, votes_denied);
 			if (has_consensus(votes_granted + votes_denied)) {
 				if (votes_granted > votes_denied) {
-					state = State::LEADER;
+					role = Role::LEADER;
 					voted_for.clear();
 					next_indexes.clear();
 					match_indexes.clear();
@@ -369,7 +369,7 @@ Raft::request_vote_response(Message type, const std::string& message)
 					// First time we elect a leader's, we setup node
 					auto joining = XapiandManager::State::JOINING;
 					if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
-						// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+						// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 						XapiandManager::manager->setup_node();
 					}
 				}
@@ -408,14 +408,14 @@ Raft::append_entries(Message type, const std::string& message)
 		// set currentTerm = T,
 		current_term = term;
 		// convert to follower
-		state = State::FOLLOWER;
+		role = Role::FOLLOWER;
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
 		// _reset_leader_election_timeout();  // resetted below!
 	}
 
-	if (state == State::LEADER) {
+	if (role == Role::LEADER) {
 		return;
 	}
 
@@ -429,10 +429,10 @@ Raft::append_entries(Message type, const std::string& message)
 		size_t prev_log_index = unserialise_length(&p, p_end);
 		uint64_t prev_log_term = unserialise_length(&p, p_end);
 
-		if (state == State::CANDIDATE) {
+		if (role == Role::CANDIDATE) {
 			// If AppendEntries RPC received from new leader:
 			// convert to follower
-			state = State::FOLLOWER;
+			role = Role::FOLLOWER;
 			voted_for.clear();
 			next_indexes.clear();
 			match_indexes.clear();
@@ -501,7 +501,7 @@ Raft::append_entries(Message type, const std::string& message)
 				// First time we reach leader's commit, we setup node
 				auto joining = XapiandManager::State::JOINING;
 				if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
-					// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+					// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 					XapiandManager::manager->setup_node();
 				}
 			}
@@ -544,7 +544,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
-	if (state != State::LEADER) {
+	if (role != Role::LEADER) {
 		return;
 	}
 
@@ -571,7 +571,7 @@ Raft::append_entries_response(Message type, const std::string& message)
 		// set currentTerm = T,
 		current_term = term;
 		// convert to follower
-		state = State::FOLLOWER;
+		role = Role::FOLLOWER;
 		voted_for.clear();
 		next_indexes.clear();
 		match_indexes.clear();
@@ -636,7 +636,7 @@ Raft::add_command(Message type, const std::string& message)
 		return;
 	}
 
-	if (state != State::LEADER) {
+	if (role != Role::LEADER) {
 		return;
 	}
 
@@ -660,7 +660,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
 
-	if (state == State::LEADER) {
+	if (role == Role::LEADER) {
 		// We're a leader, we shouldn't be here!
 		return;
 	}
@@ -669,7 +669,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	// RPC from current leader or granting vote to candidate:
 	// convert to candidate
 	++current_term;
-	state = State::CANDIDATE;
+	role = Role::CANDIDATE;
 	voted_for.clear();
 	next_indexes.clear();
 	match_indexes.clear();
@@ -683,7 +683,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 
 	auto local_node = Node::local_node();
 	L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
-		local_node->name(), current_term, last_log_term, last_log_index, StateNames(state), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+		local_node->name(), current_term, last_log_term, last_log_index, RoleNames(role), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 	send_message(Message::REQUEST_VOTE,
 		local_node->serialise() +
 		serialise_length(current_term) +
@@ -710,7 +710,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 
 	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
 
-	if (state != State::LEADER) {
+	if (role != Role::LEADER) {
 		return;
 	}
 
@@ -880,7 +880,7 @@ Raft::add_command(const std::string& command)
 {
 	L_CALL("Raft::add_command(%s)", repr(command));
 
-	if (state == State::LEADER) {
+	if (role == Role::LEADER) {
 		log.push_back({
 			current_term,
 			command,
@@ -907,7 +907,7 @@ Raft::request_vote()
 {
 	L_CALL("Raft::request_vote()");
 
-	state = State::FOLLOWER;
+	role = Role::FOLLOWER;
 	voted_for.clear();
 	next_indexes.clear();
 	match_indexes.clear();
@@ -921,7 +921,7 @@ Raft::start()
 {
 	L_CALL("Raft::start()");
 
-	state = State::FOLLOWER;
+	role = Role::FOLLOWER;
 	voted_for.clear();
 	next_indexes.clear();
 	match_indexes.clear();

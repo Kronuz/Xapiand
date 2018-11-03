@@ -57,21 +57,21 @@ struct RaftLogEntry {
 // The Raft consensus algorithm
 class Raft : public UDP, public Worker {
 public:
-	enum class State {
+	enum class Role {
 		FOLLOWER,
 		CANDIDATE,
 		LEADER,
 		MAX,
 	};
 
-	static const std::string& StateNames(State type) {
-		static const std::string StateNames[] = {
+	static const std::string& RoleNames(Role type) {
+		static const std::string _[] = {
 			"LEADER", "FOLLOWER", "CANDIDATE",
 		};
 
 		auto type_int = static_cast<int>(type);
-		if (type_int >= 0 || type_int < static_cast<int>(State::MAX)) {
-			return StateNames[type_int];
+		if (type_int >= 0 || type_int < static_cast<int>(Role::MAX)) {
+			return _[type_int];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;
@@ -110,7 +110,7 @@ private:
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
 
-	State state;
+	Role role;
 	size_t votes_granted;
 	size_t votes_denied;
 
