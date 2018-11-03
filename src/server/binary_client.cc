@@ -34,7 +34,8 @@
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
 #include "length.h"
-#include "manager.h"                          // XapiandManager::manager
+#include "manager.h"                          // for XapiandManager::manager
+#include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
 #include "server.h"
 #include "utype.hh"                           // for toUType
@@ -394,8 +395,20 @@ BinaryClient::run()
 				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
 				lk.unlock();
 				try {
+
 					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
 					remote_protocol.remote_server(type, message);
+
+					Metrics::metrics()
+						.xapiand_binary_sent_bytes
+						.Increment(total_sent_bytes);
+					total_sent_bytes = 0;
+
+					Metrics::metrics()
+						.xapiand_binary_received_bytes
+						.Increment(total_received_bytes);
+					total_received_bytes = 0;
+
 				} catch (...) {
 					lk.lock();
 					running = false;
@@ -412,8 +425,20 @@ BinaryClient::run()
 				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
 				lk.unlock();
 				try {
+
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
 					replication.replication_server(type, message);
+
+					Metrics::metrics()
+						.xapiand_binary_sent_bytes
+						.Increment(total_sent_bytes);
+					total_sent_bytes = 0;
+
+					Metrics::metrics()
+						.xapiand_binary_received_bytes
+						.Increment(total_received_bytes);
+					total_received_bytes = 0;
+
 				} catch (...) {
 					lk.lock();
 					running = false;
@@ -430,8 +455,20 @@ BinaryClient::run()
 				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
 				lk.unlock();
 				try {
+
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 					replication.replication_client(type, message);
+
+					Metrics::metrics()
+						.xapiand_binary_sent_bytes
+						.Increment(total_sent_bytes);
+					total_sent_bytes = 0;
+
+					Metrics::metrics()
+						.xapiand_binary_received_bytes
+						.Increment(total_received_bytes);
+					total_received_bytes = 0;
+
 				} catch (...) {
 					lk.lock();
 					running = false;

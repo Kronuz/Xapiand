@@ -998,7 +998,19 @@ HttpClient::run()
 
 		lk.unlock();
 		try {
+
 			run_one(request, response);
+
+			Metrics::metrics()
+				.xapiand_http_sent_bytes
+				.Increment(total_sent_bytes);
+			total_sent_bytes = 0;
+
+			Metrics::metrics()
+				.xapiand_http_received_bytes
+				.Increment(total_received_bytes);
+			total_received_bytes = 0;
+
 		} catch (...) {
 			lk.lock();
 			running = false;
