@@ -400,12 +400,12 @@ BinaryClient::run()
 					remote_protocol.remote_server(type, message);
 
 					Metrics::metrics()
-						.xapiand_binary_sent_bytes
+						.xapiand_remote_protocol_sent_bytes
 						.Increment(total_sent_bytes);
 					total_sent_bytes = 0;
 
 					Metrics::metrics()
-						.xapiand_binary_received_bytes
+						.xapiand_remote_protocol_received_bytes
 						.Increment(total_received_bytes);
 					total_received_bytes = 0;
 
@@ -430,12 +430,12 @@ BinaryClient::run()
 					replication.replication_server(type, message);
 
 					Metrics::metrics()
-						.xapiand_binary_sent_bytes
+						.xapiand_replication_sent_bytes
 						.Increment(total_sent_bytes);
 					total_sent_bytes = 0;
 
 					Metrics::metrics()
-						.xapiand_binary_received_bytes
+						.xapiand_replication_received_bytes
 						.Increment(total_received_bytes);
 					total_received_bytes = 0;
 
@@ -460,12 +460,12 @@ BinaryClient::run()
 					replication.replication_client(type, message);
 
 					Metrics::metrics()
-						.xapiand_binary_sent_bytes
+						.xapiand_replication_sent_bytes
 						.Increment(total_sent_bytes);
 					total_sent_bytes = 0;
 
 					Metrics::metrics()
-						.xapiand_binary_received_bytes
+						.xapiand_replication_received_bytes
 						.Increment(total_received_bytes);
 					total_received_bytes = 0;
 

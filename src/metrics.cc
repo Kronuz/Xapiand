@@ -209,20 +209,6 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_http_sent_bytes{
-		registry.AddCounter(
-			"xapiand_http_sent_bytes",
-			"Bytes sent by http connections",
-			constant_labels)
-		.Add({})
-	},
-	xapiand_http_received_bytes{
-		registry.AddCounter(
-			"xapiand_http_received_bytes",
-			"Bytes received by http connections",
-			constant_labels)
-		.Add({})
-	},
 	xapiand_binary_current_connections{
 		registry.AddGauge(
 			"xapiand_binary_current_connections",
@@ -237,17 +223,45 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_sent_bytes{
+	xapiand_http_sent_bytes{
 		registry.AddCounter(
-			"xapiand_binary_sent_bytes",
-			"Bytes sent by binary connections",
+			"xapiand_http_sent_bytes",
+			"Bytes sent by http connections",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_received_bytes{
+	xapiand_http_received_bytes{
 		registry.AddCounter(
-			"xapiand_binary_received_bytes",
-			"Bytes received by binary connections",
+			"xapiand_http_received_bytes",
+			"Bytes received by http connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_sent_bytes{
+		registry.AddCounter(
+			"xapiand_replication_sent_bytes",
+			"Bytes sent by replication connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_received_bytes{
+		registry.AddCounter(
+			"xapiand_replication_received_bytes",
+			"Bytes received by replication connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_remote_protocol_sent_bytes{
+		registry.AddCounter(
+			"xapiand_remote_protocol_sent_bytes",
+			"Bytes sent by remote protocol connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_remote_protocol_received_bytes{
+		registry.AddCounter(
+			"xapiand_remote_protocol_received_bytes",
+			"Bytes received by remote protocol connections",
 			constant_labels)
 		.Add({})
 	},
