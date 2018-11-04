@@ -181,7 +181,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 		return;
 	}
 
-	L_INFO("Database being synchronized from %s (%s)...", src_endpoint.node_name, repr(src_endpoint.to_string()));
+	L_INFO("Database %s being synchronized from %s...", repr(src_endpoint.to_string()), src_endpoint.node_name);
 }
 
 #endif /* XAPIAND_CLUSTERING */
