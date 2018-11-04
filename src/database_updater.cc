@@ -28,6 +28,7 @@
 
 #include "log.h"                              // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "manager.h"                          // for XapiandManager::manager
+#include "repr.hh"                            // for repr
 #include "server/discovery.h"                 // for Discovery::signal_db_update
 #include "string.hh"                          // for string::from_delta
 #include "time_point.hh"                      // for time_point_to_ullong
@@ -107,26 +108,25 @@ DatabaseUpdater::run()
 		DatabaseUpdater::statuses.erase(update);
 	}
 
-	auto start = std::chrono::system_clock::now();
+	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
+		auto start = std::chrono::system_clock::now();
 
-	std::string error;
-	try {
+		std::string error;
+		try {
 
-		if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 			discovery->signal_db_update(update);
-			L_DEBUG("Replicators where informed about the database update: %s", repr(update.endpoint.to_string()));
+
+		} catch (const Exception& exc) {
+			error = exc.get_message();
 		}
 
-	} catch (const Exception& exc) {
-		error = exc.get_message();
-	}
+		auto end = std::chrono::system_clock::now();
 
-	auto end = std::chrono::system_clock::now();
-
-	if (error.empty()) {
-		L_DEBUG("Updater%s succeeded after %s", forced ? " (forced)" : "", string::from_delta(start, end));
-	} else {
-		L_WARNING("Updater%s falied after %s: %s", forced ? " (forced)" : "", string::from_delta(start, end), error);
+		if (error.empty()) {
+			L_DEBUG("Updater%s of %s succeeded after %s", forced ? " (forced)" : "", repr(update.endpoint.to_string()), string::from_delta(start, end));
+		} else {
+			L_WARNING("Updater%s of %s falied after %s: %s", forced ? " (forced)" : "", repr(update.endpoint.to_string()), string::from_delta(start, end), error);
+		}
 	}
 }
 

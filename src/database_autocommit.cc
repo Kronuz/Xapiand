@@ -28,6 +28,7 @@
 #include "database_handler.h"                // for DatabaseHandler
 #include "endpoint.h"                        // for Endpoints
 #include "log.h"                             // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
+#include "repr.hh"                           // for repr
 #include "string.hh"                         // for string::from_delta
 #include "time_point.hh"                     // for time_point_to_ullong
 
@@ -125,9 +126,9 @@ DatabaseAutocommit::run()
 		auto end = std::chrono::system_clock::now();
 
 		if (error.empty()) {
-			L_DEBUG("Autocommit%s succeeded after %s", forced ? " (forced)" : "", string::from_delta(start, end));
+			L_DEBUG("Autocommit%s of %s succeeded after %s", forced ? " (forced)" : "", repr(endpoints.to_string()), string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit%s falied after %s: %s", forced ? " (forced)" : "", string::from_delta(start, end), error);
+			L_WARNING("Autocommit%s of %s falied after %s: %s", forced ? " (forced)" : "", repr(endpoints.to_string()), string::from_delta(start, end), error);
 		}
 	}
 }
