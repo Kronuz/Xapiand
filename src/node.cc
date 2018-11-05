@@ -112,10 +112,9 @@ atomic_shared_ptr<const Node> Node::_leader_node{std::make_shared<const Node>()}
 
 #ifndef XAPIAND_CLUSTERING
 
-static std::shared_ptr<const Node>
+std::shared_ptr<const Node>
 Node::local_node(std::shared_ptr<const Node> node)
 {
-	atomic_shared_ptr<const Node> _local_node{std::make_shared<const Node>()};
 	if (node) {
 		set_as_title(node);
 		_local_node.store(node);
@@ -124,10 +123,9 @@ Node::local_node(std::shared_ptr<const Node> node)
 }
 
 
-static std::shared_ptr<const Node>
+std::shared_ptr<const Node>
 Node::leader_node(std::shared_ptr<const Node> node)
 {
-	atomic_shared_ptr<const Node> _leader_node{std::make_shared<const Node>()};
 	if (node) {
 		_leader_node.store(node);
 	}
