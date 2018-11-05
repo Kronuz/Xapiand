@@ -1719,6 +1719,8 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 	}
 
 	MsgPack nodes(MsgPack::Type::ARRAY);
+
+#ifdef XAPIAND_CLUSTERING
 	for (auto& node : Node::nodes()) {
 		if (node->idx) {
 			MsgPack obj(MsgPack::Type::MAP);
@@ -1735,6 +1737,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 			nodes.push_back(obj);
 		}
 	}
+#endif
 
 	write_http_response(request, response, HTTP_STATUS_OK, {
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },

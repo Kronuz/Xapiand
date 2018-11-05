@@ -319,8 +319,10 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				#endif
 			}
 		} else {
+			#ifdef XAPIAND_CLUSTERING
 			auto node = Node::get_node(local_node->lower_name());
 			found = node && !!node->idx;
+			#endif
 		}
 		if (!found) {
 			THROW(NotFoundError);
@@ -399,12 +401,13 @@ XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
 
 	state = State::READY;
 
-	if (auto binary = weak_binary.lock()) {
-		binary->start();
-	}
-
 	if (auto http = weak_http.lock()) {
 		http->start();
+	}
+
+#ifdef XAPIAND_CLUSTERING
+	if (auto binary = weak_binary.lock()) {
+		binary->start();
 	}
 
 	auto local_node = Node::local_node();
@@ -430,6 +433,7 @@ XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
 				break;
 		}
 	}
+#endif
 }
 
 
