@@ -22,14 +22,14 @@
 
 #include "logger.h"
 
+#include <cerrno>             // for errno
 #include <cstdio>             // for fileno, vsnprintf, stderr
 #include <cstdlib>            // for getenv
 #include <ctime>              // for time_t
 #include <functional>         // for ref
-#include <iostream>           // for cerr
 #include <regex>              // for regex_replace, regex
 #include <stdexcept>          // for out_of_range
-#include <system_error>       // for system_error
+#include <system_error>       // for std::system_error
 #include <thread>             // for std::this_thread
 #include <unistd.h>           // for isatty
 #include <unordered_map>      // for unordered_map
@@ -40,6 +40,7 @@
 #include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback
+#include "io.hh"              // for io::write
 #include "ignore_unused.h"    // for ignore_unused
 #include "opts.h"             // for opts
 #include "thread.hh"          // for get_thread_name
@@ -205,6 +206,15 @@ Log::release()
 	return ret;
 }
 
+StreamLogger::StreamLogger(const char* filename)
+	: fdout(io::open(filename, O_WRONLY | O_CREAT | O_APPEND))
+{
+	if (fdout == -1) {
+		throw std::system_error(errno, std::generic_category());
+	}
+}
+
+
 void
 StreamLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
@@ -220,8 +230,7 @@ StreamLogger::log(int priority, std::string_view str, bool with_priority, bool w
 	bool colorized = Logging::colors && !Logging::no_colors;
 	buf = Logging::colorized(buf, colorized);
 
-	std::lock_guard<std::mutex> lk(mtx);
-	ofs << buf;
+	io::write(fdout, buf.data(), buf.size());
 }
 
 
@@ -240,8 +249,7 @@ StderrLogger::log(int priority, std::string_view str, bool with_priority, bool w
 	bool colorized = (is_tty() || Logging::colors) && !Logging::no_colors;
 	buf = Logging::colorized(buf, colorized);
 
-	std::lock_guard<std::mutex> lk(mtx);
-	std::cerr << buf;
+	io::write(STDERR_FILENO, buf.data(), buf.size());
 }
 
 
@@ -269,8 +277,7 @@ SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_
 	bool colorized = Logging::colors && !Logging::no_colors;
 	buf = Logging::colorized(buf, colorized);
 
-	std::lock_guard<std::mutex> lk(mtx);
-	syslog(priority, buf.c_str());
+	syslog(priority, "%s", buf.c_str());
 }
 
 
@@ -377,7 +384,8 @@ void
 Logging::set_mark()
 {
 	if (is_tty()) {
-		std::cerr << std::string("\033]1337;SetMark\a");
+		auto buf = std::string("\033]1337;SetMark\a");
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 
@@ -386,9 +394,11 @@ void
 Logging::tab_rgb(int red, int green, int blue)
 {
 	if (is_tty()) {
-		std::cerr << string::format("\033]6;1;bg;red;brightness;%d\a", red);
-		std::cerr << string::format("\033]6;1;bg;green;brightness;%d\a", green);
-		std::cerr << string::format("\033]6;1;bg;blue;brightness;%d\a", blue);
+		std::string buf;
+		buf += string::format("\033]6;1;bg;red;brightness;%d\a", red);
+		buf += string::format("\033]6;1;bg;green;brightness;%d\a", green);
+		buf += string::format("\033]6;1;bg;blue;brightness;%d\a", blue);
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 
@@ -396,7 +406,8 @@ void
 Logging::tab_title(std::string_view title)
 {
 	if (is_tty()) {
-		std::cerr << string::format("\033]0;%s\a", title);
+		auto buf = string::format("\033]0;%s\a", title);
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 
@@ -405,7 +416,8 @@ void
 Logging::badge(std::string_view badge)
 {
 	if (is_tty()) {
-		std::cerr << string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
+		auto buf = string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 
@@ -414,7 +426,8 @@ void
 Logging::growl(std::string_view text)
 {
 	if (is_tty()) {
-		std::cerr << string::format("\033]9;%s\a", text);
+		auto buf = string::format("\033]9;%s\a", text);
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 
@@ -423,8 +436,10 @@ void
 Logging::reset()
 {
 	if (is_tty()) {
-		std::cerr << std::string("\033]1337;SetBadgeFormat=\a");
-		std::cerr << std::string("\033]6;1;bg;*;default\a");
+		std::string buf;
+		buf += std::string("\033]1337;SetBadgeFormat=\a");
+		buf += std::string("\033]6;1;bg;*;default\a");
+		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
 }
 

@@ -26,7 +26,6 @@
 #include <atomic>             // for atomic_bool, atomic, atomic_int
 #include <chrono>             // for system_clock, time_point, duration, millise...
 #include <condition_variable> // for condition_variable
-#include <fstream>            // for ofstream
 #include <memory>             // for shared_ptr, enable_shared_from_this, unique...
 #include <mutex>              // for condition_variable, mutex
 #include <string>             // for string, basic_string
@@ -54,28 +53,22 @@ public:
 
 
 class StreamLogger : public Logger {
-	std::mutex mtx;
-	std::ofstream ofs;
+	int fdout;
 
 public:
-	explicit StreamLogger(const char* filename)
-		: ofs(filename, std::ofstream::out) { }
+	StreamLogger(const char* filename);
 
 	void log(int priority, std::string_view str, bool with_priority, bool with_endl) override;
 };
 
 
 class StderrLogger : public Logger {
-	std::mutex mtx;
-
 public:
 	void log(int priority, std::string_view str, bool with_priority, bool with_endl) override;
 };
 
 
 class SysLog : public Logger {
-	std::mutex mtx;
-
 public:
 	SysLog(const char* ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
 	~SysLog();
