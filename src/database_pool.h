@@ -81,7 +81,7 @@ private:
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 
-	size_t count;
+	std::atomic<size_t> count;
 
 	std::condition_variable unlock_cond;
 	std::condition_variable exclusive_cond;

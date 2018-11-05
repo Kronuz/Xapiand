@@ -88,8 +88,6 @@ DatabaseQueue::inc_count()
 {
 	L_CALL("DatabaseQueue::inc_count()");
 
-	std::lock_guard<std::mutex> lk(_state->_mutex);
-
 	return ++count;
 }
 
@@ -99,15 +97,15 @@ DatabaseQueue::dec_count()
 {
 	L_CALL("DatabaseQueue::dec_count()");
 
-	std::lock_guard<std::mutex> lk(_state->_mutex);
-
-	if (count == 0) {
-		L_CRIT("Inconsistency in the number of databases in queue");
-		sig_exit(-EX_SOFTWARE);
-		return count;
-	}
-
-	return --count;
+	size_t current_count = count;
+	do {
+		if (current_count == 0) {
+			L_CRIT("Inconsistency in the number of databases in queue");
+			sig_exit(-EX_SOFTWARE);
+			return current_count;
+		}
+	} while (!count.compare_exchange_weak(current_count, current_count - 1));
+	return current_count - 1;
 }
 
 
