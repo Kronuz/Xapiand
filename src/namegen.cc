@@ -49,6 +49,76 @@ Generator::SymbolMap()
 			}
 		},
 		{
+			"S", {
+				"ba", "bai", "bau", "be", "bi", "bia", "bio", "bla", "blo", "blu", "bo", "bra",
+				"brau", "bri", "bria", "brie", "bro", "bru", "bue", "ca",
+				"ce", "cha", "che", "chi", "cho", "chu", "ci", "cia", "cie", "cio", "cla",
+				"cle", "cli", "clo", "co", "cra", "cre", "cri", "cu", "cua", "da", "dai",
+				"daia", "de", "dei", "di", "dia", "die", "dio",
+				"do", "doi", "doia", "dou", "dra", "dre", "dri", "dria", "dro", "du", "dua",
+				"dui", "fa", "fe", "fi", "fia", "fie", "fio", "fla", "flo", "fo", "fra",
+				"fre", "fri", "fu", "ga", "gau", "ge", "gei", "gi", "gia", "gie", "gio",
+				"giu", "gla", "glai", "gle", "glei", "glo", "go", "gra", "gre", "gri", "gu",
+				"gua", "gue", "ja", "jai", "je",
+				"ji", "jo", "ju", "jua", "la", "lai", "le", "lei",
+				"leu", "li", "lia", "lie", "lio", "liu",
+				"lo", "loi", "lu", "lua", "lui", "ma", "mai",
+				"maia", "mau", "me", "mei", "mi", "mia", "mla", "mo", "moi",
+				"mu", "na", "nai", "naia", "ne", "nei", "neu", "ni", "nia", "nie",
+				"nio", "no", "nu", "nue", "pa", "pau", "pe", "peyo",
+				"pi", "pia", "pie", "po", "pra", "pri", "pria", "pu", "que",
+				"qui", "ra", "rai", "raya", "re", "rei", "rey", "ri", "ria",
+				"rie", "rio", "rla", "rle", "rli", "rlo", "ro",
+				"ru", "sa", "sai", "sau", "sca", "se", "si", "sia", "sio", "so",
+				"ste", "su", "sue", "ta",
+				"tai", "taua", "te", "ti", "tia", "tla", "to",
+				"tra", "tre", "tri", "trio", "tro", "troi", "tru", "tu",
+				"va", "vai", "ve", "vei", "vi", "via", "vie", "vio", "vo",
+				"za", "zai", "ze", "zi", "zia", "zie", "zio", "zo",
+			}
+		},
+		{
+			"b", {
+				"bal", "ban", "bar", "bas", "bed", "bel", "ben", "ber", "bet", "bian", "bil",
+				"bin", "blan", "blas", "bles", "bob", "bon", "bran", "bras", "brec", "bren", "bril",
+				"bur", "can", "car", "cas", "cat", "cay", "ced", "cel", "cen", "cep", "ces", "chan",
+				"ches", "chor", "cial", "cin", "cion", "cir", "cis", "claud", "cles", "clif", "cob",
+				"com", "con", "cons", "cor", "cos", "cosm", "cost", "cris", "cual", "cun", "cus", "dad",
+				"daf", "dal", "dam", "dan", "dar", "das", "del", "den", "der", "des", "det",
+				"dieg" "dic", "diel", "dier", "dil", "din", "dios", "dir", "dis", "dit", "dol",
+				"don", "dor", "dox", "dras", "dred", "dres", "duar", "dul", "dun",
+				"fal", "fan", "faus", "fer", "fet", "fin", "flor", "fon", "fran", "fred",
+				"fren", "fris", "ful", "gail", "gan", "gar", "gas", "gel", "gels", "gem", "gen",
+				"ger", "ges", "gian", "gib", "gil", "gin", "gior", "giot", "gis", "git", "glas",
+				"glen", "gon", "gor", "gos", "got", "gret", "grid", "gros", "gual", "guel",
+				"guer", "gun", "gus", "guz", "jac",
+				"jan", "jas", "jauc", "jaz", "jef", "jen", "jes", "jis", "jor", "jos", "juan",
+				"jur", "jus", "lain", "lais", "lam", "lan", "lar", "las", "laur", "leb", "led",
+				"lem", "len", "ler", "les", "let", "liam", "lian", "liel", "liet", "lil",
+				"lim", "lin", "lins", "lip", "lir", "lis", "lius", "liz", "lon", "lor", "lot",
+				"luc", "lud", "luis", "lum", "lus", "lux", "luz", "mad", "mag", "mal", "man",
+				"mar", "mas", "mat", "max", "med", "mel", "men", "mer", "mes",
+				"mian", "mic", "mig", "mil", "mim", "min", "mir", "mis", "mit", "mon", "mor",
+				"mos", "muel", "mun", "mus", "nac", "nal", "nan", "nar",
+				"nas", "nat", "nef", "nel", "nep", "ner", "nes", "net", "neus", "nic", "nid",
+				"niel", "nif", "nil", "nin", "nis", "noc", "nol", "non", "nor", "nos",
+				"nuar", "nuel", "nuem", "nul", "nun", "nur", "nus", "pan", "par", "pas",
+				"paz", "peb", "peg", "per", "pol", "pom", "pris", "prit", "quar", "quel",
+				"ques", "quet", "quin", "ral", "ram", "ran", "rap", "rar", "ras", "raz",
+				"rel", "rem", "ren", "res", "ret", "ric", "rid", "riel",
+				"riet", "ril", "rim", "rin", "riol", "ris", "rit", "sac"
+				"sal", "sam", "san", "sar", "sas", "sef", "sel", "sen", "sep", "ser", "ses",
+				"set", "siel", "sier", "sig", "sil", "sin", "sion", "sis", "six",
+				"sol", "son", "sop", "sual", "sun", "sus", "tac", "tad", "tal",
+				"tan", "tap", "tas", "tel", "ten", "ter", "tes", "tian", "tif",
+				"til", "tin", "tir", "tis", "ton", "top", "tor", "tos", "tr", "tran", "trid",
+				"tris", "triz", "val", "van", "var", "vas", "vec", "ven", "ver", "ves",
+				"vian", "vic", "vid", "vier", "vil", "vin", "vir", "vis", "von", "vor", "vril",
+				"z", "zac", "zaid", "zan", "zar", "zel", "zen", "zer", "zid", "ziel",
+				"zul",
+			}
+		},
+		{
 			"v", {
 				"a", "e", "i", "o", "u", "y"
 			}
@@ -123,566 +193,6 @@ Generator::SymbolMap()
 				"un", "unb", "ung", "unk", "unph", "unt", "uzz"
 			}
 		},
-		{
-			"K", {
-				// Drow Prefixes ("Female", "Male")
-				"akor", "alak",         // Beloved, best, first
-				"alaun", "alton",       // Lightning, powerful
-				"aly", "kel",           // Legendary, singing, song
-				"ang", "adin",          // Beast, monstrous, savage
-				"ardul", "amal",        // Blessed, divine, godly
-				"aun", "ant",           // Crypt, dead, deadly, death
-				"bae", "bar",           // Fate, fated, luck, lucky
-				"bal", "bel",           // Burned, burning, fire, flame
-				"belar", "bruh",        // Arrow, lance, pierced
-				"briz", "berg",         // Graceful, fluid, water, wet
-				"bur", "bhin",          // Craft, crafty, sly
-				"chal", "chasz",        // Earth, stable
-				"char", "kron",         // Sick, venom, venomed
-				"chess", "cal",         // Noble, lady", "lord
-				"dhaun",                // Infested, plague
-				"dil", "dur",           // Cold, ice, still
-				"dirz", "div",          // Dream, dreaming, fantasy
-				"dris", "riz",          // Ash, dawn, east, eastern
-				"eclav", "elk",         // Chaos, mad, madness
-				"elvan", "kalan",       // Elf, elven, far, lost
-				"elv", "elaug",         // Drow, mage, power
-				"erel", "rhyl",         // Eye, moon, spy
-				"ethe", "erth",         // Mithril, resolute
-				"faer", "selds",        // Oath, sworn, vow
-				"felyn", "fil",         // Pale, thin, weak, white
-				"filf", "phar",         // Dwarf, dwarven, treacherous
-				"gauss", "orgoll",      // Dread, fear, feared, vile
-				"g’eld",                // Friend, spider
-				"ghuan",                // Accursed, curse, unlucky
-				"gin", "din",           // Berserk, berserker, orc, wild
-				"grey", "gul",          // Ghost, pale, unliving
-				"hael", "hatch",        // Marked, trail, way
-				"hal", "sol",           // Deft, nimble, spider
-				"houn", "rik",          // Magic, ring, staff
-				"iiv", "dip",           // Liege, war, warrior
-				"iim",                  // Life, living, spirit, soul
-				"illiam", "im",         // Devoted, heart, love
-				"in", "sorn",           // Enchanted, spell
-				"ilph",                 // Emerald, green, lush, tree
-				"irae", "ilzt",         // Arcane, mystic, wizard
-				"in", "izz",            // Hidden, mask, masked
-				"iym", "ist",           // Endless, immortal
-				"jan", "duag",          // Shield, warded
-				"jhael", "gel",         // Ambitious, clan, kin, family
-				"jhul", "jar",          // Charmed, rune, symbol
-				"jys", "driz",          // Hard, steel, unyielding
-				"lael", "llt",          // Iron, west, western
-				"lar", "les",           // Binding, bound, law, lawful
-				"lineer", "mourn",      // Legend, legendary, mythical
-				"lird", "ryld",         // Brand, branded, owned, slave
-				"lua", "lyme",          // Bright, crystal, light
-				"mal", "malag",         // Mystery, secret
-				"may", "mas",           // Beautiful, beauty, silver
-				"micar",                // Lost, poison, widow
-				"min", "ran",           // Lesser, minor, second
-				"mol", "go",            // Blue, storm, thunder, wind
-				"myr", "nym",           // Lost, skeleton, skull
-				"nath", "mer",          // Doom, doomed, fate
-				"ned", "nad",           // Cunning, genius, mind, thought
-				"nhil", "nal",          // Fear, horrible, horror, outraged
-				"neer",                 // Core, root, strong
-				"null", "nil",          // Sad, tear, weeping
-				"olor", "omar",         // Skin, tattoo, tattooed
-				"pellan", "relon",      // North, platinum, wind
-				"phaer", "vorn",        // Honor, honored
-				"phyr", "phyx",         // Bless, blessed, blessing
-				"qualn", "quil",        // Mighty, ocean, sea
-				"quar",                 // Aged, eternal, time
-				"quav", "quev",         // Charmed, docile, friend
-				"qil", "quil",          // Foe, goblin, slave
-				"rauv", "welv",         // Cave, rock, stone
-				"ril", "ryl",           // Foretold, omen
-				"sbat", "szor",         // Amber, yellow
-				"sab", "tsab",          // Abyss, empty, void
-				"shi’n", "kren",        // Fool, foolish, young
-				"shri", "ssz",          // Silk, silent
-				"shur", "shar",         // Dagger, edge, stiletto
-				"shynt",                // Invisible, skilled, unseen
-				"sin", "szin",          // Festival, joy, pleasure
-				"ssap", "tath",         // Blue, midnight, nigh
-				"susp", "spir",         // Learned, skilled, wise
-				"talab", "tluth",       // Burn, burning, fire
-				"tal", "tar",           // Love, pain, wound, wounded
-				"triel", "taz",         // Bat, winged
-				"t’riss", "teb",        // Blade, sharp, sword
-				"ulvir", "uhls",        // Gold, golden, treasure
-				"umrae", "hurz",        // Faith, faithful, true
-				"vas", "vesz",          // Blood, body, flesh
-				"vic",                  // Abyss, deep, profound
-				"vier", "val",          // Black, dark, darkness
-				"vlon", "wod",          // Bold, hero, heroic
-				"waer", "wehl",         // Deep, hidden, south, southern
-				"wuyon", "wruz",        // Humble, third, trivial
-				"xull", "url",          // Blooded, crimson, ruby
-				"xun",                  // Demon, fiend, fiendish
-				"yas", "yaz",           // Riddle, spinning, thread, web
-				"zar", "zakn",          // Dusk, haunted, shadow
-				"zebey", "zek",         // Dragon, lithe, rage, wyrm
-				"zes", "zsz",           // Ancient, elder, respected
-				"zilv", "vuz",          // Forgotten, old, unknown
-			}
-		},
-		{
-			"L", {
-				// Drow House Names Prefix
-				"alean",      // The noble line of
-				"ale",        // Traders in
-				"arab",       // Daughters of
-				"arken",      // Mages of
-				"auvry",      // Blood of the
-				"baen",       // Blessed by
-				"barri",      // Spawn of
-				"cladd",      // Warriors from
-				"desp",       // Victors of
-				"de",         // Champions of
-				"do’",        // Walkers in
-				"eils",       // Lands of
-				"everh",      // The caverns of
-				"fre",        // Friends to
-				"gode",       // Clan of
-				"helvi",      // Those above
-				"hla",        // Seers of
-				"hun’",       // The sisterhood of
-				"ken",        // Sworn to
-				"kil",        // People of
-				"mae",        // Raiders from
-				"mel",        // Mothers of
-				"my",         // Honored of
-				"noqu",       // Sacred to
-				"orly",       // Guild of
-				"ouss",       // Heirs to
-				"rilyn",      // House of
-				"teken’",     // Delvers in
-				"tor",        // Mistresses of
-				"zau",        // Children of
-			}
-		},
-		{
-			"E", {
-				// Elven Prefixes
-				"ael",       // knight
-				"aer",       // law, order
-				"af",        // ring
-				"ah",        // crafty, sly
-				"al",        // sea
-				"am",        // swan
-				"ama",       // beauty, beautiful
-				"an",        // hand
-				"ang",       // glitter
-				"ansr",      // rune
-				"ar",        // gold, golden
-				"ari",       // silver
-				"arn",       // south
-				"aza",       // life, lives
-				"bael",      // guardian
-				"bes",       // oath
-				"cael",      // archer, arrow
-				"cal",       // faith
-				"cas",       // herald
-				"cla",       // rose
-				"cor",       // legend, legendary
-				"cy",        // onyx
-				"dae",       // white
-				"dho",       // falcon
-				"dre",       // hound
-				"du",        // crescent
-				"eil",       // azure, blue
-				"eir",       // sharp
-				"el",        // green
-				"er",        // boar
-				"ev",        // stag
-				"fera",      // champion
-				"fi",        // rain
-				"fir",       // dark
-				"fis",       // light
-				"gael",      // pegasus
-				"gar",       // owl
-				"gil",       // griffin
-				"ha",        // free, freedom
-				"hu",        // horse
-				"ia",        // day
-				"il",        // mist
-				"ja",        // staff
-				"jar",       // dove
-				"ka",        // dragon
-				"kan",       // eagle
-				"ker",       // spell
-				"keth",      // wind
-				"koeh",      // earth
-				"kor",       // black
-				"ky",        // ruby
-				"la",        // night
-				"laf",       // moon
-				"lam",       // east
-				"lue",       // riddle
-				"ly",        // wolf
-				"mai",       // death, slayer
-				"mal",       // war
-				"mara",      // priest
-				"my",        // emerald
-				"na",        // ancient
-				"nai",       // oak
-				"nim",       // deep
-				"nu",        // hope, hopeful
-				"ny",        // diamond
-				"py",        // sapphire
-				"raer",      // unicorn
-				"re",        // bear
-				"ren",       // west
-				"rhy", "ry", // jade
-				"ru",        // dream
-				"rua",       // star
-				"rum",       // meadow
-				"rid",       // spear
-				"sae",       // wood
-				"seh",       // soft
-				"sel",       // high
-				"sha",       // sun
-				"she",       // age, time
-				"si",        // cat, feline
-				"sim",       // north
-				"sol",       // history, memory
-				"sum",       // water
-				"syl",       // faerie
-				"ta",        // fox
-				"tahl",      // blade
-				"tha",       // vigil, vigilance
-				"tho",       // true, truth
-				"ther",      // sky
-				"thro",      // lore, sage
-				"tia",       // magic
-				"tra",       // tree
-				"ty", "try", // crystal
-				"uth",       // wizard
-				"ver",       // peace
-				"vil",       // finger, point
-				"von",       // ice
-				"ya",        // bridge, path, way
-				"za",        // royal
-				"zy",        // ivory
-			}
-		},
-		{
-			"F", {
-				// Elven House Name Prefixes
-				"alean",      // The noble line of
-				"alea",       // Traders in
-				"arabi",      // Daughters of
-				"arkenea",    // Mages of
-				"auvrea",     // Blood of the
-				"baequi",     // Blessed by
-				"banni",      // Holder's of
-				"cyred",      // Warriors from
-				"dirth",      // Victors of
-				"dryear",     // Champions of
-				"dwin’",      // Walkers in
-				"eyllis",     // Lands of
-				"eyther",     // The Forests of
-				"freani",     // Friends to
-				"gysse",      // Clan of
-				"heasi",      // Those above
-				"hlae",       // Seers of
-				"hunith",     // The sisterhood of
-				"kennyr",     // Sworn to
-				"kille",      // People of
-				"maern",      // Defenders from
-				"melith",     // Mothers of
-				"myrth",      // Honoured of
-				"norre",      // Sacred to
-				"orle",       // Guild of
-				"oussea",     // Heirs to
-				"rilynn",     // House of
-				"teasen’",    // Trackers of
-				"tyr",        // Mistresses of
-				"tyrnea",     // Children of
-			}
-		},
-		{
-			"k", {
-				// Drow Suffixes ("Female", "Male")
-				"a", "agh",          // Breaker, destruction, end, omega
-				"ace", "as",         // Savant, scholar, wizard
-				"ae", "aun",         // Dance, dancer, life, player
-				"aer", "d",          // Blood, blood of, heir
-				"afae", "afein",     // Bane, executioner, slayer
-				"afay", "aufein",    // Eyes, eyes of, seeress", "seer
-				"ala", "launim",     // Healer, priestess", "priest
-				"anna", "erin",      // Advisor, counselor to
-				"arra", "atar",      // Queen", "prince, queen of", "prince of
-				"aste",              // Bearer, keeper, slaver
-				"avin", "aonar",     // Guardian, guard, shield
-				"ayne", "al",        // Lunatic, maniac, manic, rage
-				"baste", "gloth",    // Path, walker
-				"breena", "antar",   // Matriarch", "patriarch, ruler
-				"bryn", "lyn",       // Agent, assassin, killer
-				"cice", "roos",      // Born of, child, young
-				"cyrl", "axle",      // Ally, companion, friend
-				"da", "daer",        // Illusionist, trickster
-				"dia", "drin",       // Rogue, stealer
-				"diira", "diirn",    // Initiate, sister", "brother
-				"dra", "zar",        // Lover, match, mate
-				"driira", "driirn",  // Mother", "father, teacher
-				"dril", "dorl",      // Knight, sword, warrior
-				"e",                 // Servant, slave, vassal
-				"eari", "erd",       // Giver, god, patron
-				"eyl",               // Archer, arrow, flight, flyer
-				"ffyn", "fein",      // Minstrel, singer, song
-				"fryn",              // Champion, victor, weapon, weapon of
-				"iara", "ica",       // Baron, duke, lady", "lord
-				"ice", "eth",        // Obsession, taker, taken
-				"idil", "imar",      // Alpha, beginning, creator of, maker
-				"iira", "inid",      // Harbinger, herald
-				"inidia",            // Secret, wall, warder
-				"inil", "in",        // Lady", "lord, rider, steed
-				"intra",             // Envoy, messenger, prophet
-				"isstra", "atlab",   // Acolyte, apprentice, student
-				"ithra", "irahc",    // Dragon, serpent, wyrm
-				"jra", "gos",        // Beast, biter, stinger
-				"jss",               // Scout, stalker
-				"kacha", "kah",      // Beauty, hair, style
-				"kiira", "raen",     // Apostle, disciple
-				"lay", "dyn",        // Flight, flyer, wing, wings
-				"lara", "aghar",     // Cynic, death, end, victim
-				"lin",               // Arm, armor, commander
-				"lochar",            // Messenger, spider
-				"mice", "myr",       // Bone, bones, necromancer, witch
-				"mur’ss",            // Shadow, spy, witness
-				"na", "nar",         // Adept, ghost, spirit
-				"nilee", "olil",     // Corpse, disease, ravager
-				"niss", "nozz",      // Chance, gambler, game
-				"nitra", "net",      // Kicker, returned, risen
-				"nolu",              // Art, artist, expert, treasure
-				"olin",              // Ascension, love, lover, lust
-				"onia", "onim",      // Rod, staff, token, wand
-				"oyss", "omph",      // Binder, judge, law, prison
-				"qualyn",            // Ally, caller, kin
-				"quarra", "net",     // Horde, host, legion
-				"quiri", "oj",       // Aura, cloak, hide, skin
-				"ra", "or",          // Fool, game, prey, quarry
-				"rae", "rar",        // Secret, seeker, quest
-				"raema", "orvir",    // Crafter, fist, hand
-				"raena", "olvir",    // Center, haven, home
-				"riia", "rak",       // Chaos, storm, tempest
-				"ril",               // Bandit, enemy, raider, outlaw
-				"riina", "ree",      // Enchanter, mage, spellcaster
-				"ryna", "oyn",       // Follower, hired, mercenary
-				"ryne", "ryn",       // Blooded, elder, experienced
-				"shalee", "ral",     // Abjurer, gaze, watch, watcher
-				"ssysn", "rysn",     // Artifact, dweomer, sorcerer, spell
-				"stin", "trin",      // Clan, house, merchant, of the house
-				"stra", "tran",      // Spider, spinner, weaver
-				"tana", "ton",       // Darkness, lurker, prowler
-				"thara", "tar",      // Glyph, marker, rune
-				"thrae", "olg",      // Charmer, leader, seducer
-				"tree", "tel",       // Exile, loner, outcast, pariah
-				"tyrr",              // Dagger, poison, poisoner, scorpion
-				"ual", "dan",        // Speed, strider
-				"ue", "dor",         // Arm, artisan, fingers
-				"uit", "dar",        // Breath, voice, word
-				"une", "diin",       // Diviner, fate, future, oracle
-				"uque",              // Cavern, digger, mole, tunnel
-				"urra", "dax",       // Nomad, renegade, wanderer
-				"va", "ven",         // Comrade, honor, honored
-				"vayas",             // Forge, forger, hammer, smith
-				"vyll",              // Punishment, scourge, whip, zealot
-				"vyrae", "vyr",      // Mistress", "master, overseer
-				"wae", "hrae",       // Heir, inheritor, princess
-				"wiira", "hriir",    // Seneschal of, steward
-				"wyss", "hrys",      // Best, creator, starter
-				"xae", "zaer",       // Orb, rank, ruler, scepter
-				"xena", "zen",       // Cutter, gem, jewel, jeweler
-				"xyra", "zyr",       // Sage, teller
-				"yl",                // Drow, woman", "man
-				"ylene", "yln",      // Handmaiden", "squire, maiden", "youth
-				"ymma", "inyon",     // Drider, feet, foot, runner
-				"ynda", "yrd",       // Captain, custodian, marshal, ranger
-				"ynrae", "yraen",    // Heretic, rebel, riot, void
-				"vrae",              // Architect, founder, mason
-				"yrr",               // Protector, rival, wielder
-				"zyne", "zt",        // Finder, hunter
-			}
-		},
-		{
-			"l", {
-				// Drow House Names Suffixes
-				"afin",       // The web
-				"ana",        // The night
-				"ani",        // The widow
-				"ar",         // Poison
-				"arn",        // Fire
-				"ate",        // The way
-				"ath",        // The dragons
-				"duis",       // The whip
-				"ervs",       // The depths
-				"ep",         // The Underdark
-				"ett",        // Magic
-				"ghym",       // The forgotten ways
-				"iryn",       // History
-				"lyl",        // The blade
-				"mtor",       // The abyss
-				"ndar",       // Black hearts
-				"neld",       // The arcane
-				"rae",        // Fell powers
-				"rahel",      // The gods
-				"rret",       // The void
-				"sek",        // Adamantite
-				"th",         // Challenges
-				"tlar",       // Mysteries
-				"t’tar",      // Victory
-				"tyl",        // The pits
-				"und",        // The spider's kiss
-				"urden",      // The darkness
-				"val",        // Silken weaver
-				"viir",       // Dominance
-				"zynge",      // The ruins
-			}
-		},
-		{
-			"e", {
-				// Elven Suffixes
-				"ae", "nae",                              // whisper
-				"ael",                                    // great
-				"aer", "aera",                            // singer, song
-				"aias", "aia",                            // mate, husband, wife
-				"ah", "aha",                              // wand
-				"aith", "aira",                           // home
-				"al", "ala", "la", "lae", "llae",         // harmony
-				"ali",                                    // shadow
-				"am", "ama",                              // strider
-				"an", "ana", "a", "ani", "uanna",         // make, maker
-				"ar", "ara", "ra",                        // man, woman
-				"ari", "ri",                              // spring
-				"aro", "ro",                              // summer
-				"as", "ash", "sah",                       // bow, fletcher
-				"ath",                                    // by, of, with
-				"avel",                                   // sword
-				"brar", "abrar", "ibrar",                 // craft, crafter
-				"dar", "adar", "odar",                    // world
-				"deth", "eath", "eth",                    // eternal
-				"dre",                                    // charm, charming
-				"drim", "drimme", "udrim",                // flight, flyer
-				"dul",                                    // glade
-				"ean",                                    // ride, rider
-				"el", "ele", "ela",                       // hawk
-				"emar",                                   // honor
-				"en",                                     // autumn
-				"er", "erl", "ern",                       // winter
-				"ess", "esti",                            // elves, elvin
-				"evar",                                   // flute
-				"fel", "afel", "efel",                    // lake
-				"hal", "ahal", "ihal",                    // pale, weak
-				"har", "ihar", "uhar",                    // wisdom, wise
-				"hel", "ahel", "ihel",                    // sadness, tears
-				"ian", "ianna", "ia", "ii", "ion",        // lord, lady
-				"iat",                                    // fire
-				"ik",                                     // might, mighty
-				"il", "iel", "ila", "lie",                // gift, giver
-				"im",                                     // duty
-				"in", "inar", "ine",                      // sibling, brother, sister
-				"ir", "ira", "ire",                       // dusk
-				"is", "iss", "ist",                       // scribe, scroll
-				"ith", "lath", "lith", "lyth",            // child, young
-				"kash", "ashk", "okash",                  // fate
-				"ki",                                     // void
-				"lan", "lanna", "lean", "olan", "ola",    // son, daughter
-				"lam", "ilam", "ulam",                    // fair
-				"lar", "lirr",                            // shine
-				"las",                                    // wild
-				"lian", "lia",                            // master, mistress
-				"lis", "elis", "lys",                     // breeze
-				"lon", "ellon",                           // chief
-				"lyn", "llinn", "lihn",                   // bolt, ray
-				"mah", "ma", "mahs",                      // mage
-				"mil", "imil", "umil",                    // bond, promise
-				"mus",                                    // ally, companion
-				"nal", "inal", "onal",                    // distant, far
-				"nes",                                    // heart
-				"nin", "nine", "nyn",                     // rite, ritual
-				"nis", "anis",                            // dawn
-				"on", "onna",                             // Keep, Keeper
-				"or", "oro",                              // Flower
-				"oth", "othi",                            // gate
-				"que",                                    // forgotten, lost
-				"quis",                                   // branch, limb
-				"rah", "rae", "raee",                     // beast
-				"rad", "rahd",                            // leaf
-				"rail", "ria", "aral", "ral", "ryl",      // hunt, hunter
-				"ran", "re", "reen",                      // binding, shackles
-				"reth", "rath",                           // arcane
-				"ro", "ri", "ron",                        // walker, walks
-				"ruil", "aruil", "eruil",                 // noble
-				"sal", "isal", "sali",                    // honey, sweet
-				"san",                                    // drink, wine
-				"sar", "asar", "isar",                    // quest, seeker
-				"sel", "asel", "isel",                    // mountain
-				"sha", "she", "shor",                     // ocean
-				"spar",                                   // fist
-				"tae", "itae",                            // beloved, love
-				"tas", "itas",                            // wall, ward
-				"ten", "iten",                            // spinner
-				"thal", "tha", "ethal", "etha",           // heal, healer, healing
-				"thar", "ethar", "ithar",                 // friend
-				"ther", "ather", "thir",                  // armor, protection
-				"thi", "ethil", "thil",                   // wing
-				"thus", "thas", "aethus", "aethas",       // harp, harper
-				"ti", "eti", "il",                        // eye, sight
-				"tril", "tria", "atri", "atril", "atria", // dance, dancer
-				"ual", "lua",                             // holy
-				"uath", "luth", "uth",                    // lance
-				"us", "ua",                               // cousin, kin
-				"van", "vanna",                           // forest
-				"var", "vara", "avar", "avara",           // father, mother
-				"vain", "avain",                          // spirit
-				"via", "avia",                            // good fortune, luck
-				"vin", "avin",                            // storm
-				"wyn",                                    // music, muscian
-				"ya",                                     // helm
-				"yr", "yn",                               // bringer
-				"yth",                                    // folk, people
-				"zair", "zara", "azair", "ezara",         // lightning
-			}
-		},
-		{
-			"f", {
-				// Elven House Name Suffixes
-				"altin",      // The branch
-				"anea",       // The night
-				"annia",      // The willow
-				"aear",       // Water
-				"arnith",     // Fire
-				"atear",      // The way
-				"athem",      // The dragons
-				"dlues",      // The bow
-				"elrvis",     // The leaves
-				"eplith",     // The forest
-				"ettln",      // Magic
-				"ghymn",      // The forgotten ways
-				"itryn",      // History
-				"lylth",      // The blade
-				"mitore",     // The moon
-				"nddare",     // The winds
-				"neldth",     // The arcane
-				"rae",        // Powers of Light
-				"raheal",     // The gods
-				"rretyn",     // The heavens
-				"sithek",     // Adamantite
-				"thym",       // Challenges
-				"tlarn",      // Mysteries
-				"tlithar",    // Victory
-				"tylar",      // The healers
-				"undlin",     // The lover’s kiss
-				"urdrenn",    // The light
-				"valsa",      // Silken weaver
-				"virrea",     // Success
-				"zea",        // The crystal growth
-			}
-		}
 	});
 
 	return *symbols;
