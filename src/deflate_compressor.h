@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <array>                 // for std::array
 #include <cstring>               // for string and memcpy
 #include <stdlib.h>              // for malloc, free
 #include "string_view.hh"        // for std::string_view
@@ -63,10 +64,8 @@ protected:
 	z_stream strm;
 	int stream;
 
-	const int cmpBuf_size;
-
-	const std::unique_ptr<char[]> cmpBuf;
-	const std::unique_ptr<char[]> buffer;
+	std::array<char, DEFLATE_BLOCK_SIZE> cmpBuf;
+	std::array<char, DEFLATE_BLOCK_SIZE> buffer;
 
 	DeflateState state;
 
@@ -82,9 +81,6 @@ public:
 	explicit DeflateBlockStreaming(bool gzip_)
 		: gzip(gzip_),
 		  stream(0),
-		  cmpBuf_size(DEFLATE_BLOCK_SIZE),
-		  cmpBuf(std::make_unique<char[]>(cmpBuf_size)),
-		  buffer(std::make_unique<char[]>(DEFLATE_BLOCK_SIZE)),
 		  state(DeflateState::NONE) { }
 
 	// // This class is not CopyConstructible or CopyAssignable.

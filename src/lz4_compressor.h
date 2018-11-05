@@ -23,6 +23,7 @@
 #pragma once
 
 #include <algorithm>        // for move
+#include <array>            // for std::array
 #include <cstring>          // for size_t, memcpy
 #include <fcntl.h>
 #include <functional>       // for function, __base
@@ -78,10 +79,8 @@ protected:
 	size_t _size;
 	size_t _offset;
 
-	const int cmpBuf_size;
-
-	const std::unique_ptr<char[]> cmpBuf;
-	const std::unique_ptr<char[]> buffer;
+	std::array<char, LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)> cmpBuf;
+	std::array<char, LZ4_RING_BUFFER_BYTES> buffer;
 
 	XXH32_state_t xxh_state;
 
@@ -102,10 +101,7 @@ protected:
 public:
 	explicit LZ4BlockStreaming(int seed)
 		: _size(0),
-		  _offset(0),
-		  cmpBuf_size(LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)),
-		  cmpBuf(std::make_unique<char[]>(cmpBuf_size)),
-		  buffer(std::make_unique<char[]>(LZ4_RING_BUFFER_BYTES))
+		  _offset(0)
 	{
 		XXH32_reset(&xxh_state, seed);
 	}

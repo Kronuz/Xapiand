@@ -88,7 +88,7 @@ LZ4CompressData::next()
 	memcpy(inpPtr, data + data_offset, inpBytes);
 	data_offset += inpBytes;
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf.size(), 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
@@ -217,7 +217,7 @@ LZ4CompressFile::next()
 		return std::string();
 	}
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf.size(), 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
