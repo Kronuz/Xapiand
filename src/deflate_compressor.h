@@ -83,10 +83,6 @@ public:
 		  stream(0),
 		  state(DeflateState::NONE) { }
 
-	// // This class is not CopyConstructible or CopyAssignable.
-	// DeflateBlockStreaming(const DeflateBlockStreaming&) = delete;
-	// DeflateBlockStreaming& operator=(const DeflateBlockStreaming&) = delete;
-
 	class iterator : public std::iterator<std::input_iterator_tag, DeflateBlockStreaming> {
 		DeflateBlockStreaming* obj;
 		std::string current_str;
@@ -103,22 +99,6 @@ public:
 			: obj(o),
 			  current_str(std::move(str)),
 			  offset(0) { }
-
-		iterator(iterator&& it)
-			: obj(std::move(it.obj)),
-			  current_str(std::move(it.current_str)),
-			  offset(std::move(it.offset)) { }
-
-		iterator& operator=(iterator&& it) {
-			obj = std::move(it.obj);
-			current_str = std::move(it.current_str);
-			offset = std::move(it.offset);
-			return *this;
-		}
-
-		// iterator is not CopyConstructible or CopyAssignable.
-		iterator(const iterator&) = delete;
-		iterator& operator=(const iterator&) = delete;
 
 		iterator& operator++() {
 			current_str = obj->_next();
