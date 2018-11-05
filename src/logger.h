@@ -54,6 +54,7 @@ public:
 
 
 class StreamLogger : public Logger {
+	std::mutex mtx;
 	std::ofstream ofs;
 
 public:
@@ -65,12 +66,16 @@ public:
 
 
 class StderrLogger : public Logger {
+	std::mutex mtx;
+
 public:
 	void log(int priority, std::string_view str, bool with_priority, bool with_endl) override;
 };
 
 
 class SysLog : public Logger {
+	std::mutex mtx;
+
 public:
 	SysLog(const char* ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
 	~SysLog();

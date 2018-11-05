@@ -208,24 +208,40 @@ Log::release()
 void
 StreamLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
-	bool colorized = Logging::colors && !Logging::no_colors;
-	ofs << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
-	ofs << Logging::colorized(str, colorized);
-	if (with_endl) {
-		ofs << std::endl;
+	std::string buf;
+	if (with_priority) {
+		buf += priorities[priority];
 	}
+	buf += str;
+	if (with_endl) {
+		buf += "\n";
+	}
+
+	bool colorized = Logging::colors && !Logging::no_colors;
+	buf = Logging::colorized(buf, colorized);
+
+	std::lock_guard<std::mutex> lk(mtx);
+	ofs << buf;
 }
 
 
 void
 StderrLogger::log(int priority, std::string_view str, bool with_priority, bool with_endl)
 {
-	bool colorized = (is_tty() || Logging::colors) && !Logging::no_colors;
-	std::cerr << Logging::colorized(with_priority ? priorities[priority] : "", colorized);
-	std::cerr << Logging::colorized(str, colorized);
-	if (with_endl) {
-		std::cerr << std::endl;
+	std::string buf;
+	if (with_priority) {
+		buf += priorities[priority];
 	}
+	buf += str;
+	if (with_endl) {
+		buf += "\n";
+	}
+
+	bool colorized = (is_tty() || Logging::colors) && !Logging::no_colors;
+	buf = Logging::colorized(buf, colorized);
+
+	std::lock_guard<std::mutex> lk(mtx);
+	std::cerr << buf;
 }
 
 
@@ -244,10 +260,17 @@ SysLog::~SysLog()
 void
 SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_endl*/)
 {
+	std::string buf;
+	if (with_priority) {
+		buf += priorities[priority];
+	}
+	buf += str;
+
 	bool colorized = Logging::colors && !Logging::no_colors;
-	auto a = Logging::colorized(with_priority ? priorities[priority] : "", colorized);
-	auto b = Logging::colorized(str, colorized);
-	syslog(priority, "%s%s", a.c_str(), b.c_str());
+	buf = Logging::colorized(buf, colorized);
+
+	std::lock_guard<std::mutex> lk(mtx);
+	syslog(priority, buf.c_str());
 }
 
 
@@ -613,8 +636,6 @@ Logging::add(const char* function, const char* filename, int line, const std::st
 void
 Logging::log(int priority, std::string str, int indent, bool with_priority, bool with_endl)
 {
-	static std::mutex log_mtx;
-	std::lock_guard<std::mutex> lk(log_mtx);
 	auto needle = str.find(STACKED_INDENT);
 	if (needle != std::string::npos) {
 		str.replace(needle, sizeof(STACKED_INDENT) - 1, std::string(indent, ' '));
