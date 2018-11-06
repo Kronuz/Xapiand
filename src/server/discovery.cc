@@ -359,10 +359,14 @@ Discovery::db_updated(Message type, const std::string& message)
 
 	auto node = Node::touch_node(remote_node);
 	if (node) {
-		// Replicate database from the other node
-		Endpoint remote_endpoint(path, node.get());
 		Endpoint local_endpoint(path);
-		XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+		if (local_endpoint.empty()) {
+			L_WARNING("Ignoring update for empty database path: %s!", repr(path));
+		} else {
+			// Replicate database from the other node
+			Endpoint remote_endpoint(path, node.get());
+			XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+		}
 	}
 }
 
