@@ -59,6 +59,7 @@
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
 #include "database_utils.h"                   // for RESERVED_TYPE
+#include "database_wal.h"                     // for DatabaseWALWriter
 #include "epoch.hh"                           // for epoch::now
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
 #include "exception.h"                        // for Exit, Excep...
@@ -82,7 +83,6 @@
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
 
 #ifdef XAPIAND_CLUSTERING
-#include "database_updater.h"                 // for DatabaseUpdater
 #include "server/binary.h"                    // for Binary
 #include "server/binary_server.h"             // for BinaryServer
 #include "server/discovery.h"                 // for Discovery
@@ -682,10 +682,8 @@ XapiandManager::run()
 
 	DatabaseAutocommit::scheduler(opts.num_committers);
 
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		DatabaseUpdater::scheduler(opts.num_updaters);
-	}
+#if XAPIAND_DATABASE_WAL
+	DatabaseWALWriter::start(opts.num_async_wal_writers);
 #endif
 
 	AsyncFsync::scheduler(opts.num_fsynchers);
@@ -694,8 +692,8 @@ XapiandManager::run()
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
 		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
 		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
-#ifdef XAPIAND_CLUSTERING
-		opts.solo ? "" : std::to_string(opts.num_updaters) + ((opts.num_updaters == 1) ? " updater" : " updaters"),
+#if XAPIAND_DATABASE_WAL
+		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
 #endif
 		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
 		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
@@ -761,21 +759,21 @@ XapiandManager::join()
 	L_MANAGER("Finishing database pool!");
 	database_pool.finish();
 
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		L_MANAGER("Finishing updater scheduler!");
-		DatabaseUpdater::finish();
-
-		L_MANAGER("Waiting for %zu updater%s...", DatabaseUpdater::running_size(), (DatabaseUpdater::running_size() == 1) ? "" : "s");
-		DatabaseUpdater::join();
-	}
-#endif
-
 	L_MANAGER("Finishing autocommitter scheduler!");
 	DatabaseAutocommit::finish();
 
 	L_MANAGER("Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
 	DatabaseAutocommit::join();
+
+#if XAPIAND_DATABASE_WAL
+	if (DatabaseWALWriter::running_size()) {
+		L_MANAGER("Finishing WAL writers!");
+		DatabaseWALWriter::finish();
+
+		L_MANAGER("Waiting for %zu WAL writer%s...", DatabaseWALWriter::running_size(), (DatabaseWALWriter::running_size() == 1) ? "" : "s");
+		DatabaseWALWriter::join();
+	}
+#endif
 
 	L_MANAGER("Finishing async fsync threads pool!");
 	AsyncFsync::finish();
@@ -1020,16 +1018,6 @@ XapiandManager::server_metrics()
 	metrics.xapiand_committers_queue_size.Set(DatabaseAutocommit::size());
 	metrics.xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_size());
 	metrics.xapiand_committers_capacity.Set(DatabaseAutocommit::threadpool_capacity());
-
-#ifdef XAPIAND_CLUSTERING
-	// updaters_threads:
-	if (!opts.solo) {
-		metrics.xapiand_committers_running.Set(DatabaseUpdater::running_size());
-		metrics.xapiand_committers_queue_size.Set(DatabaseUpdater::size());
-		metrics.xapiand_committers_pool_size.Set(DatabaseUpdater::threadpool_size());
-		metrics.xapiand_committers_capacity.Set(DatabaseUpdater::threadpool_capacity());
-	}
-#endif
 
 	// fsync_threads:
 	metrics.xapiand_fsync_running.Set(AsyncFsync::running_size());

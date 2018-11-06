@@ -36,7 +36,7 @@
 #define MAX_CLIENTS              1000    // Maximum number of open client connections
 #define MAX_DATABASES            400     // Maximum number of open databases
 #define NUM_SERVERS              10      // Number of servers.
-#define NUM_UPDATERS             3       // Number of database updaters.
+#define NUM_ASYNC_WAL_WRITERS    10      // Number of database async WAL writers.
 #define NUM_COMMITTERS           10      // Number of threads handling the commits.
 #define NUM_FSYNCHERS            10      // Number of threads handling the fsyncs.
 #define FLUSH_THRESHOLD          100000  // Database flush threshold (default for xapian is 10000)
@@ -71,7 +71,7 @@ extern struct opts_t {
 	std::string raft_group = XAPIAND_RAFT_GROUP;
 	ssize_t num_servers = NUM_SERVERS;
 	ssize_t dbpool_size = DBPOOL_SIZE;
-	ssize_t num_updaters = NUM_UPDATERS;
+	ssize_t num_async_wal_writers = NUM_ASYNC_WAL_WRITERS;
 	ssize_t threadpool_size = CONCURRENCY_MULTIPLIER;
 	ssize_t tasks_size = TASKS_SIZE;
 	ssize_t endpoints_list_size = ENDPOINT_LIST_SIZE;

@@ -377,8 +377,10 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
+#if XAPIAND_DATABASE_WAL
+		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, NUM_ASYNC_WAL_WRITERS, "writers", cmd);
+#endif
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_updaters("", "updaters", "Number of database updaters.", false, NUM_UPDATERS, "updaters", cmd);
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 #endif
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
@@ -520,8 +522,10 @@ void parseOptions(int argc, char** argv) {
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
+#if XAPIAND_DATABASE_WAL
+		opts.num_async_wal_writers = num_async_wal_writers.getValue();
+#endif
 #ifdef XAPIAND_CLUSTERING
-		opts.num_updaters = opts.solo ? 0 : num_updaters.getValue();
 		opts.num_replicas = opts.solo ? 0 : num_replicas.getValue();
 #endif
 		opts.num_committers = num_committers.getValue();

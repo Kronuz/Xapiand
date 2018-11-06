@@ -29,7 +29,7 @@
 #include "cassert.hh"                       // for assert
 
 #include "color_tools.hh"                   // for color
-#include "database_updater.h"               // for DatabaseUpdate
+#include "cuuid/uuid.h"                     // for UUID
 #include "epoch.hh"                         // for epoch::now
 #include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager::manager, XapiandManager::StateNames, XapiandManager::State
@@ -442,14 +442,17 @@ Discovery::discovery_cb(ev::timer&, int revents)
 }
 
 void
-Discovery::signal_db_update(const DatabaseUpdate& update)
+Discovery::signal_db_update(const std::string& path, const UUID& uuid, Xapian::rev revision)
 {
-	L_CALL("Discovery::signal_db_update(%s)", repr(endpoint.to_string()));
+	L_CALL("Discovery::signal_db_update(%s, %s, %llu)", repr(path), repr(uuid.to_string()), revision);
+
+	ignore_unused(uuid);
+	ignore_unused(revision);
 
 	auto local_node = Node::local_node();
 	send_message(Message::DB_UPDATED,
 		local_node->serialise() +   // The node where the index is at
-		update.endpoint.path);  // The path of the index
+		path);  // The path of the index
 }
 
 

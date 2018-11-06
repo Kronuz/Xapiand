@@ -24,7 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "database.h"                 // for DatabaseWAL
+#include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for delete_files, build_path_index
 #include "io.hh"                      // for io::*
@@ -162,7 +162,7 @@ Replication::msg_get_changesets(const std::string& message)
 		from_revision = 0;
 	}
 
-	DatabaseWAL wal(endpoints[0].path, nullptr);
+	DatabaseWAL wal(endpoints[0].path);
 	if (from_revision && wal.locate_revision(from_revision).first == DatabaseWAL::max_rev) {
 		from_revision = 0;
 	}
@@ -435,9 +435,10 @@ Replication::reply_changeset(const std::string& line)
 			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE);
 		}
 		slave_database->begin_transaction(false);
+		slave_wal = std::make_unique<DatabaseWAL>(switch_database_path);
 	}
 
-	slave_database->wal->execute(line, true, false, false);
+	slave_wal->execute_line(*slave_database, line, true, false, false);
 }
 
 

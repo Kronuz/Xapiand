@@ -88,10 +88,6 @@ public:
 	std::unique_ptr<Xapian::Database> db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;
 
-#if XAPIAND_DATABASE_WAL
-	std::unique_ptr<DatabaseWAL> wal;
-#endif /* XAPIAND_DATABASE_WAL */
-
 #ifdef XAPIAND_DATA_STORAGE
 	std::vector<std::unique_ptr<DataStorage>> writable_storages;
 	std::vector<std::unique_ptr<DataStorage>> storages;

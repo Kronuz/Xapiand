@@ -268,7 +268,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool u
 	}
 
 	// WAL required on a local writable database, open it.
-	DatabaseWAL wal(endpoints[0].path, nullptr);
+	DatabaseWAL wal(endpoints[0].path);
 	return wal.repr(start_revision, end_revision, unserialised);
 }
 #endif

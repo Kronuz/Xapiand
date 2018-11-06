@@ -89,6 +89,7 @@ static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType 
 
 
 class BinaryClient;
+class DatabaseWAL;
 
 
 class Replication : protected LockableDatabase {
@@ -100,6 +101,7 @@ public:
 	std::string switch_database_path;
 
 	std::shared_ptr<Database> slave_database;
+	std::unique_ptr<DatabaseWAL> slave_wal;
 
 	std::string file_path;
 

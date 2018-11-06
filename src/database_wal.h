@@ -27,12 +27,14 @@
 #if XAPIAND_DATABASE_WAL
 
 #include <array>                // for std::array
+#include <memory>               // for std::unique_ptr
 #include <string>               // for std::string
 #include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
 #include <utility>              // for pair, make_pair
 #include <xapian.h>             // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 #include "cuuid/uuid.h"         // for UUID
+#include "endpoint.h"           // for Endpoint
 #include "storage.h"            // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 
 
@@ -150,32 +152,26 @@ public:
 
 	mutable UUID _uuid;
 	mutable UUID _uuid_le;
-	Database* database;
+	mutable Xapian::rev _revision;
+	Database* _database;
 
-	DatabaseWAL(std::string_view base_path_, Database* database_);
+	DatabaseWAL(std::string_view base_path_);
 	~DatabaseWAL();
 
 	iterator begin();
 	iterator end();
 
-	bool open_current(bool only_committed, bool unsafe = false);
+	const UUID& get_uuid() const;
+	const UUID& get_uuid_le() const;
+	Xapian::rev get_revision() const;
+
+	bool init_database(Database& database);
+	bool execute(Database& database, bool only_committed, bool unsafe = false);
+	bool execute_line(Database& database, std::string_view line, bool wal_, bool send_update, bool unsafe);
+	void write_line(const std::string& path, const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
+
 	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
 
-	const UUID& uuid() const;
-	const UUID& uuid_le() const;
-
-	bool init_database();
-	bool execute(std::string_view line, bool wal_, bool send_update, bool unsafe);
-	void write_line(Type type, std::string_view data, bool send_update);
-	void write_add_document(const Xapian::Document& doc);
-	void write_delete_document_term(std::string_view term);
-	void write_commit(bool send_update);
-	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
-	void write_replace_document_term(std::string_view term, const Xapian::Document& doc);
-	void write_delete_document(Xapian::docid did);
-	void write_set_metadata(std::string_view key, std::string_view val);
-	void write_add_spelling(std::string_view word, Xapian::termcount freqinc);
-	void write_remove_spelling(std::string_view word, Xapian::termcount freqdec);
 	std::pair<Xapian::rev, uint32_t> locate_revision(Xapian::rev revision);
 	iterator find(Xapian::rev revision);
 	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
@@ -243,5 +239,45 @@ inline DatabaseWAL::iterator DatabaseWAL::begin() {
 inline DatabaseWAL::iterator DatabaseWAL::end() {
 	return iterator(this, std::make_pair(DatabaseWAL::max_rev, ""), 0);
 }
+
+
+struct DatabaseWALWriterThread;
+
+class DatabaseWALWriter {
+	friend DatabaseWALWriterThread;
+
+	static std::unique_ptr<DatabaseWALWriter> _instance;
+
+	std::vector<DatabaseWALWriterThread> _threads;
+	const char* _format;
+
+	std::atomic_bool _ending;
+	std::atomic_bool _finished;
+
+	bool enqueue(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func);
+
+public:
+	DatabaseWALWriter(const char* format, std::size_t size);
+
+	static void start(std::size_t size);
+
+	static void clear();
+	static void end();
+	static void finish(bool wait = false);
+	static void join();
+
+	static std::size_t running_size();
+
+	static void write_add_document(const Database& database, const Xapian::Document& doc);
+	static void write_delete_document_term(const Database& database, const std::string& term);
+	static void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
+	static void write_commit(const Database& database, bool send_update);
+	static void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc);
+	static void write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document& doc);
+	static void write_delete_document(const Database& database, Xapian::docid did);
+	static void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
+	static void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);
+};
+
 
 #endif /* XAPIAND_DATABASE_WAL */

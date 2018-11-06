@@ -270,8 +270,8 @@ Database::reopen_writable()
 #endif  // XAPIAND_CLUSTERING
 	{
 #ifdef XAPIAND_DATABASE_WAL
-		DatabaseWAL tmp_wal(endpoint.path, this);
-		tmp_wal.init_database();
+		DatabaseWAL wal(endpoint.path);
+		wal.init_database(*this);
 #endif
 		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) {
 			build_path_index(endpoint.path);
@@ -321,8 +321,8 @@ Database::reopen_writable()
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (local && ((flags & DB_NOWAL) != DB_NOWAL)) {
 		// WAL required on a local writable database, open it.
-		wal = std::make_unique<DatabaseWAL>(endpoint.path, this);
-		if (wal->open_current(true)) {
+		DatabaseWAL wal(endpoint.path);
+		if (wal.execute(*this, true)) {
 			if (auto queue = weak_queue.lock()) {
 				modified = true;
 			}
@@ -404,8 +404,8 @@ Database::reopen_readable()
 #endif  // XAPIAND_CLUSTERING
 		{
 #ifdef XAPIAND_DATABASE_WAL
-			DatabaseWAL tmp_wal(endpoint.path, this);
-			tmp_wal.init_database();
+			DatabaseWAL wal(endpoint.path);
+			wal.init_database(*this);
 #endif
 			try {
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
@@ -642,7 +642,7 @@ Database::commit(bool wal_, bool send_update)
 	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_commit(send_update); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_commit(*this, send_update); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -740,7 +740,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_delete_document(did); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_delete_document(*this, did); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -789,7 +789,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_delete_document_term(term); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_delete_document_term(*this, term); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -939,7 +939,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_add_document(doc); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_add_document(*this, doc); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -989,7 +989,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_replace_document(did, doc); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_replace_document(*this, did, doc); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1041,7 +1041,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_replace_document_term(term, doc); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_replace_document_term(*this, term, doc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1085,7 +1085,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	L_DATABASE_WRAP("Spelling added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_add_spelling(word, freqinc); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_add_spelling(*this, word, freqinc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1127,7 +1127,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	L_DATABASE_WRAP("Spelling removed (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_remove_spelling(word, freqdec); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_remove_spelling(*this, word, freqdec); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1350,7 +1350,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_DATABASE_WRAP("Set metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) { wal->write_set_metadata(key, value); }
+	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_set_metadata(*this, key, value); }
 #else
 	ignore_unused(wal_);
 #endif

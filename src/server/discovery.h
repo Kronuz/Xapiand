@@ -26,6 +26,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <xapian.h>             // for Xapian::rev
+
 #include "base_udp.h"
 
 
@@ -39,6 +41,7 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
 struct DatabaseUpdate;
+class UUID;
 
 // Discovery for nodes and databases
 class Discovery : public UDP, public Worker {
@@ -99,7 +102,7 @@ public:
 	void start();
 	void stop();
 
-	void signal_db_update(const DatabaseUpdate& update);
+	void signal_db_update(const std::string& path, const UUID& uuid, Xapian::rev revision);
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Discovery");
