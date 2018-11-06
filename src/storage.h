@@ -373,9 +373,9 @@ public:
 						close();
 						THROW(StorageIOError, "IO error: open: %s", strerror(errno));
 					}
+					initialize_file(args);
 					created = true;
 				}
-				initialize_file(args);
 				return created;
 			}
 		}
