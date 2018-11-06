@@ -341,21 +341,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				queue->dec_count();
 			}
 
-			if (!database || !database->db) {
-				database.reset();
-				if (queue->count == 0) {
-					_drop_queue(queue);
-					// Erase queue from LRUs
-					if (db_writable) {
-						writable_databases.erase(hash);
-					} else {
-						databases.erase(hash);
-					}
-				}
-				L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
-				THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoints.to_string()));
-			}
-
 			if (locks) {
 				if (!db_writable) {
 					auto has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
