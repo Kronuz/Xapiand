@@ -1031,7 +1031,7 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = doc.serialise();
 		L_DATABASE("write_add_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
@@ -1039,7 +1039,7 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1055,7 +1055,7 @@ void DatabaseWALWriter::write_delete_document_term(const Database& database, con
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
 		L_DATABASE("write_delete_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
@@ -1063,7 +1063,7 @@ void DatabaseWALWriter::write_delete_document_term(const Database& database, con
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1079,7 +1079,7 @@ void DatabaseWALWriter::write_remove_spelling(const Database& database, const st
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqdec);
 		line.append(word);
@@ -1088,7 +1088,7 @@ void DatabaseWALWriter::write_remove_spelling(const Database& database, const st
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1104,14 +1104,14 @@ void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
 
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1127,7 +1127,7 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
 		line.append(doc.serialise());
@@ -1136,7 +1136,7 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1152,7 +1152,7 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
 		line.append(doc.serialise());
@@ -1161,7 +1161,7 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1177,7 +1177,7 @@ void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
 		L_DATABASE("write_delete_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
@@ -1185,7 +1185,7 @@ void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1201,7 +1201,7 @@ void DatabaseWALWriter::write_set_metadata(const Database& database, const std::
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(key);
 		line.append(val);
@@ -1210,7 +1210,7 @@ void DatabaseWALWriter::write_set_metadata(const Database& database, const std::
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
@@ -1226,7 +1226,7 @@ void DatabaseWALWriter::write_add_spelling(const Database& database, const std::
 	auto revision = database.get_revision();
 	assert(_instance);
 	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
-		L_TIMED(start)
+		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqinc);
 		line.append(word);
@@ -1235,7 +1235,7 @@ void DatabaseWALWriter::write_add_spelling(const Database& database, const std::
 		auto& wal = thread.wal(path);
 		wal.write_line(path, uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
 
-		L_TIMED(end);
+		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	});
 }
