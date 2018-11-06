@@ -83,6 +83,7 @@ public:
 	Xapian::rev reopen_revision;
 	bool incomplete;
 	bool closed;
+	bool is_writable_and_local;
 
 	std::unique_ptr<Xapian::Database> db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;

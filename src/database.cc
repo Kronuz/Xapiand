@@ -329,6 +329,9 @@ Database::reopen_writable()
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
+	assert(dbs.size() == endpoints_size);
+
+	is_writable_and_local = local;
 	// Ends Writable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -344,6 +347,7 @@ Database::reopen_readable()
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
 
+	is_writable_and_local = false;
 	incomplete = false;
 	modified = false;
 	dbs.clear();
@@ -441,6 +445,8 @@ Database::reopen_readable()
 #endif  // XAPIAND_DATA_STORAGE
 	}
 	assert(dbs.size() == endpoints_size);
+
+	is_writable_and_local = false;
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -517,8 +523,8 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		modified &&
 		transaction == Database::Transaction::none &&
 		!closed &&
-		!dbs.empty() &&
-		dbs[0].second
+		is_writable_and_local
+
 	) {
 		// Commit only local writable databases
 		try {
@@ -570,8 +576,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 		database->modified &&
 		database->transaction == Database::Transaction::none &&
 		!database->closed &&
-		!database->dbs.empty() &&
-		database->dbs[0].second
+		database->is_writable_and_local
 	) {
 		// Auto commit only local writable databases
 		DatabaseAutocommit::commit(database);
@@ -613,11 +618,9 @@ Database::commit(bool wal_, bool send_update)
 				wdb->commit();
 			}
 			modified = false;
-			const auto& db_pair = dbs[0]; // writable database, only one db in dbs
-			bool local = db_pair.second;
-			if (local) {
+			if (is_writable_and_local) {
 				if (auto queue = weak_queue.lock()) {
-					queue->local_revision = db_pair.first.get_revision();
+					queue->local_revision = wdb->get_revision();
 				}
 			}
 			break;
