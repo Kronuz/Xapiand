@@ -451,6 +451,11 @@ public:
 	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
 		L_CALL("Storage::write() [1]");
 
+		if unlikely(fd == -1) {
+			close();
+			THROW(StorageClosedError, "IO error: closed storage");
+		}
+
 		if ((flags & STORAGE_WRITABLE) == 0) {
 			THROW(StorageIOError, "IO error: read-only storage");
 		}
@@ -552,6 +557,11 @@ public:
 
 	uint32_t write_file(std::string_view filename, void* args=nullptr) {
 		L_CALL("Storage::write_file()");
+
+		if unlikely(fd == -1) {
+			close();
+			THROW(StorageClosedError, "IO error: closed storage");
+		}
 
 		if ((flags & STORAGE_WRITABLE) == 0) {
 			THROW(StorageIOError, "IO error: read-only storage");
