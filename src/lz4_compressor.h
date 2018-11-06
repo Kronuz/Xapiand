@@ -79,8 +79,11 @@ protected:
 	size_t _size;
 	size_t _offset;
 
-	std::array<char, LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)> cmpBuf;
-	std::array<char, LZ4_RING_BUFFER_BYTES> buffer;
+	static constexpr size_t cmpBuf_size = LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE);
+	static constexpr size_t buffer_size = LZ4_RING_BUFFER_BYTES;
+
+	std::unique_ptr<char[]> cmpBuf;
+	std::unique_ptr<char[]> buffer;
 
 	XXH32_state_t xxh_state;
 

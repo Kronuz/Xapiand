@@ -64,6 +64,12 @@ std::string
 LZ4CompressData::init()
 {
 	data_offset = 0;
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -71,6 +77,9 @@ LZ4CompressData::init()
 std::string
 LZ4CompressData::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	if (data_offset >= data_size) {
 		return std::string();
 	}
@@ -88,7 +97,7 @@ LZ4CompressData::next()
 	memcpy(inpPtr, data + data_offset, inpBytes);
 	data_offset += inpBytes;
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf.size(), 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
@@ -129,6 +138,12 @@ std::string
 LZ4DecompressData::init()
 {
 	data_offset = 0;
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -136,6 +151,9 @@ LZ4DecompressData::init()
 std::string
 LZ4DecompressData::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	if (data_offset >= data_size) {
 		return std::string();
 	}
@@ -202,6 +220,12 @@ LZ4CompressFile::init()
 	if (fd_offset != -1 && io::lseek(fd, fd_offset, SEEK_SET) != static_cast<off_t>(fd_offset)) {
 		THROW(LZ4IOError, "IO error: lseek");
 	}
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -209,6 +233,9 @@ LZ4CompressFile::init()
 std::string
 LZ4CompressFile::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	char* const inpPtr = &buffer[_offset];
 
 	// Read line to the ring buffer.
@@ -217,7 +244,7 @@ LZ4CompressFile::next()
 		return std::string();
 	}
 
-	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf.size(), 1);
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, &cmpBuf[0], inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
 		THROW(LZ4Exception, "LZ4_compress_fast_continue failed!");
 	}
@@ -279,6 +306,12 @@ LZ4DecompressFile::init()
 	}
 
 	data_offset = 0;
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -286,6 +319,9 @@ LZ4DecompressFile::init()
 std::string
 LZ4DecompressFile::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	if (data_offset == static_cast<size_t>(data_size)) {
 		if unlikely((data_size = io::read(fd, data, get_read_size())) < 0) {
 			THROW(LZ4IOError, "IO error: read");

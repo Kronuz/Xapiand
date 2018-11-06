@@ -64,8 +64,11 @@ protected:
 	z_stream strm;
 	int stream;
 
-	std::array<char, DEFLATE_BLOCK_SIZE> cmpBuf;
-	std::array<char, DEFLATE_BLOCK_SIZE> buffer;
+	static constexpr size_t cmpBuf_size = DEFLATE_BLOCK_SIZE;
+	static constexpr size_t buffer_size = DEFLATE_BLOCK_SIZE;
+
+	std::unique_ptr<char[]> cmpBuf;
+	std::unique_ptr<char[]> buffer;
 
 	DeflateState state;
 

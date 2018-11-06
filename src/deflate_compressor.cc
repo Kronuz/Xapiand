@@ -79,6 +79,9 @@ DeflateCompressData::init()
 	state = DeflateState::INIT;
 
 	if (data != nullptr) {
+		if (!cmpBuf) {
+			cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+		}
 		return next();
 	}
 	return std::string();
@@ -112,6 +115,8 @@ DeflateCompressData::next(const char* input, size_t input_size, int flush)
 std::string
 DeflateCompressData::next()
 {
+	assert(cmpBuf);
+
 	int flush;
 	if (data_offset > data_size) {
 		state = DeflateState::END;
@@ -180,6 +185,9 @@ DeflateDecompressData::init()
 	}
 	state = DeflateState::INIT;
 
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -187,6 +195,8 @@ DeflateDecompressData::init()
 std::string
 DeflateDecompressData::next()
 {
+	assert(buffer);
+
 	if (data_offset > data_size) {
 		state = DeflateState::END;
 		return std::string();
@@ -269,6 +279,12 @@ DeflateCompressFile::init()
 	size_file = io::lseek(fd, 0, SEEK_CUR);
 	io::lseek(fd, 0, SEEK_SET);
 
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -276,6 +292,9 @@ DeflateCompressFile::init()
 std::string
 DeflateCompressFile::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	auto inpBytes = static_cast<int>(io::read(fd, &buffer[0], DEFLATE_BLOCK_SIZE));
 	if (inpBytes <= 0) {
 		if (stream == Z_STREAM_END) {
@@ -349,6 +368,12 @@ DeflateDecompressFile::init()
 	}
 	state = DeflateState::INIT;
 
+	if (!cmpBuf) {
+		cmpBuf = std::make_unique<char[]>(cmpBuf_size);
+	}
+	if (!buffer) {
+		buffer = std::make_unique<char[]>(buffer_size);
+	}
 	return next();
 }
 
@@ -356,6 +381,9 @@ DeflateDecompressFile::init()
 std::string
 DeflateDecompressFile::next()
 {
+	assert(cmpBuf);
+	assert(buffer);
+
 	int inpBytes = io::read(fd, &cmpBuf[0], DEFLATE_BLOCK_SIZE);
 	if (inpBytes <= 0) {
 		if (stream == Z_STREAM_END) {
