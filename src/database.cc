@@ -269,10 +269,6 @@ Database::reopen_writable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-#ifdef XAPIAND_DATABASE_WAL
-		DatabaseWAL wal(endpoint.path);
-		wal.init_database(*this);
-#endif
 		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) {
 			build_path_index(endpoint.path);
 		}
@@ -403,10 +399,6 @@ Database::reopen_readable()
 		else
 #endif  // XAPIAND_CLUSTERING
 		{
-#ifdef XAPIAND_DATABASE_WAL
-			DatabaseWAL wal(endpoint.path);
-			wal.init_database(*this);
-#endif
 			try {
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
