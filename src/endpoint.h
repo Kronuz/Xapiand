@@ -73,12 +73,11 @@ public:
 	std::string to_string() const;
 
 	bool empty() const noexcept {
-		return (
+		return path.empty() || (
 			port == -1 &&
 			user.empty() &&
 			password.empty() &&
 			host.empty() &&
-			path.empty() &&
 			search.empty() &&
 			node_name.empty()
 		);

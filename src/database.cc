@@ -261,6 +261,10 @@ Database::reopen_writable()
 	db = std::make_unique<Xapian::WritableDatabase>();
 
 	const auto& endpoint = endpoints[0];
+	if (endpoint.empty()) {
+		THROW(Error, "Database must not have empty endpoints");
+	}
+
 	Xapian::WritableDatabase wsdb;
 	bool local = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
@@ -368,6 +372,10 @@ Database::reopen_readable()
 	size_t failures = 0;
 
 	for (const auto& endpoint : endpoints) {
+		if (endpoint.empty()) {
+			THROW(Error, "Database must not have empty endpoints");
+		}
+
 		Xapian::Database rsdb;
 		bool local = false;
 #ifdef XAPIAND_CLUSTERING
