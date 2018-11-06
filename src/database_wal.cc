@@ -646,6 +646,7 @@ DatabaseWAL::init_database(Database& database)
 	try {
 		open(string::format(WAL_STORAGE_PATH "%llu", 0), STORAGE_OPEN);
 		if (header.head.revision != 0) {
+			L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), 0);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 		}
 	} catch (const StorageIOError&) {
@@ -691,9 +692,9 @@ DatabaseWAL::init_database(Database& database)
 
 
 void
-DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update)
+DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line(%s, %s, %llu, Type::%s, <data>, %s)", ::repr(path), ::repr(uuid.to_string()), revision, names[toUType(type)], send_update ? "true" : "false");
+	L_CALL("DatabaseWAL::write_line(%s, %llu, Type::%s, <data>, %s)", ::repr(uuid.to_string()), revision, names[toUType(type)], send_update ? "true" : "false");
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
@@ -711,19 +712,21 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 		line.append(serialise_length(toUType(type)));
 		line.append(compress_lz4(data));
 
-		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], path, ::repr(line, quote));
-
-		if (header.head.revision > revision) {
-			THROW(Error, "Invalid WAL revision %llu: too old for volume %llu", revision, header.head.revision);
-		}
+		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], base_path, ::repr(line, quote));
 
 		if (closed()) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
 			auto volume = (volumes.first <= volumes.second) ? volumes.second : revision;
 			open(string::format(WAL_STORAGE_PATH "%llu", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != volume) {
+				L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), volume);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 			}
+		}
+
+		if (header.head.revision > revision) {
+			L_DEBUG("Invalid WAL revision %llu: too old for %s volume %llu", revision, ::repr(base_path), header.head.revision);
+			THROW(Error, "Invalid WAL revision", revision, header.head.revision);
 		}
 
 		uint32_t slot = revision - header.head.revision;
@@ -732,6 +735,7 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 			// We need a new volume, the old one is full
 			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != revision) {
+				L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), revision);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 			}
 			slot = revision - header.head.revision;
@@ -740,7 +744,8 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 		assert(slot >= 0 && slot < WAL_SLOTS);
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
-				THROW(Error, "Invalid WAL revision %llu (slot %lu): not latest in volume %llu", revision, slot, header.head.revision);
+				L_DEBUG("Invalid WAL revision %llu (slot %lu): not latest in %s volume %llu", revision, slot, ::repr(base_path), header.head.revision);
+				THROW(Error, "Invalid WAL revision", revision, slot, header.head.revision);
 			}
 		}
 
@@ -754,6 +759,7 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 			} else {
 				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 				if (header.head.revision != revision + 1) {
+					L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), revision + 1);
 					THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 				}
 			}
@@ -766,14 +772,14 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 			// On COMMIT, let the updaters do their job
 			if (send_update) {
 				if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-					discovery->signal_db_update(path, uuid, revision + 1);
+					discovery->signal_db_update(base_path, uuid, revision + 1);
 				}
 			}
 		}
 #endif
 
 	} catch (const StorageException& exc) {
-		L_ERR("WAL ERROR in %s: %s", ::repr(path), exc.get_message());
+		L_ERR("WAL ERROR in %s: %s", ::repr(base_path), exc.get_message());
 		Metrics::metrics()
 			.xapiand_wal_errors
 			.Increment();
@@ -790,6 +796,7 @@ DatabaseWAL::locate_revision(Xapian::rev revision)
 	if (volumes.first <= volumes.second && revision - volumes.second < WAL_SLOTS) {
 		open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN);
 		if (header.head.revision != volumes.second) {
+			L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), volumes.second);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 		}
 		if (header.head.revision <= revision) {
@@ -1037,7 +1044,7 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 		L_DATABASE("write_add_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1061,7 +1068,7 @@ void DatabaseWALWriter::write_delete_document_term(const Database& database, con
 		L_DATABASE("write_delete_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1086,7 +1093,7 @@ void DatabaseWALWriter::write_remove_spelling(const Database& database, const st
 		L_DATABASE("write_remove_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1109,7 +1116,7 @@ void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 		L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1134,7 +1141,7 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 		L_DATABASE("write_replace_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1159,7 +1166,7 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 		L_DATABASE("write_replace_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1183,7 +1190,7 @@ void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::
 		L_DATABASE("write_delete_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1208,7 +1215,7 @@ void DatabaseWALWriter::write_set_metadata(const Database& database, const std::
 		L_DATABASE("write_set_metadata {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
@@ -1233,7 +1240,7 @@ void DatabaseWALWriter::write_add_spelling(const Database& database, const std::
 		L_DATABASE("write_add_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
 
 		auto& wal = thread.wal(path);
-		wal.write_line(path, uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
+		wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));

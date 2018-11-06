@@ -168,7 +168,7 @@ public:
 	bool init_database(Database& database);
 	bool execute(Database& database, bool only_committed, bool unsafe = false);
 	bool execute_line(Database& database, std::string_view line, bool wal_, bool send_update, bool unsafe);
-	void write_line(const std::string& path, const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
+	void write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
 
 	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
 
