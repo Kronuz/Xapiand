@@ -322,9 +322,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						database = std::make_shared<Database>(queue, endpoints, flags);
 					}
 					lk.lock();
-				} catch (const Xapian::DatabaseOpeningError& exc) {
-					lk.lock();
-					L_DATABASE("ERROR: %s", exc.get_description());
 				} catch (...) {
 					lk.lock();
 					database.reset();
