@@ -249,8 +249,9 @@ Database::reopen_writable()
 #endif  // XAPIAND_DATA_STORAGE
 
 	auto endpoints_size = endpoints.size();
-	ignore_unused(endpoints_size);
-	assert(endpoints_size == 1);
+	if (endpoints_size != 1) {
+		THROW(Error, "Writable database must have one single endpoint");
+	}
 
 	db = std::make_unique<Xapian::WritableDatabase>();
 
@@ -353,8 +354,9 @@ Database::reopen_readable()
 #endif  // XAPIAND_DATA_STORAGE
 
 	auto endpoints_size = endpoints.size();
-	ignore_unused(endpoints_size);
-	assert(endpoints_size >= 1);
+	if (endpoints_size == 0) {
+		THROW(Error, "Writable database must have at least one endpoint");
+	}
 
 	db = std::make_unique<Xapian::Database>();
 
