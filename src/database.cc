@@ -56,7 +56,12 @@
 
 #define DATA_STORAGE_PATH "docdata."
 
-#define XAPIAN_SYNC_MODE  0       // This could also be Xapian::DB_FULL_SYNC for xapian to ensure full sync
+#ifdef XAPIAND_DATABASE_WAL
+#define XAPIAN_DB_SYNC_MODE  Xapian::DB_NO_SYNC
+#else
+#define XAPIAN_DB_SYNC_MODE  0
+#endif
+
 #define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
 
@@ -259,12 +264,12 @@ Database::reopen_writable()
 	Xapian::WritableDatabase wsdb;
 	bool local = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
-		? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE
-		: Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
+		? Xapian::DB_CREATE_OR_OPEN
+		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
-		wsdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags, endpoint.path);
+		wsdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -274,13 +279,13 @@ Database::reopen_writable()
 			build_path_index(endpoint.path);
 		}
 		try {
-			wsdb = Xapian::WritableDatabase(endpoint.path, _flags);
+			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 					THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
-				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
+				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
 			}
 			throw;
 		}
@@ -416,7 +421,7 @@ Database::reopen_readable()
 					} else {
 						{
 							build_path_index(endpoint.path);
-							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_SYNC_MODE);
+							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
 						}
 						rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 						local = true;
