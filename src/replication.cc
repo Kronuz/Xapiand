@@ -150,11 +150,11 @@ Replication::msg_get_changesets(const std::string& message)
 	auto remote_uuid = unserialise_string(&p, p_end);
 	auto from_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
-	if (endpoint_path.empty()) {
-		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
-	}
 
 	endpoints = Endpoints{Endpoint{endpoint_path}};
+	if (endpoints.empty()) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
+	}
 
 	flags = DB_WRITABLE;
 	lock_database lk_db(this);
