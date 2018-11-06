@@ -693,16 +693,17 @@ DatabaseWAL::init_database(Database& database)
 void
 DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line(<path>, <uuid>, <revision>, Type::%s, <data>, %s)", names[toUType(type)], send_update ? "true" : "false");
+	L_CALL("DatabaseWAL::write_line(%s, %s, %llu, Type::%s, <data>, %s)", ::repr(path), ::repr(uuid.to_string()), revision, names[toUType(type)], send_update ? "true" : "false");
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
-	_revision = revision;
 
 	// COMMIT is one prior the current revision
 	if (type == Type::COMMIT) {
 		--revision;
 	}
+
+	_revision = revision;
 
 	try {
 		std::string line;
@@ -710,10 +711,10 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 		line.append(serialise_length(toUType(type)));
 		line.append(compress_lz4(data));
 
-		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], path, repr(line, quote));
+		L_DATABASE_WAL("%s on %s: '%s'", names[toUType(type)], path, ::repr(line, quote));
 
 		if (header.head.revision > revision) {
-			THROW(Error, "Invalid WAL revision (too old for volume)");
+			THROW(Error, "Invalid WAL revision %llu: too old for volume %llu", revision, header.head.revision);
 		}
 		uint32_t slot = revision - header.head.revision;
 		if (slot >= WAL_SLOTS) {
@@ -727,7 +728,7 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 		assert(slot >= 0 && slot < WAL_SLOTS);
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
-				THROW(Error, "Invalid WAL revision (not latest)");
+				THROW(Error, "Invalid WAL revision %llu (slot %lu): not latest in volume %llu", revision, slot, header.head.revision);
 			}
 		}
 
@@ -749,8 +750,8 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 			if (slot + 1 < WAL_SLOTS) {
 				header.slot[slot + 1] = header.slot[slot];
 			} else {
-				open(string::format(WAL_STORAGE_PATH "%llu", _revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
-				if (header.head.revision != _revision) {
+				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+				if (header.head.revision != revision + 1) {
 					THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 				}
 			}
@@ -763,7 +764,7 @@ DatabaseWAL::write_line(const std::string& path, const UUID& uuid, Xapian::rev r
 			// On COMMIT, let the updaters do their job
 			if (send_update) {
 				if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-					discovery->signal_db_update(path, uuid, _revision);
+					discovery->signal_db_update(path, uuid, revision + 1);
 				}
 			}
 		}
