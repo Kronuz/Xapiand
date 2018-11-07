@@ -1015,6 +1015,7 @@ HttpClient::run()
 	}
 
 	running = false;
+	lk.unlock();
 
 	if (shutting_down && is_idle()) {
 		L_WARNING("Programmed shut down!");
