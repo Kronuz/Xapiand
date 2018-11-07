@@ -281,7 +281,7 @@ class Storage {
 #endif
 	}
 
-	size_t write_bin(char** buffer_, uint32_t& buffer_offset_, const char** data_bin_, size_t size_bin_) {
+	void write_bin(char** buffer_, uint32_t& buffer_offset_, const char** data_bin_, size_t& size_bin_) {
 		size_t size = STORAGE_BLOCK_SIZE - buffer_offset_;
 		if (size > size_bin_) {
 			size = size_bin_;
@@ -290,7 +290,6 @@ class Storage {
 		size_bin_ -= size;
 		*data_bin_ += size;
 		buffer_offset_ += size;
-		return size_bin_;
 	}
 
 protected:
@@ -495,7 +494,7 @@ public:
 		off_t tmp_block_offset = block_offset;
 
 		while (bin_header_data_size) {
-			bin_header_data_size = write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
 			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
 				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
@@ -504,7 +503,7 @@ public:
 		}
 
 		while (it_size) {
-			it_size = write_bin(&buffer, tmp_buffer_offset, &data, it_size);
+			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (compress && !it_size) {
 				++cmpData_it;
 				data = cmpData_it->data();
@@ -524,7 +523,7 @@ public:
 				_bin_footer.init(param, args, XXH32(orig_data, data_size, STORAGE_MAGIC));
 			}
 
-			bin_footer_data_size = write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
 
 			// Align the tmp_buffer_offset to the next storage alignment
 			tmp_buffer_offset = static_cast<uint32_t>(((block_offset + tmp_buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
@@ -620,7 +619,7 @@ public:
 		off_t tmp_block_offset = block_offset;
 
 		while (bin_header_data_size) {
-			bin_header_data_size = write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
 			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
 				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
@@ -629,7 +628,7 @@ public:
 		}
 
 		while (it_size) {
-			it_size = write_bin(&buffer, tmp_buffer_offset, &data, it_size);
+			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (!it_size) {
 				if (compress) {
 					++cmpFile_it;
@@ -666,7 +665,7 @@ public:
 				_bin_footer.init(param, args, XXH32_digest(xxh_state));
 			}
 
-			bin_footer_data_size = write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
 
 			// Align the tmp_buffer_offset to the next storage alignment
 			tmp_buffer_offset = static_cast<uint32_t>(((block_offset + tmp_buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
