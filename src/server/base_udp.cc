@@ -38,10 +38,11 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
+UDP::UDP(int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
 	: port(port_),
 	  description(std::move(description_)),
-	  version(version_)
+	  major_version(major_version_),
+	  minor_version(minor_version_)
 {
 	bind(tries_, group_);
 }
@@ -172,8 +173,10 @@ void
 UDP::send_message(char type, const std::string& content)
 {
 	if (!content.empty()) {
-		std::string message(1, type);
-		message.append((const char *)&version, sizeof(uint16_t));
+		std::string message;
+		message.push_back(major_version);
+		message.push_back(minor_version);
+		message.push_back(type);
 		message.append(serialise_string(opts.cluster_name));
 		message.append(content);
 		sending_message(message);
@@ -206,18 +209,18 @@ UDP::get_message(std::string& result, char max_type)
 	const char *p = buf;
 	const char *p_end = p + received;
 
+	uint8_t received_major_version = *p++;
+	uint8_t received_minor_version = *p++;
+	if (received_major_version > major_version || (received_major_version == major_version && received_minor_version > minor_version)) {
+		L_CONN("Badly formed message: Protocol version mismatch!");
+		return '\xff';
+	}
+
 	char type = *p++;
 	if (type >= max_type) {
 		L_CONN("Badly formed message: Invalid message type %u", unsigned(type));
 		return '\xff';
 	}
-
-	uint16_t remote_protocol_version = *(uint16_t *)p;
-	if ((remote_protocol_version & 0xff) > version) {
-		L_CONN("Badly formed message: Protocol version mismatch!");
-		return '\xff';
-	}
-	p += sizeof(uint16_t);
 
 	auto remote_cluster_name = unserialise_string(&p, p_end);
 	if (remote_cluster_name.empty()) {
@@ -234,8 +237,8 @@ UDP::get_message(std::string& result, char max_type)
 }
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_)
-	: UDP(port_, description_, version_, group_, tries_),
+BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
+	: UDP(port_, description_, major_version_, minor_version_, group_, tries_),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
 }

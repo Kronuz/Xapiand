@@ -39,7 +39,8 @@ protected:
 	int sock;
 
 	std::string description;
-	uint16_t version;
+	uint8_t major_version;
+	uint8_t minor_version;
 
 	void sending_message(const std::string& message);
 
@@ -47,7 +48,7 @@ protected:
 	void shutdown();
 
 public:
-	UDP(int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
+	UDP(int port_, std::string  description_, uint8_t major_, uint8_t minor_, const std::string& group_, int tries_=1);
 	virtual ~UDP() {};
 
 	void send_message(char type, const std::string& content);
@@ -66,6 +67,6 @@ protected:
 	void destroy_impl() override;
 
 public:
-	BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
+	BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_=1);
 	~BaseUDP();
 };
