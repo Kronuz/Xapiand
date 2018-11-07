@@ -221,16 +221,6 @@ namespace ev {
       ev_break (EV_AX_ how);
     }
 
-    unsigned int pending_count () const
-    {
-      return ev_pending_count (EV_AX);
-    }
-
-    void invoke_pending () const
-    {
-      ev_invoke_pending (EV_AX);
-    }
-
     void post_fork ()
     {
       ev_loop_fork (EV_AX);
