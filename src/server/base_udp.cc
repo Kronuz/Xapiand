@@ -246,27 +246,9 @@ BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 
 BaseUDP::~BaseUDP()
 {
-	destroyer();
-
 	UDP::close();
 
 	L_OBJ("DELETED BASE UDP!");
-}
-
-
-void
-BaseUDP::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-BaseUDP::destroyer()
-{
-	L_CALL("BaseUDP::destroyer()");
-
-	UDP::shutdown();
 }
 
 
@@ -282,4 +264,15 @@ BaseUDP::shutdown_impl(time_t asap, time_t now)
 	if (now != 0) {
 		detach();
 	}
+}
+
+
+void
+BaseUDP::destroy_impl()
+{
+	L_CALL("BaseUDP::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	UDP::shutdown();
 }

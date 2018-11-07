@@ -144,10 +144,9 @@ private:
 	void _apply(const std::string& command);
 	void _commit_log();
 
-	void destroyer();
-
-	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
+	void start_impl() override;
+	void stop_impl() override;
 
 	// No copy constructor
 	Raft(const Raft&) = delete;
@@ -159,8 +158,6 @@ public:
 
 	void add_command(const std::string& command);
 	void request_vote();
-	void start();
-	void stop();
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Raft");

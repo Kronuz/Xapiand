@@ -58,7 +58,9 @@ HttpServer::~HttpServer()
 void
 HttpServer::start_impl()
 {
-	L_CALL("BinaryServer::start_impl()");
+	L_CALL("HttpServer::start_impl()");
+
+	Worker::start_impl();
 
 	io.start(http->sock, ev::READ);
 	L_EV("Start http's server accept event (sock=%d)", http->sock);

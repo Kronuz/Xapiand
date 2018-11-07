@@ -37,7 +37,9 @@
 
 Worker::~Worker()
 {
-	destroyer();
+	_stopper();
+	_destroyer();
+	_deinit();
 
 	L_OBJ("DELETED WORKER!");
 }
@@ -66,6 +68,14 @@ Worker::_init()
 	_destroy_async.start();
 	L_EV("Start Worker async destroy event");
 
+	_start_async.set<Worker, &Worker::_start_async_cb>(this);
+	_start_async.start();
+	L_EV("Start Worker async start event");
+
+	_stop_async.set<Worker, &Worker::_stop_async_cb>(this);
+	_stop_async.start();
+	L_EV("Start Worker async stop event");
+
 	_detach_children_async.set<Worker, &Worker::_detach_children_async_cb>(this);
 	_detach_children_async.start();
 	L_EV("Start Worker async detach children event");
@@ -75,18 +85,62 @@ Worker::_init()
 
 
 void
-Worker::destroyer()
+Worker::_deinit()
 {
-	L_CALL("Worker::destroyer()");
+	L_CALL("Worker::_deinit()");
+
+	_detach_children_async.stop();
+	L_EV("Stop Worker async detach children event");
+
+	_stop_async.stop();
+	L_EV("Stop Worker async stop event");
+
+	_start_async.stop();
+	L_EV("Stop Worker async start event");
+
+	_destroy_async.stop();
+	L_EV("Stop Worker async destroy event");
+
+	_break_loop_async.stop();
+	L_EV("Stop Worker async break_loop event");
 
 	_shutdown_async.stop();
 	L_EV("Stop Worker async shutdown event");
-	_break_loop_async.stop();
-	L_EV("Stop Worker async break_loop event");
-	_destroy_async.stop();
-	L_EV("Stop Worker async destroy event");
-	_detach_children_async.stop();
-	L_EV("Stop Worker async detach children event");
+
+}
+
+
+void
+Worker::_destroyer()
+{
+	L_EV_BEGIN("Worker::_destroyer:BEGIN");
+	destroy_impl();
+	L_EV_END("Worker::_destroyer:END");
+
+}
+
+
+inline void
+Worker::_starter()
+{
+	if (!_started) {
+		L_EV_BEGIN("Worker::_starter:BEGIN");
+		start_impl();
+		L_EV_END("Worker::_starter:END");
+		_started = true;
+	}
+}
+
+
+void
+Worker::_stopper()
+{
+	if (_started) {
+		L_EV_BEGIN("Worker::_stopper:BEGIN");
+		stop_impl();
+		L_EV_END("Worker::_stopper:END");
+		_started = false;
+	}
 }
 
 
@@ -121,9 +175,30 @@ Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Worker::_destroy_async_cb:BEGIN");
-	destroy_impl();
-	L_EV_END("Worker::_destroy_async_cb:END");
+	_stopper();
+	_destroyer();
+}
+
+
+void
+Worker::_start_async_cb(ev::async& /*unused*/, int revents)
+{
+	L_CALL("Worker::_start_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+
+	ignore_unused(revents);
+
+	_starter();
+}
+
+
+void
+Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
+{
+	L_CALL("Worker::_stop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+
+	ignore_unused(revents);
+
+	_starter();
 }
 
 
@@ -346,7 +421,34 @@ Worker::destroy()
 	if (ev_loop->depth() != 0u) {
 		_destroy_async.send();
 	} else {
-		destroy_impl();
+		_stopper();
+		_destroyer();
+	}
+}
+
+
+void
+Worker::start()
+{
+	L_CALL("Worker::start() [%s]", __repr__());
+
+	if (ev_loop->depth() != 0u) {
+		_start_async.send();
+	} else {
+		_starter();
+	}
+}
+
+
+void
+Worker::stop()
+{
+	L_CALL("Worker::stop() [%s]", __repr__());
+
+	if (ev_loop->depth() != 0u) {
+		_stop_async.send();
+	} else {
+		_stopper();
 	}
 }
 

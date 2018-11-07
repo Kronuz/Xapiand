@@ -62,6 +62,8 @@ BinaryServer::start_impl()
 {
 	L_CALL("BinaryServer::start_impl()");
 
+	Worker::start_impl();
+
 	io.start(binary->sock, ev::READ);
 	L_EV("Start binary's server accept event (sock=%d)", binary->sock);
 }

@@ -35,21 +35,13 @@ class BaseServer : public Worker {
 
 protected:
 	ev::io io;
-	ev::async start_async;
 
 	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
-	void destroyer();
-
-	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
-
-	void start_async_cb(ev::async &watcher, int revents);
-	virtual void start_impl() = 0;
+	void stop_impl() override;
 
 public:
-	void start();
-
 	virtual ~BaseServer();
 
 	virtual void io_accept_cb(ev::io& watcher, int revents) = 0;

@@ -65,6 +65,7 @@ static inline bool has_consensus(size_t votes) {
 Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: UDP(port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  Worker(parent_, ev_loop_, ev_flags_),
+	  io(*ev_loop),
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
 	  role(Role::FOLLOWER),
@@ -85,8 +86,6 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 Raft::~Raft()
 {
-	destroyer();
-
 	L_OBJ("DELETED RAFT CONSENSUS");
 }
 
@@ -107,25 +106,43 @@ Raft::shutdown_impl(time_t asap, time_t now)
 
 
 void
-Raft::destroy_impl()
+Raft::start_impl()
 {
-	destroyer();
+	L_CALL("Raft::start_impl()");
+
+	Worker::start_impl();
+
+	role = Role::FOLLOWER;
+	voted_for.clear();
+	next_indexes.clear();
+	match_indexes.clear();
+
+	_reset_leader_election_timeout();
+
+	io.start(sock, ev::READ);
+	L_EV("Start raft's server accept event (sock=%d)", sock);
+
+	L_RAFT("Raft was started!");
 }
 
 
 void
-Raft::destroyer()
+Raft::stop_impl()
 {
-	L_CALL("Raft::destroyer()");
+	L_CALL("Raft::stop_impl()");
 
-	leader_election_timeout.stop();
-	L_EV("Stop raft's leader election timeout event");
+	Worker::stop_impl();
 
 	leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
 
+	leader_election_timeout.stop();
+	L_EV("Stop raft's leader election timeout event");
+
 	io.stop();
-	L_EV("Stop raft's io event");
+	L_EV("Stop raft's server accept event");
+
+	L_RAFT("Raft was stopped!");
 }
 
 
@@ -917,43 +934,6 @@ Raft::request_vote()
 	match_indexes.clear();
 
 	_reset_leader_election_timeout(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
-}
-
-
-void
-Raft::start()
-{
-	L_CALL("Raft::start()");
-
-	role = Role::FOLLOWER;
-	voted_for.clear();
-	next_indexes.clear();
-	match_indexes.clear();
-
-	_reset_leader_election_timeout();
-
-	io.start(sock, ev::READ);
-	L_EV("Start raft's server accept event (sock=%d)", sock);
-
-	L_RAFT("Raft was started!");
-}
-
-
-void
-Raft::stop()
-{
-	L_CALL("Raft::stop()");
-
-	leader_heartbeat.stop();
-	L_EV("Stop raft's leader heartbeat event");
-
-	leader_election_timeout.stop();
-	L_EV("Stop raft's leader election timeout event");
-
-	io.stop();
-	L_EV("Stop raft's server accept event");
-
-	L_RAFT("Raft was stopped!");
 }
 
 

@@ -69,10 +69,8 @@ public:
 // Base class for configuration data for TCP.
 class BaseTCP : public TCP, public Worker {
 protected:
-	void destroyer();
-
-	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
+	void destroy_impl() override;
 
 public:
 	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_);

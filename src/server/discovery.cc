@@ -59,6 +59,7 @@ using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
 	: UDP(port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  Worker(parent_, ev_loop_, ev_flags_),
+	  io(*ev_loop),
 	  discovery(*ev_loop)
 {
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
@@ -71,8 +72,6 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 
 Discovery::~Discovery()
 {
-	destroyer();
-
 	L_OBJ("DELETED DISCOVERY");
 }
 
@@ -93,24 +92,40 @@ Discovery::shutdown_impl(time_t asap, time_t now)
 
 
 void
-Discovery::destroy_impl()
+Discovery::start_impl()
 {
-	L_CALL("Discovery::destroy_impl()");
+	L_CALL("Discovery::start_impl()");
 
-	destroyer();
+	Worker::start_impl();
+
+	discovery.start(0, WAITING_FAST);
+	L_EV("Start discovery's discovery exploring event (%f)", discovery.repeat);
+
+	io.start(sock, ev::READ);
+	L_EV("Start discovery's server accept event (sock=%d)", sock);
+
+	L_DISCOVERY("Discovery was started! (exploring)");
 }
 
 
 void
-Discovery::destroyer()
+Discovery::stop_impl()
 {
-	L_CALL("Discovery::destroyer()");
+	L_CALL("Discovery::stop_impl()");
+
+	Worker::stop_impl();
+
+	auto local_node = Node::local_node();
+	send_message(Message::BYE, local_node->serialise());
+	L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 
 	discovery.stop();
 	L_EV("Stop discovery's discovery event");
 
 	io.stop();
-	L_EV("Stop discovery's io event");
+	L_EV("Stop discovery's server accept event");
+
+	L_DISCOVERY("Discovery was stopped!");
 }
 
 
@@ -457,42 +472,6 @@ Discovery::signal_db_update(const std::string& path, const UUID& uuid, Xapian::r
 	send_message(Message::DB_UPDATED,
 		local_node->serialise() +   // The node where the index is at
 		path);  // The path of the index
-}
-
-
-void
-Discovery::start()
-{
-	L_CALL("Discovery::start()");
-
-	discovery.start(0, WAITING_FAST);
-	L_EV("Start discovery's discovery exploring event (%f)", discovery.repeat);
-
-	io.start(sock, ev::READ);
-	L_EV("Start discovery's server accept event (sock=%d)", sock);
-
-	L_DISCOVERY("Discovery was started! (exploring)");
-}
-
-
-void
-Discovery::stop()
-{
-	L_CALL("Discovery::stop()");
-
-	if (io.is_active()) {
-		auto local_node = Node::local_node();
-		send_message(Message::BYE, local_node->serialise());
-		L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
-	}
-
-	discovery.stop();
-	L_EV("Stop discovery's discovery event");
-
-	io.stop();
-	L_EV("Stop discovery's server accept event");
-
-	L_DISCOVERY("Discovery was stopped!");
 }
 
 

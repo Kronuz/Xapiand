@@ -318,25 +318,18 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
 	write_start_async.set<BaseClient, &BaseClient::write_start_async_cb>(this);
-	write_start_async.start();
-	L_EV("Start client's async update event");
-
 	read_start_async.set<BaseClient, &BaseClient::read_start_async_cb>(this);
-	read_start_async.start();
-	L_EV("Start client's async read start event");
-
 	io_read.set<BaseClient, &BaseClient::io_cb_read>(this);
-	io_read.start(sock, ev::READ);
-	L_EV("Start client's read event (sock=%d)", sock.load());
-
+	io_read.set(sock, ev::READ);
 	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
-	L_EV("Start client's write event (sock=%d)", sock.load());
 
 	int total_clients = ++XapiandServer::total_clients;
 	if (total_clients > XapiandServer::max_total_clients) {
 		XapiandServer::max_total_clients = total_clients;
 	}
+
+	start();
 
 	L_OBJ("CREATED BASE CLIENT! (%d clients)", total_clients);
 }
@@ -344,8 +337,6 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 
 BaseClient::~BaseClient()
 {
-	destroyer();
-
 	int total_clients = --XapiandServer::total_clients;
 	if (total_clients < 0) {
 		L_CRIT("Inconsistency in number of total clients");
@@ -372,18 +363,27 @@ BaseClient::is_idle()
 
 
 void
-BaseClient::destroy_impl()
+BaseClient::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL("BaseClient::destroy_impl()");
+	L_CALL("BaseClient::shutdown_impl(%d, %d)", (int)asap, (int)now);
 
-	destroyer();
+	shutting_down = true;
+
+	Worker::shutdown_impl(asap, now);
+
+	if (now != 0 || is_idle()) {
+		destroy();
+		detach();
+	}
 }
 
 
 void
-BaseClient::destroyer()
+BaseClient::destroy_impl()
 {
-	L_CALL("BaseClient::destroyer()");
+	L_CALL("BaseClient::destroy_impl()");
+
+	Worker::destroy_impl();
 
 	close();
 
@@ -392,16 +392,34 @@ BaseClient::destroyer()
 		return;
 	}
 
-	stop();
-
 	io::close(fd);
 }
 
 
 void
-BaseClient::stop()
+BaseClient::start_impl()
 {
-	L_CALL("BaseClient::stop()");
+	L_CALL("BaseClient::start_impl()");
+
+	Worker::start_impl();
+
+	write_start_async.start();
+	L_EV("Start client's async update event");
+
+	read_start_async.start();
+	L_EV("Start client's async read start event");
+
+	io_read.start();
+	L_EV("Start client's read event (sock=%d)", sock.load());
+}
+
+
+void
+BaseClient::stop_impl()
+{
+	L_CALL("BaseClient::stop_impl()");
+
+	Worker::stop_impl();
 
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
@@ -824,22 +842,6 @@ BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 	}
 
 	L_EV_END("BaseClient::read_start_async_cb:END");
-}
-
-
-void
-BaseClient::shutdown_impl(time_t asap, time_t now)
-{
-	L_CALL("BaseClient::shutdown_impl(%d, %d)", (int)asap, (int)now);
-
-	shutting_down = true;
-
-	Worker::shutdown_impl(asap, now);
-
-	if (now != 0 || is_idle()) {
-		destroy();
-		detach();
-	}
 }
 
 

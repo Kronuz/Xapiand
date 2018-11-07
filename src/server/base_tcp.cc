@@ -299,27 +299,9 @@ BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 
 BaseTCP::~BaseTCP()
 {
-	destroyer();
-
 	TCP::close();
 
 	L_OBJ("DELETED BASE TCP!");
-}
-
-
-void
-BaseTCP::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-BaseTCP::destroyer()
-{
-	L_CALL("BaseTCP::destroyer()");
-
-	TCP::shutdown();
 }
 
 
@@ -335,4 +317,15 @@ BaseTCP::shutdown_impl(time_t asap, time_t now)
 	if (now != 0) {
 		detach();
 	}
+}
+
+
+void
+BaseTCP::destroy_impl()
+{
+	L_CALL("BaseTCP::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	TCP::shutdown();
 }

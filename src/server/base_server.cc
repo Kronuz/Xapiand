@@ -29,14 +29,9 @@
 
 BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(parent_, ev_loop_, ev_flags_),
-	  io(*ev_loop),
-	  start_async(*ev_loop)
+	  io(*ev_loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
-
-	start_async.set<BaseServer, &BaseServer::start_async_cb>(this);
-	start_async.start();
-	L_EV("Start async start event");
 
 	L_OBJ("CREATED BASE SERVER!");
 }
@@ -44,29 +39,7 @@ BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 
 BaseServer::~BaseServer()
 {
-	destroyer();
-
 	L_OBJ("DELETED BASE SERVER!");
-}
-
-
-void
-BaseServer::start_async_cb(ev::async& /*unused*/, int revents)
-{
-	L_CALL("BaseServer::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	start_impl();
-}
-
-
-void
-BaseServer::start()
-{
-	L_CALL("BaseServer::start()");
-
-	start_async.send();
 }
 
 
@@ -86,20 +59,12 @@ BaseServer::shutdown_impl(time_t asap, time_t now)
 
 
 void
-BaseServer::destroy_impl()
+BaseServer::stop_impl()
 {
-	destroyer();
-}
+	L_CALL("BaseServer::stop_impl()");
 
-
-void
-BaseServer::destroyer()
-{
-	L_CALL("BaseServer::destroyer()");
+	Worker::stop_impl();
 
 	io.stop();
-	L_EV("Stop io accept event");
-
-	start_async.stop();
-	L_EV("Stop async start event");
+	L_EV("Stop server accept event");
 }

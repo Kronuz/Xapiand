@@ -207,8 +207,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 
 XapiandManager::~XapiandManager()
 {
-	destroyer();
-
 	L_OBJ("DELETED XAPIAN MANAGER!");
 }
 
@@ -565,30 +563,6 @@ XapiandManager::shutdown_sig(int sig)
 
 
 void
-XapiandManager::destroy_impl()
-{
-	destroyer();
-}
-
-
-void
-XapiandManager::destroyer() {
-	L_CALL("XapiandManager::destroyer()");
-
-#ifdef XAPIAND_CLUSTERING
-	if (auto raft = weak_raft.lock()) {
-		raft->stop();
-	}
-	if (auto discovery = weak_discovery.lock()) {
-		discovery->stop();
-	}
-#endif
-
-	finish();
-}
-
-
-void
 XapiandManager::shutdown_impl(time_t asap, time_t now)
 {
 	L_CALL("XapiandManager::shutdown_impl(%d, %d)", (int)asap, (int)now);
@@ -601,6 +575,26 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 		detach();
 		break_loop();
 	}
+}
+
+
+void
+XapiandManager::stop_impl()
+{
+	L_CALL("XapiandManager::stop_impl()");
+
+	Worker::stop_impl();
+
+#ifdef XAPIAND_CLUSTERING
+	if (auto raft = weak_raft.lock()) {
+		raft->stop();
+	}
+	if (auto discovery = weak_discovery.lock()) {
+		discovery->stop();
+	}
+#endif
+
+	finish();
 }
 
 
@@ -710,13 +704,15 @@ XapiandManager::run()
 
 	int sig = atom_sig;
 	if (sig < 0) {
-		destroyer();
+		destroy();
+		detach();
 		throw Exit(-sig);
 	}
 
-	destroyer();
+	stop();
 	join();
 
+	destroy();
 	detach();
 	detach();  // detach a second time so it cleans lingering protocols
 }

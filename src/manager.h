@@ -74,10 +74,8 @@ class XapiandManager : public Worker  {
 
 	struct sockaddr_in host_address();
 
-	void destroyer();
-
-	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
+	void stop_impl() override;
 
 	void finish();
 

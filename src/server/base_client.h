@@ -163,8 +163,10 @@ class ClientDecompressor;
 class BaseClient : public Worker {
 	friend LZ4CompressFile;
 
-	void destroyer();
-	void stop();
+	void shutdown_impl(time_t asap, time_t now) override;
+	void destroy_impl() override;
+	void start_impl() override;
+	void stop_impl() override;
 
 	std::mutex _mutex;
 
@@ -232,7 +234,4 @@ protected:
 
 	void read_file();
 	bool send_file(int fd, size_t offset=0);
-
-	void destroy_impl() override;
-	void shutdown_impl(time_t asap, time_t now) override;
 };

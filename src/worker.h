@@ -51,12 +51,16 @@ private:
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
 	ev::async _destroy_async;
+	ev::async _start_async;
+	ev::async _stop_async;
 	ev::async _detach_children_async;
 
 	std::recursive_mutex _mtx;
 	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
 	std::atomic_int _detaching_retries;
+
+	bool _started;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -71,19 +75,22 @@ protected:
 		: _dynamic_ev_loop(ev_flags_),
 		  ev_flags(ev_flags_),
 		  ev_loop(ev_loop_ ? std::forward<L>(ev_loop_) : &_dynamic_ev_loop),
+		  _asap(0),
+		  _now(0),
 		  _shutdown_async(*ev_loop),
 		  _break_loop_async(*ev_loop),
 		  _destroy_async(*ev_loop),
+		  _start_async(*ev_loop),
+		  _stop_async(*ev_loop),
 		  _detach_children_async(*ev_loop),
 		  _runner(false),
 		  _detaching(false),
 		  _detaching_retries(0),
+		  _started(false),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
 	}
-
-	void destroyer();
 
 private:
 	template<typename T>
@@ -107,10 +114,17 @@ private:
 	}
 
 	void _init();
+	void _deinit();
+
+	void _destroyer();
+	void _starter();
+	void _stopper();
 
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
 	void _destroy_async_cb(ev::async&, int revents);
+	void _start_async_cb(ev::async&, int revents);
+	void _stop_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
@@ -130,6 +144,8 @@ public:
 
 	virtual void shutdown_impl(time_t asap, time_t now);
 	virtual void destroy_impl() {}
+	virtual void start_impl() {}
+	virtual void stop_impl() {}
 
 	void break_loop_impl();
 	void detach_children_impl();
@@ -140,6 +156,9 @@ public:
 	void break_loop();
 
 	void destroy();
+	void start();
+	void stop();
+
 	void detach(int retries = 3);
 	void redetach(int retries = 3);
 

@@ -62,10 +62,8 @@ public:
 // Base class for UDP messages configuration
 class BaseUDP : public UDP, public Worker {
 protected:
-	void destroyer();
-
-	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
+	void destroy_impl() override;
 
 public:
 	BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint16_t version_, const std::string& group_, int tries_=1);
