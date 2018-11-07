@@ -180,8 +180,6 @@ public:
 	virtual void on_read_file(const char *buf, ssize_t received) = 0;
 	virtual void on_read_file_done() = 0;
 
-	void close();
-
 	bool write(const char *buf, size_t buf_size);
 	inline bool write(std::string_view buf) {
 		return write(buf.data(), buf.size());
@@ -200,8 +198,9 @@ protected:
 	std::atomic_bool waiting;
 	std::atomic_bool running;
 	std::atomic_bool shutting_down;
+
+	int sock;
 	std::atomic_bool closed;
-	std::atomic_int sock;
 
 	size_t writes;
 
@@ -229,9 +228,11 @@ protected:
 	// Socket is writable
 	void io_cb_write(ev::io &watcher, int revents);
 
-	WR write_from_queue(int fd);
-	WR write_from_queue(int fd, int max);
+	WR write_from_queue();
+	WR write_from_queue(int max);
 
 	void read_file();
 	bool send_file(int fd, size_t offset=0);
+
+	void close();
 };

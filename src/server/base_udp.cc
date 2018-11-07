@@ -40,6 +40,8 @@
 
 UDP::UDP(int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
 	: port(port_),
+	  sock(-1),
+	  closed(false),
 	  description(std::move(description_)),
 	  major_version(major_version_),
 	  minor_version(minor_version_)
@@ -48,25 +50,21 @@ UDP::UDP(int port_, std::string  description_, uint8_t major_version_, uint8_t m
 }
 
 
+UDP::~UDP()
+{
+	if (sock != -1) {
+		io::close(sock);
+	}
+}
+
+
 void
 UDP::close() {
-	if (sock == -1) {
-		return;
+	if (!closed.exchange(true)) {
+		io::shutdown(sock, SHUT_RDWR);
 	}
-
-	io::close(sock);
-	sock = -1;
 }
 
-
-void
-UDP::shutdown() {
-	if (sock == -1) {
-		return;
-	}
-
-	io::shutdown(sock, SHUT_RDWR);
-}
 
 void
 UDP::bind(int tries, const std::string& group)
@@ -99,8 +97,7 @@ UDP::bind(int tries, const std::string& group)
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
-		io::close(sock);
-		sock = -1;
+		close();
 		sig_exit(-EX_CONFIG);
 	}
 
@@ -141,8 +138,7 @@ UDP::bind(int tries, const std::string& group)
 	}
 
 	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
-	io::close(sock);
-	sock = -1;
+	close();
 	sig_exit(-EX_CONFIG);
 }
 
@@ -150,7 +146,7 @@ UDP::bind(int tries, const std::string& group)
 void
 UDP::sending_message(const std::string& message)
 {
-	if (sock != -1) {
+	if (!closed) {
 		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
@@ -160,7 +156,7 @@ UDP::sending_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			if (sock != -1 && !io::ignored_errno(errno, true, true, true)) {
+			if (!io::ignored_errno(errno, true, true, true)) {
 				L_ERR("ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 				XapiandManager::manager->shutdown();
 			}
@@ -272,5 +268,5 @@ BaseUDP::destroy_impl()
 
 	Worker::destroy_impl();
 
-	UDP::shutdown();
+	UDP::close();
 }

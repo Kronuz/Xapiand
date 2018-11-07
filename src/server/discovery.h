@@ -85,6 +85,7 @@ private:
 	void discovery_cb(ev::timer& watcher, int revents);
 
 	void shutdown_impl(time_t asap, time_t now) override;
+	void destroy_impl() override;
 	void start_impl() override;
 	void stop_impl() override;
 

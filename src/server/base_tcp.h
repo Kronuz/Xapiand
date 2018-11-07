@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <iostream>
+#include <atomic>    // for std::atomic_bool
 #include <memory>    // for shared_ptr
 #include <string>    // for string
 #include <time.h>    // for time_t
@@ -44,6 +44,7 @@ class TCP {
 protected:
 	int port;
 	int sock;
+	std::atomic_bool closed;
 
 	int flags;
 
@@ -53,11 +54,10 @@ protected:
 	void check_backlog(int tcp_backlog);
 
 	void close();
-	void shutdown();
 
 public:
 	TCP(int port_, std::string  description_, int tries_, int flags_);
-	virtual ~TCP() {};
+	virtual ~TCP();
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
 	int accept();

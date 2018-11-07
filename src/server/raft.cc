@@ -98,6 +98,17 @@ Raft::shutdown_impl(time_t asap, time_t now)
 
 
 void
+Raft::destroy_impl()
+{
+	L_CALL("Raft::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	UDP::close();
+}
+
+
+void
 Raft::start_impl()
 {
 	L_CALL("Raft::start_impl()");
@@ -152,19 +163,19 @@ Raft::send_message(Message type, const std::string& message)
 void
 Raft::io_accept_cb(ev::io& watcher, int revents)
 {
-	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d, state:%s}", revents, readable_revents(revents), sock, watcher.fd, XapiandManager::StateNames(XapiandManager::manager->state));
+	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), sock, XapiandManager::StateNames(XapiandManager::manager->state));
 
-	int fd = sock;
-	if (fd == -1) {
+	ignore_unused(watcher);
+	assert(sock == watcher.fd);
+
+	if (closed) {
 		return;
 	}
-	ignore_unused(watcher);
-	assert(fd == watcher.fd || fd == -1);
 
-	L_DEBUG_HOOK("Raft::io_accept_cb", "Raft::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("Raft::io_accept_cb", "Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid raft event {fd:%d}: %s", fd, strerror(errno));
+		L_EV("ERROR: got invalid raft event {sock:%d}: %s", sock, strerror(errno));
 		return;
 	}
 

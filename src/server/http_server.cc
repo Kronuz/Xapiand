@@ -62,19 +62,19 @@ HttpServer::start_impl()
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d, fd:%d}", revents, readable_revents(revents), http->sock, watcher.fd);
+	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), http->sock);
 
-	int fd = http->sock;
-	if (fd == -1) {
+	ignore_unused(watcher);
+	assert(http->sock == watcher.fd);
+
+	if (http->closed) {
 		return;
 	}
-	ignore_unused(watcher);
-	assert(fd == watcher.fd || fd == -1);
 
-	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), http->sock);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid http event {fd:%d}: %s", fd, strerror(errno));
+		L_EV("ERROR: got invalid http event {sock:%d}: %s", http->sock, strerror(errno));
 		return;
 	}
 
@@ -83,7 +83,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	int client_sock = http->accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept http error {fd:%d}: %s", fd, strerror(errno));
+			L_ERR("ERROR: accept http error {sock:%d}: %s", http->sock, strerror(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);

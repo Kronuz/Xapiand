@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <atomic>        // for std::atomic_bool
 #include <netinet/in.h>  // for sockaddr_in
 #include <sys/types.h>   // for uint16_t
 #include <time.h>        // for time_t
@@ -37,6 +38,7 @@ protected:
 
 	int port;
 	int sock;
+	std::atomic_bool closed;
 
 	std::string description;
 	uint8_t major_version;
@@ -45,11 +47,10 @@ protected:
 	void sending_message(const std::string& message);
 
 	void close();
-	void shutdown();
 
 public:
 	UDP(int port_, std::string  description_, uint8_t major_, uint8_t minor_, const std::string& group_, int tries_=1);
-	virtual ~UDP() {};
+	virtual ~UDP();
 
 	void send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);

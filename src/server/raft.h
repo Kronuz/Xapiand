@@ -143,6 +143,7 @@ private:
 	void _commit_log();
 
 	void shutdown_impl(time_t asap, time_t now) override;
+	void destroy_impl() override;
 	void start_impl() override;
 	void stop_impl() override;
 

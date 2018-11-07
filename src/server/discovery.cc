@@ -83,6 +83,17 @@ Discovery::shutdown_impl(time_t asap, time_t now)
 
 
 void
+Discovery::destroy_impl()
+{
+	L_CALL("Discovery::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	UDP::close();
+}
+
+
+void
 Discovery::start_impl()
 {
 	L_CALL("Discovery::start_impl()");
@@ -133,19 +144,19 @@ Discovery::send_message(Message type, const std::string& message)
 void
 Discovery::io_accept_cb(ev::io &watcher, int revents)
 {
-	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, fd:%d}", revents, readable_revents(revents), sock, watcher.fd);
+	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
-	int fd = sock;
-	if (fd == -1) {
+	ignore_unused(watcher);
+	assert(sock == watcher.fd);
+
+	if (closed) {
 		return;
 	}
-	ignore_unused(watcher);
-	assert(fd == watcher.fd || fd == -1);
 
-	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {fd:%d}", revents, readable_revents(revents), fd);
+	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid discovery event {fd:%d}: %s", fd, strerror(errno));
+		L_EV("ERROR: got invalid discovery event {sock:%d}: %s", sock, strerror(errno));
 		return;
 	}
 

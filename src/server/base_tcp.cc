@@ -45,6 +45,8 @@
 
 TCP::TCP(int port_, std::string  description_, int tries_, int flags_)
 	: port(port_),
+	  sock(-1),
+	  closed(false),
 	  flags(flags_),
 	  description(std::move(description_))
 {
@@ -52,24 +54,19 @@ TCP::TCP(int port_, std::string  description_, int tries_, int flags_)
 }
 
 
-void
-TCP::close() {
-	if (sock == -1) {
-		return;
+TCP::~TCP()
+{
+	if (sock != -1) {
+		io::close(sock);
 	}
-
-	io::close(sock);
-	sock = -1;
 }
 
 
 void
-TCP::shutdown() {
-	if (sock == -1) {
-		return;
+TCP::close() {
+	if (!closed.exchange(true)) {
+		io::shutdown(sock, SHUT_RDWR);
 	}
-
-	io::shutdown(sock, SHUT_RDWR);
 }
 
 
@@ -152,8 +149,7 @@ TCP::bind(int tries)
 	}
 
 	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
-	io::close(sock);
-	sock = -1;
+	close();
 	sig_exit(-EX_CONFIG);
 }
 
@@ -322,5 +318,5 @@ BaseTCP::destroy_impl()
 
 	Worker::destroy_impl();
 
-	TCP::shutdown();
+	TCP::close();
 }
