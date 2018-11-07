@@ -381,7 +381,8 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 	Worker::shutdown_impl(asap, now);
 
 	if (now != 0 || is_idle()) {
-		destroy();
+		stop(false);
+		destroy(false);
 		detach();
 	}
 }

@@ -89,7 +89,8 @@ Raft::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	destroy();
+	stop(false);
+	destroy(false);
 
 	if (now != 0) {
 		detach();
