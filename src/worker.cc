@@ -371,7 +371,7 @@ Worker::detach_children_impl()
 	for (auto& weak_child : weak_children) {
 		int retries = 0;
 		if (auto child = weak_child.lock()) {
-			child->_detach_children();
+			child->_detach_children(true);
 			if (!child->_detaching) { continue; }
 			retries = child->_detaching_retries;
 		}
@@ -381,21 +381,21 @@ Worker::detach_children_impl()
 
 
 void
-Worker::shutdown()
+Worker::shutdown(bool async)
 {
 	L_CALL("Worker::shutdown() [%s]", __repr__());
 
 	auto now = epoch::now<>();
-	shutdown(now, now);
+	shutdown(now, now, async);
 }
 
 
 void
-Worker::shutdown(time_t asap, time_t now)
+Worker::shutdown(time_t asap, time_t now, bool async)
 {
 	L_CALL("Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__());
 
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_asap = asap;
 		_now = now;
 		_shutdown_async.send();
@@ -406,11 +406,11 @@ Worker::shutdown(time_t asap, time_t now)
 
 
 void
-Worker::break_loop()
+Worker::break_loop(bool async)
 {
 	L_CALL("Worker::break_loop() [%s]", __repr__());
 
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_break_loop_async.send();
 	} else {
 		break_loop_impl();
@@ -419,11 +419,11 @@ Worker::break_loop()
 
 
 void
-Worker::destroy()
+Worker::destroy(bool async)
 {
 	L_CALL("Worker::destroy() [%s]", __repr__());
 
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_destroy_async.send();
 	} else {
 		_destroyer();
@@ -432,11 +432,11 @@ Worker::destroy()
 
 
 void
-Worker::start()
+Worker::start(bool async)
 {
 	L_CALL("Worker::start() [%s]", __repr__());
 
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_start_async.send();
 	} else {
 		_starter();
@@ -445,11 +445,11 @@ Worker::start()
 
 
 void
-Worker::stop()
+Worker::stop(bool async)
 {
 	L_CALL("Worker::stop() [%s]", __repr__());
 
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_stop_async.send();
 	} else {
 		_stopper();
@@ -458,9 +458,9 @@ Worker::stop()
 
 
 void
-Worker::_detach_children()
+Worker::_detach_children(bool async)
 {
-	if (ev_loop->depth() != 0u) {
+	if (async && ev_loop->depth() != 0u) {
 		_detach_children_async.send();
 	} else {
 		detach_children_impl();
@@ -469,19 +469,19 @@ Worker::_detach_children()
 
 
 void
-Worker::detach(int retries)
+Worker::detach(int retries, bool async)
 {
 	L_CALL("Worker::detach() [%s]", __repr__());
 
 	_detaching = true;
 	_detaching_retries = retries;
 
-	_ancestor(1)->_detach_children();
+	_ancestor(1)->_detach_children(async);
 }
 
 
 void
-Worker::redetach(int retries)
+Worker::redetach(int retries, bool async)
 {
 	L_CALL("Worker::redetach() [%s]", __repr__());
 
@@ -489,7 +489,7 @@ Worker::redetach(int retries)
 
 	if (_detaching) {
 		_detaching_retries = retries;
-		_ancestor(1)->_detach_children();
+		_ancestor(1)->_detach_children(async);
 	}
 }
 

@@ -129,7 +129,7 @@ private:
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
 	auto _ancestor(int levels=-1);
-	void _detach_children();
+	void _detach_children(bool async);
 
 public:
 	std::string dump_tree(int level=1);
@@ -150,17 +150,17 @@ public:
 	void break_loop_impl();
 	void detach_children_impl();
 
-	void shutdown(time_t asap, time_t now);
-	void shutdown();
+	void shutdown(bool async = true);
+	void shutdown(time_t asap, time_t now, bool async = true);
 
-	void break_loop();
+	void break_loop(bool async = true);
 
-	void destroy();
-	void start();
-	void stop();
+	void destroy(bool async = true);
+	void start(bool async = true);
+	void stop(bool async = true);
 
-	void detach(int retries = 3);
-	void redetach(int retries = 3);
+	void detach(int retries = 3, bool async = true);
+	void redetach(int retries = 3, bool async = true);
 
 	auto detaching() {
 		return _detaching.load(std::memory_order_relaxed);
