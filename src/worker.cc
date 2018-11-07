@@ -24,6 +24,8 @@
 
 #include <thread>
 
+#include "cassert.hh"           // for assert
+
 #include "epoch.hh"             // for epoch::now
 #include "ignore_unused.h"
 #include "log.h"
@@ -35,11 +37,30 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #define L_WORKER L_SALMON
+// #undef L_EV_BEGIN
+// #define L_EV_BEGIN L_DELAYED_200
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 Worker::~Worker()
 {
 	L_CALL("Worker::~Worker() [%s]", __repr__());
+
+	// Make sure to call Worker::deinit() as the last line in the
+	// destructor of any subclasses implementing either one of:
+	// shutdown_impl(), destroy_impl(), start_impl() or stop_impl().
+	// Otherwise the assert bellow will fire!
+	assert(_deinited);  // Beware of the note above
+
+	deinit();
+}
+
+
+void
+Worker::deinit()
+{
+	L_CALL("Worker::deinit() [%s]", __repr__());
 
 	_stopper();
 	_destroyer();
@@ -89,23 +110,27 @@ Worker::_deinit()
 {
 	L_CALL("Worker::_deinit() [%s]", __repr__());
 
-	_detach_children_async.stop();
-	L_EV("Stop Worker async detach children event");
+	if (!_deinited) {
+		_detach_children_async.stop();
+		L_EV("Stop Worker async detach children event");
 
-	_stop_async.stop();
-	L_EV("Stop Worker async stop event");
+		_stop_async.stop();
+		L_EV("Stop Worker async stop event");
 
-	_start_async.stop();
-	L_EV("Stop Worker async start event");
+		_start_async.stop();
+		L_EV("Stop Worker async start event");
 
-	_destroy_async.stop();
-	L_EV("Stop Worker async destroy event");
+		_destroy_async.stop();
+		L_EV("Stop Worker async destroy event");
 
-	_break_loop_async.stop();
-	L_EV("Stop Worker async break_loop event");
+		_break_loop_async.stop();
+		L_EV("Stop Worker async break_loop event");
 
-	_shutdown_async.stop();
-	L_EV("Stop Worker async shutdown event");
+		_shutdown_async.stop();
+		L_EV("Stop Worker async shutdown event");
+
+		_deinited = true;
+	}
 
 }
 
@@ -119,6 +144,7 @@ Worker::_destroyer()
 		L_EV_BEGIN("Worker::_destroyer:BEGIN");
 		destroy_impl();
 		L_EV_END("Worker::_destroyer:END");
+
 		_destroyed = true;
 	}
 
@@ -134,6 +160,7 @@ Worker::_starter()
 		L_EV_BEGIN("Worker::_starter:BEGIN");
 		start_impl();
 		L_EV_END("Worker::_starter:END");
+
 		_started = true;
 	}
 }
@@ -148,6 +175,7 @@ Worker::_stopper()
 		L_EV_BEGIN("Worker::_stopper:BEGIN");
 		stop_impl();
 		L_EV_END("Worker::_stopper:END");
+
 		_started = false;
 	}
 }

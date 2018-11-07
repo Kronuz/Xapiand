@@ -62,6 +62,7 @@ private:
 
 	bool _started;
 	bool _destroyed;
+	bool _deinited;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -89,10 +90,13 @@ protected:
 		  _detaching_retries(0),
 		  _started(false),
 		  _destroyed(false),
+		  _deinited(false),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();
 	}
+
+	void deinit();
 
 private:
 	template<typename T>
