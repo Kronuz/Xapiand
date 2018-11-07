@@ -391,11 +391,11 @@ public:
 			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
 		}
 
-		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
-		if unlikely(r == -1) {
+		auto read_size = io::pread(fd, &header, sizeof(header), 0);
+		if unlikely(read_size == -1) {
 			close();
 			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
-		} else if unlikely(r != sizeof(header)) {
+		} else if unlikely(read_size != sizeof(header)) {
 			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
 		header.validate(param, args);
@@ -579,7 +579,7 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&_bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		ssize_t it_size = 0;
+		size_t it_size = 0;
 		off_t file_size = 0;
 		int fd_write = -1;
 		char buf_read[STORAGE_BLOCK_SIZE];
@@ -600,11 +600,12 @@ public:
 				THROW(StorageIOError, "Cannot open file: %s", filename);
 			}
 			_bin_header.init(param, args, 0, 0);
-			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
-			if unlikely(it_size < 0) {
+			auto read_size = io::read(fd_write, buf_read, sizeof(buf_read));
+			if unlikely(read_size == -1) {
 				close();
 				THROW(StorageIOError, "Cannot read file: %s", filename);
 			}
+			it_size = read_size;
 			data = buf_read;
 			file_size += it_size;
 			XXH32_reset(xxh_state, STORAGE_MAGIC);
@@ -635,11 +636,12 @@ public:
 					it_size = cmpFile_it.size();
 					data = cmpFile_it->data();
 				} else {
-					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
-					if unlikely(it_size < 0) {
+					auto read_size = io::read(fd_write, buf_read, sizeof(buf_read));
+					if unlikely(read_size == -1) {
 						close();
 						THROW(StorageIOError, "Cannot read from file: %s", filename);
 					}
+					it_size = read_size;
 					data = buf_read;
 					file_size += it_size;
 					XXH32_update(xxh_state, data, it_size);
@@ -705,22 +707,20 @@ public:
 			return 0;
 		}
 
-		ssize_t r;
-
 		if (!bin_header.size) {
 			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
 			if (offset >= header.head.offset * STORAGE_ALIGNMENT || offset >= limit * STORAGE_ALIGNMENT) {
 				THROW(StorageEOF, "Storage EOF");
 			}
 
-			r = io::read(fd, &bin_header, sizeof(StorageBinHeader));
-			if unlikely(r < 0) {
+			auto read_size = io::read(fd, &bin_header, sizeof(StorageBinHeader));
+			if unlikely(read_size == -1) {
 				close();
 				THROW(StorageIOError, "IO error: read: %s", strerror(errno));
-			} else if unlikely(r != sizeof(StorageBinHeader)) {
+			} else if unlikely(read_size != sizeof(StorageBinHeader)) {
 				THROW(StorageCorruptVolume, "Incomplete bin header");
 			}
-			bin_offset += r;
+			bin_offset += read_size;
 			bin_header.validate(param, args);
 
 			io::fadvise(fd, bin_offset, bin_header.size, POSIX_FADV_WILLNEED);
@@ -746,29 +746,29 @@ public:
 			}
 
 			if (buf_size) {
-				r = io::read(fd, buf, buf_size);
-				if unlikely(r < 0) {
+				auto read_size = io::read(fd, buf, buf_size);
+				if unlikely(read_size == -1) {
 					close();
 					THROW(StorageIOError, "IO error: read: %s", strerror(errno));
-				} else if unlikely(static_cast<size_t>(r) != buf_size) {
+				} else if unlikely(static_cast<size_t>(read_size) != buf_size) {
 					THROW(StorageCorruptVolume, "Incomplete bin data");
 				}
-				bin_offset += r;
-				bin_size += r;
-				XXH32_update(xxh_state, buf, r);
-				return r;
+				bin_offset += read_size;
+				bin_size += read_size;
+				XXH32_update(xxh_state, buf, read_size);
+				return read_size;
 			}
 			bin_hash = XXH32_digest(xxh_state);
 		}
 
-		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
-		if unlikely(r < 0) {
+		auto read_size = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
+		if unlikely(read_size == -1) {
 			close();
 			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
-		} else if unlikely(r != sizeof(StorageBinFooter)) {
+		} else if unlikely(read_size != sizeof(StorageBinFooter)) {
 			THROW(StorageCorruptVolume, "Incomplete bin footer");
 		}
-		bin_offset += r;
+		bin_offset += read_size;
 		bin_footer.validate(param, args, bin_hash);
 
 		// Align the bin_offset to the next storage alignment
@@ -845,10 +845,9 @@ public:
 
 		std::string ret;
 
-		size_t r;
 		char buf[LZ4_BLOCK_SIZE];
-		while ((r = read(buf, sizeof(buf), limit, args))) {
-			ret += std::string(buf, r);
+		while (auto read_size = read(buf, sizeof(buf), limit, args)) {
+			ret += std::string(buf, read_size);
 		}
 
 		return ret;
