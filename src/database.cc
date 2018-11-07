@@ -201,7 +201,10 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
 	  incomplete(false),
-	  closed(false)
+	  closed(false),
+	  is_writable(false),
+	  is_writable_and_local(false),
+	  is_writable_and_local_with_wal(false)
 {
 	reopen();
 
@@ -310,10 +313,15 @@ Database::reopen_writable()
 		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 	}
 #endif  // XAPIAND_DATA_STORAGE
+	assert(dbs.size() == endpoints_size);
+
+	is_writable = true;
+	is_writable_and_local = local;
+	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NOWAL) != DB_NOWAL);
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
-	if (local && ((flags & DB_NOWAL) != DB_NOWAL)) {
+	if (is_writable_and_local_with_wal) {
 		// WAL required on a local writable database, open it.
 		DatabaseWAL wal(endpoint.path);
 		if (wal.execute(*this, true)) {
@@ -323,9 +331,6 @@ Database::reopen_writable()
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
-	assert(dbs.size() == endpoints_size);
-
-	is_writable_and_local = local;
 	// Ends Writable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -341,7 +346,6 @@ Database::reopen_readable()
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
 
-	is_writable_and_local = false;
 	incomplete = false;
 	modified = false;
 	dbs.clear();
@@ -441,7 +445,9 @@ Database::reopen_readable()
 	}
 	assert(dbs.size() == endpoints_size);
 
+	is_writable = false;
 	is_writable_and_local = false;
+	is_writable_and_local_with_wal = false;
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -510,11 +516,9 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
 	L_CALL("Database::do_close(...)");
 
-	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 	if (
 		commit_ &&
 		db &&
-		db_writable &&
 		modified &&
 		transaction == Database::Transaction::none &&
 		!closed &&
@@ -564,10 +568,8 @@ Database::close()
 void
 Database::autocommit(const std::shared_ptr<Database>& database)
 {
-	bool db_writable = (database->flags & DB_WRITABLE) == DB_WRITABLE;
 	if (
 		database->db &&
-		db_writable &&
 		database->modified &&
 		database->transaction == Database::Transaction::none &&
 		!database->closed &&
@@ -584,7 +586,7 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit(%s)", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -637,7 +639,7 @@ Database::commit(bool wal_, bool send_update)
 	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_commit(*this, send_update); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_commit(*this, send_update); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -651,7 +653,7 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction(%s)", flushed ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -668,7 +670,7 @@ Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -685,7 +687,7 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -702,7 +704,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document(%d, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -735,7 +737,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_delete_document(*this, did); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_delete_document(*this, did); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -751,7 +753,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document_term(%s, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -784,7 +786,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_delete_document_term(*this, term); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_delete_document_term(*this, term); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -845,7 +847,7 @@ Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid did) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
-	assert((flags & DB_WRITABLE) != 0);
+	assert(is_writable);
 
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = writable_storages[subdatabase];
@@ -934,7 +936,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_add_document(*this, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_add_document(*this, doc); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -984,7 +986,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_replace_document(*this, did, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document(*this, did, doc); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1036,7 +1038,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_replace_document_term(*this, term, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document_term(*this, term, doc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1080,7 +1082,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	L_DATABASE_WRAP("Spelling added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_add_spelling(*this, word, freqinc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_add_spelling(*this, word, freqinc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1122,7 +1124,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	L_DATABASE_WRAP("Spelling removed (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_remove_spelling(*this, word, freqdec); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_remove_spelling(*this, word, freqdec); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1345,7 +1347,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_DATABASE_WRAP("Set metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local) { DatabaseWALWriter::write_set_metadata(*this, key, value); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_set_metadata(*this, key, value); }
 #else
 	ignore_unused(wal_);
 #endif
