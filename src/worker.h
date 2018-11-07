@@ -50,9 +50,9 @@ private:
 
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
-	ev::async _destroy_async;
 	ev::async _start_async;
 	ev::async _stop_async;
+	ev::async _destroy_async;
 	ev::async _detach_children_async;
 
 	std::recursive_mutex _mtx;
@@ -81,9 +81,9 @@ protected:
 		  _now(0),
 		  _shutdown_async(*ev_loop),
 		  _break_loop_async(*ev_loop),
-		  _destroy_async(*ev_loop),
 		  _start_async(*ev_loop),
 		  _stop_async(*ev_loop),
+		  _destroy_async(*ev_loop),
 		  _detach_children_async(*ev_loop),
 		  _runner(false),
 		  _detaching(false),
@@ -128,9 +128,9 @@ private:
 
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
-	void _destroy_async_cb(ev::async&, int revents);
 	void _start_async_cb(ev::async&, int revents);
 	void _stop_async_cb(ev::async&, int revents);
+	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
 	std::vector<std::weak_ptr<Worker>> _gather_children();
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
@@ -149,9 +149,9 @@ public:
 	virtual ~Worker();
 
 	virtual void shutdown_impl(time_t asap, time_t now);
-	virtual void destroy_impl() {}
 	virtual void start_impl() {}
 	virtual void stop_impl() {}
+	virtual void destroy_impl() {}
 
 	void break_loop_impl();
 	void detach_children_impl();
@@ -161,12 +161,17 @@ public:
 
 	void break_loop(bool async = true);
 
-	void destroy(bool async = true);
 	void start(bool async = true);
 	void stop(bool async = true);
-
+	void destroy(bool async = true);
 	void detach(int retries = 3, bool async = true);
 	void redetach(int retries = 3, bool async = true);
+
+	void kill(bool async = true) {
+		stop(async);
+		destroy(async);
+		detach(async);
+	}
 
 	auto detaching() {
 		return _detaching.load(std::memory_order_relaxed);
