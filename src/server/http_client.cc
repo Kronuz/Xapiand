@@ -977,7 +977,7 @@ HttpClient::run()
 
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
-	while (!requests.empty() && !closed) {
+	while (!requests.empty() && !closed && !shutting_down) {
 		Request request;
 		Response response;
 
@@ -1017,8 +1017,7 @@ HttpClient::run()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down && is_idle()) {
-		L_WARNING("Programmed shut down!");
+	if (shutting_down) {
 		kill();
 	}
 

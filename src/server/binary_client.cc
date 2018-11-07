@@ -376,7 +376,7 @@ BinaryClient::run()
 		lk.lock();
 	}
 
-	while (!messages.empty() && !closed) {
+	while (!messages.empty() && !closed && !shutting_down) {
 		switch (state) {
 			case State::REMOTEPROTOCOL_SERVER: {
 				std::string message;
@@ -481,8 +481,7 @@ BinaryClient::run()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down && is_idle()) {
-		L_WARNING("Programmed shut down!");
+	if (shutting_down) {
 		kill();
 	}
 
