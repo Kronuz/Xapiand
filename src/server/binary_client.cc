@@ -71,12 +71,13 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	  remote_protocol(*this),
 	  replication(*this)
 {
-	int binary_clients = ++XapiandServer::binary_clients;
-	if (binary_clients > XapiandServer::max_binary_clients) {
-		XapiandServer::max_binary_clients = binary_clients;
-	}
+	++XapiandServer::binary_clients;
 
-	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, XapiandServer::total_clients);
+	Metrics::metrics()
+		.xapiand_binary_connections
+		.Increment();
+
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::binary_clients, XapiandServer::total_clients);
 }
 
 

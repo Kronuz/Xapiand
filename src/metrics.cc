@@ -202,10 +202,10 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_http_peak_connections{
-		registry.AddGauge(
-			"xapiand_http_peak_connections",
-			"Max http connections",
+	xapiand_http_connections{
+		registry.AddCounter(
+			"xapiand_http_connections",
+			"Bttp connections",
 			constant_labels)
 		.Add({})
 	},
@@ -216,10 +216,10 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_peak_connections{
-		registry.AddGauge(
-			"xapiand_binary_peak_connections",
-			"Max binary connections",
+	xapiand_binary_connections{
+		registry.AddCounter(
+			"xapiand_binary_connections",
+			"Binary connections",
 			constant_labels)
 		.Add({})
 	},

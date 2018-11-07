@@ -35,9 +35,6 @@
 std::atomic_int XapiandServer::total_clients(0);
 std::atomic_int XapiandServer::http_clients(0);
 std::atomic_int XapiandServer::binary_clients(0);
-std::atomic_int XapiandServer::max_total_clients(0);
-std::atomic_int XapiandServer::max_http_clients(0);
-std::atomic_int XapiandServer::max_binary_clients(0);
 
 
 XapiandServer::XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)

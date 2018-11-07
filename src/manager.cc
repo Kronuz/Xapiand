@@ -1013,12 +1013,9 @@ XapiandManager::server_metrics()
 	metrics.xapiand_fsync_pool_size.Set(AsyncFsync::threadpool_size());
 	metrics.xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
 
-	// connections:
+	// current connections:
 	metrics.xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
-	metrics.xapiand_http_peak_connections.Set(XapiandServer::max_http_clients.load());
-
 	metrics.xapiand_binary_current_connections.Set(XapiandServer::binary_clients.load());
-	metrics.xapiand_binary_peak_connections.Set(XapiandServer::max_binary_clients.load());
 
 	// file_descriptors:
 	metrics.xapiand_file_descriptors.Set(get_open_files_per_proc());

@@ -369,12 +369,13 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  new_request(this)
 {
-	int http_clients = ++XapiandServer::http_clients;
-	if (http_clients > XapiandServer::max_http_clients) {
-		XapiandServer::max_http_clients = http_clients;
-	}
+	++XapiandServer::http_clients;
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, XapiandServer::total_clients);
+	Metrics::metrics()
+		.xapiand_http_connections
+		.Increment();
+
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::http_clients, XapiandServer::total_clients);
 }
 
 

@@ -46,7 +46,7 @@
 #include "manager.h"             // for sig_exit
 #include "readable_revents.hh"   // for readable_revents
 #include "repr.hh"               // for repr
-#include "server.h"              // for XapiandServer, XapiandServer::max_to...
+#include "server.h"              // for XapiandServer
 
 
 // #undef L_DEBUG
@@ -324,10 +324,7 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
 
-	int total_clients = ++XapiandServer::total_clients;
-	if (total_clients > XapiandServer::max_total_clients) {
-		XapiandServer::max_total_clients = total_clients;
-	}
+	++XapiandServer::total_clients;
 
 	start();
 }
