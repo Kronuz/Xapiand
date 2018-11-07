@@ -76,17 +76,9 @@ Worker::_init()
 	_stop_async.start();
 	L_EV("Start Worker async stop event");
 
-	_detach_async.set<Worker, &Worker::_detach_async_cb>(this);
-	_detach_async.start();
-	L_EV("Start Worker async detach event");
-
 	_detach_children_async.set<Worker, &Worker::_detach_children_async_cb>(this);
 	_detach_children_async.start();
 	L_EV("Start Worker async detach children event");
-
-	_redetach_async.set<Worker, &Worker::_redetach_async_cb>(this);
-	_redetach_async.start();
-	L_EV("Start Worker async redetach event");
 }
 
 
@@ -95,14 +87,8 @@ Worker::_deinit()
 {
 	L_CALL("Worker::_deinit()");
 
-	_redetach_async.stop();
-	L_EV("Stop Worker async redetach event");
-
 	_detach_children_async.stop();
 	L_EV("Stop Worker async detach children event");
-
-	_detach_async.stop();
-	L_EV("Stop Worker async detach event");
 
 	_stop_async.stop();
 	L_EV("Stop Worker async stop event");
@@ -215,19 +201,6 @@ Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
 
 
 void
-Worker::_detach_async_cb(ev::async& /*unused*/, int revents)
-{
-	L_CALL("Worker::_detach_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
-
-	L_EV_BEGIN("Worker::_detach_children_async_cb:BEGIN");
-	detach_impl();
-	L_EV_END("Worker::_detach_children_async_cb:END");
-}
-
-
-void
 Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
@@ -237,19 +210,6 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 	L_EV_BEGIN("Worker::_detach_children_async_cb:BEGIN");
 	detach_children_impl();
 	L_EV_END("Worker::_detach_children_async_cb:END");
-}
-
-
-void
-Worker::_redetach_async_cb(ev::async& /*unused*/, int revents)
-{
-	L_CALL("Worker::_redetach_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
-
-	L_EV_BEGIN("Worker::_redetach_children_async_cb:BEGIN");
-	redetach_impl();
-	L_EV_END("Worker::_redetach_children_async_cb:END");
 }
 
 
@@ -396,28 +356,6 @@ Worker::break_loop_impl()
 
 
 void
-Worker::detach_impl()
-{
-	L_CALL("Worker::detach_impl() [%s]", __repr__());
-
-	_detaching = true;
-
-	_ancestor(1)->_detach_children();
-}
-
-
-void
-Worker::redetach_impl()
-{
-	L_CALL("Worker::redetach_impl() [%s]", __repr__());
-
-	if (_detaching) {
-		_ancestor(1)->_detach_children();
-	}
-}
-
-
-void
 Worker::detach_children_impl()
 {
 	L_CALL("Worker::detach_children_impl() [%s]", __repr__());
@@ -514,21 +452,6 @@ Worker::stop()
 
 
 void
-Worker::detach(int retries)
-{
-	L_CALL("Worker::detach() [%s]", __repr__());
-
-	_detaching_retries = retries;
-
-	if (ev_loop->depth() != 0u) {
-		_detach_async.send();
-	} else {
-		detach_impl();
-	}
-}
-
-
-void
 Worker::_detach_children()
 {
 	if (ev_loop->depth() != 0u) {
@@ -540,18 +463,27 @@ Worker::_detach_children()
 
 
 void
+Worker::detach(int retries)
+{
+	L_CALL("Worker::detach() [%s]", __repr__());
+
+	_detaching = true;
+	_detaching_retries = retries;
+
+	_ancestor(1)->_detach_children();
+}
+
+
+void
 Worker::redetach(int retries)
 {
 	L_CALL("Worker::redetach() [%s]", __repr__());
 
 	// Needs to be run at the end of Workers's run(), to try re-detaching
 
-	_detaching_retries = retries;
-
-	if (ev_loop->depth() != 0u) {
-		_detach_async.send();
-	} else {
-		detach_impl();
+	if (_detaching) {
+		_detaching_retries = retries;
+		_ancestor(1)->_detach_children();
 	}
 }
 
