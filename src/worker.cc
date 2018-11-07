@@ -39,6 +39,8 @@
 
 Worker::~Worker()
 {
+	L_CALL("Worker::~Worker() [%s]", __repr__());
+
 	_stopper();
 	_destroyer();
 	_deinit();
@@ -48,7 +50,7 @@ Worker::~Worker()
 void
 Worker::_init()
 {
-	L_CALL("Worker::_init()");
+	L_CALL("Worker::_init() [%s]", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -85,7 +87,7 @@ Worker::_init()
 void
 Worker::_deinit()
 {
-	L_CALL("Worker::_deinit()");
+	L_CALL("Worker::_deinit() [%s]", __repr__());
 
 	_detach_children_async.stop();
 	L_EV("Stop Worker async detach children event");
@@ -111,6 +113,8 @@ Worker::_deinit()
 void
 Worker::_destroyer()
 {
+	L_CALL("Worker::_destroyer() [%s]", __repr__());
+
 	L_EV_BEGIN("Worker::_destroyer:BEGIN");
 	destroy_impl();
 	L_EV_END("Worker::_destroyer:END");
@@ -121,6 +125,8 @@ Worker::_destroyer()
 inline void
 Worker::_starter()
 {
+	L_CALL("Worker::_starter() [%s]", __repr__());
+
 	if (!_started) {
 		L_EV_BEGIN("Worker::_starter:BEGIN");
 		start_impl();
@@ -133,6 +139,8 @@ Worker::_starter()
 void
 Worker::_stopper()
 {
+	L_CALL("Worker::_stopper() [%s]", __repr__());
+
 	if (_started) {
 		L_EV_BEGIN("Worker::_stopper:BEGIN");
 		stop_impl();
