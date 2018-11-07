@@ -43,13 +43,6 @@ std::atomic_int XapiandServer::max_binary_clients(0);
 XapiandServer::XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(std::move(parent_), ev_loop_, ev_flags_)
 {
-	L_OBJ("CREATED XAPIAN SERVER!");
-}
-
-
-XapiandServer::~XapiandServer()
-{
-	L_OBJ("DELETED XAPIAN SERVER!");
 }
 
 

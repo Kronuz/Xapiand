@@ -32,14 +32,6 @@ BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  io(*ev_loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
-
-	L_OBJ("CREATED BASE SERVER!");
-}
-
-
-BaseServer::~BaseServer()
-{
-	L_OBJ("DELETED BASE SERVER!");
 }
 
 

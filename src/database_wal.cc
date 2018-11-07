@@ -114,7 +114,6 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 	  _revision(0),
 	  _database(nullptr)
 {
-	L_OBJ("CREATED DATABASE WAL!");
 }
 
 
@@ -154,12 +153,6 @@ DatabaseWAL::get_revision() const
 		_revision = _database->get_revision();
 	}
 	return _revision;
-}
-
-
-DatabaseWAL::~DatabaseWAL()
-{
-	L_OBJ("DELETED DATABASE WAL!");
 }
 
 

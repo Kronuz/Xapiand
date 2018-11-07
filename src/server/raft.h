@@ -154,7 +154,6 @@ private:
 
 public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
-	~Raft();
 
 	void add_command(const std::string& command);
 	void request_vote();

@@ -46,14 +46,6 @@ BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	process_tasks_async.set<BinaryServer, &BinaryServer::process_tasks_async_cb>(this);
 	process_tasks_async.start();
 	L_EV("Start binary's async signal event");
-
-	L_OBJ("CREATED BINARY SERVER!");
-}
-
-
-BinaryServer::~BinaryServer()
-{
-	L_OBJ("DELETED BINARY SERVER!");
 }
 
 

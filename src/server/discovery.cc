@@ -63,16 +63,7 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  discovery(*ev_loop)
 {
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
-
 	discovery.set<Discovery, &Discovery::discovery_cb>(this);
-
-	L_OBJ("CREATED DISCOVERY");
-}
-
-
-Discovery::~Discovery()
-{
-	L_OBJ("DELETED DISCOVERY");
 }
 
 

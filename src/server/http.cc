@@ -37,14 +37,6 @@ Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	auto node_copy = std::make_unique<Node>(*local_node);
 	node_copy->http_port = port;
 	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
-
-	L_OBJ("CREATED CONFIGURATION FOR HTTP");
-}
-
-
-Http::~Http()
-{
-	L_OBJ("DELETED CONFIGURATION FOR HTTP");
 }
 
 

@@ -373,23 +373,14 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	if (http_clients > XapiandServer::max_http_clients) {
 		XapiandServer::max_http_clients = http_clients;
 	}
-	int total_clients = XapiandServer::total_clients;
-	if (http_clients > total_clients) {
-		L_CRIT("Inconsistency in number of http clients");
-		sig_exit(-EX_SOFTWARE);
-	}
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, total_clients);
-
-	L_OBJ("CREATED HTTP CLIENT! (%d clients)", http_clients);
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, http_clients, XapiandServer::total_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	int http_clients = --XapiandServer::http_clients;
-	int total_clients = XapiandServer::total_clients;
-	if (http_clients < 0 || http_clients > total_clients) {
+	if (XapiandServer::http_clients.fetch_sub(1) == 0) {
 		L_CRIT("Inconsistency in number of http clients");
 		sig_exit(-EX_SOFTWARE);
 	}
@@ -397,8 +388,6 @@ HttpClient::~HttpClient()
 	if (shutting_down && !is_idle()) {
 		L_WARNING("HTTP client killed!");
 	}
-
-	L_OBJ("DELETED HTTP CLIENT! (%d clients left)", http_clients);
 }
 
 

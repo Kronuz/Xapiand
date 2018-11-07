@@ -97,7 +97,6 @@ public:
 	DatabaseQueue(DatabaseQueue&&) = delete;
 	DatabaseQueue& operator=(const DatabaseQueue&) = delete;
 	DatabaseQueue& operator=(DatabaseQueue&&) = delete;
-	~DatabaseQueue();
 
 	size_t inc_count();
 	size_t dec_count();

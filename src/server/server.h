@@ -56,7 +56,5 @@ public:
 	static std::atomic_int max_http_clients;
 	static std::atomic_int max_binary_clients;
 
-	~XapiandServer();
-
 	void run();
 };

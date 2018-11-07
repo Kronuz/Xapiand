@@ -40,8 +40,6 @@ Worker::~Worker()
 	_stopper();
 	_destroyer();
 	_deinit();
-
-	L_OBJ("DELETED WORKER!");
 }
 
 
@@ -79,8 +77,6 @@ Worker::_init()
 	_detach_children_async.set<Worker, &Worker::_detach_children_async_cb>(this);
 	_detach_children_async.start();
 	L_EV("Start Worker async detach children event");
-
-	L_OBJ("CREATED WORKER!");
 }
 
 

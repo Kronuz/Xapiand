@@ -79,14 +79,6 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
-
-	L_OBJ("CREATED RAFT CONSENSUS");
-}
-
-
-Raft::~Raft()
-{
-	L_OBJ("DELETED RAFT CONSENSUS");
 }
 
 

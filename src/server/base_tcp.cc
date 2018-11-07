@@ -49,8 +49,6 @@ TCP::TCP(int port_, std::string  description_, int tries_, int flags_)
 	  description(std::move(description_))
 {
 	bind(tries_);
-
-	L_OBJ("CREATED TCP!");
 }
 
 
@@ -293,15 +291,12 @@ BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 	: TCP(port_, description_, tries_, flags_),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
-	L_OBJ("CREATED BASE TCP!");
 }
 
 
 BaseTCP::~BaseTCP()
 {
 	TCP::close();
-
-	L_OBJ("DELETED BASE TCP!");
 }
 
 

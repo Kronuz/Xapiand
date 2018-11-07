@@ -65,7 +65,6 @@ Replication::Replication(BinaryClient& client_)
 	: LockableDatabase(),
 	  client(client_)
 {
-	L_OBJ("CREATED REPLICATION OBJ!");
 }
 
 
@@ -79,8 +78,6 @@ Replication::~Replication()
 	if (!switch_database_path.empty()) {
 		delete_files(switch_database_path.c_str());
 	}
-
-	L_OBJ("DELETED REPLICATION OBJ!");
 }
 
 

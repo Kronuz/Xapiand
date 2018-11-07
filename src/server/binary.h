@@ -54,7 +54,6 @@ public:
 	}
 
 	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
-	~Binary();
 
 	std::string getDescription() const noexcept override;
 

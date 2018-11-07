@@ -67,19 +67,8 @@ DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
 	  locked(false),
 	  renew_time(std::chrono::system_clock::now()),
 	  count(0),
-	  endpoints(endpoints_) {
-	L_OBJ("CREATED DATABASE QUEUE FOR %s!", repr(endpoints.to_string()));
-}
-
-
-DatabaseQueue::~DatabaseQueue()
+	  endpoints(endpoints_)
 {
-	if (size() != count) {
-		L_CRIT("Inconsistency in the number of databases in queue");
-		sig_exit(-EX_SOFTWARE);
-	}
-
-	L_OBJ("DELETED DATABASE QUEUE!");
 }
 
 
@@ -97,14 +86,11 @@ DatabaseQueue::dec_count()
 {
 	L_CALL("DatabaseQueue::dec_count()");
 
-	size_t current_count = count;
-	do {
-		if (current_count == 0) {
-			L_CRIT("Inconsistency in the number of databases in queue");
-			sig_exit(-EX_SOFTWARE);
-			return current_count;
-		}
-	} while (!count.compare_exchange_weak(current_count, current_count - 1));
+	auto current_count = count.fetch_sub(1);
+	if (current_count == 0) {
+		L_CRIT("Inconsistency in the number of databases in queue");
+		sig_exit(-EX_SOFTWARE);
+	}
 	return current_count - 1;
 }
 
@@ -223,15 +209,12 @@ DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases)
 	  databases(*this, dbpool_size, queue_state),
 	  writable_databases(*this, dbpool_size, queue_state)
 {
-	L_OBJ("CREATED DATABASE POLL!");
 }
 
 
 DatabasePool::~DatabasePool()
 {
 	finish();
-
-	L_OBJ("DELETED DATABASE POOL!");
 }
 
 
@@ -534,8 +517,6 @@ DatabasePool::finish()
 
 	writable_databases.finish();
 	databases.finish();
-
-	L_OBJ("FINISH DATABASE!");
 }
 
 

@@ -90,13 +90,6 @@ RemoteProtocol::RemoteProtocol(BinaryClient& client_)
 	  client(client_),
 	  _msg_query_database_lock(this)
 {
-	L_OBJ("CREATED REMOTE PROTOCOL!");
-}
-
-
-RemoteProtocol::~RemoteProtocol()
-{
-	L_OBJ("DELETED REMOTE PROTOCOL!");
 }
 
 

@@ -158,9 +158,7 @@ class RemoteProtocol : protected LockableDatabase {
 	void reset();
 
 public:
-
 	explicit RemoteProtocol(BinaryClient& client_);
-	~RemoteProtocol();
 
 	void send_message(RemoteReplyType type, const std::string& message);
 

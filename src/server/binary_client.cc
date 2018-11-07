@@ -75,23 +75,14 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	if (binary_clients > XapiandServer::max_binary_clients) {
 		XapiandServer::max_binary_clients = binary_clients;
 	}
-	int total_clients = XapiandServer::total_clients;
-	if (binary_clients > total_clients) {
-		L_CRIT("Inconsistency in number of binary clients");
-		sig_exit(-EX_SOFTWARE);
-	}
 
-	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, total_clients);
-
-	L_OBJ("CREATED BINARY CLIENT! (%d clients)", binary_clients);
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, binary_clients, XapiandServer::total_clients);
 }
 
 
 BinaryClient::~BinaryClient()
 {
-	int binary_clients = --XapiandServer::binary_clients;
-	int total_clients = XapiandServer::total_clients;
-	if (binary_clients < 0 || binary_clients > total_clients) {
+	if (XapiandServer::binary_clients.fetch_sub(1) == 0) {
 		L_CRIT("Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
 	}
@@ -117,8 +108,6 @@ BinaryClient::~BinaryClient()
 		L_CRIT("Cannot synchronize cluster database!");
 		sig_exit(-EX_CANTCREAT);
 	}
-
-	L_OBJ("DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
 
 

@@ -40,14 +40,6 @@ Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, u
 	auto node_copy = std::make_unique<Node>(*local_node);
 	node_copy->binary_port = port;
 	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
-
-	L_OBJ("CREATED CONFIGURATION FOR BINARY");
-}
-
-
-Binary::~Binary()
-{
-	L_OBJ("DELETED CONFIGURATION FOR BINARY");
 }
 
 

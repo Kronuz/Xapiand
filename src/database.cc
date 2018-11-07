@@ -138,7 +138,6 @@ public:
 	uint32_t volume;
 
 	DataStorage(std::string_view base_path_, void* param_, int flags);
-	~DataStorage();
 
 	bool open(std::string_view relative_path);
 };
@@ -174,13 +173,6 @@ DataStorage::DataStorage(std::string_view base_path_, void* param_, int flags)
 	: Storage<DataHeader, DataBinHeader, DataBinFooter>(base_path_, param_),
 	  flags(flags)
 {
-	L_OBJ("CREATED DATABASE DATA STORAGE!");
-}
-
-
-DataStorage::~DataStorage()
-{
-	L_OBJ("DELETED DATABASE DATA STORAGE!");
 }
 
 
@@ -214,8 +206,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_
 	reopen();
 
 	queue_->inc_count();
-
-	L_OBJ("CREATED DATABASE!");
 }
 
 
@@ -229,8 +219,6 @@ Database::~Database()
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
 	}
-
-	L_OBJ("DELETED DATABASE!");
 }
 
 

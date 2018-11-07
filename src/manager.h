@@ -156,8 +156,6 @@ public:
 
 	void shutdown_sig(int sig);
 
-	~XapiandManager();
-
 	void setup_node();
 	void setup_node_async_cb(ev::async&, int);
 

@@ -200,14 +200,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	cleanup.set<XapiandManager, &XapiandManager::cleanup_cb>(this);
 	cleanup.repeat = 60.0;
 	cleanup.again();
-
-	L_OBJ("CREATED XAPIAN MANAGER!");
-}
-
-
-XapiandManager::~XapiandManager()
-{
-	L_OBJ("DELETED XAPIAN MANAGER!");
 }
 
 

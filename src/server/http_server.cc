@@ -44,14 +44,6 @@ HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	: BaseServer(parent_, ev_loop_, ev_flags_),
 	  http(std::move(http_))
 {
-
-	L_OBJ("CREATED HTTP SERVER!");
-}
-
-
-HttpServer::~HttpServer()
-{
-	L_OBJ("DELETED HTTP SERVER!");
 }
 
 

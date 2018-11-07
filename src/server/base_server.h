@@ -42,7 +42,5 @@ protected:
 	void stop_impl() override;
 
 public:
-	virtual ~BaseServer();
-
 	virtual void io_accept_cb(ev::io& watcher, int revents) = 0;
 };

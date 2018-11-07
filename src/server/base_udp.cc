@@ -44,8 +44,6 @@ UDP::UDP(int port_, std::string  description_, uint16_t version_, const std::str
 	  version(version_)
 {
 	bind(tries_, group_);
-
-	L_OBJ("CREATED UDP!");
 }
 
 
@@ -240,15 +238,12 @@ BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 	: UDP(port_, description_, version_, group_, tries_),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
-	L_OBJ("CREATED BASE UDP!");
 }
 
 
 BaseUDP::~BaseUDP()
 {
 	UDP::close();
-
-	L_OBJ("DELETED BASE UDP!");
 }
 
 

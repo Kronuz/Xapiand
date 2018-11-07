@@ -156,7 +156,6 @@ public:
 	Database* _database;
 
 	DatabaseWAL(std::string_view base_path_);
-	~DatabaseWAL();
 
 	iterator begin();
 	iterator end();
