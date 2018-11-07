@@ -47,6 +47,12 @@ HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 }
 
 
+HttpServer::~HttpServer()
+{
+	Worker::deinit();
+}
+
+
 void
 HttpServer::start_impl()
 {

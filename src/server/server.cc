@@ -43,6 +43,12 @@ XapiandServer::XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_re
 }
 
 
+XapiandServer::~XapiandServer()
+{
+	Worker::deinit();
+}
+
+
 void
 XapiandServer::run()
 {

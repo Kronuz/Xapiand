@@ -71,6 +71,7 @@ class XapiandManager : public Worker  {
 
 	XapiandManager();
 	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_ = std::chrono::system_clock::now());
+	~XapiandManager();
 
 	struct sockaddr_in host_address();
 

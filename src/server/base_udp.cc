@@ -243,6 +243,8 @@ BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 BaseUDP::~BaseUDP()
 {
 	UDP::close();
+
+	Worker::deinit();
 }
 
 

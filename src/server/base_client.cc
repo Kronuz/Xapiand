@@ -350,6 +350,8 @@ BaseClient::~BaseClient()
 	}
 
 	io::close(sock);
+
+	Worker::deinit();
 }
 
 

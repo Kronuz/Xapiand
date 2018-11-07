@@ -293,6 +293,8 @@ BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 BaseTCP::~BaseTCP()
 {
 	TCP::close();
+
+	Worker::deinit();
 }
 
 

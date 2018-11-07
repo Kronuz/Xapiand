@@ -203,6 +203,12 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 }
 
 
+XapiandManager::~XapiandManager()
+{
+	Worker::deinit();
+}
+
+
 std::string
 XapiandManager::load_node_name()
 {

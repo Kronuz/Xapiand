@@ -82,6 +82,12 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 }
 
 
+Raft::~Raft()
+{
+	Worker::deinit();
+}
+
+
 void
 Raft::shutdown_impl(time_t asap, time_t now)
 {

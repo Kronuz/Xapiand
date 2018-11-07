@@ -49,6 +49,12 @@ BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 }
 
 
+BinaryServer::~BinaryServer()
+{
+	Worker::deinit();
+}
+
+
 void
 BinaryServer::start_impl()
 {

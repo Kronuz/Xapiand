@@ -95,6 +95,7 @@ private:
 
 public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
+	~Discovery();
 
 	void signal_db_update(const std::string& path, const UUID& uuid, Xapian::rev revision);
 
