@@ -23,6 +23,7 @@
 #include "test_storage.h"
 
 #include "../src/storage.h"
+#include "../src/random.hh"
 #include "utils.h"
 
 

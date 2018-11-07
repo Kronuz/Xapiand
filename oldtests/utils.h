@@ -90,7 +90,7 @@ constexpr const char   TEST_LOCAL_HOST[]    = "127.0.0.1";
 #include "../src/endpoint.h"
 
 inline Endpoint create_endpoint(const std::string& database) {
-	Endpoint e(database, nullptr, -1, TEST_NODE_NAME);
+	Endpoint e(database, nullptr, TEST_NODE_NAME);
 	e.port = XAPIAND_BINARY_SERVERPORT;
 	e.host.assign(TEST_LOCAL_HOST);
 	return e;

@@ -22,6 +22,7 @@
 
 #include "test_wal.h"
 
+#include "../src/database.h"
 
 const std::string test_db(".test_wal.db");
 const std::string restored_db(".backup_wal.db");

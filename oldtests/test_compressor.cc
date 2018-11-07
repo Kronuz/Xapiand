@@ -22,7 +22,7 @@
 
 #include "test_compressor.h"
 
-#include "../src/io.h"
+#include "../src/io.hh"
 #include "../src/lz4_compressor.h"
 #include "utils.h"
 

@@ -26,6 +26,7 @@
 
 #include "../src/base_x.hh"
 #include "../src/cuuid/uuid.h"
+#include "../src/random.hh"
 #include "utils.h"
 
 #define B59 (Base59::dubaluchk())
