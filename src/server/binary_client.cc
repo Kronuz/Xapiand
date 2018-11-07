@@ -77,7 +77,7 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 		.xapiand_binary_connections
 		.Increment();
 
-	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::binary_clients, XapiandServer::total_clients);
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::binary_clients.load(), XapiandServer::total_clients.load());
 }
 
 
@@ -161,7 +161,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
 		return false;
 	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock.load());
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
 
 	return replication.init_replication(src_endpoint, dst_endpoint);
 }

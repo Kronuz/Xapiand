@@ -375,7 +375,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 		.xapiand_http_connections
 		.Increment();
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::http_clients, XapiandServer::total_clients);
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::http_clients.load(), XapiandServer::total_clients.load());
 }
 
 
