@@ -348,6 +348,8 @@ Discovery::bye(Message type, const std::string& message)
 	} else {
 		L_INFO("Node %s left the party!", remote_node.name());
 	}
+
+	L_DEBUG("Nodes still active after %s left: %zu", remote_node.name(), Node::active_nodes());
 }
 
 
