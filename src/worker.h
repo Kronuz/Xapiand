@@ -61,6 +61,7 @@ private:
 	std::atomic_int _detaching_retries;
 
 	bool _started;
+	bool _destroyed;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -87,6 +88,7 @@ protected:
 		  _detaching(false),
 		  _detaching_retries(0),
 		  _started(false),
+		  _destroyed(false),
 		  _parent(std::forward<T>(parent))
 	{
 		_init();

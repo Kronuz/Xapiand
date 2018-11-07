@@ -115,9 +115,12 @@ Worker::_destroyer()
 {
 	L_CALL("Worker::_destroyer() [%s]", __repr__());
 
-	L_EV_BEGIN("Worker::_destroyer:BEGIN");
-	destroy_impl();
-	L_EV_END("Worker::_destroyer:END");
+	if (!_destroyed) {
+		L_EV_BEGIN("Worker::_destroyer:BEGIN");
+		destroy_impl();
+		L_EV_END("Worker::_destroyer:END");
+		_destroyed = true;
+	}
 
 }
 
