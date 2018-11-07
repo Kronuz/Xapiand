@@ -29,10 +29,12 @@
 #include "log.h"
 #include "readable_revents.hh"   // for readable_revents
 
-#undef L_CALL
-#define L_CALL L_NOTHING
 
-// #define L_WORKER L_DEBUG
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #define L_WORKER L_SALMON
 
 
 Worker::~Worker()
