@@ -583,6 +583,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
+		stop();
 		destroy();
 		detach();
 		L_EV_END("BaseClient::io_cb_write:END");
@@ -606,6 +607,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 
 
 	if (closed) {
+		stop();
 		destroy();
 		detach();
 	}
@@ -632,6 +634,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
+		stop();
 		destroy();
 		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
@@ -651,6 +654,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		if (errno == ECONNRESET) {
 			L_CONN("Received ECONNRESET {sock:%d}!", sock);
 			on_read(nullptr, received);
+			stop();
 			destroy();
 			detach();
 			L_EV_END("BaseClient::io_cb_read:END");
@@ -659,6 +663,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 		L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
 		on_read(nullptr, received);
+		stop();
 		destroy();
 		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
@@ -669,6 +674,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		// The peer has closed its half side of the connection.
 		L_CONN("Received EOF {sock:%d}!", sock);
 		on_read(nullptr, received);
+		stop();
 		destroy();
 		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
@@ -700,6 +706,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 					break;
 				default:
 					L_CONN("Received wrong file mode: %s {sock:%d}!", repr(std::string(1, compressor)), sock);
+					stop();
 					destroy();
 					detach();
 					L_EV_END("BaseClient::io_cb_read:END");
@@ -777,6 +784,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		}
 
 		if (closed) {
+			stop();
 			destroy();
 			detach();
 			L_EV_END("BaseClient::io_cb_read:END");
