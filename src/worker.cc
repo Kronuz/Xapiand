@@ -181,7 +181,6 @@ Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	_stopper();
 	_destroyer();
 }
 
@@ -204,7 +203,7 @@ Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	_starter();
+	_stopper();
 }
 
 
@@ -427,7 +426,6 @@ Worker::destroy()
 	if (ev_loop->depth() != 0u) {
 		_destroy_async.send();
 	} else {
-		_stopper();
 		_destroyer();
 	}
 }
