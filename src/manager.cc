@@ -474,7 +474,11 @@ void
 XapiandManager::signal_sig(int sig)
 {
 	atom_sig = sig;
-	signal_sig_async.send();
+	if (ev_loop->depth()) {
+		signal_sig_async.send();
+	} else {
+		signal_sig_impl();
+	}
 }
 
 
@@ -485,7 +489,17 @@ XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
+	signal_sig_impl();
+}
+
+
+void
+XapiandManager::signal_sig_impl()
+{
+	L_CALL("XapiandManager::signal_sig_impl()");
+
 	int sig = atom_sig;
+
 	if (sig < 0) {
 		shutdown_sig(sig);
 	}

@@ -154,6 +154,7 @@ public:
 
 	void signal_sig(int sig);
 	void signal_sig_async_cb(ev::async&, int);
+	void signal_sig_impl();
 
 	void shutdown_sig(int sig);
 
