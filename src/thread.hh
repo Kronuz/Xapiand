@@ -22,8 +22,63 @@
 
 #pragma once
 
-#include <string>                // for std::string
-#include <thread>                // for std::thread
+#include <atomic>         // for std::atomic_bool
+#include <chrono>         // for std::chrono
+#include <future>         // for std::future, std::promise
+#include <string>         // for std::string
+#include <thread>         // for std::thread
+
+
+class Thread {
+	std::thread _thread;
+	std::promise<void> _promise;
+	std::future<void> _future;
+
+	std::atomic_bool _started;
+	std::atomic_bool _joined;
+
+	void _runner();
+
+public:
+	Thread() :
+		_future{_promise.get_future()},
+		_started{false},
+		_joined{false} {};
+
+	Thread(Thread&& other) :
+		_thread(std::move(other._thread)),
+		_promise(std::move(other._promise)),
+		_future(std::move(other._future)),
+		_started(other._started.load()),
+		_joined(other._joined.load())
+	{}
+
+	Thread& operator=(Thread&& other) {
+		_thread = std::move(other._thread);
+		_promise = std::move(other._promise);
+		_future = std::move(other._future);
+		_started = other._started.load();
+		_joined = other._joined.load();
+		return *this;
+	}
+
+	virtual ~Thread() = default;
+
+	void start();
+
+	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
+
+	template <typename T, typename R>
+	bool join(std::chrono::duration<T, R> timeout) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
+	bool join(int timeout = 60000) {
+		return join(std::chrono::milliseconds(timeout));
+	}
+
+	virtual void operator()() = 0;
+};
 
 
 void set_thread_name(const std::string& name);
