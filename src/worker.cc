@@ -83,27 +83,27 @@ Worker::_init()
 
 	_shutdown_async.set<Worker, &Worker::_shutdown_async_cb>(this);
 	_shutdown_async.start();
-	L_EV("Start Worker async shutdown event");
+	L_EV("Start %s async shutdown event", __repr__());
 
 	_break_loop_async.set<Worker, &Worker::_break_loop_async_cb>(this);
 	_break_loop_async.start();
-	L_EV("Start Worker async break_loop event");
+	L_EV("Start %s async break_loop event", __repr__());
 
 	_destroy_async.set<Worker, &Worker::_destroy_async_cb>(this);
 	_destroy_async.start();
-	L_EV("Start Worker async destroy event");
+	L_EV("Start %s async destroy event", __repr__());
 
 	_start_async.set<Worker, &Worker::_start_async_cb>(this);
 	_start_async.start();
-	L_EV("Start Worker async start event");
+	L_EV("Start %s async start event", __repr__());
 
 	_stop_async.set<Worker, &Worker::_stop_async_cb>(this);
 	_stop_async.start();
-	L_EV("Start Worker async stop event");
+	L_EV("Start %s async stop event", __repr__());
 
 	_detach_children_async.set<Worker, &Worker::_detach_children_async_cb>(this);
 	_detach_children_async.start();
-	L_EV("Start Worker async detach children event");
+	L_EV("Start %s async detach children event", __repr__());
 }
 
 
@@ -114,22 +114,22 @@ Worker::_deinit()
 
 	if (!_deinited) {
 		_detach_children_async.stop();
-		L_EV("Stop Worker async detach children event");
+		L_EV("Stop %s async detach children event", __repr__());
 
 		_stop_async.stop();
-		L_EV("Stop Worker async stop event");
+		L_EV("Stop %s async stop event", __repr__());
 
 		_start_async.stop();
-		L_EV("Stop Worker async start event");
+		L_EV("Stop %s async start event", __repr__());
 
 		_destroy_async.stop();
-		L_EV("Stop Worker async destroy event");
+		L_EV("Stop %s async destroy event", __repr__());
 
 		_break_loop_async.stop();
-		L_EV("Stop Worker async break_loop event");
+		L_EV("Stop %s async break_loop event", __repr__());
 
 		_shutdown_async.stop();
-		L_EV("Stop Worker async shutdown event");
+		L_EV("Stop %s async shutdown event", __repr__());
 
 		_deinited = true;
 	}
