@@ -33,7 +33,6 @@
 #include <string.h>             // for memset
 #include <string>               // for std::string
 #include "string_view.hh"       // for std::string_view
-#include <time.h>               // for time_t
 #include <unordered_map>        // for std::unordered_map
 #include <utility>              // for std::pair, std::move
 #include <vector>               // for std::vector
@@ -44,7 +43,7 @@
 #include "string.hh"            // for string::lower
 
 
-constexpr double NODE_LIFESPAN = 120.0;
+constexpr long long NODE_LIFESPAN = 120000;  // in milliseconds
 
 
 class color;
@@ -61,7 +60,7 @@ public:
 	int http_port;
 	int binary_port;
 
-	time_t touched;
+	long long touched;
 
 	Node() : idx{0}, http_port{0}, binary_port{0}, touched{0} {
 		memset(&_addr, 0, sizeof(_addr));
@@ -190,7 +189,7 @@ public:
 	}
 
 	static bool is_active(const std::shared_ptr<const Node>& node) {
-		return node && (node->touched >= epoch::now<>() - NODE_LIFESPAN || is_local(node));
+		return node && (node->touched >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local(node));
 	}
 
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
