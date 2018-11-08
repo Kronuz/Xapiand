@@ -363,7 +363,6 @@ Replication::reply_db_header(const std::string& message)
 	build_path_index(client.temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
-		client.destroy();
 		client.detach();
 		return;
 	}
@@ -397,7 +396,6 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
-		client.destroy();
 		client.detach();
 		return;
 	}

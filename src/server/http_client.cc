@@ -1009,7 +1009,8 @@ HttpClient::run()
 		lk.lock();
 
 		if (request.closing) {
-			close();
+			destroy();
+			detach();
 			break;
 		}
 	}
@@ -1212,6 +1213,8 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_sig(0);
+			write_http_response(request, response, HTTP_STATUS_OK);
+			destroy();
 			detach();
 			break;
 #endif

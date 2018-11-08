@@ -157,7 +157,6 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
-		client.destroy();
 		client.detach();
 	} catch (const Xapian::NetworkError& exc) {
 	    // All other network errors mean we are fatally confused and are unlikely
@@ -165,7 +164,6 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 	    // try to propagate the error to the client, but instead just log the
 	    // exception and close the connection.
 		L_EXC("ERROR: %s", exc.get_description());
-		client.destroy();
 		client.detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
@@ -175,18 +173,15 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 	} catch (const BaseException& exc) {
 		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.destroy();
 		client.detach();
 	} catch (const std::exception& exc) {
 		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.destroy();
 		client.detach();
 	} catch (...) {
 		std::exception exc;
 		L_EXC("ERROR: %s", "Unkown exception!");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.destroy();
 		client.detach();
 	}
 }
