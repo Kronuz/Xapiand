@@ -692,12 +692,12 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
 
+	_revision = revision;
+
 	// COMMIT is one prior the current revision
 	if (type == Type::COMMIT) {
 		--revision;
 	}
-
-	_revision = revision;
 
 	try {
 		std::string line;
