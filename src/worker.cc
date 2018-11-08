@@ -358,14 +358,16 @@ Worker::__repr__(const std::string& name) const
 std::string
 Worker::dump_tree(int level)
 {
-	std::lock_guard<std::recursive_mutex> lk(_mtx);
 	std::string ret = "\n";
 	for (int l = 0; l < level; ++l) {
 		ret += "    ";
 	}
 	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + ")";
-	for (const auto& c : _children) {
-		ret += c->dump_tree(level + 1);
+	auto weak_children = _gather_children();
+	for (auto& weak_child : weak_children) {
+		if (auto child = weak_child.lock()) {
+			ret += child->dump_tree(level + 1);
+		}
 	}
 	return ret;
 }
