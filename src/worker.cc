@@ -294,36 +294,37 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 	long child_use_count;
 #endif
 
-	for (int i = retries; i >= 0; --i) {
-		std::this_thread::yield();
+	std::this_thread::yield();
 
-		if (auto child = weak_child.lock()) {
-			if (child->_runner && (child->ev_loop->depth() != 0u)) {
-				if (i == 0) {
-					L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
-				}
-				continue;
+	if (auto child = weak_child.lock()) {
+		if (child->_runner && (child->ev_loop->depth() != 0u)) {
+			if (retries == 0) {
+				L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
+			} else if (retries > 0) {
+				child->redetach(retries - 1);
 			}
-			__detach(child);
-	#ifdef LOG_WORKER
-			child_repr = child->__repr__();
-			child_use_count = child.use_count();
-	#endif
-		} else {
-			break;  // It was already detached
+			return;
 		}
-
-		if (auto child = weak_child.lock()) {
-			__attach(child);
-			if (i == 0) {
-				L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
-			}
-			continue;
-		}
-
-		L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
-		break;
+		__detach(child);
+#ifdef LOG_WORKER
+		child_repr = child->__repr__();
+		child_use_count = child.use_count();
+#endif
+	} else {
+		return;  // It was already detached
 	}
+
+	if (auto child = weak_child.lock()) {
+		__attach(child);
+		if (retries == 0) {
+			L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
+		} else if (retries > 0) {
+			child->redetach(retries - 1);
+		}
+		return;
+	}
+
+	L_WORKER(FOREST_GREEN + "Worker child %s (cnt: %ld) detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
 }
 
 
