@@ -27,7 +27,7 @@
 
 #include "stash.h"
 #include "thread.hh"              // for Thread
-#include "threadpool.h"           // for ThreadPool
+#include "threadpool.hh"          // for ThreadPool
 #include "time_point.hh"          // for time_point_to_ullong
 
 

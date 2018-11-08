@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "../src/threadpool.h"
+#include "../src/threadpool.hh"
 
 #include <chrono>
 #include <iostream>

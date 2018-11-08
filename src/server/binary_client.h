@@ -37,7 +37,7 @@
 #include "base_client.h"                      // for BaseClient
 #include "remote_protocol.h"                  // for RemoteProtocol
 #include "replication.h"                      // for Replication
-#include "threadpool.h"                       // for Task
+#include "threadpool.hh"                      // for Task
 
 
 #define FILE_FOLLOWS '\xfd'

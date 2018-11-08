@@ -37,7 +37,7 @@
 #include "length.h"                           // for serialise_length
 #include "node.h"                             // for Node, local_node
 #include "schemas_lru.h"                      // for SchemasLRU
-#include "threadpool.h"                       // for ThreadPool
+#include "threadpool.hh"                      // for ThreadPool
 #include "worker.h"                           // for Worker
 
 

@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_tcp.h"                         // for BaseTCP
-#include "threadpool.h"                       // for TaskQueue
+#include "threadpool.hh"                      // for TaskQueue
 
 
 class Endpoint;
