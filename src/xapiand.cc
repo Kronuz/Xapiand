@@ -222,8 +222,14 @@ void sig_handler(int sig) {
 //  }
 // #endif
 
-	if (XapiandManager::manager) {
-		XapiandManager::manager->signal_sig(sig);
+	auto manager = XapiandManager::manager;
+	if (manager) {
+		try {
+			manager->signal_sig(sig);
+		} catch (const Exit& exc) {
+			manager->atom_sig = -exc.code;
+			throw;  // TODO: Remove this throw when timeouts for threads are ready
+		}
 	} else {
 		if (sig == SIGTERM || sig == SIGINT) {
 			exit(EX_SOFTWARE);

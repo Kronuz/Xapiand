@@ -1211,7 +1211,7 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			break;
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
-			XapiandManager::manager->shutdown_sig(SIGTERM);
+			XapiandManager::manager->shutdown_sig(0);
 			detach();
 			break;
 #endif

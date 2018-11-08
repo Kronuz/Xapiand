@@ -76,6 +76,7 @@
 #include "namegen.h"                          // for name_generator
 #include "net.hh"                             // for fast_inet_ntop4
 #include "opts.h"                             // for opts::*
+#include "package.h"                          // for Package
 #include "readable_revents.hh"                // for readable_revents
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
@@ -115,10 +116,10 @@ void sig_exit(int sig) {
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
 	} else if (sig < 0) {
-		exit(-sig);
+		throw Exit(-sig);
 	} else {
 		if (sig == SIGTERM || sig == SIGINT) {
-			exit(EX_SOFTWARE);
+			throw Exit(EX_SOFTWARE);
 		}
 	}
 }
@@ -535,24 +536,37 @@ XapiandManager::shutdown_sig(int sig)
 
 	if (sig < 0) {
 		atom_sig = sig;
-		break_loop();
+		if (ev_loop->depth()) {
+			break_loop();
+		} else {
+			throw Exit(-sig);
+		}
 		return;
 	}
-	if ((shutdown_now != 0) && sig != SIGTERM) {
-		if ((sig != 0) && now >= shutdown_asap + 1000 && now <= shutdown_asap + 4000) {
-			io::ignore_eintr().store(false);
-			L_WARNING("You insisted... Xapiand exiting now!");
-			atom_sig = -1;
-			break_loop();
-			return;
+	if (shutdown_now != 0) {
+		if (now >= shutdown_now + 800) {
+			if (now <= shutdown_now + 3000) {
+				io::ignore_eintr().store(false);
+				atom_sig = sig = -EX_SOFTWARE;
+				if (ev_loop->depth()) {
+					L_WARNING("Trying breaking the loop.");
+					break_loop();
+				} else {
+					L_WARNING("You insisted... %s exiting now!", Package::NAME);
+					throw Exit(-sig);
+				}
+				return;
+			}
+			shutdown_now = now;
 		}
-	} else if ((shutdown_asap != 0) && sig != SIGTERM) {
-		if ((sig != 0) && now >= shutdown_asap + 1000 && now <= shutdown_asap + 4000) {
-			shutdown_now = now;
-			io::ignore_eintr().store(false);
-			L_INFO("Trying immediate shutdown.");
-		} else if (sig == 0) {
-			shutdown_now = now;
+	} else if (shutdown_asap != 0) {
+		if (now >= shutdown_asap + 800) {
+			if (now <= shutdown_asap + 3000) {
+				shutdown_now = now;
+				io::ignore_eintr().store(false);
+				L_INFO("Trying immediate shutdown.");
+			}
+			shutdown_asap = now;
 		}
 	} else {
 		switch (sig) {
@@ -567,7 +581,7 @@ XapiandManager::shutdown_sig(int sig)
 		};
 	}
 
-	if (now >= shutdown_asap + 1000) {
+	if (now >= shutdown_asap + 800) {
 		shutdown_asap = now;
 	}
 
@@ -686,8 +700,9 @@ XapiandManager::run()
 
 	if (node_name == "~") {
 		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name);
+		sig_exit(EX_CONFIG);
 		join();
-		throw Exit(EX_CONFIG);
+		return;
 	}
 
 	make_servers();
