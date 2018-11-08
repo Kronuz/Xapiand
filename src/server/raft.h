@@ -142,7 +142,7 @@ private:
 	void _apply(const std::string& command);
 	void _commit_log();
 
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 	void start_impl() override;
 	void stop_impl() override;

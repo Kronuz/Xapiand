@@ -376,9 +376,9 @@ BaseClient::is_idle()
 
 
 void
-BaseClient::shutdown_impl(time_t asap, time_t now)
+BaseClient::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("BaseClient::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("BaseClient::shutdown_impl(%lld, %lld)", asap, now);
 
 	shutting_down = true;
 

@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <time.h>               // for time_t
 #include <atomic>               // for std::atomic_int
 #include <memory>               // for std::shared_ptr
 #include <mutex>                // for std::mutex
@@ -42,7 +41,7 @@ class XapiandServer : public Worker {
 	XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~XapiandServer();
 
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 
 public:
 	std::string __repr__() const override {

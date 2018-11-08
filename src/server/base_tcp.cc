@@ -299,9 +299,9 @@ BaseTCP::~BaseTCP()
 
 
 void
-BaseTCP::shutdown_impl(time_t asap, time_t now)
+BaseTCP::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("BaseTCP::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("BaseTCP::shutdown_impl(%lld, %lld)", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 

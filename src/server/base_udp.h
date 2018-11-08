@@ -25,7 +25,6 @@
 #include <atomic>        // for std::atomic_bool
 #include <netinet/in.h>  // for sockaddr_in
 #include <sys/types.h>   // for uint16_t
-#include <time.h>        // for time_t
 #include <memory>        // for shared_ptr
 #include <string>        // for string
 
@@ -64,7 +63,7 @@ public:
 // Base class for UDP messages configuration
 class BaseUDP : public UDP, public Worker {
 protected:
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 
 public:

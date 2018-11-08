@@ -27,7 +27,6 @@
 #include <chrono>                             // for std::chrono, std::chrono::system_clock
 #include <cstdlib>                            // for size_t, exit
 #include <cstring>                            // for strerror
-#include <ctime>                              // for time_t, ctime, NULL
 #include <errno.h>                            // for errno
 #include <exception>                          // for exception
 #include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
@@ -512,7 +511,7 @@ XapiandManager::shutdown_sig(int sig)
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
-	auto now = epoch::now<>();
+	auto now = epoch::now<std::chrono::milliseconds>();
 
 	if (sig < 0) {
 		atom_sig = sig;
@@ -520,7 +519,7 @@ XapiandManager::shutdown_sig(int sig)
 		return;
 	}
 	if ((shutdown_now != 0) && sig != SIGTERM) {
-		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+		if ((sig != 0) && now >= shutdown_asap + 1000 && now <= shutdown_asap + 4000) {
 			io::ignore_eintr().store(false);
 			L_WARNING("You insisted... Xapiand exiting now!");
 			atom_sig = -1;
@@ -528,7 +527,7 @@ XapiandManager::shutdown_sig(int sig)
 			return;
 		}
 	} else if ((shutdown_asap != 0) && sig != SIGTERM) {
-		if ((sig != 0) && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+		if ((sig != 0) && now >= shutdown_asap + 1000 && now <= shutdown_asap + 4000) {
 			shutdown_now = now;
 			io::ignore_eintr().store(false);
 			L_INFO("Trying immediate shutdown.");
@@ -548,7 +547,7 @@ XapiandManager::shutdown_sig(int sig)
 		};
 	}
 
-	if (now > shutdown_asap + 1) {
+	if (now >= shutdown_asap + 1000) {
 		shutdown_asap = now;
 	}
 
@@ -561,9 +560,9 @@ XapiandManager::shutdown_sig(int sig)
 
 
 void
-XapiandManager::shutdown_impl(time_t asap, time_t now)
+XapiandManager::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("XapiandManager::shutdown_impl(%d, %d)", (int)asap, (int)now);
+	L_CALL("XapiandManager::shutdown_impl(%lld, %lld)", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 

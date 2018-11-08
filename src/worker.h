@@ -45,8 +45,8 @@ protected:
 	ev::loop_ref *ev_loop;
 
 private:
-	time_t _asap;
-	time_t _now;
+	long long _asap;
+	long long _now;
 
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
@@ -148,7 +148,7 @@ public:
 
 	virtual ~Worker();
 
-	virtual void shutdown_impl(time_t asap, time_t now);
+	virtual void shutdown_impl(long long asap, long long now);
 	virtual void start_impl() {}
 	virtual void stop_impl() {}
 	virtual void destroy_impl() {}
@@ -157,7 +157,7 @@ public:
 	void detach_children_impl();
 
 	void shutdown(bool async = true);
-	void shutdown(time_t asap, time_t now, bool async = true);
+	void shutdown(long long asap, long long now, bool async = true);
 
 	void break_loop(bool async = true);
 

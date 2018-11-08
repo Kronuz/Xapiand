@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <time.h>                             // for time_t
 #include <memory>                             // for std::shared_ptr
 
 #include "ev/ev++.h"                          // for ev::io, ev::loop_ref
@@ -39,7 +38,7 @@ protected:
 	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~BaseServer();
 
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 	void stop_impl() override;
 
 public:

@@ -27,7 +27,6 @@
 #include <string.h>      // for size_t, memcpy, strlen
 #include <string>        // for string
 #include <sys/types.h>   // for ssize_t
-#include <time.h>        // for time_t
 
 #include "cassert.hh"    // for assert
 
@@ -163,7 +162,7 @@ class ClientDecompressor;
 class BaseClient : public Worker {
 	friend LZ4CompressFile;
 
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 	void start_impl() override;
 	void stop_impl() override;

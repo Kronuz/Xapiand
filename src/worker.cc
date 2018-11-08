@@ -374,9 +374,9 @@ Worker::dump_tree(int level)
 
 
 void
-Worker::shutdown_impl(time_t asap, time_t now)
+Worker::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("Worker::shutdown_impl(%d, %d) %s", (int)asap, (int)now, __repr__());
+	L_CALL("Worker::shutdown_impl(%lld, %lld) %s", asap, now, __repr__());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
@@ -428,9 +428,9 @@ Worker::shutdown(bool async)
 
 
 void
-Worker::shutdown(time_t asap, time_t now, bool async)
+Worker::shutdown(long long asap, long long now, bool async)
 {
-	L_CALL("Worker::shutdown(%d, %d) %s", (int)asap, (int)now, __repr__());
+	L_CALL("Worker::shutdown(%d, %d) %s", asap, now, __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_asap = asap;

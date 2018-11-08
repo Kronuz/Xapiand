@@ -75,7 +75,7 @@ class XapiandManager : public Worker  {
 
 	struct sockaddr_in host_address();
 
-	void shutdown_impl(time_t asap, time_t now) override;
+	void shutdown_impl(long long asap, long long now) override;
 	void stop_impl() override;
 
 	void finish();
@@ -135,8 +135,8 @@ public:
 	ThreadPool client_pool;
 	ThreadPool server_pool;
 
-	std::atomic<time_t> shutdown_asap;
-	std::atomic<time_t> shutdown_now;
+	std::atomic_llong shutdown_asap;
+	std::atomic_llong shutdown_now;
 
 	std::atomic<State> state;
 	std::string node_name;
