@@ -380,7 +380,8 @@ Worker::shutdown_impl(time_t asap, time_t now)
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			child->shutdown(asap, now);
+			auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
+			child->shutdown(asap, now, async);
 		}
 	}
 }
