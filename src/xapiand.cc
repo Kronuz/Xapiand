@@ -224,6 +224,10 @@ void sig_handler(int sig) {
 
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
+	} else {
+		if (sig == SIGTERM || sig == SIGINT) {
+			exit(EX_SOFTWARE);
+		}
 	}
 
 	errno = old_errno;

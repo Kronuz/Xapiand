@@ -114,6 +114,10 @@ void sig_exit(int sig) {
 		XapiandManager::manager->signal_sig(sig);
 	} else if (sig < 0) {
 		exit(-sig);
+	} else {
+		if (sig == SIGTERM || sig == SIGINT) {
+			exit(EX_SOFTWARE);
+		}
 	}
 }
 
