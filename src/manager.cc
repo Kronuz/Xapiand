@@ -703,12 +703,17 @@ XapiandManager::run()
 
 	int sig = atom_sig;
 	if (sig < 0) {
-		kill();
+		stop();
+		destroy();
+		detach();
 		throw Exit(-sig);
 	}
 
-	kill();
+	stop();
 	join();
+	destroy();
+	detach();
+	detach();
 }
 
 

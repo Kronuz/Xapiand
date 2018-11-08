@@ -167,12 +167,6 @@ public:
 	void detach(int retries = 3, bool async = true);
 	void redetach(int retries = 3, bool async = true);
 
-	void kill(bool async = true) {
-		stop(async);
-		destroy(async);
-		detach(async);
-	}
-
 	auto detaching() {
 		return _detaching.load(std::memory_order_relaxed);
 	}

@@ -204,7 +204,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
 							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, io::strerrno(errno), errno, strerror(errno));
-							kill();
+							detach();
 							return processed;
 						}
 						temp_directory = path;
@@ -216,7 +216,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
 					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
-					kill();
+					detach();
 					return processed;
 				} else {
 					L_BINARY("Start reading file: %s (%d)", path, file_descriptor);
@@ -370,7 +370,7 @@ BinaryClient::run()
 			lk.lock();
 			running = false;
 			L_CONN("Running in worker ended with an exception.");
-			kill();
+			detach();
 			throw;
 		}
 		lk.lock();
@@ -401,7 +401,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					kill();
+					detach();
 					throw;
 				}
 				lk.lock();
@@ -431,7 +431,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					kill();
+					detach();
 					throw;
 				}
 				lk.lock();
@@ -461,7 +461,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					kill();
+					detach();
 					throw;
 				}
 				lk.lock();
@@ -482,7 +482,7 @@ BinaryClient::run()
 	lk.unlock();
 
 	if (shutting_down && is_idle()) {
-		kill();
+		detach();
 	}
 
 	L_CONN("Running in binary worker ended.");

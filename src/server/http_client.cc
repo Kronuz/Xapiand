@@ -448,7 +448,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			write_http_response(new_request, response, error_code, err_response);
 			L_WARNING(HTTP_PARSER_ERRNO(&new_request.parser) != HPE_OK ? message : "incomplete request");
 		}
-		kill();
+		detach();
 	}
 
 	return received;
@@ -951,7 +951,7 @@ HttpClient::run_one(Request& request, Response& response)
 
 	if (error_code != HTTP_STATUS_OK) {
 		if (writes != 0) {
-			kill();
+			detach();
 		} else {
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
@@ -1003,7 +1003,7 @@ HttpClient::run()
 			lk.lock();
 			running = false;
 			L_CONN("Running in worker ended with an exception.");
-			kill();
+			detach();
 			throw;
 		}
 		lk.lock();
@@ -1018,7 +1018,7 @@ HttpClient::run()
 	lk.unlock();
 
 	if (shutting_down && is_idle()) {
-		kill();
+		detach();
 	}
 
 	L_CONN("Running in worker ended.");
@@ -1212,7 +1212,7 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 #ifndef NDEBUG
 		case Command::CMD_QUIT:
 			XapiandManager::manager->shutdown_sig(SIGTERM);
-			kill();
+			detach();
 			break;
 #endif
 		default:

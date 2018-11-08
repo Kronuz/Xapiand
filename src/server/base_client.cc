@@ -59,6 +59,8 @@
 // #define L_TCP_ENQUEUE L_GREEN
 // #undef L_TCP_WIRE
 // #define L_TCP_WIRE L_WHITE
+// #undef L_EV
+// #define L_EV L_MEDIUM_PURPLE
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
 // #undef L_EV_END
@@ -580,14 +582,14 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 
 	if (closed) {
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_write:END");
 		return;
 	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_write:END");
 		return;
 	}
@@ -603,7 +605,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 					io_write.stop();
 					L_EV("Disable write event");
 					if (shutting_down) {
-						kill();
+						detach();
 					}
 				}
 			});
@@ -612,7 +614,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 
 
 	if (closed) {
-		kill();
+		detach();
 	}
 
 	L_EV_END("BaseClient::io_cb_write:END");
@@ -632,14 +634,14 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 
 	if (closed) {
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
@@ -657,14 +659,14 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		if (errno == ECONNRESET) {
 			L_CONN("Received ECONNRESET {sock:%d}!", sock);
 			on_read(nullptr, received);
-			kill();
+			detach();
 			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
 
 		L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
 		on_read(nullptr, received);
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
@@ -673,7 +675,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		// The peer has closed its half side of the connection.
 		L_CONN("Received EOF {sock:%d}!", sock);
 		on_read(nullptr, received);
-		kill();
+		detach();
 		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
@@ -703,7 +705,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 					break;
 				default:
 					L_CONN("Received wrong file mode: %s {sock:%d}!", repr(std::string(1, compressor)), sock);
-					kill();
+					detach();
 					L_EV_END("BaseClient::io_cb_read:END");
 					return;
 			}
@@ -779,7 +781,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		}
 
 		if (closed) {
-			kill();
+			detach();
 			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
