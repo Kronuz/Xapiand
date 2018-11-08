@@ -75,8 +75,6 @@ Worker::_init()
 {
 	L_CALL("Worker::_init() %s", __repr__());
 
-	std::lock_guard<std::recursive_mutex> lk(_mtx);
-
 	if (_parent) {
 		_iterator = _parent->_children.end();
 	}
