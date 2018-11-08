@@ -881,6 +881,7 @@ struct DatabaseWALWriterThread : public Thread {
 	void operator()() override {
 		set_thread_name(string::format(_wal_writer->_format, _idx));
 
+		_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
 		while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
 			std::function<void(DatabaseWALWriterThread&)> task;
 			_queue.wait_dequeue(task);
@@ -899,6 +900,7 @@ struct DatabaseWALWriterThread : public Thread {
 				break;
 			}
 		}
+		_wal_writer->_workers.fetch_sub(1, std::memory_order_relaxed);
 	}
 
 	void clear() {
@@ -920,7 +922,8 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 	_threads(num_threads),
 	_format(format),
 	_ending(false),
-	_finished(false)
+	_finished(false),
+	_workers(0)
 {
 
 	for (std::size_t idx = 0; idx < num_threads; ++idx) {

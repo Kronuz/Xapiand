@@ -88,6 +88,7 @@ class ThreadPool {
 	std::atomic_bool _finished;
 	std::atomic_size_t _enqueued;
 	std::atomic_size_t _running;
+	std::atomic_size_t _workers;
 
 public:
 	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 1000);

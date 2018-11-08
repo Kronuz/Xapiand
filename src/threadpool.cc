@@ -48,7 +48,8 @@ ThreadPool::ThreadPool(const char* format, std::size_t num_threads, std::size_t 
 	  _ending(false),
 	  _finished(false),
 	  _enqueued(0),
-	  _running(0)
+	  _running(0),
+	  _workers(0)
 {
 	for (std::size_t idx = 0; idx < num_threads; ++idx) {
 		_threads[idx] = ThreadPoolThread(idx, this);
@@ -61,6 +62,7 @@ ThreadPoolThread::operator()()
 {
 	set_thread_name(string::format(_pool->_format, _idx));
 
+	_pool->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_pool->_finished.load(std::memory_order_acquire)) {
 		std::function<void()> task;
 		_pool->_queue.wait_dequeue(task);
@@ -84,6 +86,7 @@ ThreadPoolThread::operator()()
 			break;
 		}
 	}
+	_pool->_workers.fetch_sub(1, std::memory_order_relaxed);
 }
 
 

@@ -253,6 +253,7 @@ class DatabaseWALWriter {
 
 	std::atomic_bool _ending;
 	std::atomic_bool _finished;
+	std::atomic_size_t _workers;
 
 	bool enqueue(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func);
 
