@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include <chrono>             // for system_clock, time_point, duration, millise...
-#include <mutex>              // for condition_variable, mutex
-#include <thread>             // for thread, thread::id
+#include <chrono>                 // for system_clock, time_point, duration, millise...
+#include <mutex>                  // for condition_variable, mutex
 
 #include "stash.h"
-#include "threadpool.h"
-#include "time_point.hh"    // for time_point_to_ullong
+#include "thread.hh"              // for Thread
+#include "threadpool.h"           // for ThreadPool
+#include "time_point.hh"          // for time_point_to_ullong
 
 
 using namespace std::chrono_literals;
@@ -102,7 +102,7 @@ public:
 };
 
 
-class Scheduler {
+class Scheduler : public Thread {
 	std::mutex mtx;
 
 	std::unique_ptr<ThreadPool> thread_pool;
@@ -113,11 +113,14 @@ class Scheduler {
 	SchedulerQueue scheduler_queue;
 
 	const std::string name;
-	std::atomic_int running;
-	std::thread inner_thread;
+	std::atomic_int ending;
 
 	void run_one(TaskType& task);
 	void run();
+
+	void operator()() override {
+		run();
+	}
 
 public:
 	explicit Scheduler(std::string  name_);
@@ -129,8 +132,19 @@ public:
 	size_t running_size();
 	size_t size();
 
-	void finish(int wait=10);
-	void join();
+	bool finish(int wait);
+
+	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
+
+	template <typename T, typename R>
+	bool join(std::chrono::duration<T, R> timeout) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
+	bool join(int timeout = 60000) {
+		return join(std::chrono::milliseconds(timeout));
+	}
+
 	void add(const TaskType& task, unsigned long long wakeup_time);
 	void add(const TaskType& task, const std::chrono::time_point<std::chrono::system_clock>& wakeup);
 };

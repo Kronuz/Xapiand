@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <chrono>         // for std::chrono
 #include <mutex>          // for mutex
 #include <unordered_map>  // for unordered_map
 
@@ -49,12 +50,21 @@ public:
 		return scheduler;
 	}
 
-	static void finish(int wait=10) {
-		scheduler().finish(wait);
+	static bool finish(int wait = 10) {
+		return scheduler().finish(wait);
 	}
 
-	static void join() {
-		scheduler().join();
+	static bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
+		return scheduler().join(wakeup);
+	}
+
+	template <typename T, typename R>
+	static bool join(std::chrono::duration<T, R> timeout) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
+	static bool join(int timeout = 60000) {
+		return join(std::chrono::milliseconds(timeout));
 	}
 
 	static size_t threadpool_capacity() {

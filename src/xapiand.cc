@@ -227,8 +227,8 @@ void sig_handler(int sig) {
 		try {
 			manager->signal_sig(sig);
 		} catch (const Exit& exc) {
+			// Flag atom_sig for clean exit in the next Manager::join() timeout
 			manager->atom_sig = -exc.code;
-			throw;  // TODO: Remove this throw when timeouts for threads are ready
 		}
 	} else {
 		if (sig == SIGTERM || sig == SIGINT) {

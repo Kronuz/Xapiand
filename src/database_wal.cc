@@ -36,7 +36,6 @@
 #include <errno.h>                // for errno
 #include <fcntl.h>                // for O_CREAT, O_WRONLY, O_EXCL
 #include <limits>                 // for std::numeric_limits
-#include <thread>                 // for std::thread
 #include <utility>                // for std::make_pair
 
 #include "cassert.hh"             // for assert
@@ -44,7 +43,6 @@
 #include "database.h"             // for Database
 #include "database_pool.h"        // for DatabasePool
 #include "database_utils.h"       // for read_uuid
-#include "server/discovery.h"     // for Discovery::signal_db_update
 #include "exception.h"            // for THROW, Error
 #include "fs.hh"                  // for exists
 #include "ignore_unused.h"        // for ignore_unused
@@ -57,7 +55,9 @@
 #include "msgpack.h"              // for MsgPack
 #include "opts.h"                 // for opts::*
 #include "repr.hh"                // for repr
+#include "server/discovery.h"     // for Discovery::signal_db_update
 #include "string.hh"              // for string::format
+#include "thread.hh"              // for Thread
 
 
 // #undef L_DEBUG
@@ -854,10 +854,9 @@ DatabaseWAL::get_current_line(uint32_t end_off)
 
 std::unique_ptr<DatabaseWALWriter> DatabaseWALWriter::_instance;
 
-struct DatabaseWALWriterThread {
+struct DatabaseWALWriterThread : public Thread {
 	DatabaseWALWriter* _wal_writer;
 	size_t _idx;
-	std::thread _thread;
 	BlockingConcurrentQueue<std::function<void(DatabaseWALWriterThread&)>> _queue;
 
 	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
@@ -872,32 +871,14 @@ struct DatabaseWALWriterThread {
 		_idx(idx)
 	{}
 
-	DatabaseWALWriterThread(const DatabaseWALWriterThread&) = delete;
-
 	DatabaseWALWriterThread& operator=(DatabaseWALWriterThread&& other) {
 		_wal_writer = std::move(other._wal_writer);
 		_idx = std::move(other._idx);
-		_thread = std::move(other._thread);
+		Thread::operator=(static_cast<Thread&&>(other));
 		return *this;
 	}
 
-	void start() {
-		_thread = std::thread(&DatabaseWALWriterThread::operator(), this);
-	}
-
-	bool joinable() const noexcept {
-		return _thread.joinable();
-	}
-
-	void join() {
-		try {
-			if (_thread.joinable()) {
-				_thread.join();
-			}
-		} catch (const std::system_error&) { }
-	}
-
-	void operator()() {
+	void operator()() override {
 		set_thread_name(string::format(_wal_writer->_format, _idx));
 
 		while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
@@ -988,28 +969,26 @@ DatabaseWALWriter::end()
 
 
 void
-DatabaseWALWriter::finish(bool wait)
+DatabaseWALWriter::finish()
 {
 	if (!_instance->_finished.exchange(true, std::memory_order_release)) {
 		for (auto& _thread : _instance->_threads) {
 			_thread._queue.enqueue(nullptr);
 		}
-		if (wait) {
-			join();
-		}
 	}
 }
 
 
-void
-DatabaseWALWriter::join()
+bool
+DatabaseWALWriter::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
 {
 	assert(_instance);
 	for (auto& _thread : _instance->_threads) {
-		if (_thread.joinable()) {
-			_thread.join();
+		if (!_thread.join(wakeup)) {
+			return false;
 		}
 	}
+	return true;
 }
 
 

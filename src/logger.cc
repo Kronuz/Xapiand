@@ -371,12 +371,15 @@ Logging::scheduler()
 }
 
 
-void
+bool
 Logging::finish(int wait)
 {
-	scheduler().finish(wait);
+	if (!scheduler().finish(wait)) {
+		return false;
+	}
 	dump_collected();
 	reset();
+	return true;
 }
 
 
@@ -441,13 +444,6 @@ Logging::reset()
 		buf += std::string("\033]6;1;bg;*;default\a");
 		io::write(STDERR_FILENO, buf.data(), buf.size());
 	}
-}
-
-
-void
-Logging::join()
-{
-	scheduler().join();
 }
 
 

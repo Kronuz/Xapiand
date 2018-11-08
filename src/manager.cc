@@ -770,16 +770,31 @@ XapiandManager::join()
 	finish();
 
 	L_MANAGER("Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
-	server_pool.join();
+	while (!server_pool.join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
 
 	L_MANAGER("Waiting for %zu client thread%s...", client_pool.running_size(), (client_pool.running_size() == 1) ? "" : "s");
-	client_pool.join();
+	while (!client_pool.join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
 
 	L_MANAGER("Finishing thread pool!");
 	thread_pool.finish();
 
 	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
-	thread_pool.join();
+	while (!thread_pool.join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
 
 	L_MANAGER("Finishing database pool!");
 	database_pool.finish();
@@ -788,7 +803,12 @@ XapiandManager::join()
 	DatabaseAutocommit::finish();
 
 	L_MANAGER("Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
-	DatabaseAutocommit::join();
+	while (!DatabaseAutocommit::join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
 
 #if XAPIAND_DATABASE_WAL
 	if (DatabaseWALWriter::running_size()) {
@@ -796,7 +816,12 @@ XapiandManager::join()
 		DatabaseWALWriter::finish();
 
 		L_MANAGER("Waiting for %zu WAL writer%s...", DatabaseWALWriter::running_size(), (DatabaseWALWriter::running_size() == 1) ? "" : "s");
-		DatabaseWALWriter::join();
+		while (!DatabaseWALWriter::join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw Exit(-sig);
+			}
+		}
 	}
 #endif
 
@@ -804,7 +829,12 @@ XapiandManager::join()
 	AsyncFsync::finish();
 
 	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
-	AsyncFsync::join();
+	while (!AsyncFsync::join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
 
 	L_MANAGER("Clearing database pool!");
 	database_pool.clear();

@@ -27,6 +27,7 @@
 #if XAPIAND_DATABASE_WAL
 
 #include <array>                // for std::array
+#include <chrono>               // for std::chrono
 #include <memory>               // for std::unique_ptr
 #include <string>               // for std::string
 #include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
@@ -261,9 +262,20 @@ public:
 	static void start(std::size_t size);
 
 	static void clear();
+
+	static bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
+
+	template <typename T, typename R>
+	static bool join(std::chrono::duration<T, R> timeout) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
+	static bool join(int timeout = 60000) {
+		return join(std::chrono::milliseconds(timeout));
+	}
+
 	static void end();
-	static void finish(bool wait = false);
-	static void join();
+	static void finish();
 
 	static std::size_t running_size();
 

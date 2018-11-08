@@ -119,19 +119,23 @@ SchedulerQueue::add(const TaskType& task, unsigned long long key)
 }
 
 
-Scheduler::Scheduler(std::string  name_)
-	: atom_next_wakeup_time(0),
-	  name(std::move(name_)),
-	  running(-1),
-	  inner_thread(&Scheduler::run, this) { }
+Scheduler::Scheduler(std::string  name_) :
+	atom_next_wakeup_time(0),
+	name(std::move(name_)),
+	ending(-1)
+{
+	start();
+}
 
 
-Scheduler::Scheduler(std::string name_, const char* format, size_t num_threads)
-	: thread_pool(std::make_unique<ThreadPool>(format, num_threads)),
-	  atom_next_wakeup_time(0),
-	  name(std::move(name_)),
-	  running(-1),
-	  inner_thread(&Scheduler::run, this) { }
+Scheduler::Scheduler(std::string name_, const char* format, size_t num_threads) :
+	thread_pool(std::make_unique<ThreadPool>(format, num_threads)),
+	atom_next_wakeup_time(0),
+	name(std::move(name_)),
+	ending(-1)
+{
+	start();
+}
 
 
 Scheduler::~Scheduler()
@@ -180,10 +184,10 @@ Scheduler::size()
 }
 
 
-void
+bool
 Scheduler::finish(int wait)
 {
-	running = wait;
+	ending = wait;
 
 	{
 		std::lock_guard<std::mutex> lk(mtx);
@@ -195,31 +199,33 @@ Scheduler::finish(int wait)
 	}
 
 	if (wait != 0) {
-		join();
+		return join(2 * wait * 100ms);
 	}
+
+	return true;
 }
 
 
-void
-Scheduler::join()
+bool
+Scheduler::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
 {
-	try {
-		if (inner_thread.joinable()) {
-			inner_thread.join();
-		}
-	} catch (const std::system_error&) { }
-
+	if (!Thread::join(wakeup)) {
+		return false;
+	}
 	if (thread_pool) {
-		thread_pool->join();
+		if (!thread_pool->join(wakeup)) {
+			return false;
+		}
 		thread_pool.reset();
 	}
+	return true;
 }
 
 
 void
 Scheduler::add(const TaskType& task, unsigned long long wakeup_time)
 {
-	if (running != 0) {
+	if (ending != 0) {
 		auto now = time_point_to_ullong(std::chrono::system_clock::now());
 		if (wakeup_time < now) {
 			wakeup_time = now;
@@ -284,16 +290,16 @@ Scheduler::run()
 	auto next_wakeup_time = atom_next_wakeup_time.load();
 	lk.unlock();
 
-	while (running != 0) {
-		if (--running < 0) {
-			running = -1;
+	while (ending != 0) {
+		if (--ending < 0) {
+			ending = -1;
 		}
 
 		bool pending = false;
 
 		// Propose a wakeup time some time in the future:
 		auto now = std::chrono::system_clock::now();
-		auto wakeup_time = time_point_to_ullong(now + (running < 0 ? 30s : 100ms));
+		auto wakeup_time = time_point_to_ullong(now + (ending < 0 ? 30s : 100ms));
 
 		// Then figure out if there's something that needs to be acted upon sooner
 		// than that wakeup time in the scheduler queue (an earlier wakeup time needed):
@@ -313,7 +319,7 @@ Scheduler::run()
 
 		// Try setting the worked out wakeup time as the real next wakeup time:
 		if (atom_next_wakeup_time.compare_exchange_strong(next_wakeup_time, wakeup_time)) {
-			if (running >= 0 && !pending) {
+			if (ending >= 0 && !pending) {
 				break;
 			}
 		}

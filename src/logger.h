@@ -126,8 +126,21 @@ public:
 	~Logging();
 
 	static std::string colorized(std::string_view str, bool try_coloring);
-	static void finish(int wait=10);
-	static void join();
+	static bool finish(int wait = 10);
+
+	static bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
+		return scheduler().join(wakeup);
+	}
+
+	template <typename T, typename R>
+	static bool join(std::chrono::duration<T, R> timeout) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
+	static bool join(int timeout = 60000) {
+		return join(std::chrono::milliseconds(timeout));
+	}
+
 	static void dump_collected();
 
 	// iTerm2
