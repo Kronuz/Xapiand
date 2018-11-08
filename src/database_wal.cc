@@ -960,6 +960,28 @@ DatabaseWALWriter::clear()
 }
 
 
+bool
+DatabaseWALWriter::join(std::chrono::milliseconds timeout)
+{
+	assert(_instance);
+	bool ret = true;
+	// Divide timeout among number of running worker threads
+	// to give each thread the chance to "join".
+	auto threadpool_workers = _instance->_workers.load(std::memory_order_relaxed);
+	if (!threadpool_workers) {
+		threadpool_workers = 1;
+	}
+	auto single_timeout = timeout / threadpool_workers;
+	for (auto& _thread : _instance->_threads) {
+		auto wakeup = std::chrono::system_clock::now() + single_timeout;
+		if (!_thread.join(wakeup)) {
+			ret = false;
+		}
+	}
+	return ret;
+}
+
+
 void
 DatabaseWALWriter::end()
 {
@@ -979,19 +1001,6 @@ DatabaseWALWriter::finish()
 			_thread._queue.enqueue(nullptr);
 		}
 	}
-}
-
-
-bool
-DatabaseWALWriter::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
-{
-	assert(_instance);
-	for (auto& _thread : _instance->_threads) {
-		if (!_thread.join(wakeup)) {
-			return false;
-		}
-	}
-	return true;
 }
 
 

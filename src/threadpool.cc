@@ -131,6 +131,33 @@ ThreadPool::threadpool_size()
 	return _threads.size();
 }
 
+std::size_t
+ThreadPool::threadpool_workers()
+{
+	return _workers.load(std::memory_order_relaxed);
+}
+
+bool
+ThreadPool::join(std::chrono::milliseconds timeout)
+{
+	bool ret = true;
+	// Divide timeout among number of running worker threads
+	// to give each thread the chance to "join".
+	auto threadpool_workers = _workers.load(std::memory_order_relaxed);
+	if (!threadpool_workers) {
+		threadpool_workers = 1;
+	}
+	auto single_timeout = timeout / threadpool_workers;
+	for (auto& _thread : _threads) {
+		auto wakeup = std::chrono::system_clock::now() + single_timeout;
+		if (!_thread.join(wakeup)) {
+			ret = false;
+		}
+	}
+	return ret;
+}
+
+
 void
 ThreadPool::end()
 {
@@ -150,18 +177,6 @@ ThreadPool::finish()
 		}
 	}
 }
-
-bool
-ThreadPool::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
-{
-	for (auto& _thread : _threads) {
-		if (!_thread.join(wakeup)) {
-			return false;
-		}
-	}
-	return true;
-}
-
 
 bool
 ThreadPool::finished()

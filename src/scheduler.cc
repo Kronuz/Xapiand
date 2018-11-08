@@ -207,13 +207,16 @@ Scheduler::finish(int wait)
 
 
 bool
-Scheduler::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
+Scheduler::join(std::chrono::milliseconds timeout)
 {
-	if (!Thread::join(wakeup)) {
+	auto threadpool_workers = thread_pool->threadpool_workers() + 1;
+	auto single_timeout = timeout / threadpool_workers;
+
+	if (!Thread::join(single_timeout)) {
 		return false;
 	}
 	if (thread_pool) {
-		if (!thread_pool->join(wakeup)) {
+		if (!thread_pool->join(single_timeout * threadpool_workers)) {
 			return false;
 		}
 		thread_pool.reset();

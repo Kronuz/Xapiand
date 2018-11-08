@@ -264,13 +264,7 @@ public:
 
 	static void clear();
 
-	static bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
-
-	template <typename T, typename R>
-	static bool join(std::chrono::duration<T, R> timeout) {
-		return join(std::chrono::system_clock::now() + timeout);
-	}
-
+	static bool join(std::chrono::milliseconds timeout);
 	static bool join(int timeout = 60000) {
 		return join(std::chrono::milliseconds(timeout));
 	}
