@@ -977,7 +977,7 @@ HttpClient::run()
 
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
-	while (!requests.empty() && !closed && !shutting_down) {
+	while (!requests.empty() && !closed) {
 		Request request;
 		Response response;
 
@@ -1003,13 +1003,13 @@ HttpClient::run()
 			lk.lock();
 			running = false;
 			L_CONN("Running in worker ended with an exception.");
-			detach();  // try re-detaching if already flagged as detaching
+			kill();
 			throw;
 		}
 		lk.lock();
 
 		if (request.closing) {
-			kill();
+			close();
 			break;
 		}
 	}
@@ -1017,7 +1017,7 @@ HttpClient::run()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down) {
+	if (shutting_down && is_idle()) {
 		kill();
 	}
 

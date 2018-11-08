@@ -452,7 +452,6 @@ BaseClient::write_from_queue()
 	if (closed) {
 		L_ERR("ERROR: write error {sock:%d}: Socket already closed!", sock);
 		L_CONN("WR:ERR.1: {sock:%d}", sock);
-		close();
 		return WR::ERROR;
 	}
 
@@ -576,13 +575,15 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
 
-	if (closed) {
-		return;
-	}
-
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
+
+	if (closed) {
+		kill();
+		L_EV_END("BaseClient::io_cb_write:END");
+		return;
+	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
@@ -601,6 +602,9 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 				if (empty) {
 					io_write.stop();
 					L_EV("Disable write event");
+					if (shutting_down) {
+						kill();
+					}
 				}
 			});
 			break;
@@ -623,13 +627,15 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
 
-	if (closed) {
-		return;
-	}
-
 	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
+
+	if (closed) {
+		kill();
+		L_EV_END("BaseClient::io_cb_read:END");
+		return;
+	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));

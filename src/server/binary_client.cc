@@ -370,13 +370,13 @@ BinaryClient::run()
 			lk.lock();
 			running = false;
 			L_CONN("Running in worker ended with an exception.");
-			detach();  // try re-detaching if already flagged as detaching
+			kill();
 			throw;
 		}
 		lk.lock();
 	}
 
-	while (!messages.empty() && !closed && !shutting_down) {
+	while (!messages.empty() && !closed) {
 		switch (state) {
 			case State::REMOTEPROTOCOL_SERVER: {
 				std::string message;
@@ -401,7 +401,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					detach();  // try re-detaching if already flagged as detaching
+					kill();
 					throw;
 				}
 				lk.lock();
@@ -431,7 +431,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					detach();  // try re-detaching if already flagged as detaching
+					kill();
 					throw;
 				}
 				lk.lock();
@@ -461,7 +461,7 @@ BinaryClient::run()
 					lk.lock();
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
-					detach();  // try re-detaching if already flagged as detaching
+					kill();
 					throw;
 				}
 				lk.lock();
@@ -481,7 +481,7 @@ BinaryClient::run()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down) {
+	if (shutting_down && is_idle()) {
 		kill();
 	}
 
