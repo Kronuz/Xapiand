@@ -47,7 +47,7 @@
 
 Worker::~Worker()
 {
-	L_CALL("Worker::~Worker() [%s]", __repr__());
+	L_CALL("Worker::~Worker() %s", __repr__());
 
 	// Make sure to call Worker::deinit() as the last line in the
 	// destructor of any subclasses implementing either one of:
@@ -62,7 +62,7 @@ Worker::~Worker()
 void
 Worker::deinit()
 {
-	L_CALL("Worker::deinit() [%s]", __repr__());
+	L_CALL("Worker::deinit() %s", __repr__());
 
 	_stopper();
 	_destroyer();
@@ -73,7 +73,7 @@ Worker::deinit()
 void
 Worker::_init()
 {
-	L_CALL("Worker::_init() [%s]", __repr__());
+	L_CALL("Worker::_init() %s", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -110,7 +110,7 @@ Worker::_init()
 void
 Worker::_deinit()
 {
-	L_CALL("Worker::_deinit() [%s]", __repr__());
+	L_CALL("Worker::_deinit() %s", __repr__());
 
 	if (!_deinited) {
 		_detach_children_async.stop();
@@ -140,7 +140,7 @@ Worker::_deinit()
 void
 Worker::_destroyer()
 {
-	L_CALL("Worker::_destroyer() [%s]", __repr__());
+	L_CALL("Worker::_destroyer() %s", __repr__());
 
 	if (!_destroyed) {
 		L_EV_BEGIN("Worker::_destroyer:BEGIN");
@@ -156,7 +156,7 @@ Worker::_destroyer()
 inline void
 Worker::_starter()
 {
-	L_CALL("Worker::_starter() [%s]", __repr__());
+	L_CALL("Worker::_starter() %s", __repr__());
 
 	if (!_started) {
 		L_EV_BEGIN("Worker::_starter:BEGIN");
@@ -171,7 +171,7 @@ Worker::_starter()
 void
 Worker::_stopper()
 {
-	L_CALL("Worker::_stopper() [%s]", __repr__());
+	L_CALL("Worker::_stopper() %s", __repr__());
 
 	if (_started) {
 		L_EV_BEGIN("Worker::_stopper:BEGIN");
@@ -186,7 +186,7 @@ Worker::_stopper()
 void
 Worker::_shutdown_async_cb()
 {
-	L_CALL("Worker::_shutdown_async_cb() [%s]", __repr__());
+	L_CALL("Worker::_shutdown_async_cb() %s", __repr__());
 
 	L_EV_BEGIN("Worker::_shutdown_async_cb:BEGIN");
 	shutdown_impl(_asap, _now);
@@ -197,7 +197,7 @@ Worker::_shutdown_async_cb()
 void
 Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -210,7 +210,7 @@ Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
 void
 Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -221,7 +221,7 @@ Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
 void
 Worker::_start_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("Worker::_start_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+	L_CALL("Worker::_start_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -232,7 +232,7 @@ Worker::_start_async_cb(ev::async& /*unused*/, int revents)
 void
 Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("Worker::_stop_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+	L_CALL("Worker::_stop_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -243,7 +243,7 @@ Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
 void
 Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) [%s]", revents, readable_revents(revents), __repr__());
+	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
 	ignore_unused(revents);
 
@@ -256,7 +256,7 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 std::vector<std::weak_ptr<Worker>>
 Worker::_gather_children()
 {
-	L_CALL("Worker::_gather_children() [%s]", __repr__());
+	L_CALL("Worker::_gather_children() %s", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -285,7 +285,7 @@ Worker::_gather_children()
 void
 Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 {
-	L_CALL("Worker::_detach_impl(<weak_child>, %d) [%s]", retries, __repr__());
+	L_CALL("Worker::_detach_impl(<weak_child>, %d) %s", retries, __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -330,7 +330,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 auto
 Worker::_ancestor(int levels)
 {
-	L_CALL("Worker::_ancestor(%d) [%s]", levels, __repr__());
+	L_CALL("Worker::_ancestor(%d) %s", levels, __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -375,7 +375,7 @@ Worker::dump_tree(int level)
 void
 Worker::shutdown_impl(time_t asap, time_t now)
 {
-	L_CALL("Worker::shutdown_impl(%d, %d) [%s]", (int)asap, (int)now, __repr__());
+	L_CALL("Worker::shutdown_impl(%d, %d) %s", (int)asap, (int)now, __repr__());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
@@ -389,7 +389,7 @@ Worker::shutdown_impl(time_t asap, time_t now)
 void
 Worker::break_loop_impl()
 {
-	L_CALL("Worker::break_loop_impl() [%s]", __repr__());
+	L_CALL("Worker::break_loop_impl() %s", __repr__());
 
 	ev_loop->break_loop();
 }
@@ -398,7 +398,7 @@ Worker::break_loop_impl()
 void
 Worker::detach_children_impl()
 {
-	L_CALL("Worker::detach_children_impl() [%s]", __repr__());
+	L_CALL("Worker::detach_children_impl() %s", __repr__());
 
 	auto weak_children = _gather_children();
 	for (auto& weak_child : weak_children) {
@@ -418,7 +418,7 @@ Worker::detach_children_impl()
 void
 Worker::shutdown(bool async)
 {
-	L_CALL("Worker::shutdown() [%s]", __repr__());
+	L_CALL("Worker::shutdown() %s", __repr__());
 
 	auto now = epoch::now<>();
 	shutdown(now, now, async);
@@ -428,7 +428,7 @@ Worker::shutdown(bool async)
 void
 Worker::shutdown(time_t asap, time_t now, bool async)
 {
-	L_CALL("Worker::shutdown(%d, %d) [%s]", (int)asap, (int)now, __repr__());
+	L_CALL("Worker::shutdown(%d, %d) %s", (int)asap, (int)now, __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_asap = asap;
@@ -443,7 +443,7 @@ Worker::shutdown(time_t asap, time_t now, bool async)
 void
 Worker::break_loop(bool async)
 {
-	L_CALL("Worker::break_loop() [%s]", __repr__());
+	L_CALL("Worker::break_loop() %s", __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_break_loop_async.send();
@@ -456,7 +456,7 @@ Worker::break_loop(bool async)
 void
 Worker::destroy(bool async)
 {
-	L_CALL("Worker::destroy() [%s]", __repr__());
+	L_CALL("Worker::destroy() %s", __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_destroy_async.send();
@@ -469,7 +469,7 @@ Worker::destroy(bool async)
 void
 Worker::start(bool async)
 {
-	L_CALL("Worker::start() [%s]", __repr__());
+	L_CALL("Worker::start() %s", __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_start_async.send();
@@ -482,7 +482,7 @@ Worker::start(bool async)
 void
 Worker::stop(bool async)
 {
-	L_CALL("Worker::stop() [%s]", __repr__());
+	L_CALL("Worker::stop() %s", __repr__());
 
 	if (async && ev_loop->depth() != 0u) {
 		_stop_async.send();
@@ -506,7 +506,7 @@ Worker::_detach_children(bool async)
 void
 Worker::detach(int retries, bool async)
 {
-	L_CALL("Worker::detach() [%s]", __repr__());
+	L_CALL("Worker::detach() %s", __repr__());
 
 	_detaching = true;
 	_detaching_retries = retries;
@@ -518,7 +518,7 @@ Worker::detach(int retries, bool async)
 void
 Worker::redetach(int retries, bool async)
 {
-	L_CALL("Worker::redetach() [%s]", __repr__());
+	L_CALL("Worker::redetach() %s", __repr__());
 
 	// Needs to be run at the end of Workers's run(), to try re-detaching
 
@@ -532,7 +532,7 @@ Worker::redetach(int retries, bool async)
 void
 Worker::run_loop()
 {
-	L_CALL("Worker::run_loop() [%s]", __repr__());
+	L_CALL("Worker::run_loop() %s", __repr__());
 
 	assert(ev_loop->depth() == 0);
 
