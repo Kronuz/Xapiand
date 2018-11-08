@@ -28,6 +28,8 @@
 #include <string>
 #include "string_view.hh"     // for std::string_view
 
+#include "cassert.hh"        // for assert
+
 #include "lz4/xxhash.h"
 #include "static_string.hh"  // for static_string::
 #include "chars.hh"          // for chars::tolower

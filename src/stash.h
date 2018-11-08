@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include <array>     // for array
-#include <atomic>    // for atomic
+#include <array>                 // for std::array
+#include <atomic>                // for std::atomic
 
-#include "ignore_unused.h"
-#include "log.h"
+#include "cassert.hh"            // for assert
+
+#include "ignore_unused.h"       // for ignore_unused
+#include "log.h"                 // for L_NOTHING
 
 
 // #define L_STASH L_COLLECT

@@ -24,6 +24,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "cassert.hh"                 // for assert
+
 #include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for delete_files, build_path_index

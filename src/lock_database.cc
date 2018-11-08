@@ -22,6 +22,8 @@
 
 #include "lock_database.h"
 
+#include "cassert.hh"            // for assert
+
 #include "database.h"           // for Database
 #include "database_pool.h"      // for DatabasePool
 #include "manager.h"            // for XapiandManager::manager

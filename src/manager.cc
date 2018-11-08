@@ -51,6 +51,8 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
+#include "cassert.hh"                         // for assert
+
 #include "allocator.h"                        // for allocator::total_allocated
 #include "async_fsync.h"                      // for AsyncFsync
 #include "color_tools.hh"                     // for color

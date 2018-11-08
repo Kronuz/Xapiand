@@ -22,6 +22,8 @@
 
 #include "deflate_compressor.h"
 
+#include "cassert.hh"            // for assert
+
 
 std::string zerr(int ret) {
 	switch (ret) {

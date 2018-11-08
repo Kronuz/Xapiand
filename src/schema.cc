@@ -35,6 +35,8 @@
 #include <type_traits>                     // for remove_reference<>::type
 #include <utility>
 
+#include "cassert.hh"                      // for assert
+
 #include "cast.h"                          // for Cast
 #include "database_handler.h"              // for DatabaseHandler
 #include "datetime.h"                      // for isDate, tm_t

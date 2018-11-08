@@ -22,6 +22,8 @@
 
 #include "escape.hh"
 
+#include "cassert.hh"            // for assert
+
 #include "chars.hh"           // for chars::char_repr
 
 

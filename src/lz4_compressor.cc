@@ -25,6 +25,8 @@
 #include <cstdio>                // for SEEK_SET
 #include <cstring>               // for size_t, memcpy
 
+#include "cassert.hh"            // for assert
+
 #include "likely.h"              // for likely, unlikely
 
 

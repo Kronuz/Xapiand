@@ -28,6 +28,8 @@
 #include <cmath>        // for scalbn, frexp, HUGE_VAL
 #include <functional>   // for std::reference_wrapper
 
+#include "cassert.hh"   // for assert
+
 #include "io.hh"        // for io::read and io::write
 
 

@@ -31,6 +31,8 @@
 #include "concurrent_queue.h"
 #include "lightweight_semaphore.h"
 
+#include "cassert.hh"            // for assert
+
 #include <type_traits>
 #include <cerrno>
 #include <memory>

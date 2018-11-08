@@ -48,6 +48,8 @@ extern "C" {
 #include <semaphore.h>
 #endif
 
+#include "cassert.hh"            // for assert
+
 namespace moodycamel
 {
 namespace details

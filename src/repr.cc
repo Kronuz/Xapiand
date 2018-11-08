@@ -22,7 +22,9 @@
 
 #include "repr.hh"
 
-#include "chars.hh"           // for chars::char_repr
+#include "cassert.hh"            // for assert
+
+#include "chars.hh"              // for chars::char_repr
 
 
 std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {

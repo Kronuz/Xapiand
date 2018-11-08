@@ -32,6 +32,8 @@ THE SOFTWARE.
 #include "string_view.hh"   // for std::string_view
 #include <type_traits>      // for std::enable_if_t
 
+#include "cassert.hh"       // for assert
+
 #include "uinteger_t.hh"
 
 
