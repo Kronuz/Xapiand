@@ -37,6 +37,8 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #define L_WORKER L_SALMON
+// #undef L_EV
+// #define L_EV L_MEDIUM_PURPLE
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
 // #undef L_EV_END
@@ -403,7 +405,9 @@ Worker::detach_children_impl()
 		int retries = 0;
 		if (auto child = weak_child.lock()) {
 			child->_detach_children(true);
-			if (!child->_detaching) { continue; }
+			if (!child->_detaching) {
+				continue;
+			}
 			retries = child->_detaching_retries;
 		}
 		_detach_impl(weak_child, retries);
