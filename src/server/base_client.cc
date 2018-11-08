@@ -428,18 +428,17 @@ BaseClient::stop_impl()
 
 	Worker::stop_impl();
 
-	// Stop and free watcher if client socket is closing
-	io_read.stop();
-	L_EV("Stop client's read event");
-
-	io_write.stop();
-	L_EV("Stop client's write event");
+	write_start_async.stop();
+	L_EV("Stop client's async update event");
 
 	read_start_async.stop();
 	L_EV("Stop client's async read start event");
 
-	write_start_async.stop();
-	L_EV("Stop client's async update event");
+	io_write.stop();
+	L_EV("Stop client's write event");
+
+	io_read.stop();
+	L_EV("Stop client's read event");
 
 	write_queue.finish();
 	write_queue.clear();
