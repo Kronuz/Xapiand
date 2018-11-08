@@ -209,7 +209,7 @@ Scheduler::finish(int wait)
 bool
 Scheduler::join(std::chrono::milliseconds timeout)
 {
-	auto threadpool_workers = thread_pool->threadpool_workers() + 1;
+	auto threadpool_workers = thread_pool ? thread_pool->threadpool_workers() + 1 : 1;
 	auto single_timeout = timeout / threadpool_workers;
 
 	if (!Thread::join(single_timeout)) {
