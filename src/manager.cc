@@ -56,7 +56,6 @@
 #include "allocator.h"                        // for allocator::total_allocated
 #include "async_fsync.h"                      // for AsyncFsync
 #include "color_tools.hh"                     // for color
-#include "database_pool.h"                    // for DatabasePool
 #include "database_autocommit.h"              // for DatabaseAutocommit
 #include "database_handler.h"                 // for DatabaseHandler
 #include "database_utils.h"                   // for RESERVED_TYPE

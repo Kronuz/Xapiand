@@ -83,8 +83,8 @@ private:
 
 	std::atomic<size_t> count;
 
-	std::condition_variable unlock_cond;
-	std::condition_variable exclusive_cond;
+	std::condition_variable unlocked_cond;
+	std::condition_variable lockable_cond;
 
 	Endpoints endpoints;
 
@@ -173,6 +173,9 @@ class DatabasePool {
 	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
+	void lock(const std::shared_ptr<Database>& database);
+	void unlock(const std::shared_ptr<Database>& database);
+
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags);
 	void checkin(std::shared_ptr<Database>& database);
 
@@ -184,7 +187,6 @@ public:
 	~DatabasePool();
 
 	void finish();
-	void switch_db(const std::string& tmp, const std::string& endpoint_path);
 	void cleanup();
 
 	void clear();

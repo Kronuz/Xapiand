@@ -260,6 +260,81 @@ DatabasePool::_drop_queue(const std::shared_ptr<DatabaseQueue>& queue)
 
 
 void
+DatabasePool::lock(const std::shared_ptr<Database>& database)
+{
+	L_CALL("DatabasePool::lock(<Database %s>)", repr(database->endpoints.to_string()));
+
+	if (!database->is_writable_and_local) {
+		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	auto queue = database->weak_queue.lock();
+	if (!queue) {
+		L_DEBUG("ERROR: Exclusive lock can be granted only for valid databases in a queue");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	std::unique_lock<std::mutex> lk(qmtx);
+	if (queue->locked) {
+		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	++locks;
+	queue->locked = true;
+	try {
+		auto is_ready_to_lock = [&] {
+			for (auto& endpoint_queue : queues[database->endpoints.hash()]) {
+				if (endpoint_queue != queue && endpoint_queue->size() < endpoint_queue->count) {
+					return false;
+				}
+			}
+			return true;
+		};
+		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
+		if (!queue->lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
+			THROW(TimeOutError, "Cannot grant exclusive lock database");
+		}
+	} catch(...) {
+		assert(locks > 0);
+		--locks;
+		queue->locked = false;
+		queue->unlocked_cond.notify_all();
+	}
+}
+
+
+void
+DatabasePool::unlock(const std::shared_ptr<Database>& database)
+{
+	L_CALL("DatabasePool::unlock(<Database %s>)", repr(database->endpoints.to_string()));
+
+	if (!database->is_writable_and_local) {
+		L_DEBUG("ERROR: Exclusive lock can be released only for locked databases");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	auto queue = database->weak_queue.lock();
+	if (!queue) {
+		L_DEBUG("ERROR: Exclusive lock can be released only for locked databases in a queue");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	std::unique_lock<std::mutex> lk(qmtx);
+	if (!queue->locked) {
+		L_DEBUG("ERROR: Exclusive lock can be released only to locked databases");
+		THROW(Error, "Cannot grant exclusive lock database");
+	}
+
+	assert(locks > 0);
+	--locks;
+	queue->locked = false;
+	queue->unlocked_cond.notify_all();
+}
+
+
+void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
 	L_CALL("DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()), flags, [&flags]() {
@@ -267,30 +342,21 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
-		if ((flags & DB_EXCLUSIVE) == DB_EXCLUSIVE) values.push_back("DB_EXCLUSIVE");
 		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
 		return string::join(values, " | ");
 	}());
 
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
-	bool db_exclusive = (flags & DB_EXCLUSIVE) == DB_EXCLUSIVE;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
 	assert(!database);
 
 	if (db_writable && endpoints.size() != 1) {
-		L_ERR("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
-		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (only one)", repr(endpoints.to_string()));
+		L_DEBUG("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
+		THROW(CheckoutErrorBadEndpoint, "Cannot checkout writable multi-database");
 	}
-
-	if (db_exclusive && !db_writable) {
-		L_ERR("ERROR: Exclusive access can be granted only for writable databases");
-		THROW(CheckoutErrorBadEndpoint, "Cannot checkout database: %s (non-exclusive)", repr(endpoints.to_string()));
-	}
-
-	std::unique_lock<std::mutex> lk(qmtx);
 
 	if (!finished) {
 		size_t hash = endpoints.hash();
@@ -337,8 +403,17 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			}
 
 			if (locks) {
-				if (!db_writable) {
-					auto has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
+				auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
+				std::function<std::shared_ptr<DatabaseQueue>()> has_locked_endpoints;
+				if (db_writable) {
+					has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
+						if (queue->locked) {
+							return queue;
+						}
+						return nullptr;
+					};
+				} else {
+					has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
 						for (auto& e : database->endpoints) {
 							auto wq = writable_databases.get(e.hash());
 							if (wq && wq->locked) {
@@ -347,46 +422,28 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						}
 						return nullptr;
 					};
-					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
-					auto wq = has_locked_endpoints();
-					if (wq) {
-						database.reset();
-						if (--retries == 0) {
-							THROW(TimeOutError, "Database is not available");
-						}
-						do {
-							if (wq->unlock_cond.wait_until(lk, timeout_tp) == std::cv_status::timeout) {
-								if (has_locked_endpoints()) {
-									THROW(TimeOutError, "Database is not available");
-								}
-								break;
-							}
-						} while ((wq = has_locked_endpoints()));
-						continue;
-					}
-				} else if (db_exclusive) {
-					assert(queue->locked == false);
-					++locks;
-					queue->locked = true;
-					auto is_ready_to_lock = [&] {
-						for (auto& endpoint_queue : queues[hash]) {
-							if (endpoint_queue != queue && endpoint_queue->size() < endpoint_queue->count) {
-								return false;
-							}
-						}
-						return true;
-					};
-					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
-					if (!queue->exclusive_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
+				}
+				auto wq = has_locked_endpoints();
+				if (wq) {
+					database.reset();
+					if (--retries == 0) {
 						THROW(TimeOutError, "Database is not available");
 					}
+					do {
+						if (wq->unlocked_cond.wait_until(lk, timeout_tp) == std::cv_status::timeout) {
+							if (has_locked_endpoints()) {
+								THROW(TimeOutError, "Database is not available");
+							}
+							break;
+						}
+					} while ((wq = has_locked_endpoints()));
+					continue;  // locked database has been unlocked, retry!
 				}
 			}
 
 			break;
 		};
 	}
-	lk.unlock();
 
 	if (!database) {
 		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
@@ -406,10 +463,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				bool local = db_pair.second;
 				auto hash = endpoints[i].hash();
 				if (local) {
-					lk.lock();
+					std::unique_lock<std::mutex> lk(qmtx);
 					auto queue = writable_databases.get(hash);
-					lk.unlock();
 					if (queue) {
+						lk.unlock();
 						auto revision = queue->local_revision.load();
 						if (revision != db_pair.first.get_revision()) {
 							// Local writable database has changed revision.
@@ -456,10 +513,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		if (locks) {
 			if (db_writable) {
 				if (queue->locked) {
-					queue->locked = false;
 					assert(locks > 0);
 					--locks;
-					queue->unlock_cond.notify_all();
+					queue->locked = false;
+					queue->unlocked_cond.notify_all();
 				}
 			} else {
 				bool was_locked = false;
@@ -475,7 +532,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 							}
 						}
 						if (unlock) {
-							writable_queue->exclusive_cond.notify_one();
+							writable_queue->lockable_cond.notify_one();
 							was_locked = true;
 						}
 					}
@@ -529,29 +586,6 @@ DatabasePool::finish()
 
 	writable_databases.finish();
 	databases.finish();
-}
-
-
-void
-DatabasePool::switch_db(const std::string& tmp, const std::string& endpoint_path)
-{
-	L_CALL("DatabasePool::switch_db(%s, %s)", repr(tmp), repr(endpoint_path));
-
-	std::shared_ptr<Database> database;
-
-	try {
-		checkout(database, Endpoints{Endpoint{endpoint_path}}, DB_WRITABLE | DB_EXCLUSIVE);
-		database->close();
-	} catch (const DatabaseNotFoundError&) {
-		// Database still doesn't exist, just move files
-	}
-
-	delete_files(endpoint_path, {"*glass", "wal.*"});
-	move_files(tmp, endpoint_path);
-
-	if (database) {
-		checkin(database);
-	}
 }
 
 
