@@ -49,13 +49,22 @@ static inline int find_val(long double val, const long double* input, int i=0) {
 	return (*input == val) ? i : find_val(val, input + 1, i + 1);
 }
 
+// MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
+// MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
+// SEA_GREEN         -> rgb(46, 139, 87);
+// OLIVE_DRAB        -> rgb(107, 142, 35)
+// OLIVE             -> rgb(128, 128, 0)
+// DARK_GOLDEN_ROD   -> rgb(184, 134, 11);
+// PERU              -> rgb(205, 133, 63);
+// SADDLE_BROWN      -> rgb(139, 69, 19);
+// BROWN             -> rgb(165, 42, 42);
 
 static inline std::string _from_bytes(size_t bytes, const char* prefix, bool colored) {
 	static const long double base = 1024;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 8), std::pow(base, 7), std::pow(base, 6), std::pow(base, 5), std::pow(base, 4), std::pow(base, 3), std::pow(base, 2), std::pow(base, 1), 1 };
 	static const char* const units[] = { "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" };
-	static const char* const colors[] = { BROWN, BROWN, BROWN, BROWN, DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
+	static const char* const colors[] = { BROWN, BROWN, BROWN, BROWN, BROWN, PERU, OLIVE, SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
@@ -72,7 +81,7 @@ static inline std::string _from_small_time(long double seconds, const char* pref
 	static const long double div = std::log(base);
 	static const long double scaling[] = { 1, std::pow(base, -1), std::pow(base, -2), std::pow(base, -3), std::pow(base, -4) };
 	static const char* const units[] = { "s", "ms", R"(µs)", "ns", "ps" };
-	static const char* const colors[] = { BROWN, DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
+	static const char* const colors[] = { OLIVE, OLIVE_DRAB, SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
@@ -83,13 +92,12 @@ std::string string::from_small_time(long double seconds, const char* prefix, boo
 	return _from_small_time(seconds, prefix, colored);
 }
 
-
 static inline std::string _from_time(long double seconds, const char* prefix, bool colored) {
 	static const long double base = 60;
 	static const long double div = std::log(base);
 	static const long double scaling[] = { std::pow(base, 2), std::pow(base, 1), 1 };
 	static const char* const units[] = { "hrs", "min", "s" };
-	static const char* const colors[] = { DARK_ORANGE, YELLOW_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
+	static const char* const colors[] = { SADDLE_BROWN, PERU, DARK_GOLDEN_ROD, CLEAR_COLOR };
 	static const int n = sizeof(units) / sizeof(const char*) - 1;
 	static const int i = find_val(1, scaling);
 
