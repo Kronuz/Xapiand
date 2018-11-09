@@ -218,6 +218,30 @@ DatabasePool::~DatabasePool()
 }
 
 
+std::shared_ptr<DatabaseQueue>
+DatabasePool::_spawn_queue(bool writable, size_t hash, const Endpoints& endpoints)
+{
+	L_CALL("DatabasePool::_spawn_queue(<Database %s>)", repr(database->endpoints.to_string()));
+
+	auto queue_pair = writable
+		? writable_databases.get(hash, endpoints)
+		: databases.get(hash, endpoints);
+
+	auto queue = queue_pair.first;
+
+	if (queue_pair.second) {
+		// Queue was just created, add as used queue to the endpoint -> queues map
+		for (const auto& endpoint : endpoints) {
+			auto endpoint_hash = endpoint.hash();
+			auto& queues_set = queues[endpoint_hash];
+			queues_set.insert(queue);
+		}
+	}
+
+	return queue;
+}
+
+
 void
 DatabasePool::_drop_queue(const std::shared_ptr<DatabaseQueue>& queue)
 {
@@ -271,20 +295,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	if (!finished) {
 		size_t hash = endpoints.hash();
 
-		auto queue_pair = db_writable
-			? writable_databases.get(hash, endpoints)
-			: databases.get(hash, endpoints);
-
-		auto queue = queue_pair.first;
-
-		if (queue_pair.second) {
-			// Queue was just created, add as used queue to the endpoint -> queues map
-			for (const auto& endpoint : endpoints) {
-				auto endpoint_hash = endpoint.hash();
-				auto& queues_set = queues[endpoint_hash];
-				queues_set.insert(queue);
-			}
-		}
+		std::unique_lock<std::mutex> lk(qmtx);
+		auto queue = _spawn_queue(db_writable, hash, endpoints);
 
 		int retries = 10;
 		while (true) {

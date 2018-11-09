@@ -168,6 +168,8 @@ class DatabasePool {
 
 	void _cleanup(bool writable, bool readable);
 
+	std::shared_ptr<DatabaseQueue> _spawn_queue(bool writable, size_t hash, const Endpoints& endpoints);
+
 	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
