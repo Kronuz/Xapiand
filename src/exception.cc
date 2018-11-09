@@ -22,7 +22,7 @@
 
 #include "exception.h"
 
-#include "config.h"
+#include "config.h"           // for XAPIAND_TRACEBACKS
 
 #include <cstdlib>            // for free
 #include <cstring>            // for strtok_r
