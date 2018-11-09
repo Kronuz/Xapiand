@@ -607,7 +607,11 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 {
 	if (!clear()) {
 		if (_priority <= log_level) {
-			add(_function, _filename, _line, fmt::vsprintf(format, args), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, once, _priority, time_point_from_ullong(created_at));
+			std::string _str;
+			DEBUG_TRY {
+				_str = fmt::vsprintf(format, args);
+			} DEBUG_TRY_END;
+			add(_function, _filename, _line, _str, nullptr, false, std::chrono::system_clock::now(), async, true, stacked, once, _priority, time_point_from_ullong(created_at));
 			return true;
 		}
 	}
@@ -618,15 +622,15 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 bool
 Logging::vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
 {
-	if (!clear()) {
-		if (_priority <= log_level) {
-			unlogger_priority = _priority;
-			unlogger_function = _function;
-			unlogger_filename = _filename;
-			unlogger_line = _line;
+	if (_priority <= log_level) {
+		unlogger_priority = _priority;
+		unlogger_function = _function;
+		unlogger_filename = _filename;
+		unlogger_line = _line;
+		DEBUG_TRY {
 			unlogger_str = fmt::vsprintf(format, args);
-			return true;
-		}
+		} DEBUG_TRY_END;
+		return true;
 	}
 	return false;
 }
@@ -635,7 +639,10 @@ Logging::vunlogger(int _priority, const char* _function, const char* _filename, 
 void
 Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
 {
-	auto str = fmt::vsprintf(format, args);
+	std::string str;
+	DEBUG_TRY {
+		str = fmt::vsprintf(format, args);
+	} DEBUG_TRY_END;
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
 		collected.emplace_back(std::move(str), with_endl);
@@ -649,7 +656,10 @@ Log
 Logging::do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
-		auto str = fmt::vsprintf(format, args);
+		std::string str;
+		DEBUG_TRY {
+			str = fmt::vsprintf(format, args);
+		} DEBUG_TRY_END;
 		return add(function, filename, line, str, exc, clean, wakeup, async, info, stacked, once, priority);
 	}
 	return Log();
