@@ -302,7 +302,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 							THROW(TimeOutError, "Database is not available");
 						}
 					} else {
-						database = std::make_shared<Database>(queue, endpoints, flags);
+						database = std::make_shared<Database>(queue, flags);
 					}
 					lk.lock();
 				} catch (...) {

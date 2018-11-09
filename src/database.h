@@ -96,7 +96,7 @@ public:
 	std::vector<std::unique_ptr<DataStorage>> storages;
 #endif /* XAPIAND_DATA_STORAGE */
 
-	Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_);
+	Database(std::shared_ptr<DatabaseQueue>& queue_, int flags_);
 	~Database();
 
 	bool reopen();

@@ -191,9 +191,9 @@ DataStorage::open(std::string_view relative_path)
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_, Endpoints  endpoints_, int flags_)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_, int flags_)
 	: weak_queue(queue_),
-	  endpoints(std::move(endpoints_)),
+	  endpoints(queue_->endpoints),
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  modified(false),
