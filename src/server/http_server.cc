@@ -71,7 +71,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), http->sock);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
-	L_EV_ATEND("HttpServer::io_accept_cb:END");
+	L_EV_END("HttpServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
 	assert(http->sock == watcher.fd);

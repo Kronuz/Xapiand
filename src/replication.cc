@@ -140,7 +140,7 @@ Replication::replication_server(ReplicationMessageType type, const std::string& 
 	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
 
 	L_OBJ_BEGIN("Replication::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
-	L_OBJ_ATEND("Replication::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_END("Replication::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Replication::msg_get_changesets,
@@ -268,7 +268,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
 
 	L_OBJ_BEGIN("Replication::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
-	L_OBJ_ATEND("Replication::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_END("Replication::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Replication::reply_welcome,

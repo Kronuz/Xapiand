@@ -44,7 +44,7 @@
 // #undef L_DATABASE_BEGIN
 // #define L_DATABASE_BEGIN L_DELAYED_600
 // #undef L_DATABASE_END
-// #define L_DATABASE_END L_DELAYED_N_UNLOGGER
+// #define L_DATABASE_END L_DELAYED_N_UNLOG
 
 
 #define REMOTE_DATABASE_UPDATE_TIME 3
@@ -349,7 +349,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
-	L_DATABASE_ATEND("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
 	assert(!database);
 

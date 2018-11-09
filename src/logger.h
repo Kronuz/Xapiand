@@ -97,7 +97,7 @@ class Logging : public ScheduledTask {
 	int line;
 	unsigned stack_level;
 
-	bool clean;
+	bool clears;
 	std::string str;
 	BaseException exception;
 	bool async;
@@ -105,20 +105,35 @@ class Logging : public ScheduledTask {
 	bool stacked;
 	bool once;
 	int priority;
-	std::atomic_bool cleaned;
+	std::atomic_ullong cleaned_at;
 
-	const char* unlogger_function;
-	const char* unlogger_filename;
-	int unlogger_line;
-	std::string unlogger_str;
-	int unlogger_priority;
+	const char* unlog_function;
+	const char* unlog_filename;
+	int unlog_line;
+	std::string unlog_str;
+	int unlog_priority;
 
 	Logging(Logging&&) = delete;
 	Logging(const Logging&) = delete;
 	Logging& operator=(Logging&&) = delete;
 	Logging& operator=(const Logging&) = delete;
 
-	static Log add(const char* function, const char* filename, int line, const std::string& str, const BaseException* exc, bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
+	static Log add(
+		const std::chrono::time_point<std::chrono::system_clock>& wakeup,
+		const char* function,
+		const char* filename,
+		int line,
+		const std::string& str,
+		const BaseException* exc,
+		bool clears,
+		bool async,
+		bool info,
+		bool stacked,
+		bool once,
+		int priority,
+		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
+	);
+
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
 
 public:
@@ -128,7 +143,20 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Logging(const char *function, const char *filename, int line, std::string  str, const BaseException* exc, bool clean, bool async, bool info, bool stacked, bool once, int priority, const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now());
+	Logging(
+		const char *function,
+		const char *filename,
+		int line,
+		std::string str,
+		const BaseException* exc,
+		bool clears,
+		bool async,
+		bool info,
+		bool stacked,
+		bool once,
+		int priority,
+		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
+	);
 	~Logging();
 
 	static std::string colorized(std::string_view str, bool try_coloring);
@@ -153,21 +181,15 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
-	static Log do_log(bool clean, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 	template <typename... Args>
-	bool unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
-		return vunlog(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
+		vunlog(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 	}
-	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
+	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
 
-	template <typename... Args>
-	bool unlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
-		return vunlogger(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
-	}
-	bool vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
-
-	void cleanup();
+	void clean();
 
 	long double age();
 

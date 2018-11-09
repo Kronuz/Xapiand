@@ -60,16 +60,10 @@ public:
 	~Log();
 
 	template <typename... Args>
-	bool unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-		return vunlog(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+	void unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+		vunlog(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 	}
-	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
-
-	template <typename... Args>
-	bool unlogger(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-		return vunlogger(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
-	}
-	bool vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
+	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
 
 	bool clear();
 	long double age();
@@ -92,30 +86,30 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+Log vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 
 template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+inline Log log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const T* exc, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+	return vlog(clears, wakeup, async, info, stacked, once, priority, exc, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const void*, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(cleanup, wakeup, async, info, stacked, once, priority, nullptr, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+inline Log log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const void*, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+	return vlog(clears, wakeup, async, info, stacked, once, priority, nullptr, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 }
 
 
 template <typename T, typename R, typename... Args>
-inline Log log(bool cleanup, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
-	return log(cleanup, std::chrono::system_clock::now() + timeout, async, info, stacked, once, priority, std::forward<Args>(args)...);
+inline Log log(bool clears, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
+	return log(clears, std::chrono::system_clock::now() + timeout, async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
 
 template <typename... Args>
-inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
-	return log(cleanup, std::chrono::milliseconds(timeout), async, info, stacked, once, priority, std::forward<Args>(args)...);
+inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, bool once, int priority, Args&&... args) {
+	return log(clears, std::chrono::milliseconds(timeout), async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
 #pragma GCC diagnostic push
@@ -145,29 +139,24 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, b
 #define LOG_ARGS_APPLY_ALL_H2(t, n, ...) LOG_ARGS_APPLY_ALL_H3(t, n, __VA_ARGS__)
 #define LOG_ARGS_APPLY_ALL(t, ...) LOG_ARGS_APPLY_ALL_H2(t, LOG_ARGS_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-#define LAZY_LOG(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, ...) \
-	::log(cleanup, wakeup, async, info, stacked, once, priority, exc, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+#define LAZY_LOG(clears, wakeup, async, info, stacked, once, priority, exc, function, filename, line, ...) \
+	::log(clears, wakeup, async, info, stacked, once, priority, exc, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
 #define LAZY_UNLOG(priority, function, filename, line, ...) \
 	unlog(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
-
-#define LAZY_UNLOGGER(priority, function, filename, line, ...) \
-	unlogger(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(cleanup, delay, priority, color, format, ...) LAZY_LOG(cleanup, delay, true, true, false, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_DELAYED(clears, delay, priority, color, format, ...) LAZY_LOG(clears, delay, true, true, false, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
-#define L_DELAYED_UNLOGGER(priority, color, format, ...) LAZY_UNLOGGER(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
 #define L_DELAYED_200(...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_600(...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_1000(...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_UNLOG(...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
-#define L_DELAYED_N_UNLOGGER(...) __log_timed.L_DELAYED_UNLOGGER(LOG_WARNING, PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 
 #define L_NOTHING(...)

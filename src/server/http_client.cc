@@ -863,7 +863,7 @@ HttpClient::run_one(Request& request, Response& response)
 {
 	writes = 0;
 	L_OBJ_BEGIN("HttpClient::run:BEGIN");
-	L_OBJ_ATEND("HttpClient::run:END");
+	L_OBJ_END("HttpClient::run:END");
 
 	request.log->clear();
 	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release();

@@ -63,8 +63,8 @@
 // #define L_EV L_MEDIUM_PURPLE
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_ATEND
-// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 #define BUF_SIZE 4096
@@ -574,7 +574,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
-	L_EV_ATEND("BaseClient::io_cb_write:END");
+	L_EV_END("BaseClient::io_cb_write:END");
 
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
@@ -623,7 +623,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
-	L_EV_ATEND("BaseClient::io_cb_read:END");
+	L_EV_END("BaseClient::io_cb_read:END");
 
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
@@ -783,7 +783,7 @@ BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::write_start_async_cb:BEGIN");
-	L_EV_ATEND("BaseClient::write_start_async_cb:END");
+	L_EV_END("BaseClient::write_start_async_cb:END");
 
 	ignore_unused(revents);
 
@@ -800,7 +800,7 @@ BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::read_start_async_cb:BEGIN");
-	L_EV_ATEND("BaseClient::read_start_async_cb:END");
+	L_EV_END("BaseClient::read_start_async_cb:END");
 
 	ignore_unused(revents);
 

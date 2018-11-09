@@ -82,7 +82,7 @@ BinaryServer::process_tasks_async_cb(ev::async&, int revents)
 	L_CALL("BinaryServer::process_tasks_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BinaryServer::process_tasks_async_cb:BEGIN");
-	L_EV_ATEND("BinaryServer::process_tasks_async_cb:END");
+	L_EV_END("BinaryServer::process_tasks_async_cb:END");
 
 	ignore_unused(revents);
 
@@ -96,7 +96,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), binary->sock);
 
 	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
-	L_EV_ATEND("BinaryServer::io_accept_cb:END");
+	L_EV_END("BinaryServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
 	assert(binary->sock == watcher.fd);

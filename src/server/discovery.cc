@@ -49,8 +49,8 @@
 // #define L_DISCOVERY L_SALMON
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_ATEND
-// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&);
@@ -154,7 +154,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_ATEND("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
 	assert(sock == watcher.fd);
@@ -196,7 +196,7 @@ Discovery::discovery_server(Message type, const std::string& message)
 	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
 
 	L_OBJ_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_OBJ_ATEND("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_OBJ_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Discovery::hello,
@@ -404,7 +404,7 @@ Discovery::discovery_cb(ev::timer&, int revents)
 	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
 
 	L_EV_BEGIN("Discovery::discovery_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
-	L_EV_ATEND("Discovery::discovery_cb:END {state:%s}", XapiandManager::StateNames(state));
+	L_EV_END("Discovery::discovery_cb:END {state:%s}", XapiandManager::StateNames(state));
 
 	ignore_unused(revents);
 

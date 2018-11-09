@@ -110,7 +110,7 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 	L_CALL("RemoteProtocol::remote_server(%s, <message>)", RemoteMessageTypeNames(type));
 
 	L_OBJ_BEGIN("RemoteProtocol::remote_server:BEGIN {type:%s}", RemoteMessageTypeNames(type));
-	L_OBJ_ATEND("RemoteProtocol::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
+	L_OBJ_END("RemoteProtocol::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&RemoteProtocol::msg_allterms,

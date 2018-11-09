@@ -49,8 +49,8 @@
 // #define L_RAFT L_SEA_GREEN
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_ATEND
-// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
 
 
 using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
@@ -173,7 +173,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), sock, XapiandManager::StateNames(XapiandManager::manager->state));
 
 	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_ATEND("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_END("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
 	assert(sock == watcher.fd);
@@ -219,7 +219,7 @@ Raft::raft_server(Message type, const std::string& message)
 	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
 	L_OBJ_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_OBJ_ATEND("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_OBJ_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,
@@ -681,7 +681,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
-	L_EV_ATEND("Raft::leader_election_timeout_cb:END");
+	L_EV_END("Raft::leader_election_timeout_cb:END");
 
 	ignore_unused(revents);
 
@@ -730,7 +730,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 	// L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 
 	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
-	L_EV_ATEND("Raft::leader_heartbeat_cb:END");
+	L_EV_END("Raft::leader_heartbeat_cb:END");
 
 	ignore_unused(revents);
 
