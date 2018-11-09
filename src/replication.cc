@@ -99,13 +99,13 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 {
 	L_CALL("Replication::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
-
 	src_endpoints = Endpoints{src_endpoint};
 
 	flags = DB_WRITABLE | DB_CREATE_OR_OPEN;
 	endpoints = Endpoints{dst_endpoint};
 	lk_db.lock();
+
+	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
 	L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	return true;
