@@ -65,20 +65,31 @@ using dispatch_func = void (Replication::*)(const std::string&);
 
 Replication::Replication(BinaryClient& client_)
 	: LockableDatabase(),
-	  client(client_)
+	  client(client_),
+	  lk_db(this)
 {
 }
 
 
 Replication::~Replication()
 {
-	if (slave_database) {
-		slave_database->close();
-		XapiandManager::manager->database_pool.checkin(slave_database);
+	reset();
+}
+
+
+void
+Replication::reset()
+{
+	wal.reset();
+
+	if (switch_database) {
+		switch_database->close();
+		XapiandManager::manager->database_pool.checkin(switch_database);
 	}
 
 	if (!switch_database_path.empty()) {
 		delete_files(switch_database_path.c_str());
+		switch_database_path.clear();
 	}
 }
 
@@ -88,9 +99,13 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 {
 	L_CALL("Replication::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	src_endpoints = Endpoints{src_endpoint};
-	endpoints = Endpoints{dst_endpoint};
 	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
+
+	src_endpoints = Endpoints{src_endpoint};
+
+	flags = DB_WRITABLE | DB_CREATE_OR_OPEN;
+	endpoints = Endpoints{dst_endpoint};
+	lk_db.lock();
 
 	L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	return true;
@@ -155,8 +170,7 @@ Replication::msg_get_changesets(const std::string& message)
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
 	}
 
-	flags = DB_WRITABLE;
-	lock_database lk_db(this);
+	lk_db.lock();
 	auto uuid = db()->get_uuid();
 	auto revision = db()->get_revision();
 	lk_db.unlock();
@@ -165,8 +179,8 @@ Replication::msg_get_changesets(const std::string& message)
 		from_revision = 0;
 	}
 
-	DatabaseWAL wal(endpoints[0].path);
-	if (from_revision && wal.locate_revision(from_revision).first == DatabaseWAL::max_rev) {
+	wal = std::make_unique<DatabaseWAL>(endpoints[0].path);
+	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
 		from_revision = 0;
 	}
 
@@ -230,8 +244,8 @@ Replication::msg_get_changesets(const std::string& message)
 		int wal_iterations = 5;
 		do {
 			// Send WAL operations.
-			auto wal_it = wal.find(from_revision);
-			for (; wal_it != wal.end(); ++wal_it) {
+			auto wal_it = wal->find(from_revision);
+			for (; wal_it != wal->end(); ++wal_it) {
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			from_revision = wal_it->first + 1;
@@ -274,17 +288,9 @@ Replication::reply_welcome(const std::string&)
 {
 	std::string message;
 
-	try {
-		flags = DB_WRITABLE;
-		lock_database lk_db(this);
-		message.append(serialise_string(db()->get_uuid()));
-		message.append(serialise_length(db()->get_revision()));
-		message.append(serialise_string(endpoints[0].path));
-	} catch (const DatabaseNotFoundError&) {
-		message.append(serialise_string(""));
-		message.append(serialise_length(0));
-		message.append(serialise_string(endpoints[0].path));
-	}
+	message.append(serialise_string(db()->get_uuid()));
+	message.append(serialise_length(db()->get_revision()));
+	message.append(serialise_string(endpoints[0].path));
 
 	send_message(static_cast<ReplicationReplyType>(SWITCH_TO_REPL), message);
 }
@@ -295,15 +301,10 @@ Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
-	L_REPLICATION("Replication::reply_end_of_changes%s%s", slave_database ? " (checking in slave database)" : "", !switch_database_path.empty() ? " (switching database)" : "");
+	L_REPLICATION("Replication::reply_end_of_changes%s", switch_database ? " (switching database)" : "");
 
-	if (slave_database) {
-		slave_database->close();
-		XapiandManager::manager->database_pool.checkin(slave_database);
-	}
-
-	if (!switch_database_path.empty()) {
-		XapiandManager::manager->database_pool.switch_db(switch_database_path, endpoints[0].path);
+	if (switch_database) {
+		// XapiandManager::manager->database_pool.move(switch_database, database());
 	}
 
 	L_REPLICATION("Replication completed!");
@@ -324,10 +325,7 @@ Replication::reply_fail(const std::string&)
 
 	L_REPLICATION("Replication::reply_fail");
 
-	if (slave_database) {
-		slave_database->close();
-		XapiandManager::manager->database_pool.checkin(slave_database);
-	}
+	reset();
 
 	L_ERR("Replication failure!");
 	client.destroy();
@@ -348,15 +346,7 @@ Replication::reply_db_header(const std::string& message)
 	current_uuid = unserialise_string(&p, p_end);
 	current_revision = unserialise_length(&p, p_end);
 
-	if (slave_database) {
-		slave_database->close();
-		XapiandManager::manager->database_pool.checkin(slave_database);
-	}
-
-	if (!switch_database_path.empty()) {
-		delete_files(switch_database_path.c_str());
-		switch_database_path.clear();
-	}
+	reset();
 
 	char path[PATH_MAX];
 	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
@@ -427,19 +417,22 @@ Replication::reply_changeset(const std::string& line)
 {
 	L_CALL("Replication::reply_changeset(<line>)");
 
-	L_REPLICATION("Replication::reply_changeset%s", slave_database ? "" : " (checking out slave database)");
+	L_REPLICATION("Replication::reply_changeset%s", switch_database ? " (to switch database)" : "");
 
-	if (!slave_database) {
-		if (!switch_database_path.empty()) {
-			XapiandManager::manager->database_pool.checkout(slave_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE);
+	if (!wal) {
+		if (switch_database_path.empty()) {
+			database()->begin_transaction(false);
+			wal = std::make_unique<DatabaseWAL>(database().get());
 		} else {
-			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE);
+			if (!switch_database) {
+				XapiandManager::manager->database_pool.checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE);
+			}
+			switch_database->begin_transaction(false);
+			wal = std::make_unique<DatabaseWAL>(switch_database.get());
 		}
-		slave_database->begin_transaction(false);
-		slave_wal = std::make_unique<DatabaseWAL>(slave_database.get());
 	}
 
-	slave_wal->execute_line(line, true, false, false);
+	wal->execute_line(line, true, false, false);
 }
 
 

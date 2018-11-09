@@ -30,8 +30,8 @@
 
 #include <xapian.h>
 
-#include "endpoint.h"
-#include "lock_database.h"
+#include "endpoint.h"          // for Endpoints, Endpoint
+#include "lock_database.h"     // for LockableDatabase
 
 
 #define SWITCH_TO_REPL '\xfe'
@@ -98,10 +98,12 @@ class Replication : protected LockableDatabase {
 public:
 	Endpoints src_endpoints;
 
-	std::string switch_database_path;
+	lock_database lk_db;
 
-	std::shared_ptr<Database> slave_database;
-	std::unique_ptr<DatabaseWAL> slave_wal;
+	std::string switch_database_path;
+	std::shared_ptr<Database> switch_database;
+
+	std::unique_ptr<DatabaseWAL> wal;
 
 	std::string file_path;
 
@@ -109,8 +111,10 @@ public:
 	Xapian::rev current_revision;
 
 public:
-	explicit Replication(BinaryClient& client_);
+	Replication(BinaryClient& client_);
 	~Replication();
+
+	void reset();
 
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
