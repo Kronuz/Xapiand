@@ -34,6 +34,7 @@
 #include "cassert.hh"         // for assert
 
 #include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
+#include "log.h"              // for DEBUG_TRY
 #include "milo.h"             // for internal::Grisu2
 #include "split.h"            // for Split
 #include "chars.hh"           // for chars::tolower
@@ -142,7 +143,11 @@ static inline std::vector<std::string_view> split(std::string_view value, const 
 
 template <typename... Args>
 static inline std::string format(std::string_view format, Args&&... args) {
-	return fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
+	std::string str;
+	DEBUG_TRY {
+		str = fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
+	} DEBUG_TRY_END;
+	return str;
 }
 
 
