@@ -375,6 +375,9 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 		.xapiand_http_connections
 		.Increment();
 
+	// Initialize new_request.begins as soon as possible (for correctly timing disconnecting clients)
+	new_request.begins = std::chrono::system_clock::now();
+
 	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::http_clients.load(), XapiandServer::total_clients.load());
 }
 
