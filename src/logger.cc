@@ -186,6 +186,13 @@ Log::vunlog(int _priority, const char* _function, const char* _filename, int _li
 
 
 bool
+Log::vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
+{
+	return log ? log->vunlogger(_priority, _function, _filename, _line, format, args) : false;
+}
+
+
+bool
 Log::clear()
 {
 	return log ? log->clear() : false;
@@ -333,10 +340,14 @@ Logging::colorized(std::string_view str, bool try_coloring)
 void
 Logging::cleanup()
 {
+	auto now = std::chrono::system_clock::now();
 	unsigned long long c = 0;
-	cleared_at.compare_exchange_strong(c, clean ? time_point_to_ullong(std::chrono::system_clock::now()) : 0);
+	cleared_at.compare_exchange_strong(c, clean ? time_point_to_ullong(now) : 0);
 
 	if (!cleaned.exchange(true)) {
+		if (clean && !unlogger_str.empty()) {
+			add(unlogger_function, unlogger_filename, unlogger_line, unlogger_str, nullptr, false, now, async, true, stacked, once, unlogger_priority, time_point_from_ullong(created_at));
+		}
 		if (stacked) {
 			std::lock_guard<std::mutex> lk(stack_mtx);
 			if (stack_levels.at(thread_id)-- == 0) {
@@ -597,6 +608,23 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 	if (!clear()) {
 		if (_priority <= log_level) {
 			add(_function, _filename, _line, fmt::vsprintf(format, args), nullptr, false, std::chrono::system_clock::now(), async, true, stacked, once, _priority, time_point_from_ullong(created_at));
+			return true;
+		}
+	}
+	return false;
+}
+
+
+bool
+Logging::vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
+{
+	if (!clear()) {
+		if (_priority <= log_level) {
+			unlogger_priority = _priority;
+			unlogger_function = _function;
+			unlogger_filename = _filename;
+			unlogger_line = _line;
+			unlogger_str = fmt::vsprintf(format, args);
 			return true;
 		}
 	}

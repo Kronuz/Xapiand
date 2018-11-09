@@ -65,6 +65,12 @@ public:
 	}
 	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
 
+	template <typename... Args>
+	bool unlogger(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+		return vunlogger(priority, function, filename, line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+	}
+	bool vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
+
 	bool clear();
 	long double age();
 	LogType release();
@@ -145,18 +151,23 @@ inline Log log(bool cleanup, int timeout, bool async, bool info, bool stacked, b
 #define LAZY_UNLOG(priority, function, filename, line, ...) \
 	unlog(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
+#define LAZY_UNLOGGER(priority, function, filename, line, ...) \
+	unlogger(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
 #define L_DELAYED(cleanup, delay, priority, color, format, ...) LAZY_LOG(cleanup, delay, true, true, false, false, priority, nullptr, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
+#define L_DELAYED_UNLOGGER(priority, color, format, ...) LAZY_UNLOGGER(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
 #define L_DELAYED_200(...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_600(...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_1000(...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_UNLOG(...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
+#define L_DELAYED_N_UNLOGGER(...) __log_timed.L_DELAYED_UNLOGGER(LOG_WARNING, PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 
 #define L_NOTHING(...)

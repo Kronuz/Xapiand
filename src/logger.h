@@ -107,6 +107,12 @@ class Logging : public ScheduledTask {
 	int priority;
 	std::atomic_bool cleaned;
 
+	const char* unlogger_function;
+	const char* unlogger_filename;
+	int unlogger_line;
+	std::string unlogger_str;
+	int unlogger_priority;
+
 	Logging(Logging&&) = delete;
 	Logging(const Logging&) = delete;
 	Logging& operator=(Logging&&) = delete;
@@ -154,6 +160,12 @@ public:
 		return vunlog(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
 	}
 	bool vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
+
+	template <typename... Args>
+	bool unlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
+		return vunlogger(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+	}
+	bool vunlogger(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
 
 	void cleanup();
 
