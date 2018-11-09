@@ -539,7 +539,7 @@ DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& dat
 	auto& data_obj = std::get<2>(prepared);
 
 	lock_database lk_db(this);
-	auto did = database()->replace_document_term(term_id, doc, commit);
+	auto did = database()->replace_document_term(term_id, std::move(doc), commit);
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
@@ -982,7 +982,7 @@ DatabaseHandler::restore(int fd)
 				if (!term_id.empty()) {
 					lk_db.lock();
 					try {
-						db_handler.database()->replace_document_term(term_id, doc, false, false);
+						db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
 					} catch (const BaseException& exc) {
 						L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 					} catch (const Xapian::Error& exc) {
@@ -1217,7 +1217,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			if (!term_id.empty()) {
 				try {
 					lock_database lk_db(&db_handler);
-					db_handler.database()->replace_document_term(term_id, doc, false, false);
+					db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
 				} catch (const BaseException& exc) {
 					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 				} catch (const Xapian::Error& exc) {
@@ -1676,12 +1676,12 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 
 
 Xapian::docid
-DatabaseHandler::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit)
+DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit)
 {
 	L_CALL("Database::replace_document(%d, <doc>)", did);
 
 	lock_database lk_db(this);
-	return database()->replace_document(did, doc, commit);
+	return database()->replace_document(did, std::move(doc), commit);
 }
 
 

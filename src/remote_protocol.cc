@@ -879,7 +879,7 @@ RemoteProtocol::msg_adddocument(const std::string & message)
 
 	reset();
 	lock_database lk_db(this);
-	auto did = database()->add_document(document);
+	auto did = database()->add_document(std::move(document));
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
@@ -928,7 +928,7 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 
 	reset();
 	lock_database lk_db(this);
-	database()->replace_document(did, document);
+	database()->replace_document(did, std::move(document));
 }
 
 
@@ -947,7 +947,7 @@ RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 
 	reset();
 	lock_database lk_db(this);
-	auto did = database()->replace_document_term(unique_term, document);
+	auto did = database()->replace_document_term(unique_term, std::move(document));
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));

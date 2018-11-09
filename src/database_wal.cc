@@ -66,10 +66,6 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
-// #undef L_DATABASE_BEGIN
-// #define L_DATABASE_BEGIN L_DELAYED_600
-// #undef L_DATABASE_END
-// #define L_DATABASE_END L_DELAYED_N_UNLOG
 
 
 #define WAL_STORAGE_PATH "wal."
@@ -553,7 +549,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
 
 	Xapian::docid did;
-	Xapian::Document doc;
+	std::string document;
 	Xapian::termcount freq;
 	std::string term;
 	std::size_t size;
@@ -565,8 +561,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 
 	switch (type) {
 		case Type::ADD_DOCUMENT:
-			doc = Xapian::Document::unserialise(data);
-			_database->add_document(doc, false, wal_);
+			_database->add_document(Xapian::Document::unserialise(data), false, wal_);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
@@ -579,14 +574,14 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-			doc = Xapian::Document::unserialise(std::string(p, p_end - p));
-			_database->replace_document(did, doc, false, wal_);
+			document = std::string(p, p_end - p);
+			_database->replace_document(did, Xapian::Document::unserialise(document), false, wal_);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
-			doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
-			_database->replace_document_term(term, doc, false, wal_);
+			document = std::string(p + size, p_end - p - size);
+			_database->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {
@@ -1018,7 +1013,7 @@ DatabaseWALWriter::running_size()
 }
 
 
-void DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Document& doc)
+void DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1027,7 +1022,7 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = doc.serialise();
@@ -1114,7 +1109,7 @@ void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 }
 
 
-void DatabaseWALWriter::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc)
+void DatabaseWALWriter::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1123,7 +1118,7 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
@@ -1139,7 +1134,7 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 }
 
 
-void DatabaseWALWriter::write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document& doc)
+void DatabaseWALWriter::write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1148,7 +1143,7 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);

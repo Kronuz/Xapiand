@@ -275,12 +275,12 @@ public:
 
 	static std::size_t running_size();
 
-	static void write_add_document(const Database& database, const Xapian::Document& doc);
+	static void write_add_document(const Database& database, const Xapian::Document&& doc);
 	static void write_delete_document_term(const Database& database, const std::string& term);
 	static void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
 	static void write_commit(const Database& database, bool send_update);
-	static void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc);
-	static void write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document& doc);
+	static void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc);
+	static void write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc);
 	static void write_delete_document(const Database& database, Xapian::docid did);
 	static void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
 	static void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);

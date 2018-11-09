@@ -921,7 +921,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 							{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
 						}, msgpack_type);
 						auto& doc = std::get<1>(prepared);
-						db_handler.replace_document(node->idx, doc, true);
+						db_handler.replace_document(node->idx, std::move(doc), true);
 					}
 				}
 			}

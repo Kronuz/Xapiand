@@ -898,15 +898,14 @@ Database::storage_commit()
 
 
 Xapian::docid
-Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
+Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::add_document(<doc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	Xapian::docid did = 0;
 
-	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_, doc_.get_docid()); // Only writable database get_docid is enough
+	storage_push_blobs(doc, doc.get_docid()); // Only writable database get_docid is enough
 #endif  // XAPIAND_DATA_STORAGE
 
 	L_DATABASE_WRAP_INIT();
@@ -915,7 +914,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		// L_DATABASE_WRAP("Adding new document.  t: %d", t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			did = wdb->add_document(doc_);
+			did = wdb->add_document(doc);
 			modified = true;
 			break;
 		} catch (const Xapian::NetworkError& exc) {
@@ -936,7 +935,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_add_document(*this, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_add_document(*this, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -950,13 +949,12 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 
 Xapian::docid
-Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
+Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::replace_document(%d, <doc>, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_, did);
+	storage_push_blobs(doc, did);
 #endif  // XAPIAND_DATA_STORAGE
 
 	L_DATABASE_WRAP_INIT();
@@ -965,7 +963,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		// L_DATABASE_WRAP("Replacing: %d  t: %d", did, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			wdb->replace_document(did, doc_);
+			wdb->replace_document(did, doc);
 			modified = true;
 			break;
 		} catch (const Xapian::NetworkError& exc) {
@@ -986,7 +984,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document(*this, did, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document(*this, did, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1000,15 +998,14 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 
 Xapian::docid
-Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
+Database::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::replace_document_term(%s, <doc>, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
 	Xapian::docid did = 0;
 
-	Xapian::Document doc_ = doc;
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc_, doc_.get_docid()); // Only writable database get_docid is enough
+	storage_push_blobs(doc, doc.get_docid()); // Only writable database get_docid is enough
 #endif  // XAPIAND_DATA_STORAGE
 
 	L_DATABASE_WRAP_INIT();
@@ -1017,7 +1014,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		// L_DATABASE_WRAP("Replacing: '%s'  t: %d", term, t);
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			did = wdb->replace_document(term, doc_);
+			did = wdb->replace_document(term, doc);
 			modified = true;
 			break;
 		} catch (const Xapian::NetworkError& exc) {
@@ -1038,7 +1035,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document_term(*this, term, doc); }
+	if (wal_ && is_writable_and_local_with_wal) { DatabaseWALWriter::write_replace_document_term(*this, term, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif
