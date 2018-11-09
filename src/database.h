@@ -68,11 +68,8 @@ private:
 	void reopen_writable();
 	void reopen_readable();
 
-	void do_close(bool commit_, bool closed_, Transaction transaction_);
-
 public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
-	std::weak_ptr<DatabaseQueue> weak_readable_queue;
 
 	Endpoints endpoints;
 	int flags;
@@ -108,6 +105,7 @@ public:
 	UUID get_uuid() const;
 	Xapian::rev get_revision() const;
 
+	void do_close(bool commit_, bool closed_, Transaction transaction_);
 	void close();
 
 	static void autocommit(const std::shared_ptr<Database>& database);
