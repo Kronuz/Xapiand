@@ -29,7 +29,6 @@
 
 #include "database.h"             // for Database
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
-#include "fs.hh"                  // for move_files, exists, build_path_index
 #include "log.h"                  // for L_OBJ, L_CALL
 #include "manager.h"              // for sig_exit
 #include "repr.hh"                // for repr

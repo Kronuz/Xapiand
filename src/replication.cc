@@ -28,7 +28,7 @@
 
 #include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
-#include "fs.hh"                      // for delete_files, build_path_index
+#include "fs.hh"                      // for move_files, delete_files, build_path_index
 #include "io.hh"                      // for io::*
 #include "length.h"                   // for serialise_string, unserialise_string
 #include "manager.h"                  // for XapiandManager::manager
@@ -304,7 +304,19 @@ Replication::reply_end_of_changes(const std::string&)
 	L_REPLICATION("Replication::reply_end_of_changes%s", switch_database ? " (switching database)" : "");
 
 	if (switch_database) {
-		// XapiandManager::manager->database_pool.move(switch_database, database());
+		// Close internal databases
+		switch_database->close();
+		database()->close();
+
+		// get exclusive lock
+		XapiandManager::manager->database_pool.lock(database());
+
+		// Now we are sure no readers are using the switch_database
+		delete_files(database()->endpoints[0].path, {"*glass", "wal.*"});
+		move_files(switch_database->endpoints[0].path, database()->endpoints[0].path);
+
+		// release exclusive lock
+		XapiandManager::manager->database_pool.unlock(database());
 	}
 
 	L_REPLICATION("Replication completed!");
