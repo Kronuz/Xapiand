@@ -30,7 +30,7 @@
 #include "database_flags.h"       // DB_*
 #include "database_autocommit.h"  // for DatabaseAutocommit
 #include "database_pool.h"        // for DatabaseQueue
-#include "database_wal.h"         // for DatabaseWAL
+#include "database_wal.h"         // for DatabaseWAL, DatabaseWALWriter
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for exists, build_path_index
 #include "ignore_unused.h"        // for ignore_unused
@@ -322,6 +322,10 @@ Database::reopen_writable()
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_writable_and_local_with_wal) {
+
+		// Create a new ConcurrentQueue producer token for this database
+		producer_token = DatabaseWALWriter::new_producer_token(endpoint.path);
+
 		// WAL required on a local writable database, open it.
 		DatabaseWAL wal(this);
 		if (wal.execute(true)) {

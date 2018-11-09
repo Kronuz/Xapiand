@@ -935,12 +935,12 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 
 
 bool
-DatabaseWALWriter::enqueue(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
+DatabaseWALWriter::enqueue(const ProducerToken& token, const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
 {
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
 	auto& thread = _threads[hash % _threads.size()];
-	return thread._queue.enqueue(std::move(func));
+	return thread._queue.enqueue(token, std::move(func));
 }
 
 
@@ -1013,7 +1013,18 @@ DatabaseWALWriter::running_size()
 }
 
 
-void DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Document&& doc)
+std::unique_ptr<ProducerToken>
+DatabaseWALWriter::new_producer_token(const std::string& path)
+{
+	static const std::hash<std::string> hasher;
+	auto hash = hasher(path);
+	auto& thread = _instance->_threads[hash % _instance->_threads.size()];
+	return std::make_unique<ProducerToken>(thread._queue);
+}
+
+
+void
+DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1022,7 +1033,8 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = doc.serialise();
@@ -1037,7 +1049,8 @@ void DatabaseWALWriter::write_add_document(const Database& database, const Xapia
 }
 
 
-void DatabaseWALWriter::write_delete_document_term(const Database& database, const std::string& term)
+void
+DatabaseWALWriter::write_delete_document_term(const Database& database, const std::string& term)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1046,7 +1059,8 @@ void DatabaseWALWriter::write_delete_document_term(const Database& database, con
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
@@ -1061,7 +1075,8 @@ void DatabaseWALWriter::write_delete_document_term(const Database& database, con
 }
 
 
-void DatabaseWALWriter::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
+void
+DatabaseWALWriter::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1070,7 +1085,8 @@ void DatabaseWALWriter::write_remove_spelling(const Database& database, const st
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqdec);
@@ -1086,7 +1102,8 @@ void DatabaseWALWriter::write_remove_spelling(const Database& database, const st
 }
 
 
-void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
+void
+DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1095,7 +1112,8 @@ void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
@@ -1109,7 +1127,8 @@ void DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 }
 
 
-void DatabaseWALWriter::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc)
+void
+DatabaseWALWriter::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1118,7 +1137,8 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
@@ -1134,7 +1154,8 @@ void DatabaseWALWriter::write_replace_document(const Database& database, Xapian:
 }
 
 
-void DatabaseWALWriter::write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc)
+void
+DatabaseWALWriter::write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1143,7 +1164,8 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
@@ -1159,7 +1181,8 @@ void DatabaseWALWriter::write_replace_document_term(const Database& database, co
 }
 
 
-void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid did)
+void
+DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid did)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1168,7 +1191,8 @@ void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
@@ -1183,7 +1207,8 @@ void DatabaseWALWriter::write_delete_document(const Database& database, Xapian::
 }
 
 
-void DatabaseWALWriter::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
+void
+DatabaseWALWriter::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1192,7 +1217,8 @@ void DatabaseWALWriter::write_set_metadata(const Database& database, const std::
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(key);
@@ -1208,7 +1234,8 @@ void DatabaseWALWriter::write_set_metadata(const Database& database, const std::
 }
 
 
-void DatabaseWALWriter::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
+void
+DatabaseWALWriter::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1217,7 +1244,8 @@ void DatabaseWALWriter::write_add_spelling(const Database& database, const std::
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	assert(_instance);
-	_instance->enqueue(path, [=] (DatabaseWALWriterThread& thread) {
+	assert(database.producer_token);
+	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqinc);

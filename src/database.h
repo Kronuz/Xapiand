@@ -43,6 +43,11 @@ class DatabaseQueue;
 class MsgPack;
 class DataStorage;
 
+namespace moodycamel {
+	struct ProducerToken;
+}
+using namespace moodycamel;
+
 
 //  ____        _        _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
@@ -92,6 +97,10 @@ public:
 	std::vector<std::unique_ptr<DataStorage>> writable_storages;
 	std::vector<std::unique_ptr<DataStorage>> storages;
 #endif /* XAPIAND_DATA_STORAGE */
+
+#ifdef XAPIAND_DATABASE_WAL
+	std::unique_ptr<ProducerToken> producer_token;
+#endif
 
 	Database(std::shared_ptr<DatabaseQueue>& queue_, int flags_);
 	~Database();

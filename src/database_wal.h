@@ -242,6 +242,11 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 }
 
 
+namespace moodycamel {
+	struct ProducerToken;
+}
+using namespace moodycamel;
+
 struct DatabaseWALWriterThread;
 
 class DatabaseWALWriter {
@@ -256,7 +261,7 @@ class DatabaseWALWriter {
 	std::atomic_bool _finished;
 	std::atomic_size_t _workers;
 
-	bool enqueue(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func);
+	bool enqueue(const ProducerToken& token, const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func);
 
 public:
 	DatabaseWALWriter(const char* format, std::size_t size);
@@ -274,6 +279,8 @@ public:
 	static void finish();
 
 	static std::size_t running_size();
+
+	static std::unique_ptr<ProducerToken> new_producer_token(const std::string& path);
 
 	static void write_add_document(const Database& database, const Xapian::Document&& doc);
 	static void write_delete_document_term(const Database& database, const std::string& term);
