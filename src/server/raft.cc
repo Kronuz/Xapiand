@@ -173,7 +173,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), sock, XapiandManager::StateNames(XapiandManager::manager->state));
 
 	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_ATEND("Raft::io_accept_cb:END {state:%s}");
+	L_EV_ATEND("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
 	assert(sock == watcher.fd);
