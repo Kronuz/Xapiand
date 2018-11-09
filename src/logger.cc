@@ -348,7 +348,7 @@ Logging::colorized(std::string_view str, bool try_coloring)
 void
 Logging::clean()
 {
-	bool unlog;
+	bool unlog = false;
 	if (clears) {
 		if (!clear()) {
 			unlog = !unlog_str.empty();
