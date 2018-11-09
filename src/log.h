@@ -35,6 +35,8 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
+#define L_TRACEBACK() L_PRINT(TRACEBACK())
+
 #ifdef NDEBUG
 #define L_OBJ_BEGIN L_NOTHING
 #define L_OBJ_ATEND L_NOTHING
@@ -45,6 +47,8 @@
 #define L_EV_BEGIN L_NOTHING
 #define L_EV_ATEND L_NOTHING
 #define L_EV_END L_NOTHING
+#define DEBUG_TRY L_NOTHING
+#define DEBUG_TRY_END L_NOTHING
 #else
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_ATEND L_DELAYED_N_UNLOGGER
@@ -55,14 +59,13 @@
 #define L_EV_BEGIN L_DELAYED_200
 #define L_EV_ATEND L_DELAYED_N_UNLOGGER
 #define L_EV_END L_DELAYED_N_UNLOG
+#define DEBUG_TRY try
+#define DEBUG_TRY_END catch(...) { L_TRACEBACK(); throw; }
 #endif
 
 #define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
 
 #define L_INIT auto start = std::chrono::system_clock::now
-
-#define L_TRACEBACK() L_PRINT(TRACEBACK())
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
