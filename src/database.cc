@@ -323,8 +323,8 @@ Database::reopen_writable()
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_writable_and_local_with_wal) {
 		// WAL required on a local writable database, open it.
-		DatabaseWAL wal(endpoint.path);
-		if (wal.execute(*this, true)) {
+		DatabaseWAL wal(this);
+		if (wal.execute(true)) {
 			if (auto queue = weak_queue.lock()) {
 				modified = true;
 			}

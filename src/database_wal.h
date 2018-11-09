@@ -151,11 +151,12 @@ public:
 		MAX,
 	};
 
-	mutable UUID _uuid;
-	mutable UUID _uuid_le;
-	mutable Xapian::rev _revision;
+	UUID _uuid;
+	UUID _uuid_le;
+	Xapian::rev _revision;
 	Database* _database;
 
+	DatabaseWAL(Database* database_);
 	DatabaseWAL(std::string_view base_path_);
 
 	iterator begin();
@@ -165,9 +166,9 @@ public:
 	const UUID& get_uuid_le() const;
 	Xapian::rev get_revision() const;
 
-	bool init_database(Database& database);
-	bool execute(Database& database, bool only_committed, bool unsafe = false);
-	bool execute_line(Database& database, std::string_view line, bool wal_, bool send_update, bool unsafe);
+	bool init_database();
+	bool execute(bool only_committed, bool unsafe = false);
+	bool execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe);
 	void write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
 
 	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);

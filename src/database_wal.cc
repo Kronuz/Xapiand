@@ -110,28 +110,37 @@ WalHeader::validate(void* param, void* /*unused*/)
 
 DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
-	  validate_uuid(true),
+	  validate_uuid(false),
 	  _revision(0),
 	  _database(nullptr)
 {
+	std::array<unsigned char, 16> uuid_data;
+	if (read_uuid(base_path, uuid_data) != -1) {
+		_uuid = UUID(uuid_data);
+		_uuid_le = UUID(uuid_data, true);
+		validate_uuid = true;
+	}
+}
+
+
+DatabaseWAL::DatabaseWAL(Database* database_)
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(database_->endpoints[0].path, this),
+	  validate_uuid(true),
+	  _revision(0),
+	  _database(database_)
+{
+	if (!_database->is_writable_and_local_with_wal) {
+		THROW(Error, "Database is not suitable");
+	}
+
+	_uuid = UUID(_database->get_uuid());
+	_uuid_le = UUID(_uuid.get_bytes(), true);
 }
 
 
 const UUID&
 DatabaseWAL::get_uuid() const
 {
-	if (_uuid.empty()) {
-		if (_database) {
-			_uuid = UUID(_database->get_uuid());
-			_uuid_le = UUID(_uuid.get_bytes(), true);
-		} else {
-			std::array<unsigned char, 16> uuid_data;
-			if (read_uuid(base_path, uuid_data) != -1) {
-				_uuid = UUID(uuid_data);
-				_uuid_le = UUID(uuid_data, true);
-			}
-		}
-	}
 	return _uuid;
 }
 
@@ -139,9 +148,6 @@ DatabaseWAL::get_uuid() const
 const UUID&
 DatabaseWAL::get_uuid_le() const
 {
-	if (_uuid_le.empty()) {
-		get_uuid();
-	}
 	return _uuid_le;
 }
 
@@ -150,20 +156,23 @@ Xapian::rev
 DatabaseWAL::get_revision() const
 {
 	if (_database) {
-		_revision = _database->get_revision();
+		return _database->get_revision();
+	} else {
+		return _revision;
 	}
-	return _revision;
 }
 
 
 bool
-DatabaseWAL::execute(Database& database, bool only_committed, bool unsafe)
+DatabaseWAL::execute(bool only_committed, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute(<database>, %s, %s)", only_committed ? "true" : "false", unsafe ? "true" : "false");
+	L_CALL("DatabaseWAL::execute(%s, %s)", only_committed ? "true" : "false", unsafe ? "true" : "false");
 
-	_database = &database;
+	if (!_database) {
+		THROW(Error, "Database is not defined");
+	}
 
-	Xapian::rev revision = database.reopen_revision;
+	Xapian::rev revision = _database->reopen_revision;
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
@@ -261,7 +270,7 @@ DatabaseWAL::execute(Database& database, bool only_committed, bool unsafe)
 			try {
 				while (true) {
 					std::string line = read(end_off);
-					modified = execute_line(database, line, false, false, unsafe);
+					modified = execute_line(line, false, false, unsafe);
 				}
 			} catch (const StorageEOF& exc) { }
 		}
@@ -275,7 +284,7 @@ DatabaseWAL::execute(Database& database, bool only_committed, bool unsafe)
 			}
 		}
 	} catch (const StorageException& exc) {
-		L_ERR("WAL ERROR in %s: %s", ::repr(database.endpoints.to_string()), exc.get_message());
+		L_ERR("WAL ERROR in %s: %s", ::repr(base_path), exc.get_message());
 		Metrics::metrics()
 			.xapiand_wal_errors
 			.Increment();
@@ -517,28 +526,23 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute_line(Database& database, std::string_view line, bool wal_, bool send_update, bool unsafe)
+DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute_line(<database>, <line>, %s, %s, %s)", wal_ ? "true" : "false", send_update ? "true" : "false", unsafe ? "true" : "false");
+	L_CALL("DatabaseWAL::execute_line(<line>, %s, %s, %s)", wal_ ? "true" : "false", send_update ? "true" : "false", unsafe ? "true" : "false");
 
-	_database = &database;
+	if (!_database) {
+		THROW(Error, "Database is not defined");
+	}
 
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
-	if ((database.flags & DB_WRITABLE) != DB_WRITABLE) {
-		THROW(Error, "Database is read-only");
-	}
-
-	if (!database.endpoints[0].is_local()) {
-		THROW(Error, "Can not execute WAL on a remote database!");
-	}
-
 	auto revision = unserialise_length(&p, p_end);
-	auto db_revision = database.get_revision();
+	auto db_revision = _database->get_revision();
 
 	if (revision != db_revision) {
 		if (!unsafe) {
+			L_DEBUG("WAL revision mismatch for %s at %llu: %llu", ::repr(base_path), db_revision, revision);
 			THROW(StorageCorruptVolume, "WAL revision mismatch!");
 		}
 		// L_WARNING("WAL revision mismatch!");
@@ -562,32 +566,32 @@ DatabaseWAL::execute_line(Database& database, std::string_view line, bool wal_, 
 	switch (type) {
 		case Type::ADD_DOCUMENT:
 			doc = Xapian::Document::unserialise(data);
-			database.add_document(doc, false, wal_);
+			_database->add_document(doc, false, wal_);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
-			database.delete_document_term(term, false, wal_);
+			_database->delete_document_term(term, false, wal_);
 			break;
 		case Type::COMMIT:
-			database.commit(wal_, send_update);
+			_database->commit(wal_, send_update);
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			doc = Xapian::Document::unserialise(std::string(p, p_end - p));
-			database.replace_document(did, doc, false, wal_);
+			_database->replace_document(did, doc, false, wal_);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
-			database.replace_document_term(term, doc, false, wal_);
+			_database->replace_document_term(term, doc, false, wal_);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {
 				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-				database.delete_document(did, false, wal_);
+				_database->delete_document(did, false, wal_);
 			} catch (const NotFoundError& exc) {
 				if (!unsafe) {
 					throw;
@@ -597,15 +601,15 @@ DatabaseWAL::execute_line(Database& database, std::string_view line, bool wal_, 
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length(&p, p_end, true);
-			database.set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
+			_database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			database.add_spelling(std::string(p, p_end - p), freq, false, wal_);
+			_database->add_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		case Type::REMOVE_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			database.remove_spelling(std::string(p, p_end - p), freq, false, wal_);
+			_database->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
@@ -616,11 +620,13 @@ DatabaseWAL::execute_line(Database& database, std::string_view line, bool wal_, 
 
 
 bool
-DatabaseWAL::init_database(Database& database)
+DatabaseWAL::init_database()
 {
-	L_CALL("DatabaseWAL::init_database(<database>)");
+	L_CALL("DatabaseWAL::init_database()");
 
-	_database = &database;
+	if (!_database) {
+		THROW(Error, "Database is not defined");
+	}
 
 	static const std::array<std::string, 2> iamglass({{
 		std::string("\x0f\x0d\x58\x61\x70\x69\x61\x6e\x20\x47\x6c\x61\x73\x73\x04\x6e", 16),

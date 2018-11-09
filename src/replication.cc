@@ -436,10 +436,10 @@ Replication::reply_changeset(const std::string& line)
 			XapiandManager::manager->database_pool.checkout(slave_database, endpoints, DB_WRITABLE);
 		}
 		slave_database->begin_transaction(false);
-		slave_wal = std::make_unique<DatabaseWAL>(switch_database_path);
+		slave_wal = std::make_unique<DatabaseWAL>(slave_database.get());
 	}
 
-	slave_wal->execute_line(*slave_database, line, true, false, false);
+	slave_wal->execute_line(line, true, false, false);
 }
 
 
