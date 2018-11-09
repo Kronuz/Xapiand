@@ -203,8 +203,8 @@ protected:
 
 	size_t writes;
 
-	size_t total_received_bytes;
-	size_t total_sent_bytes;
+	std::atomic_size_t total_received_bytes;
+	std::atomic_size_t total_sent_bytes;
 
 	std::unique_ptr<ClientDecompressor> decompressor;
 

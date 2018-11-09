@@ -391,13 +391,13 @@ BinaryClient::run()
 
 					Metrics::metrics()
 						.xapiand_remote_protocol_sent_bytes
-						.Increment(total_sent_bytes);
-					total_sent_bytes = 0;
+						.Increment(total_sent_bytes.load());
+					total_sent_bytes.exchange(0);
 
 					Metrics::metrics()
 						.xapiand_remote_protocol_received_bytes
-						.Increment(total_received_bytes);
-					total_received_bytes = 0;
+						.Increment(total_received_bytes.load());
+					total_received_bytes.exchange(0);
 
 				} catch (...) {
 					lk.lock();
@@ -421,13 +421,13 @@ BinaryClient::run()
 
 					Metrics::metrics()
 						.xapiand_replication_sent_bytes
-						.Increment(total_sent_bytes);
-					total_sent_bytes = 0;
+						.Increment(total_sent_bytes.load());
+					total_sent_bytes.exchange(0);
 
 					Metrics::metrics()
 						.xapiand_replication_received_bytes
-						.Increment(total_received_bytes);
-					total_received_bytes = 0;
+						.Increment(total_received_bytes.load());
+					total_received_bytes.exchange(0);
 
 				} catch (...) {
 					lk.lock();
@@ -451,13 +451,13 @@ BinaryClient::run()
 
 					Metrics::metrics()
 						.xapiand_replication_sent_bytes
-						.Increment(total_sent_bytes);
-					total_sent_bytes = 0;
+						.Increment(total_sent_bytes.load());
+					total_sent_bytes.exchange(0);
 
 					Metrics::metrics()
 						.xapiand_replication_received_bytes
-						.Increment(total_received_bytes);
-					total_received_bytes = 0;
+						.Increment(total_received_bytes.load());
+					total_received_bytes.exchange(0);
 
 				} catch (...) {
 					lk.lock();

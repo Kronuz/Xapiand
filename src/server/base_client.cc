@@ -481,7 +481,7 @@ BaseClient::write_from_queue()
 			return WR::ERROR;
 		}
 
-		total_sent_bytes += sent;
+		total_sent_bytes.fetch_add(sent, std::memory_order_relaxed);
 		L_TCP_WIRE("{sock:%d} <<-- %s (%zu bytes)", sock, repr(buf_data, sent, true, true, 500), sent);
 
 		buffer->remove_prefix(sent);
@@ -674,7 +674,7 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	const char* buf_data = read_buffer;
 	const char* buf_end = read_buffer + received;
 
-	total_received_bytes += received;
+	total_received_bytes.fetch_add(received, std::memory_order_relaxed);
 	L_TCP_WIRE("{sock:%d} -->> %s (%zu bytes)", sock, repr(buf_data, received, true, true, 500), received);
 
 	do {
