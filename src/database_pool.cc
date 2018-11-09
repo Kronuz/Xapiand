@@ -44,7 +44,7 @@
 // #undef L_DATABASE_BEGIN
 // #define L_DATABASE_BEGIN L_DELAYED_600
 // #undef L_DATABASE_END
-// #define L_DATABASE_END L_DELAYED_N_UNLOG
+// #define L_DATABASE_END L_DELAYED_N_UNLOGGER
 
 
 #define REMOTE_DATABASE_UPDATE_TIME 3
@@ -349,6 +349,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_ATEND("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
 	assert(!database);
 
@@ -445,7 +446,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}
 
 	if (!database) {
-		L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "WR", repr(endpoints.to_string()));
 		THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoints.to_string()));
 	}
 
@@ -488,7 +488,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 	}
 
-	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "WR", repr(endpoints.to_string()), database->reopen_revision);
+	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "RO", repr(endpoints.to_string()), database->reopen_revision);
 }
 
 

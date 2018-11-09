@@ -70,6 +70,9 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), http->sock);
 
+	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
+	L_EV_ATEND("HttpServer::io_accept_cb:END");
+
 	ignore_unused(watcher);
 	assert(http->sock == watcher.fd);
 
@@ -84,8 +87,6 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
-
 	int client_sock = http->accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
@@ -94,6 +95,4 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
 	}
-
-	L_EV_END("HttpServer::io_accept_cb:END");
 }

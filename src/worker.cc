@@ -41,8 +41,8 @@
 // #define L_EV L_MEDIUM_PURPLE
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_END
-// #define L_EV_END L_DELAYED_N_UNLOG
+// #undef L_EV_ATEND
+// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
 
 
 Worker::~Worker()
@@ -140,11 +140,11 @@ Worker::_destroyer()
 {
 	L_CALL("Worker::_destroyer() %s", __repr__());
 
-	if (!_destroyed) {
-		L_EV_BEGIN("Worker::_destroyer:BEGIN");
-		destroy_impl();
-		L_EV_END("Worker::_destroyer:END");
+	L_EV_BEGIN("Worker::_destroyer:BEGIN");
+	L_EV_ATEND("Worker::_destroyer:END");
 
+	if (!_destroyed) {
+		destroy_impl();
 		_destroyed = true;
 	}
 
@@ -156,11 +156,11 @@ Worker::_starter()
 {
 	L_CALL("Worker::_starter() %s", __repr__());
 
-	if (!_started) {
-		L_EV_BEGIN("Worker::_starter:BEGIN");
-		start_impl();
-		L_EV_END("Worker::_starter:END");
+	L_EV_BEGIN("Worker::_starter:BEGIN");
+	L_EV_ATEND("Worker::_starter:END");
 
+	if (!_started) {
+		start_impl();
 		_started = true;
 	}
 }
@@ -171,11 +171,11 @@ Worker::_stopper()
 {
 	L_CALL("Worker::_stopper() %s", __repr__());
 
-	if (_started) {
-		L_EV_BEGIN("Worker::_stopper:BEGIN");
-		stop_impl();
-		L_EV_END("Worker::_stopper:END");
+	L_EV_BEGIN("Worker::_stopper:BEGIN");
+	L_EV_ATEND("Worker::_stopper:END");
 
+	if (_started) {
+		stop_impl();
 		_started = false;
 	}
 }
@@ -187,8 +187,9 @@ Worker::_shutdown_async_cb()
 	L_CALL("Worker::_shutdown_async_cb() %s", __repr__());
 
 	L_EV_BEGIN("Worker::_shutdown_async_cb:BEGIN");
+	L_EV_ATEND("Worker::_shutdown_async_cb:END");
+
 	shutdown_impl(_asap, _now);
-	L_EV_END("Worker::_shutdown_async_cb:END");
 }
 
 
@@ -197,11 +198,12 @@ Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_break_loop_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
+	L_EV_BEGIN("Worker::_break_loop_async_cb:BEGIN");
+	L_EV_ATEND("Worker::_break_loop_async_cb:END");
+
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Worker::_break_loop_async_cb:BEGIN");
 	break_loop_impl();
-	L_EV_END("Worker::_break_loop_async_cb:END");
 }
 
 
@@ -243,11 +245,12 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("Worker::_detach_children_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
 
+	L_EV_BEGIN("Worker::_detach_children_async_cb:BEGIN");
+	L_EV_ATEND("Worker::_detach_children_async_cb:END");
+
 	ignore_unused(revents);
 
-	L_EV_BEGIN("Worker::_detach_children_async_cb:BEGIN");
 	detach_children_impl();
-	L_EV_END("Worker::_detach_children_async_cb:END");
 }
 
 

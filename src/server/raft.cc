@@ -49,8 +49,8 @@
 // #define L_RAFT L_SEA_GREEN
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_END
-// #define L_EV_END L_DELAYED_N_UNLOG
+// #undef L_EV_ATEND
+// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
 
 
 using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
@@ -172,6 +172,9 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 {
 	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), sock, XapiandManager::StateNames(XapiandManager::manager->state));
 
+	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_ATEND("Raft::io_accept_cb:END {state:%s}");
+
 	ignore_unused(watcher);
 	assert(sock == watcher.fd);
 
@@ -185,8 +188,6 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 		L_EV("ERROR: got invalid raft event {sock:%d}: %s", sock, strerror(errno));
 		return;
 	}
-
-	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	if (revents & EV_READ) {
 		while (
@@ -206,14 +207,9 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 			} catch (const BaseException& exc) {
 				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;
-			} catch (...) {
-				L_EV_END("Raft::io_accept_cb:END %lld", SchedulerQueue::now);
-				throw;
 			}
 		}
 	}
-
-	L_EV_END("Raft::io_accept_cb:END %lld", SchedulerQueue::now);
 }
 
 
@@ -221,6 +217,9 @@ void
 Raft::raft_server(Message type, const std::string& message)
 {
 	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
+
+	L_OBJ_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_OBJ_ATEND("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,
@@ -680,6 +679,10 @@ void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
 {
 	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+
+	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
+	L_EV_ATEND("Raft::leader_election_timeout_cb:END");
+
 	ignore_unused(revents);
 
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
@@ -688,8 +691,6 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		L_RAFT("   << LEADER_ELECTION (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 		return;
 	}
-
-	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
 
 	if (role == Role::LEADER) {
 		// We're a leader, we shouldn't be here!
@@ -720,8 +721,6 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 		serialise_length(current_term) +
 		serialise_length(last_log_term) +
 		serialise_length(last_log_index));
-
-	L_EV_END("Raft::leader_election_timeout_cb:END");
 }
 
 
@@ -729,6 +728,9 @@ void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
 	// L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+
+	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
+	L_EV_ATEND("Raft::leader_heartbeat_cb:END");
 
 	ignore_unused(revents);
 
@@ -738,8 +740,6 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
 		return;
 	}
-
-	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
 
 	if (role != Role::LEADER) {
 		return;
@@ -772,8 +772,6 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 				serialise_length(entry_term) +
 				serialise_string(entry_command) +
 				serialise_length(commit_index));
-
-			L_EV_END("Raft::leader_heartbeat_cb:END");
 			return;
 		}
 	}
@@ -787,8 +785,6 @@ Raft::leader_heartbeat_cb(ev::timer&, int revents)
 		serialise_length(last_log_index) +
 		serialise_length(last_log_term) +
 		serialise_length(commit_index));
-
-	L_EV_END("Raft::leader_heartbeat_cb:END");
 }
 
 

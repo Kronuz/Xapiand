@@ -63,8 +63,8 @@
 // #define L_EV L_MEDIUM_PURPLE
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
-// #undef L_EV_END
-// #define L_EV_END L_DELAYED_N_UNLOG
+// #undef L_EV_ATEND
+// #define L_EV_ATEND L_DELAYED_N_UNLOGGER
 
 
 #define BUF_SIZE 4096
@@ -573,23 +573,22 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
+	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
+	L_EV_ATEND("BaseClient::io_cb_write:END");
+
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
 
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
-	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
-
 	if (closed) {
 		detach();
-		L_EV_END("BaseClient::io_cb_write:END");
 		return;
 	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
 		detach();
-		L_EV_END("BaseClient::io_cb_write:END");
 		return;
 	}
 
@@ -615,8 +614,6 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	if (closed) {
 		detach();
 	}
-
-	L_EV_END("BaseClient::io_cb_write:END");
 }
 
 
@@ -625,23 +622,22 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
+	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
+	L_EV_ATEND("BaseClient::io_cb_read:END");
+
 	assert(sock == watcher.fd);
 	ignore_unused(watcher);
 
 	L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
-	L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
-
 	if (closed) {
 		detach();
-		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
 		detach();
-		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
 
@@ -651,7 +647,6 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 	if (received < 0) {
 		if (io::ignored_errno(errno, true, true, false)) {
 			L_CONN("Ignored error: {sock:%d} - %d: %s", sock, errno, strerror(errno));
-			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
 
@@ -659,14 +654,12 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 			L_CONN("Received ECONNRESET {sock:%d}!", sock);
 			on_read(nullptr, received);
 			detach();
-			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
 
 		L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
 		on_read(nullptr, received);
 		detach();
-		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
 
@@ -675,7 +668,6 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 		L_CONN("Received EOF {sock:%d}!", sock);
 		on_read(nullptr, received);
 		detach();
-		L_EV_END("BaseClient::io_cb_read:END");
 		return;
 	}
 
@@ -705,7 +697,6 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 				default:
 					L_CONN("Received wrong file mode: %s {sock:%d}!", repr(std::string(1, compressor)), sock);
 					detach();
-					L_EV_END("BaseClient::io_cb_read:END");
 					return;
 			}
 			--received;
@@ -735,7 +726,6 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 					receive_checksum = false;
 					if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
 						L_ERR("Data is corrupt!");
-						L_EV_END("BaseClient::io_cb_read:END");
 						return;
 					}
 					on_read_file_done();
@@ -781,12 +771,9 @@ BaseClient::io_cb_read(ev::io &watcher, int revents)
 
 		if (closed) {
 			detach();
-			L_EV_END("BaseClient::io_cb_read:END");
 			return;
 		}
 	} while (received > 0);
-
-	L_EV_END("BaseClient::io_cb_read:END");
 }
 
 
@@ -795,16 +782,15 @@ BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	ignore_unused(revents);
-
 	L_EV_BEGIN("BaseClient::write_start_async_cb:BEGIN");
+	L_EV_ATEND("BaseClient::write_start_async_cb:END");
+
+	ignore_unused(revents);
 
 	if (!closed) {
 		io_write.start();
 		L_EV("Enable write event [%d]", io_write.is_active());
 	}
-
-	L_EV_END("BaseClient::write_start_async_cb:END");
 }
 
 
@@ -813,16 +799,15 @@ BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 {
 	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	ignore_unused(revents);
-
 	L_EV_BEGIN("BaseClient::read_start_async_cb:BEGIN");
+	L_EV_ATEND("BaseClient::read_start_async_cb:END");
+
+	ignore_unused(revents);
 
 	if (!closed) {
 		io_read.start();
 		L_EV("Enable read event [%d]", io_read.is_active());
 	}
-
-	L_EV_END("BaseClient::read_start_async_cb:END");
 }
 
 

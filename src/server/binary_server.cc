@@ -81,13 +81,12 @@ BinaryServer::process_tasks_async_cb(ev::async&, int revents)
 {
 	L_CALL("BinaryServer::process_tasks_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
+	L_EV_BEGIN("BinaryServer::process_tasks_async_cb:BEGIN");
+	L_EV_ATEND("BinaryServer::process_tasks_async_cb:END");
+
 	ignore_unused(revents);
 
-	L_EV_BEGIN("BinaryServer::process_tasks_async_cb:BEGIN");
-
 	while (binary->tasks.call(share_this<BinaryServer>())) {};
-
-	L_EV_END("BinaryServer::process_tasks_async_cb:END");
 }
 
 
@@ -95,6 +94,9 @@ void
 BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), binary->sock);
+
+	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
+	L_EV_ATEND("BinaryServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
 	assert(binary->sock == watcher.fd);
@@ -110,8 +112,6 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
-
 	int client_sock = binary->accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
@@ -123,8 +123,6 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 			client->destroy();
 		}
 	}
-
-	L_EV_END("BinaryServer::io_accept_cb:END");
 }
 
 
