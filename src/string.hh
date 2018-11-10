@@ -33,11 +33,12 @@
 
 #include "cassert.hh"         // for assert
 
-#include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
-#include "log.h"              // for DEBUG_TRY
-#include "milo.h"             // for internal::Grisu2
-#include "split.h"            // for Split
 #include "chars.hh"           // for chars::tolower
+#include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
+#include "log.h"              // for L_DEBUG_TRY
+#include "milo.h"             // for internal::Grisu2
+#include "repr.hh"            // for repr
+#include "split.h"            // for Split
 #include "static_string.hh"   // for static_string
 
 
@@ -144,9 +145,9 @@ static inline std::vector<std::string_view> split(std::string_view value, const 
 template <typename... Args>
 static inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
-	DEBUG_TRY {
+	L_DEBUG_TRY {
 		str = fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
-	} DEBUG_TRY_END;
+	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
 	return str;
 }
 

@@ -35,14 +35,16 @@
 #include <unordered_map>      // for unordered_map
 #include <utility>
 #include <vector>             // for vector
+#include <xapian.h>           // for Xapian::Error
 
 #include "base_x.hh"          // for Base64
 #include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
-#include "exception.h"        // for traceback
+#include "exception.h"        // for traceback, BaseException
 #include "ignore_unused.h"    // for ignore_unused
 #include "io.hh"              // for io::write
 #include "opts.h"             // for opts
+#include "repr.hh"            // for repr
 #include "string.hh"          // for string::format
 #include "thread.hh"          // for get_thread_name
 #include "time_point.hh"      // for time_point_to_ullong
@@ -145,9 +147,9 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
-	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, exc, function, filename, line, format, args);
+	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, eptr, function, filename, line, format, args);
 }
 
 
@@ -289,7 +291,7 @@ Logging::Logging(
 	const char *filename,
 	int line,
 	std::string  str,
-	const BaseException* exc,
+	std::exception_ptr eptr,
 	bool clears,
 	bool async,
 	bool info,
@@ -306,7 +308,7 @@ Logging::Logging(
 	stack_level(0),
 	clears(clears),
 	str(std::move(str)),
-	exception(exc),
+	eptr(eptr),
 	async(async),
 	info(info),
 	stacked(stacked),
@@ -621,9 +623,32 @@ Logging::run()
 		}
 	}
 
-	if (!exception.empty()) {
+	if (eptr) {
+		std::string exception = "\n== Exception: ";
+		try {
+			std::rethrow_exception(eptr);
+		} catch (const BaseException& exc) {
+			if (*exc.get_context()) {
+				exception.append(exc.get_context());
+			} else {
+				exception.append("Unkown BaseException");
+			}
+			if (!exc.empty()) {
+				exception.append(exc.get_traceback());
+			}
+		} catch (const Xapian::Error& exc) {
+			exception.append(exc.get_description());
+		} catch (const std::exception& exc) {
+			if (*exc.what()) {
+				exception.append(exc.what());
+			} else {
+				exception.append("Unkown std::exception");
+			}
+		} catch (...) {
+			exception.append("Unkown exception");
+		}
 		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
-		msg.append(exception.get_traceback());
+		msg.append(exception);
 		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
 	}
 
@@ -643,9 +668,9 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 	unlog_function = _function;
 	unlog_filename = _filename;
 	unlog_line = _line;
-	DEBUG_TRY {
+	L_DEBUG_TRY {
 		unlog_str = fmt::vsprintf(format, args);
-	} DEBUG_TRY_END;
+	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
 }
 
 
@@ -653,9 +678,9 @@ void
 Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
 {
 	std::string str;
-	DEBUG_TRY {
+	L_DEBUG_TRY {
 		str = fmt::vsprintf(format, args);
-	} DEBUG_TRY_END;
+	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
 		collected.emplace_back(std::move(str), with_endl);
@@ -666,14 +691,14 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, const BaseException* exc, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
-		DEBUG_TRY {
+		L_DEBUG_TRY {
 			str = fmt::vsprintf(format, args);
-		} DEBUG_TRY_END;
-		return add(wakeup, function, filename, line, str, exc, clears, async, info, stacked, once, priority);
+		} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+		return add(wakeup, function, filename, line, str, eptr, clears, async, info, stacked, once, priority);
 	}
 	return Log();
 }
@@ -686,7 +711,7 @@ Logging::add(
 	const char* filename,
 	int line,
 	const std::string& str,
-	const BaseException* exc,
+	std::exception_ptr eptr,
 	bool clears,
 	bool async,
 	bool info,
@@ -700,7 +725,7 @@ Logging::add(
 		filename,
 		line,
 		str,
-		exc,
+		eptr,
 		clears,
 		async,
 		info,

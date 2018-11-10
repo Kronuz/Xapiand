@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <xapian.h>             // for Xapian::Database
+
 #include "endpoint.h"           // for Endpoints
 
 
