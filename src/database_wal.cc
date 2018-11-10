@@ -926,11 +926,20 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 	_finished(false),
 	_workers(0)
 {
-
 	for (std::size_t idx = 0; idx < num_threads; ++idx) {
 		_threads[idx] = DatabaseWALWriterThread(idx, this);
 		_threads[idx].start();
 	}
+}
+
+
+void
+DatabaseWALWriter::execute(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
+{
+	static const std::hash<std::string> hasher;
+	auto hash = hasher(path);
+	auto& thread = _threads[hash % _threads.size()];
+	func(thread);
 }
 
 
@@ -1034,7 +1043,7 @@ DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Do
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = doc.serialise();
@@ -1045,7 +1054,12 @@ DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Do
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1060,7 +1074,7 @@ DatabaseWALWriter::write_delete_document_term(const Database& database, const st
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
@@ -1071,7 +1085,12 @@ DatabaseWALWriter::write_delete_document_term(const Database& database, const st
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1086,7 +1105,7 @@ DatabaseWALWriter::write_remove_spelling(const Database& database, const std::st
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqdec);
@@ -1098,7 +1117,12 @@ DatabaseWALWriter::write_remove_spelling(const Database& database, const std::st
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1113,7 +1137,7 @@ DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
@@ -1123,7 +1147,12 @@ DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1138,7 +1167,7 @@ DatabaseWALWriter::write_replace_document(const Database& database, Xapian::doci
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
@@ -1150,7 +1179,12 @@ DatabaseWALWriter::write_replace_document(const Database& database, Xapian::doci
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1165,7 +1199,7 @@ DatabaseWALWriter::write_replace_document_term(const Database& database, const s
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
+	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(term);
@@ -1177,7 +1211,12 @@ DatabaseWALWriter::write_replace_document_term(const Database& database, const s
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1192,7 +1231,7 @@ DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(did);
@@ -1203,7 +1242,12 @@ DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1218,7 +1262,7 @@ DatabaseWALWriter::write_set_metadata(const Database& database, const std::strin
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_string(key);
@@ -1230,7 +1274,12 @@ DatabaseWALWriter::write_set_metadata(const Database& database, const std::strin
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 
@@ -1245,7 +1294,7 @@ DatabaseWALWriter::write_add_spelling(const Database& database, const std::strin
 	auto revision = database.get_revision();
 	assert(_instance);
 	assert(database.producer_token);
-	_instance->enqueue(*database.producer_token, path, [=] (DatabaseWALWriterThread& thread) {
+	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
 
 		auto line = serialise_length(freqinc);
@@ -1257,7 +1306,12 @@ DatabaseWALWriter::write_add_spelling(const Database& database, const std::strin
 
 		L_DEBUG_NOW(end);
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	});
+	};
+	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+		_instance->execute(path, writer);
+	} else {
+		_instance->enqueue(*database.producer_token, path, writer);
+	}
 }
 
 #endif
