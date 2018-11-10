@@ -28,6 +28,7 @@
 
 #include "likely.h"              // for likely, unlikely
 #include "log.h"                 // for L_CALL, L_ERRNO
+#include "exception.h"           // for traceback
 
 
 #pragma GCC diagnostic push
