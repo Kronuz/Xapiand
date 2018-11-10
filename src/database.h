@@ -74,11 +74,12 @@ private:
 	void reopen_readable();
 
 public:
-	std::weak_ptr<DatabaseQueue> weak_queue;
+	const std::weak_ptr<DatabaseQueue> weak_queue;
 
-	Endpoints endpoints;
-	int flags;
-	size_t hash;
+	const Endpoints endpoints;
+
+	const int flags;
+	const size_t hash;
 	bool modified;
 	Transaction transaction;
 	std::chrono::system_clock::time_point reopen_time;
