@@ -810,6 +810,8 @@ Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) co
 	assert(locator.type == Data::Type::stored);
 	assert(locator.volume != -1);
 
+	assert(did > 0);
+	assert(endpoints.size() > 0);
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
@@ -827,6 +829,8 @@ Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
 {
 	L_CALL("Database::storage_pull_blobs()");
 
+	assert(did > 0);
+	assert(endpoints.size() > 0);
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
@@ -853,6 +857,8 @@ Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid did) const
 
 	assert(is_writable);
 
+	assert(did > 0);
+	assert(endpoints.size() > 0);
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = writable_storages[subdatabase];
 	if (storage) {
