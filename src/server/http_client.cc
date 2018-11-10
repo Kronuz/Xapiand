@@ -991,15 +991,15 @@ HttpClient::run()
 
 			run_one(request, response);
 
+			auto sent = total_sent_bytes.exchange(0);
 			Metrics::metrics()
 				.xapiand_http_sent_bytes
-				.Increment(total_sent_bytes);
-			total_sent_bytes = 0;
+				.Increment(sent);
 
+			auto received = total_received_bytes.exchange(0);
 			Metrics::metrics()
 				.xapiand_http_received_bytes
-				.Increment(total_received_bytes);
-			total_received_bytes = 0;
+				.Increment(received);
 
 		} catch (...) {
 			lk.lock();

@@ -389,15 +389,15 @@ BinaryClient::run()
 					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
 					remote_protocol.remote_server(type, message);
 
+					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_remote_protocol_sent_bytes
-						.Increment(total_sent_bytes.load());
-					total_sent_bytes.exchange(0);
+						.Increment(sent);
 
+					auto received = total_received_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_remote_protocol_received_bytes
-						.Increment(total_received_bytes.load());
-					total_received_bytes.exchange(0);
+						.Increment(received);
 
 				} catch (...) {
 					lk.lock();
@@ -419,15 +419,15 @@ BinaryClient::run()
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
 					replication.replication_server(type, message);
 
+					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_replication_sent_bytes
-						.Increment(total_sent_bytes.load());
-					total_sent_bytes.exchange(0);
+						.Increment(sent);
 
+					auto received = total_received_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_replication_received_bytes
-						.Increment(total_received_bytes.load());
-					total_received_bytes.exchange(0);
+						.Increment(received);
 
 				} catch (...) {
 					lk.lock();
@@ -449,15 +449,15 @@ BinaryClient::run()
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 					replication.replication_client(type, message);
 
+					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_replication_sent_bytes
-						.Increment(total_sent_bytes.load());
-					total_sent_bytes.exchange(0);
+						.Increment(sent);
 
+					auto received = total_received_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_replication_received_bytes
-						.Increment(total_received_bytes.load());
-					total_received_bytes.exchange(0);
+						.Increment(received);
 
 				} catch (...) {
 					lk.lock();
