@@ -35,8 +35,6 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
-#define L_TRACEBACK() L_PRINT(TRACEBACK())
-
 #ifdef NDEBUG
 #define L_OBJ_BEGIN L_NOTHING
 #define L_OBJ_END L_NOTHING
