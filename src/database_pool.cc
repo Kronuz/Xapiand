@@ -300,6 +300,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database)
 		--locks;
 		queue->locked = false;
 		queue->unlocked_cond.notify_all();
+		throw;
 	}
 }
 
