@@ -851,16 +851,15 @@ Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
 
 
 void
-Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid did) const
+Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
 	assert(is_writable);
 
-	assert(did > 0);
-	assert(endpoints.size() > 0);
-	int subdatabase = (did - 1) % endpoints.size();
-	const auto& storage = writable_storages[subdatabase];
+	// Writable databases have only one subdatabase,
+	// simply get the single storage:
+	const auto& storage = writable_storages[0];
 	if (storage) {
 		auto data = Data(doc.get_data());
 		for (auto& locator : data) {
