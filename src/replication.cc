@@ -443,7 +443,7 @@ Replication::reply_changeset(const std::string& line)
 			wal = std::make_unique<DatabaseWAL>(database().get());
 		} else {
 			if (!switch_database) {
-				XapiandManager::manager->database_pool.checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE);
+				XapiandManager::manager->database_pool.checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
 			}
 			switch_database->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_database.get());
