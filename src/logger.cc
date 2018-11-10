@@ -633,19 +633,44 @@ Logging::run()
 			} else {
 				exception.append("Unkown BaseException");
 			}
-			if (!exc.empty()) {
+			if (exc.empty()) {
+				exception.append("\n== Location: ");
+				exception.append(filename);
+				exception.push_back(':');
+				exception.append(std::to_string(line));
+				exception.append(" at ");
+				exception.append(function);
+			} else {
 				exception.append(exc.get_traceback());
 			}
 		} catch (const Xapian::Error& exc) {
 			exception.append(exc.get_description());
+			exception.append("\n== Location: ");
+			exception.append(filename);
+			exception.push_back(':');
+			exception.append(std::to_string(line));
+			exception.append(" at ");
+			exception.append(function);
 		} catch (const std::exception& exc) {
 			if (*exc.what()) {
 				exception.append(exc.what());
 			} else {
 				exception.append("Unkown std::exception");
 			}
+			exception.append("\n== Location: ");
+			exception.append(filename);
+			exception.push_back(':');
+			exception.append(std::to_string(line));
+			exception.append(" at ");
+			exception.append(function);
 		} catch (...) {
 			exception.append("Unkown exception");
+			exception.append("\n== Location: ");
+			exception.append(filename);
+			exception.push_back(':');
+			exception.append(std::to_string(line));
+			exception.append(" at ");
+			exception.append(function);
 		}
 		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
 		msg.append(exception);
