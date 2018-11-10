@@ -107,7 +107,7 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 			path_test_geo + "geo_6.txt",
 			path_test_geo + "geo_7.txt",
 			path_test_geo + "geo_8.txt"
-		}), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL);
+		}), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
 
 	int cont = 0;
 	query_field_t query;

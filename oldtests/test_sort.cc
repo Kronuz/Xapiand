@@ -681,7 +681,7 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 			path_test_sort + "doc8.txt",
 			path_test_sort + "doc9.txt",
 			path_test_sort + "doc10.txt"
-		}), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL);
+		}), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
 
 	int cont = 0;
 	query_field_t query;

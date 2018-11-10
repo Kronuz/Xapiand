@@ -1809,7 +1809,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_NOWAL);
+	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_NO_WAL);
 
 	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 
@@ -1873,7 +1873,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, method);
 
 	auto& decoded_body = request.decoded_body();
 	if (decoded_body.is_string()) {

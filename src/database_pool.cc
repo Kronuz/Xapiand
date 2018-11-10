@@ -341,7 +341,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
-		if ((flags & DB_NOWAL) == DB_NOWAL) values.push_back("DB_NOWAL");
+		if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
 		return string::join(values, " | ");
 	}());

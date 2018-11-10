@@ -317,7 +317,7 @@ Database::reopen_writable()
 
 	is_writable = true;
 	is_writable_and_local = local;
-	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NOWAL) != DB_NOWAL);
+	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NO_WAL) != DB_NO_WAL);
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations

@@ -25,7 +25,8 @@
 constexpr int DB_OPEN              = 0x0000;  // Opens a database
 constexpr int DB_CREATE_OR_OPEN    = 0x0001;  // Automatically creates the database if it doesn't exist
 constexpr int DB_WRITABLE          = 0x0002;  // Opens as writable
-constexpr int DB_NOWAL             = 0x0010;  // Disable open wal file
+constexpr int DB_NO_WAL            = 0x0010;  // Disable open wal file
+constexpr int DB_SYNC_WAL          = 0x0020;  // Use sync wal
 constexpr int DB_NOSTORAGE         = 0x0040;  // Disable separate data storage file for the database
 
 constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document

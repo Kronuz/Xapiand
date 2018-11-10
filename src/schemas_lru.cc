@@ -66,7 +66,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 		if (!context->insert(hash).second) {
 			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NOWAL, HTTP_GET, context);
+		DatabaseHandler _db_handler(Endpoints(endpoint), DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 		std::string_view selector;
 		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
 		if (needle != std::string::npos) {
@@ -457,7 +457,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (exchanged) {
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
-					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL, HTTP_PUT, db_handler->context);
+					DatabaseHandler _db_handler(Endpoints(Endpoint(foreign_path)), DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, HTTP_PUT, db_handler->context);
 					if (_db_handler.get_metadata(reserved_schema).empty()) {
 						_db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 					}

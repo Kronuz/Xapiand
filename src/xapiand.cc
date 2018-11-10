@@ -1056,7 +1056,7 @@ void dump_metadata() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
 			L_NOTICE("Dumping metadata database: %s", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_metadata(fd);
 			L_NOTICE("Dump finished!");
 			XapiandManager::manager->join();
@@ -1086,7 +1086,7 @@ void dump_schema() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
 			L_NOTICE("Dumping schema database: %s", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_schema(fd);
 			L_NOTICE("Dump finished!");
 			XapiandManager::manager->join();
@@ -1116,7 +1116,7 @@ void dump_documents() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
 			L_NOTICE("Dumping database: %s", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NOWAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_documents(fd);
 			L_NOTICE("Dump finished!");
 			XapiandManager::manager->join();
@@ -1146,7 +1146,7 @@ void restore() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
 			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NOWAL);
+			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
 			XapiandManager::manager->join();
