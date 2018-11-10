@@ -889,13 +889,8 @@ struct DatabaseWALWriterThread : public Thread {
 			if likely(task != nullptr) {
 				try {
 					task(*this);
-				} catch (const BaseException& exc) {
-					L_EXC("Task died with an unhandled exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-				} catch (const std::exception& exc) {
-					L_EXC("Task died with an unhandled exception: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 				} catch (...) {
-					std::exception exc;
-					L_EXC("WAL writer task died with an unhandled exception: Unkown exception!");
+					L_EXC("ERROR: Task died with an unhandled exception");
 				}
 			} else if (_wal_writer->_ending.load(std::memory_order_acquire)) {
 				break;

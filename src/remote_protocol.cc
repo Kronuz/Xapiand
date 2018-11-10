@@ -154,36 +154,27 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (const Xapian::NetworkTimeoutError& exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: Dispatching remote protocol message");
 		try {
 			// We've had a timeout, so the client may not be listening, if we can't
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
 		client.detach();
-	} catch (const Xapian::NetworkError& exc) {
+	} catch (const Xapian::NetworkError&) {
 	    // All other network errors mean we are fatally confused and are unlikely
 	    // to be able to communicate further across this connection. So we don't
 	    // try to propagate the error to the client, but instead just log the
 	    // exception and close the connection.
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: Dispatching remote protocol message");
 		client.detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-	} catch (const BaseException& exc) {
-		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.detach();
-	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
-		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.detach();
 	} catch (...) {
-		std::exception exc;
-		L_EXC("ERROR: %s", "Unkown exception!");
+		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 		client.detach();
 	}

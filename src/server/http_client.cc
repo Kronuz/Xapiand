@@ -917,40 +917,34 @@ HttpClient::run_one(Request& request, Response& response)
 	} catch (const NotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
-		// L_EXC("ERROR: %s", error);
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-		// L_EXC("ERROR: %s", error);
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
-		// L_EXC("ERROR: %s", error);
 	} catch (const TimeOutError& exc) {
 		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC("ERROR: %s", error);
 	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-		// L_EXC("ERROR: %s", error);
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
-		L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+		L_EXC("ERROR: Dispatching HTTP request");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(exc.get_description());
-		L_EXC("ERROR: %s", error);
+		L_EXC("ERROR: Dispatching HTTP request");
 	} catch (const std::exception& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-		L_EXC("ERROR: %s", error);
+		L_EXC("ERROR: Dispatching HTTP request");
 	} catch (...) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign("Unknown exception!");
-		std::exception exc;
-		L_EXC("ERROR: %s", error);
+		L_EXC("ERROR: Dispatching HTTP request");
 	}
 
 	if (error_code != HTTP_STATUS_OK) {

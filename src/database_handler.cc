@@ -983,15 +983,8 @@ DatabaseHandler::restore(int fd)
 					lk_db.lock();
 					try {
 						db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
-					} catch (const BaseException& exc) {
-						L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-					} catch (const Xapian::Error& exc) {
-						L_EXC("ERROR: %s", exc.get_description());
-					} catch (const std::exception& exc) {
-						L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 					} catch (...) {
-						std::exception exc;
-						L_EXC("ERROR: %s", "Unknown exception!");
+						L_EXC("ERROR: Cannot replace document");
 					}
 					lk_db.unlock();
 				}
@@ -1046,18 +1039,8 @@ DatabaseHandler::restore(int fd)
 				}
 				if (eof) { break; }
 				accumulated.store(acc, std::memory_order_relaxed);
-			} catch (const BaseException& exc) {
-				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-				break;
-			} catch (const Xapian::Error& exc) {
-				L_EXC("ERROR: %s", exc.get_description());
-				break;
-			} catch (const std::exception& exc) {
-				L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-				break;
 			} catch (...) {
-				std::exception exc;
-				L_EXC("ERROR: %s", "Unknown exception!");
+				L_EXC("ERROR: Cannot replace document");
 				break;
 			}
 
@@ -1094,18 +1077,8 @@ DatabaseHandler::restore(int fd)
 					DatabaseHandler db_handler(endpoints, flags, method);
 					std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 					queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
-				} catch (const BaseException& exc) {
-					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-				} catch (const Xapian::Error& exc) {
-					L_EXC("ERROR: %s", exc.get_description());
-					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-				} catch (const std::exception& exc) {
-					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 				} catch (...) {
-					std::exception exc;
-					L_EXC("ERROR: %s", "Unknown exception!");
+					L_EXC("ERROR: Cannot prepare document");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 				}
 			};
@@ -1218,15 +1191,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 				try {
 					lock_database lk_db(&db_handler);
 					db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
-				} catch (const BaseException& exc) {
-					L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-				} catch (const Xapian::Error& exc) {
-					L_EXC("ERROR: %s", exc.get_description());
-				} catch (const std::exception& exc) {
-					L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 				} catch (...) {
-					std::exception exc;
-					L_EXC("ERROR: %s", "Unknown exception!");
+					L_EXC("ERROR: Cannot replace document");
 				}
 			}
 
@@ -1254,18 +1220,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 				DatabaseHandler db_handler(endpoints, flags, method);
 				std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
 				queue.enqueue(db_handler.prepare_document(obj));
-			} catch (const BaseException& exc) {
-				L_EXC("ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-			} catch (const Xapian::Error& exc) {
-				L_EXC("ERROR: %s", exc.get_description());
-				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-			} catch (const std::exception& exc) {
-				L_EXC("ERROR: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 			} catch (...) {
-				std::exception exc;
-				L_EXC("ERROR: %s", "Unknown exception!");
+				L_EXC("ERROR: Cannot prepare document");
 				queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 			}
 		};

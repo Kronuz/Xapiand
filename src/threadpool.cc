@@ -22,7 +22,6 @@
 
 #include "threadpool.hh"
 
-#include "exception.h"    // for BaseException
 #include "likely.h"       // for likely
 #include "log.h"          // for L_EXC
 #include "string.hh"      // for string::format
@@ -71,15 +70,8 @@ ThreadPoolThread::operator()()
 			_pool->_enqueued.fetch_sub(1, std::memory_order_release);
 			try {
 				task();
-			} catch (const BaseException& exc) {
-				L_EXC("Task died with an unhandled exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-			} catch (const Xapian::Error& exc) {
-				L_EXC("Task died with an unhandled exception: %s", exc.get_description());
-			} catch (const std::exception& exc) {
-				L_EXC("Task died with an unhandled exception: %s", *exc.what() != 0 ? exc.what() : "Unkown std::exception!");
 			} catch (...) {
-				std::exception exc;
-				L_EXC("Task died with an unhandled exception: Unkown exception!");
+				L_EXC("ERROR: Task died with an unhandled exception");
 			}
 			_pool->_running.fetch_sub(1, std::memory_order_release);
 		} else if (_pool->_ending.load(std::memory_order_acquire)) {
