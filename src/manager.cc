@@ -336,7 +336,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_INDEX, "field_all" },
 				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
 				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
-			}, true, msgpack_type).first;
+			}, false, msgpack_type).first;
 			new_cluster = 1;
 			#ifdef XAPIAND_CLUSTERING
 			if (!opts.solo) {
@@ -921,7 +921,7 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 							{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
 						}, msgpack_type);
 						auto& doc = std::get<1>(prepared);
-						db_handler.replace_document(node->idx, std::move(doc), true);
+						db_handler.replace_document(node->idx, std::move(doc), false);
 					}
 				}
 			}
@@ -1004,7 +1004,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				db_handler.set_metadata(key, serialised, true);
+				db_handler.set_metadata(key, serialised, false);
 			}
 		} else {
 			const char *p = serialised.data();
