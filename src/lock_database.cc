@@ -55,7 +55,7 @@ Xapian::Database*
 LockableDatabase::db() const noexcept
 {
 	assert(_locked_database);
-	return _locked_database ? _locked_database->db.get() : nullptr;
+	return _locked_database ? _locked_database->db() : nullptr;
 }
 
 

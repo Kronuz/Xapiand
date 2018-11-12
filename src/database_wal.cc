@@ -1019,7 +1019,7 @@ DatabaseWALWriter::new_producer_token(const std::string& path)
 
 
 void
-DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Document&& doc)
+DatabaseWALWriter::write_add_document(Database& database, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1049,7 +1049,7 @@ DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Do
 
 
 void
-DatabaseWALWriter::write_delete_document_term(const Database& database, const std::string& term)
+DatabaseWALWriter::write_delete_document_term(Database& database, const std::string& term)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1079,7 +1079,7 @@ DatabaseWALWriter::write_delete_document_term(const Database& database, const st
 
 
 void
-DatabaseWALWriter::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
+DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1110,7 +1110,7 @@ DatabaseWALWriter::write_remove_spelling(const Database& database, const std::st
 
 
 void
-DatabaseWALWriter::write_commit(const Database& database, bool send_update)
+DatabaseWALWriter::write_commit(Database& database, bool send_update)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1139,7 +1139,7 @@ DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 
 
 void
-DatabaseWALWriter::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1170,7 +1170,7 @@ DatabaseWALWriter::write_replace_document(const Database& database, Xapian::doci
 
 
 void
-DatabaseWALWriter::write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, const Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1201,7 +1201,7 @@ DatabaseWALWriter::write_replace_document_term(const Database& database, const s
 
 
 void
-DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid did)
+DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1231,7 +1231,7 @@ DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid
 
 
 void
-DatabaseWALWriter::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
+DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key, const std::string& val)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1262,7 +1262,7 @@ DatabaseWALWriter::write_set_metadata(const Database& database, const std::strin
 
 
 void
-DatabaseWALWriter::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
+DatabaseWALWriter::write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];

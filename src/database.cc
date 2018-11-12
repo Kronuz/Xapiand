@@ -147,7 +147,7 @@ public:
 void
 DataHeader::init(void* param, void* /*unused*/)
 {
-	const auto* database = static_cast<const Database*>(param);
+	auto database = static_cast<Database*>(param);
 	assert(database);
 
 	head.magic = STORAGE_MAGIC;
@@ -163,7 +163,7 @@ DataHeader::validate(void* param, void* /*unused*/)
 		THROW(StorageCorruptVolume, "Bad data storage header magic number");
 	}
 
-	const auto* database = static_cast<const Database*>(param);
+	auto database = static_cast<Database*>(param);
 	if (UUID(head.uuid) != database->get_uuid()) {
 		THROW(StorageCorruptVolume, "Data storage UUID mismatch");
 	}
@@ -250,7 +250,7 @@ Database::reopen_writable()
 		THROW(Error, "Writable database must have one single endpoint");
 	}
 
-	db = std::make_unique<Xapian::WritableDatabase>();
+	_db = std::make_unique<Xapian::WritableDatabase>();
 
 	const auto& endpoint = endpoints[0];
 	if (endpoint.empty()) {
@@ -288,7 +288,7 @@ Database::reopen_writable()
 		local = true;
 	}
 
-	db->add_database(wsdb);
+	_db->add_database(wsdb);
 	dbs.emplace_back(wsdb, local);
 
 	if (local) {
@@ -296,7 +296,7 @@ Database::reopen_writable()
 	}
 
 	if (transaction != Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(_db.get());
 		wdb->begin_transaction(transaction == Transaction::flushed);
 	}
 
@@ -364,7 +364,7 @@ Database::reopen_readable()
 		THROW(Error, "Writable database must have at least one endpoint");
 	}
 
-	db = std::make_unique<Xapian::Database>();
+	_db = std::make_unique<Xapian::Database>();
 
 	size_t failures = 0;
 
@@ -419,7 +419,7 @@ Database::reopen_readable()
 					++failures;
 					if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 						if (endpoints.size() == failures) {
-							db.reset();
+							_db.reset();
 							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
 						incomplete = true;
@@ -436,7 +436,7 @@ Database::reopen_readable()
 			}
 		}
 
-		db->add_database(rsdb);
+		_db->add_database(rsdb);
 		dbs.emplace_back(rsdb, local);
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -464,11 +464,11 @@ Database::reopen()
 
 	reopen_time = std::chrono::system_clock::now();
 
-	if (db) {
+	if (_db) {
 		if (!incomplete) {
 			// Try to reopen
 			try {
-				bool ret = db->reopen();
+				bool ret = _db->reopen();
 				L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
 				return ret;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -494,22 +494,46 @@ Database::reopen()
 }
 
 
+Xapian::Database*
+Database::db()
+{
+	if (closed) {
+		THROW(Error, "database is closed");
+	}
+
+	if (!_db) {
+		reopen();
+	}
+
+	return _db.get();
+}
+
+
 UUID
-Database::get_uuid() const
+Database::get_uuid()
 {
 	L_CALL("Database::get_uuid");
 
-	return UUID(db->get_uuid());
+	return UUID(get_uuid_string());
+}
+
+
+std::string
+Database::get_uuid_string()
+{
+	L_CALL("Database::get_uuid_string");
+
+	return db()->get_uuid();
 }
 
 
 Xapian::rev
-Database::get_revision() const
+Database::get_revision()
 {
 	L_CALL("Database::get_revision()");
 
 #if HAVE_XAPIAN_DATABASE_GET_REVISION
-	return db->get_revision();
+	return db()->get_revision();
 #else
 	return 0;
 #endif
@@ -523,7 +547,7 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 
 	if (
 		commit_ &&
-		db &&
+		_db &&
 		modified &&
 		transaction == Database::Transaction::none &&
 		!closed &&
@@ -537,12 +561,12 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		}
 	}
 
-	if (db) {
+	if (_db) {
 		try {
-			db->close();
+			_db->close();
 		} catch (...) {
 		}
-		db.reset();
+		_db.reset();
 	}
 
 	closed = closed_;
@@ -575,7 +599,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 {
 	// Auto commit only local writable databases
 	if (
-		database->db &&
+		database->_db &&
 		database->modified &&
 		database->transaction == Database::Transaction::none &&
 		!database->closed &&
@@ -604,7 +628,7 @@ Database::commit(bool wal_, bool send_update)
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Commit: t: %d", t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
@@ -663,7 +687,7 @@ Database::begin_transaction(bool flushed)
 	}
 
 	if (transaction == Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->begin_transaction(flushed);
 		transaction = flushed ? Transaction::flushed : Transaction::unflushed;
 	}
@@ -680,7 +704,7 @@ Database::commit_transaction()
 	}
 
 	if (transaction != Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->commit_transaction();
 		transaction = Transaction::none;
 	}
@@ -697,7 +721,7 @@ Database::cancel_transaction()
 	}
 
 	if (transaction != Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->cancel_transaction();
 		transaction = Transaction::none;
 	}
@@ -717,7 +741,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Deleting document: %d  t: %d", did, t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->delete_document(did);
 			modified = true;
@@ -766,7 +790,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Deleting document: '%s'  t: %d", term, t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->delete_document(term);
 			modified = true;
@@ -925,7 +949,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	Xapian::docid did = 0;
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Adding new document.  t: %d", t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			did = wdb->add_document(doc);
 			modified = true;
@@ -978,7 +1002,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Replacing: %d  t: %d", did, t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->replace_document(did, doc);
 			modified = true;
@@ -1032,7 +1056,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	Xapian::docid did = 0;
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE_WRAP("Replacing: '%s'  t: %d", term, t);
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			did = wdb->replace_document(term, doc);
 			modified = true;
@@ -1080,7 +1104,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t; --t) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->add_spelling(word, freqinc);
 			modified = true;
@@ -1126,7 +1150,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t; --t) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->remove_spelling(word, freqdec);
 			modified = true;
@@ -1171,8 +1195,8 @@ Database::find_document(const std::string& term_id)
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-			Xapian::PostingIterator it = db->postlist_begin(term_id);
-			if (it == db->postlist_end(term_id)) {
+			Xapian::PostingIterator it = db()->postlist_begin(term_id);
+			if (it == db()->postlist_end(term_id)) {
 				THROW(DocNotFoundError, "Document not found");
 			}
 			did = *it;
@@ -1217,13 +1241,13 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 		try {
 #ifdef HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS
 			if (assume_valid_) {
-				doc = db->get_document(did, Xapian::DOC_ASSUME_VALID);
+				doc = db()->get_document(did, Xapian::DOC_ASSUME_VALID);
 			} else
 #else
 			ignore_unused(assume_valid_);
 #endif
 			{
-				doc = db->get_document(did);
+				doc = db()->get_document(did);
 			}
 #ifdef XAPIAND_DATA_STORAGE
 			if (pull_) {
@@ -1271,7 +1295,7 @@ Database::get_metadata(const std::string& key)
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-			value = db->get_metadata(key);
+			value = db()->get_metadata(key);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1309,8 +1333,8 @@ Database::get_metadata_keys()
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-			auto it = db->metadata_keys_begin();
-			auto it_e = db->metadata_keys_end();
+			auto it = db()->metadata_keys_begin();
+			auto it_e = db()->metadata_keys_end();
 			for (; it != it_e; ++it) {
 				values.push_back(*it);
 			}
@@ -1353,7 +1377,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t; --t) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		try {
 			wdb->set_metadata(key, value);
 			modified = true;
@@ -1398,12 +1422,12 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 	for (int t = DB_RETRIES; t; --t) {
 		std::string key;
 		try {
-			auto it = db->metadata_keys_begin();
-			auto it_e = db->metadata_keys_end();
+			auto it = db()->metadata_keys_begin();
+			auto it_e = db()->metadata_keys_end();
 			it.skip_to(initial);
 			for (; it != it_e; ++it) {
 				key = *it;
-				auto value = db->get_metadata(key);
+				auto value = db()->get_metadata(key);
 				serialise_string(fd, key);
 				XXH32_update(xxh_state, key.data(), key.size());
 				serialise_string(fd, value);
@@ -1450,12 +1474,12 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 	for (int t = DB_RETRIES; t; --t) {
 		Xapian::docid did = initial;
 		try {
-			auto it = db->postlist_begin("");
-			auto it_e = db->postlist_end("");
+			auto it = db()->postlist_begin("");
+			auto it_e = db()->postlist_end("");
 			it.skip_to(initial);
 			for (; it != it_e; ++it) {
 				did = *it;
-				auto doc = db->get_document(did);
+				auto doc = db()->get_document(did);
 				auto data = Data(doc.get_data());
 				for (auto& locator : data) {
 					switch (locator.type) {
@@ -1531,12 +1555,12 @@ Database::dump_documents()
 	for (int t = DB_RETRIES; t; --t) {
 		Xapian::docid did = initial;
 		try {
-			auto it = db->postlist_begin("");
-			auto it_e = db->postlist_end("");
+			auto it = db()->postlist_begin("");
+			auto it_e = db()->postlist_end("");
 			it.skip_to(initial);
 			for (; it != it_e; ++it) {
 				did = *it;
-				auto doc = db->get_document(did);
+				auto doc = db()->get_document(did);
 				auto data = Data(doc.get_data());
 				auto main_locator = data.get("");
 				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();

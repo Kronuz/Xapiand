@@ -91,7 +91,7 @@ public:
 	bool is_writable_and_local;
 	bool is_writable_and_local_with_wal;
 
-	std::unique_ptr<Xapian::Database> db;
+	std::unique_ptr<Xapian::Database> _db;
 	std::vector<std::pair<Xapian::Database, bool>> dbs;
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -108,12 +108,15 @@ public:
 
 	bool reopen();
 
+	Xapian::Database* db();
+
 #ifdef XAPIAND_DATA_STORAGE
 	std::string storage_get_stored(Xapian::docid did, const Data::Locator& locator) const;
 #endif /* XAPIAND_DATA_STORAGE */
 
-	UUID get_uuid() const;
-	Xapian::rev get_revision() const;
+	UUID get_uuid();
+	std::string get_uuid_string();
+	Xapian::rev get_revision();
 
 	void do_close(bool commit_, bool closed_, Transaction transaction_);
 	void close();
