@@ -218,8 +218,8 @@ Raft::raft_server(Message type, const std::string& message)
 {
 	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
-	L_OBJ_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_OBJ_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Raft::append_entries,

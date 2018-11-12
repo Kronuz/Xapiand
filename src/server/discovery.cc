@@ -196,8 +196,8 @@ Discovery::discovery_server(Message type, const std::string& message)
 {
 	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
 
-	L_OBJ_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_OBJ_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
 	static const dispatch_func dispatch[] = {
 		&Discovery::hello,
