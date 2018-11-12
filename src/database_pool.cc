@@ -50,8 +50,6 @@
 #define REMOTE_DATABASE_UPDATE_TIME 3
 #define LOCAL_DATABASE_UPDATE_TIME 10
 
-#define DB_TIMEOUT 3
-
 
 //  ____        _        _                     ___
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___ / _ \ _   _  ___ _   _  ___
@@ -218,11 +216,11 @@ DatabasePool::~DatabasePool()
 
 
 std::shared_ptr<DatabaseQueue>
-DatabasePool::_spawn_queue(bool writable, size_t hash, const Endpoints& endpoints)
+DatabasePool::_spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints)
 {
 	L_CALL("DatabasePool::_spawn_queue(<Database %s>)", repr(database->endpoints.to_string()));
 
-	auto queue_pair = writable
+	auto queue_pair = db_writable
 		? writable_databases.get(hash, endpoints)
 		: databases.get(hash, endpoints);
 
@@ -259,7 +257,7 @@ DatabasePool::_drop_queue(const std::shared_ptr<DatabaseQueue>& queue)
 
 
 void
-DatabasePool::lock(const std::shared_ptr<Database>& database)
+DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 {
 	L_CALL("DatabasePool::lock(<Database %s>)", repr(database->endpoints.to_string()));
 
@@ -291,7 +289,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database)
 			}
 			return true;
 		};
-		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
+		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 		if (!queue->lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
 			THROW(TimeOutError, "Cannot grant exclusive lock database");
 		}
@@ -335,7 +333,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 
 
 void
-DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
+DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout)
 {
 	L_CALL("DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()), flags, [&flags]() {
 		std::vector<std::string> values;
@@ -377,7 +375,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						(!db_writable && count > 1000)
 					) {
 						// Lock until a database is available if it can't get one.
-						if (!queue->pop(database, DB_TIMEOUT)) {
+						if (!queue->pop(database, timeout)) {
 							THROW(TimeOutError, "Database is not available");
 						}
 					} else {
@@ -404,7 +402,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			}
 
 			if (locks) {
-				auto timeout_tp = std::chrono::system_clock::now() + std::chrono::seconds(DB_TIMEOUT);
+				auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 				std::function<std::shared_ptr<DatabaseQueue>()> has_locked_endpoints;
 				if (db_writable) {
 					has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
@@ -427,7 +425,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				auto wq = has_locked_endpoints();
 				if (wq) {
 					database.reset();
-					if (--retries == 0) {
+					if (--retries == 0 || !timeout) {
 						THROW(TimeOutError, "Database is not available");
 					}
 					do {
