@@ -22,12 +22,13 @@
 
 #pragma once
 
-#include <functional>		                 // for std::function
+#include <chrono>                            // for std::chrono
+#include <functional>                        // for std::function
 #include <mutex>                             // for std::mutex
 #include <unordered_map>                     // for std::unordered_map
 #include <utility>                           // for std::move
 
-#include "callable_traits.hh"                  // for callable_traits
+#include "callable_traits.hh"                // for callable_traits
 #include "log.h"                             // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
 #include "repr.hh"                           // for repr
 #include "scheduler.h"                       // for SchedulerTask, SchedulerThread
@@ -35,21 +36,20 @@
 #include "time_point.hh"                     // for time_point_to_ullong
 
 
-#define NORMALY_EXECUTE_AFTER       1s
-#define WHEN_BUSY_EXECUTE_AFTER     3s
-#define FORCE_EXECUTE_AFTER         9s
-
-
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 class DebouncerTask;
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 class Debouncer : public Scheduler {
-	friend DebouncerTask<Key, Func, Tuple>;
+	friend DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>;
+
+	static constexpr auto debounce_timeout = std::chrono::milliseconds(DT);
+	static constexpr auto debounce_busy_timeout = std::chrono::milliseconds(DBT);
+	static constexpr auto debounce_force_timeout = std::chrono::milliseconds(DFT);
 
 	struct Status {
-		std::shared_ptr<DebouncerTask<Key, Func, Tuple>> task;
+		std::shared_ptr<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>> task;
 		unsigned long long max_wakeup_time;
 	};
 
@@ -70,18 +70,18 @@ public:
 };
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 class DebouncerTask : public ScheduledTask {
-	friend Debouncer<Key, Func, Tuple>;
+	friend Debouncer<Key, DT, DBT, DFT, Func, Tuple>;
 
-	Debouncer<Key, Func, Tuple>& debouncer;
+	Debouncer<Key, DT, DBT, DFT, Func, Tuple>& debouncer;
 
 	bool forced;
 	Key key;
 	Tuple args;
 
 public:
-	DebouncerTask(Debouncer<Key, Func, Tuple>& debouncer, bool forced, Key key, Tuple args);
+	DebouncerTask(Debouncer<Key, DT, DBT, DFT, Func, Tuple>& debouncer, bool forced, Key key, Tuple args);
 
 	void run() override;
 
@@ -91,9 +91,9 @@ public:
 };
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 inline
-DebouncerTask<Key, Func, Tuple>::DebouncerTask(Debouncer<Key, Func, Tuple>& debouncer, bool forced, Key key, Tuple args) :
+DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::DebouncerTask(Debouncer<Key, DT, DBT, DFT, Func, Tuple>& debouncer, bool forced, Key key, Tuple args) :
 	debouncer(debouncer),
 	forced(forced),
 	key(std::move(key)),
@@ -102,9 +102,9 @@ DebouncerTask<Key, Func, Tuple>::DebouncerTask(Debouncer<Key, Func, Tuple>& debo
 }
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 inline void
-DebouncerTask<Key, Func, Tuple>::run()
+DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::run()
 {
 	L_CALL("DebouncerTask::run()");
 	L_DEBUG_HOOK("DebouncerTask::run", "DebouncerTask::run()");
@@ -115,23 +115,23 @@ DebouncerTask<Key, Func, Tuple>::run()
 }
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 inline void
-Debouncer<Key, Func, Tuple>::release(Key key)
+Debouncer<Key, DT, DBT, DFT, Func, Tuple>::release(Key key)
 {
 	std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
 	statuses.erase(key);
 }
 
 
-template <typename Key, typename Func, typename Tuple>
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 template <typename... Args>
 inline void
-Debouncer<Key, Func, Tuple>::debounce(Key key, Args&&... args)
+Debouncer<Key, DT, DBT, DFT, Func, Tuple>::debounce(Key key, Args&&... args)
 {
 	L_CALL("Debouncer::debounce(<key, ...)");
 
-	std::shared_ptr<DebouncerTask<Key, Func, Tuple>> task;
+	std::shared_ptr<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>> task;
 	unsigned long long next_wakeup_time;
 
 	{
@@ -144,13 +144,13 @@ Debouncer<Key, Func, Tuple>::debounce(Key key, Args&&... args)
 		if (it == statuses.end()) {
 			auto& status_ref = statuses[key] = {
 				nullptr,
-				time_point_to_ullong(now + FORCE_EXECUTE_AFTER)
+				time_point_to_ullong(now + debounce_force_timeout)
 			};
 			status = &status_ref;
-			next_wakeup_time = time_point_to_ullong(now + NORMALY_EXECUTE_AFTER);
+			next_wakeup_time = time_point_to_ullong(now + debounce_timeout);
 		} else {
 			status = &(it->second);
-			next_wakeup_time = time_point_to_ullong(now + WHEN_BUSY_EXECUTE_AFTER);
+			next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout);
 		}
 
 		bool forced;
@@ -167,7 +167,7 @@ Debouncer<Key, Func, Tuple>::debounce(Key key, Args&&... args)
 			}
 			status->task->clear();
 		}
-		status->task = std::make_shared<DebouncerTask<Key, Func, Tuple>>(*this, forced, key, std::make_tuple(std::forward<Args>(args)...));
+		status->task = std::make_shared<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>>(*this, forced, key, std::make_tuple(std::forward<Args>(args)...));
 		task = status->task;
 	}
 
@@ -175,9 +175,9 @@ Debouncer<Key, Func, Tuple>::debounce(Key key, Args&&... args)
 }
 
 
-template <typename Key, typename Func>
+template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, typename Func>
 inline auto
 make_debouncer(std::string name, const char* format, size_t num_threads, Func func)
 {
-	return Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type>(name, format, num_threads, func);
+	return Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type>(name, format, num_threads, func);
 }
