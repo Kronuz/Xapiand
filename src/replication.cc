@@ -311,9 +311,11 @@ Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
-	L_REPLICATION("Replication::reply_end_of_changes%s", switch_database ? " (switching database)" : "");
+	bool switching = !!switch_database;
 
-	if (switch_database) {
+	L_REPLICATION("Replication::reply_end_of_changes%s", switching ? " (switching database)" : "");
+
+	if (switching) {
 		// Close internal databases
 		switch_database->close();
 		database()->close();
@@ -322,14 +324,15 @@ Replication::reply_end_of_changes(const std::string&)
 		XapiandManager::manager->database_pool.lock(database());
 
 		// Now we are sure no readers are using the switch_database
-		delete_files(database()->endpoints[0].path, {"*glass", "wal.*"});
-		move_files(switch_database->endpoints[0].path, database()->endpoints[0].path);
+		delete_files(endpoints[0].path, {"*glass", "wal.*"});
+		move_files(switch_database->endpoints[0].path, endpoints[0].path);
 
 		// release exclusive lock
 		XapiandManager::manager->database_pool.unlock(database());
 	}
 
-	L_REPLICATION("Replication completed!");
+	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy" : "from a set of changesets");
+
 	if (client.cluster_database) {
 		client.cluster_database = false;
 		XapiandManager::manager->cluster_database_ready();
