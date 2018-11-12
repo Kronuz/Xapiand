@@ -506,7 +506,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	Database::autocommit(database);
 
 	if (auto queue = database->weak_queue.lock()) {
-		std::lock_guard<std::mutex> lk(qmtx);
+		std::unique_lock<std::mutex> lk(qmtx);
 
 		if (locks) {
 			if (db_writable) {
@@ -565,6 +565,13 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 				databases.erase(hash);
 			}
 		}
+
+		TaskQueue<void()> callbacks;
+		std::swap(callbacks, queue->callbacks);
+		lk.unlock();
+
+		while (callbacks.call()) {};
+
 	} else {
 		database.reset();
 	}

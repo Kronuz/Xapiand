@@ -39,6 +39,7 @@
 #include <xapian.h>             // for Xapian::docid, Xapian::termcount, Xapian::Document, Xapian::ExpandDecider
 
 #include "cuuid/uuid.h"         // for UUID, UUID_LENGTH
+#include "database_flags.h"     // for DB_WRITABLE
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 #include "queue.h"              // for Queue, QueueSet
@@ -89,6 +90,8 @@ private:
 	std::condition_variable lockable_cond;
 
 	Endpoints endpoints;
+
+	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
 protected:
 	template <typename... Args>
@@ -180,6 +183,24 @@ public:
 
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
 	void checkin(std::shared_ptr<Database>& database);
+
+	template <typename Func>
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout, Func callback) {
+		try {
+			checkout(database, endpoints, flags, timeout);
+		} catch (const TimeOutError&) {
+			size_t hash = endpoints.hash();
+			bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
+			std::lock_guard<std::mutex> lk(qmtx);
+			auto queue = db_writable
+					? writable_databases.get(hash)
+					: databases.get(hash);
+			if (queue) {
+				queue->callbacks.enqueue(callback);
+			}
+			throw;
+		}
+	}
 
 	DatabasePool(size_t dbpool_size, size_t max_databases);
 	DatabasePool(const DatabasePool&) = delete;
