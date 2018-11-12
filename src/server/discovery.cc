@@ -37,6 +37,7 @@
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
 #include "readable_revents.hh"              // for readable_revents
+#include "random.hh"                        // for random_int
 #include "repr.hh"                          // for repr
 #include "utype.hh"                         // for toUType
 
@@ -390,7 +391,7 @@ Discovery::db_updated(Message type, const std::string& message)
 		} else {
 			// Replicate database from the other node
 			Endpoint remote_endpoint(path, node.get());
-			trigger_replication().debounce(local_endpoint.path, remote_endpoint, local_endpoint);
+			trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, local_endpoint.path, remote_endpoint, local_endpoint);
 		}
 	}
 }

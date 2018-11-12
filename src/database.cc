@@ -39,6 +39,7 @@
 #include "lz4/xxhash.h"           // for XXH32_update, XXH32_state_t
 #include "manager.h"              // for XapiandManager::manager, sig_exit, trigger_replication
 #include "msgpack.h"              // for MsgPack
+#include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "string.hh"              // for string::from_delta, string::format
@@ -392,7 +393,7 @@ Database::reopen_readable()
 				} else {
 					try {
 						// If remote is master (it should be), try triggering replication
-						trigger_replication().debounce(endpoint.path, endpoint, Endpoint{endpoint.path});
+						trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}
@@ -400,7 +401,7 @@ Database::reopen_readable()
 				if (!exists(endpoint.path + "/iamglass")) {
 					try {
 						// If remote is master (it should be), try triggering replication
-						trigger_replication().debounce(endpoint.path, endpoint, Endpoint{endpoint.path});
+						trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}

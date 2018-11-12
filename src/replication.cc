@@ -32,6 +32,7 @@
 #include "io.hh"                      // for io::*
 #include "length.h"                   // for serialise_string, unserialise_string
 #include "manager.h"                  // for XapiandManager::manager
+#include "random.hh"                  // for random_int
 #include "server/binary_client.h"     // for BinaryClient
 
 
@@ -105,7 +106,7 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 	endpoints = Endpoints{dst_endpoint};
 	lk_db.lock(0, [=] {
 		// If it cannot checkout because database is busy, retry when ready...
-		trigger_replication().debounce(dst_endpoint.path, src_endpoint, dst_endpoint);
+		trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
 	});
 
 	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
