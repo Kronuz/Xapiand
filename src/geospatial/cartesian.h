@@ -173,12 +173,12 @@ public:
 };
 
 
-inline static Cartesian operator*(const Cartesian& c, double scale) {
+inline Cartesian operator*(const Cartesian& c, double scale) {
 	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
 }
 
 
-inline static Cartesian operator*(double scale, const Cartesian& c) {
+inline Cartesian operator*(double scale, const Cartesian& c) {
 	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
 }
 

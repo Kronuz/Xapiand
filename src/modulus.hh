@@ -27,7 +27,7 @@
 
 
 template<typename T, typename M, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value && std::is_integral<std::decay_t<M>>::value>>
-static inline M modulus(T val, M mod) {
+inline M modulus(T val, M mod) {
 	if (mod < 0) {
 		throw std::invalid_argument("Modulus must be positive");
 	}

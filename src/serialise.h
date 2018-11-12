@@ -88,7 +88,7 @@ struct required_spc_t;
 
 
 namespace Serialise {
-	inline static bool isText(std::string_view field_value, bool bool_term) noexcept {
+	inline bool isText(std::string_view field_value, bool bool_term) noexcept {
 		return !bool_term && field_value.find(' ') != std::string::npos;
 	}
 

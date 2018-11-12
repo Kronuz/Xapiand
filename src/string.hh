@@ -43,32 +43,32 @@
 
 
 namespace std {
-	static inline auto& to_string(std::string& str) {
+	inline auto& to_string(std::string& str) {
 		return str;
 	}
 
-	static inline const auto& to_string(const std::string& str) {
+	inline const auto& to_string(const std::string& str) {
 		return str;
 	}
 
 	template <typename T, int N>
-	static inline auto to_string(const T (&s)[N]) {
+	inline auto to_string(const T (&s)[N]) {
 		return std::string(s, N - 1);
 	}
 
-	static inline auto to_string(const std::string_view& str) {
+	inline auto to_string(const std::string_view& str) {
 		return std::string(str);
 	}
 
 	template <std::size_t SN, typename ST>
-	static inline auto to_string(const static_string::static_string<SN, ST>& str) {
+	inline auto to_string(const static_string::static_string<SN, ST>& str) {
 		return std::string(str.data(), str.size());
 	}
 
 	template <typename T, typename = std::enable_if_t<
 		std::is_convertible<decltype(std::declval<T>().to_string()), std::string>::value
 	>>
-	static inline auto to_string(const T& obj) {
+	inline auto to_string(const T& obj) {
 		return obj.to_string();
 	}
 }
@@ -86,7 +86,7 @@ std::ostream& operator<<(std::ostream& os, const T& obj) {
 namespace string {
 
 template <typename T>
-static inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
 {
 	auto it = values.begin();
 	auto it_e = values.end();
@@ -115,13 +115,13 @@ static inline std::string join(const std::vector<T>& values, std::string_view de
 
 
 template <typename T>
-static inline std::string join(const std::vector<T>& values, std::string_view delimiter) {
+inline std::string join(const std::vector<T>& values, std::string_view delimiter) {
 	return join(values, delimiter, delimiter);
 }
 
 
 template <typename T, typename UnaryPredicate, typename = std::enable_if_t<std::is_invocable<UnaryPredicate, T>::value>>
-static inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter, UnaryPredicate pred) {
 	std::vector<T> filtered_values(values.size());
 	filtered_values.erase(std::remove_copy_if(values.begin(), values.end(), filtered_values.begin(), pred), filtered_values.end());
 	return join(filtered_values, delimiter, last_delimiter);
@@ -129,13 +129,13 @@ static inline std::string join(const std::vector<T>& values, std::string_view de
 
 
 template <typename T, typename UnaryPredicate, typename = std::enable_if_t<std::is_invocable<UnaryPredicate, T>::value>>
-static inline std::string join(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
+inline std::string join(const std::vector<T>& values, std::string_view delimiter, UnaryPredicate pred) {
 	return join(values, delimiter, delimiter, pred);
 }
 
 
 template <typename T>
-static inline std::vector<std::string_view> split(std::string_view value, const T& sep) {
+inline std::vector<std::string_view> split(std::string_view value, const T& sep) {
 	std::vector<std::string_view> values;
 	Split<T>::split(value, sep, std::back_inserter(values));
 	return values;
@@ -143,7 +143,7 @@ static inline std::vector<std::string_view> split(std::string_view value, const 
 
 
 template <typename... Args>
-static inline std::string format(std::string_view format, Args&&... args) {
+inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
 	L_DEBUG_TRY {
 		str = fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
@@ -152,7 +152,7 @@ static inline std::string format(std::string_view format, Args&&... args) {
 }
 
 
-static inline std::string indent(std::string_view str, char sep, int level, bool indent_first=true) {
+inline std::string indent(std::string_view str, char sep, int level, bool indent_first=true) {
 	std::string result;
 	result.reserve(((indent_first ? 1 : 0) + std::count(str.begin(), str.end(), '\n')) * level);
 
@@ -176,7 +176,7 @@ static inline std::string indent(std::string_view str, char sep, int level, bool
 }
 
 
-static inline std::string left(std::string_view str, int width, bool fill = false) {
+inline std::string left(std::string_view str, int width, bool fill = false) {
 	std::string result;
 	result.append(str.data(), str.size());
 	if (fill) {
@@ -188,7 +188,7 @@ static inline std::string left(std::string_view str, int width, bool fill = fals
 }
 
 
-static inline std::string center(std::string_view str, int width, bool fill = false) {
+inline std::string center(std::string_view str, int width, bool fill = false) {
 	std::string result;
 	auto idx = int((width + 0.5f) / 2 - (str.size() + 0.5f) / 2);
 	width -= idx;
@@ -206,7 +206,7 @@ static inline std::string center(std::string_view str, int width, bool fill = fa
 }
 
 
-static inline std::string right(std::string_view str, int width) {
+inline std::string right(std::string_view str, int width) {
 	std::string result;
 	for (auto idx = int(width - str.size()); idx > 0; --idx) {
 		result += " ";
@@ -216,31 +216,31 @@ static inline std::string right(std::string_view str, int width) {
 }
 
 
-static inline std::string upper(std::string_view str) {
+inline std::string upper(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::toupper);
 	return result;
 }
 
 
-static inline std::string lower(std::string_view str) {
+inline std::string lower(std::string_view str) {
 	std::string result;
 	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::tolower);
 	return result;
 }
 
 
-static inline bool startswith(std::string_view text, std::string_view token) {
+inline bool startswith(std::string_view text, std::string_view token) {
 	return text.size() >= token.size() && text.compare(0, token.size(), token) == 0;
 }
 
 
-static inline bool startswith(std::string_view text, char ch) {
+inline bool startswith(std::string_view text, char ch) {
 	return text.size() >= 1 && text.at(0) == ch;
 }
 
 
-static inline bool hasupper(std::string_view str) {
+inline bool hasupper(std::string_view str) {
 	for (const auto& c : str) {
 		if (isupper(c) != 0) {
 			return true;
@@ -251,22 +251,22 @@ static inline bool hasupper(std::string_view str) {
 }
 
 
-static inline bool endswith(std::string_view text, std::string_view token) {
+inline bool endswith(std::string_view text, std::string_view token) {
 	return text.size() >= token.size() && std::equal(text.begin() + text.size() - token.size(), text.end(), token.begin());
 }
 
 
-static inline bool endswith(std::string_view text, char ch) {
+inline bool endswith(std::string_view text, char ch) {
 	return text.size() >= 1 && text.at(text.size() - 1) == ch;
 }
 
 
-static inline void toupper(std::string& str) {
+inline void toupper(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), chars::toupper);
 }
 
 
-static inline void tolower(std::string& str) {
+inline void tolower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), chars::tolower);
 }
 

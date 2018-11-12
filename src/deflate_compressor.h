@@ -371,7 +371,7 @@ public:
 };
 
 
-static inline std::string
+inline std::string
 compress_deflate(std::string_view uncompressed)
 {
 	std::string compressed;
@@ -383,7 +383,7 @@ compress_deflate(std::string_view uncompressed)
 }
 
 
-static inline std::string
+inline std::string
 decompress_deflate(std::string_view compressed)
 {
 	std::string decompressed;

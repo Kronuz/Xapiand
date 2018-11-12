@@ -27,7 +27,7 @@
 
 namespace epoch {
 	template<typename Period = std::chrono::seconds>
-	static inline auto now() noexcept {
+	inline auto now() noexcept {
 		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 }

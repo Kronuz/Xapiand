@@ -292,7 +292,7 @@ using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul s
 
 //
 
-static inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
+inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	// Computes the bucket number for key in the range [0, num_buckets).
 	// The algorithm used is the jump consistent hash by Lamping and Veach.
 	// A Fast, Minimal Memory, Consistent Hash Algorithm
@@ -310,7 +310,7 @@ static inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	return static_cast<uint32_t>(b);
 }
 
-static inline uint32_t jump_consistent_hash(std::string_view key, int32_t num_buckets) {
+inline uint32_t jump_consistent_hash(std::string_view key, int32_t num_buckets) {
 	return jump_consistent_hash(xxh64::hash(key), num_buckets);
 }
 

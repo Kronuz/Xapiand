@@ -43,7 +43,7 @@ enum class ReplicationMessageType {
 };
 
 
-static inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
+inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
 	static const std::string ReplicationMessageTypeNames[] = {
 		"MSG_GET_CHANGESETS",
 	};
@@ -69,7 +69,7 @@ enum class ReplicationReplyType {
 };
 
 
-static inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
+inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 	static const std::string ReplicationReplyTypeNames[] = {
 		"REPLY_WELCOME",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",

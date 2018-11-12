@@ -29,7 +29,7 @@
 #include "string.hh"          // for string::join
 
 
-static inline std::string readable_revents(int revents) {
+inline std::string readable_revents(int revents) {
 	std::vector<std::string> values;
 	if (revents == EV_NONE) values.push_back("EV_NONE");
 	if ((revents & EV_READ) == EV_READ) values.push_back("EV_READ");

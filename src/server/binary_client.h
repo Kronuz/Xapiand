@@ -51,7 +51,7 @@ enum class State {
 	MAX,
 };
 
-static inline const std::string& StateNames(State type) {
+inline const std::string& StateNames(State type) {
 	static const std::string _[] = {
 		"INIT",
 		"REMOTEPROTOCOL_SERVER",

@@ -27,6 +27,6 @@
 
 // It'll return the enum's underlying type.
 template<typename E>
-static inline constexpr auto toUType(E enumerator) noexcept {
+inline constexpr auto toUType(E enumerator) noexcept {
 	return static_cast<std::underlying_type_t<E>>(enumerator);
 }

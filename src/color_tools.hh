@@ -28,7 +28,7 @@
 #include "string.hh"
 
 
-static inline void
+inline void
 hsv2rgb(
 	// input:
 	double hue,        // angle in degrees between 0 and 360

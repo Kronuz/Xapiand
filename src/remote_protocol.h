@@ -77,7 +77,7 @@ enum class RemoteMessageType {
 };
 
 
-static inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
+inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
 	static const std::string RemoteMessageTypeNames[] = {
 		"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
 		"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
@@ -126,7 +126,7 @@ enum class RemoteReplyType {
 };
 
 
-static inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
+inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 	static const std::string RemoteReplyTypeNames[] = {
 		"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
 		"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",

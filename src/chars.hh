@@ -25,7 +25,7 @@
 namespace chars {
 
 // converts a character to lowercase
-static constexpr inline char tolower(char c) noexcept {
+inline constexpr char tolower(char c) noexcept {
 	constexpr char _[256]{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
@@ -65,7 +65,7 @@ static constexpr inline char tolower(char c) noexcept {
 
 
 // converts a character to uppercase
-static constexpr inline char toupper(char c) noexcept {
+inline constexpr char toupper(char c) noexcept {
 	constexpr char _[256]{
 		'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 		'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
@@ -103,7 +103,7 @@ static constexpr inline char toupper(char c) noexcept {
 	return _[static_cast<unsigned char>(c)];
 }
 
-static constexpr inline int
+inline constexpr int
 hexdigit(char c) noexcept {
 	constexpr int _[256]{
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -131,7 +131,7 @@ hexdigit(char c) noexcept {
 
 
 // converts the two hexadecimal characters to an int (a byte)
-static constexpr inline int
+inline constexpr int
 hexdec(const char** ptr) noexcept {
 	auto pos = *ptr;
 	auto a = hexdigit(*pos++);
@@ -144,7 +144,7 @@ hexdec(const char** ptr) noexcept {
 }
 
 
-static inline void
+inline void
 char_repr(char c, char** p)
 {
 	constexpr char _[] =

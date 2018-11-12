@@ -57,14 +57,14 @@ static const Clk& clk() {
 
 
 template <typename T>
-static inline unsigned long long
+inline unsigned long long
 time_point_to_ullong(std::chrono::time_point<T> t) {
 	return Clk::clk().time_point_to_ullong<T>(t);
 }
 
 
 template <typename T=std::chrono::system_clock>
-static inline std::chrono::time_point<T>
+inline std::chrono::time_point<T>
 time_point_from_ullong(unsigned long long t) {
 	return Clk::clk().time_point_from_ullong<T>(t);
 }

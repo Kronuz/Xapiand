@@ -32,7 +32,7 @@
 #include "string.hh"             // for string::format, string::join
 
 
-static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
+inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 	// char ip[INET_ADDRSTRLEN];
 	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
 	// return std::string(ip);
@@ -44,7 +44,7 @@ static inline std::string fast_inet_ntop4(const struct in_addr& addr) {
 }
 
 
-static inline void tcp_nopush(int sock) {
+inline void tcp_nopush(int sock) {
 	int optval = 1;
 
 #ifdef TCP_NOPUSH
@@ -61,7 +61,7 @@ static inline void tcp_nopush(int sock) {
 }
 
 
-static inline void tcp_push(int sock) {
+inline void tcp_push(int sock) {
 	int optval = 0;
 
 #ifdef TCP_NOPUSH

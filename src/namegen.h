@@ -268,7 +268,7 @@ std::string tostring(const std::wstring& s);
 
 
 // Custom name_generator()
-static inline std::string name_generator() {
+inline std::string name_generator() {
 	static NameGen::Generator generator("!<b<||v|V><||s|S|b>>");
 	return generator.toString();
 }

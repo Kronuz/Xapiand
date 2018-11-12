@@ -49,7 +49,7 @@ namespace v8pp {
 constexpr auto DURATION_SCRIPT = std::chrono::milliseconds(100);
 
 
-inline static size_t hash(const std::string& source) {
+inline size_t hash(const std::string& source) {
 	std::hash<std::string> hash_fn;
 	return hash_fn(source);
 }

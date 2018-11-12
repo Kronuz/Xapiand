@@ -78,7 +78,7 @@ inline void log(std::string fmt, Args&&... args) {
 #endif
 
 template<typename T, std::size_t N>
-static inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
+inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 	return N;
 }
 
