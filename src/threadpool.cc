@@ -28,7 +28,6 @@
 #include "thread.hh"      // for Thread, set_thread_name
 
 
-
 ThreadPoolThread::ThreadPoolThread() noexcept :
 	_pool(nullptr),
 	_idx(0)
