@@ -23,6 +23,8 @@
 #include "test_wal.h"
 
 #include "../src/database.h"
+#include "../src/database_wal.h"
+
 
 const std::string test_db(".test_wal.db");
 const std::string restored_db(".backup_wal.db");
@@ -104,6 +106,8 @@ int create_db_wal() {
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
 
+	DatabaseWALWriter::start(1);
+
 	auto re = db_wal.get_body(document, JSON_CONTENT_TYPE);
 
 	db_wal.db_handler.index(std::to_string(1), false, re.second, true, json_type);
@@ -122,8 +126,8 @@ int create_db_wal() {
 		return 1;
 	}
 
-	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.1012")) == -1) {
-		L_ERR("ERROR: Could not copy the file %s to dir %s\n", "wal.1012", restored_db);
+	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.1016")) == -1) {
+		L_ERR("ERROR: Could not copy the file %s to dir %s\n", "wal.1016", restored_db);
 		return 1;
 	}
 
@@ -139,7 +143,8 @@ int restore_database() {
 			/* Trigger the backup wal */
 			Endpoints endpoints;
 			endpoints.add(create_endpoint(restored_db));
-			auto b_queue = std::make_shared<DatabaseQueue>(endpoints);
+			const auto queue_state(std::make_shared<queue::QueueState>(-1, 1, -1));
+			auto b_queue = DatabaseQueue::make_shared(endpoints, queue_state);
 			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, DB_WRITABLE);
 			if (not dir_compare(test_db, restored_db)) {
 				delete_files(restored_db);
