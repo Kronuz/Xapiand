@@ -27,10 +27,11 @@
 #include "string_view.hh"        // for std::string_view
 #include <unistd.h>
 
-#include "async_fsync.h"         // for AsyncFsync
 #include "fs.hh"                 // for opendir, find_file_dir, closedir
+#include "debouncer.h"           // for make_debouncer
 #include "io.hh"                 // for io::*
 #include "likely.h"              // for likely, unlikely
+#include "opts.h"                // for opts::*
 #include "logger.h"
 #include "lz4_compressor.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "strict_stox.hh"        // for strict_stoull
@@ -75,6 +76,7 @@ constexpr int STORAGE_COMPRESS         = 0x20;  // Compress data in storage.
 constexpr int STORAGE_FLAG_COMPRESSED  = 0x01;
 constexpr int STORAGE_FLAG_DELETED     = 0x02;
 constexpr int STORAGE_FLAG_MASK        = STORAGE_FLAG_COMPRESSED | STORAGE_FLAG_DELETED;
+
 
 
 class StorageException : public Error {
@@ -124,6 +126,30 @@ public:
 	template<typename... Args>
 	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
+
+inline auto& fsyncher() {
+	static auto fsyncher = make_debouncer<int>("F--", "F%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
+		auto start = std::chrono::system_clock::now();
+
+		int err = full_fsync
+			? io::unchecked_full_fsync(fd)
+			: io::unchecked_fsync(fd);
+
+		auto end = std::chrono::system_clock::now();
+
+		if (err == -1) {
+			if (errno == EBADF || errno == EINVAL) {
+				L_DEBUG("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+			} else {
+				L_WARNING("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+			}
+		} else {
+			L_DEBUG("Async %s succeeded after %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
+		}
+	});
+	return fsyncher;
+}
 
 
 struct StorageHeader {
@@ -806,15 +832,9 @@ public:
 		if (!(flags & STORAGE_NO_SYNC)) {
 			if (flags & STORAGE_ASYNC_SYNC) {
 				if (flags & STORAGE_FULL_SYNC) {
-					if unlikely(AsyncFsync::full_fsync(fd) == -1) {
-						close();
-						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
-					}
+					fsyncher().debounce(fd, fd, true);
 				} else {
-					if unlikely(AsyncFsync::fsync(fd) == -1) {
-						close();
-						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
-					}
+					fsyncher().debounce(fd, fd, false);
 				}
 			} else {
 				if (flags & STORAGE_FULL_SYNC) {

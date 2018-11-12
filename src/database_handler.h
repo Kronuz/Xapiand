@@ -34,8 +34,11 @@
 #include <xapian.h>                          // for Document, docid, MSet
 
 #include "database_flags.h"                  // for DB_*
+#include "debouncer.h"                       // for make_debouncer
+#include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
 #include "lock_database.h"                   // for LockableDatabase
+#include "opts.h"                            // for opts::*
 
 
 class AggregationMatchSpy;
@@ -43,7 +46,6 @@ class Data;
 class Database;
 class DatabaseHandler;
 class Document;
-class Endpoints;
 class MsgPack;
 class Multi_MultiValueKeyMaker;
 class Schema;
@@ -289,3 +291,12 @@ public:
 
 	uint64_t hash(size_t retries=DB_RETRIES);
 };
+
+
+void committer_commit(std::weak_ptr<Database> weak_database);
+
+
+inline auto& committer() {
+	static auto committer = make_debouncer<Endpoints>("A--", "A%02zu", opts.num_committers, committer_commit);
+	return committer;
+}

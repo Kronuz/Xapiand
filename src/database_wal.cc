@@ -48,7 +48,6 @@
 #include "ignore_unused.h"        // for ignore_unused
 #include "io.hh"                  // for io::*
 #include "log.h"                  // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
-#include "lru.h"                  // for lru::LRU
 #include "lz4_compressor.h"       // for compress_lz4, decompress_lz4
 #include "manager.h"              // for XapiandManager::manager
 #include "metrics.h"              // for Metrics::metrics
@@ -57,7 +56,6 @@
 #include "repr.hh"                // for repr
 #include "server/discovery.h"     // for Discovery::signal_db_update
 #include "string.hh"              // for string::format
-#include "thread.hh"              // for Thread
 
 
 // #undef L_DEBUG
@@ -853,65 +851,70 @@ DatabaseWAL::get_current_line(uint32_t end_off)
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| \_/\_/_/   \_\_____\_/\_/ |_|  |_|\__\___|_|
 //
 
-std::unique_ptr<DatabaseWALWriter> DatabaseWALWriter::_instance;
+DatabaseWALWriterThread::DatabaseWALWriterThread() noexcept :
+	_wal_writer(nullptr),
+	_idx(0)
+{
+}
 
-struct DatabaseWALWriterThread : public Thread {
-	DatabaseWALWriter* _wal_writer;
-	size_t _idx;
-	BlockingConcurrentQueue<std::function<void(DatabaseWALWriterThread&)>> _queue;
 
-	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
+DatabaseWALWriterThread::DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept :
+	_wal_writer(async_wal),
+	_idx(idx)
+{
+}
 
-	DatabaseWALWriterThread() noexcept :
-		_wal_writer(nullptr),
-		_idx(0)
-	{}
 
-	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept :
-		_wal_writer(async_wal),
-		_idx(idx)
-	{}
+DatabaseWALWriterThread&
+DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
+{
+	_wal_writer = std::move(other._wal_writer);
+	_idx = std::move(other._idx);
+	Thread::operator=(static_cast<Thread&&>(other));
+	return *this;
+}
 
-	DatabaseWALWriterThread& operator=(DatabaseWALWriterThread&& other) {
-		_wal_writer = std::move(other._wal_writer);
-		_idx = std::move(other._idx);
-		Thread::operator=(static_cast<Thread&&>(other));
-		return *this;
-	}
 
-	void operator()() override {
-		set_thread_name(string::format(_wal_writer->_format, _idx));
+void
+DatabaseWALWriterThread::operator()()
+{
+	set_thread_name(string::format(_wal_writer->_format, _idx));
 
-		_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
-		while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
-			std::function<void(DatabaseWALWriterThread&)> task;
-			_queue.wait_dequeue(task);
-			if likely(task != nullptr) {
-				try {
-					task(*this);
-				} catch (...) {
-					L_EXC("ERROR: Task died with an unhandled exception");
-				}
-			} else if (_wal_writer->_ending.load(std::memory_order_acquire)) {
-				break;
-			}
-		}
-		_wal_writer->_workers.fetch_sub(1, std::memory_order_relaxed);
-	}
-
-	void clear() {
+	_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
+	while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
 		std::function<void(DatabaseWALWriterThread&)> task;
-		while (_queue.try_dequeue(task)) {}
-	}
-
-	DatabaseWAL& wal(const std::string& path) {
-		auto it = lru.find(path);
-		if (it == lru.end()) {
-			it = lru.emplace(path, std::make_unique<DatabaseWAL>(path)).first;
+		_queue.wait_dequeue(task);
+		if likely(task != nullptr) {
+			try {
+				task(*this);
+			} catch (...) {
+				L_EXC("ERROR: Task died with an unhandled exception");
+			}
+		} else if (_wal_writer->_ending.load(std::memory_order_acquire)) {
+			break;
 		}
-		return *it->second;
 	}
-};
+	_wal_writer->_workers.fetch_sub(1, std::memory_order_relaxed);
+}
+
+
+void
+DatabaseWALWriterThread::clear()
+{
+	std::function<void(DatabaseWALWriterThread&)> task;
+	while (_queue.try_dequeue(task)) {}
+}
+
+
+DatabaseWAL&
+DatabaseWALWriterThread::wal(const std::string& path)
+{
+	auto it = lru.find(path);
+	if (it == lru.end()) {
+		it = lru.emplace(path, std::make_unique<DatabaseWAL>(path)).first;
+	}
+	return *it->second;
+}
 
 
 DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads) :
@@ -949,17 +952,9 @@ DatabaseWALWriter::enqueue(const ProducerToken& token, const std::string& path, 
 
 
 void
-DatabaseWALWriter::start(std::size_t num_threads = 0)
-{
-	_instance = std::make_unique<DatabaseWALWriter>("X%02zu", num_threads);
-}
-
-
-void
 DatabaseWALWriter::clear()
 {
-	assert(_instance);
-	for (auto& _thread : _instance->_threads) {
+	for (auto& _thread : _threads) {
 		_thread.clear();
 	}
 }
@@ -968,16 +963,15 @@ DatabaseWALWriter::clear()
 bool
 DatabaseWALWriter::join(std::chrono::milliseconds timeout)
 {
-	assert(_instance);
 	bool ret = true;
 	// Divide timeout among number of running worker threads
 	// to give each thread the chance to "join".
-	auto threadpool_workers = _instance->_workers.load(std::memory_order_relaxed);
+	auto threadpool_workers = _workers.load(std::memory_order_relaxed);
 	if (!threadpool_workers) {
 		threadpool_workers = 1;
 	}
 	auto single_timeout = timeout / threadpool_workers;
-	for (auto& _thread : _instance->_threads) {
+	for (auto& _thread : _threads) {
 		auto wakeup = std::chrono::system_clock::now() + single_timeout;
 		if (!_thread.join(wakeup)) {
 			ret = false;
@@ -990,8 +984,8 @@ DatabaseWALWriter::join(std::chrono::milliseconds timeout)
 void
 DatabaseWALWriter::end()
 {
-	if (!_instance->_ending.exchange(true, std::memory_order_release)) {
-		for (auto& _thread : _instance->_threads) {
+	if (!_ending.exchange(true, std::memory_order_release)) {
+		for (auto& _thread : _threads) {
 			_thread._queue.enqueue(nullptr);
 		}
 	}
@@ -1001,8 +995,8 @@ DatabaseWALWriter::end()
 void
 DatabaseWALWriter::finish()
 {
-	if (!_instance->_finished.exchange(true, std::memory_order_release)) {
-		for (auto& _thread : _instance->_threads) {
+	if (!_finished.exchange(true, std::memory_order_release)) {
+		for (auto& _thread : _threads) {
 			_thread._queue.enqueue(nullptr);
 		}
 	}
@@ -1012,8 +1006,7 @@ DatabaseWALWriter::finish()
 std::size_t
 DatabaseWALWriter::running_size()
 {
-	assert(_instance);
-	return _instance->_threads.size();
+	return _threads.size();
 }
 
 
@@ -1022,7 +1015,7 @@ DatabaseWALWriter::new_producer_token(const std::string& path)
 {
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
-	auto& thread = _instance->_threads[hash % _instance->_threads.size()];
+	auto& thread = _threads[hash % _threads.size()];
 	return std::make_unique<ProducerToken>(thread._queue);
 }
 
@@ -1036,7 +1029,6 @@ DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Do
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1051,9 +1043,9 @@ DatabaseWALWriter::write_add_document(const Database& database, const Xapian::Do
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1067,7 +1059,6 @@ DatabaseWALWriter::write_delete_document_term(const Database& database, const st
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1082,9 +1073,9 @@ DatabaseWALWriter::write_delete_document_term(const Database& database, const st
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1098,7 +1089,6 @@ DatabaseWALWriter::write_remove_spelling(const Database& database, const std::st
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1114,9 +1104,9 @@ DatabaseWALWriter::write_remove_spelling(const Database& database, const std::st
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1130,7 +1120,6 @@ DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1144,9 +1133,9 @@ DatabaseWALWriter::write_commit(const Database& database, bool send_update)
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1160,7 +1149,6 @@ DatabaseWALWriter::write_replace_document(const Database& database, Xapian::doci
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1176,9 +1164,9 @@ DatabaseWALWriter::write_replace_document(const Database& database, Xapian::doci
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1192,7 +1180,6 @@ DatabaseWALWriter::write_replace_document_term(const Database& database, const s
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1208,9 +1195,9 @@ DatabaseWALWriter::write_replace_document_term(const Database& database, const s
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1224,7 +1211,6 @@ DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1239,9 +1225,9 @@ DatabaseWALWriter::write_delete_document(const Database& database, Xapian::docid
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1255,7 +1241,6 @@ DatabaseWALWriter::write_set_metadata(const Database& database, const std::strin
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1271,9 +1256,9 @@ DatabaseWALWriter::write_set_metadata(const Database& database, const std::strin
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 
@@ -1287,7 +1272,6 @@ DatabaseWALWriter::write_add_spelling(const Database& database, const std::strin
 	auto path = endpoint.path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
-	assert(_instance);
 	assert(database.producer_token);
 	auto writer = [=] (DatabaseWALWriterThread& thread) {
 		L_DEBUG_NOW(start);
@@ -1303,9 +1287,9 @@ DatabaseWALWriter::write_add_spelling(const Database& database, const std::strin
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		_instance->execute(path, writer);
+		execute(path, writer);
 	} else {
-		_instance->enqueue(*database.producer_token, path, writer);
+		enqueue(*database.producer_token, path, writer);
 	}
 }
 

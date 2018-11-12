@@ -54,12 +54,10 @@
 #include "cassert.hh"                         // for assert
 
 #include "allocator.h"                        // for allocator::total_allocated
-#include "async_fsync.h"                      // for AsyncFsync
 #include "color_tools.hh"                     // for color
-#include "database_autocommit.h"              // for DatabaseAutocommit
-#include "database_handler.h"                 // for DatabaseHandler
+#include "database_handler.h"                 // for DatabaseHandler, committer
 #include "database_utils.h"                   // for RESERVED_TYPE
-#include "database_wal.h"                     // for DatabaseWALWriter
+#include "debouncer.h"                        // for Debouncer
 #include "epoch.hh"                           // for epoch::now
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
 #include "exception.h"                        // for Exit, Excep...
@@ -81,6 +79,7 @@
 #include "server/http.h"                      // for Http
 #include "server/http_server.h"               // for HttpServer
 #include "server/server.h"                    // for XapiandServer, XapiandServer::total_clients
+#include "storage.h"                          // for Storage
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
 
 #ifdef XAPIAND_CLUSTERING
@@ -128,6 +127,7 @@ XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
+	  wal_writer("X%02zu", opts.num_async_wal_writers),
 	  thread_pool("W%02zu", opts.threadpool_size),
 	  client_pool("C%02zu", opts.tasks_size),
 	  server_pool("S%02zu", opts.num_servers),
@@ -149,6 +149,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size),
+	  wal_writer("X%02zu", opts.num_async_wal_writers),
 	  thread_pool("W%02zu", opts.threadpool_size),
 	  client_pool("C%02zu", opts.tasks_size),
 	  server_pool("S%02zu", opts.num_servers),
@@ -706,14 +707,6 @@ XapiandManager::run()
 
 	make_servers();
 
-	DatabaseAutocommit::scheduler(opts.num_committers);
-
-#if XAPIAND_DATABASE_WAL
-	DatabaseWALWriter::start(opts.num_async_wal_writers);
-#endif
-
-	AsyncFsync::scheduler(opts.num_fsynchers);
-
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
 		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
@@ -799,10 +792,10 @@ XapiandManager::join()
 	database_pool.finish();
 
 	L_MANAGER("Finishing autocommitter scheduler!");
-	DatabaseAutocommit::finish();
+	committer().finish();
 
-	L_MANAGER("Waiting for %zu autocommitter%s...", DatabaseAutocommit::running_size(), (DatabaseAutocommit::running_size() == 1) ? "" : "s");
-	while (!DatabaseAutocommit::join(500ms)) {
+	L_MANAGER("Waiting for %zu autocommitter%s...", committer().running_size(), (committer().running_size() == 1) ? "" : "s");
+	while (!committer().join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw Exit(-sig);
@@ -810,12 +803,12 @@ XapiandManager::join()
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (DatabaseWALWriter::running_size()) {
+	if (wal_writer.running_size()) {
 		L_MANAGER("Finishing WAL writers!");
-		DatabaseWALWriter::finish();
+		wal_writer.finish();
 
-		L_MANAGER("Waiting for %zu WAL writer%s...", DatabaseWALWriter::running_size(), (DatabaseWALWriter::running_size() == 1) ? "" : "s");
-		while (!DatabaseWALWriter::join(500ms)) {
+		L_MANAGER("Waiting for %zu WAL writer%s...", wal_writer.running_size(), (wal_writer.running_size() == 1) ? "" : "s");
+		while (!wal_writer.join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw Exit(-sig);
@@ -825,10 +818,10 @@ XapiandManager::join()
 #endif
 
 	L_MANAGER("Finishing async fsync threads pool!");
-	AsyncFsync::finish();
+	fsyncher().finish();
 
-	L_MANAGER("Waiting for %zu async fsync%s...", AsyncFsync::running_size(), (AsyncFsync::running_size() == 1) ? "" : "s");
-	while (!AsyncFsync::join(500ms)) {
+	L_MANAGER("Waiting for %zu async fsync%s...", fsyncher().running_size(), (fsyncher().running_size() == 1) ? "" : "s");
+	while (!fsyncher().join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw Exit(-sig);
@@ -1068,16 +1061,16 @@ XapiandManager::server_metrics()
 	metrics.xapiand_servers_capacity.Set(server_pool.threadpool_capacity());
 
 	// committers_threads:
-	metrics.xapiand_committers_running.Set(DatabaseAutocommit::running_size());
-	metrics.xapiand_committers_queue_size.Set(DatabaseAutocommit::size());
-	metrics.xapiand_committers_pool_size.Set(DatabaseAutocommit::threadpool_size());
-	metrics.xapiand_committers_capacity.Set(DatabaseAutocommit::threadpool_capacity());
+	metrics.xapiand_committers_running.Set(committer().running_size());
+	metrics.xapiand_committers_queue_size.Set(committer().size());
+	metrics.xapiand_committers_pool_size.Set(committer().threadpool_size());
+	metrics.xapiand_committers_capacity.Set(committer().threadpool_capacity());
 
 	// fsync_threads:
-	metrics.xapiand_fsync_running.Set(AsyncFsync::running_size());
-	metrics.xapiand_fsync_queue_size.Set(AsyncFsync::size());
-	metrics.xapiand_fsync_pool_size.Set(AsyncFsync::threadpool_size());
-	metrics.xapiand_fsync_capacity.Set(AsyncFsync::threadpool_capacity());
+	metrics.xapiand_fsync_running.Set(fsyncher().running_size());
+	metrics.xapiand_fsync_queue_size.Set(fsyncher().size());
+	metrics.xapiand_fsync_pool_size.Set(fsyncher().threadpool_size());
+	metrics.xapiand_fsync_capacity.Set(fsyncher().threadpool_capacity());
 
 	// current connections:
 	metrics.xapiand_http_current_connections.Set(XapiandServer::http_clients.load());

@@ -132,7 +132,7 @@ public:
 	size_t running_size();
 	size_t size();
 
-	bool finish(int wait);
+	bool finish(int wait = 10);
 
 	bool join(std::chrono::milliseconds timeout);
 	bool join(int timeout = 60000) {

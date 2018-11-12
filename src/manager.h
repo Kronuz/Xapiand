@@ -32,6 +32,8 @@
 
 #include "base_x.hh"                          // for Base62
 #include "database_pool.h"                    // for DatabasePool
+#include "database_wal.h"                     // for DatabaseWALWriter
+#include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"                          // for ev::loop_ref
 #include "length.h"                           // for serialise_length
@@ -130,6 +132,8 @@ public:
 
 	DatabasePool database_pool;
 	SchemasLRU schemas;
+
+	DatabaseWALWriter wal_writer;
 
 	ThreadPool thread_pool;
 	ThreadPool client_pool;

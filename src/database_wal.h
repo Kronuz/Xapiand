@@ -22,21 +22,24 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
+#include "config.h"                         // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
 
 #if XAPIAND_DATABASE_WAL
 
-#include <array>                // for std::array
-#include <chrono>               // for std::chrono
-#include <memory>               // for std::unique_ptr
-#include <string>               // for std::string
-#include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
-#include <utility>              // for pair, make_pair
-#include <xapian.h>             // for Xapian::docid, Xapian::termcount, Xapian::Document
+#include <array>                            // for std::array
+#include <chrono>                           // for std::chrono
+#include <memory>                           // for std::unique_ptr
+#include <string>                           // for std::string
+#include <sys/types.h>                      // for uint32_t, uint8_t, ssize_t
+#include <utility>                          // for pair, make_pair
+#include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
-#include "cuuid/uuid.h"         // for UUID
-#include "endpoint.h"           // for Endpoint
-#include "storage.h"            // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
+#include "cuuid/uuid.h"                     // for UUID
+#include "endpoint.h"                       // for Endpoint
+#include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
+#include "thread.hh"                        // for Thread
+#include "lru.h"                            // for lru::LRU
+#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
 
 
 class MsgPack;
@@ -242,17 +245,37 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 }
 
 
-namespace moodycamel {
-	struct ProducerToken;
-}
-using namespace moodycamel;
+//  ____        _        _                  __        ___    _ __        __    _ _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  __\ \      / / \  | |\ \      / / __(_) |_ ___ _ __
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ \ /\ / / _ \ | | \ \ /\ / / '__| | __/ _ \ '__|
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/\ V  V / ___ \| |__\ V  V /| |  | | ||  __/ |
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| \_/\_/_/   \_\_____\_/\_/ |_|  |_|\__\___|_|
+//
 
-struct DatabaseWALWriterThread;
+class DatabaseWALWriter;
+
+class DatabaseWALWriterThread : public Thread {
+	friend DatabaseWALWriter;
+
+	DatabaseWALWriter* _wal_writer;
+	size_t _idx;
+	BlockingConcurrentQueue<std::function<void(DatabaseWALWriterThread&)>> _queue;
+
+	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
+
+public:
+	DatabaseWALWriterThread() noexcept;
+	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept;
+	DatabaseWALWriterThread& operator=(DatabaseWALWriterThread&& other);
+
+	void operator()() override;
+	void clear();
+	DatabaseWAL& wal(const std::string& path);
+};
+
 
 class DatabaseWALWriter {
 	friend DatabaseWALWriterThread;
-
-	static std::unique_ptr<DatabaseWALWriter> _instance;
 
 	std::vector<DatabaseWALWriterThread> _threads;
 	const char* _format;
@@ -267,31 +290,29 @@ class DatabaseWALWriter {
 public:
 	DatabaseWALWriter(const char* format, std::size_t size);
 
-	static void start(std::size_t size);
+	void clear();
 
-	static void clear();
-
-	static bool join(std::chrono::milliseconds timeout);
-	static bool join(int timeout = 60000) {
+	bool join(std::chrono::milliseconds timeout);
+	bool join(int timeout = 60000) {
 		return join(std::chrono::milliseconds(timeout));
 	}
 
-	static void end();
-	static void finish();
+	void end();
+	void finish();
 
-	static std::size_t running_size();
+	std::size_t running_size();
 
-	static std::unique_ptr<ProducerToken> new_producer_token(const std::string& path);
+	std::unique_ptr<ProducerToken> new_producer_token(const std::string& path);
 
-	static void write_add_document(const Database& database, const Xapian::Document&& doc);
-	static void write_delete_document_term(const Database& database, const std::string& term);
-	static void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
-	static void write_commit(const Database& database, bool send_update);
-	static void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc);
-	static void write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc);
-	static void write_delete_document(const Database& database, Xapian::docid did);
-	static void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
-	static void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);
+	void write_add_document(const Database& database, const Xapian::Document&& doc);
+	void write_delete_document_term(const Database& database, const std::string& term);
+	void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
+	void write_commit(const Database& database, bool send_update);
+	void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document&& doc);
+	void write_replace_document_term(const Database& database, const std::string& term, const Xapian::Document&& doc);
+	void write_delete_document(const Database& database, Xapian::docid did);
+	void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
+	void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);
 };
 
 
