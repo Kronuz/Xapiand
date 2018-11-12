@@ -25,6 +25,7 @@
 #include <xapian.h>             // for Xapian::Database
 
 #include "endpoint.h"           // for Endpoints
+#include "manager.h"            // for XapiandManager::manager
 
 
 class Database;
@@ -42,8 +43,10 @@ public:
 	lock_database(LockableDatabase* lockable);
 	~lock_database();
 
-	void lock();
 	void unlock();
+
+	template <typename... Args>
+	void lock(Args&&... args);
 };
 
 
@@ -64,3 +67,23 @@ public:
 	LockableDatabase();
 	LockableDatabase(const Endpoints& endpoints_, int flags_);
 };
+
+
+template <typename... Args>
+inline void
+lock_database::lock(Args&&... args)
+{
+	if (lockable != nullptr) {
+		if (lockable->endpoints.empty()) {
+			return;
+		}
+		if (!lockable->_locked_database) {
+			assert(locks == 0 && lockable->_database_locks == 0);
+			assert(XapiandManager::manager);
+			XapiandManager::manager->database_pool.checkout(lockable->_locked_database, lockable->endpoints, lockable->flags, std::forward<Args>(args)...);
+		}
+		if (locks++ == 0) {
+			++lockable->_database_locks;
+		}
+	}
+}

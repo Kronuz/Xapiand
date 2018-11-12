@@ -26,7 +26,6 @@
 
 #include "database.h"           // for Database
 #include "database_pool.h"      // for DatabasePool
-#include "manager.h"            // for XapiandManager::manager
 
 
 LockableDatabase::LockableDatabase() :
@@ -72,25 +71,6 @@ lock_database::~lock_database()
 {
 	while (locks) {
 		unlock();
-	}
-}
-
-
-void
-lock_database::lock()
-{
-	if (lockable != nullptr) {
-		if (lockable->endpoints.empty()) {
-			return;
-		}
-		if (!lockable->_locked_database) {
-			assert(locks == 0 && lockable->_database_locks == 0);
-			assert(XapiandManager::manager);
-			XapiandManager::manager->database_pool.checkout(lockable->_locked_database, lockable->endpoints, lockable->flags);
-		}
-		if (locks++ == 0) {
-			++lockable->_database_locks;
-		}
 	}
 }
 
