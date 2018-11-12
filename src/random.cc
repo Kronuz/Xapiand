@@ -26,17 +26,33 @@
 #include <random>                // for std::random_device, std::mt19937_64
 
 
-static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
-
-
-double random_real(double initial, double last) {
-	std::uniform_real_distribution<double> distribution(initial, last);
-	return distribution(rng);  // Use rng as a generator
+auto& rng() {
+	// Initialize Mersennes' twister using Random device engine (usually based
+	// on /dev/random on UNIX-like systems) to generate the seed
+	static thread_local std::mt19937_64 rng(std::random_device{}());
+	return rng;
 }
 
 
-std::uint64_t random_int(std::uint64_t initial, std::uint64_t last) {
+double
+random_real(double initial, double last)
+{
+	std::uniform_real_distribution<double> distribution(initial, last);
+	return distribution(rng());
+}
+
+
+std::uint64_t
+random_int(std::uint64_t initial, std::uint64_t last)
+{
 	std::uniform_int_distribution<std::uint64_t> distribution(initial, last);
-	return distribution(rng);  // Use rng as a generator
+	return distribution(rng());
+}
+
+
+std::chrono::milliseconds
+random_time(std::chrono::milliseconds initial, std::chrono::milliseconds last)
+{
+	std::uniform_int_distribution<std::chrono::milliseconds::rep> distribution(initial.count(), last.count());
+	return std::chrono::milliseconds{distribution(rng())};
 }

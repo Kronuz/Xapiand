@@ -22,8 +22,13 @@
 
 #pragma once
 
+#include <chrono>                // for std::chrono
 #include <cstdint>               // for std::uint64_t
 #include <string>                // for std::string
 
+
 double random_real(double initial, double last);
+
 std::uint64_t random_int(std::uint64_t initial, std::uint64_t last);
+
+std::chrono::milliseconds random_time(std::chrono::milliseconds initial, std::chrono::milliseconds last);
