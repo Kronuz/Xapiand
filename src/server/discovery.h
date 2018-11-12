@@ -26,9 +26,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <xapian.h>             // for Xapian::rev
-
-#include "base_udp.h"
+#include "base_udp.h"           // for UDP
+#include "debouncer.h"          // for make_debouncer
 
 
 // Values in seconds
@@ -97,13 +96,20 @@ public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();
 
-	void signal_db_update(const std::string& path, const UUID& uuid, Xapian::rev revision);
-
 	std::string __repr__() const override {
 		return Worker::__repr__("Discovery");
 	}
 
+	void db_update_send(const std::string& path);
+
 	std::string getDescription() const noexcept override;
 };
+
+void db_updater_send(std::string path);
+
+inline auto& db_updater() {
+	static auto db_updater = make_debouncer<std::string>("U--", "U%02zu", 3, db_updater_send);
+	return db_updater;
+}
 
 #endif

@@ -54,7 +54,7 @@
 #include "msgpack.h"              // for MsgPack
 #include "opts.h"                 // for opts::*
 #include "repr.hh"                // for repr
-#include "server/discovery.h"     // for Discovery::signal_db_update
+#include "server/discovery.h"     // for db_updater
 #include "string.hh"              // for string::format
 
 
@@ -763,9 +763,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		if (!opts.solo) {
 			// On COMMIT, let the updaters do their job
 			if (send_update) {
-				if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-					discovery->signal_db_update(base_path, uuid, revision + 1);
-				}
+				db_updater().debounce(base_path, base_path);
 			}
 		}
 #endif

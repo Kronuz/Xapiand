@@ -469,18 +469,18 @@ Discovery::discovery_cb(ev::timer&, int revents)
 	}
 }
 
-void
-Discovery::signal_db_update(const std::string& path, const UUID& uuid, Xapian::rev revision)
-{
-	L_CALL("Discovery::signal_db_update(%s, %s, %llu)", repr(path), repr(uuid.to_string()), revision);
 
-	ignore_unused(uuid);
-	ignore_unused(revision);
+void
+Discovery::db_update_send(const std::string& path)
+{
+	L_CALL("Discovery::db_update_send(%s)", repr(path));
 
 	auto local_node = Node::local_node();
 	send_message(Message::DB_UPDATED,
 		local_node->serialise() +   // The node where the index is at
 		path);  // The path of the index
+
+	L_DEBUG("Sending database updated signal for %s", repr(path));
 }
 
 
@@ -490,6 +490,15 @@ Discovery::getDescription() const noexcept
 	L_CALL("Discovery::getDescription()");
 
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + ")";
+}
+
+
+void
+db_updater_send(std::string path)
+{
+	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
+		discovery->db_update_send(path);
+	}
 }
 
 #endif
