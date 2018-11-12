@@ -311,21 +311,25 @@ Replication::reply_end_of_changes(const std::string&)
 {
 	L_CALL("Replication::reply_end_of_changes(<message>)");
 
-	bool switching = !!switch_database;
+	bool switching = !switch_database_path.empty();
 
 	L_REPLICATION("Replication::reply_end_of_changes%s", switching ? " (switching database)" : "");
 
 	if (switching) {
 		// Close internal databases
-		switch_database->close();
 		database()->close();
+
+		if (switch_database) {
+			switch_database->close();
+			XapiandManager::manager->database_pool.checkin(switch_database);
+		}
 
 		// get exclusive lock
 		XapiandManager::manager->database_pool.lock(database());
 
-		// Now we are sure no readers are using the switch_database
+		// Now we are sure no readers are using the database before moving the files
 		delete_files(endpoints[0].path, {"*glass", "wal.*"});
-		move_files(switch_database->endpoints[0].path, endpoints[0].path);
+		move_files(switch_database_path, endpoints[0].path);
 
 		// release exclusive lock
 		XapiandManager::manager->database_pool.unlock(database());
