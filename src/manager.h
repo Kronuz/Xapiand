@@ -177,8 +177,6 @@ public:
 
 	void renew_leader();
 	void new_leader(std::shared_ptr<const Node>&& leader_node);
-
-	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database = false);
 #endif
 
 	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);
@@ -186,3 +184,10 @@ public:
 
 	std::string server_metrics();
 };
+
+void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
+
+inline auto& trigger_replication() {
+	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000>("R--", "R%02zu", 3, trigger_replication_trigger);
+	return trigger_replication;
+}

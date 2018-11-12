@@ -390,7 +390,7 @@ Discovery::db_updated(Message type, const std::string& message)
 		} else {
 			// Replicate database from the other node
 			Endpoint remote_endpoint(path, node.get());
-			XapiandManager::manager->trigger_replication(remote_endpoint, local_endpoint);
+			trigger_replication().debounce(local_endpoint.path, remote_endpoint, local_endpoint);
 		}
 	}
 }

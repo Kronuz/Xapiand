@@ -377,7 +377,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
 			new_cluster = 2;
-			trigger_replication(cluster_endpoint, local_endpoint, true);
+			if (auto binary = weak_binary.lock()) {
+				binary->trigger_replication(cluster_endpoint, local_endpoint, true);
+			}
 		} else {
 			cluster_database_ready();
 		}
@@ -930,17 +932,6 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 	}
 }
 
-
-void
-XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
-{
-	L_CALL("XapiandManager::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
-
-	if (auto binary = weak_binary.lock()) {
-		binary->trigger_replication(src_endpoint, dst_endpoint, cluster_database);
-	}
-}
-
 #endif
 
 
@@ -1104,4 +1095,13 @@ XapiandManager::server_metrics()
 	metrics.xapiand_db.Set(rdb.count + wdb.count);
 
 	return metrics.serialise();
+}
+
+
+void
+trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
+{
+	if (auto binary = XapiandManager::manager->weak_binary.lock()) {
+		binary->trigger_replication(src_endpoint, dst_endpoint, false);
+	}
 }

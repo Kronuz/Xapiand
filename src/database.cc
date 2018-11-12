@@ -37,7 +37,7 @@
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_OBJ, L_CALL
 #include "lz4/xxhash.h"           // for XXH32_update, XXH32_state_t
-#include "manager.h"              // for XapiandManager::manager, sig_exit
+#include "manager.h"              // for XapiandManager::manager, sig_exit, trigger_replication
 #include "msgpack.h"              // for MsgPack
 #include "repr.hh"                // for repr
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
@@ -392,7 +392,7 @@ Database::reopen_readable()
 				} else {
 					try {
 						// If remote is master (it should be), try triggering replication
-						XapiandManager::manager->trigger_replication(endpoint, Endpoint{endpoint.path});
+						trigger_replication().debounce(endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}
@@ -400,7 +400,7 @@ Database::reopen_readable()
 				if (!exists(endpoint.path + "/iamglass")) {
 					try {
 						// If remote is master (it should be), try triggering replication
-						XapiandManager::manager->trigger_replication(endpoint, Endpoint{endpoint.path});
+						trigger_replication().debounce(endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}
