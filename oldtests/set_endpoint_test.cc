@@ -32,6 +32,11 @@ TEST(EndpointNormalization, English) {
 }
 
 
+TEST(PathNormalization, English) {
+	EXPECT_EQ(test_normalize_path(), 0);
+}
+
+
 int main(int argc, char **argv) {
 	auto initializer = Initializer::create();
 	::testing::InitGoogleTest(&argc, argv);

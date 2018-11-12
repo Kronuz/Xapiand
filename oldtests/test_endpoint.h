@@ -26,3 +26,4 @@
 
 
 int test_endpoint();
+int test_normalize_path();

@@ -21,6 +21,7 @@
  */
 
 #include "test_endpoint.h"
+#include "fs.hh"
 
 #include "utils.h"
 
@@ -54,5 +55,26 @@ int test_endpoint() {
 		}
 	}
 
+	RETURN(count);
+}
+
+int test_normalize_path() {
+	INIT_LOG
+
+	std::string path_samples[][2] = {
+		{"var/db/xapiand/./", "var/db/xapiand/"},
+		{"./././", "./"},
+		{"var/./db/./xapiand", "var/db/xapiand/"},
+		{"././var/db/xapiand", "./var/db/xapiand/"},
+		{"./var/../", "./"},
+	};
+
+	int count = 0;
+	for (size_t i = 0; i < arraySize(path_samples); ++i) {
+		auto res = normalize_path(std::string_view(path_samples[i][0]), true);
+		if (res != path_samples[i][1]) {
+			L_ERR("ERROR: Path (%s) missmatch.\n\t  Result: %s\n\tExpected: %s\n", path_samples[i][0], res, path_samples[i][1]);
+		}
+	}
 	RETURN(count);
 }
