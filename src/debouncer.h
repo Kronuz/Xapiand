@@ -67,6 +67,9 @@ public:
 
 	template <typename... Args>
 	void debounce(Key key, Args&&... args);
+
+	template <typename... Args>
+	void delayed_debounce(std::chrono::milliseconds delay, Key key, Args&&... args);
 };
 
 
@@ -129,7 +132,18 @@ template <typename... Args>
 inline void
 Debouncer<Key, DT, DBT, DFT, Func, Tuple>::debounce(Key key, Args&&... args)
 {
-	L_CALL("Debouncer::debounce(<key, ...)");
+	L_CALL("Debouncer::debounce(<key>, ...)");
+
+	delayed_debounce(0ms, key, std::forward<Args>(args)...);
+}
+
+
+template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
+template <typename... Args>
+inline void
+Debouncer<Key, DT, DBT, DFT, Func, Tuple>::delayed_debounce(std::chrono::milliseconds delay, Key key, Args&&... args)
+{
+	L_CALL("Debouncer::delayed_debounce(<delay>, <key>, ...)");
 
 	std::shared_ptr<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>> task;
 	unsigned long long next_wakeup_time;
@@ -144,13 +158,13 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple>::debounce(Key key, Args&&... args)
 		if (it == statuses.end()) {
 			auto& status_ref = statuses[key] = {
 				nullptr,
-				time_point_to_ullong(now + debounce_force_timeout)
+				time_point_to_ullong(now + debounce_force_timeout + delay)
 			};
 			status = &status_ref;
-			next_wakeup_time = time_point_to_ullong(now + debounce_timeout);
+			next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
 		} else {
 			status = &(it->second);
-			next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout);
+			next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout + delay);
 		}
 
 		bool forced;
