@@ -10,20 +10,17 @@
 
 #include "namegen.h"
 
-#include <algorithm>  // for move, reverse
-#include <cwchar>     // for size_t, mbsrtowcs, wcsrtombs
-#include <cwctype>    // for towupper
-#include <memory>     // for make_unique
-#include <random>     // for mt19937, random_device, uniform_real_distribution
-#include <stdexcept>  // for invalid_argument, out_of_range
-#include <utility>
+#include <algorithm>     // for srd::reverse
+#include <cwchar>        // for std::size_t, std::mbsrtowcs, std::wcsrtombs
+#include <cwctype>       // for std::towupper
+#include <memory>        // for std::make_unique
+#include <stdexcept>     // for std::invalid_argument, std::out_of_range
+#include <utility>       // for std::move
+
+#include "random.hh"     // for random_real
 
 
 using namespace NameGen;
-
-
-static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
 // https://isocpp.org/wiki/faq/ctors#static-init-order
@@ -304,8 +301,8 @@ Random::toString() const
 		return std::string();
 	}
 
-	std::uniform_real_distribution<double> distribution(0, generators.size() - 1);
-	int rnd = distribution(rng) + 0.5;
+	int rnd = random_real(0, generators.size() - 1) + 0.5;
+
 	return generators[rnd]->toString();
 }
 
