@@ -40,6 +40,8 @@ constexpr double active_timeout = 15;
 
 // Base class for configuration data for TCP.
 class TCP {
+	void _check_backlog(int tcp_backlog);
+
 protected:
 	int port;
 	int sock;
@@ -50,12 +52,11 @@ protected:
 	std::string description;
 
 	void bind(int tries);
-	void check_backlog(int tcp_backlog);
 
 	void close();
 
 public:
-	TCP(int port_, std::string  description_, int tries_, int flags_);
+	TCP(int port_, std::string description_, int tries_, int flags_);
 	virtual ~TCP();
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
@@ -72,6 +73,6 @@ protected:
 	void destroy_impl() override;
 
 public:
-	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string description_, int tries_, int flags_);
 	~BaseTCP();
 };

@@ -43,7 +43,7 @@
 #include "manager.h"                // for sig_exit
 
 
-TCP::TCP(int port_, std::string  description_, int tries_, int flags_)
+TCP::TCP(int port_, std::string description_, int tries_, int flags_)
 	: port(port_),
 	  sock(-1),
 	  closed(false),
@@ -86,6 +86,10 @@ TCP::bind(int tries)
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
+
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+	// 	L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+	// }
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
@@ -143,7 +147,7 @@ TCP::bind(int tries)
 			sig_exit(-EX_CONFIG);
 		}
 
-		check_backlog(tcp_backlog);
+		_check_backlog(tcp_backlog);
 		io::listen(sock, tcp_backlog);
 		return;
 	}
@@ -201,7 +205,7 @@ TCP::accept()
 
 
 void
-TCP::check_backlog(int tcp_backlog)
+TCP::_check_backlog(int tcp_backlog)
 {
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KIPC_SOMAXCONN)
@@ -283,7 +287,7 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 }
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, int tries_, int flags_)
+BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string description_, int tries_, int flags_)
 	: TCP(port_, description_, tries_, flags_),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {

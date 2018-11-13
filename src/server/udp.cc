@@ -38,7 +38,7 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
+UDP::UDP(int port_, std::string description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
 	: port(port_),
 	  sock(-1),
 	  closed(false),
