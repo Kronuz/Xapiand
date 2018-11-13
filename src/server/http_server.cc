@@ -40,9 +40,9 @@
 #include "worker.h"              // for Worker
 
 
-HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::shared_ptr<Http>  http_)
-	: BaseServer(parent_, ev_loop_, ev_flags_),
-	  http(std::move(http_))
+HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http)
+	: BaseServer(parent_, ev_loop_, ev_flags_, http->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
+	  http(http)
 {
 }
 
@@ -60,37 +60,40 @@ HttpServer::start_impl()
 
 	Worker::start_impl();
 
-	io.start(http->sock, ev::READ);
-	L_EV("Start http's server accept event (sock=%d)", http->sock);
+	http->close();
+	bind(1);
+
+	io.start(sock, ev::READ);
+	L_EV("Start http's server accept event (sock=%d)", sock);
 }
 
 
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), http->sock);
+	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 	L_EV_END("HttpServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
-	assert(http->sock == watcher.fd);
+	assert(sock == watcher.fd);
 
-	if (http->closed) {
+	if (closed) {
 		return;
 	}
 
-	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), http->sock);
+	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid http event {sock:%d}: %s", http->sock, strerror(errno));
+		L_EV("ERROR: got invalid http event {sock:%d}: %s", sock, strerror(errno));
 		return;
 	}
 
-	int client_sock = http->accept();
+	int client_sock = accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept http error {sock:%d}: %s", http->sock, strerror(errno));
+			L_ERR("ERROR: accept http error {sock:%d}: %s", sock, strerror(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);

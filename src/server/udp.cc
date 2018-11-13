@@ -38,19 +38,15 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags, int tries, const std::string& group)
+UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags)
 	: port(port),
 	  sock(-1),
-	  closed(false),
+	  closed(true),
 	  flags(flags),
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version)
-{
-	if (tries) {
-		bind(tries, group);
-	}
-}
+{}
 
 
 UDP::~UDP()
@@ -61,17 +57,23 @@ UDP::~UDP()
 }
 
 
-void
+bool
 UDP::close() {
-	if (!closed.exchange(true)) {
+	bool was_closed = closed.exchange(true);
+	if (!was_closed && sock != -1) {
 		io::shutdown(sock, SHUT_RDWR);
 	}
+	return was_closed;
 }
 
 
 void
 UDP::bind(int tries, const std::string& group)
 {
+	if (!closed.exchange(false)) {
+		return;
+	}
+
 	int optval = 1;
 	unsigned char ttl = 3;
 	struct ip_mreq mreq;
@@ -148,6 +150,17 @@ UDP::bind(int tries, const std::string& group)
 	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	close();
 	sig_exit(-EX_CONFIG);
+}
+
+
+void
+UDP::find(int tries, const std::string& group)
+{
+	bind(tries, group);
+	if (!close() && sock != -1) {
+		io::close(sock);
+		sock = -1;
+	}
 }
 
 

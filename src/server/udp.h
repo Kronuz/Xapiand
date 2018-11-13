@@ -45,19 +45,21 @@ protected:
 	int flags;
 
 	const char* description;
+
 	uint8_t major_version;
 	uint8_t minor_version;
 
+	void bind(int tries, const std::string& group);
+	void find(int tries, const std::string& group);
+
+	bool close();
+
 	void sending_message(const std::string& message);
 
-	void close();
-
 public:
-	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags, int tries, const std::string& group);
+	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags);
 	~UDP();
 
 	void send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);
-
-	void bind(int tries, const std::string& group);
 };

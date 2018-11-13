@@ -43,17 +43,13 @@
 #include "manager.h"                // for sig_exit
 
 
-TCP::TCP(int port, const char* description, int flags, int tries)
+TCP::TCP(int port, const char* description, int flags)
 	: port(port),
 	  sock(-1),
-	  closed(false),
+	  closed(true),
 	  flags(flags),
 	  description(description)
-{
-	if (tries) {
-		bind(tries);
-	}
-}
+{}
 
 
 TCP::~TCP()
@@ -64,17 +60,23 @@ TCP::~TCP()
 }
 
 
-void
+bool
 TCP::close() {
-	if (!closed.exchange(true)) {
+	bool was_closed = closed.exchange(true);
+	if (!was_closed && sock != -1) {
 		io::shutdown(sock, SHUT_RDWR);
 	}
+	return was_closed;
 }
 
 
 void
 TCP::bind(int tries)
 {
+	if (!closed.exchange(false)) {
+		return;
+	}
+
 	struct sockaddr_in addr;
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
@@ -158,6 +160,17 @@ TCP::bind(int tries)
 	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	close();
 	sig_exit(-EX_CONFIG);
+}
+
+
+void
+TCP::find(int tries)
+{
+	bind(tries);
+	if (!close() && sock != -1) {
+		io::close(sock);
+		sock = -1;
+	}
 }
 
 
@@ -325,8 +338,8 @@ TCP::socket()
 
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags, int tries)
-	: TCP(port, description, flags, tries),
+BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags)
+	: TCP(port, description, flags),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
 }

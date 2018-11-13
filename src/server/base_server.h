@@ -25,20 +25,22 @@
 #include <memory>                             // for std::shared_ptr
 
 #include "ev/ev++.h"                          // for ev::io, ev::loop_ref
+#include "tcp.h"                              // for TCP
 #include "worker.h"                           // for Worker
 
 
 // This class lets make different types of servers.
-class BaseServer : public Worker {
+class BaseServer : public TCP, public Worker {
 	friend Worker;
 
 protected:
 	ev::io io;
 
-	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
+	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags);
 	~BaseServer();
 
 	void shutdown_impl(long long asap, long long now) override;
+	void destroy_impl() override;
 	void stop_impl() override;
 
 public:

@@ -39,9 +39,9 @@
 #include "tcp.h"                            // for TCP::socket
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)
-	: BaseServer(parent_, ev_loop_, ev_flags_),
-	  binary(binary_),
+BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary)
+	: BaseServer(parent_, ev_loop_, ev_flags_, binary->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+	  binary(binary),
 	  process_tasks_async(*ev_loop)
 {
 	process_tasks_async.set<BinaryServer, &BinaryServer::process_tasks_async_cb>(this);
@@ -63,8 +63,11 @@ BinaryServer::start_impl()
 
 	Worker::start_impl();
 
-	io.start(binary->sock, ev::READ);
-	L_EV("Start binary's server accept event (sock=%d)", binary->sock);
+	binary->close();
+	bind(1);
+
+	io.start(sock, ev::READ);
+	L_EV("Start binary's server accept event (sock=%d)", sock);
 }
 
 
@@ -94,29 +97,29 @@ BinaryServer::process_tasks_async_cb(ev::async&, int revents)
 void
 BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), binary->sock);
+	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
 	L_EV_END("BinaryServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
-	assert(binary->sock == watcher.fd);
+	assert(sock == watcher.fd);
 
-	if (binary->closed) {
+	if (closed) {
 		return;
 	}
 
-	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), binary->sock);
+	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid binary event {sock:%d}: %s", binary->sock, strerror(errno));
+		L_EV("ERROR: got invalid binary event {sock:%d}: %s", sock, strerror(errno));
 		return;
 	}
 
-	int client_sock = binary->accept();
+	int client_sock = accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept binary error {sock:%d}: %s", binary->sock, strerror(errno));
+			L_ERR("ERROR: accept binary error {sock:%d}: %s", sock, strerror(errno));
 		}
 	} else {
 		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);

@@ -30,9 +30,11 @@
 #include "node.h"                             // for Node::local_node
 
 
-Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, port, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT, port == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
+Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
 {
+	find(port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1);
+
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);
 	node_copy->http_port = port;

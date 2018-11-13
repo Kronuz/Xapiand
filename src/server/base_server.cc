@@ -27,8 +27,9 @@
 #include "readable_revents.hh"                // for readable_revents
 
 
-BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: Worker(parent_, ev_loop_, ev_flags_),
+BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags)
+	: TCP(port, description, flags),
+	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
@@ -37,6 +38,8 @@ BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 
 BaseServer::~BaseServer()
 {
+	TCP::close();
+
 	Worker::deinit();
 }
 
@@ -54,6 +57,17 @@ BaseServer::shutdown_impl(long long asap, long long now)
 	if (now != 0) {
 		detach();
 	}
+}
+
+
+void
+BaseServer::destroy_impl()
+{
+	L_CALL("BaseServer::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	TCP::close();
 }
 
 

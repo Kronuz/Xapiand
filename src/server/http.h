@@ -50,7 +50,7 @@ public:
 		return Worker::__repr__("Http");
 	}
 
-	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port);
+	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 
 	std::string getDescription() const;
 

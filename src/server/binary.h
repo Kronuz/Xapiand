@@ -53,7 +53,7 @@ public:
 		return Worker::__repr__("Binary");
 	}
 
-	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port);
+	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 
 	std::string getDescription() const;
 
