@@ -944,7 +944,7 @@ Raft::request_vote()
 
 
 std::string
-Raft::getDescription() const noexcept
+Raft::getDescription() const
 {
 	L_CALL("Raft::getDescription()");
 

@@ -55,7 +55,7 @@ public:
 
 	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port);
 
-	std::string getDescription() const noexcept override;
+	std::string getDescription() const;
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();

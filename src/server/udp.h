@@ -54,12 +54,10 @@ protected:
 
 public:
 	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags, int tries, const std::string& group);
-	virtual ~UDP();
+	~UDP();
 
 	void send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);
 
 	void bind(int tries, const std::string& group);
-
-	virtual std::string getDescription() const noexcept = 0;
 };

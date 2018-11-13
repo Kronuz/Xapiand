@@ -486,7 +486,7 @@ Discovery::db_update_send(const std::string& path)
 
 
 std::string
-Discovery::getDescription() const noexcept
+Discovery::getDescription() const
 {
 	L_CALL("Discovery::getDescription()");
 

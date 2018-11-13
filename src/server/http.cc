@@ -41,7 +41,7 @@ Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 
 std::string
-Http::getDescription() const noexcept
+Http::getDescription() const
 {
 	return "TCP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_HTTP_PROTOCOL_MINOR_VERSION) + ")";
 }

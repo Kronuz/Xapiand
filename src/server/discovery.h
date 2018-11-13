@@ -102,7 +102,7 @@ public:
 
 	void db_update_send(const std::string& path);
 
-	std::string getDescription() const noexcept override;
+	std::string getDescription() const;
 };
 
 void db_updater_send(std::string path);

@@ -162,7 +162,7 @@ public:
 		return Worker::__repr__("Raft");
 	}
 
-	std::string getDescription() const noexcept override;
+	std::string getDescription() const;
 };
 
 #endif
