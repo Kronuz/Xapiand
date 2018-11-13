@@ -47,7 +47,9 @@ UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor
 	  major_version(major_version),
 	  minor_version(minor_version)
 {
-	bind(tries, group);
+	if (tries) {
+		bind(tries, group);
+	}
 }
 
 

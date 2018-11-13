@@ -50,7 +50,9 @@ TCP::TCP(int port, const char* description, int flags, int tries)
 	  flags(flags),
 	  description(description)
 {
-	bind(tries);
+	if (tries) {
+		bind(tries);
+	}
 }
 
 
