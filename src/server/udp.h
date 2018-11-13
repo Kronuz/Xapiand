@@ -53,7 +53,7 @@ protected:
 	void close();
 
 public:
-	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int flags, int tries);
+	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags, int tries, const std::string& group);
 	virtual ~UDP();
 
 	void send_message(char type, const std::string& content);

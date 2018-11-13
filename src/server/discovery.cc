@@ -58,7 +58,7 @@ using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&
 
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group)
-	: UDP(port, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, group, UDP_SO_REUSEPORT, 1),
+	: UDP(port, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT, 1, group),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  discovery(*ev_loop)
