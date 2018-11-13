@@ -137,7 +137,6 @@ public:
 
 	DatabaseWALWriter wal_writer;
 
-	ThreadPool<> thread_pool;
 	ThreadPool<std::shared_ptr<HttpClient>> http_client_pool;
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool<std::shared_ptr<BinaryClient>> binary_client_pool;

@@ -989,13 +989,19 @@ DatabaseHandler::restore(int fd)
 		std::atomic_size_t processed = 0;
 		std::size_t total = 0;
 
+		ThreadPool<> thread_pool("T%02zu", 4 * std::thread::hardware_concurrency());
+
 		// Index documents.
-		auto indexer = XapiandManager::manager->thread_pool.async([&]{
+		auto indexer = thread_pool.async([&]{
 			DatabaseHandler db_handler(endpoints, flags, method);
 			lock_database lk_db(&db_handler);
 			lk_db.unlock();
 			bool _ready = false;
-			while (!XapiandManager::manager->detaching()) {
+			while (true) {
+				if (XapiandManager::manager->detaching()) {
+					thread_pool.finish();
+					break;
+				}
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 				queue.wait_dequeue(prepared);
 				if (!_ready) {
@@ -1037,7 +1043,11 @@ DatabaseHandler::restore(int fd)
 
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
-		while (!XapiandManager::manager->thread_pool.finished()) {
+		while (true) {
+			if (XapiandManager::manager->detaching()) {
+				thread_pool.finish();
+				break;
+			}
 			MsgPack obj(MsgPack::Type::MAP);
 			Data data;
 			try {
@@ -1110,7 +1120,7 @@ DatabaseHandler::restore(int fd)
 				}
 			};
 			if (bulk_cnt == bulk.size()) {
-				if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
+				if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
 					L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 				}
 				bulk_cnt = 0;
@@ -1119,7 +1129,7 @@ DatabaseHandler::restore(int fd)
 		}
 
 		if (bulk_cnt != 0) {
-			if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
 				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 			}
 		}
@@ -1199,11 +1209,17 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::atomic_size_t processed = 0;
 	std::size_t total = docs.size();
 
+	ThreadPool<> thread_pool("T%02zu", 4 * std::thread::hardware_concurrency());
+
 	// Index documents.
-	auto indexer = XapiandManager::manager->thread_pool.async([&]{
+	auto indexer = thread_pool.async([&]{
 		DatabaseHandler db_handler(endpoints, flags, method);
 		bool _ready = false;
-		while (!XapiandManager::manager->detaching()) {
+		while (true) {
+			if (XapiandManager::manager->detaching()) {
+				thread_pool.finish();
+				break;
+			}
 			std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 			queue.wait_dequeue(prepared);
 			if (!_ready) {
@@ -1239,7 +1255,8 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		if (XapiandManager::manager->thread_pool.finished()) {
+		if (XapiandManager::manager->detaching()) {
+			thread_pool.finish();
 			break;
 		}
 		bulk[bulk_cnt++] = [&]() {
@@ -1253,7 +1270,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 			}
 		};
 		if (bulk_cnt == bulk.size()) {
-			if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
 				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 			}
 			bulk_cnt = 0;
@@ -1262,7 +1279,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	}
 
 	if (bulk_cnt != 0) {
-		if (!XapiandManager::manager->thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
+		if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 		}
 	}

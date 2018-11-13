@@ -30,19 +30,19 @@
 #include <sys/types.h>                   // for ssize_t
 
 
-#define CONCURRENCY_MULTIPLIER   4       // Server workers multiplier (by number of CPUs)
+#define NUM_SERVERS              2       // Number of servers per CPU
+#define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
+#define NUM_BINARY_CLIENTS       16      // Number of binary client threads per CPU
+#define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
+#define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
+#define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
 
-#define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool.
+#define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool
 #define MAX_CLIENTS              1000    // Maximum number of open client connections
 #define MAX_DATABASES            400     // Maximum number of open databases
-#define NUM_SERVERS              10      // Number of servers.
-#define NUM_ASYNC_WAL_WRITERS    10      // Number of database async WAL writers.
-#define NUM_COMMITTERS           10      // Number of threads handling the commits.
-#define NUM_FSYNCHERS            10      // Number of threads handling the fsyncs.
 #define FLUSH_THRESHOLD          100000  // Database flush threshold (default for xapian is 10000)
-#define TASKS_SIZE               100     // Client tasks threadpool's size.
-#define ENDPOINT_LIST_SIZE       10      // Endpoints List's size.
-#define NUM_REPLICAS             3       // Default number of database replicas per index.
+#define ENDPOINT_LIST_SIZE       10      // Endpoints List's size
+#define NUM_REPLICAS             3       // Default number of database replicas per index
 
 
 extern struct opts_t {
@@ -70,10 +70,10 @@ extern struct opts_t {
 	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
 	std::string raft_group = XAPIAND_RAFT_GROUP;
 	ssize_t num_servers = NUM_SERVERS;
+	ssize_t num_http_clients = NUM_BINARY_CLIENTS;
+	ssize_t num_binary_clients = NUM_BINARY_CLIENTS;
 	ssize_t dbpool_size = DBPOOL_SIZE;
 	ssize_t num_async_wal_writers = NUM_ASYNC_WAL_WRITERS;
-	ssize_t threadpool_size = CONCURRENCY_MULTIPLIER;
-	ssize_t tasks_size = TASKS_SIZE;
 	ssize_t endpoints_list_size = ENDPOINT_LIST_SIZE;
 	ssize_t num_committers = NUM_COMMITTERS;
 	ssize_t num_fsynchers = NUM_FSYNCHERS;

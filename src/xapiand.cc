@@ -332,7 +332,7 @@ std::vector<std::string> ev_supported() {
 
 
 void parseOptions(int argc, char** argv) {
-	const unsigned int nthreads = std::thread::hardware_concurrency() * CONCURRENCY_MULTIPLIER;
+	const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
 
 	using namespace TCLAP;
 
@@ -388,29 +388,33 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
 #if XAPIAND_DATABASE_WAL
-		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, NUM_ASYNC_WAL_WRITERS, "writers", cmd);
+		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, NUM_ASYNC_WAL_WRITERS * hardware_concurrency, "writers", cmd);
 #endif
 #ifdef XAPIAND_CLUSTERING
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 #endif
-		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS, "committers", cmd);
+		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS * hardware_concurrency, "committers", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
 		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 
-		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS, "fsynchers", cmd);
+		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS * hardware_concurrency, "fsynchers", cmd);
 		ValueArg<std::size_t> max_files("", "max-files", "Maximum number of files to open.", false, 0, "files", cmd);
 		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
 
-		ValueArg<std::size_t> threadpool_size("", "threads", "Worker threads.", false, nthreads, "threads", cmd);
-		ValueArg<std::size_t> tasks_size("", "tasks", "Number of async tasks.", false, TASKS_SIZE, "tasks", cmd);
+#ifdef XAPIAND_CLUSTERING
+		ValueArg<std::size_t> num_binary_clients("", "binary-clients", "Number of binary client threads.", false, NUM_BINARY_CLIENTS * hardware_concurrency, "threads", cmd);
+#endif
+		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, NUM_HTTP_CLIENTS * hardware_concurrency, "threads", cmd);
 		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-		ValueArg<std::size_t> num_servers("", "servers", "Number of servers.", false, NUM_SERVERS, "servers", cmd);
+		ValueArg<std::size_t> num_servers("", "servers", "Number of servers.", false, NUM_SERVERS * hardware_concurrency, "servers", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
 
+#ifdef XAPIAND_CLUSTERING
 		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+#endif
 		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
 
 		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
@@ -521,7 +525,9 @@ void parseOptions(int argc, char** argv) {
 		opts.cluster_name = cluster_name.getValue();
 		opts.node_name = node_name.getValue();
 		opts.http_port = http_port.getValue();
+#ifdef XAPIAND_CLUSTERING
 		opts.binary_port = binary_port.getValue();
+#endif
 		opts.discovery_port = discovery_port.getValue();
 		opts.discovery_group = discovery_group.getValue();
 		opts.raft_port = raft_port.getValue();
@@ -544,8 +550,10 @@ void parseOptions(int argc, char** argv) {
 		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
 		opts.flush_threshold = flush_threshold.getValue();
-		opts.threadpool_size = threadpool_size.getValue();
-		opts.tasks_size = tasks_size.getValue();
+		opts.num_http_clients = num_http_clients.getValue();
+#ifdef XAPIAND_CLUSTERING
+		opts.num_binary_clients = num_binary_clients.getValue();
+#endif
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
 			if (opts.logfile.empty()) {

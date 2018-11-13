@@ -129,11 +129,10 @@ XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
-	  wal_writer("X%02zu", opts.num_async_wal_writers),
-	  thread_pool("W%02zu", opts.threadpool_size),
-	  http_client_pool("H%02zu", opts.tasks_size),
+	  wal_writer("W%02zu", opts.num_async_wal_writers),
+	  http_client_pool("H%02zu", opts.num_http_clients),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("B%02zu", opts.tasks_size),
+	  binary_client_pool("B%02zu", opts.num_binary_clients),
 #endif
 	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
@@ -143,8 +142,10 @@ XapiandManager::XapiandManager()
 	  atom_sig(0)
 {
 	std::vector<std::string> values({
-		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
-		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
+		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
+#ifdef XAPIAND_CLUSTERING
+		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+#endif
 	});
 	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 }
@@ -153,12 +154,11 @@ XapiandManager::XapiandManager()
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(opts.dbpool_size, opts.max_databases),
-	  schemas(opts.dbpool_size),
-	  wal_writer("X%02zu", opts.num_async_wal_writers),
-	  thread_pool("W%02zu", opts.threadpool_size),
-	  http_client_pool("H%02zu", opts.tasks_size),
+	  schemas(opts.dbpool_size * 3),
+	  wal_writer("W%02zu", opts.num_async_wal_writers),
+	  http_client_pool("H%02zu", opts.num_http_clients),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("B%02zu", opts.tasks_size),
+	  binary_client_pool("B%02zu", opts.num_binary_clients),
 #endif
 	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
@@ -421,6 +421,7 @@ XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
 	if (auto binary = weak_binary.lock()) {
 		binary->start();
 	}
+#endif
 
 	auto local_node = Node::local_node();
 	if (opts.solo) {
@@ -445,7 +446,6 @@ XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
 				break;
 		}
 	}
-#endif
 }
 
 
@@ -717,8 +717,10 @@ XapiandManager::run()
 
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
-		std::to_string(opts.tasks_size) +( (opts.tasks_size == 1) ? " async task" : " async tasks"),
-		std::to_string(opts.threadpool_size) +( (opts.threadpool_size == 1) ? " worker thread" : " worker threads"),
+		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
+#ifdef XAPIAND_CLUSTERING
+		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+#endif
 #if XAPIAND_DATABASE_WAL
 		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
 #endif
@@ -799,17 +801,6 @@ XapiandManager::join()
 		}
 	}
 #endif
-
-	L_MANAGER("Finishing thread pool!");
-	thread_pool.finish();
-
-	L_MANAGER("Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
-	while (!thread_pool.join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw Exit(-sig);
-		}
-	}
 
 	L_MANAGER("Finishing database pool!");
 	database_pool.finish();
