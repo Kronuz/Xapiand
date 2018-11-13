@@ -23,10 +23,9 @@
 #pragma once
 
 #include <chrono>                            // for std::chrono
-#include <functional>                        // for std::function
 #include <mutex>                             // for std::mutex
 #include <unordered_map>                     // for std::unordered_map
-#include <utility>                           // for std::move
+#include <utility>                           // for std::move, std::forward
 
 #include "callable_traits.hh"                // for callable_traits
 #include "log.h"                             // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
@@ -41,7 +40,7 @@ class DebouncerTask;
 
 
 template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
-class Debouncer : public Scheduler {
+class Debouncer : public ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>> {
 	friend DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>;
 
 	static constexpr auto debounce_timeout = std::chrono::milliseconds(DT);
@@ -62,7 +61,7 @@ class Debouncer : public Scheduler {
 
 public:
 	Debouncer(std::string name, const char* format, size_t num_threads, Func func) :
-		Scheduler(name, format, num_threads),
+		ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>>(name, format, num_threads),
 		func(std::move(func)) {}
 
 	template <typename... Args>
@@ -74,7 +73,7 @@ public:
 
 
 template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
-class DebouncerTask : public ScheduledTask {
+class DebouncerTask : public ScheduledTask<ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>>, DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>> {
 	friend Debouncer<Key, DT, DBT, DFT, Func, Tuple>;
 
 	Debouncer<Key, DT, DBT, DFT, Func, Tuple>& debouncer;
@@ -86,11 +85,7 @@ class DebouncerTask : public ScheduledTask {
 public:
 	DebouncerTask(Debouncer<Key, DT, DBT, DFT, Func, Tuple>& debouncer, bool forced, Key key, Tuple args);
 
-	void run() override;
-
-	std::string __repr__() const override {
-		return ScheduledTask::__repr__("DebouncerTask");
-	}
+	void operator()();
 };
 
 
@@ -107,10 +102,10 @@ DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::DebouncerTask(Debouncer<Key, DT, 
 
 template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple>
 inline void
-DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::run()
+DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::operator()()
 {
-	L_CALL("DebouncerTask::run()");
-	L_DEBUG_HOOK("DebouncerTask::run", "DebouncerTask::run()");
+	L_CALL("DebouncerTask::operator()()");
+	L_DEBUG_HOOK("DebouncerTask::operator()", "DebouncerTask::operator()()");
 
 	debouncer.release(key);
 
@@ -185,7 +180,7 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple>::delayed_debounce(std::chrono::millise
 		task = status->task;
 	}
 
-	add(task, next_wakeup_time);
+	this->add(task, next_wakeup_time);
 }
 
 

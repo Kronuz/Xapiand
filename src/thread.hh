@@ -28,6 +28,9 @@
 #include <thread>                // for std::thread
 
 
+using namespace std::chrono_literals;
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -41,6 +44,7 @@ const std::string& get_thread_name();
 ////////////////////////////////////////////////////////////////////////////////
 
 
+template <typename ThreadImpl>
 class Thread {
 	std::thread _thread;
 	std::promise<void> _promise;
@@ -51,7 +55,7 @@ class Thread {
 
 	void _runner() {
 		try {
-			(*this)();
+			static_cast<ThreadImpl*>(this)->operator()();
 			_promise.set_value();
 		} catch (...) {
 			try {
@@ -84,8 +88,6 @@ public:
 		return *this;
 	}
 
-	virtual ~Thread() = default;
-
 	void start() {
 		if (!_started.exchange(true)) {
 			_thread = std::thread(&Thread::_runner, this);
@@ -109,9 +111,7 @@ public:
 		return true;
 	}
 
-	bool join(std::chrono::milliseconds timeout = std::chrono::milliseconds(60000)) {
+	bool join(std::chrono::milliseconds timeout = 60s) {
 		return join(std::chrono::system_clock::now() + timeout);
 	}
-
-	virtual void operator()() = 0;
 };

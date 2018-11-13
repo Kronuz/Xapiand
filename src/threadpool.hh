@@ -38,6 +38,9 @@
 #include "thread.hh"             // for Thread, set_thread_name
 
 
+using namespace std::chrono_literals;
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /* Since std::packaged_task cannot be copied, and std::function requires it can,
@@ -70,7 +73,7 @@ class PackagedTask : public std::packaged_task<Result> {
 
 
 class ThreadPool;
-class ThreadPoolThread : public Thread {
+class ThreadPoolThread : public Thread<ThreadPoolThread> {
 	ThreadPool* _pool;
 	std::size_t _idx;
 
@@ -83,7 +86,7 @@ public:
 		_pool(pool),
 		_idx(idx) {}
 
-	void operator()() override;
+	void operator()();
 };
 
 
@@ -152,7 +155,7 @@ public:
 		return _workers.load(std::memory_order_relaxed);
 	}
 
-	bool join(std::chrono::milliseconds timeout = std::chrono::milliseconds(60000)) {
+	bool join(std::chrono::milliseconds timeout = 60s) {
 		bool ret = true;
 		// Divide timeout among number of running worker threads
 		// to give each thread the chance to "join".

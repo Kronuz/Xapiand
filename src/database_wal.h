@@ -254,7 +254,7 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 
 class DatabaseWALWriter;
 
-class DatabaseWALWriterThread : public Thread {
+class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread> {
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;
@@ -268,7 +268,7 @@ public:
 	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept;
 	DatabaseWALWriterThread& operator=(DatabaseWALWriterThread&& other);
 
-	void operator()() override;
+	void operator()();
 	void clear();
 	DatabaseWAL& wal(const std::string& path);
 };

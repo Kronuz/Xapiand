@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <functional>		 // for std::function
 #include <ostream>           // for std::ostream
 #include <type_traits>       // for std::enable_if_t
 #include <utility>           // for std::forward, std::move

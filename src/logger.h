@@ -80,10 +80,10 @@ public:
 class Log;
 
 
-class Logging : public ScheduledTask {
+class Logging : public ScheduledTask<Scheduler<Logging>, Logging> {
 	friend class Log;
 
-	static Scheduler& scheduler();
+	static Scheduler<Logging>& scheduler();
 
 	static std::mutex collected_mtx;
 	static std::vector<std::pair<std::string, bool>> collected;
@@ -193,9 +193,5 @@ public:
 
 	long double age();
 
-	void run() override;
-
-	std::string __repr__() const override {
-		return ScheduledTask::__repr__("Logging");
-	}
+	void operator()();
 };

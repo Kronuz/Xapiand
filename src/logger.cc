@@ -300,7 +300,7 @@ Logging::Logging(
 	int priority,
 	const std::chrono::time_point<std::chrono::system_clock>& created_at
 ) :
-	ScheduledTask(created_at),
+	ScheduledTask<Scheduler<Logging>, Logging>(created_at),
 	thread_id(std::this_thread::get_id()),
 	function(function),
 	filename(filename),
@@ -411,10 +411,10 @@ Logging::age()
  * Avoid the "static initialization order fiasco"
  */
 
-Scheduler&
+Scheduler<Logging>&
 Logging::scheduler()
 {
-	static Scheduler scheduler("LOG");
+	static Scheduler<Logging> scheduler("LOG");
 	return scheduler;
 }
 
@@ -496,9 +496,9 @@ Logging::reset()
 
 
 void
-Logging::run()
+Logging::operator()()
 {
-	L_DEBUG_HOOK("Logging::run", "Logging::run()");
+	L_DEBUG_HOOK("Logging::operator()", "Logging::operator()()");
 
 	if (once) {
 		static BloomFilter<> bloom;
@@ -765,7 +765,7 @@ Logging::add(
 		scheduler().add(l_ptr, wakeup);
 	} else {
 		// immediate logs
-		l_ptr->run();
+		(*l_ptr)();
 	}
 
 	return Log(l_ptr);
