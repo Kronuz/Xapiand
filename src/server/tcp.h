@@ -60,6 +60,8 @@ public:
 	virtual ~TCP();
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
+	static int socket();
+
 	int accept();
 
 	virtual std::string getDescription() const noexcept = 0;

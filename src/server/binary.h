@@ -57,8 +57,6 @@ public:
 
 	std::string getDescription() const noexcept override;
 
-	int connection_socket();
-
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();
 

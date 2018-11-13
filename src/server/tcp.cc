@@ -287,6 +287,41 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 }
 
 
+int
+TCP::socket()
+{
+	int sock_;
+	int optval = 1;
+
+	if ((sock_ = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		L_ERR("ERROR: cannot create binary connection: [%d] %s", errno, strerror(errno));
+		return -1;
+	}
+
+#ifdef SO_NOSIGPIPE
+	if (io::setsockopt(sock_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	}
+#endif
+
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	// }
+
+	// struct linger ling = {0, 0};
+	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
+	// }
+
+	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
+		L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
+	}
+
+	return sock_;
+}
+
+
+
 BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags, int tries)
 	: TCP(port, description, flags, tries),
 	  Worker(parent_, ev_loop_, ev_flags_)
