@@ -135,9 +135,9 @@ public:
 
 	DatabaseWALWriter wal_writer;
 
-	ThreadPool thread_pool;
-	ThreadPool client_pool;
-	ThreadPool server_pool;
+	ThreadPool<> thread_pool;
+	ThreadPool<> client_pool;
+	ThreadPool<> server_pool;
 
 	std::atomic_llong shutdown_asap;
 	std::atomic_llong shutdown_now;

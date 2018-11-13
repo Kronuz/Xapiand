@@ -338,7 +338,7 @@ template <typename ScheduledTaskImpl>
 class ThreadedScheduler : public BaseScheduler<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl> {
 	using TaskType = std::shared_ptr<ScheduledTask<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl>>;
 
-	ThreadPool thread_pool;
+	ThreadPool<TaskType> thread_pool;
 
 public:
 	ThreadedScheduler(std::string name_, const char* format, size_t num_threads)  :
@@ -395,9 +395,7 @@ public:
 			if (task->clear()) {
 				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 				try {
-					thread_pool.enqueue([task]{
-						task->operator()();
-					});
+					thread_pool.enqueue(task);
 				} catch (const std::logic_error&) { }
 			}
 		}

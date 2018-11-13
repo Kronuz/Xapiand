@@ -25,7 +25,8 @@
 #include <chrono>                // for std::chrono
 #include <cstddef>               // for std::size_t
 #include <functional>            // for std::function
-#include <future>                // for std::packaged_task
+#include <future>                // for std::future, std::packaged_task
+#include <memory>                // for std::shared_ptr, std::unique_ptr
 #include <tuple>                 // for std::make_tuple, std::apply
 #include <vector>                // for std::vector
 
@@ -71,10 +72,12 @@ class PackagedTask : public std::packaged_task<Result> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
+template <typename TaskType>
 class ThreadPool;
-class ThreadPoolThread : public Thread<ThreadPoolThread> {
-	ThreadPool* _pool;
+
+template <typename TaskType>
+class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType>> {
+	ThreadPool<TaskType>* _pool;
 	std::size_t _idx;
 
 public:
@@ -82,7 +85,7 @@ public:
 		_pool(nullptr),
 		_idx(0) {}
 
-	ThreadPoolThread(std::size_t idx, ThreadPool* pool) noexcept :
+	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType>* pool) noexcept :
 		_pool(pool),
 		_idx(idx) {}
 
@@ -90,11 +93,80 @@ public:
 };
 
 
-class ThreadPool {
-	friend ThreadPoolThread;
+template <typename>
+struct TaskWrapper;
 
-	std::vector<ThreadPoolThread> _threads;
-	BlockingConcurrentQueue<std::function<void()>> _queue;
+
+template <>
+struct TaskWrapper<std::function<void()>> {
+	std::function<void()> t;
+
+	TaskWrapper() {}
+
+	template <typename T>
+	TaskWrapper(T&& t) :
+		t(std::forward<T>(t)) {}
+
+	void operator()() {
+		t.operator()();
+	}
+
+	operator bool() const noexcept {
+		return !!t;
+	}
+};
+
+
+template <typename P>
+struct TaskWrapper<std::shared_ptr<P>> {
+	std::shared_ptr<P> t;
+
+	TaskWrapper() {}
+
+	template <typename T>
+	TaskWrapper(T&& t) :
+		t(std::forward<T>(t)) {}
+
+	void operator()() {
+		if (t) {
+			t->operator()();
+		}
+	}
+
+	operator bool() const noexcept {
+		return !!t;
+	}
+};
+
+
+template <typename P>
+struct TaskWrapper<std::unique_ptr<P>> {
+	std::unique_ptr<P> t;
+
+	TaskWrapper() {}
+
+	template <typename T>
+	TaskWrapper(T&& t) :
+		t(std::forward<T>(t)) {}
+
+	void operator()() {
+		if (t) {
+			t->operator()();
+		}
+	}
+
+	operator bool() const noexcept {
+		return !!t;
+	}
+};
+
+
+template <typename TaskType = std::function<void()>>
+class ThreadPool {
+	friend ThreadPoolThread<TaskType>;
+
+	std::vector<ThreadPoolThread<TaskType>> _threads;
+	BlockingConcurrentQueue<TaskWrapper<TaskType>> _queue;
 
 	const char* _format;
 
@@ -115,7 +187,7 @@ public:
 		_running(0),
 		_workers(0) {
 		for (std::size_t idx = 0; idx < num_threads; ++idx) {
-			_threads[idx] = ThreadPoolThread(idx, this);
+			_threads[idx] = ThreadPoolThread<TaskType>(idx, this);
 			_threads[idx].start();
 		}
 	}
@@ -127,9 +199,9 @@ public:
 
 
 	void clear() {
-		std::function<void()> task;
+		TaskWrapper<TaskType> task;
 		while (_queue.try_dequeue(task)) {
-			if likely(task != nullptr) {
+			if likely(task) {
 				_enqueued.fetch_sub(1, std::memory_order_relaxed);
 			}
 		}
@@ -240,16 +312,17 @@ public:
 };
 
 
+template <typename TaskType>
 inline void
-ThreadPoolThread::operator()()
+ThreadPoolThread<TaskType>::operator()()
 {
 	set_thread_name(string::format(_pool->_format, _idx));
 
 	_pool->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_pool->_finished.load(std::memory_order_acquire)) {
-		std::function<void()> task;
+		TaskWrapper<TaskType> task;
 		_pool->_queue.wait_dequeue(task);
-		if likely(task != nullptr) {
+		if likely(task) {
 			_pool->_running.fetch_add(1, std::memory_order_relaxed);
 			_pool->_enqueued.fetch_sub(1, std::memory_order_release);
 			try {
