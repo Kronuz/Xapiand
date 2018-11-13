@@ -315,6 +315,9 @@ Replication::reply_end_of_changes(const std::string&)
 
 	L_REPLICATION("Replication::reply_end_of_changes%s", switching ? " (switching database)" : "");
 
+	auto db_uuid = database()->get_uuid();
+	auto db_revision = database()->get_revision();
+
 	if (switching) {
 		// Close internal databases
 		database()->close();
@@ -335,7 +338,7 @@ Replication::reply_end_of_changes(const std::string&)
 		XapiandManager::manager->database_pool.unlock(database());
 	}
 
-	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy" : "from a set of changesets");
+	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s)", repr(endpoints[0].path), db_uuid, db_revision, switching ? "from a full copy" : "from a set of changesets");
 
 	if (client.cluster_database) {
 		client.cluster_database = false;
