@@ -317,7 +317,7 @@ Replication::reply_end_of_changes(const std::string&)
 
 	if (switching) {
 		// Close internal databases
-		database()->close();
+		database()->do_close(false, false, database()->transaction);
 
 		if (switch_database) {
 			switch_database->close();
