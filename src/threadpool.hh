@@ -22,19 +22,23 @@
 
 #pragma once
 
-#include <chrono>         // for std::chrono
-#include <cstddef>        // for std::size_t
-#include <functional>     // for std::function
-#include <future>         // for std::packaged_task
-#include <tuple>          // for std::make_tuple, std::apply
-#include <vector>         // for std::vector
+#include <chrono>                // for std::chrono
+#include <cstddef>               // for std::size_t
+#include <functional>            // for std::function
+#include <future>                // for std::packaged_task
+#include <tuple>                 // for std::make_tuple, std::apply
+#include <vector>                // for std::vector
 
-#include "cassert.hh"     // for assert
+#include "cassert.hh"            // for assert
 
 #include "blocking_concurrent_queue.h"
-#include "likely.h"       // for unlikely
-#include "thread.hh"      // for Thread
+#include "likely.h"              // for likely, unlikely
+#include "log.h"                 // for L_EXC
+#include "string.hh"             // for string::format
+#include "thread.hh"             // for Thread, set_thread_name
 
+
+////////////////////////////////////////////////////////////////////////////////
 
 /* Since std::packaged_task cannot be copied, and std::function requires it can,
  * we add a dummy copy constructor to std::packaged_task. (We need to make sure
@@ -62,15 +66,22 @@ class PackagedTask : public std::packaged_task<Result> {
 };
 
 
+////////////////////////////////////////////////////////////////////////////////
+
+
 class ThreadPool;
 class ThreadPoolThread : public Thread {
 	ThreadPool* _pool;
 	std::size_t _idx;
 
 public:
-	ThreadPoolThread() noexcept;
+	ThreadPoolThread() noexcept :
+		_pool(nullptr),
+		_idx(0) {}
 
-	ThreadPoolThread(std::size_t idx, ThreadPool* pool) noexcept;
+	ThreadPoolThread(std::size_t idx, ThreadPool* pool) noexcept :
+		_pool(pool),
+		_idx(idx) {}
 
 	void operator()() override;
 };
@@ -91,27 +102,91 @@ class ThreadPool {
 	std::atomic_size_t _workers;
 
 public:
-	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 1000);
+	ThreadPool(const char* format, std::size_t num_threads, std::size_t queue_size = 1000) :
+		_threads(num_threads),
+		_queue(queue_size),
+		_format(format),
+		_ending(false),
+		_finished(false),
+		_enqueued(0),
+		_running(0),
+		_workers(0) {
+		for (std::size_t idx = 0; idx < num_threads; ++idx) {
+			_threads[idx] = ThreadPoolThread(idx, this);
+			_threads[idx].start();
+		}
+	}
 
-	~ThreadPool();
+	~ThreadPool() {
+		finish();
+		join();
+	}
 
-	void clear();
-	std::size_t size();
-	std::size_t running_size();
-	std::size_t threadpool_capacity();
-	std::size_t threadpool_size();
-	std::size_t threadpool_workers();
 
-	bool join(std::chrono::milliseconds timeout);
-	bool join(int timeout = 60000) {
-		return join(std::chrono::milliseconds(timeout));
+	void clear() {
+		std::function<void()> task;
+		while (_queue.try_dequeue(task)) {
+			if likely(task != nullptr) {
+				_enqueued.fetch_sub(1, std::memory_order_relaxed);
+			}
+		}
+	}
+
+	std::size_t size() {
+		return _enqueued.load(std::memory_order_relaxed);
+	}
+
+	std::size_t running_size() {
+		return _running.load(std::memory_order_relaxed);
+	}
+
+	std::size_t threadpool_capacity() {
+		return _threads.capacity();
+	}
+
+	std::size_t threadpool_size() {
+		return _threads.size();
+	}
+
+	std::size_t threadpool_workers() {
+		return _workers.load(std::memory_order_relaxed);
+	}
+
+	bool join(std::chrono::milliseconds timeout = std::chrono::milliseconds(60000)) {
+		bool ret = true;
+		// Divide timeout among number of running worker threads
+		// to give each thread the chance to "join".
+		auto threadpool_workers = _workers.load(std::memory_order_relaxed);
+		if (!threadpool_workers) {
+			threadpool_workers = 1;
+		}
+		auto single_timeout = timeout / threadpool_workers;
+		for (auto& _thread : _threads) {
+			auto wakeup = std::chrono::system_clock::now() + single_timeout;
+			if (!_thread.join(wakeup)) {
+				ret = false;
+			}
+		}
+		return ret;
 	}
 
 	// Flag the pool as ending, so all threads exit as soon as all queued tasks end
-	void end();
+	void end() {
+		if (!_ending.exchange(true, std::memory_order_release)) {
+			for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
+				_queue.enqueue(nullptr);
+			}
+		}
+	}
 
 	// Tell the tasks to finish so all threads exit as soon as possible
-	void finish();
+	void finish() {
+		if (!_finished.exchange(true, std::memory_order_release)) {
+			for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
+				_queue.enqueue(nullptr);
+			}
+		}
+	}
 
 	template <typename Func, typename... Args>
 	auto package(Func&& func, Args&&... args) {
@@ -156,8 +231,36 @@ public:
 		return future;
 	}
 
-	bool finished();
+	bool finished() {
+		return _finished.load(std::memory_order_relaxed);
+	}
 };
+
+
+inline void
+ThreadPoolThread::operator()()
+{
+	set_thread_name(string::format(_pool->_format, _idx));
+
+	_pool->_workers.fetch_add(1, std::memory_order_relaxed);
+	while (!_pool->_finished.load(std::memory_order_acquire)) {
+		std::function<void()> task;
+		_pool->_queue.wait_dequeue(task);
+		if likely(task != nullptr) {
+			_pool->_running.fetch_add(1, std::memory_order_relaxed);
+			_pool->_enqueued.fetch_sub(1, std::memory_order_release);
+			try {
+				task();
+			} catch (...) {
+				L_EXC("ERROR: Task died with an unhandled exception");
+			}
+			_pool->_running.fetch_sub(1, std::memory_order_release);
+		} else if (_pool->_ending.load(std::memory_order_acquire)) {
+			break;
+		}
+	}
+	_pool->_workers.fetch_sub(1, std::memory_order_relaxed);
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////

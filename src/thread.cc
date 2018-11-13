@@ -25,6 +25,7 @@
 #include "config.h"              // for HAVE_PTHREADS, HAVE_PTHREAD_SETNAME_NP
 
 #include <mutex>                 // for std::mutex, std::lock_guard
+#include <string>                // for std::string
 #include <tuple>                 // for std::forward_as_tuple
 #include <unordered_map>         // for std::unordered_map
 
@@ -35,50 +36,8 @@
 #include "stringified.hh"        // for stringified
 
 
-void
-Thread::start()
-{
-	if (!_started.exchange(true)) {
-		_thread = std::thread(&Thread::_runner, this);
-		_thread.detach();
-	}
-}
-
-bool
-Thread::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
-{
-	if (_started && !_joined) {
-		std::future_status status;
-		do {
-			status = _future.wait_until(wakeup);
-			if (status == std::future_status::timeout) {
-				return false;
-			}
-		} while (status != std::future_status::ready);
-		if (!_joined.exchange(true)) {
-			_future.get(); // rethrow any exceptions
-		}
-	}
-	return true;
-}
-
-void
-Thread::_runner()
-{
-	try {
-		(*this)();
-		_promise.set_value();
-	} catch (...) {
-		try {
-			// store anything thrown in the promise
-			_promise.set_exception(std::current_exception());
-		} catch(...) {} // set_exception() may throw too
-	}
-}
-
-
-static std::unordered_map<std::thread::id, std::string> thread_names;
 static std::mutex thread_names_mutex;
+static std::unordered_map<std::thread::id, std::string> thread_names;
 
 
 void set_thread_name(const std::string& name) {

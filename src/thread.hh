@@ -22,11 +22,23 @@
 
 #pragma once
 
-#include <atomic>         // for std::atomic_bool
-#include <chrono>         // for std::chrono
-#include <future>         // for std::future, std::promise
-#include <string>         // for std::string
-#include <thread>         // for std::thread
+#include <atomic>                // for std::atomic_bool
+#include <chrono>                // for std::chrono
+#include <future>                // for std::future, std::promise
+#include <thread>                // for std::thread
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+void set_thread_name(const std::string& name);
+
+const std::string& get_thread_name(std::thread::id thread_id);
+
+const std::string& get_thread_name();
+
+
+////////////////////////////////////////////////////////////////////////////////
 
 
 class Thread {
@@ -37,7 +49,17 @@ class Thread {
 	std::atomic_bool _started;
 	std::atomic_bool _joined;
 
-	void _runner();
+	void _runner() {
+		try {
+			(*this)();
+			_promise.set_value();
+		} catch (...) {
+			try {
+				// store anything thrown in the promise
+				_promise.set_exception(std::current_exception());
+			} catch(...) {} // set_exception() may throw too
+		}
+	}
 
 public:
 	Thread() :
@@ -64,23 +86,32 @@ public:
 
 	virtual ~Thread() = default;
 
-	void start();
-
-	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
-
-	template <typename T, typename R>
-	bool join(std::chrono::duration<T, R> timeout) {
-		return join(std::chrono::system_clock::now() + timeout);
+	void start() {
+		if (!_started.exchange(true)) {
+			_thread = std::thread(&Thread::_runner, this);
+			_thread.detach();
+		}
 	}
 
-	bool join(int timeout = 60000) {
-		return join(std::chrono::milliseconds(timeout));
+	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
+		if (_started && !_joined) {
+			std::future_status status;
+			do {
+				status = _future.wait_until(wakeup);
+				if (status == std::future_status::timeout) {
+					return false;
+				}
+			} while (status != std::future_status::ready);
+			if (!_joined.exchange(true)) {
+				_future.get(); // rethrow any exceptions
+			}
+		}
+		return true;
+	}
+
+	bool join(std::chrono::milliseconds timeout = std::chrono::milliseconds(60000)) {
+		return join(std::chrono::system_clock::now() + timeout);
 	}
 
 	virtual void operator()() = 0;
 };
-
-
-void set_thread_name(const std::string& name);
-const std::string& get_thread_name(std::thread::id thread_id);
-const std::string& get_thread_name();
