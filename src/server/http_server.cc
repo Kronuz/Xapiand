@@ -41,7 +41,7 @@
 
 
 HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http)
-	: BaseServer(parent_, ev_loop_, ev_flags_, http->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
+	: BaseServer<HttpServer>(parent_, ev_loop_, ev_flags_, http->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
 	  http(http)
 {
 }

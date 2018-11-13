@@ -33,7 +33,7 @@ class Binary;
 class Endpoint;
 
 // Binary Server
-class BinaryServer : public BaseServer {
+class BinaryServer : public BaseServer<BinaryServer> {
 	std::shared_ptr<Binary> binary;
 
 	ev::async process_tasks_async;
@@ -50,7 +50,7 @@ public:
 	BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary);
 	~BinaryServer();
 
-	void io_accept_cb(ev::io& watcher, int revents) override;
+	void io_accept_cb(ev::io& watcher, int revents);
 
 	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database);
 

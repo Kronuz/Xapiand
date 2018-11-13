@@ -31,7 +31,7 @@
 class Http;
 
 // Http Server
-class HttpServer : public BaseServer {
+class HttpServer : public BaseServer<HttpServer> {
 	std::shared_ptr<Http> http;
 
 	void start_impl() override;
@@ -44,5 +44,5 @@ public:
 	HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http);
 	~HttpServer();
 
-	void io_accept_cb(ev::io& watcher, int revents) override;
+	void io_accept_cb(ev::io& watcher, int revents);
 };
