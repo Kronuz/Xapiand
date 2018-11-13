@@ -78,6 +78,7 @@
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
 #include "server/http_server.h"               // for HttpServer
+#include "server/http_client.h"               // for HttpClient
 #include "server/server.h"                    // for XapiandServer, XapiandServer::total_clients
 #include "storage.h"                          // for Storage
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
@@ -85,6 +86,7 @@
 #ifdef XAPIAND_CLUSTERING
 #include "server/binary.h"                    // for Binary
 #include "server/binary_server.h"             // for BinaryServer
+#include "server/binary_client.h"             // for BinaryClient
 #include "server/discovery.h"                 // for Discovery
 #include "server/raft.h"                      // for Raft
 #endif
@@ -129,7 +131,10 @@ XapiandManager::XapiandManager()
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("X%02zu", opts.num_async_wal_writers),
 	  thread_pool("W%02zu", opts.threadpool_size),
-	  client_pool("C%02zu", opts.tasks_size),
+	  http_client_pool("H%02zu", opts.tasks_size),
+#ifdef XAPIAND_CLUSTERING
+	  binary_client_pool("B%02zu", opts.tasks_size),
+#endif
 	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -151,7 +156,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  schemas(opts.dbpool_size),
 	  wal_writer("X%02zu", opts.num_async_wal_writers),
 	  thread_pool("W%02zu", opts.threadpool_size),
-	  client_pool("C%02zu", opts.tasks_size),
+	  http_client_pool("H%02zu", opts.tasks_size),
+#ifdef XAPIAND_CLUSTERING
+	  binary_client_pool("B%02zu", opts.tasks_size),
+#endif
 	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -675,9 +683,7 @@ XapiandManager::make_servers()
 			binary->add_server(binary_server);
 		}
 #endif
-		server_pool.enqueue([task = std::move(server)]{
-			task->run();
-		});
+		server_pool.enqueue(std::move(server));
 	}
 
 	// Make server protocols weak:
@@ -749,8 +755,13 @@ XapiandManager::finish()
 	L_MANAGER("Finishing servers pool!");
 	server_pool.finish();
 
-	L_MANAGER("Finishing client threads pool!");
-	client_pool.finish();
+	L_MANAGER("Finishing http client threads pool!");
+	http_client_pool.finish();
+
+#ifdef XAPIAND_CLUSTERING
+	L_MANAGER("Finishing binary client threads pool!");
+	binary_client_pool.finish();
+#endif
 }
 
 
@@ -771,13 +782,23 @@ XapiandManager::join()
 		}
 	}
 
-	L_MANAGER("Waiting for %zu client thread%s...", client_pool.running_size(), (client_pool.running_size() == 1) ? "" : "s");
-	while (!client_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu http client thread%s...", http_client_pool.running_size(), (http_client_pool.running_size() == 1) ? "" : "s");
+	while (!http_client_pool.join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw Exit(-sig);
 		}
 	}
+
+#ifdef XAPIAND_CLUSTERING
+	L_MANAGER("Waiting for %zu binary client thread%s...", binary_client_pool.running_size(), (binary_client_pool.running_size() == 1) ? "" : "s");
+	while (!binary_client_pool.join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw Exit(-sig);
+		}
+	}
+#endif
 
 	L_MANAGER("Finishing thread pool!");
 	thread_pool.finish();
@@ -1039,11 +1060,19 @@ XapiandManager::server_metrics()
 
 	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
-	// clients_tasks:
-	metrics.xapiand_clients_running.Set(client_pool.running_size());
-	metrics.xapiand_clients_queue_size.Set(client_pool.size());
-	metrics.xapiand_clients_pool_size.Set(client_pool.threadpool_size());
-	metrics.xapiand_clients_capacity.Set(client_pool.threadpool_capacity());
+	// http client tasks:
+	metrics.xapiand_http_clients_running.Set(http_client_pool.running_size());
+	metrics.xapiand_http_clients_queue_size.Set(http_client_pool.size());
+	metrics.xapiand_http_clients_pool_size.Set(http_client_pool.threadpool_size());
+	metrics.xapiand_http_clients_capacity.Set(http_client_pool.threadpool_capacity());
+
+#ifdef XAPIAND_CLUSTERING
+	// binary client tasks:
+	metrics.xapiand_binary_clients_running.Set(binary_client_pool.running_size());
+	metrics.xapiand_binary_clients_queue_size.Set(binary_client_pool.size());
+	metrics.xapiand_binary_clients_pool_size.Set(binary_client_pool.threadpool_size());
+	metrics.xapiand_binary_clients_capacity.Set(binary_client_pool.threadpool_capacity());
+#endif
 
 	// servers_threads:
 	metrics.xapiand_servers_running.Set(server_pool.running_size());
@@ -1063,9 +1092,11 @@ XapiandManager::server_metrics()
 	metrics.xapiand_fsync_pool_size.Set(fsyncher().threadpool_size());
 	metrics.xapiand_fsync_capacity.Set(fsyncher().threadpool_capacity());
 
+#ifdef XAPIAND_CLUSTERING
 	// current connections:
 	metrics.xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
 	metrics.xapiand_binary_current_connections.Set(XapiandServer::binary_clients.load());
+#endif
 
 	// file_descriptors:
 	metrics.xapiand_file_descriptors.Set(get_open_files_per_proc());
@@ -1098,6 +1129,7 @@ XapiandManager::server_metrics()
 }
 
 
+#ifdef XAPIAND_CLUSTERING
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
@@ -1105,3 +1137,4 @@ trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 		binary->trigger_replication(src_endpoint, dst_endpoint, false);
 	}
 }
+#endif

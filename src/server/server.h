@@ -53,5 +53,5 @@ public:
 	static std::atomic_int http_clients;
 	static std::atomic_int binary_clients;
 
-	void run();
+	void operator()();
 };

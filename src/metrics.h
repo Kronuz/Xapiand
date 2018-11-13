@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "config.h"                // for XAPIAND_CLUSTERING
+
 #include <string>
 #include <memory>
 
@@ -50,25 +52,33 @@ public:
 	prometheus::Gauge& xapiand_running;
 	prometheus::Gauge& xapiand_info;
 
-	// clients_tasks:
-	prometheus::Gauge& xapiand_clients_running;
-	prometheus::Gauge& xapiand_clients_queue_size;
-	prometheus::Gauge& xapiand_clients_capacity;
-	prometheus::Gauge& xapiand_clients_pool_size;
+	// http client tasks:
+	prometheus::Gauge& xapiand_http_clients_running;
+	prometheus::Gauge& xapiand_http_clients_queue_size;
+	prometheus::Gauge& xapiand_http_clients_capacity;
+	prometheus::Gauge& xapiand_http_clients_pool_size;
 
-	// server_tasks:
+#ifdef XAPIAND_CLUSTERING
+	// binary client tasks:
+	prometheus::Gauge& xapiand_binary_clients_running;
+	prometheus::Gauge& xapiand_binary_clients_queue_size;
+	prometheus::Gauge& xapiand_binary_clients_capacity;
+	prometheus::Gauge& xapiand_binary_clients_pool_size;
+#endif
+
+	// server tasks:
 	prometheus::Gauge& xapiand_servers_running;
 	prometheus::Gauge& xapiand_servers_queue_size;
 	prometheus::Gauge& xapiand_servers_capacity;
 	prometheus::Gauge& xapiand_servers_pool_size;
 
-	// committers_threads:
+	// committers threads:
 	prometheus::Gauge& xapiand_committers_running;
 	prometheus::Gauge& xapiand_committers_queue_size;
 	prometheus::Gauge& xapiand_committers_capacity;
 	prometheus::Gauge& xapiand_committers_pool_size;
 
-	// fsync_threads:
+	// fsync threads:
 	prometheus::Gauge& xapiand_fsync_running;
 	prometheus::Gauge& xapiand_fsync_queue_size;
 	prometheus::Gauge& xapiand_fsync_capacity;
@@ -78,8 +88,10 @@ public:
 	prometheus::Gauge& xapiand_http_current_connections;
 	prometheus::Counter& xapiand_http_connections;
 
+#ifdef XAPIAND_CLUSTERING
 	prometheus::Gauge& xapiand_binary_current_connections;
 	prometheus::Counter& xapiand_binary_connections;
+#endif
 
 	prometheus::Counter& xapiand_http_sent_bytes;
 	prometheus::Counter& xapiand_http_received_bytes;

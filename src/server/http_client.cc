@@ -824,9 +824,7 @@ HttpClient::on_message_complete(http_parser* parser)
 			requests.push_back(std::move(new_request));
 			// And start a runner.
 			running = true;
-			XapiandManager::manager->client_pool.enqueue([task = share_this<HttpClient>()]{
-				task->run();
-			});
+			XapiandManager::manager->http_client_pool.enqueue(share_this<HttpClient>());
 		} else {
 			// There should be a runner, just enqueue request.
 			requests.push_back(std::move(new_request));
@@ -862,11 +860,11 @@ HttpClient::on_chunk_complete(http_parser* parser)
 
 
 void
-HttpClient::run_one(Request& request, Response& response)
+HttpClient::process(Request& request, Response& response)
 {
 	writes = 0;
-	L_OBJ_BEGIN("HttpClient::run:BEGIN");
-	L_OBJ_END("HttpClient::run:END");
+	L_OBJ_BEGIN("HttpClient::process:BEGIN");
+	L_OBJ_END("HttpClient::process:END");
 
 	request.log->clear();
 	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release();
@@ -965,9 +963,9 @@ HttpClient::run_one(Request& request, Response& response)
 
 
 void
-HttpClient::run()
+HttpClient::operator()()
 {
-	L_CALL("HttpClient::run()");
+	L_CALL("HttpClient::operator()()");
 
 	L_CONN("Start running in worker...");
 
@@ -983,7 +981,7 @@ HttpClient::run()
 		lk.unlock();
 		try {
 
-			run_one(request, response);
+			process(request, response);
 
 			auto sent = total_sent_bytes.exchange(0);
 			Metrics::metrics()

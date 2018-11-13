@@ -135,9 +135,7 @@ BinaryClient::init_remote()
 		state = State::INIT;
 		// And start a runner.
 		running = true;
-		XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-			task->run();
-		});
+		XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
 
 		return true;
 	}
@@ -244,9 +242,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-					task->run();
-				});
+				XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -291,9 +287,7 @@ BinaryClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::manager->client_pool.enqueue([task = share_this<BinaryClient>()]{
-				task->run();
-			});
+			XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
@@ -355,9 +349,9 @@ BinaryClient::send_file(char type_as_char, int fd)
 
 
 void
-BinaryClient::run()
+BinaryClient::operator()()
 {
-	L_CALL("BinaryClient::run()");
+	L_CALL("BinaryClient::operator()()");
 
 	L_CONN("Start running in binary worker...");
 

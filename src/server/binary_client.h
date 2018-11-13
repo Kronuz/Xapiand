@@ -113,7 +113,7 @@ public:
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
-	void run();
+	void operator()();
 };
 
 

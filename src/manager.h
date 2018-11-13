@@ -50,6 +50,8 @@ class Discovery;
 class Raft;
 #endif
 
+class HttpClient;
+class BinaryClient;
 class XapiandServer;
 
 extern void sig_exit(int sig);
@@ -136,8 +138,11 @@ public:
 	DatabaseWALWriter wal_writer;
 
 	ThreadPool<> thread_pool;
-	ThreadPool<> client_pool;
-	ThreadPool<> server_pool;
+	ThreadPool<std::shared_ptr<HttpClient>> http_client_pool;
+#ifdef XAPIAND_CLUSTERING
+	ThreadPool<std::shared_ptr<BinaryClient>> binary_client_pool;
+#endif
+	ThreadPool<std::shared_ptr<XapiandServer>> server_pool;
 
 	std::atomic_llong shutdown_asap;
 	std::atomic_llong shutdown_now;
@@ -185,9 +190,11 @@ public:
 	std::string server_metrics();
 };
 
+#ifdef XAPIAND_CLUSTERING
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication() {
 	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000>("R--", "R%02zu", 3, trigger_replication_trigger);
 	return trigger_replication;
 }
+#endif

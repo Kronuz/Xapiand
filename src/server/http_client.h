@@ -356,6 +356,6 @@ public:
 
 	~HttpClient();
 
-	void run_one(Request& request, Response& response);
-	void run();
+	void process(Request& request, Response& response);
+	void operator()();
 };

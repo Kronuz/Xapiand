@@ -990,7 +990,7 @@ DatabaseHandler::restore(int fd)
 		std::size_t total = 0;
 
 		// Index documents.
-		auto indexer = XapiandManager::manager->client_pool.async([&]{
+		auto indexer = XapiandManager::manager->thread_pool.async([&]{
 			DatabaseHandler db_handler(endpoints, flags, method);
 			lock_database lk_db(&db_handler);
 			lk_db.unlock();
@@ -1037,7 +1037,7 @@ DatabaseHandler::restore(int fd)
 
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
-		while (!XapiandManager::manager->client_pool.finished()) {
+		while (!XapiandManager::manager->thread_pool.finished()) {
 			MsgPack obj(MsgPack::Type::MAP);
 			Data data;
 			try {
@@ -1200,7 +1200,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::size_t total = docs.size();
 
 	// Index documents.
-	auto indexer = XapiandManager::manager->client_pool.async([&]{
+	auto indexer = XapiandManager::manager->thread_pool.async([&]{
 		DatabaseHandler db_handler(endpoints, flags, method);
 		bool _ready = false;
 		while (!XapiandManager::manager->detaching()) {
@@ -1239,7 +1239,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		if (XapiandManager::manager->client_pool.finished()) {
+		if (XapiandManager::manager->thread_pool.finished()) {
 			break;
 		}
 		bulk[bulk_cnt++] = [&]() {

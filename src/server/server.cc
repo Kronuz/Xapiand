@@ -50,9 +50,9 @@ XapiandServer::~XapiandServer()
 
 
 void
-XapiandServer::run()
+XapiandServer::operator()()
 {
-	L_CALL("XapiandServer::run()");
+	L_CALL("XapiandServer::operator()()");
 
 	L_EV("Starting server loop...");
 	run_loop();

@@ -83,34 +83,64 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			{"arch", check_architecture()},
 		})
 	},
-	xapiand_clients_running{
+	xapiand_http_clients_running{
 		registry.AddGauge(
-			"xapiand_clients_running",
-			"Amount of clients running",
+			"xapiand_http_clients_running",
+			"Number of Http clients running",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_clients_queue_size{
+	xapiand_http_clients_queue_size{
 		registry.AddGauge(
-			"xapiand_clients_queue_size",
-			"Clients in the queue",
+			"xapiand_http_clients_queue_size",
+			"Http clients in the queue",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_clients_capacity{
+	xapiand_http_clients_capacity{
 		registry.AddGauge(
-			"xapiand_clients_capacity",
-			"Client queue capacity",
+			"xapiand_http_clients_capacity",
+			"Http client queue capacity",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_clients_pool_size{
+	xapiand_http_clients_pool_size{
+		registry.AddGauge(
+			"xapiand_http_clients_pool_size",
+			"Http client total pool size",
+			constant_labels)
+		.Add({})
+	},
+#ifdef XAPIAND_CLUSTERING
+	xapiand_binary_clients_running{
+		registry.AddGauge(
+			"xapiand_binary_clients_running",
+			"Number of binary clients running",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_binary_clients_queue_size{
+		registry.AddGauge(
+			"xapiand_binary_clients_queue_size",
+			"Binary clients in the queue",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_binary_clients_capacity{
+		registry.AddGauge(
+			"xapiand_binary_clients_capacity",
+			"Binary client queue capacity",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_binary_clients_pool_size{
 		registry.AddGauge(
 			"xapiand_clients_pool_size",
-			"Client total pool size",
+			"Binary client total pool size",
 			constant_labels)
 		.Add({})
 	},
+#endif
 	xapiand_servers_running{
 		registry.AddGauge(
 			"xapiand_servers_running",
@@ -209,6 +239,7 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
+#ifdef XAPIAND_CLUSTERING
 	xapiand_binary_current_connections{
 		registry.AddGauge(
 			"xapiand_binary_current_connections",
@@ -223,6 +254,7 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
+#endif
 	xapiand_http_sent_bytes{
 		registry.AddCounter(
 			"xapiand_http_sent_bytes",
