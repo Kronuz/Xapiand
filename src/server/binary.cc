@@ -33,8 +33,8 @@
 #include "remote_protocol.h"                  // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 
 
-Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY)
+Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, port, "Binary", CONN_TCP_NODELAY, port == XAPIAND_BINARY_SERVERPORT ? 10 : 1)
 {
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);

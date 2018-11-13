@@ -49,14 +49,14 @@ protected:
 
 	int flags;
 
-	std::string description;
+	const char* description;
 
 	void bind(int tries);
 
 	void close();
 
 public:
-	TCP(int port_, std::string description_, int tries_, int flags_);
+	TCP(int port, const char* description, int flags, int tries);
 	virtual ~TCP();
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
@@ -73,6 +73,6 @@ protected:
 	void destroy_impl() override;
 
 public:
-	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int falgs, int tries);
 	~BaseTCP();
 };

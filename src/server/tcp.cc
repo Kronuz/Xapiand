@@ -43,14 +43,14 @@
 #include "manager.h"                // for sig_exit
 
 
-TCP::TCP(int port_, std::string description_, int tries_, int flags_)
-	: port(port_),
+TCP::TCP(int port, const char* description, int flags, int tries)
+	: port(port),
 	  sock(-1),
 	  closed(false),
-	  flags(flags_),
-	  description(std::move(description_))
+	  flags(flags),
+	  description(description)
 {
-	bind(tries_);
+	bind(tries);
 }
 
 
@@ -287,8 +287,8 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 }
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string description_, int tries_, int flags_)
-	: TCP(port_, description_, tries_, flags_),
+BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags, int tries)
+	: TCP(port, description, flags, tries),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
 }

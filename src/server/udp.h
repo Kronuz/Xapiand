@@ -39,7 +39,7 @@ protected:
 	int sock;
 	std::atomic_bool closed;
 
-	std::string description;
+	const char* description;
 	uint8_t major_version;
 	uint8_t minor_version;
 
@@ -48,7 +48,7 @@ protected:
 	void close();
 
 public:
-	UDP(int port_, std::string description_, uint8_t major_, uint8_t minor_, const std::string& group_, int tries_=1);
+	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int tries = 1);
 	virtual ~UDP();
 
 	void send_message(char type, const std::string& content);

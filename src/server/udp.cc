@@ -38,15 +38,15 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port_, std::string description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
-	: port(port_),
+UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int tries)
+	: port(port),
 	  sock(-1),
 	  closed(false),
-	  description(std::move(description_)),
-	  major_version(major_version_),
-	  minor_version(minor_version_)
+	  description(description),
+	  major_version(major_version),
+	  minor_version(minor_version)
 {
-	bind(tries_, group_);
+	bind(tries, group);
 }
 
 
