@@ -22,7 +22,7 @@
 
 #include "config.h"                 // for HAVE_SYS_SYSCTL_H, XAPIAND_TCP_BACKLOG
 
-#include "base_tcp.h"
+#include "tcp.h"
 
 #include <arpa/inet.h>              // for htonl, htons
 #include <netdb.h>                  // for addrinfo, freeaddrinfo, getaddrinfo

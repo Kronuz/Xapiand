@@ -30,7 +30,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include "base_tcp.h"
+#include "tcp.h"                              // for TCP::connect
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
 #include "length.h"
@@ -155,7 +155,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	if (replication.init_replication(src_endpoint, dst_endpoint)) {
 		int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
-		if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) == -1) {
+		if ((sock = TCP::connect(sock, src_endpoint.host, std::to_string(port))) == -1) {
 			L_ERR("Cannot connect to %s", src_endpoint.host, std::to_string(port));
 			return false;
 		}

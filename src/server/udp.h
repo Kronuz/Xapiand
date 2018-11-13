@@ -58,15 +58,3 @@ public:
 
 	virtual std::string getDescription() const noexcept = 0;
 };
-
-
-// Base class for UDP messages configuration
-class BaseUDP : public UDP, public Worker {
-protected:
-	void shutdown_impl(long long asap, long long now) override;
-	void destroy_impl() override;
-
-public:
-	BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_=1);
-	~BaseUDP();
-};

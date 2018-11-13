@@ -26,7 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "base_udp.h"           // for UDP
+#include "udp.h"                // for UDP
 #include "debouncer.h"          // for make_debouncer
 
 

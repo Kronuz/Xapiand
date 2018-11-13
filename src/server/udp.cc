@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "base_udp.h"
+#include "udp.h"
 
 #include <arpa/inet.h>              // for inet_addr, htonl, htons
 #include <cstring>                  // for strerror, memset
@@ -230,46 +230,4 @@ UDP::get_message(std::string& result, char max_type)
 
 	result = std::string(p, p_end - p);
 	return type;
-}
-
-
-BaseUDP::BaseUDP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, std::string  description_, uint8_t major_version_, uint8_t minor_version_, const std::string& group_, int tries_)
-	: UDP(port_, description_, major_version_, minor_version_, group_, tries_),
-	  Worker(parent_, ev_loop_, ev_flags_)
-{
-}
-
-
-BaseUDP::~BaseUDP()
-{
-	UDP::close();
-
-	Worker::deinit();
-}
-
-
-void
-BaseUDP::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("BaseUDP::shutdown_impl(%lld, %lld)", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	stop(false);
-	destroy(false);
-
-	if (now != 0) {
-		detach();
-	}
-}
-
-
-void
-BaseUDP::destroy_impl()
-{
-	L_CALL("BaseUDP::destroy_impl()");
-
-	Worker::destroy_impl();
-
-	UDP::close();
 }
