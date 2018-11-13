@@ -29,8 +29,9 @@
 #include "worker.h"  // for Worker
 
 
-constexpr int CONN_TCP_NODELAY      = 1;
-constexpr int CONN_TCP_DEFER_ACCEPT = 2;
+constexpr int TCP_SO_REUSEPORT     = 1;
+constexpr int TCP_TCP_NODELAY      = 2;
+constexpr int TCP_TCP_DEFER_ACCEPT = 4;
 
 
 // Values in seconds.

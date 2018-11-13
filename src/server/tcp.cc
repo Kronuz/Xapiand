@@ -82,14 +82,15 @@ TCP::bind(int tries)
 		sig_exit(-EX_IOERR);
 	}
 
-	// use io::setsockopt() to allow multiple listeners connected to the same address
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	}
 
-	// if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-	// 	L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
-	// }
+	if ((flags & TCP_SO_REUSEPORT) != 0) {
+		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+		}
+	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
@@ -106,7 +107,7 @@ TCP::bind(int tries)
 	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
 	// }
 
-	if ((flags & CONN_TCP_DEFER_ACCEPT) != 0) {
+	if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
 		// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
 		// We want the HTTP server to wakeup accepting connections that already have some data
 		// to read; this is not the case for binary servers where the server is the one first
@@ -190,7 +191,7 @@ TCP::accept()
 	// 	L_ERR("ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
-	if ((flags & CONN_TCP_NODELAY) != 0) {
+	if ((flags & TCP_TCP_NODELAY) != 0) {
 		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 		}
@@ -300,21 +301,21 @@ TCP::socket()
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock_, errno, strerror(errno));
 	}
 #endif
 
-	// if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	// if (io::setsockopt(sock_, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock_, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
-	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
+	// if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock_, strerror(errno));
 	// }
 
-	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
+	if (io::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
+		L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock_, strerror(errno));
 	}
 
 	return sock_;

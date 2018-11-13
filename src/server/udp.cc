@@ -38,10 +38,11 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int tries)
+UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int flags, int tries)
 	: port(port),
 	  sock(-1),
 	  closed(false),
+	  flags(flags),
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version)
@@ -78,9 +79,14 @@ UDP::bind(int tries, const std::string& group)
 		sig_exit(-EX_CONFIG);
 	}
 
-	// use io::setsockopt() to allow multiple listeners connected to the same port
-	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+	}
+
+	if ((flags & UDP_SO_REUSEPORT) != 0) {
+		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+		}
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {

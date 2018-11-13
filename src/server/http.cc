@@ -24,14 +24,14 @@
 
 #include "config.h"                           // for XAPIAND_HTTP_SERVERPORT, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION
 
-#include "tcp.h"                              // for BaseTCP, CONN_TCP_NODELAY, CONN_TCP_DEFER_ACCEPT
+#include "tcp.h"                              // for BaseTCP, TCP_TCP_NODELAY, TCP_TCP_DEFER_ACCEPT
 #include "http_server.h"                      // For BinaryServer
 #include "log.h"                              // for L_OBJ
 #include "node.h"                             // for Node::local_node
 
 
 Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, port, "HTTP", CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT, port == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, port, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT, port == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
 {
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);

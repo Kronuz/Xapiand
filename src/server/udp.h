@@ -31,6 +31,9 @@
 #include "worker.h"      // for Worker
 
 
+constexpr int UDP_SO_REUSEPORT     = 1;
+
+
 class UDP {
 protected:
 	struct sockaddr_in addr;
@@ -38,6 +41,8 @@ protected:
 	int port;
 	int sock;
 	std::atomic_bool closed;
+
+	int flags;
 
 	const char* description;
 	uint8_t major_version;
@@ -48,7 +53,7 @@ protected:
 	void close();
 
 public:
-	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int tries = 1);
+	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, const std::string& group, int flags, int tries);
 	virtual ~UDP();
 
 	void send_message(char type, const std::string& content);
