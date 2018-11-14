@@ -81,8 +81,6 @@ public:
 	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
 		: BaseException(default_exc(), function, filename, line, type, msg, fmt::make_printf_args()) { }
 
-	virtual ~BaseException() = default;
-
 	const char* get_message() const;
 	const char* get_context() const;
 	const char* get_traceback() const;
