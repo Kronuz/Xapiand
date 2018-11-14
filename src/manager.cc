@@ -127,6 +127,7 @@ void sig_exit(int sig) {
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
+	  resolve_index_lru(1000),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
@@ -153,6 +154,7 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
+	  resolve_index_lru(1000),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
@@ -956,18 +958,15 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		static std::mutex lru_mtx;
-		static lru::LRU<std::string, std::string> lru(1000);
-
 		DatabaseHandler db_handler;
 
 		std::string serialised;
 		auto key = std::string(path);
 		key.push_back('/');
 
-		std::unique_lock<std::mutex> lk(lru_mtx);
-		auto it = lru.find(key);
-		if (it != lru.end()) {
+		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
+		auto it = resolve_index_lru.find(key);
+		if (it != resolve_index_lru.end()) {
 			serialised = it->second;
 			lk.unlock();
 		} else {
@@ -976,7 +975,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 			serialised = db_handler.get_metadata(key);
 			if (!serialised.empty()) {
 				lk.lock();
-				lru.insert(std::make_pair(key, serialised));
+				resolve_index_lru.insert(std::make_pair(key, serialised));
 				lk.unlock();
 			}
 		}
@@ -995,7 +994,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				}
 				assert(!serialised.empty());
 				lk.lock();
-				lru.insert(std::make_pair(key, serialised));
+				resolve_index_lru.insert(std::make_pair(key, serialised));
 				lk.unlock();
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
