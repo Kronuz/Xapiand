@@ -1019,7 +1019,7 @@ DatabaseWALWriter::new_producer_token(const std::string& path)
 
 
 void
-DatabaseWALWriter::write_add_document(Database& database, const Xapian::Document&& doc)
+DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1139,7 +1139,7 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 
 
 void
-DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, const Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];
@@ -1170,7 +1170,7 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 
 
 void
-DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, const Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc)
 {
 	assert((database.flags & DB_WRITABLE) == DB_WRITABLE);
 	auto endpoint = database.endpoints[0];

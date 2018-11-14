@@ -304,12 +304,12 @@ public:
 
 	std::unique_ptr<ProducerToken> new_producer_token(const std::string& path);
 
-	void write_add_document(Database& database, const Xapian::Document&& doc);
+	void write_add_document(Database& database, Xapian::Document&& doc);
 	void write_delete_document_term(Database& database, const std::string& term);
 	void write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec);
 	void write_commit(Database& database, bool send_update);
-	void write_replace_document(Database& database, Xapian::docid did, const Xapian::Document&& doc);
-	void write_replace_document_term(Database& database, const std::string& term, const Xapian::Document&& doc);
+	void write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc);
+	void write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc);
 	void write_delete_document(Database& database, Xapian::docid did);
 	void write_set_metadata(Database& database, const std::string& key, const std::string& val);
 	void write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc);
