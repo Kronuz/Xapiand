@@ -932,9 +932,7 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 void
 DatabaseWALWriter::execute(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
 {
-	static const std::hash<std::string> hasher;
-	auto hash = hasher(path);
-	auto& thread = _threads[hash % _threads.size()];
+	static thread_local DatabaseWALWriterThread thread(0, this);
 	func(thread);
 }
 
