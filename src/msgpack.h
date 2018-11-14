@@ -84,9 +84,7 @@ class MsgPack {
 	MsgPack(msgpack::object&& _object, bool _const);
 
 public:
-	struct Data {
-		virtual ~Data() { };
-	};
+	struct Data {};
 
 	enum class Type : uint8_t {
 		NIL                 = msgpack::type::NIL,               //0x00

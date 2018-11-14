@@ -2483,7 +2483,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 	}
 
 	properties = &it.value();
-	const auto data = std::dynamic_pointer_cast<const FedSpecification>(properties->get_data());
+	const auto data = std::static_pointer_cast<const FedSpecification>(properties->get_data());
 	if (data) {
 		// This is the feed cache
 		auto local_prefix_uuid = specification.local_prefix.uuid;
