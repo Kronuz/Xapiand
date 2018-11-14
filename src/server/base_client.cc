@@ -42,6 +42,7 @@
 #include "readable_revents.hh"   // for readable_revents
 #include "repr.hh"               // for repr
 #include "server.h"              // for XapiandServer
+#include "thread.hh"             // for get_thread_name
 
 
 // #undef L_DEBUG
@@ -117,6 +118,11 @@ BaseClient::~BaseClient()
 	io::close(sock);
 
 	Worker::deinit();
+
+	if (get_thread_name()[0] != 'S') {
+		L_TRACEBACK(CRIT_COL + "BaseClient destroyed from %s!", get_thread_name());
+		sig_exit(-EX_SOFTWARE);
+	}
 }
 
 
