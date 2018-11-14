@@ -187,13 +187,13 @@ protected:
 
 			if (errno == ECONNRESET) {
 				L_CONN("Received ECONNRESET {sock:%d}!", sock);
-				client.on_read(nullptr, received);
+				on_read(nullptr, received);
 				detach();
 				return;
 			}
 
 			L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
-			client.on_read(nullptr, received);
+			on_read(nullptr, received);
 			detach();
 			return;
 		}
@@ -201,7 +201,7 @@ protected:
 		if (received == 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN("Received EOF {sock:%d}!", sock);
-			client.on_read(nullptr, received);
+			on_read(nullptr, received);
 			detach();
 			return;
 		}
@@ -214,7 +214,7 @@ protected:
 
 		do {
 			if ((received > 0) && mode == MODE::READ_BUF) {
-				buf_data += client.on_read(buf_data, received);
+				buf_data += on_read(buf_data, received);
 				received = buf_end - buf_data;
 			}
 
@@ -249,7 +249,7 @@ protected:
 							L_ERR("Data is corrupt!");
 							return;
 						}
-						client.on_read_file_done();
+						on_read_file_done();
 						mode = MODE::READ_BUF;
 						decompressor.reset();
 						continue;
