@@ -38,17 +38,17 @@
 //  \____\___/|_| |_| |_| .__/|_|  \___||___/___/\___/|_|
 //                      |_|
 
-template <typename ClientImpl>
+template <typename Writer>
 class ClientNoCompressor {
-	ClientImpl& client;
+	Writer& writer;
 
 	XXH32_state_t* xxh_state;
 	size_t offset;
 	int fd;
 
 public:
-	ClientNoCompressor(ClientImpl& client, int fd, size_t offset = 0) :
-		client(client),
+	ClientNoCompressor(Writer& writer, int fd, size_t offset = 0) :
+		writer(writer),
 		xxh_state(XXH32_createState()),
 		offset(offset),
 		fd(fd) {}
@@ -72,7 +72,7 @@ public:
 		ssize_t r;
 		while ((r = io::read(fd, buffer, sizeof(buffer))) > 0) {
 			std::string length(serialise_length(r));
-			if (!client.write(length) || !client.write(buffer, r)) {
+			if (!writer.write(length) || !writer.write(buffer, r)) {
 				L_ERR("Write failed!");
 				return -1;
 			}
@@ -85,7 +85,7 @@ public:
 			return -1;
 		}
 
-		if (!client.write(serialise_length(0)) || !client.write(serialise_length(XXH32_digest(xxh_state)))) {
+		if (!writer.write(serialise_length(0)) || !writer.write(serialise_length(XXH32_digest(xxh_state)))) {
 			L_ERR("Write Footer failed!");
 			return -1;
 		}
@@ -95,14 +95,14 @@ public:
 };
 
 
-template <typename ClientImpl>
+template <typename Writer>
 class ClientLZ4Compressor : public LZ4CompressFile {
-	ClientImpl& client;
+	Writer& writer;
 
 public:
-	ClientLZ4Compressor(ClientImpl& client, int fd, size_t offset = 0) :
+	ClientLZ4Compressor(Writer& writer, int fd, size_t offset = 0) :
 		LZ4CompressFile(fd, offset, -1, COMPRESSION_SEED),
-		client(client) {}
+		writer(writer) {}
 
 	ssize_t compress() {
 		L_CALL("compress()");
@@ -111,7 +111,7 @@ public:
 			auto it = begin();
 			while (it) {
 				std::string length(serialise_length(it.size()));
-				if (!client.write(length) || !client.write(it->data(), it.size())) {
+				if (!writer.write(length) || !writer.write(it->data(), it.size())) {
 					L_ERR("Write failed!");
 					return -1;
 				}
@@ -122,7 +122,7 @@ public:
 			return -1;
 		}
 
-		if (!client.write(serialise_length(0)) || !client.write(serialise_length(get_digest()))) {
+		if (!writer.write(serialise_length(0)) || !writer.write(serialise_length(get_digest()))) {
 			L_ERR("Write Footer failed!");
 			return -1;
 		}
@@ -139,16 +139,16 @@ public:
 // |____/ \___|\___\___/|_| |_| |_| .__/|_|  \___||___/___/\___/|_|
 //                                |_|
 
-template <typename ClientImpl>
+template <typename Reader>
 class ClientNoDecompressor {
-	ClientImpl& client;
+	Reader& reader;
 
 	XXH32_state_t* xxh_state;
 	std::string input;
 
 public:
-	ClientNoDecompressor(ClientImpl& client) :
-		client(client),
+	ClientNoDecompressor(Reader& reader) :
+		reader(reader),
 		xxh_state(XXH32_createState()) {
 		XXH32_reset(xxh_state, COMPRESSION_SEED);
 	}
@@ -174,7 +174,7 @@ public:
 
 		size_t size = input.size();
 		const char* data = input.data();
-		client.on_read_file(data, size);
+		reader.on_read_file(data, size);
 		XXH32_update(xxh_state, data, size);
 
 		return size;
@@ -188,16 +188,16 @@ public:
 };
 
 
-template <typename ClientImpl>
+template <typename Reader>
 class ClientLZ4Decompressor : public LZ4DecompressData {
-	ClientImpl& client;
+	Reader& reader;
 
 	std::string input;
 
 public:
-	ClientLZ4Decompressor(ClientImpl& client) :
+	ClientLZ4Decompressor(Reader& reader) :
 		LZ4DecompressData(nullptr, 0, COMPRESSION_SEED),
-		client(client) {}
+		reader(reader) {}
 
 
 	void clear() noexcept {
@@ -218,7 +218,7 @@ public:
 		add_data(input.data(), input.size());
 		auto it = begin();
 		while (it) {
-			client.on_read_file(it->data(), it.size());
+			reader.on_read_file(it->data(), it.size());
 			++it;
 		}
 		return size();
