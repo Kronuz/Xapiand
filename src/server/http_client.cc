@@ -366,7 +366,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 
 
 HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
-	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
+	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  new_request(this)
 {
 	++XapiandServer::http_clients;
@@ -391,6 +391,23 @@ HttpClient::~HttpClient()
 
 	if (shutting_down && !is_idle()) {
 		L_WARNING("HTTP client killed!");
+	}
+}
+
+
+void
+HttpClient::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("HttpClient::shutdown_impl(%lld, %lld)", asap, now);
+
+	shutting_down = true;
+
+	Worker::shutdown_impl(asap, now);
+
+	if (now != 0 || is_idle()) {
+		stop(false);
+		destroy(false);
+		detach();
 	}
 }
 

@@ -34,7 +34,7 @@
 #include <vector>                             // for std::vector
 #include <xapian.h>
 
-#include "base_client.h"                      // for BaseClient
+#include "base_client.h"                      // for MetaBaseClient
 #include "remote_protocol.h"                  // for RemoteProtocol
 #include "replication.h"                      // for Replication
 #include "threadpool.hh"                      // for Task
@@ -64,7 +64,9 @@ inline const std::string& StateNames(State type) {
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class BinaryClient : public BaseClient {
+class BinaryClient : public MetaBaseClient<BinaryClient> {
+	friend MetaBaseClient<BinaryClient>;
+
 	std::mutex runner_mutex;
 
 	State state;
@@ -83,11 +85,13 @@ class BinaryClient : public BaseClient {
 
 	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
-	bool is_idle() override;
+	void shutdown_impl(long long asap, long long now) override;
 
-	ssize_t on_read(const char *buf, ssize_t received) override;
-	void on_read_file(const char *buf, ssize_t received) override;
-	void on_read_file_done() override;
+	bool is_idle();
+
+	ssize_t on_read(const char *buf, ssize_t received);
+	void on_read_file(const char *buf, ssize_t received);
+	void on_read_file_done();
 
 	// Remote protocol:
 	RemoteProtocol remote_protocol;

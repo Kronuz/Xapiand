@@ -22,165 +22,55 @@
 
 #pragma once
 
-#include <atomic>        // for atomic_bool, atomic_int
-#include <memory>        // for shared_ptr, unique_ptr
-#include <string.h>      // for size_t, memcpy, strlen
-#include <string>        // for string
-#include <sys/types.h>   // for ssize_t
+#include <atomic>                // for std::atomic_bool
+#include <errno.h>               // for errno, ECONNRESET
+#include <memory>                // for std::shared_ptr, std::unique_ptr
+#include <string>                // for std::string
+#include <sys/types.h>           // for ssize_t
 
-#include "cassert.hh"    // for assert
+#include "cassert.hh"            // for assert
 
-#include "ev/ev++.h"     // for async, io, loop_ref (ptr only)
-#include "io.hh"         // for io::*
-#include "queue.h"       // for Queue
-#include "worker.h"      // for Worker
+#include "buffer.h"              // for Buffer
+#include "client_compressor.h"   // for ClientLZ4Compressor, ClientLZ4Decompressor
+#include "ev/ev++.h"             // for ev::async, ev::io, ev::loop_ref
+#include "io.hh"                 // for io::*
+#include "lz4/xxhash.h"          // for XXH32_state_t
+#include "ignore_unused.h"       // for ignore_unused
+#include "log.h"                 // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
+#include "queue.h"               // for Queue
+#include "readable_revents.hh"   // for readable_revents
+#include "worker.h"              // for Worker
 
-// #define L_CONN L_DEBUG
 
-class LZ4CompressFile;
+#define BUF_SIZE 4096
 
-//
-//   Buffer class - allow for output buffering such that it can be written out
-//                                 into async pieces
-//
 
-class Buffer {
-	std::string _data;
-	std::string_view _data_view;
-
-	std::string _path;
-	int _fd;
-	bool _unlink;
-	size_t _max_pos;
-
-	void feed() {
-		if (_fd != -1 && _data_view.empty() && pos < _max_pos) {
-			_data.resize(4096);
-			io::lseek(_fd, pos, SEEK_SET);
-			auto _read = io::read(_fd, &_data[0], 4096UL);
-			if (_read > 0) {
-				_data.resize(_read);
-			}
-			_data_view = _data;
-		}
-	}
-
-public:
-	size_t pos;
-	char type;
-
-	Buffer()
-		: _data_view(_data),
-		  _fd(-1),
-		  _unlink(false),
-		  _max_pos(0),
-		  pos(0),
-		  type('\xff')
-	{ }
-
-	Buffer(int fd)
-		: _fd(fd),
-		  _unlink(false),
-		  _max_pos(io::lseek(_fd, 0, SEEK_END)),
-		  pos(0),
-		  type('\0')
-	{ }
-
-	Buffer(std::string_view path, bool unlink = false)
-		: _path(path),
-		  _fd(io::open(_path.c_str())),
-		  _unlink(unlink),
-		  _max_pos(io::lseek(_fd, 0, SEEK_END)),
-		  pos(0),
-		  type('\0')
-	{ }
-
-	Buffer(char type, const char *bytes, size_t nbytes)
-		: _data(bytes, nbytes),
-		  _data_view(_data),
-		  _fd(-1),
-		  _unlink(false),
-		  _max_pos(nbytes),
-		  pos(0),
-		  type(type)
-	{ }
-
-	~Buffer() {
-		if (_fd != -1) {
-			io::close(_fd);
-			if (!_path.empty() && _unlink) {
-				io::unlink(_path.c_str());
-			}
-		}
-	}
-
-	Buffer(const Buffer&) = delete;
-	Buffer& operator=(const Buffer&) = delete;
-	Buffer(Buffer&&) = default;
-	Buffer& operator=(Buffer&&) = default;
-
-	const char *data() {
-		feed();
-		return _data_view.data();
-	}
-
-	size_t size() {
-		feed();
-		return std::min(_max_pos, _data_view.size());
-	}
-
-	size_t full_size() {
-		feed();
-		return std::max(_max_pos, _data_view.size());
-	}
-
-	void remove_prefix(size_t n) {
-		assert(n <= _data_view.size());
-		_data_view.remove_prefix(n);
-		pos += n;
-	}
-
-	// Legacy:
-
-	const char *dpos() {
-		return _data.data() + pos;
-	}
-
-	size_t nbytes() {
-		return _data.size() - pos;
-	}
+enum class WR {
+	OK,
+	ERROR,
+	RETRY,
+	PENDING
 };
 
 
-enum class MODE;
-enum class WR;
-
-
-class ClientDecompressor;
+enum class MODE {
+	READ_BUF,
+	READ_FILE_TYPE,
+	READ_FILE
+};
 
 
 class BaseClient : public Worker {
-	friend LZ4CompressFile;
-
-	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 	void start_impl() override;
 	void stop_impl() override;
 
 	std::mutex _mutex;
 
-protected:
-	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
-
 public:
-	virtual ~BaseClient();
-
-	virtual ssize_t on_read(const char *buf, ssize_t received) = 0;
-	virtual void on_read_file(const char *buf, ssize_t received) = 0;
-	virtual void on_read_file_done() = 0;
-
 	bool write(const char *buf, size_t buf_size);
-	inline bool write(std::string_view buf) {
+
+	bool write(std::string_view buf) {
 		return write(buf.data(), buf.size());
 	}
 
@@ -206,8 +96,6 @@ protected:
 	std::atomic_size_t total_received_bytes;
 	std::atomic_size_t total_sent_bytes;
 
-	std::unique_ptr<ClientDecompressor> decompressor;
-
 	MODE mode;
 	ssize_t file_size;
 	std::string file_size_buffer;
@@ -216,13 +104,11 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
-	virtual bool is_idle();
+	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
+	~BaseClient();
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);
-
-	// Receive message from client socket
-	void io_cb_read(ev::io &watcher, int revents);
 
 	// Socket is writable
 	void io_cb_write(ev::io &watcher, int revents);
@@ -231,7 +117,190 @@ protected:
 	WR write_from_queue(int max);
 
 	void read_file();
-	bool send_file(int fd, size_t offset=0);
 
 	void close();
+};
+
+
+// The following is the CRTP for BaseClient
+
+template <typename ClientImpl>
+class MetaBaseClient : public BaseClient {
+	friend ClientLZ4Compressor<MetaBaseClient<ClientImpl>>;
+	friend ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>;
+
+protected:
+	std::unique_ptr<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>> decompressor;
+
+	ClientImpl& client;
+
+	ssize_t on_read(const char* buf, ssize_t received) {
+		return client.on_read(buf, received);
+	}
+
+	void on_read_file(const char* buf, ssize_t received) {
+		client.on_read_file(buf, received);
+	}
+
+	void on_read_file_done() {
+		client.on_read_file_done();
+	}
+
+	MetaBaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_) :
+		BaseClient(parent_, ev_loop_, ev_flags_, sock_),
+		client(static_cast<ClientImpl&>(*this)) {
+		io_read.set<MetaBaseClient<ClientImpl>, &MetaBaseClient<ClientImpl>::io_cb_read>(this);
+		io_read.set(sock, ev::READ);
+	}
+
+	// Receive message from client socket
+	void io_cb_read(ev::io &watcher, int revents) {
+		L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+
+		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
+		L_EV_END("BaseClient::io_cb_read:END");
+
+		assert(sock == watcher.fd);
+		ignore_unused(watcher);
+
+		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+
+		if (closed) {
+			detach();
+			return;
+		}
+
+		if ((revents & EV_ERROR) != 0) {
+			L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
+			detach();
+			return;
+		}
+
+		char read_buffer[BUF_SIZE];
+		ssize_t received = io::read(sock, read_buffer, BUF_SIZE);
+
+		if (received < 0) {
+			if (io::ignored_errno(errno, true, true, false)) {
+				L_CONN("Ignored error: {sock:%d} - %d: %s", sock, errno, strerror(errno));
+				return;
+			}
+
+			if (errno == ECONNRESET) {
+				L_CONN("Received ECONNRESET {sock:%d}!", sock);
+				client.on_read(nullptr, received);
+				detach();
+				return;
+			}
+
+			L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
+			client.on_read(nullptr, received);
+			detach();
+			return;
+		}
+
+		if (received == 0) {
+			// The peer has closed its half side of the connection.
+			L_CONN("Received EOF {sock:%d}!", sock);
+			client.on_read(nullptr, received);
+			detach();
+			return;
+		}
+
+		const char* buf_data = read_buffer;
+		const char* buf_end = read_buffer + received;
+
+		total_received_bytes += received;
+		L_TCP_WIRE("{sock:%d} -->> %s (%zu bytes)", sock, repr(buf_data, received, true, true, 500), received);
+
+		do {
+			if ((received > 0) && mode == MODE::READ_BUF) {
+				buf_data += client.on_read(buf_data, received);
+				received = buf_end - buf_data;
+			}
+
+			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
+				L_CONN("Receiving file {sock:%d}...", sock);
+				decompressor = std::make_unique<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>>(static_cast<MetaBaseClient<ClientImpl>&>(*this));
+				file_size_buffer.clear();
+				receive_checksum = false;
+				mode = MODE::READ_FILE;
+			}
+
+			if ((received > 0) && mode == MODE::READ_FILE) {
+				if (file_size == -1) {
+					try {
+						auto processed = -file_size_buffer.size();
+						file_size_buffer.append(buf_data, std::min(buf_data + 10, buf_end));  // serialized size is at most 10 bytes
+						const char* o = file_size_buffer.data();
+						const char* p = o;
+						const char* p_end = p + file_size_buffer.size();
+						file_size = unserialise_length(&p, p_end);
+						processed += p - o;
+						file_size_buffer.clear();
+						buf_data += processed;
+						received -= processed;
+					} catch (const Xapian::SerialisationError) {
+						break;
+					}
+
+					if (receive_checksum) {
+						receive_checksum = false;
+						if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
+							L_ERR("Data is corrupt!");
+							return;
+						}
+						client.on_read_file_done();
+						mode = MODE::READ_BUF;
+						decompressor.reset();
+						continue;
+					}
+
+					block_size = file_size;
+					decompressor->clear();
+				}
+
+				const char *file_buf_to_write;
+				size_t block_size_to_write;
+				size_t buf_left_size = buf_end - buf_data;
+				if (block_size < buf_left_size) {
+					file_buf_to_write = buf_data;
+					block_size_to_write = block_size;
+					buf_data += block_size;
+					received = buf_left_size - block_size;
+				} else {
+					file_buf_to_write = buf_data;
+					block_size_to_write = buf_left_size;
+					buf_data = nullptr;
+					received = 0;
+				}
+
+				if (block_size_to_write) {
+					decompressor->append(file_buf_to_write, block_size_to_write);
+					block_size -= block_size_to_write;
+				}
+
+				if (file_size == 0) {
+					decompressor->clear();
+					decompressor->decompress();
+					receive_checksum = true;
+					file_size = -1;
+				} else if (block_size == 0) {
+					decompressor->decompress();
+					file_size = -1;
+				}
+			}
+
+			if (closed) {
+				detach();
+				return;
+			}
+		} while (received > 0);
+	}
+
+	bool send_file(int fd, size_t offset = 0) {
+		L_CALL("BaseClient::send_file(%d, %zu)", fd, offset);
+
+		ClientLZ4Compressor<MetaBaseClient<ClientImpl>> compressor(static_cast<MetaBaseClient<ClientImpl>&>(*this), fd, offset);
+		return (compressor.compress() != -1);
+	}
 };

@@ -62,7 +62,7 @@
 //
 
 BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: BaseClient(std::move(parent_), ev_loop_, ev_flags_, sock_),
+	: MetaBaseClient<BinaryClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
@@ -108,6 +108,23 @@ BinaryClient::~BinaryClient()
 	if (cluster_database) {
 		L_CRIT("Cannot synchronize cluster database!");
 		sig_exit(-EX_CANTCREAT);
+	}
+}
+
+
+void
+BinaryClient::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("BinaryClient::shutdown_impl(%lld, %lld)", asap, now);
+
+	shutting_down = true;
+
+	Worker::shutdown_impl(asap, now);
+
+	if (now != 0 || is_idle()) {
+		stop(false);
+		destroy(false);
+		detach();
 	}
 }
 
@@ -344,7 +361,7 @@ BinaryClient::send_file(char type_as_char, int fd)
 	buf += type_as_char;
 	write(buf);
 
-	BaseClient::send_file(fd);
+	MetaBaseClient<BinaryClient>::send_file(fd);
 }
 
 

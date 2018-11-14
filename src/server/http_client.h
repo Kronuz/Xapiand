@@ -35,7 +35,7 @@
 #include <utility>                          // for std::pair
 #include <vector>                           // for std::vector
 
-#include "base_client.h"                    // for BaseClient
+#include "base_client.h"                    // for MetaBaseClient
 #include "database_data.h"                  // for ct_type_t, accept_set_t
 #include "deflate_compressor.h"             // for DeflateCompressData
 #include "endpoint.h"                       // for Endpoints
@@ -240,7 +240,9 @@ public:
 
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
-class HttpClient : public BaseClient {
+class HttpClient : public MetaBaseClient<HttpClient> {
+	friend MetaBaseClient<HttpClient>;
+
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
 		COMMAND_OPTIONS()
@@ -250,13 +252,15 @@ class HttpClient : public BaseClient {
 		BAD_QUERY,
 	};
 
-	bool is_idle() override;
+	void shutdown_impl(long long asap, long long now) override;
+
+	bool is_idle();
 
 	Command getCommand(std::string_view command_name);
 
-	ssize_t on_read(const char* buf, ssize_t received) override;
-	void on_read_file(const char* buf, ssize_t received) override;
-	void on_read_file_done() override;
+	ssize_t on_read(const char* buf, ssize_t received);
+	void on_read_file(const char* buf, ssize_t received);
+	void on_read_file_done();
 
 	static const http_parser_settings settings;
 
