@@ -219,7 +219,7 @@ namespace queue {
 		// Copy assigment
 		Queue& operator=(const Queue& q) = delete;
 
-		virtual ~Queue() {
+		~Queue() {
 			if (_state) {
 				std::lock_guard<std::mutex> lk(_state->_mutex);
 				auto size = _items_queue.size();

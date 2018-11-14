@@ -45,7 +45,6 @@ class Token {
 
 public:
 	Token() = default;
-	virtual ~Token() = default;
 
 	void set_type(TokenType type_) {
 		type = type_;

@@ -69,8 +69,6 @@ public:
 		assert(_max_size != 0);
 	}
 
-	virtual ~LRU() = default;
-
 	iterator begin() noexcept {
 		return _items_list.begin();
 	}

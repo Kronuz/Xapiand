@@ -344,7 +344,7 @@ public:
 		}
 	}
 
-	virtual ~Storage() {
+	~Storage() {
 		close();
 		XXH32_freeState(xxh_state);
 	}

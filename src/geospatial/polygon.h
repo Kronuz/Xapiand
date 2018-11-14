@@ -91,8 +91,6 @@ public:
 			  centroid(polygon.centroid),
 			  radius(polygon.radius) { }
 
-		virtual ~ConvexPolygon() = default;
-
 		ConvexPolygon& operator=(ConvexPolygon&& polygon) noexcept {
 			Geometry::operator=(std::move(polygon));
 			corners = std::move(polygon.corners);

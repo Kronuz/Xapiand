@@ -231,8 +231,6 @@ protected:
 	}
 
 public:
-	virtual ~SerialiseList() = default;
-
 	bool empty() const noexcept {
 		return _serialised.empty();
 	}
