@@ -930,7 +930,7 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 
 
 void
-DatabaseWALWriter::execute(const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
+DatabaseWALWriter::execute(std::function<void(DatabaseWALWriterThread&)>&& func)
 {
 	static thread_local DatabaseWALWriterThread thread(0, this);
 	func(thread);
@@ -1039,7 +1039,7 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1069,7 +1069,7 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1100,7 +1100,7 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1129,7 +1129,7 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1160,7 +1160,7 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1191,7 +1191,7 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1221,7 +1221,7 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1252,7 +1252,7 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
@@ -1283,7 +1283,7 @@ DatabaseWALWriter::write_add_spelling(Database& database, const std::string& wor
 		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
 	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(path, std::move(writer));
+		execute(std::move(writer));
 	} else {
 		enqueue(*database.producer_token, path, std::move(writer));
 	}
