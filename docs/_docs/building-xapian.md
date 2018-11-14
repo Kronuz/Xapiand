@@ -56,7 +56,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/HEAD' || echo '/usr/local')" \
-  CXXFLAGS="-DFLINTLOCK_USE_FLOCK $CXXFLAGS"
+  CXXFLAGS="-DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS"
 ```
 
 #### Build, Test and Install
@@ -86,7 +86,7 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/ASAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address $LDFLAGS"
 ```
 
@@ -99,7 +99,7 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/MSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
 ```
 
@@ -112,7 +112,7 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/UBSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
 
@@ -125,6 +125,6 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/TSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK $CXXFLAGS" \
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread $LDFLAGS"
 ```
