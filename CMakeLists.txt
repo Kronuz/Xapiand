@@ -462,6 +462,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${UUID_LIBRARIES})
 # Xapian Library
 ########################################################################
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXAPIAN_MOVE_SEMANTICS")
+
 find_package(Xapian REQUIRED)
 include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}") # <xapian.h> is imported everywhere (for exceptions)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${XAPIAN_LIBRARIES})
