@@ -27,13 +27,13 @@
 #include "string_view.hh"        // for std::string_view
 #include <unistd.h>
 
-#include "fs.hh"                 // for opendir, find_file_dir, closedir
+#include "compressor_lz4.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "debouncer.h"           // for make_debouncer
+#include "fs.hh"                 // for opendir, find_file_dir, closedir
 #include "io.hh"                 // for io::*
 #include "likely.h"              // for likely, unlikely
-#include "opts.h"                // for opts::*
 #include "logger.h"
-#include "lz4_compressor.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
+#include "opts.h"                // for opts::*
 #include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified
 

@@ -295,7 +295,7 @@ protected:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	virtual ~LZ4File() {
+	~LZ4File() {
 		close();
 	}
 

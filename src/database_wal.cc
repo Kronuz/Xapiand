@@ -40,6 +40,7 @@
 
 #include "cassert.hh"             // for assert
 
+#include "compressor_lz4.h"       // for compress_lz4, decompress_lz4
 #include "database.h"             // for Database
 #include "database_pool.h"        // for DatabasePool
 #include "database_utils.h"       // for read_uuid
@@ -48,7 +49,6 @@
 #include "ignore_unused.h"        // for ignore_unused
 #include "io.hh"                  // for io::*
 #include "log.h"                  // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
-#include "lz4_compressor.h"       // for compress_lz4, decompress_lz4
 #include "manager.h"              // for XapiandManager::manager
 #include "metrics.h"              // for Metrics::metrics
 #include "msgpack.h"              // for MsgPack

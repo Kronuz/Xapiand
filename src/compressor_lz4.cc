@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "lz4_compressor.h"
+#include "compressor_lz4.h"
 
 #include <cstdio>                // for SEEK_SET
 #include <cstring>               // for size_t, memcpy

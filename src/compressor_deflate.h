@@ -268,7 +268,7 @@ protected:
 		add_fildes(fd_, fd_offset_, fd_nbytes_);
 	}
 
-	virtual ~DeflateFile() {
+	~DeflateFile() {
 		close();
 	}
 

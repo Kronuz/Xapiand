@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "deflate_compressor.h"
+#include "compressor_deflate.h"
 
 #include "cassert.hh"            // for assert
 
