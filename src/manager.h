@@ -132,9 +132,6 @@ public:
 	std::weak_ptr<Raft> weak_raft;
 #endif
 
-	std::mutex resolve_index_lru_mtx;
-	lru::LRU<std::string, std::string> resolve_index_lru;
-
 	DatabasePool database_pool;
 	SchemasLRU schemas;
 

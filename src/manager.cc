@@ -127,7 +127,6 @@ void sig_exit(int sig) {
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
-	  resolve_index_lru(1000),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
@@ -154,7 +153,6 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
-	  resolve_index_lru(1000),
 	  database_pool(opts.dbpool_size, opts.max_databases),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
@@ -963,6 +961,9 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 		std::string serialised;
 		auto key = std::string(path);
 		key.push_back('/');
+
+		static std::mutex resolve_index_lru_mtx;
+		static lru::LRU<std::string, std::string> resolve_index_lru(1000);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(key);
