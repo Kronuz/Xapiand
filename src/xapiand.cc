@@ -55,6 +55,7 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
+#include "check_size.h"             // for check_size
 #include "cmdoutput.h"              // for CmdOutput
 #include "database_handler.h"       // for DatabaseHandler
 #include "endpoint.h"               // for Endpoint, Endpoint::cwd
@@ -1177,6 +1178,8 @@ void restore() {
 
 
 int main(int argc, char **argv) {
+	check_size();
+
 	int exit_code = EX_OK;
 
 	auto process_start = std::chrono::system_clock::now();

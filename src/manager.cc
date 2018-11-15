@@ -55,7 +55,6 @@
 #include "color_tools.hh"                     // for color
 #include "database_handler.h"                 // for DatabaseHandler, committer
 #include "database_utils.h"                   // for RESERVED_TYPE
-#include "debouncer.h"                        // for Debouncer
 #include "epoch.hh"                           // for epoch::now
 #include "error.hh"                           // for error:name, error::description
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
