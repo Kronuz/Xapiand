@@ -541,7 +541,7 @@ endif ()
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
 # Setup CMAKE_CXX_FLAGS Debug flags.
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-strong")
 
 # Add compiler flags.
 add_required_cxx_compiler_flag("-std=c++1z")
