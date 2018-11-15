@@ -34,7 +34,7 @@
 #include "exception.h"              // for MSG_NetworkError, NetworkError
 #include "io.hh"                    // for close, ignored_errno
 #include "length.h"                 // for serialise_string, unserialise_string
-#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
+#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN, L_UDP_WIRE
 #include "manager.h"                // for XapiandManager, sig_exit, Xapiand...
 #include "opts.h"                   // for opts
 
@@ -122,7 +122,7 @@ UDP::bind(int tries, const std::string& group)
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
-				L_DEBUG("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 		}

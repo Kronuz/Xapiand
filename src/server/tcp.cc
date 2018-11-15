@@ -40,7 +40,7 @@
 
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for close, ignored_errno
-#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
+#include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN
 #include "manager.h"                // for sig_exit
 
 
@@ -143,7 +143,7 @@ TCP::bind(int tries)
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
-				L_DEBUG("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 		}
