@@ -83,8 +83,8 @@ int open(const char* path, int oflag, int mode) {
 
 int close(int fd) {
 	// Make sure we don't ever close 0, 1 or 2 file descriptors
-	ASSERT(fd != -1 && fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
-	if unlikely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
+	ASSERT(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
+	if likely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
 		CHECK_CLOSING(fd);
 		return ::close(fd);  // IMPORTANT: don't check EINTR (do not use RetryAfterSignal here)
 	}
