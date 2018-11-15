@@ -22,14 +22,15 @@
 
 #pragma once
 
-#include <cstring>               // for strerror
-#include <netinet/in.h>          // for IPPROTO_TCP
-#include <netinet/tcp.h>         // for TCP_NOPUSH
-#include <string>                // for std::string
+#include <errno.h>                  // for errno
+#include <netinet/in.h>             // for IPPROTO_TCP
+#include <netinet/tcp.h>            // for TCP_NOPUSH
+#include <string>                   // for std::string
 
-#include "io.hh"                 // for io::setsockopt
-#include "log.h"                 // for L_ERR
-#include "string.hh"             // for string::format, string::join
+#include "error.hh"                 // for error:name, error::description
+#include "io.hh"                    // for io::setsockopt
+#include "log.h"                    // for L_ERR
+#include "string.hh"                // for string::format, string::join
 
 
 inline std::string fast_inet_ntop4(const struct in_addr& addr) {
@@ -49,13 +50,13 @@ inline void tcp_nopush(int sock) {
 
 #ifdef TCP_NOPUSH
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 }
@@ -66,13 +67,13 @@ inline void tcp_push(int sock) {
 
 #ifdef TCP_NOPUSH
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 }

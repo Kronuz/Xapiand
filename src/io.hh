@@ -126,8 +126,6 @@ inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As.
 }
 
 
-const char* strerrno(int errnum);
-
 int open(const char* path, int oflag=O_RDONLY, int mode=0644);
 int close(int fd);
 

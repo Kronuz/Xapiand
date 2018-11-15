@@ -22,27 +22,28 @@
 
 #include "base_client.h"
 
-#include <errno.h>               // for errno, ECONNRESET
-#include <memory>                // for std::shared_ptr
-#include <sys/socket.h>          // for SHUT_RDWR
-#include <sysexits.h>            // for EX_SOFTWARE
-#include <type_traits>           // for remove_reference<>::type
-#include <utility>               // for std::move
-#include <xapian.h>              // for SerialisationError
+#include <errno.h>                  // for errno
+#include <memory>                   // for std::shared_ptr
+#include <sys/socket.h>             // for SHUT_RDWR
+#include <sysexits.h>               // for EX_SOFTWARE
+#include <type_traits>              // for remove_reference<>::type
+#include <utility>                  // for std::move
+#include <xapian.h>                 // for SerialisationError
 
-#include "cassert.hh"            // for assert
+#include "cassert.hh"               // for assert
 
-#include "ev/ev++.h"             // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
-#include "ignore_unused.h"       // for ignore_unused
-#include "io.hh"                 // for io::read, io::close, io::lseek, io::write
-#include "length.h"              // for serialise_length, unserialise_length
-#include "likely.h"              // for likely, unlikely
-#include "log.h"                 // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
-#include "manager.h"             // for sig_exit
-#include "readable_revents.hh"   // for readable_revents
-#include "repr.hh"               // for repr
-#include "server.h"              // for XapiandServer
-#include "thread.hh"             // for get_thread_name
+#include "error.hh"                 // for error:name, error::description
+#include "ev/ev++.h"                // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
+#include "ignore_unused.h"          // for ignore_unused
+#include "io.hh"                    // for io::read, io::close, io::lseek, io::write
+#include "length.h"                 // for serialise_length, unserialise_length
+#include "likely.h"                 // for likely, unlikely
+#include "log.h"                    // for L_CALL, L_ERR, L_EV, L_CONN, L_OBJ
+#include "manager.h"                // for sig_exit
+#include "readable_revents.hh"      // for readable_revents
+#include "repr.hh"                  // for repr
+#include "server.h"                 // for XapiandServer
+#include "thread.hh"                // for get_thread_name
 
 
 // #undef L_DEBUG
@@ -216,11 +217,11 @@ BaseClient::write_from_queue()
 
 		if (sent < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("WR:RETRY: {sock:%d} - %d: %s", sock, errno, strerror(errno));
+				L_CONN("WR:RETRY: {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 				return WR::RETRY;
 			}
 
-			L_ERR("ERROR: write error {sock:%d} - %d: %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: write error {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			L_CONN("WR:ERR.2: {sock:%d}", sock);
 			close();
 			return WR::ERROR;
@@ -332,7 +333,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	}
 
 	if ((revents & EV_ERROR) != 0) {
-		L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
+		L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		detach();
 		return;
 	}

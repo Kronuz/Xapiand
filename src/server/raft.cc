@@ -24,18 +24,21 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                          // for errno
+
 #include "cassert.hh"                       // for assert
 
 #include "color_tools.hh"                   // for color
+#include "error.hh"                         // for error:name, error::description
 #include "ignore_unused.h"                  // for ignore_unused
 #include "length.h"                         // for serialise_length, unserialise_length
 #include "log.h"                            // for L_CALL, L_EV
 #include "manager.h"                        // for XapiandManager::manager
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
+#include "random.hh"                        // for random_real
 #include "readable_revents.hh"              // for readable_revents
 #include "repr.hh"                          // for repr
-#include "random.hh"                        // for random_real
 #include "utype.hh"                         // for toUType
 
 
@@ -187,7 +190,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 	L_DEBUG_HOOK("Raft::io_accept_cb", "Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid raft event {sock:%d}: %s", sock, strerror(errno));
+		L_EV("ERROR: got invalid raft event {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

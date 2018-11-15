@@ -26,7 +26,6 @@
 #include <cctype>                             // for isspace
 #include <chrono>                             // for std::chrono, std::chrono::system_clock
 #include <cstdlib>                            // for size_t, exit
-#include <cstring>                            // for strerror
 #include <errno.h>                            // for errno
 #include <exception>                          // for exception
 #include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
@@ -59,6 +58,7 @@
 #include "database_utils.h"                   // for RESERVED_TYPE
 #include "debouncer.h"                        // for Debouncer
 #include "epoch.hh"                           // for epoch::now
+#include "error.hh"                           // for error:name, error::description
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
 #include "exception.h"                        // for Exit, Excep...
 #include "hashes.hh"                          // for jump_consistent_hash
@@ -77,8 +77,8 @@
 #include "readable_revents.hh"                // for readable_revents
 #include "serialise.h"                        // for KEYWORD_STR
 #include "server/http.h"                      // for Http
-#include "server/http_server.h"               // for HttpServer
 #include "server/http_client.h"               // for HttpClient
+#include "server/http_server.h"               // for HttpServer
 #include "server/server.h"                    // for XapiandServer, XapiandServer::total_clients
 #include "storage.h"                          // for Storage
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
@@ -459,7 +459,7 @@ XapiandManager::host_address()
 	struct sockaddr_in addr;
 	struct ifaddrs *if_addr_struct;
 	if (getifaddrs(&if_addr_struct) < 0) {
-		L_ERR("ERROR: getifaddrs: %s", strerror(errno));
+		L_ERR("ERROR: getifaddrs: %s (%d): %s", error::name(errno), errno, error::description(errno));
 	} else {
 		for (struct ifaddrs *ifa = if_addr_struct; ifa != nullptr; ifa = ifa->ifa_next) {
 			if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) { // check it is IP4

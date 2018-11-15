@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                            // for errno
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -31,6 +32,7 @@
 #include <unistd.h>
 
 #include "tcp.h"                              // for TCP::connect
+#include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
 #include "length.h"
@@ -220,7 +222,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
-							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, io::strerrno(errno), errno, strerror(errno));
+							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, error::name(errno), errno, error::description(errno));
 							detach();
 							return processed;
 						}
@@ -232,7 +234,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				temp_files.push_back(path);
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
-					L_ERR("Cannot create temporary file: %s (%d): %s", io::strerrno(errno), errno, strerror(errno));
+					L_ERR("Cannot create temporary file: %s (%d): %s", error::name(errno), errno, error::description(errno));
 					detach();
 					return processed;
 				} else {

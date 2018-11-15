@@ -24,7 +24,6 @@
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
 
-#include <cstring>                          // for strerror
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
@@ -48,6 +47,7 @@
 #include "database_utils.h"                 // for query_field_t
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
+#include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
@@ -432,7 +432,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 	if (received <= 0) {
 		if (received < 0) {
-			L_WARNING("Connection unexpectedly closed after %s: %d - %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), errno, strerror(errno));
+			L_WARNING("Connection unexpectedly closed after %s: %s (%d): %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
 		} else if (init_state != 18) {
 			L_WARNING("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
 		} else if (waiting) {

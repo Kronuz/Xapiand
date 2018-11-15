@@ -32,30 +32,31 @@
 
 #if XAPIAND_DATABASE_WAL
 
-#include <array>                  // for std::array
-#include <errno.h>                // for errno
-#include <fcntl.h>                // for O_CREAT, O_WRONLY, O_EXCL
-#include <limits>                 // for std::numeric_limits
-#include <utility>                // for std::make_pair
+#include <array>                    // for std::array
+#include <errno.h>                  // for errno
+#include <fcntl.h>                  // for O_CREAT, O_WRONLY, O_EXCL
+#include <limits>                   // for std::numeric_limits
+#include <utility>                  // for std::make_pair
 
-#include "cassert.hh"             // for assert
+#include "cassert.hh"               // for assert
 
-#include "compressor_lz4.h"       // for compress_lz4, decompress_lz4
-#include "database.h"             // for Database
-#include "database_pool.h"        // for DatabasePool
-#include "database_utils.h"       // for read_uuid
-#include "exception.h"            // for THROW, Error
-#include "fs.hh"                  // for exists
-#include "ignore_unused.h"        // for ignore_unused
-#include "io.hh"                  // for io::*
-#include "log.h"                  // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
-#include "manager.h"              // for XapiandManager::manager
-#include "metrics.h"              // for Metrics::metrics
-#include "msgpack.h"              // for MsgPack
-#include "opts.h"                 // for opts::*
-#include "repr.hh"                // for repr
-#include "server/discovery.h"     // for db_updater
-#include "string.hh"              // for string::format
+#include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
+#include "database.h"               // for Database
+#include "database_pool.h"          // for DatabasePool
+#include "database_utils.h"         // for read_uuid
+#include "exception.h"              // for THROW, Error
+#include "error.hh"                 // for error:name, error::description
+#include "fs.hh"                    // for exists
+#include "ignore_unused.h"          // for ignore_unused
+#include "io.hh"                    // for io::*
+#include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
+#include "manager.h"                // for XapiandManager::manager
+#include "metrics.h"                // for Metrics::metrics
+#include "msgpack.h"                // for MsgPack
+#include "opts.h"                   // for opts::*
+#include "repr.hh"                  // for repr
+#include "server/discovery.h"       // for db_updater
+#include "string.hh"                // for string::format
 
 
 // #undef L_DEBUG
@@ -655,17 +656,17 @@ DatabaseWAL::init_database()
 		return false;
 	}
 	if unlikely(io::write(fd, iamglass[0].data(), iamglass[0].size()) < 0) {
-		L_ERRNO("io::write() -> %s", io::strerrno(errno));
+		L_ERRNO("io::write() -> %s (%d): %s", error::name(errno), errno, error::description(errno));
 		io::close(fd);
 		return false;
 	}
 	if unlikely(io::write(fd, uuid_str.data(), uuid_str.size()) < 0) {
-		L_ERRNO("io::write() -> %s", io::strerrno(errno));
+		L_ERRNO("io::write() -> %s (%d): %s", error::name(errno), errno, error::description(errno));
 		io::close(fd);
 		return false;
 	}
 	if unlikely(io::write(fd, iamglass[1].data(), iamglass[1].size()) < 0) {
-		L_ERRNO("io::write() -> %s", io::strerrno(errno));
+		L_ERRNO("io::write() -> %s (%d): %s", error::name(errno), errno, error::description(errno));
 		io::close(fd);
 		return false;
 	}

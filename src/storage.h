@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <errno.h>               // for errno
 #include <limits>                // for std::numeric_limits
 #include <memory>
 #include "string_view.hh"        // for std::string_view
@@ -30,6 +31,7 @@
 #include "compressor_lz4.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "debouncer.h"           // for make_debouncer
 #include "fs.hh"                 // for opendir, find_file_dir, closedir
+#include "error.hh"              // for error:name, error::description
 #include "io.hh"                 // for io::*
 #include "likely.h"              // for likely, unlikely
 #include "logger.h"
@@ -140,9 +142,9 @@ inline auto& fsyncher() {
 
 		if (err == -1) {
 			if (errno == EBADF || errno == EINVAL) {
-				L_DEBUG("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+				L_DEBUG("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), error::name(errno), errno, error::description(errno));
 			} else {
-				L_WARNING("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), io::strerrno(errno), errno, strerror(errno));
+				L_WARNING("Async %s falied after %s: %s (%d): %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), error::name(errno), errno, error::description(errno));
 			}
 		} else {
 			L_DEBUG("Async %s succeeded after %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
@@ -262,7 +264,8 @@ class Storage {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size == -1) {
 				close();
-				THROW(StorageIOError, "IO error: lseek: %s", strerror(errno));
+				L_ERR("IO error in %s: lseek: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -274,7 +277,7 @@ class Storage {
 				}
 				if (new_size > file_size) {
 					if unlikely(io::fallocate(fd, 0, file_size, new_size - file_size) == -1) {
-						L_WARNING_ONCE("Cannot grow storage file: %s", strerror(errno));
+						L_WARNING_ONCE("Cannot grow storage file: %s (%d): %s", error::name(errno), errno, error::description(errno));
 					}
 				}
 			}
@@ -293,7 +296,8 @@ class Storage {
 	do_write:
 		if unlikely(io::pwrite(fd, *buffer_, STORAGE_BLOCK_SIZE, block_offset_) != STORAGE_BLOCK_SIZE) {
 			close();
-			THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+			L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		}
 
 	do_update:
@@ -340,7 +344,8 @@ public:
 		memset(&header, 0, sizeof(header));
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
 			XXH32_freeState(xxh_state);
-			THROW(StorageException, "StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
+			L_ERR("StorageBinHeader's size must be in the first %d bytes", STORAGE_ALIGNMENT - sizeof(bin_header.size));
+			THROW(StorageException, "Invalid storage header");
 		}
 	}
 
@@ -354,7 +359,8 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageClosedError, "IO error: closed storage");
+			L_DEBUG("IO error in %s: Closed storage", repr(path.empty() ? base_path : path));
+			THROW(StorageClosedError, "Closed storage");
 		}
 
 		memset(&header, 0, sizeof(header));
@@ -362,7 +368,8 @@ public:
 
 		if unlikely(io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 			close();
-			THROW(StorageIOError, "IO error: write: %s", strerror(errno));
+			L_ERR("IO error in %s: write: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		}
 
 		seek(STORAGE_START_BLOCK_OFFSET);
@@ -397,7 +404,8 @@ public:
 					fd = io::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
 					if unlikely(fd == -1) {
 						close();
-						THROW(StorageIOError, "IO error: open: %s", strerror(errno));
+						L_ERR("IO error in %s: open: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+						THROW(StorageIOError, error::description(errno));
 					}
 					initialize_file(args);
 					created = true;
@@ -414,13 +422,15 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageIOError, "Cannot open storage file: %s", strerror(errno));
+			L_ERR("IO error in %s: Cannot open storage file: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		}
 
 		auto read_size = io::pread(fd, &header, sizeof(header), 0);
 		if unlikely(read_size == -1) {
 			close();
-			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
+			L_ERR("IO error in %s: read: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		} else if unlikely(read_size != sizeof(header)) {
 			THROW(StorageCorruptVolume, "Incomplete bin data");
 		}
@@ -432,7 +442,8 @@ public:
 			buffer_offset -= offset;
 			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) == -1) {
 				close();
-				THROW(StorageIOError, "IO error: pread: %s", strerror(errno));
+				L_ERR("IO error in %s: pread: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			}
 		}
 
@@ -479,11 +490,13 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageClosedError, "IO error: closed storage");
+			L_DEBUG("IO error in %s: Closed storage", repr(path.empty() ? base_path : path));
+			THROW(StorageClosedError, "Closed storage");
 		}
 
 		if ((flags & STORAGE_WRITABLE) == 0) {
-			THROW(StorageIOError, "IO error: read-only storage");
+			L_ERR("IO error in %s: Read-only storage", repr(path.empty() ? base_path : path));
+			THROW(StorageIOError, "Read-only storage");
 		}
 
 		uint32_t curr_offset = header.head.offset;
@@ -559,7 +572,8 @@ public:
 			}
 			if unlikely(io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+				L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			}
 			break;
 		}
@@ -568,7 +582,8 @@ public:
 		if (buffer != buffer_curr) {
 			if unlikely(io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+				L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			}
 			buffer_curr = buffer;
 		}
@@ -586,11 +601,13 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageClosedError, "IO error: closed storage");
+			L_DEBUG("IO error in %s: Closed storage", repr(path.empty() ? base_path : path));
+			THROW(StorageClosedError, "Closed storage");
 		}
 
 		if ((flags & STORAGE_WRITABLE) == 0) {
-			THROW(StorageIOError, "IO error: read-only storage");
+			L_ERR("IO error in %s: Read-only storage", repr(path.empty() ? base_path : path));
+			THROW(StorageIOError, "Read-only storage");
 		}
 
 		uint32_t curr_offset = header.head.offset;
@@ -623,13 +640,15 @@ public:
 			fd_write = io::open(filename_string.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write == -1) {
 				close();
-				THROW(StorageIOError, "Cannot open file: %s", filename);
+				L_ERR("IO error in %s: Cannot open file: %s", repr(path.empty() ? base_path : path), filename);
+				THROW(StorageIOError, error::description(errno));
 			}
 			_bin_header.init(param, args, 0, 0);
 			auto read_size = io::read(fd_write, buf_read, sizeof(buf_read));
 			if unlikely(read_size == -1) {
 				close();
-				THROW(StorageIOError, "Cannot read file: %s", filename);
+				L_ERR("IO error in %s: Cannot read file: %s", repr(path.empty() ? base_path : path), filename);
+				THROW(StorageIOError, error::description(errno));
 			}
 			it_size = read_size;
 			data = buf_read;
@@ -665,7 +684,8 @@ public:
 					auto read_size = io::read(fd_write, buf_read, sizeof(buf_read));
 					if unlikely(read_size == -1) {
 						close();
-						THROW(StorageIOError, "Cannot read from file: %s", filename);
+						L_ERR("IO error in %s: Cannot read from file: %s", repr(path.empty() ? base_path : path), filename);
+						THROW(StorageIOError, error::description(errno));
 					}
 					it_size = read_size;
 					data = buf_read;
@@ -703,7 +723,8 @@ public:
 			} else {
 				if unlikely(io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 					close();
-					THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+					L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+					THROW(StorageIOError, error::description(errno));
 				}
 				break;
 			}
@@ -713,7 +734,8 @@ public:
 		if (buffer != buffer_curr) {
 			if unlikely(io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
-				THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+				L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			}
 			buffer_curr = buffer;
 		}
@@ -742,7 +764,8 @@ public:
 			auto read_size = io::read(fd, &bin_header, sizeof(StorageBinHeader));
 			if unlikely(read_size == -1) {
 				close();
-				THROW(StorageIOError, "IO error: read: %s", strerror(errno));
+				L_ERR("IO error in %s: read: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+				THROW(StorageIOError, error::description(errno));
 			} else if unlikely(read_size != sizeof(StorageBinHeader)) {
 				THROW(StorageCorruptVolume, "Incomplete bin header");
 			}
@@ -775,7 +798,8 @@ public:
 				auto read_size = io::read(fd, buf, buf_size);
 				if unlikely(read_size == -1) {
 					close();
-					THROW(StorageIOError, "IO error: read: %s", strerror(errno));
+					L_ERR("IO error in %s: read: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+					THROW(StorageIOError, error::description(errno));
 				} else if unlikely(static_cast<size_t>(read_size) != buf_size) {
 					THROW(StorageCorruptVolume, "Incomplete bin data");
 				}
@@ -790,7 +814,8 @@ public:
 		auto read_size = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 		if unlikely(read_size == -1) {
 			close();
-			THROW(StorageIOError, "IO error: read: %s", strerror(errno));
+			L_ERR("IO error in %s: read: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		} else if unlikely(read_size != sizeof(StorageBinFooter)) {
 			THROW(StorageCorruptVolume, "Incomplete bin footer");
 		}
@@ -815,18 +840,21 @@ public:
 
 		if unlikely(fd == -1) {
 			close();
-			THROW(StorageClosedError, "IO error: closed storage");
+			L_DEBUG("IO error in %s: Closed storage", repr(path.empty() ? base_path : path));
+			THROW(StorageClosedError, "Closed storage");
 		}
 
 		if unlikely((flags & STORAGE_WRITABLE) == 0) {
-			THROW(StorageIOError, "IO error: read-only storage");
+			L_ERR("IO error in %s: Read-only storage", repr(path.empty() ? base_path : path));
+			THROW(StorageIOError, "Read-only storage");
 		}
 
 		changed = false;
 
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			close();
-			THROW(StorageIOError, "IO error: pwrite: %s", strerror(errno));
+			L_ERR("IO error in %s: pwrite: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+			THROW(StorageIOError, error::description(errno));
 		}
 
 		if (!(flags & STORAGE_NO_SYNC)) {
@@ -840,12 +868,14 @@ public:
 				if (flags & STORAGE_FULL_SYNC) {
 					if unlikely(io::full_fsync(fd) == -1) {
 						close();
-						THROW(StorageIOError, "IO error: full_fsync: %s", strerror(errno));
+						L_ERR("IO error in %s: full_fsync: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+						THROW(StorageIOError, error::description(errno));
 					}
 				} else {
 					if unlikely(io::fsync(fd) == -1) {
 						close();
-						THROW(StorageIOError, "IO error: fsync: %s", strerror(errno));
+						L_ERR("IO error in %s: fsync: %s (%d): %s", repr(path.empty() ? base_path : path), error::name(errno), errno, error::description(errno));
+						THROW(StorageIOError, error::description(errno));
 					}
 				}
 			}
@@ -880,7 +910,8 @@ public:
 
 		DIR *dir = opendir(base_path, false);
 		if (dir == nullptr) {
-			THROW(NotFoundError, "Could not open the dir (%s)", strerror(errno));
+			L_DEBUG("Could not open the directory %s: %s (%d): %s", repr(base_path), error::name(errno), errno, error::description(errno));
+			THROW(NotFoundError, error::description(errno));
 		}
 
 		unsigned long long first_volume = std::numeric_limits<unsigned long long>::max();

@@ -22,24 +22,25 @@
 
 #pragma once
 
-#include <atomic>                // for std::atomic_bool
-#include <errno.h>               // for errno, ECONNRESET
-#include <memory>                // for std::shared_ptr, std::unique_ptr
-#include <string>                // for std::string
-#include <sys/types.h>           // for ssize_t
+#include <atomic>                   // for std::atomic_bool
+#include <errno.h>                  // for errno, ECONNRESET
+#include <memory>                   // for std::shared_ptr, std::unique_ptr
+#include <string>                   // for std::string
+#include <sys/types.h>              // for ssize_t
 
-#include "cassert.hh"            // for assert
+#include "cassert.hh"               // for assert
 
-#include "buffer.h"              // for Buffer
-#include "client_compressor.h"   // for ClientLZ4Compressor, ClientLZ4Decompressor
-#include "ev/ev++.h"             // for ev::async, ev::io, ev::loop_ref
-#include "io.hh"                 // for io::*
-#include "lz4/xxhash.h"          // for XXH32_state_t
-#include "ignore_unused.h"       // for ignore_unused
-#include "log.h"                 // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
-#include "queue.h"               // for Queue
-#include "readable_revents.hh"   // for readable_revents
-#include "worker.h"              // for Worker
+#include "buffer.h"                 // for Buffer
+#include "client_compressor.h"      // for ClientLZ4Compressor, ClientLZ4Decompressor
+#include "ev/ev++.h"                // for ev::async, ev::io, ev::loop_ref
+#include "error.hh"                 // for error:name, error::description
+#include "io.hh"                    // for io::*
+#include "lz4/xxhash.h"             // for XXH32_state_t
+#include "ignore_unused.h"          // for ignore_unused
+#include "log.h"                    // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
+#include "queue.h"                  // for Queue
+#include "readable_revents.hh"      // for readable_revents
+#include "worker.h"                 // for Worker
 
 
 #define BUF_SIZE 4096
@@ -171,7 +172,7 @@ protected:
 		}
 
 		if ((revents & EV_ERROR) != 0) {
-			L_ERR("ERROR: got invalid event {sock:%d} - %d: %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			detach();
 			return;
 		}
@@ -181,7 +182,7 @@ protected:
 
 		if (received < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("Ignored error: {sock:%d} - %d: %s", sock, errno, strerror(errno));
+				L_CONN("Ignored error: {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 				return;
 			}
 
@@ -192,7 +193,7 @@ protected:
 				return;
 			}
 
-			L_ERR("ERROR: read error {sock:%d} - %d: %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", sock, error::name(errno), errno, error::description(errno));
 			on_read(nullptr, received);
 			detach();
 			return;

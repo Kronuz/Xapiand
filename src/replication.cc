@@ -24,11 +24,14 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                    // for errno
+
 #include "cassert.hh"                 // for assert
 
 #include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for move_files, delete_files, build_path_index
+#include "error.hh"                   // for error:name, error::description
 #include "io.hh"                      // for io::*
 #include "length.h"                   // for serialise_string, unserialise_string
 #include "manager.h"                  // for XapiandManager::manager
@@ -381,7 +384,7 @@ Replication::reply_db_header(const std::string& message)
 	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
 	build_path_index(client.temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
-		L_ERR("Directory %s not created: %s (%d): %s", path, io::strerrno(errno), errno, strerror(errno));
+		L_ERR("Directory %s not created: %s (%d): %s", path, error::name(errno), errno, error::description(errno));
 		client.detach();
 		return;
 	}
@@ -414,7 +417,7 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 	assert(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
-		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, io::strerrno(errno), errno, strerror(errno));
+		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, error::name(errno), errno, error::description(errno));
 		client.detach();
 		return;
 	}

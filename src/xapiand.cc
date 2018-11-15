@@ -22,31 +22,31 @@
 
 #include "xapiand.h"
 
-#include "config.h"                  // for XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_UUID...
+#include "config.h"                 // for XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_UUID...
 
-#include <algorithm>                 // for min
-#include <chrono>                    // for system_clock, time_point
-#include <clocale>                   // for std::setlocale, LC_CTYPE
-#include <csignal>                   // for sigaction, sigemptyset
-#include <cstdio>                    // for std::fprintf, std::snprintf
-#include <cstdlib>                   // for std::size_t, std::atoi, std::getenv, std::exit, setenv
-#include <cstring>                   // for std::strchr, std::strlen, std::strrchr, std::strcmp, std::strerror
-#include <grp.h>                     // for getgrgid, group, getgrnam, gid_t
-#include <iostream>                  // for operator<<, basic_ostream, ostream
-#include <list>                      // for __list_iterator, list, operator!=
-#include <memory>                    // for unique_ptr, allocator, make_unique
-#include <pwd.h>                     // for passwd, getpwnam, getpwuid
-#include <sstream>                   // for basic_stringbuf<>::int_type, bas...
-#include <strings.h>                 // for strcasecmp
-#include <errno.h>                   // for errno
-#include <fcntl.h>                   // for O_RDWR, O_CREAT
-#include <sys/resource.h>            // for rlimit
-#include <signal.h>                  // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
-#include <sysexits.h>                // for EX_NOUSER, EX_OK, EX_USAGE, EX_OSFILE
-#include <thread>                    // for thread
-#include <unistd.h>                  // for dup2, unlink, STDERR_FILENO, chdir
-#include <vector>                    // for vector
-#include <xapian.h>                  // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
+#include <algorithm>                // for min
+#include <chrono>                   // for system_clock, time_point
+#include <clocale>                  // for std::setlocale, LC_CTYPE
+#include <csignal>                  // for sigaction, sigemptyset
+#include <cstdio>                   // for std::fprintf, std::snprintf
+#include <cstdlib>                  // for std::size_t, std::atoi, std::getenv, std::exit, setenv
+#include <cstring>                  // for std::strchr, std::strlen, std::strrchr, std::strcmp, strerror
+#include <errno.h>                  // for errno
+#include <fcntl.h>                  // for O_RDWR, O_CREAT
+#include <grp.h>                    // for getgrgid, group, getgrnam, gid_t
+#include <iostream>                 // for operator<<, basic_ostream, ostream
+#include <list>                     // for __list_iterator, list, operator!=
+#include <memory>                   // for unique_ptr, allocator, make_unique
+#include <pwd.h>                    // for passwd, getpwnam, getpwuid
+#include <signal.h>                 // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
+#include <sstream>                  // for basic_stringbuf<>::int_type, bas...
+#include <strings.h>                // for strcasecmp
+#include <sys/resource.h>           // for rlimit
+#include <sysexits.h>               // for EX_NOUSER, EX_OK, EX_USAGE, EX_OSFILE
+#include <thread>                   // for thread
+#include <unistd.h>                 // for dup2, unlink, STDERR_FILENO, chdir
+#include <vector>                   // for vector
+#include <xapian.h>                 // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
@@ -55,22 +55,23 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
-#include "cmdoutput.h"               // for CmdOutput
-#include "database_handler.h"        // for DatabaseHandler
-#include "endpoint.h"                // for Endpoint, Endpoint::cwd
-#include "ev/ev++.h"                 // for ::DEVPOLL, ::EPOLL, ::KQUEUE
-#include "exception.h"               // for Exit
-#include "fs.hh"                     // for build_path
-#include "hashes.hh"                 // for fnv1ah32
-#include "ignore_unused.h"           // for ignore_unused
-#include "io.hh"                     // for io::close, io::open, io::write, io::strerrno
-#include "log.h"                     // for Logging, L_INFO, L_CRIT, L_NOTICE
-#include "manager.h"                 // for XapiandManager, XapiandM...
-#include "opts.h"                    // for opts_t
-#include "schema.h"                  // for default_spc
-#include "string.hh"                 // for string::format, string::center
-#include "system.hh"                 // for get_max_files_per_proc, get_open_files_system_wide
-#include "worker.h"                  // for Worker
+#include "cmdoutput.h"              // for CmdOutput
+#include "database_handler.h"       // for DatabaseHandler
+#include "endpoint.h"               // for Endpoint, Endpoint::cwd
+#include "error.hh"                 // for error:name, error::description
+#include "ev/ev++.h"                // for ::DEVPOLL, ::EPOLL, ::KQUEUE
+#include "exception.h"              // for Exit
+#include "fs.hh"                    // for build_path
+#include "hashes.hh"                // for fnv1ah32
+#include "ignore_unused.h"          // for ignore_unused
+#include "io.hh"                    // for io::close, io::open, io::write
+#include "log.h"                    // for Logging, L_INFO, L_CRIT, L_NOTICE
+#include "manager.h"                // for XapiandManager, XapiandM...
+#include "opts.h"                   // for opts_t
+#include "schema.h"                 // for default_spc
+#include "string.hh"                // for string::format, string::center
+#include "system.hh"                // for get_max_files_per_proc, get_open_files_system_wide
+#include "worker.h"                 // for Worker
 
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np
@@ -718,7 +719,7 @@ void adjustOpenFilesLimit() {
 		if ((limit_cur_files == 0) || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING_ONCE("Unable to obtain the current NOFILE limit (%s), assuming %zd", std::strerror(errno), limit_cur_files);
+		L_WARNING_ONCE("Unable to obtain the current NOFILE limit, assuming %zd: %s (%d): %s", limit_cur_files, error::name(errno), errno, error::description(errno));
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -758,7 +759,7 @@ void adjustOpenFilesLimit() {
 		}
 
 		if (setrlimit_error != 0) {
-			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, std::strerror(setrlimit_error));
+			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
 		}
 		max_files = new_max_files;
 	} else {
@@ -939,7 +940,7 @@ void usedir(const char* path, bool force) {
 				throw Exit(EX_OSFILE);
 			}
 		} else {
-			L_ERR("Cannot create working directory: %s (%s)", path, std::strerror(errno));
+			L_ERR("Cannot create working directory: %s: %s (%d): %s", repr(path), error::name(errno), errno, error::description(errno));
 		}
 	}
 
@@ -995,7 +996,7 @@ void setup() {
 		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
 	} else {
 		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::Number(opts.flush_threshold).c_str(), 0) == -1) {
-			L_INFO("Flush threshold is now 10000. (%s)", io::strerrno(errno));
+			L_INFO("Flush threshold is 10000: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		} else {
 			L_INFO("Flush threshold is now %d. (it was originally 10000)", opts.flush_threshold);
 		}

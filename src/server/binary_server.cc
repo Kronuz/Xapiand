@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "cassert.hh"                       // for assert
@@ -31,6 +32,7 @@
 #include "binary.h"                         // for Binary
 #include "binary_client.h"                  // for BinaryClient
 #include "endpoint.h"                       // for Endpoints
+#include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
 #include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager::manager
@@ -112,14 +114,14 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid binary event {sock:%d}: %s", sock, strerror(errno));
+		L_EV("ERROR: got invalid binary event {sock:%d}: %s", sock, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
 	int client_sock = accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept binary error {sock:%d}: %s", sock, strerror(errno));
+			L_ERR("ERROR: accept binary error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}
 	} else {
 		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);

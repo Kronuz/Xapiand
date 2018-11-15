@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "cassert.hh"                       // for assert
@@ -31,13 +32,14 @@
 #include "color_tools.hh"                   // for color
 #include "cuuid/uuid.h"                     // for UUID
 #include "epoch.hh"                         // for epoch::now
+#include "error.hh"                         // for error:name, error::description
 #include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager::manager, XapiandManager::StateNames, XapiandManager::State
 #include "namegen.h"                        // for name_generator
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
-#include "readable_revents.hh"              // for readable_revents
 #include "random.hh"                        // for random_int
+#include "readable_revents.hh"              // for readable_revents
 #include "repr.hh"                          // for repr
 #include "utype.hh"                         // for toUType
 
@@ -168,7 +170,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid discovery event {sock:%d}: %s", sock, strerror(errno));
+		L_EV("ERROR: got invalid discovery event {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

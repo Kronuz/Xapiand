@@ -22,13 +22,14 @@
 
 #include "io.hh"
 
-#include <cstring>               // for strerror, size_t
+#include <errno.h>                  // for errno
 
-#include "cassert.hh"            // for assert
+#include "cassert.hh"               // for assert
 
-#include "likely.h"              // for likely, unlikely
-#include "log.h"                 // for L_CALL, L_ERRNO
-#include "exception.h"           // for traceback
+#include "error.hh"                 // for error:name, error::description
+#include "exception.h"              // for traceback
+#include "likely.h"                 // for likely, unlikely
+#include "log.h"                    // for L_CALL, L_ERRNO
 
 
 #pragma GCC diagnostic push
@@ -39,123 +40,6 @@ namespace io {
 std::atomic_bool& ignore_eintr() {
 	static std::atomic_bool ignore_eintr = true;
 	return ignore_eintr;
-}
-
-
-// From /usr/include/sys/errno.h:
-const char* sys_errnolist[] {
-	"",
-	"EPERM",            /* 1:   Operation not permitted */
-	"ENOENT",           /* 2:   No such file or directory */
-	"ESRCH",            /* 3:   No such process */
-	"EINTR",            /* 4:   Interrupted system call */
-	"EIO",              /* 5:   Input/output error */
-	"ENXIO",            /* 6:   Device not configured */
-	"E2BIG",            /* 7:   Argument list too long */
-	"ENOEXEC",          /* 8:   Exec format error */
-	"EBADF",            /* 9:   Bad file descriptor */
-	"ECHILD",           /* 10:  No child processes */
-	"EDEADLK",          /* 11:  Resource deadlock avoided */
-	"ENOMEM",           /* 12:  Cannot allocate memory */
-	"EACCES",           /* 13:  Permission denied */
-	"EFAULT",           /* 14:  Bad address */
-	"ENOTBLK",          /* 15:  Block device required */
-	"EBUSY",            /* 16:  Device / Resource busy */
-	"EEXIST",           /* 17:  File exists */
-	"EXDEV",            /* 18:  Cross-device link */
-	"ENODEV",           /* 19:  Operation not supported by device */
-	"ENOTDIR",          /* 20:  Not a directory */
-	"EISDIR",           /* 21:  Is a directory */
-	"EINVAL",           /* 22:  Invalid argument */
-	"ENFILE",           /* 23:  Too many open files in system */
-	"EMFILE",           /* 24:  Too many open files */
-	"ENOTTY",           /* 25:  Inappropriate ioctl for device */
-	"ETXTBSY",          /* 26:  Text file busy */
-	"EFBIG",            /* 27:  File too large */
-	"ENOSPC",           /* 28:  No space left on device */
-	"ESPIPE",           /* 29:  Illegal seek */
-	"EROFS",            /* 30:  Read-only file system */
-	"EMLINK",           /* 31:  Too many links */
-	"EPIPE",            /* 32:  Broken pipe */
-	"EDOM",             /* 33:  Numerical argument out of domain */
-	"ERANGE",           /* 34:  Result too large */
-	"EAGAIN",           /* 35:  Resource temporarily unavailable */
-	"EINPROGRESS",      /* 36:  Operation now in progress */
-	"EALREADY",         /* 37:  Operation already in progress */
-	"ENOTSOCK",         /* 38:  Socket operation on non-socket */
-	"EDESTADDRREQ",     /* 39:  Destination address required */
-	"EMSGSIZE",         /* 40:  Message too long */
-	"EPROTOTYPE",       /* 41:  Protocol wrong type for socket */
-	"ENOPROTOOPT",      /* 42:  Protocol not available */
-	"EPROTONOSUPPORT",  /* 43:  Protocol not supported */
-	"ESOCKTNOSUPPORT",  /* 44:  Socket type not supported */
-	"ENOTSUP",          /* 45:  Operation not supported */
-	"EPFNOSUPPORT",     /* 46:  Protocol family not supported */
-	"EAFNOSUPPORT",     /* 47:  Address family not supported by protocol family */
-	"EADDRINUSE",       /* 48:  Address already in use */
-	"EADDRNOTAVAIL",    /* 49:  Can't assign requested address */
-	"ENETDOWN",         /* 50:  Network is down */
-	"ENETUNREACH",      /* 51:  Network is unreachable */
-	"ENETRESET",        /* 52:  Network dropped connection on reset */
-	"ECONNABORTED",     /* 53:  Software caused connection abort */
-	"ECONNRESET",       /* 54:  Connection reset by peer */
-	"ENOBUFS",          /* 55:  No buffer space available */
-	"EISCONN",          /* 56:  Socket is already connected */
-	"ENOTCONN",         /* 57:  Socket is not connected */
-	"ESHUTDOWN",        /* 58:  Can't send after socket shutdown */
-	"ETOOMANYREFS",     /* 59:  Too many references: can't splice */
-	"ETIMEDOUT",        /* 60:  Operation timed out */
-	"ECONNREFUSED",     /* 61:  Connection refused */
-	"ELOOP",            /* 62:  Too many levels of symbolic links */
-	"ENAMETOOLONG",     /* 63:  File name too long */
-	"EHOSTDOWN",        /* 64:  Host is down */
-	"EHOSTUNREACH",     /* 65:  No route to host */
-	"ENOTEMPTY",        /* 66:  Directory not empty */
-	"EPROCLIM",         /* 67:  Too many processes */
-	"EUSERS",           /* 68:  Too many users */
-	"EDQUOT",           /* 69:  Disc quota exceeded */
-	"ESTALE",           /* 70:  Stale NFS file handle */
-	"EREMOTE",          /* 71:  Too many levels of remote in path */
-	"EBADRPC",          /* 72:  RPC struct is bad */
-	"ERPCMISMATCH",     /* 73:  RPC version wrong */
-	"EPROGUNAVAIL",     /* 74:  RPC prog. not avail */
-	"EPROGMISMATCH",    /* 75:  Program version wrong */
-	"EPROCUNAVAIL",     /* 76:  Bad procedure for program */
-	"ENOLCK",           /* 77:  No locks available */
-	"ENOSYS",           /* 78:  Function not implemented */
-	"EFTYPE",           /* 79:  Inappropriate file type or format */
-	"EAUTH",            /* 80:  Authentication error */
-	"ENEEDAUTH",        /* 81:  Need authenticator */
-	"EPWROFF",          /* 82:  Device power is off */
-	"EDEVERR",          /* 83:  Device error, e.g. paper out */
-	"EOVERFLOW",        /* 84:  Value too large to be stored in data type */
-	"EBADEXEC",         /* 85:  Bad executable */
-	"EBADARCH",         /* 86:  Bad CPU type in executable */
-	"ESHLIBVERS",       /* 87:  Shared library version mismatch */
-	"EBADMACHO",        /* 88:  Malformed Macho file */
-	"ECANCELED",        /* 89:  Operation canceled */
-	"EIDRM",            /* 90:  Identifier removed */
-	"ENOMSG",           /* 91:  No message of desired type */
-	"EILSEQ",           /* 92:  Illegal byte sequence */
-	"ENOATTR",          /* 93:  Attribute not found */
-	"EBADMSG",          /* 94:  Bad message */
-	"EMULTIHOP",        /* 95:  Reserved */
-	"ENODATA",          /* 96:  No message available on STREAM */
-	"ENOLINK",          /* 97:  Reserved */
-	"ENOSR",            /* 98:  No STREAM resources */
-	"ENOSTR",           /* 99:  Not a STREAM */
-	"EPROTO",           /* 100: Protocol error */
-	"ETIME",            /* 101: STREAM ioctl timeout */
-	"EOPNOTSUPP",       /* 102: Operation not supported on socket */
-	"ENOPOLICY",        /* 103: No such policy registered */
-	"ENOTRECOVERABLE",  /* 104: State not recoverable */
-	"EOWNERDEAD",       /* 105: Previous owner died */
-	"EQFULL",           /* 106: Interface output queue is full */
-};
-
-
-const char* strerrno(int errnum) {
-	return sys_errnolist[errnum];
 }
 
 
@@ -218,7 +102,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::write() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::write() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -255,7 +139,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -284,7 +168,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::read() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::read() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -323,7 +207,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", strerrno(errno), errno, strerror(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -484,7 +368,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 int close(int fd) {
 	static int honeypot = io::RetryAfterSignal(::open, "/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if unlikely(honeypot == -1) {
-		L_ERR("honeypot -> %s", io::strerrno(errno));
+		L_ERR("honeypot -> %s (%d): %s", error::name(errno), errno, error::description(errno));
 		exit(EX_SOFTWARE);
 	}
 	CHECK_CLOSE(fd);

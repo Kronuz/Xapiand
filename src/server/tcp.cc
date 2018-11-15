@@ -25,19 +25,20 @@
 #include "tcp.h"
 
 #include <arpa/inet.h>              // for htonl, htons
+#include <cstring>                  // for memset
+#include <errno.h>                  // for errno
+#include <fcntl.h>                  // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <netdb.h>                  // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>             // for sockaddr_in, INADDR_ANY, IPPROTO_TCP
 #include <netinet/tcp.h>            // for TCP_NODELAY
-#include <cstring>                  // for strerror, memset
-#include <utility>
-#include <errno.h>                  // for __error, errno
-#include <fcntl.h>                  // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
+#include <utility>
 #ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>             // for sysctl, CTL_KERN, KIPC_SOMAXCONN
 #endif
 #include <sysexits.h>               // for EX_CONFIG, EX_IOERR
 
+#include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for close, ignored_errno
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_DEBUG
 #include "manager.h"                // for sig_exit
@@ -82,33 +83,33 @@ TCP::bind(int tries)
 	int optval = 1;
 
 	if ((sock = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		L_CRIT("ERROR: %s socket: [%d] %s", description, errno, strerror(errno));
+		L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 		sig_exit(-EX_IOERR);
 	}
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 
 	if ((flags & TCP_SO_REUSEPORT) != 0) {
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		}
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 
 	// struct linger ling = {0, 0};
 	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+	// 	L_ERR("ERROR: %s setsockopt SO_LINGER (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	// }
 
 	if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
@@ -121,13 +122,13 @@ TCP::bind(int tries)
 		struct accept_filter_arg af = {"dataready", ""};
 
 		if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
-			L_ERR("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
 		if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt TCP_DEFER_ACCEPT (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: setsockopt TCP_DEFER_ACCEPT (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}
 #endif
 	}
@@ -142,13 +143,13 @@ TCP::bind(int tries)
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
-				L_DEBUG("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+				L_DEBUG("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 		}
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_CRIT("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_CRIT("ERROR: fcntl O_NONBLOCK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			sig_exit(-EX_CONFIG);
 		}
 
@@ -157,7 +158,7 @@ TCP::bind(int tries)
 		return;
 	}
 
-	L_CRIT("ERROR: %s bind error (sock=%d): [%d] %s", description, sock, errno, strerror(errno));
+	L_CRIT("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }
@@ -186,34 +187,34 @@ TCP::accept()
 
 	if ((client_sock = io::accept(sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
 		if (!io::ignored_errno(errno, true, true, true)) {
-			L_ERR("ERROR: accept error (sock=%d): [%d] %s", sock, errno, strerror(errno));
+			L_ERR("ERROR: accept error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (client_sock=%d): %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 	// if (io::setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (client_sock=%d): %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
 	// }
 
 	// struct linger ling = {0, 0};
 	// if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_LINGER (client_sock=%d): %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
 	// }
 
 	if ((flags & TCP_TCP_NODELAY) != 0) {
 		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+			L_ERR("ERROR: setsockopt TCP_NODELAY (client_sock=%d): %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
 		}
 	}
 
 	if (io::fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		L_ERR("ERROR: fcntl O_NONBLOCK (client_sock=%d): %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
 	}
 
 	return client_sock;
@@ -234,7 +235,7 @@ TCP::_check_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(mib, mib_len, &somaxconn, &somaxconn_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -246,13 +247,13 @@ TCP::_check_backlog(int tcp_backlog)
 #elif defined(__linux__)
 	int fd = io::open("/proc/sys/net/core/somaxconn", O_RDONLY);
 	if unlikely(fd == -1) {
-		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
-		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: [%d] %s", errno, std::strerror(errno));
+		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return;
 	}
 	int somaxconn = atoi(line);
@@ -286,7 +287,7 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 
 	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
 		if (!io::ignored_errno(errno, true, true, true)) {
-			L_ERR("ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname, servname, sock_, errno, strerror(errno));
+			L_ERR("ERROR: connect error to %s:%s (sock=%d): %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
 			freeaddrinfo(result);
 			io::close(sock_);
 			return -1;
@@ -296,7 +297,7 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 	freeaddrinfo(result);
 
 	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock_, errno, strerror(errno));
+		L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	}
 
 	return sock_;
@@ -310,27 +311,27 @@ TCP::socket()
 	int optval = 1;
 
 	if ((sock_ = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		L_ERR("ERROR: cannot create binary connection: [%d] %s", errno, strerror(errno));
+		L_ERR("ERROR: cannot create binary connection: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", sock_, errno, strerror(errno));
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 	// if (io::setsockopt(sock_, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", sock_, errno, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_KEEPALIVE (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	// }
 
 	// struct linger ling = {0, 0};
 	// if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s", sock_, strerror(errno));
+	// 	L_ERR("ERROR: setsockopt SO_LINGER (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	// }
 
 	if (io::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock_, strerror(errno));
+		L_ERR("ERROR: setsockopt TCP_NODELAY (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	}
 
 	return sock_;

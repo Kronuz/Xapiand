@@ -22,19 +22,21 @@
 
 #include "fs.hh"
 
-#include <algorithm>             // for std::any_of
-#include <fnmatch.h>             // for fnmatch
-#include <stdio.h>               // for rename
-#include <sys/stat.h>            // for stat, mkdir
-#include <unistd.h>              // for rmdir
-#include <vector>                // for std::vector
+#include <algorithm>                // for std::any_of
+#include <errno.h>                  // for errno
+#include <fnmatch.h>                // for fnmatch
+#include <stdio.h>                  // for rename
+#include <sys/stat.h>               // for stat, mkdir
+#include <unistd.h>                 // for rmdir
+#include <vector>                   // for std::vector
 
-#include "io.hh"                 // for io::*
-#include "log.h"                 // for L_ERR, L_WARNING, L_INFO
-#include "repr.hh"               // for repr
-#include "split.h"               // for Split
-#include "string.hh"             // for string::startswith, string::endswith
-#include "stringified.hh"        // for stringified
+#include "error.hh"                 // for error:name, error::description
+#include "io.hh"                    // for io::*
+#include "log.h"                    // for L_ERR, L_WARNING, L_INFO
+#include "repr.hh"                  // for repr
+#include "split.h"                  // for Split
+#include "string.hh"                // for string::startswith, string::endswith
+#include "stringified.hh"           // for stringified
 
 #define L_FS L_NOTHING
 
@@ -230,7 +232,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 	stringified src_string(src);
 	DIR* dir_src = ::opendir(src_string.c_str());
 	if (dir_src == nullptr) {
-		L_ERR("ERROR: couldn't open directory %s: %s", strerror(errno));
+		L_ERR("ERROR: couldn't open directory %s: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 
@@ -241,11 +243,11 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 	if (err == -1) {
 		if (ENOENT == errno && create) {
 			if (::mkdir(dst_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s: %s", dst_string, strerror(errno));
+				L_ERR("ERROR: couldn't create directory %s: %s (%d): %s", dst_string, error::name(errno), errno, error::description(errno));
 				return -1;
 			}
 		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s: %s", dst_string, strerror(errno));
+			L_ERR("ERROR: couldn't obtain directory information %s: %s (%d): %s", dst_string, error::name(errno), errno, error::description(errno));
 			return -1;
 		}
 	}
@@ -291,7 +293,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 			while (true) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (bytes == -1) {
-					L_ERR("ERROR: reading file. %s: %s\n", src_path, strerror(errno));
+					L_ERR("ERROR: reading file. %s: %s (%d): %s\n", src_path, error::name(errno), errno, error::description(errno));
 					return -1;
 				}
 
@@ -299,7 +301,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 				bytes = io::write(dst_fd, buffer, bytes);
 				if (bytes == -1) {
-					L_ERR("ERROR: writing file. %s: %s\n", dst_path, strerror(errno));
+					L_ERR("ERROR: writing file. %s: %s (%d): %s\n", dst_path, error::name(errno), errno, error::description(errno));
 					return -1;
 				}
 			}
