@@ -30,7 +30,7 @@
 #include <csignal>                  // for sigaction, sigemptyset
 #include <cstdio>                   // for std::fprintf, std::snprintf
 #include <cstdlib>                  // for std::size_t, std::atoi, std::getenv, std::exit, setenv
-#include <cstring>                  // for std::strchr, std::strlen, std::strrchr, std::strcmp, strerror
+#include <cstring>                  // for std::strchr, std::strlen, std::strrchr, std::strcmp
 #include <errno.h>                  // for errno
 #include <fcntl.h>                  // for O_RDWR, O_CREAT
 #include <grp.h>                    // for getgrgid, group, getgrnam, gid_t
@@ -732,7 +732,7 @@ void adjustOpenFilesLimit() {
 		bool increasing = limit_cur_files < max_files;
 
 		const ssize_t step = 16;
-		int setrlimit_error = 0;
+		int setrlimit_errno = 0;
 
 		// Try to set the file limit to match 'max_files' or at least to the higher value supported less than max_files.
 		ssize_t new_max_files = max_files;
@@ -749,7 +749,7 @@ void adjustOpenFilesLimit() {
 			}
 
 			// We failed to set file limit to 'new_max_files'. Try with a smaller limit decrementing by a few FDs per iteration.
-			setrlimit_error = errno;
+			setrlimit_errno = errno;
 			if (!increasing || new_max_files < step) {
 				// Assume that the limit we get initially is still valid if our last try was even lower.
 				new_max_files = limit_cur_files;
@@ -758,8 +758,8 @@ void adjustOpenFilesLimit() {
 			new_max_files -= step;
 		}
 
-		if (setrlimit_error != 0) {
-			L_ERR("Server can't set maximum open files to %zd because of OS error: %s", max_files, strerror(setrlimit_error));
+		if (setrlimit_errno != 0) {
+			L_ERR("Server can't set maximum open files to %zd because of OS error: %s (%d): %s", max_files, error::name(setrlimit_errno), setrlimit_errno, error::description(setrlimit_errno));
 		}
 		max_files = new_max_files;
 	} else {
