@@ -123,7 +123,7 @@ atos(const void* address)
 	return "";
 }
 #else
-inline static std::string
+static inline std::string
 atos(const void*)
 {
 	return "";

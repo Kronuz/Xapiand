@@ -104,7 +104,7 @@ namespace allocator {
 
 #ifdef HAS_THREAD_LOCAL
 	static inline long long& _local_allocated() noexcept {
-		thread_local static long long l_allocated;
+		static thread_local long long l_allocated;
 		return l_allocated;
 	}
 

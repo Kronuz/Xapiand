@@ -98,7 +98,7 @@ HTM::trixel_intersection(std::vector<std::string>&& txs1, std::vector<std::strin
  *
  * result is sort.
  */
-inline static void exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth) {
+static inline void exclusive_disjunction(std::vector<std::string>& result, const std::string& father, const std::string& son, size_t depth) {
 	if (depth != 0u) {
 		switch (son.at(father.length())) {
 			case '0':
@@ -288,7 +288,7 @@ HTM::range_intersection(std::vector<range_t>&& rs1, std::vector<range_t>&& rs2)
 }
 
 
-inline static void exclusive_disjunction(std::vector<range_t>& res, range_t& range) {
+static inline void exclusive_disjunction(std::vector<range_t>& res, range_t& range) {
 	if (res.empty()) {
 		res.push_back(std::move(range));
 		return;
@@ -694,7 +694,7 @@ HTM::getRange(const std::string& name)
 }
 
 
-inline static void get_trixels(std::vector<std::string>& trixels, uint64_t start, uint64_t end) {
+static inline void get_trixels(std::vector<std::string>& trixels, uint64_t start, uint64_t end) {
 	if (start == end) {
 		trixels.push_back(HTM::getTrixelName(start));
 		return;
@@ -743,7 +743,7 @@ HTM::getTrixels(const std::vector<range_t>& ranges)
 }
 
 
-inline static void get_id_trixels(std::vector<uint64_t>& id_trixels, uint64_t start, uint64_t end) {
+static inline void get_id_trixels(std::vector<uint64_t>& id_trixels, uint64_t start, uint64_t end) {
 	if (start == end) {
 		id_trixels.push_back(start);
 		return;

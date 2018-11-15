@@ -31,7 +31,7 @@
 
 namespace chaipp {
 
-inline static chaiscript::ModulePtr ModuleMsgPack() {
+inline chaiscript::ModulePtr ModuleMsgPack() {
 	chaiscript::ModulePtr module(new chaiscript::Module());
 
 	module->add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack& obj) {
