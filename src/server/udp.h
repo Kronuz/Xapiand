@@ -54,12 +54,11 @@ protected:
 
 	bool close();
 
-	void sending_message(const std::string& message);
-
 public:
 	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags);
 	~UDP();
 
-	void send_message(char type, const std::string& content);
+	ssize_t send_message(const std::string& message);
+	ssize_t send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);
 };

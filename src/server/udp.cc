@@ -164,10 +164,10 @@ UDP::find(int tries, const std::string& group)
 }
 
 
-void
-UDP::sending_message(const std::string& message)
+ssize_t
+UDP::send_message(const std::string& message)
 {
-	if (!closed) {
+	while (!closed) {
 		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
@@ -177,16 +177,18 @@ UDP::sending_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			if (!io::ignored_errno(errno, true, true, true)) {
-				L_ERR("ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
-				XapiandManager::manager->shutdown();
+			if (io::ignored_errno(errno, true, false, false)) {
+				continue;
 			}
+			L_ERR("ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 		}
+		return written;
 	}
+	return 0;
 }
 
 
-void
+ssize_t
 UDP::send_message(char type, const std::string& content)
 {
 	if (!content.empty()) {
@@ -196,8 +198,9 @@ UDP::send_message(char type, const std::string& content)
 		message.push_back(type);
 		message.append(serialise_string(opts.cluster_name));
 		message.append(content);
-		sending_message(message);
+		return send_message(message);
 	}
+	return 0;
 }
 
 
