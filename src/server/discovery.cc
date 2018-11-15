@@ -27,8 +27,7 @@
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
-#include "cassert.hh"                       // for assert
-
+#include "cassert.h"                        // for ASSERT
 #include "color_tools.hh"                   // for color
 #include "cuuid/uuid.h"                     // for UUID
 #include "epoch.hh"                         // for epoch::now
@@ -161,7 +160,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
-	assert(sock == watcher.fd);
+	ASSERT(sock == watcher.fd);
 
 	if (closed) {
 		return;

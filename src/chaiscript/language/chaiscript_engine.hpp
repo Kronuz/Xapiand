@@ -11,7 +11,6 @@
 #ifndef CHAISCRIPT_ENGINE_HPP_
 #define CHAISCRIPT_ENGINE_HPP_
 
-#include <cassert>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -23,6 +22,7 @@
 #include <vector>
 #include <cstring>
 
+#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../chaiscript_threading.hpp"
 #include "../dispatchkit/boxed_cast_helper.hpp"
@@ -216,7 +216,7 @@ namespace chaiscript
       const auto size = infile.tellg();
       infile.seekg(0, std::ios::beg);
 
-      assert(size >= 0);
+      ASSERT(size >= 0);
 
       if (size == std::streampos(0))
       {

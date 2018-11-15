@@ -71,10 +71,10 @@ You can contact the author at :
 *  Debug
 **************************************/
 #if defined(LZ4_DEBUG) && (LZ4_DEBUG>=1)
-#  include "cassert.hh"
+#  include "cassert.hh"  // for ASSERT
 #else
 #  ifndef assert
-#    define assert(condition) ((void)0)
+#    define ASSERT(condition) ((void)0)
 #  endif
 #endif
 
@@ -1443,7 +1443,7 @@ size_t LZ4F_decompress(LZ4F_dctx* dctx,
             /* At this stage, input is large enough to decode a block */
             if (dctx->frameInfo.blockChecksumFlag) {
                 dctx->tmpInTarget -= 4;
-                assert(selectedIn != NULL);  /* selectedIn is defined at this stage (either srcPtr, or dctx->tmpIn) */
+                ASSERT(selectedIn != NULL);  /* selectedIn is defined at this stage (either srcPtr, or dctx->tmpIn) */
                 {   U32 const readBlockCrc = LZ4F_readLE32(selectedIn + dctx->tmpInTarget);
                     U32 const calcBlockCrc = XXH32(selectedIn, dctx->tmpInTarget, 0);
                     if (readBlockCrc != calcBlockCrc)

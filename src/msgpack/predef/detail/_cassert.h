@@ -9,9 +9,9 @@ http://www.boost.org/LICENSE_1_0.txt)
 #define MSGPACK_PREDEF_DETAIL__CASSERT_H
 
 #if defined(__cpluplus)
-#include "cassert.hh"
+#include "cassert.h"  // for ASSERT
 #else
-#include "cassert.hh"
+#include "cassert.h"  // for ASSERT
 #endif
 
 #endif

@@ -31,7 +31,7 @@
 #include "concurrent_queue.h"
 #include "lightweight_semaphore.h"
 
-#include "cassert.hh"            // for assert
+#include "cassert.h"             // for ASSERT
 
 #include <type_traits>
 #include <cerrno>
@@ -82,7 +82,7 @@ public:
 	explicit BlockingConcurrentQueue(size_t capacity = 6 * BLOCK_SIZE)
 		: inner(capacity), sema(create<LightweightSemaphore>(), &BlockingConcurrentQueue::template destroy<LightweightSemaphore>)
 	{
-		assert(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
+		ASSERT(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
 		if (!sema) {
 			MOODYCAMEL_THROW(std::bad_alloc());
 		}
@@ -91,7 +91,7 @@ public:
 	BlockingConcurrentQueue(size_t minCapacity, size_t maxExplicitProducers, size_t maxImplicitProducers)
 		: inner(minCapacity, maxExplicitProducers, maxImplicitProducers), sema(create<LightweightSemaphore>(), &BlockingConcurrentQueue::template destroy<LightweightSemaphore>)
 	{
-		assert(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
+		ASSERT(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
 		if (!sema) {
 			MOODYCAMEL_THROW(std::bad_alloc());
 		}

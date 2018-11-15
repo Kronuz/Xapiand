@@ -50,9 +50,8 @@
 #include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
 #endif
 
-#include "cassert.hh"                         // for assert
-
 #include "allocator.h"                        // for allocator::total_allocated
+#include "cassert.h"                          // for ASSERT
 #include "color_tools.hh"                     // for color
 #include "database_handler.h"                 // for DatabaseHandler, committer
 #include "database_utils.h"                   // for RESERVED_TYPE
@@ -381,7 +380,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!opts.solo) {
 		// Replicate database from the leader
 		if (!is_leader) {
-			assert(!cluster_endpoint.is_local());
+			ASSERT(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
 			new_cluster = 2;
@@ -988,12 +987,12 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 				for (size_t replicas = std::min(opts.num_replicas, indexed_nodes); replicas; --replicas) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
-					assert(node);
+					ASSERT(node);
 					nodes.push_back(std::move(node));
 					consistent_hash = idx % indexed_nodes;
 					serialised.append(serialise_length(idx));
 				}
-				assert(!serialised.empty());
+				ASSERT(!serialised.empty());
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(key, serialised));
 				lk.unlock();
@@ -1008,7 +1007,7 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 			do {
 				auto idx = unserialise_length(&p, p_end);
 				auto node = Node::get_node(idx);
-				assert(node);
+				ASSERT(node);
 				nodes.push_back(std::move(node));
 			} while (p != p_end);
 		}

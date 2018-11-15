@@ -22,10 +22,9 @@
 
 #include "lock_database.h"
 
-#include "cassert.hh"            // for assert
-
-#include "database.h"           // for Database
-#include "database_pool.h"      // for DatabasePool
+#include "cassert.h"             // for ASSERT
+#include "database.h"            // for Database
+#include "database_pool.h"       // for DatabasePool
 
 
 LockableDatabase::LockableDatabase() :
@@ -46,7 +45,7 @@ LockableDatabase::LockableDatabase(const Endpoints& endpoints_, int flags_) :
 const std::shared_ptr<Database>&
 LockableDatabase::database() const noexcept
 {
-	assert(_locked_database);
+	ASSERT(_locked_database);
 	return _locked_database;
 }
 
@@ -54,7 +53,7 @@ LockableDatabase::database() const noexcept
 Xapian::Database*
 LockableDatabase::db() const noexcept
 {
-	assert(_locked_database);
+	ASSERT(_locked_database);
 	return _locked_database ? _locked_database->db() : nullptr;
 }
 
@@ -81,8 +80,8 @@ lock_database::unlock()
 	if (lockable != nullptr) {
 		if (locks > 0 && --locks == 0) {
 			if (lockable->_database_locks > 0 && --lockable->_database_locks == 0) {
-				assert(lockable->_locked_database);
-				assert(XapiandManager::manager);
+				ASSERT(lockable->_locked_database);
+				ASSERT(XapiandManager::manager);
 				XapiandManager::manager->database_pool.checkin(lockable->_locked_database);
 			}
 		}

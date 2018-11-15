@@ -36,7 +36,7 @@
 #include <stdexcept>
 #include <stdint.h>
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 #ifdef __clang__
 # define FMT_CLANG_VERSION (__clang_major__ * 100 + __clang_minor__)
@@ -116,7 +116,7 @@ FMT_END_NAMESPACE
 #   define FMT_THROW(x) throw x
 #  endif
 # else
-#  define FMT_THROW(x) do { static_cast<void>(sizeof(x)); assert(false); } while(false);
+#  define FMT_THROW(x) do { static_cast<void>(sizeof(x)); ASSERT(false); } while(false);
 # endif
 #endif
 
@@ -195,7 +195,7 @@ inline uint32_t clz(uint32_t x) {
   unsigned long r = 0;
   _BitScanReverse(&r, x);
 
-  assert(x != 0);
+  ASSERT(x != 0);
   // Static analysis complains about using uninitialized data
   // "r", but the only way that can happen is if "x" is 0,
   // which the callers guarantee to not happen.
@@ -221,7 +221,7 @@ inline uint32_t clzll(uint64_t x) {
   _BitScanReverse(&r, static_cast<uint32_t>(x));
 # endif
 
-  assert(x != 0);
+  ASSERT(x != 0);
   // Static analysis complains about using uninitialized data
   // "r", but the only way that can happen is if "x" is 0,
   // which the callers guarantee to not happen.
@@ -525,7 +525,7 @@ class basic_memory_buffer: private Allocator, public internal::basic_buffer<T> {
     \endrst
    */
   basic_memory_buffer &operator=(basic_memory_buffer &&other) {
-    assert(this != &other);
+    ASSERT(this != &other);
     deallocate();
     move(other);
     return *this;
@@ -635,7 +635,7 @@ class null_terminating_iterator {
     : ptr_(r.begin()), end_(r.end()) {}
 
   FMT_CONSTEXPR null_terminating_iterator &operator=(const Char *ptr) {
-    assert(ptr <= end_);
+    ASSERT(ptr <= end_);
     ptr_ = ptr;
     return *this;
   }
@@ -1539,7 +1539,7 @@ FMT_CONSTEXPR bool is_name_start(Char c) {
 // it: an iterator pointing to the beginning of the input range.
 template <typename Iterator, typename ErrorHandler>
 FMT_CONSTEXPR unsigned parse_nonnegative_int(Iterator &it, ErrorHandler &&eh) {
-  assert('0' <= *it && *it <= '9');
+  ASSERT('0' <= *it && *it <= '9');
   unsigned value = 0;
   // Convert to unsigned to prevent a warning.
   unsigned max_int = (std::numeric_limits<int>::max)();
@@ -1566,7 +1566,7 @@ FMT_CONSTEXPR unsigned parse_nonnegative_int(Iterator &it, ErrorHandler &&eh) {
 template <typename Char, typename ErrorHandler>
 FMT_CONSTEXPR unsigned parse_nonnegative_int(
     const Char *&begin, const Char *end, ErrorHandler &&eh) {
-  assert(begin != end && '0' <= *begin && *begin <= '9');
+  ASSERT(begin != end && '0' <= *begin && *begin <= '9');
   unsigned value = 0;
   // Convert to unsigned to prevent a warning.
   unsigned max_int = (std::numeric_limits<int>::max)();
@@ -1924,7 +1924,7 @@ FMT_CONSTEXPR Iterator parse_arg_id(Iterator it, IDHandler &&handler) {
 template <typename Char, typename IDHandler>
 FMT_CONSTEXPR const Char *parse_arg_id(
     const Char *begin, const Char *end, IDHandler &&handler) {
-  assert(begin != end);
+  ASSERT(begin != end);
   Char c = *begin;
   if (c == '}' || c == ':')
     return handler(), begin;

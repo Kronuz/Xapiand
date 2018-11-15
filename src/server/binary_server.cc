@@ -27,10 +27,9 @@
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
-#include "cassert.hh"                       // for assert
-
 #include "binary.h"                         // for Binary
 #include "binary_client.h"                  // for BinaryClient
+#include "cassert.h"                        // for ASSERT
 #include "endpoint.h"                       // for Endpoints
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
@@ -105,7 +104,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	L_EV_END("BinaryServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
-	assert(sock == watcher.fd);
+	ASSERT(sock == watcher.fd);
 
 	if (closed) {
 		return;
@@ -136,7 +135,7 @@ void
 BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
 {
 	if (src_endpoint.is_local()) {
-		assert(!cluster_database);
+		ASSERT(!cluster_database);
 		return;
 	}
 
@@ -165,7 +164,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 	}
 
 	if (!replicated) {
-		assert(!cluster_database);
+		ASSERT(!cluster_database);
 		return;
 	}
 

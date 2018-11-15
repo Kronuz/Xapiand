@@ -32,8 +32,7 @@ THE SOFTWARE.
 #include "string_view.hh"   // for std::string_view
 #include <type_traits>      // for std::enable_if_t
 
-#include "cassert.hh"       // for assert
-
+#include "cassert.h"        // for ASSERT
 #include "uinteger_t.hh"
 
 
@@ -86,7 +85,7 @@ public:
 		for (int cp = 0; cp < base; ++cp) {
 			auto ch = alphabet[cp];
 			_chr[cp] = ch;
-			assert(_ord[(unsigned char)ch] == base);  // Duplicate character in the alphabet
+			ASSERT(_ord[(unsigned char)ch] == base);  // Duplicate character in the alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -100,7 +99,7 @@ public:
 			auto ch = extended[i];
 			auto cp = base + i;
 			_chr[cp] = ch;
-			assert(_ord[(unsigned char)ch] == base); // Duplicate character in the extended alphabet
+			ASSERT(_ord[(unsigned char)ch] == base); // Duplicate character in the extended alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -115,7 +114,7 @@ public:
 			auto ch = translate[i];
 			auto ncp = _ord[(unsigned char)ch];
 			if (ncp >= base) {
-				assert(_ord[(unsigned char)ch] == base); // Invalid translation character
+				ASSERT(_ord[(unsigned char)ch] == base); // Invalid translation character
 				_ord[(unsigned char)ch] = cp;
 				if (flags & BaseX::ignore_case) {
 					if (ch >= 'A' && ch <='Z') {

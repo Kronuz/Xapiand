@@ -49,7 +49,7 @@ to header-only and extended to arbitrary bit length.
 #include <functional>
 #include <type_traits>
 
-#include "cassert.hh"
+#include "cassert.h"          // for ASSERT
 
 // Compatibility inlines
 #ifndef __has_builtin         // Optional of course
@@ -215,7 +215,7 @@ public:
 			sz -= min;
 		}
 		if (sz) {
-			assert (_begin == 0); // _begin should be 0 in here
+			ASSERT(_begin == 0); // _begin should be 0 in here
 			// If there's still more room needed, we grow the vector:
 			// Ex.: grow using prepend(3, y)
 			//    sz = 3
@@ -1233,14 +1233,14 @@ public:
 		if (shift) {
 			digit shifted = 0;
 			for (; lhs_rit != lhs_rit_e; ++lhs_rit, ++rit) {
-				assert(rit != rit_e); (void)(rit_e);
+				ASSERT(rit != rit_e); (void)(rit_e);
 				auto v = (*lhs_rit >> shift) | shifted;
 				shifted = *lhs_rit << (_digit_bits - shift);
 				*rit = v;
 			}
 		} else {
 			for (; lhs_rit != lhs_rit_e; ++lhs_rit, ++rit) {
-				assert(rit != rit_e); (void)(rit_e);
+				ASSERT(rit != rit_e); (void)(rit_e);
 				*rit = *lhs_rit;
 			}
 		}
@@ -1525,7 +1525,7 @@ public:
 		auto lhs_sz = lhs.size();
 		auto rhs_sz = rhs.size();
 
-		assert(rhs_sz == 1); (void)(rhs_sz);
+		ASSERT(rhs_sz == 1); (void)(rhs_sz);
 		auto n = rhs.front();
 
 		uinteger_t tmp;
@@ -1618,8 +1618,8 @@ public:
 		auto lhs_sz = lhs.size();
 		auto rhs_sz = rhs.size();
 
-		assert(lhs_sz > cutoff);
-		assert(2 * lhs_sz <= rhs_sz);
+		ASSERT(lhs_sz > cutoff);
+		ASSERT(2 * lhs_sz <= rhs_sz);
 
 		auto rhs_begin = rhs._begin;
 		std::size_t shift = 0;
@@ -1751,7 +1751,7 @@ public:
 		auto lhs_sz = lhs.size();
 		auto rhs_sz = rhs.size();
 
-		assert(rhs_sz == 1); (void)(rhs_sz);
+		ASSERT(rhs_sz == 1); (void)(rhs_sz);
 		auto n = rhs.front();
 
 		auto rit_lhs = lhs.rbegin();
@@ -1780,7 +1780,7 @@ public:
 
 		auto v_size = v.size();
 		auto w_size = w.size();
-		assert(v_size >= w_size && w_size >= 2);
+		ASSERT(v_size >= w_size && w_size >= 2);
 
 		// D1. normalize: shift rhs left so that its top digit is >= 63 bits.
 		// shift lhs left by the same amount. Results go into w and v.

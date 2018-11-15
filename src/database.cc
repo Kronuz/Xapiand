@@ -25,8 +25,7 @@
 #include <algorithm>              // for std::move
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
-#include "cassert.hh"             // for assert
-
+#include "cassert.h"              // for ASSERT
 #include "database_flags.h"       // DB_*
 #include "database_pool.h"        // for DatabaseQueue
 #include "database_handler.h"     // for committer
@@ -148,7 +147,7 @@ void
 DataHeader::init(void* param, void* /*unused*/)
 {
 	auto database = static_cast<Database*>(param);
-	assert(database);
+	ASSERT(database);
 
 	head.magic = STORAGE_MAGIC;
 	strncpy(head.uuid, database->get_uuid().to_string().c_str(), sizeof(head.uuid));
@@ -314,7 +313,7 @@ Database::reopen_writable()
 		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 	}
 #endif  // XAPIAND_DATA_STORAGE
-	assert(dbs.size() == endpoints_size);
+	ASSERT(dbs.size() == endpoints_size);
 
 	is_writable = true;
 	is_writable_and_local = local;
@@ -448,7 +447,7 @@ Database::reopen_readable()
 		}
 #endif  // XAPIAND_DATA_STORAGE
 	}
-	assert(dbs.size() == endpoints_size);
+	ASSERT(dbs.size() == endpoints_size);
 
 	is_writable = false;
 	is_writable_and_local = false;
@@ -838,11 +837,11 @@ Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) co
 {
 	L_CALL("Database::storage_get_stored()");
 
-	assert(locator.type == Data::Type::stored);
-	assert(locator.volume != -1);
+	ASSERT(locator.type == Data::Type::stored);
+	ASSERT(locator.volume != -1);
 
-	assert(did > 0);
-	assert(endpoints.size() > 0);
+	ASSERT(did > 0);
+	ASSERT(endpoints.size() > 0);
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
@@ -860,15 +859,15 @@ Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
 {
 	L_CALL("Database::storage_pull_blobs()");
 
-	assert(did > 0);
-	assert(endpoints.size() > 0);
+	ASSERT(did > 0);
+	ASSERT(endpoints.size() > 0);
 	int subdatabase = (did - 1) % endpoints.size();
 	const auto& storage = storages[subdatabase];
 	if (storage) {
 		auto data = Data(doc.get_data());
 		for (auto& locator : data) {
 			if (locator.type == Data::Type::stored) {
-				assert(locator.volume != -1);
+				ASSERT(locator.volume != -1);
 				storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
 				storage->seek(static_cast<uint32_t>(locator.offset));
 				auto stored = storage->read();
@@ -886,7 +885,7 @@ Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
-	assert(is_writable);
+	ASSERT(is_writable);
 
 	// Writable databases have only one subdatabase,
 	// simply get the single storage:

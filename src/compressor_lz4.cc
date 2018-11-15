@@ -25,8 +25,7 @@
 #include <cstdio>                // for SEEK_SET
 #include <cstring>               // for size_t, memcpy
 
-#include "cassert.hh"            // for assert
-
+#include "cassert.h"             // for ASSERT
 #include "likely.h"              // for likely, unlikely
 
 
@@ -79,8 +78,8 @@ LZ4CompressData::init()
 std::string
 LZ4CompressData::next()
 {
-	assert(cmpBuf);
-	assert(buffer);
+	ASSERT(cmpBuf);
+	ASSERT(buffer);
 
 	if (data_offset >= data_size) {
 		return std::string();
@@ -153,8 +152,8 @@ LZ4DecompressData::init()
 std::string
 LZ4DecompressData::next()
 {
-	assert(cmpBuf);
-	assert(buffer);
+	ASSERT(cmpBuf);
+	ASSERT(buffer);
 
 	if (data_offset >= data_size) {
 		return std::string();
@@ -235,8 +234,8 @@ LZ4CompressFile::init()
 std::string
 LZ4CompressFile::next()
 {
-	assert(cmpBuf);
-	assert(buffer);
+	ASSERT(cmpBuf);
+	ASSERT(buffer);
 
 	char* const inpPtr = &buffer[_offset];
 
@@ -321,8 +320,8 @@ LZ4DecompressFile::init()
 std::string
 LZ4DecompressFile::next()
 {
-	assert(cmpBuf);
-	assert(buffer);
+	ASSERT(cmpBuf);
+	ASSERT(buffer);
 
 	if (data_offset == static_cast<size_t>(data_size)) {
 		if unlikely((data_size = io::read(fd, data, get_read_size())) < 0) {

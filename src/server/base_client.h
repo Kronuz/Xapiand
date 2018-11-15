@@ -28,9 +28,8 @@
 #include <string>                   // for std::string
 #include <sys/types.h>              // for ssize_t
 
-#include "cassert.hh"               // for assert
-
 #include "buffer.h"                 // for Buffer
+#include "cassert.h"                // for ASSERT
 #include "client_compressor.h"      // for ClientLZ4Compressor, ClientLZ4Decompressor
 #include "ev/ev++.h"                // for ev::async, ev::io, ev::loop_ref
 #include "error.hh"                 // for error:name, error::description
@@ -161,7 +160,7 @@ protected:
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 		L_EV_END("BaseClient::io_cb_read:END");
 
-		assert(sock == watcher.fd);
+		ASSERT(sock == watcher.fd);
 		ignore_unused(watcher);
 
 		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);

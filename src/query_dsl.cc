@@ -25,8 +25,6 @@
 #include <strings.h>                           // for strncasecmp
 #include <utility>
 
-#include "cassert.hh"                          // for ASSERT
-
 #include "booleanParser/BooleanParser.h"       // for BooleanTree
 #include "booleanParser/LexicalException.h"    // for LexicalException
 #include "booleanParser/SyntacticException.h"  // for SyntacticException

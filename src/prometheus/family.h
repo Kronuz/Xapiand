@@ -9,8 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "cassert.hh"
-
+#include "cassert.h"        // for ASSERT
 #include "check_names.h"
 #include "collectable.h"
 #include "metric.h"
@@ -50,7 +49,7 @@ template <typename T>
 Family<T>::Family(const std::string& name, const std::string& help,
                   const std::map<std::string, std::string>& constant_labels)
     : name_(name), help_(help), constant_labels_(constant_labels) {
-  assert(CheckMetricName(name_));
+  ASSERT(CheckMetricName(name_));
 }
 
 template <typename T>
@@ -60,7 +59,7 @@ T& Family<T>::Add(const std::map<std::string, std::string>& labels,
 #ifndef NDEBUG
   for (auto& label_pair : labels) {
     auto& label_name = label_pair.first;
-    assert(CheckLabelName(label_name));
+    ASSERT(CheckLabelName(label_name));
   }
 #endif
 
@@ -71,9 +70,9 @@ T& Family<T>::Add(const std::map<std::string, std::string>& labels,
   if (metrics_iter != metrics_.end()) {
 #ifndef NDEBUG
     auto labels_iter = labels_.find(hash);
-    assert(labels_iter != labels_.end());
+    ASSERT(labels_iter != labels_.end());
     const auto &old_labels = labels_iter->second;
-    assert(labels == old_labels);
+    ASSERT(labels == old_labels);
 #endif
     return *metrics_iter->second;
   } else {

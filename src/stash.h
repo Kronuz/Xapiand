@@ -25,8 +25,7 @@
 #include <array>                 // for std::array
 #include <atomic>                // for std::atomic
 
-#include "cassert.hh"            // for assert
-
+#include "cassert.h"             // for ASSERT
 #include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_NOTHING
 
@@ -320,7 +319,7 @@ public:
 			if (!found) {
 				unsigned long long new_cur_key;
 				if (!final_key || (ctx.current_key && ctx.current_key < final_key)) {
-					assert(ctx.current_key);
+					ASSERT(ctx.current_key);
 					new_cur_key = get_base_key(ctx.current_key);
 				} else {
 					new_cur_key = get_base_key(final_key);

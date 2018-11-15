@@ -22,13 +22,12 @@
 
 #include "repr.hh"
 
-#include "cassert.hh"            // for assert
-
+#include "cassert.h"             // for ASSERT
 #include "chars.hh"              // for chars::char_repr
 
 
 std::string repr(const void* p, size_t size, bool friendly, char quote, size_t max_size) {
-	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
+	ASSERT(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	const char *max_a = max_size != 0u ? q + (max_size * 2 / 3) : p_end + 1;

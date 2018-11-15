@@ -26,8 +26,7 @@
 
 #include <errno.h>                          // for errno
 
-#include "cassert.hh"                       // for assert
-
+#include "cassert.h"                        // for ASSERT
 #include "color_tools.hh"                   // for color
 #include "error.hh"                         // for error:name, error::description
 #include "ignore_unused.h"                  // for ignore_unused
@@ -181,7 +180,7 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 	L_EV_END("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
-	assert(sock == watcher.fd);
+	ASSERT(sock == watcher.fd);
 
 	if (closed) {
 		return;

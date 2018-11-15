@@ -25,8 +25,7 @@
 #include <algorithm>              // for std::move
 #include <sysexits.h>             // for EX_SOFTWARE
 
-#include "cassert.hh"             // for assert
-
+#include "cassert.h"              // for ASSERT
 #include "database.h"             // for Database
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "log.h"                  // for L_OBJ, L_CALL
@@ -294,7 +293,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 			THROW(TimeOutError, "Cannot grant exclusive lock database");
 		}
 	} catch(...) {
-		assert(locks > 0);
+		ASSERT(locks > 0);
 		--locks;
 		queue->locked = false;
 		queue->unlocked_cond.notify_all();
@@ -325,7 +324,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
 
-	assert(locks > 0);
+	ASSERT(locks > 0);
 	--locks;
 	queue->locked = false;
 	queue->unlocked_cond.notify_all();
@@ -350,7 +349,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 	L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
 
-	assert(!database);
+	ASSERT(!database);
 
 	if (db_writable && endpoints.size() != 1) {
 		L_DEBUG("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
@@ -496,7 +495,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL("DatabasePool::checkin(%s)", repr(database->to_string()));
 
-	assert(database);
+	ASSERT(database);
 	auto endpoints = database->endpoints;
 	int flags = database->flags;
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
@@ -511,7 +510,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		if (locks) {
 			if (db_writable) {
 				if (queue->locked) {
-					assert(locks > 0);
+					ASSERT(locks > 0);
 					--locks;
 					queue->locked = false;
 					queue->unlocked_cond.notify_all();

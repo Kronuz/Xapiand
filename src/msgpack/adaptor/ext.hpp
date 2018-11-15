@@ -14,7 +14,6 @@
 #include "adaptor_base.hpp"
 #include <cstring>
 #include <string>
-#include <cassert>
 
 namespace msgpack {
 

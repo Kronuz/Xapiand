@@ -24,8 +24,7 @@
 
 #include <cstring>           // for strncmp
 
-#include "cassert.hh"        // for assert
-
+#include "cassert.h"         // for ASSERT
 #include "chars.hh"          // for chars::hexdec
 #include "log.h"
 
@@ -333,7 +332,7 @@ PathParser::init(std::string_view p)
 						break;
 
 					case State::PMT:
-						assert(n0 >= n1);
+						ASSERT(n0 >= n1);
 						length = n0 - n1;
 						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
@@ -365,7 +364,7 @@ PathParser::init(std::string_view p)
 						n0 = n1 - 1;
 						break;
 					case State::ID:
-						assert(n0 >= n1);
+						ASSERT(n0 >= n1);
 						length = n0 - n1;
 						if (length != 0u) {
 							off_id = n1 + 1;
@@ -511,14 +510,14 @@ PathParser::next()
 				switch (state) {
 					case State::NSP:
 					case State::PTH:
-						assert(n1 >= n0);
+						ASSERT(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;
 						off = ++n1;
 						return state;
 					case State::HST:
-						assert(n1 >= n0);
+						ASSERT(n1 >= n0);
 						length = n1 - n0;
 						if (length == 0u) {
 							return State::INVALID_HST;
@@ -540,7 +539,7 @@ PathParser::next()
 						if (cn1 == ':' || cp1 == ':' || cp1 == '/') {
 							break;
 						}
-						assert(n1 >= n0);
+						ASSERT(n1 >= n0);
 						length = n1 - n0;
 						if (length == 0u) {
 							return State::INVALID_NSP;
@@ -559,7 +558,7 @@ PathParser::next()
 				switch (state) {
 					case State::NSP:
 					case State::PTH:
-						assert(n1 >= n0);
+						ASSERT(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;

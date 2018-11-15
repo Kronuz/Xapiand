@@ -31,8 +31,7 @@
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
-#include "cassert.hh"         // for assert
-
+#include "cassert.h"          // for ASSERT
 #include "chars.hh"           // for chars::tolower
 #include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 #include "log.h"              // for L_DEBUG_TRY
@@ -162,7 +161,7 @@ inline std::string indent(std::string_view str, char sep, int level, bool indent
 
 	Split<char> lines(str, '\n');
 	auto it = lines.begin();
-	assert(it != lines.end());
+	ASSERT(it != lines.end());
 	for (; !it.last(); ++it) {
 		const auto& line = *it;
 		result.append(line);
@@ -287,7 +286,7 @@ private:
 
 	// Formats value using Grisu2 algorithm
 	char* format_double(double value, int maxDecimalPlaces) {
-		assert(maxDecimalPlaces >= 1);
+		ASSERT(maxDecimalPlaces >= 1);
 
 		if (std::isnan(value)) {
 			buffer_[0] = 'n';

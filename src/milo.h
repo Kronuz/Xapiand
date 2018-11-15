@@ -36,7 +36,7 @@
 #pragma intrinsic(_umul128)
 #endif
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 namespace fmt {
 namespace internal {
@@ -453,7 +453,7 @@ private:
 
 	// Formats value using Grisu2 algorithm
 	char* format_double(double value, int maxDecimalPlaces) {
-		assert(maxDecimalPlaces >= 1);
+		ASSERT(maxDecimalPlaces >= 1);
 
 		if (std::isnan(value)) {
 			buffer_[0] = 'n';

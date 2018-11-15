@@ -36,6 +36,8 @@
 # endif
 #endif
 
+#include "cassert.h"   // for ASSERT
+
 #if FMT_EXCEPTIONS
 # define FMT_TRY try
 # define FMT_CATCH(x) catch (x)
@@ -178,7 +180,7 @@ void format_error_code(internal::buffer &out, int error_code,
   }
   w.write(ERROR_STR);
   w.write(error_code);
-  assert(out.size() <= inline_buffer_size);
+  ASSERT(out.size() <= inline_buffer_size);
 }
 
 void report_error(FormatFunc func, int error_code,
@@ -551,7 +553,7 @@ struct prettify_handler {
   explicit prettify_handler(buffer &b, size_t n)
     : data(b.data()), size(n), buf(b) {}
   ~prettify_handler() {
-    assert(buf.size() >= size);
+    ASSERT(buf.size() >= size);
     buf.resize(size);
   }
 

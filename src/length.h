@@ -26,8 +26,7 @@
 #include <string>                 // for string
 #include "string_view.hh"         // for std::string_view
 
-#include "cassert.hh"            // for assert
-
+#include "cassert.h"             // for ASSERT
 #include "exception.h"           // for MSG_SerialisationError, SerialisationError
 #include "likely.h"              // for likely, unlikely
 
@@ -110,8 +109,8 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
 	const char * ptr = *p;
-	assert(ptr);
-	assert(ptr <= end);
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	const char * start = ptr;
 

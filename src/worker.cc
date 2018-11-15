@@ -24,12 +24,11 @@
 
 #include <thread>
 
-#include "cassert.hh"           // for assert
-
+#include "cassert.h"            // for ASSERT
 #include "epoch.hh"             // for epoch::now
-#include "ignore_unused.h"
-#include "log.h"
-#include "readable_revents.hh"   // for readable_revents
+#include "ignore_unused.h"      // for ignore_unused
+#include "log.h"                // for L_CALL
+#include "readable_revents.hh"  // for readable_revents
 
 
 // #undef L_DEBUG
@@ -53,7 +52,7 @@ Worker::~Worker()
 	// destructor of any subclasses implementing either one of:
 	// shutdown_impl(), destroy_impl(), start_impl() or stop_impl().
 	// Otherwise the assert bellow will fire!
-	assert(_deinited);  // Beware of the note above
+	ASSERT(_deinited);  // Beware of the note above
 
 	deinit();
 }
@@ -539,7 +538,7 @@ Worker::run_loop()
 {
 	L_CALL("Worker::run_loop() %s", __repr__());
 
-	assert(ev_loop->depth() == 0);
+	ASSERT(ev_loop->depth() == 0);
 
 	_runner = true;
 	ev_loop->run();

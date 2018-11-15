@@ -37,7 +37,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "cassert.hh"         // for assert
+#include "cassert.h"          // for ASSERT
 
 
 namespace static_string {
@@ -46,7 +46,7 @@ namespace static_string {
 #ifdef NDEBUG
 #   define constexpr_assert(CHECK) void(0)
 #else
-#   define constexpr_assert(CHECK) ((CHECK) ? void(0) : []{assert(!#CHECK);}())
+#   define constexpr_assert(CHECK) ((CHECK) ? void(0) : []{ASSERT(!#CHECK);}())
 #endif
 
 

@@ -31,8 +31,6 @@
 #include "string_view.hh"        // for std::string_view
 #include <unordered_map>         // for std::unordered_map
 
-#include "cassert.hh"            // for ASSERT
-
 #include "atomic_shared_ptr.h"
 #include "exception.h"
 #include "msgpack.hpp"

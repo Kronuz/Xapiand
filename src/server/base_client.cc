@@ -30,8 +30,7 @@
 #include <utility>                  // for std::move
 #include <xapian.h>                 // for SerialisationError
 
-#include "cassert.hh"               // for assert
-
+#include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "ev/ev++.h"                // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "ignore_unused.h"          // for ignore_unused
@@ -322,7 +321,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 	L_EV_END("BaseClient::io_cb_write:END");
 
-	assert(sock == watcher.fd);
+	ASSERT(sock == watcher.fd);
 	ignore_unused(watcher);
 
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);

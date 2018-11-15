@@ -29,7 +29,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 
 namespace lru {
@@ -66,7 +66,7 @@ public:
 	explicit LRU(size_t max_size=SIZE_MAX)
 		: _max_size(max_size)
 	{
-		assert(_max_size != 0);
+		ASSERT(_max_size != 0);
 	}
 
 	iterator begin() noexcept {

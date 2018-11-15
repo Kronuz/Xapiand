@@ -24,6 +24,7 @@
 
 #include <xapian.h>             // for Xapian::Database
 
+#include "cassert.h"            // for ASSERT
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager::manager
 
@@ -78,8 +79,8 @@ lock_database::lock(Args&&... args)
 			return;
 		}
 		if (!lockable->_locked_database) {
-			assert(locks == 0 && lockable->_database_locks == 0);
-			assert(XapiandManager::manager);
+			ASSERT(locks == 0 && lockable->_database_locks == 0);
+			ASSERT(XapiandManager::manager);
 			XapiandManager::manager->database_pool.checkout(lockable->_locked_database, lockable->endpoints, lockable->flags, std::forward<Args>(args)...);
 		}
 		if (locks++ == 0) {

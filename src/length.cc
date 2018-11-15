@@ -28,8 +28,7 @@
 #include <cmath>        // for scalbn, frexp, HUGE_VAL
 #include <functional>   // for std::reference_wrapper
 
-#include "cassert.hh"   // for assert
-
+#include "cassert.h"    // for ASSERT
 #include "io.hh"        // for io::read and io::write
 
 
@@ -136,7 +135,7 @@ serialise_double(double v)
 
 	n = result.size() - n;
 	if (n > 1) {
-		assert(n <= 8);
+		ASSERT(n <= 8);
 		result[0] = static_cast<unsigned char>(result[0] | ((n - 1) << 4));
 	}
 
@@ -247,8 +246,8 @@ unsigned long long
 unserialise_length(const char** p, const char* end, bool check_remaining)
 {
 	const char *ptr = *p;
-	assert(ptr);
-	assert(ptr <= end);
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	if unlikely(ptr == end) {
 		// Out of data.
@@ -294,8 +293,8 @@ serialise_string(std::string_view input) {
 std::string_view
 unserialise_string(const char** p, const char* end) {
 	const char *ptr = *p;
-	assert(ptr);
-	assert(ptr <= end);
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	unsigned long long length = unserialise_length(&ptr, end, true);
 	std::string_view string(ptr, length);
@@ -440,8 +439,8 @@ std::string_view
 unserialise_string_at(size_t at, const char** p, const char* end)
 {
 	const char *ptr = *p;
-	assert(ptr);
-	assert(ptr <= end);
+	ASSERT(ptr);
+	ASSERT(ptr <= end);
 
 	unsigned long long length = 0;
 

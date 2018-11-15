@@ -28,11 +28,10 @@
 #include <string>
 #include "string_view.hh"     // for std::string_view
 
-#include "cassert.hh"        // for assert
-
+#include "cassert.h"         // for ASSERT
+#include "chars.hh"          // for chars::tolower
 #include "lz4/xxhash.h"
 #include "static_string.hh"  // for static_string::
-#include "chars.hh"          // for chars::tolower
 
 
 /*               _               _
@@ -297,7 +296,7 @@ inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	// The algorithm used is the jump consistent hash by Lamping and Veach.
 	// A Fast, Minimal Memory, Consistent Hash Algorithm
 	// [http://arxiv.org/pdf/1406.2294v1.pdf]
-	assert(num_buckets > 0);  // help static code analysis
+	ASSERT(num_buckets > 0);  // help static code analysis
 	int64_t b = -1, j = 0;
 	while (j < num_buckets) {
 		b = j;

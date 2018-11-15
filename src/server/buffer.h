@@ -26,8 +26,7 @@
 #include <string>              // for std::string
 #include "string_view.hh"      // for std::string_view
 
-#include "cassert.hh"          // for assert
-
+#include "cassert.h"           // for ASSERT
 #include "io.hh"               // for io::*
 
 //
@@ -126,7 +125,7 @@ public:
 	}
 
 	void remove_prefix(std::size_t n) {
-		assert(n <= _data_view.size());
+		ASSERT(n <= _data_view.size());
 		_data_view.remove_prefix(n);
 		pos += n;
 	}

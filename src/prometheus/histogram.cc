@@ -2,15 +2,14 @@
 #include <iterator>
 #include <numeric>
 
-#include "cassert.hh"
-
+#include "cassert.h"        // for ASSERT
 #include "histogram.h"
 
 namespace prometheus {
 
 Histogram::Histogram(const BucketBoundaries& buckets)
   : bucket_boundaries_(buckets), bucket_counts_(buckets.size() + 1) {
-    assert(std::is_sorted(std::begin(bucket_boundaries_), std::end(bucket_boundaries_)));
+    ASSERT(std::is_sorted(std::begin(bucket_boundaries_), std::end(bucket_boundaries_)));
   }
 
 void Histogram::Observe(double value) {

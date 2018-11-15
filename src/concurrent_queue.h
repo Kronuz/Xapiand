@@ -73,7 +73,7 @@
 #include <array>
 #include <thread>		// partly for __WINPTHREADS_VERSION if on MinGW-w64 w/ POSIX threading
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 // Platform-specific definitions of a numeric thread ID type and an invalid value
 namespace moodycamel { namespace details {
@@ -527,7 +527,7 @@ namespace details
 		~ThreadExitNotifier()
 		{
 			// This thread is about to exit, let everyone know!
-			assert(this == &instance() && "If this assert fails, you likely have a buggy compiler! Change the preprocessor conditions such that MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED is no longer defined.");
+			ASSERT(this == &instance() && "If this assert fails, you likely have a buggy compiler! Change the preprocessor conditions such that MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED is no longer defined.");
 			for (auto ptr = tail; ptr != nullptr; ptr = ptr->next) {
 				ptr->callback(ptr->userData);
 			}
@@ -1397,7 +1397,7 @@ private:
 				if (freeListHead.compare_exchange_strong(head, next, std::memory_order_acquire, std::memory_order_relaxed)) {
 					// Yay, got the node. This means it was on the list, which means shouldBeOnFreeList must be false no
 					// matter the refcount (because nobody else knows it's been taken off yet, it can't have been put back on).
-					assert((head->freeListRefs.load(std::memory_order_relaxed) & SHOULD_BE_ON_FREELIST) == 0);
+					ASSERT((head->freeListRefs.load(std::memory_order_relaxed) & SHOULD_BE_ON_FREELIST) == 0);
 
 					// Decrease refcount twice, once for our ref, and once for the list's ref
 					head->freeListRefs.fetch_sub(2, std::memory_order_release);
@@ -1494,7 +1494,7 @@ private:
 					std::atomic_thread_fence(std::memory_order_acquire);
 					return true;
 				}
-				assert(elementsCompletelyDequeued.load(std::memory_order_relaxed) <= BLOCK_SIZE);
+				ASSERT(elementsCompletelyDequeued.load(std::memory_order_relaxed) <= BLOCK_SIZE);
 				return false;
 			}
 		}
@@ -1505,14 +1505,14 @@ private:
 		{
 			if (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
 				// Set flag
-				assert(!emptyFlags[BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1))].load(std::memory_order_relaxed));
+				ASSERT(!emptyFlags[BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1))].load(std::memory_order_relaxed));
 				emptyFlags[BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1))].store(true, std::memory_order_release);
 				return false;
 			}
 			else {
 				// Increment counter
 				auto prevVal = elementsCompletelyDequeued.fetch_add(1, std::memory_order_release);
-				assert(prevVal < BLOCK_SIZE);
+				ASSERT(prevVal < BLOCK_SIZE);
 				return prevVal == BLOCK_SIZE - 1;
 			}
 		}
@@ -1527,7 +1527,7 @@ private:
 				std::atomic_thread_fence(std::memory_order_release);
 				i = BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1)) - count + 1;
 				for (size_t j = 0; j != count; ++j) {
-					assert(!emptyFlags[i + j].load(std::memory_order_relaxed));
+					ASSERT(!emptyFlags[i + j].load(std::memory_order_relaxed));
 					emptyFlags[i + j].store(true, std::memory_order_relaxed);
 				}
 				return false;
@@ -1535,7 +1535,7 @@ private:
 			else {
 				// Increment counter
 				auto prevVal = elementsCompletelyDequeued.fetch_add(count, std::memory_order_release);
-				assert(prevVal + count <= BLOCK_SIZE);
+				ASSERT(prevVal + count <= BLOCK_SIZE);
 				return prevVal + count == BLOCK_SIZE;
 			}
 		}
@@ -1720,7 +1720,7 @@ private:
 					while (details::circular_less_than<index_t>(pr_blockIndexEntries[i].base + BLOCK_SIZE, this->headIndex.load(std::memory_order_relaxed))) {
 						i = (i + 1) & (pr_blockIndexSize - 1);
 					}
-					assert(details::circular_less_than<index_t>(pr_blockIndexEntries[i].base, this->headIndex.load(std::memory_order_relaxed)));
+					ASSERT(details::circular_less_than<index_t>(pr_blockIndexEntries[i].base, this->headIndex.load(std::memory_order_relaxed)));
 					halfDequeuedBlock = pr_blockIndexEntries[i].block;
 				}
 
@@ -1795,7 +1795,7 @@ private:
 					// and <= its current value. Since we have the most recent tail, the head must be
 					// <= to it.
 					auto head = this->headIndex.load(std::memory_order_relaxed);
-					assert(!details::circular_less_than<index_t>(currentTailIndex, head));
+					ASSERT(!details::circular_less_than<index_t>(currentTailIndex, head));
 					if (!details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE)
 						|| (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head))) {
 						// We can't enqueue in another block because there's not enough leeway -- the
@@ -1904,7 +1904,7 @@ private:
 				// incremented after dequeueOptimisticCount -- this is enforced in the `else` block below), and since we now
 				// have a version of dequeueOptimisticCount that is at least as recent as overcommit (due to the release upon
 				// incrementing dequeueOvercommit and the acquire above that synchronizes with it), overcommit <= myDequeueCount.
-				assert(overcommit <= myDequeueCount);
+				ASSERT(overcommit <= myDequeueCount);
 
 				// Note that we reload tail here in case it changed; it will be the same value as before or greater, since
 				// this load is sequenced after (happens after) the earlier load above. This is supported by read-read
@@ -2009,7 +2009,7 @@ private:
 					currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
 
 					auto head = this->headIndex.load(std::memory_order_relaxed);
-					assert(!details::circular_less_than<index_t>(currentTailIndex, head));
+					ASSERT(!details::circular_less_than<index_t>(currentTailIndex, head));
 					bool full = !details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head));
 					if (pr_blockIndexRaw == nullptr || pr_blockIndexSlotsUsed == pr_blockIndexSize || full) {
 						if (allocMode == CannotAlloc || full || !new_block_index(originalBlockIndexSlotsUsed)) {
@@ -2078,7 +2078,7 @@ private:
 			currentTailIndex = startTailIndex;
 			auto endBlock = this->tailBlock;
 			this->tailBlock = startBlock;
-			assert((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
+			ASSERT((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
 			if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
 				this->tailBlock = firstAllocatedBlock;
 			}
@@ -2143,7 +2143,7 @@ private:
 				}
 
 				if (this->tailBlock == endBlock) {
-					assert(currentTailIndex == newTailIndex);
+					ASSERT(currentTailIndex == newTailIndex);
 					break;
 				}
 				this->tailBlock = this->tailBlock->next;
@@ -2168,7 +2168,7 @@ private:
 				std::atomic_thread_fence(std::memory_order_acquire);
 
 				auto myDequeueCount = this->dequeueOptimisticCount.fetch_add(desiredCount, std::memory_order_relaxed);
-				assert(overcommit <= myDequeueCount);
+				ASSERT(overcommit <= myDequeueCount);
 
 				tail = this->tailIndex.load(std::memory_order_acquire);
 				auto actualCount = static_cast<size_t>(tail - (myDequeueCount - overcommit));
@@ -2360,7 +2360,7 @@ private:
 			auto tail = this->tailIndex.load(std::memory_order_relaxed);
 			auto index = this->headIndex.load(std::memory_order_relaxed);
 			Block* block = nullptr;
-			assert(index == tail || details::circular_less_than(index, tail));
+			ASSERT(index == tail || details::circular_less_than(index, tail));
 			bool forceFreeLastBlock = index != tail;		// If we enter the loop, then the last (tail) block will not be freed
 			while (index != tail) {
 				if ((index & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 || block == nullptr) {
@@ -2405,7 +2405,7 @@ private:
 			if ((currentTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0) {
 				// We reached the end of a block, start a new one
 				auto head = this->headIndex.load(std::memory_order_relaxed);
-				assert(!details::circular_less_than<index_t>(currentTailIndex, head));
+				ASSERT(!details::circular_less_than<index_t>(currentTailIndex, head));
 				if (!details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head))) {
 					return false;
 				}
@@ -2471,7 +2471,7 @@ private:
 				std::atomic_thread_fence(std::memory_order_acquire);
 
 				index_t myDequeueCount = this->dequeueOptimisticCount.fetch_add(1, std::memory_order_relaxed);
-				assert(overcommit <= myDequeueCount);
+				ASSERT(overcommit <= myDequeueCount);
 				tail = this->tailIndex.load(std::memory_order_acquire);
 				if likely(details::circular_less_than<index_t>(myDequeueCount - overcommit, tail)) {
 					index_t index = this->headIndex.fetch_add(1, std::memory_order_acq_rel);
@@ -2566,7 +2566,7 @@ private:
 					Block* newBlock;
 					bool indexInserted = false;
 					auto head = this->headIndex.load(std::memory_order_relaxed);
-					assert(!details::circular_less_than<index_t>(currentTailIndex, head));
+					ASSERT(!details::circular_less_than<index_t>(currentTailIndex, head));
 					bool full = !details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head));
 					if (full || !(indexInserted = insert_block_index_entry<allocMode>(idxEntry, currentTailIndex)) || (newBlock = this->parent->ConcurrentQueue::template requisition_block<allocMode>()) == nullptr) {
 						// Index allocation or block allocation failed; revert any other allocations
@@ -2600,7 +2600,7 @@ private:
 					// Store the chain of blocks so that we can undo if later allocations fail,
 					// and so that we can find the blocks when we do the actual enqueueing
 					if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr) {
-						assert(this->tailBlock != nullptr);
+						ASSERT(this->tailBlock != nullptr);
 						this->tailBlock->next = newBlock;
 					}
 					this->tailBlock = newBlock;
@@ -2613,7 +2613,7 @@ private:
 			index_t newTailIndex = startTailIndex + static_cast<index_t>(count);
 			currentTailIndex = startTailIndex;
 			this->tailBlock = startBlock;
-			assert((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
+			ASSERT((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
 			if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
 				this->tailBlock = firstAllocatedBlock;
 			}
@@ -2674,7 +2674,7 @@ private:
 				}
 
 				if (this->tailBlock == endBlock) {
-					assert(currentTailIndex == newTailIndex);
+					ASSERT(currentTailIndex == newTailIndex);
 					break;
 				}
 				this->tailBlock = this->tailBlock->next;
@@ -2694,7 +2694,7 @@ private:
 				std::atomic_thread_fence(std::memory_order_acquire);
 
 				auto myDequeueCount = this->dequeueOptimisticCount.fetch_add(desiredCount, std::memory_order_relaxed);
-				assert(overcommit <= myDequeueCount);
+				ASSERT(overcommit <= myDequeueCount);
 
 				tail = this->tailIndex.load(std::memory_order_acquire);
 				auto actualCount = static_cast<size_t>(tail - (myDequeueCount - overcommit));
@@ -2829,7 +2829,7 @@ private:
 			localBlockIndex = blockIndex.load(std::memory_order_relaxed);
 			newTail = (localBlockIndex->tail.load(std::memory_order_relaxed) + 1) & (localBlockIndex->capacity - 1);
 			idxEntry = localBlockIndex->index[newTail];
-			assert(idxEntry->key.load(std::memory_order_relaxed) == INVALID_BLOCK_BASE);
+			ASSERT(idxEntry->key.load(std::memory_order_relaxed) == INVALID_BLOCK_BASE);
 			idxEntry->key.store(blockStartIndex, std::memory_order_relaxed);
 			localBlockIndex->tail.store(newTail, std::memory_order_release);
 			return true;
@@ -2857,12 +2857,12 @@ private:
 			localBlockIndex = blockIndex.load(std::memory_order_acquire);
 			auto tail = localBlockIndex->tail.load(std::memory_order_acquire);
 			auto tailBase = localBlockIndex->index[tail]->key.load(std::memory_order_relaxed);
-			assert(tailBase != INVALID_BLOCK_BASE);
+			ASSERT(tailBase != INVALID_BLOCK_BASE);
 			// Note: Must use division instead of shift because the index may wrap around, causing a negative
 			// offset, whose negativity we want to preserve
 			auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(index - tailBase) / BLOCK_SIZE);
 			size_t idx = (tail + offset) & (localBlockIndex->capacity - 1);
-			assert(localBlockIndex->index[idx]->key.load(std::memory_order_relaxed) == index && localBlockIndex->index[idx]->value.load(std::memory_order_relaxed) != nullptr);
+			ASSERT(localBlockIndex->index[idx]->key.load(std::memory_order_relaxed) == index && localBlockIndex->index[idx]->value.load(std::memory_order_relaxed) != nullptr);
 			return idx;
 		}
 
@@ -2890,7 +2890,7 @@ private:
 					prevPos = (prevPos + 1) & (prev->capacity - 1);
 					index[i++] = prev->index[prevPos];
 				} while (prevPos != prevTail);
-				assert(i == prevCapacity);
+				ASSERT(i == prevCapacity);
 			}
 			for (size_t i = 0; i != entryCount; ++i) {
 				new (entries + i) BlockIndexEntry;
@@ -3445,7 +3445,7 @@ private:
 		debug::DebugLock lock(implicitProdMutex);
 #endif
 		auto hash = implicitProducerHash.load(std::memory_order_acquire);
-		assert(hash != nullptr);		// The thread exit listener is only registered if we were added to a hash in the first place
+		ASSERT(hash != nullptr);		// The thread exit listener is only registered if we were added to a hash in the first place
 		auto id = details::thread_id();
 		auto hashedId = details::hash_thread_id(id);
 		details::thread_id_t probedKey;
@@ -3484,7 +3484,7 @@ private:
 	template<typename U>
 	static inline U* create_array(size_t count)
 	{
-		assert(count > 0);
+		ASSERT(count > 0);
 		auto p = static_cast<U*>((Traits::malloc)(sizeof(U) * count));
 		if (p == nullptr) {
 			return nullptr;
@@ -3500,7 +3500,7 @@ private:
 	static inline void destroy_array(U* p, size_t count)
 	{
 		if (p != nullptr) {
-			assert(count > 0);
+			ASSERT(count > 0);
 			for (size_t i = count; i != 0; ) {
 				(p + --i)->~U();
 			}

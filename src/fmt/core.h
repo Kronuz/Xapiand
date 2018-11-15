@@ -14,7 +14,7 @@
 #include <string>
 #include <type_traits>
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 // The fmt library version in the form major * 10000 + minor * 100 + patch.
 #define FMT_VERSION 50201
@@ -166,7 +166,7 @@
 #endif
 
 #ifndef FMT_ASSERT
-# define FMT_ASSERT(condition, message) assert((condition) && message)
+# define FMT_ASSERT(condition, message) ASSERT((condition) && message)
 #endif
 
 // libc++ supports string_view in pre-c++17.

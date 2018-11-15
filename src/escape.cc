@@ -22,13 +22,12 @@
 
 #include "escape.hh"
 
-#include "cassert.hh"            // for assert
-
-#include "chars.hh"           // for chars::char_repr
+#include "cassert.h"             // for ASSERT
+#include "chars.hh"              // for chars::char_repr
 
 
 std::string escape(const void* p, size_t size, char quote) {
-	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
+	ASSERT(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	size = size * 4 + 2;  // Consider "\xNN" and two quotes

@@ -29,8 +29,7 @@
 #include <string>	    // for string
 #include <vector>       // for vector
 
-#include "cassert.hh"   // for assert
-
+#include "cassert.h"    // for ASSERT
 #include "ev/ev++.h"
 
 
@@ -101,7 +100,7 @@ protected:
 private:
 	template<typename T>
 	auto __attach(T&& child) {
-		assert(child);
+		ASSERT(child);
 		auto it = _children.insert(_children.end(), std::forward<T>(child));
 		(*it)->_iterator = it;
 		return it;
@@ -109,9 +108,9 @@ private:
 
 	template<typename T>
 	auto __detach(T&& child) {
-		assert(child);
+		ASSERT(child);
 		if (child->_iterator != _children.end()) {
-			assert(child->_parent.get() == this);
+			ASSERT(child->_parent.get() == this);
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
 			return it;

@@ -26,8 +26,7 @@
 
 #include <errno.h>                    // for errno
 
-#include "cassert.hh"                 // for assert
-
+#include "cassert.h"                  // for ASSERT
 #include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
 #include "fs.hh"                      // for move_files, delete_files, build_path_index
@@ -401,7 +400,7 @@ Replication::reply_db_filename(const std::string& filename)
 
 	L_REPLICATION("Replication::reply_db_filename");
 
-	assert(!switch_database_path.empty());
+	ASSERT(!switch_database_path.empty());
 
 	file_path = switch_database_path + "/" + filename;
 }
@@ -414,7 +413,7 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 
 	L_REPLICATION("Replication::reply_db_filedata %s -> %s", repr(tmp_file), repr(file_path));
 
-	assert(!switch_database_path.empty());
+	ASSERT(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, error::name(errno), errno, error::description(errno));
@@ -433,7 +432,7 @@ Replication::reply_db_footer(const std::string& message)
 	const char *p_end = p + message.size();
 	size_t revision = unserialise_length(&p, p_end);
 
-	assert(!switch_database_path.empty());
+	ASSERT(!switch_database_path.empty());
 
 	if (revision != current_revision) {
 		delete_files(switch_database_path.c_str());

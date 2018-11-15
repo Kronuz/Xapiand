@@ -31,7 +31,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "cassert.hh"
+#include "cassert.h"    // for ASSERT
 
 
 namespace queue {
@@ -148,7 +148,7 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_back();
-				assert(_state->_cnt > 0);
+				ASSERT(_state->_cnt > 0);
 				--_state->_cnt;
 			}
 			return ret;
@@ -162,7 +162,7 @@ namespace queue {
 
 				//pop the element
 				_items_queue.pop_front();
-				assert(_state->_cnt > 0);
+				ASSERT(_state->_cnt > 0);
 				--_state->_cnt;
 			}
 			return ret;
@@ -171,7 +171,7 @@ namespace queue {
 		bool _clear_impl(std::unique_lock<std::mutex>&) noexcept {
 			auto size = _items_queue.size();
 			_items_queue.clear();
-			assert(_state->_cnt >= size);
+			ASSERT(_state->_cnt >= size);
 			_state->_cnt -= size;
 
 			if (_finished || _ending) {
@@ -223,7 +223,7 @@ namespace queue {
 			if (_state) {
 				std::lock_guard<std::mutex> lk(_state->_mutex);
 				auto size = _items_queue.size();
-				assert(_state->_cnt >= size);
+				ASSERT(_state->_cnt >= size);
 				_state->_cnt -= size;
 				finish();
 			}
@@ -406,7 +406,7 @@ namespace queue {
 						// Move it to front
 						Queue_t::_items_queue.erase(it->second);
 						_items_map.erase(it);
-						assert(Queue_t::_state->_cnt > 0);
+						ASSERT(Queue_t::_state->_cnt > 0);
 						--Queue_t::_state->_cnt;
 						break;
 				}
@@ -428,7 +428,7 @@ namespace queue {
 				// The item is already there, move it to front
 				Queue_t::_items_queue.erase(it->second);
 				_items_map.erase(it);
-				assert(Queue_t::_state->_cnt > 0);
+				ASSERT(Queue_t::_state->_cnt > 0);
 				--Queue_t::_state->_cnt;
 			}
 			return _push(std::forward<E>(element), timeout, lk);
@@ -489,7 +489,7 @@ namespace queue {
 			}
 			Queue_t::_items_queue.erase(it->second);
 			_items_map.erase(it);
-			assert(Queue_t::_state->_cnt > 0);
+			ASSERT(Queue_t::_state->_cnt > 0);
 			--Queue_t::_state->_cnt;
 			return 1;
 		}

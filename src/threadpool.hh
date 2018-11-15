@@ -30,9 +30,8 @@
 #include <tuple>                 // for std::make_tuple, std::apply
 #include <vector>                // for std::vector
 
-#include "cassert.hh"            // for assert
-
 #include "blocking_concurrent_queue.h"
+#include "cassert.h"             // for ASSERT
 #include "likely.h"              // for likely, unlikely
 #include "log.h"                 // for L_EXC
 #include "string.hh"             // for string::format
@@ -61,7 +60,7 @@ class PackagedTask : public std::packaged_task<Result> {
 
 	PackagedTask(const PackagedTask& /*unused*/) noexcept {
 		// Adding this borks the compile
-		assert(false);  // but should never be called!
+		ASSERT(false);  // but should never be called!
 	}
 
 	PackagedTask(PackagedTask&& other) noexcept = default;

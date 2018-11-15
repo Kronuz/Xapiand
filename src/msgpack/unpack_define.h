@@ -15,8 +15,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "cassert.hh"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

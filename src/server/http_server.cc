@@ -25,9 +25,8 @@
 #include <errno.h>                          // for errno
 #include <utility>
 
-#include "cassert.hh"                       // for assert
-
 #include "base_server.h"                    // for BaseServer
+#include "cassert.h"                        // for ASSERT
 #include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                           // for Http
@@ -76,7 +75,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	L_EV_END("HttpServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
-	assert(sock == watcher.fd);
+	ASSERT(sock == watcher.fd);
 
 	if (closed) {
 		return;

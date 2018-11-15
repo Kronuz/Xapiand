@@ -391,15 +391,15 @@ RAPIDJSON_NAMESPACE_END
 
 //! Assertion.
 /*! \ingroup RAPIDJSON_CONFIG
-    By default, rapidjson uses C \c assert() for internal assertions.
+    By default, rapidjson uses C \c ASSERT() for internal assertions.
     User can override it by defining RAPIDJSON_ASSERT(x) macro.
 
     \note Parsing errors are handled and can be customized by the
           \ref RAPIDJSON_ERRORS APIs.
 */
 #ifndef RAPIDJSON_ASSERT
-#include "cassert.hh"
-#define RAPIDJSON_ASSERT(x) assert(x)
+#include "cassert.h"        // for ASSERT
+#define RAPIDJSON_ASSERT(x) ASSERT(x)
 #endif // RAPIDJSON_ASSERT
 
 ///////////////////////////////////////////////////////////////////////////////
