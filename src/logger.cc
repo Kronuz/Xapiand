@@ -616,7 +616,7 @@ Logging::operator()()
 
 	if (async) {
 		auto log_age = age();
-		if (log_age > 2e8) {
+		if (log_age > 1e8) {
 			msg += " " + string::from_delta(log_age, clears ? "+" : "~", true);
 		}
 	}
