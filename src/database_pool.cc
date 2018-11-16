@@ -99,9 +99,10 @@ DatabaseQueue::dec_count()
 std::string
 DatabaseQueue::__repr__() const
 {
-	return string::format("<%s %s>",
+	return string::format("<%s at %p: %s>",
 		((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableQueue" : "Queue",
-		endpoints.to_string());
+		static_cast<const void*>(this),
+		repr(endpoints.to_string()));
 }
 
 
