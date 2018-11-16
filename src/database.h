@@ -151,4 +151,6 @@ public:
 	std::string to_string() const {
 		return endpoints.to_string();
 	}
+
+	std::string __repr__() const;
 };

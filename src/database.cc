@@ -1713,3 +1713,20 @@ Database::dump_documents()
 
 	return docs;
 }
+
+
+std::string
+Database::__repr__() const
+{
+	std::vector<std::string> values;
+	if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
+	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
+	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
+	if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
+	if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
+	return string::format("<%s at %p: %s with %s>",
+		((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableDatabase" : "Database",
+		static_cast<const void*>(this),
+		repr(endpoints.to_string()),
+		string::join(values, " | "));
+}
