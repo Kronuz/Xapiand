@@ -109,6 +109,10 @@ DebouncerTask<Key, DT, DBT, DFT, Func, Tuple>::operator()()
 
 	debouncer.release(key);
 
+	if (forced) {
+		L_DEBUG("Forced call for debounced function!");
+	}
+
 	std::apply(debouncer.func, args);
 }
 
