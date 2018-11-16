@@ -196,7 +196,7 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, bo
 #ifdef NDEBUG
 #define L_DEBUG L_NOTHING
 #define L_DEBUG_HOOK L_NOTHING
-#define L_DEBUG_NOW(name) L_NOTHING
+#define L_DEBUG_NOW(name)
 #else
 #define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
 #define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, CLEAR_COLOR, __VA_ARGS__)
