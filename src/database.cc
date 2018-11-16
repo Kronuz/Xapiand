@@ -213,10 +213,10 @@ DataStorage::open(std::string_view relative_path)
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_, int flags_)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_)
 	: weak_queue(queue_),
 	  endpoints(queue_->endpoints),
-	  flags(flags_),
+	  flags(queue_->flags),
 	  hash(endpoints.hash()),
 	  modified(false),
 	  transaction(Transaction::none),

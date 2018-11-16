@@ -77,8 +77,8 @@ public:
 	const std::weak_ptr<DatabaseQueue> weak_queue;
 
 	const Endpoints endpoints;
-
 	const int flags;
+
 	const size_t hash;
 	bool modified;
 	Transaction transaction;
@@ -103,7 +103,7 @@ public:
 	std::unique_ptr<ProducerToken> producer_token;
 #endif
 
-	Database(std::shared_ptr<DatabaseQueue>& queue_, int flags_);
+	Database(std::shared_ptr<DatabaseQueue>& queue_);
 	~Database();
 
 	bool reopen();

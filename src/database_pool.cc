@@ -62,12 +62,13 @@
 //
 
 template <typename... Args>
-DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, Args&&... args)
+DatabaseQueue::DatabaseQueue(const Endpoints& endpoints_, int flags_, Args&&... args)
 	: Queue(std::forward<Args>(args)...),
 	  locked(false),
 	  renew_time(std::chrono::system_clock::now()),
 	  count(0),
-	  endpoints(endpoints_)
+	  endpoints(endpoints_),
+	  flags(flags_)
 {
 }
 
@@ -122,9 +123,9 @@ DatabasesLRU::get(size_t hash)
 
 
 std::pair<std::shared_ptr<DatabaseQueue>, bool>
-DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
+DatabasesLRU::get(size_t hash, const Endpoints& endpoints, int flags)
 {
-	L_CALL("DatabasesLRU::get(%zx, %s)", hash, repr(endpoints.to_string()));
+	L_CALL("DatabasesLRU::get(%zx, %s, <flags>)", hash, repr(endpoints.to_string()));
 
 	const auto now = std::chrono::system_clock::now();
 
@@ -142,7 +143,7 @@ DatabasesLRU::get(size_t hash, const Endpoints& endpoints)
 		return lru::DropAction::stop;
 	};
 
-	auto emplaced = emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, _queue_state));
+	auto emplaced = emplace_and(on_drop, hash, DatabaseQueue::make_shared(endpoints, flags, _queue_state));
 	return std::make_pair(emplaced.first->second, emplaced.second);
 }
 
@@ -219,13 +220,13 @@ DatabasePool::~DatabasePool()
 
 
 std::shared_ptr<DatabaseQueue>
-DatabasePool::_spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints)
+DatabasePool::_spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints, int flags)
 {
-	L_CALL("DatabasePool::_spawn_queue(<Database %s>)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::_spawn_queue(<%s: %s>)", ((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableDatabase" : "Database", repr(endpoints.to_string()));
 
 	auto queue_pair = db_writable
-		? writable_databases.get(hash, endpoints)
-		: databases.get(hash, endpoints);
+		? writable_databases.get(hash, endpoints, flags)
+		: databases.get(hash, endpoints, flags);
 
 	auto queue = queue_pair.first;
 
@@ -364,7 +365,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		size_t hash = endpoints.hash();
 
 		std::unique_lock<std::mutex> lk(qmtx);
-		auto queue = _spawn_queue(db_writable, hash, endpoints);
+		auto queue = _spawn_queue(db_writable, hash, endpoints, flags);
 
 		int retries = 10;
 		while (true) {
@@ -382,7 +383,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 							THROW(TimeOutError, "Database is not available");
 						}
 					} else {
-						database = std::make_shared<Database>(queue, flags);
+						database = std::make_shared<Database>(queue);
 					}
 					lk.lock();
 				} catch (...) {

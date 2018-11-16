@@ -89,13 +89,14 @@ private:
 	std::condition_variable unlocked_cond;
 	std::condition_variable lockable_cond;
 
-	Endpoints endpoints;
+	const Endpoints endpoints;
+	const int flags;
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
 protected:
 	template <typename... Args>
-	DatabaseQueue(const Endpoints& endpoints, Args&&... args);
+	DatabaseQueue(const Endpoints& endpoints, int flags, Args&&... args);
 
 public:
 	DatabaseQueue(const DatabaseQueue&) = delete;
@@ -135,7 +136,7 @@ public:
 	DatabasesLRU(DatabasePool& database_pool_, size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
 
 	std::shared_ptr<DatabaseQueue> get(size_t hash);
-	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(size_t hash, const Endpoints& endpoints);
+	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(size_t hash, const Endpoints& endpoints, int flags);
 
 	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
@@ -173,7 +174,7 @@ class DatabasePool {
 
 	void _cleanup(bool writable, bool readable);
 
-	std::shared_ptr<DatabaseQueue> _spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints);
+	std::shared_ptr<DatabaseQueue> _spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints, int flags);
 
 	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
 
