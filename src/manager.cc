@@ -525,7 +525,7 @@ XapiandManager::signal_sig_impl()
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 #endif
-			print(STEEL_BLUE + "%s\n%s", dump_tree(), database_pool.dump_databases());
+			print(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool.dump_databases());
 			break;
 	}
 }
@@ -770,7 +770,7 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	L_MANAGER(STEEL_BLUE + "%s\n%s", dump_tree(), database_pool.dump_databases());
+	L_MANAGER(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool.dump_databases());
 
 	finish();
 
