@@ -221,7 +221,7 @@ DatabasePool::~DatabasePool()
 std::shared_ptr<DatabaseQueue>
 DatabasePool::_spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::_spawn_queue(<Database %s>)", repr(database->endpoints.to_string()));
+	L_CALL("DatabasePool::_spawn_queue(<Database %s>)", repr(endpoints.to_string()));
 
 	auto queue_pair = db_writable
 		? writable_databases.get(hash, endpoints)
