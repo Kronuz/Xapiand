@@ -43,6 +43,20 @@
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "string.hh"              // for string::from_delta, string::format
 
+#ifdef XAPIAND_RANDOM_ERRORS
+#include "random.hh"                // for random_real
+#include "opts.h"                   // for opts.random_errors_db
+#define RANDOM_ERRORS_DB_THROW(error, ...) \
+	if (opts.random_errors_db) { \
+		auto prob = random_real(0, 1); \
+		if (prob < opts.random_errors_db) { \
+			throw error(__VA_ARGS__); \
+		} \
+	}
+#else
+#define RANDOM_ERRORS_DB_THROW(...)
+#endif
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -264,6 +278,7 @@ Database::reopen_writable()
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
+		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		wsdb = Xapian::Remote::open_writable(endpoint.host, port, 0, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
@@ -274,12 +289,14 @@ Database::reopen_writable()
 			build_path_index(endpoint.path);
 		}
 		try {
+			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (!exists(endpoint.path + "/iamglass")) {
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 					THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 				}
+				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
 			}
 			throw;
@@ -380,13 +397,16 @@ Database::reopen_readable()
 			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
 			int port = (endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.port;
+			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			rsdb = Xapian::Remote::open(endpoint.host, port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
+				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				if (tmp.get_uuid() == rsdb.get_uuid()) {
 					L_DATABASE("Endpoint %s fallback to local database!", repr(endpoint.to_string()));
 					// Handle remote endpoints and figure out if the endpoint is a local database
+					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 					rsdb = Xapian::Database(endpoint.path, _flags);
 					local = true;
 				} else {
@@ -411,6 +431,7 @@ Database::reopen_readable()
 #endif  // XAPIAND_CLUSTERING
 		{
 			try {
+				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -425,8 +446,10 @@ Database::reopen_readable()
 					} else {
 						{
 							build_path_index(endpoint.path);
+							RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
 						}
+						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 						rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 						local = true;
 					}
@@ -522,6 +545,8 @@ Database::get_uuid_string()
 {
 	L_CALL("Database::get_uuid_string");
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	return db()->get_uuid();
 }
 
@@ -530,6 +555,8 @@ Xapian::rev
 Database::get_revision()
 {
 	L_CALL("Database::get_revision()");
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 #if HAVE_XAPIAN_DATABASE_GET_REVISION
 	return db()->get_revision();
@@ -623,6 +650,8 @@ Database::commit(bool wal_, bool send_update)
 		return false;
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -688,6 +717,8 @@ Database::begin_transaction(bool flushed)
 	}
 
 	if (transaction == Transaction::none) {
+		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->begin_transaction(flushed);
 		transaction = flushed ? Transaction::flushed : Transaction::unflushed;
@@ -705,6 +736,8 @@ Database::commit_transaction()
 	}
 
 	if (transaction != Transaction::none) {
+		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->commit_transaction();
 		transaction = Transaction::none;
@@ -722,6 +755,8 @@ Database::cancel_transaction()
 	}
 
 	if (transaction != Transaction::none) {
+		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->cancel_transaction();
 		transaction = Transaction::none;
@@ -737,6 +772,8 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -788,6 +825,8 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	if (!is_writable) {
 		THROW(Error, "database is read-only");
 	}
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -945,6 +984,8 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 		THROW(Error, "database is read-only");
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1001,6 +1042,8 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		THROW(Error, "database is read-only");
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1056,9 +1099,11 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		THROW(Error, "database is read-only");
 	}
 
-	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
+
+	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 #ifdef XAPIAND_DATA_STORAGE
 	storage_push_blobs(doc, doc.get_docid()); // Only writable database get_docid is enough
@@ -1112,6 +1157,8 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		THROW(Error, "database is read-only");
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1160,6 +1207,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		THROW(Error, "database is read-only");
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1205,6 +1254,8 @@ Database::find_document(const std::string& term_id)
 	L_CALL("Database::find_document(%s)", repr(term_id));
 
 	Xapian::docid did = 0;
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1252,6 +1303,8 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 	L_CALL("Database::get_document(%d)", did);
 
 	Xapian::Document doc;
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1312,6 +1365,8 @@ Database::get_metadata(const std::string& key)
 
 	std::string value;
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
@@ -1352,6 +1407,8 @@ Database::get_metadata_keys()
 	L_CALL("Database::get_metadata_keys()");
 
 	std::vector<std::string> values;
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1402,6 +1459,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		THROW(Error, "database is read-only");
 	}
 
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
 	L_DATABASE_WRAP_INIT();
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1445,6 +1504,8 @@ void
 Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 {
 	L_CALL("Database::dump_metadata()");
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1501,6 +1562,8 @@ void
 Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 {
 	L_CALL("Database::dump_documents()");
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 
@@ -1585,6 +1648,8 @@ MsgPack
 Database::dump_documents()
 {
 	L_CALL("Database::dump_documents()");
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 	L_DATABASE_WRAP_INIT();
 

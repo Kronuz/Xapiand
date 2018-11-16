@@ -269,6 +269,8 @@
 #cmakedefine XAPIAND_UUID_GUID @XAPIAND_UUID_GUID@
 #cmakedefine XAPIAND_UUID_URN @XAPIAND_UUID_URN@
 
+#cmakedefine XAPIAND_RANDOM_ERRORS @XAPIAND_RANDOM_ERRORS@
+
 
 ////////////////////////////////////////////////////////////////////////////////
 

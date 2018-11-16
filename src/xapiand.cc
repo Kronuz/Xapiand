@@ -350,6 +350,12 @@ void parseOptions(int argc, char** argv) {
 			cmd.setOutput(&output);
 		}
 
+#ifdef XAPIAND_RANDOM_ERRORS
+		ValueArg<double> random_errors_net("", "random-errors-net", "Inject random network errors with this probability (0-1)", false, 0, "probability", cmd);
+		ValueArg<double> random_errors_io("", "random-errors-io", "Inject random IO errors with this probability (0-1)", false, 0, "probability", cmd);
+		ValueArg<double> random_errors_db("", "random-errors-db", "Inject random database errors with this probability (0-1)", false, 0, "probability", cmd);
+#endif
+
 		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
 		ValueArg<std::string> dump_metadata("", "dump-metadata", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
 		ValueArg<std::string> dump_schema("", "dump-schema", "Dump endpoint schema to stdout.", false, "", "endpoint", cmd);
@@ -483,6 +489,12 @@ void parseOptions(int argc, char** argv) {
 		}
 
 		cmd.parse(args);
+
+#ifdef XAPIAND_RANDOM_ERRORS
+		opts.random_errors_db = random_errors_db.getValue();
+		opts.random_errors_io = random_errors_io.getValue();
+		opts.random_errors_net = random_errors_net.getValue();
+#endif
 
 		opts.verbosity = verbosity.getValue() + verbose.getValue();
 		opts.detach = detach.getValue();

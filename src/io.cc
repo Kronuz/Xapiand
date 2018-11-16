@@ -53,6 +53,8 @@ std::atomic_bool& ignore_eintr() {
 int open(const char* path, int oflag, int mode) {
 	L_CALL("io::open(%s, <buf>, <mode>)", path);
 
+	RANDOM_ERRORS_IO_ERRNO_RETURN(EACCES);
+
 	int fd;
 	while (true) {
 #ifdef O_CLOEXEC
@@ -107,6 +109,8 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	L_CALL("io::write(%d, <buf>, %lu)", fd, nbyte);
 	CHECK_OPENED("during write()", fd);
 
+	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
+
 	const auto* p = static_cast<const char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
@@ -134,6 +138,8 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pwrite(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
 	CHECK_OPENED("during pwrite()", fd);
+
+	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
@@ -174,6 +180,8 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	L_CALL("io::read(%d, <buf>, %lu)", fd, nbyte);
 	CHECK_OPENED("during read()", fd);
 
+	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
+
 	auto* p = static_cast<char*>(buf);
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
@@ -203,6 +211,8 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 	L_CALL("io::pread(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
 	CHECK_OPENED("during pread()", fd);
+
+	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
