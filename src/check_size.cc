@@ -88,6 +88,8 @@
 #include "phonetic/french_soundex.h"
 #include "phonetic/german_soundex.h"
 #include "phonetic/spanish_soundex.h"
+#include "server/base_client.h"
+#include "server/buffer.h"
 #include "server/http.h"
 #include "server/http_server.h"
 #include "server/http_client.h"
@@ -104,6 +106,12 @@
 #define REGULAR 1024
 #define BIG 5 * 1024
 #define LARGE 20 * 1024
+
+class DummyClient {
+	ssize_t on_read(const char*, ssize_t) { return 0; }
+	void on_read_file(const char*, ssize_t) {}
+	void on_read_file_done() {}
+};
 
 void
 check_size()
@@ -302,6 +310,12 @@ CHECK_MAX_SIZE(SMALL, (SoundexFrench))
 CHECK_MAX_SIZE(SMALL, (SoundexGerman))
 CHECK_MAX_SIZE(SMALL, (SoundexSpanish))
 
+// server/base_client.h
+CHECK_MAX_SIZE(SMALL, (MetaBaseClient<DummyClient>))
+
+// server/buffer.h
+CHECK_MAX_SIZE(SMALL, (Buffer))
+
 // server/http.h
 CHECK_MAX_SIZE(SMALL, (Http))
 
@@ -310,6 +324,8 @@ CHECK_MAX_SIZE(SMALL, (HttpServer))
 
 // server/http_client.h
 CHECK_MAX_SIZE(SMALL, (HttpClient))
+CHECK_MAX_SIZE(SMALL, (Response))
+CHECK_MAX_SIZE(SMALL, (Request))
 
 // server/binary.h
 CHECK_MAX_SIZE(SMALL, (Binary))
