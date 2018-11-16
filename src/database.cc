@@ -700,6 +700,7 @@ Database::commit(bool wal_, bool send_update)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::commit:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -807,6 +808,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::delete_document:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -859,6 +861,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::delete_document_term:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1019,6 +1022,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::add_document_term:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1075,6 +1079,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::replace_document:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1132,6 +1137,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::replace_document_term:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1183,6 +1189,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::add_spelling:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1232,6 +1239,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::remove_spelling:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1288,6 +1296,7 @@ Database::find_document(const std::string& term_id)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::find_document:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 	return did;
@@ -1348,6 +1357,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::get_document:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 	return doc;
@@ -1390,6 +1400,7 @@ Database::get_metadata(const std::string& key)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::get_metadata:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 	return value;
@@ -1436,6 +1447,7 @@ Database::get_metadata_keys()
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::get_metadata_keys:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 
 		values.clear();
 	}
@@ -1479,6 +1491,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
+		L_DATABASE_WRAP_END("Database::set_metadata:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1544,6 +1557,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::dump_metadata:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 
 		initial = key;
 	}
@@ -1629,6 +1643,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::dump_documents:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 
 		initial = did;
 	}
@@ -1707,6 +1722,7 @@ Database::dump_documents()
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::dump_documents:END %s (%d retries)", repr(endpoints.to_string()), DB_RETRIES - t);
 
 		initial = did;
 	}
