@@ -425,12 +425,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				if (wq) {
 					database.reset();
 					if (--retries == 0 || !timeout) {
-						THROW(TimeOutError, "Database is not available");
+						THROW(TimeOutError, "Locked database is not available");
 					}
 					do {
 						if (wq->unlocked_cond.wait_until(lk, timeout_tp) == std::cv_status::timeout) {
 							if (has_locked_endpoints()) {
-								THROW(TimeOutError, "Database is not available");
+								THROW(TimeOutError, "Locked database is not available");
 							}
 							break;
 						}
