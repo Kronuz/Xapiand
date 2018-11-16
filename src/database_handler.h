@@ -33,6 +33,7 @@
 #include <vector>                            // for vector
 #include <xapian.h>                          // for Document, docid, MSet
 
+#include "affinity.h"                        // for cpu_affinity_*
 #include "database_flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
@@ -297,6 +298,6 @@ void committer_commit(std::weak_ptr<Database> weak_database);
 
 
 inline auto& committer() {
-	static auto committer = make_debouncer<Endpoints>("A--", "A%02zu", opts.num_committers, committer_commit);
+	static auto committer = make_debouncer<Endpoints, 1000, 3000, 9000, cpu_affinity_committers>("A--", "A%02zu", opts.num_committers, committer_commit);
 	return committer;
 }

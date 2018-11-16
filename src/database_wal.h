@@ -34,6 +34,7 @@
 #include <utility>                          // for pair, make_pair
 #include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
+#include "affinity.h"                       // for cpu_affinity_*
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
@@ -254,7 +255,7 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 
 class DatabaseWALWriter;
 
-class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread> {
+class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, cpu_affinity_wal_writer> {
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;

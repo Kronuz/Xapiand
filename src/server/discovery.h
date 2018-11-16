@@ -26,6 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "affinity.h"           // for cpu_affinity_*
 #include "udp.h"                // for UDP
 #include "debouncer.h"          // for make_debouncer
 
@@ -108,7 +109,7 @@ public:
 void db_updater_send(std::string path);
 
 inline auto& db_updater() {
-	static auto db_updater = make_debouncer<std::string, 3000, 6000, 12000>("U--", "U%02zu", 3, db_updater_send);
+	static auto db_updater = make_debouncer<std::string, 3000, 6000, 12000, cpu_affinity_updaters>("U--", "U%02zu", 3, db_updater_send);
 	return db_updater;
 }
 

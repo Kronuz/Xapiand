@@ -71,12 +71,12 @@ class PackagedTask : public std::packaged_task<Result> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename TaskType>
+template <typename TaskType, uint64_t Affinity>
 class ThreadPool;
 
-template <typename TaskType>
-class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType>> {
-	ThreadPool<TaskType>* _pool;
+template <typename TaskType, uint64_t Affinity>
+class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType, Affinity>, Affinity> {
+	ThreadPool<TaskType, Affinity>* _pool;
 	std::size_t _idx;
 
 public:
@@ -84,7 +84,7 @@ public:
 		_pool(nullptr),
 		_idx(0) {}
 
-	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType>* pool) noexcept :
+	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, Affinity>* pool) noexcept :
 		_pool(pool),
 		_idx(idx) {}
 
@@ -160,11 +160,11 @@ struct TaskWrapper<std::unique_ptr<P>> {
 };
 
 
-template <typename TaskType = std::function<void()>>
+template <typename TaskType = std::function<void()>, uint64_t Affinity = 0>
 class ThreadPool {
-	friend ThreadPoolThread<TaskType>;
+	friend ThreadPoolThread<TaskType, Affinity>;
 
-	std::vector<ThreadPoolThread<TaskType>> _threads;
+	std::vector<ThreadPoolThread<TaskType, Affinity>> _threads;
 	BlockingConcurrentQueue<TaskWrapper<TaskType>> _queue;
 
 	const char* _format;
@@ -186,7 +186,7 @@ public:
 		_running(0),
 		_workers(0) {
 		for (std::size_t idx = 0; idx < num_threads; ++idx) {
-			_threads[idx] = ThreadPoolThread<TaskType>(idx, this);
+			_threads[idx] = ThreadPoolThread<TaskType, Affinity>(idx, this);
 			_threads[idx].start();
 		}
 	}
@@ -311,9 +311,9 @@ public:
 };
 
 
-template <typename TaskType>
+template <typename TaskType, uint64_t Affinity>
 inline void
-ThreadPoolThread<TaskType>::operator()()
+ThreadPoolThread<TaskType, Affinity>::operator()()
 {
 	set_thread_name(string::format(_pool->_format, _idx));
 

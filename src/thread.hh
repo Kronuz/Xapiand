@@ -34,6 +34,8 @@ using namespace std::chrono_literals;
 ////////////////////////////////////////////////////////////////////////////////
 
 
+void set_thread_afinity(uint64_t afinity_map);
+
 void set_thread_name(const std::string& name);
 
 const std::string& get_thread_name(std::thread::id thread_id);
@@ -44,7 +46,7 @@ const std::string& get_thread_name();
 ////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename ThreadImpl>
+template <typename ThreadImpl, uint64_t Affinity>
 class Thread {
 	std::thread _thread;
 	std::promise<void> _promise;
@@ -54,6 +56,7 @@ class Thread {
 	std::atomic_bool _joined;
 
 	void _runner() {
+		set_thread_afinity(Affinity);
 		try {
 			static_cast<ThreadImpl*>(this)->operator()();
 			_promise.set_value();

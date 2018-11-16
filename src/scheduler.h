@@ -47,21 +47,21 @@ using namespace std::chrono_literals;
 #endif
 
 
-template <typename SchedulerImpl, typename ScheduledTaskImpl>
+template <typename SchedulerImpl, typename ScheduledTaskImpl, uint64_t Affinity>
 class BaseScheduler;
 
-template <typename ScheduledTaskImpl>
+template <typename ScheduledTaskImpl, uint64_t Affinity>
 class Scheduler;
 
-template <typename ScheduledTaskImpl>
+template <typename ScheduledTaskImpl, uint64_t Affinity>
 class ThreadedScheduler;
 
 
-template <typename SchedulerImpl, typename ScheduledTaskImpl>
-class ScheduledTask : public std::enable_shared_from_this<ScheduledTask<SchedulerImpl, ScheduledTaskImpl>> {
-	friend BaseScheduler<SchedulerImpl, ScheduledTaskImpl>;
-	friend Scheduler<ScheduledTaskImpl>;
-	friend ThreadedScheduler<ScheduledTaskImpl>;
+template <typename SchedulerImpl, typename ScheduledTaskImpl, uint64_t Affinity = 0>
+class ScheduledTask : public std::enable_shared_from_this<ScheduledTask<SchedulerImpl, ScheduledTaskImpl, Affinity>> {
+	friend BaseScheduler<SchedulerImpl, ScheduledTaskImpl, Affinity>;
+	friend Scheduler<ScheduledTaskImpl, Affinity>;
+	friend ThreadedScheduler<ScheduledTaskImpl, Affinity>;
 
 protected:
 	unsigned long long wakeup_time;
@@ -92,9 +92,9 @@ public:
 #define MS 1000000ULL
 
 
-template <typename SchedulerImpl, typename ScheduledTaskImpl>
+template <typename SchedulerImpl, typename ScheduledTaskImpl, uint64_t Affinity>
 class SchedulerQueue {
-	using TaskType = std::shared_ptr<ScheduledTask<SchedulerImpl, ScheduledTaskImpl>>;
+	using TaskType = std::shared_ptr<ScheduledTask<SchedulerImpl, ScheduledTaskImpl, Affinity>>;
 
 public:
 	static unsigned long long now() {
@@ -162,16 +162,16 @@ public:
 };
 
 
-template <typename SchedulerImpl, typename ScheduledTaskImpl>
-class BaseScheduler : public Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl>> {
-	using TaskType = std::shared_ptr<ScheduledTask<SchedulerImpl, ScheduledTaskImpl>>;
+template <typename SchedulerImpl, typename ScheduledTaskImpl, uint64_t Affinity = 0>
+class BaseScheduler : public Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, Affinity>, Affinity> {
+	using TaskType = std::shared_ptr<ScheduledTask<SchedulerImpl, ScheduledTaskImpl, Affinity>>;
 
 	std::mutex mtx;
 
 	std::condition_variable wakeup_signal;
 	std::atomic_ullong atom_next_wakeup_time;
 
-	SchedulerQueue<SchedulerImpl, ScheduledTaskImpl> scheduler_queue;
+	SchedulerQueue<SchedulerImpl, ScheduledTaskImpl, Affinity> scheduler_queue;
 
 	const std::string name;
 	std::atomic_int ending;
@@ -191,7 +191,7 @@ public:
 		atom_next_wakeup_time(0),
 		name(std::move(name_)),
 		ending(-1) {
-		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl>>::start();
+		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, Affinity>, Affinity>::start();
 	}
 
 	void operator()() {
@@ -293,20 +293,20 @@ public:
 };
 
 
-template <typename ScheduledTaskImpl>
-class Scheduler : public BaseScheduler<Scheduler<ScheduledTaskImpl>, ScheduledTaskImpl> {
-	using TaskType = std::shared_ptr<ScheduledTask<Scheduler<ScheduledTaskImpl>, ScheduledTaskImpl>>;
+template <typename ScheduledTaskImpl, uint64_t Affinity = 0>
+class Scheduler : public BaseScheduler<Scheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity> {
+	using TaskType = std::shared_ptr<ScheduledTask<Scheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>>;
 
 public:
 	Scheduler(std::string name_) :
-		BaseScheduler<Scheduler<ScheduledTaskImpl>, ScheduledTaskImpl>(name_) {}
+		BaseScheduler<Scheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>(name_) {}
 
 	~Scheduler() {
 		finish(1);
 	}
 
 	bool finish(int wait = 10) {
-		BaseScheduler<Scheduler<ScheduledTaskImpl>, ScheduledTaskImpl>::end(wait);
+		BaseScheduler<Scheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>::end(wait);
 
 		if (wait != 0) {
 			return join(2 * wait * 100ms);
@@ -316,7 +316,7 @@ public:
 	}
 
 	bool join(std::chrono::milliseconds timeout = 60s) {
-		if (!BaseScheduler<Scheduler<ScheduledTaskImpl>, ScheduledTaskImpl>::join(timeout)) {
+		if (!BaseScheduler<Scheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>::join(timeout)) {
 			return false;
 		}
 		return true;
@@ -334,15 +334,15 @@ public:
 };
 
 
-template <typename ScheduledTaskImpl>
-class ThreadedScheduler : public BaseScheduler<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl> {
-	using TaskType = std::shared_ptr<ScheduledTask<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl>>;
+template <typename ScheduledTaskImpl, uint64_t Affinity = 0>
+class ThreadedScheduler : public BaseScheduler<ThreadedScheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity> {
+	using TaskType = std::shared_ptr<ScheduledTask<ThreadedScheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>>;
 
-	ThreadPool<TaskType> thread_pool;
+	ThreadPool<TaskType, Affinity> thread_pool;
 
 public:
 	ThreadedScheduler(std::string name_, const char* format, size_t num_threads)  :
-		BaseScheduler<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl>(name_),
+		BaseScheduler<ThreadedScheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>(name_),
 		thread_pool(format, num_threads) {}
 
 	~ThreadedScheduler() {
@@ -366,7 +366,7 @@ public:
 	}
 
 	bool finish(int wait = 10) {
-		BaseScheduler<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl>::end(wait);
+		BaseScheduler<ThreadedScheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>::end(wait);
 
 		thread_pool.finish();
 
@@ -381,7 +381,7 @@ public:
 		auto threadpool_workers = thread_pool.threadpool_workers() + 1;
 		auto single_timeout = timeout / threadpool_workers;
 
-		if (!BaseScheduler<ThreadedScheduler<ScheduledTaskImpl>, ScheduledTaskImpl>::join(single_timeout)) {
+		if (!BaseScheduler<ThreadedScheduler<ScheduledTaskImpl, Affinity>, ScheduledTaskImpl, Affinity>::join(single_timeout)) {
 			return false;
 		}
 		if (!thread_pool.join(single_timeout * threadpool_workers)) {

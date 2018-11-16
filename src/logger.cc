@@ -297,7 +297,7 @@ Logging::Logging(
 	int priority,
 	const std::chrono::time_point<std::chrono::system_clock>& created_at
 ) :
-	ScheduledTask<Scheduler<Logging>, Logging>(created_at),
+	ScheduledTask<Scheduler<Logging, cpu_affinity_logging>, Logging, cpu_affinity_logging>(created_at),
 	thread_id(std::this_thread::get_id()),
 	function(function),
 	filename(filename),
@@ -409,10 +409,10 @@ Logging::age()
  * Avoid the "static initialization order fiasco"
  */
 
-Scheduler<Logging>&
+Scheduler<Logging, cpu_affinity_logging>&
 Logging::scheduler()
 {
-	static Scheduler<Logging> scheduler("LOG");
+	static Scheduler<Logging, cpu_affinity_logging> scheduler("LOG");
 	return scheduler;
 }
 

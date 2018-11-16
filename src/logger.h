@@ -37,6 +37,7 @@
 #include <utility>            // for pair
 #include <vector>             // for vector
 
+#include "affinity.h"         // for cpu_affinity_*
 #include "logger_fwd.h"
 #include "scheduler.h"
 
@@ -80,10 +81,10 @@ public:
 class Log;
 
 
-class Logging : public ScheduledTask<Scheduler<Logging>, Logging> {
+class Logging : public ScheduledTask<Scheduler<Logging, cpu_affinity_logging>, Logging, cpu_affinity_logging> {
 	friend class Log;
 
-	static Scheduler<Logging>& scheduler();
+	static Scheduler<Logging, cpu_affinity_logging>& scheduler();
 
 	static std::mutex collected_mtx;
 	static std::vector<std::pair<std::string, bool>> collected;
