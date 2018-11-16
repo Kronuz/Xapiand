@@ -31,6 +31,14 @@
 #include "log.h"                    // for L_CALL, L_ERRNO
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_ERRNO
+// #define L_ERRNO L_ORANGE_RED
+
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-statement-expression"
 
@@ -43,6 +51,8 @@ std::atomic_bool& ignore_eintr() {
 
 
 int open(const char* path, int oflag, int mode) {
+	L_CALL("io::open(%s, <buf>, <mode>)", path);
+
 	int fd;
 	while (true) {
 #ifdef O_CLOEXEC
@@ -101,7 +111,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::write() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::write(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -128,6 +138,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
+		L_ERRNO("io::pwrite(): lseek: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 #endif
@@ -138,7 +149,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pwrite() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pwrite(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -167,7 +178,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::read() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::read(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -195,6 +206,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
+		L_ERRNO("io::pread(): lseek: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 #endif
@@ -206,7 +218,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pread() -> %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pread(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -367,7 +379,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 int close(int fd) {
 	static int honeypot = io::RetryAfterSignal(::open, "/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if unlikely(honeypot == -1) {
-		L_ERR("honeypot -> %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("honeypot: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		exit(EX_SOFTWARE);
 	}
 	CHECK_CLOSE(fd);
