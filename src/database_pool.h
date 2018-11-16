@@ -119,6 +119,7 @@ public:
 	}
 
 	std::string __repr__() const;
+	std::string dump_databases(int level = 1) const;
 };
 
 
@@ -220,5 +221,5 @@ public:
 	DatabaseCount total_writable_databases();
 	DatabaseCount total_readable_databases();
 
-	std::string dump_databases();
+	std::string dump_databases(int level = 1);
 };

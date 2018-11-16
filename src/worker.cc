@@ -360,7 +360,7 @@ Worker::__repr__(const std::string& name) const
 std::string
 Worker::dump_tree(int level)
 {
-	std::string ret = "\n";
+	std::string ret = "Workers:\n";
 	for (int l = 0; l < level; ++l) {
 		ret += "    ";
 	}

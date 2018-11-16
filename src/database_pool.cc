@@ -99,18 +99,34 @@ DatabaseQueue::dec_count()
 std::string
 DatabaseQueue::__repr__() const
 {
+	return string::format("<%s %s>",
+		((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableQueue" : "Queue",
+		endpoints.to_string());
+}
+
+
+std::string
+DatabaseQueue::dump_databases(int level) const
+{
+	std::string indent;
+	for (int l = 0; l < level; ++l) {
+		indent += "    ";
+	}
+
 	std::string ret;
 	size_t current_count;
 	{
 		std::lock_guard<std::mutex> lk(_state->_mutex);
 		current_count = count;
 		for (const auto& database : _items_queue) {
+			ret += indent;
 			ret += database->__repr__();
 			ret.push_back('\n');
 			--current_count;
 		}
 	}
 	while (current_count) {
+		ret += indent;
 		ret += string::format("<%s (checked out): %s>",
 			((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableDatabase" : "Database",
 			repr(endpoints.to_string()));
@@ -715,16 +731,28 @@ DatabasePool::total_readable_databases()
 
 
 std::string
-DatabasePool::dump_databases()
+DatabasePool::dump_databases(int level)
 {
-    std::lock_guard<std::mutex> lk(qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
-    std::string ret;
-    for (const auto& queue_database : writable_databases) {
-        ret += queue_database.second->__repr__();
-    }
-    for (const auto& queue_database : databases) {
-        ret += queue_database.second->__repr__();
-    }
-    return ret;
+	std::string indent;
+	for (int l = 0; l < level; ++l) {
+		indent += "    ";
+	}
+
+	std::string ret = "Databases:\n";
+
+	for (const auto& queue_database : writable_databases) {
+		ret += indent;
+		ret += queue_database.second->__repr__();
+		ret.push_back('\n');
+		ret += queue_database.second->dump_databases(level + 1);
+	}
+	for (const auto& queue_database : databases) {
+		ret += indent;
+		ret += queue_database.second->__repr__();
+		ret.push_back('\n');
+		ret += queue_database.second->dump_databases(level + 1);
+	}
+	return ret;
 }
