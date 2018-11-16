@@ -79,9 +79,6 @@ static const std::string priorities[MAX_PRIORITY + 1] = {
 };
 
 
-const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)", std::regex::optimize);
-
-
 static inline bool
 is_tty()
 {
@@ -337,6 +334,7 @@ Logging::~Logging()
 std::string
 Logging::colorized(std::string_view str, bool try_coloring)
 {
+	static const std::regex coloring_re("(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)(" ESC "\\[[;\\d]*m)", std::regex::optimize);
 	static const auto coloring_group = detectColoring();
 	static const std::string empty_group;
 	const auto& group = try_coloring ? coloring_group : empty_group;
