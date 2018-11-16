@@ -147,7 +147,6 @@ CHECK_MAX_SIZE(SMALL, (Database))
 
 // database_handler.h
 CHECK_MAX_SIZE(SMALL, (Data))
-CHECK_MAX_SIZE(SMALL, (Database))
 CHECK_MAX_SIZE(SMALL, (DatabaseHandler))
 CHECK_MAX_SIZE(SMALL, (Document))
 CHECK_MAX_SIZE(SMALL, (MSet))
