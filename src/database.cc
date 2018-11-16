@@ -64,6 +64,14 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
+// #undef L_DATABASE_BEGIN
+// #define L_DATABASE_BEGIN L_DELAYED_600
+// #undef L_DATABASE_END
+// #define L_DATABASE_END L_DELAYED_N_UNLOG
+// #undef L_DATABASE_WRAP_BEGIN
+// #define L_DATABASE_WRAP_BEGIN L_DELAYED_100
+// #undef L_DATABASE_WRAP_END
+// #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
 
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
@@ -484,14 +492,14 @@ Database::reopen()
 {
 	L_CALL("Database::reopen()");
 
-	reopen_time = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN");
+	L_DATABASE_WRAP_END("Database::reopen:END");
 
 	if (_db) {
 		if (!incomplete) {
 			// Try to reopen
 			try {
 				bool ret = _db->reopen();
-				L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
 				return ret;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 			} catch (const Xapian::DatabaseError& exc) {
@@ -509,8 +517,6 @@ Database::reopen()
 	} else {
 		reopen_readable();
 	}
-
-	L_DATABASE_WRAP("Reopen done (took %s) [1]", string::from_delta(reopen_time, std::chrono::system_clock::now()));
 
 	return true;
 }
@@ -646,18 +652,19 @@ Database::commit(bool wal_, bool send_update)
 	}
 
 	if (!modified) {
-		L_DATABASE_WRAP("Do not commit, because there are not changes");
+		L_DATABASE("Do not commit, because there are not changes");
 		return false;
 	}
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::commit:BEGIN");
+	L_DATABASE_WRAP_END("Database::commit:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Commit: t: %d", t);
+		// L_DATABASE("Commit: t: %d", t);
 		try {
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
@@ -694,8 +701,6 @@ Database::commit(bool wal_, bool send_update)
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Commit made (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_commit(*this, send_update); }
@@ -775,12 +780,13 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::delete_document:BEGIN");
+	L_DATABASE_WRAP_END("Database::delete_document:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Deleting document: %d  t: %d", did, t);
+		// L_DATABASE("Deleting document: %d  t: %d", did, t);
 		try {
 			wdb->delete_document(did);
 			modified = true;
@@ -802,8 +808,6 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_delete_document(*this, did); }
@@ -828,12 +832,13 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::delete_document_term:BEGIN");
+	L_DATABASE_WRAP_END("Database::delete_document_term:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Deleting document: '%s'  t: %d", term, t);
+		// L_DATABASE("Deleting document: '%s'  t: %d", term, t);
 		try {
 			wdb->delete_document(term);
 			modified = true;
@@ -855,8 +860,6 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Document deleted (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_delete_document_term(*this, term); }
@@ -986,7 +989,8 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::add_document:BEGIN");
+	L_DATABASE_WRAP_END("Database::add_document:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -996,7 +1000,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 
 	Xapian::docid did = 0;
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Adding new document.  t: %d", t);
+		// L_DATABASE("Adding new document.  t: %d", t);
 		try {
 			did = wdb->add_document(doc);
 			modified = true;
@@ -1016,8 +1020,6 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Document added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_add_document(*this, std::move(doc)); }
@@ -1044,7 +1046,8 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::replace_document:BEGIN");
+	L_DATABASE_WRAP_END("Database::replace_document:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1053,7 +1056,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 #endif  // XAPIAND_DATA_STORAGE
 
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Replacing: %d  t: %d", did, t);
+		// L_DATABASE("Replacing: %d  t: %d", did, t);
 		try {
 			wdb->replace_document(did, doc);
 			modified = true;
@@ -1073,8 +1076,6 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_replace_document(*this, did, std::move(doc)); }
@@ -1101,7 +1102,8 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::replace_document_term:BEGIN");
+	L_DATABASE_WRAP_END("Database::replace_document_term:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1111,7 +1113,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	Xapian::docid did = 0;
 	for (int t = DB_RETRIES; t; --t) {
-		// L_DATABASE_WRAP("Replacing: '%s'  t: %d", term, t);
+		// L_DATABASE("Replacing: '%s'  t: %d", term, t);
 		try {
 			did = wdb->replace_document(term, doc);
 			modified = true;
@@ -1131,8 +1133,6 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
-
-	L_DATABASE_WRAP("Document replaced (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_replace_document_term(*this, term, std::move(doc)); }
@@ -1159,7 +1159,8 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::add_spelling:BEGIN");
+	L_DATABASE_WRAP_END("Database::add_spelling:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1184,8 +1185,6 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
 
-	L_DATABASE_WRAP("Spelling added (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_add_spelling(*this, word, freqinc); }
 #else
@@ -1209,7 +1208,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::remove_spelling:BEGIN");
+	L_DATABASE_WRAP_END("Database::remove_spelling:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1234,8 +1234,6 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
 
-	L_DATABASE_WRAP("Spelling removed (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_remove_spelling(*this, word, freqdec); }
 #else
@@ -1257,7 +1255,8 @@ Database::find_document(const std::string& term_id)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::find_document:BEGIN");
+	L_DATABASE_WRAP_END("Database::find_document:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1291,8 +1290,6 @@ Database::find_document(const std::string& term_id)
 		rdb = static_cast<Xapian::Database *>(db());
 	}
 
-	L_DATABASE_WRAP("Document found (took %s) [1]", string::from_delta(start, std::chrono::system_clock::now()));
-
 	return did;
 }
 
@@ -1306,7 +1303,8 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::get_document:BEGIN");
+	L_DATABASE_WRAP_END("Database::get_document:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1352,8 +1350,6 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 		rdb = static_cast<Xapian::Database *>(db());
 	}
 
-	L_DATABASE_WRAP("Got document (took %s) [1]", string::from_delta(start, std::chrono::system_clock::now()));
-
 	return doc;
 }
 
@@ -1367,7 +1363,8 @@ Database::get_metadata(const std::string& key)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::get_metadata:BEGIN");
+	L_DATABASE_WRAP_END("Database::get_metadata:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1395,8 +1392,6 @@ Database::get_metadata(const std::string& key)
 		rdb = static_cast<Xapian::Database *>(db());
 	}
 
-	L_DATABASE_WRAP("Got metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
 	return value;
 }
 
@@ -1410,7 +1405,8 @@ Database::get_metadata_keys()
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::get_metadata_keys:BEGIN");
+	L_DATABASE_WRAP_END("Database::get_metadata_keys:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1444,8 +1440,6 @@ Database::get_metadata_keys()
 		values.clear();
 	}
 
-	L_DATABASE_WRAP("Got metadata keys (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
 	return values;
 }
 
@@ -1461,7 +1455,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::set_metadata:BEGIN");
+	L_DATABASE_WRAP_END("Database::set_metadata:END");
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1486,8 +1481,6 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 	}
 
-	L_DATABASE_WRAP("Set metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
-
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_set_metadata(*this, key, value); }
 #else
@@ -1507,7 +1500,8 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::dump_metadata:BEGIN");
+	L_DATABASE_WRAP_END("Database::dump_metadata:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1553,8 +1547,6 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 
 		initial = key;
 	}
-
-	L_DATABASE_WRAP("Dump metadata (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 }
 
 
@@ -1565,7 +1557,8 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN");
+	L_DATABASE_WRAP_END("Database::dump_documents:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1639,8 +1632,6 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 
 		initial = did;
 	}
-
-	L_DATABASE_WRAP("Dump documents (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 }
 
 
@@ -1651,7 +1642,8 @@ Database::dump_documents()
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_INIT();
+	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN");
+	L_DATABASE_WRAP_END("Database::dump_documents:END");
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1718,8 +1710,6 @@ Database::dump_documents()
 
 		initial = did;
 	}
-
-	L_DATABASE_WRAP("Dump documents (took %s)", string::from_delta(start, std::chrono::system_clock::now()));
 
 	return docs;
 }

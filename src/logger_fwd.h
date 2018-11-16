@@ -147,9 +147,11 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, bo
 #define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, (color + (format) + CLEAR_COLOR), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
+#define L_DELAYED_100(...) auto __log_timed = L_DELAYED(true, 100ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_200(...) auto __log_timed = L_DELAYED(true, 200ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_600(...) auto __log_timed = L_DELAYED(true, 600ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_1000(...) auto __log_timed = L_DELAYED(true, 1000ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_N(delay, ...) auto __log_timed = L_DELAYED(true, delay, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_UNLOG(...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 

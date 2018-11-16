@@ -35,11 +35,15 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
+#define L_INIT auto start = std::chrono::system_clock::now
+
 #ifdef NDEBUG
 #define L_OBJ_BEGIN L_NOTHING
 #define L_OBJ_END L_NOTHING
 #define L_DATABASE_BEGIN L_NOTHING
 #define L_DATABASE_END L_NOTHING
+#define L_DATABASE_WRAP_BEGIN L_NOTHING
+#define L_DATABASE_WRAP_END L_NOTHING
 #define L_EV_BEGIN L_NOTHING
 #define L_EV_END L_NOTHING
 #define L_DEBUG_TRY L_NOTHING
@@ -49,6 +53,8 @@
 #define L_OBJ_END L_DELAYED_N_UNLOG
 #define L_DATABASE_BEGIN L_DELAYED_600
 #define L_DATABASE_END L_DELAYED_N_UNLOG
+#define L_DATABASE_WRAP_BEGIN L_DELAYED_100
+#define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
 #define L_EV_BEGIN L_DELAYED_200
 #define L_EV_END L_DELAYED_N_UNLOG
 #define L_DEBUG_TRY try
@@ -56,8 +62,6 @@
 #endif
 
 #define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
-
-#define L_INIT auto start = std::chrono::system_clock::now
 
 ////////////////////////////////////////////////////////////////////////////////
 // Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
@@ -87,7 +91,5 @@
 #define L_UDP_WIRE L_NOTHING
 #define L_HTTP_PROTO L_NOTHING
 #define L_BINARY_PROTO L_NOTHING
-#define L_DATABASE_WRAP_INIT L_NOTHING
-#define L_DATABASE_WRAP L_NOTHING
 #define L_INDEX L_NOTHING
 #define L_SEARCH L_NOTHING

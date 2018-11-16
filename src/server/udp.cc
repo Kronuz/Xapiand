@@ -135,7 +135,7 @@ UDP::bind(int tries, const std::string& group)
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)
 
 		// Flush socket
-		L_DELAYED_1000("UDP flush is taking too long...");
+		L_DELAYED_N(1s, "UDP flush is taking too long...");
 		while (true) {
 			char buf[1024];
 			ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
