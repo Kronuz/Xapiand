@@ -1297,6 +1297,7 @@ int main(int argc, char **argv) {
 	}
 
 	Logging::finish();
+	Logging::join();
 
 	return exit_code;
 }
