@@ -48,7 +48,7 @@ option(BUILD_BENCHMARKS "Build all benchmarks"                      OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
 option(BINARY_PROXY  "Define a proxy port for binary protocol"      OFF)
-option(CLUSTERING    "Enable remote clustering"                     OFF)
+option(CLUSTERING    "Enable remote clustering"                      ON)
 option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
 option(DATA_STORAGE  "Enable data storage"                           ON)
 option(TRACEBACKS    "Enable tracebacks for exceptions"             OFF)
