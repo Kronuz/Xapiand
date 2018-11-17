@@ -35,7 +35,7 @@
 #define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
 #define NUM_BINARY_CLIENTS       16      // Number of binary client threads per CPU
 #define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
-#define NUM_COMMITTERS           0.5     // Number of threads handling the commits per CPU
+#define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
 #define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
 
 #define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool
