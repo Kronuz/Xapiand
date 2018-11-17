@@ -32,7 +32,11 @@
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
 #endif
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>          // for pthread_setaffinity_np
+#endif
 
+#include "log.h"                 // for L_WARNING_ONCE
 #include "stringified.hh"        // for stringified
 
 
@@ -41,15 +45,6 @@ static std::unordered_map<std::thread::id, std::string> thread_names;
 
 
 #ifndef HAVE_PTHREAD_SETAFFINITY_NP
-#include <mach/task.h>
-#include <mach/task_info.h>
-#include <mach/thread_info.h>
-#include <mach/mach_types.h>
-#include <mach/thread_act.h>
-#include <sys/sysctl.h>
-#include <unistd.h>
-
-#define SYSCTL_CORE_COUNT   "machdep.cpu.core_count"
 
 typedef struct cpu_set {
 	uint32_t count;
@@ -74,37 +69,26 @@ CPU_ISSET(int num, cpu_set_t *cs) {
 }
 
 
-int
-sched_getaffinity(pid_t /*pid*/, size_t /*cpu_size*/, cpu_set_t *cpu_set)
-{
-	int32_t core_count = 0;
-	size_t len = sizeof(core_count);
-	int ret = sysctlbyname(SYSCTL_CORE_COUNT, &core_count, &len, 0, 0);
-	if (ret) {
-		// printf("error while get core count %d\n", ret);
-		return -1;
-	}
-	cpu_set->count = 0;
-	for (int i = 0; i < core_count; i++) {
-		cpu_set->count |= (1 << i);
-	}
-	return 0;
-}
+#if defined(__APPLE__)
+#include <mach/thread_act.h>
+#endif
 
-
-int
+static inline int
 pthread_setaffinity_np(pthread_t thread, size_t cpu_size, cpu_set_t *cpu_set)
 {
+#if defined(__APPLE__)
 	int core = 0;
 	for (; core < 8 * static_cast<int>(cpu_size); ++core) {
 		if (CPU_ISSET(core, cpu_set)) {
 			break;
 		}
 	}
-	// printf("binding to core %d\n", core);
 	thread_affinity_policy_data_t policy = { core };
 	thread_port_t mach_thread = pthread_mach_thread_np(thread);
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
+#else
+	L_WARNING_ONCE("WARNING: No way of setting cpu affinity.");
+#endif
 	return 0;
 }
 
