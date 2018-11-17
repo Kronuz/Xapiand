@@ -24,6 +24,7 @@
 
 #include "config.h"
 
+#include <cmath>                         // for std::ceil
 #include <cstdint>                       // for std::uint32_t
 #include <cstdlib>                       // for std::size_t
 #include <string>                        // for std::string
@@ -34,7 +35,7 @@
 #define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
 #define NUM_BINARY_CLIENTS       16      // Number of binary client threads per CPU
 #define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
-#define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
+#define NUM_COMMITTERS           0.5     // Number of threads handling the commits per CPU
 #define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
 
 #define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool
@@ -69,14 +70,14 @@ extern struct opts_t {
 	std::string gid = "";
 	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
 	std::string raft_group = XAPIAND_RAFT_GROUP;
-	ssize_t num_servers = NUM_SERVERS;
-	ssize_t num_http_clients = NUM_BINARY_CLIENTS;
-	ssize_t num_binary_clients = NUM_BINARY_CLIENTS;
+	ssize_t num_servers = std::ceil(NUM_SERVERS);
+	ssize_t num_http_clients = std::ceil(NUM_BINARY_CLIENTS);
+	ssize_t num_binary_clients = std::ceil(NUM_BINARY_CLIENTS);
+	ssize_t num_async_wal_writers = std::ceil(NUM_ASYNC_WAL_WRITERS);
+	ssize_t num_committers = std::ceil(NUM_COMMITTERS);
+	ssize_t num_fsynchers = std::ceil(NUM_FSYNCHERS);
 	ssize_t dbpool_size = DBPOOL_SIZE;
-	ssize_t num_async_wal_writers = NUM_ASYNC_WAL_WRITERS;
 	ssize_t endpoints_list_size = ENDPOINT_LIST_SIZE;
-	ssize_t num_committers = NUM_COMMITTERS;
-	ssize_t num_fsynchers = NUM_FSYNCHERS;
 	ssize_t max_clients = MAX_CLIENTS;
 	ssize_t max_databases = MAX_DATABASES;
 	ssize_t max_files = 0;  // (0 = automatic)

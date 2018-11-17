@@ -27,6 +27,7 @@
 #include <algorithm>                // for min
 #include <chrono>                   // for system_clock, time_point
 #include <clocale>                  // for std::setlocale, LC_CTYPE
+#include <cmath>                    // for std::ceil
 #include <csignal>                  // for sigaction, sigemptyset
 #include <cstdio>                   // for std::fprintf, std::snprintf
 #include <cstdlib>                  // for std::size_t, std::atoi, std::getenv, std::exit, setenv
@@ -334,7 +335,7 @@ std::vector<std::string> ev_supported() {
 
 
 void parseOptions(int argc, char** argv) {
-	const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
+	const double hardware_concurrency = std::thread::hardware_concurrency();
 
 	using namespace TCLAP;
 
@@ -396,25 +397,25 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
 #if XAPIAND_DATABASE_WAL
-		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, NUM_ASYNC_WAL_WRITERS * hardware_concurrency, "writers", cmd);
+		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, std::ceil(NUM_ASYNC_WAL_WRITERS * hardware_concurrency), "writers", cmd);
 #endif
 #ifdef XAPIAND_CLUSTERING
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 #endif
-		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, NUM_COMMITTERS * hardware_concurrency, "committers", cmd);
+		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, std::ceil(NUM_COMMITTERS * hardware_concurrency), "committers", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
 		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 
-		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, NUM_FSYNCHERS * hardware_concurrency, "fsynchers", cmd);
+		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, std::ceil(NUM_FSYNCHERS * hardware_concurrency), "fsynchers", cmd);
 		ValueArg<std::size_t> max_files("", "max-files", "Maximum number of files to open.", false, 0, "files", cmd);
 		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_binary_clients("", "binary-clients", "Number of binary client threads.", false, NUM_BINARY_CLIENTS * hardware_concurrency, "threads", cmd);
+		ValueArg<std::size_t> num_binary_clients("", "binary-clients", "Number of binary client threads.", false, std::ceil(NUM_BINARY_CLIENTS * hardware_concurrency), "threads", cmd);
 #endif
-		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, NUM_HTTP_CLIENTS * hardware_concurrency, "threads", cmd);
+		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, std::ceil(NUM_HTTP_CLIENTS * hardware_concurrency), "threads", cmd);
 		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-		ValueArg<std::size_t> num_servers("", "servers", "Number of servers.", false, NUM_SERVERS * hardware_concurrency, "servers", cmd);
+		ValueArg<std::size_t> num_servers("", "servers", "Number of servers.", false, std::ceil(NUM_SERVERS * hardware_concurrency), "servers", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
