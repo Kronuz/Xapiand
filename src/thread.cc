@@ -24,12 +24,12 @@
 
 #include "config.h"              // for HAVE_PTHREADS, HAVE_PTHREAD_SETNAME_NP
 
+#include <errno.h>               // for errno
 #include <mutex>                 // for std::mutex, std::lock_guard
 #include <string>                // for std::string
+#include <system_error>          // for std::system_error
 #include <tuple>                 // for std::forward_as_tuple
 #include <unordered_map>         // for std::unordered_map
-#include <system_error>          // for std::system_error
-
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
 #endif
@@ -37,6 +37,14 @@
 #include <pthread_np.h>          // for pthread_setaffinity_np
 #endif
 
+#if defined(__linux) || defined(__linux__) || defined(linux)
+#include <unistd.h>
+#include <sys/syscall.h>         // for syscall
+#include <sys/resource.h>        // for setpriority
+#endif
+
+#include "error.hh"              // for error::name, error::description
+#include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_WARNING_ONCE
 #include "stringified.hh"        // for stringified
 
@@ -176,7 +184,7 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 }
 #else
 
-#include <sched.h>
+#include <sched.h>              // for sched_get_priority_*
 
 void
 start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
@@ -238,6 +246,29 @@ void
 setup_thread(const std::string& name, ThreadPolicyType thread_policy)
 {
 	set_thread_name(name);
+
+#if defined(__linux) || defined(__linux__) || defined(linux)
+	ThreadPolicy policy(thread_policy);
+	if (policy.priority) {
+		// It turns out that threading implementations on Linux actually violate
+		// POSIX.1, and you can set a specific niceness for one or more
+		// individual threads by passing a tid to setpriority() on these systems
+		constexpr int sched_nice_max = 10;
+		constexpr int sched_nice_min = -20;
+		#ifdef SYS_gettid
+		pid_t tid = syscall(SYS_gettid);
+		#else
+		#warning "SYS_gettid unavailable on this system"
+		pid_t tid = 0;
+		#endif
+		int priority = ((100 - policy.priority) * (sched_nice_max - sched_nice_min) / 100) + sched_nice_min;
+		if (setpriority(PRIO_PROCESS, tid, priority) == -1) {
+			L_WARNING_ONCE("ERROR: setpriority(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		}
+	}
+#else
+	ignore_unused(thread_policy);
+#endif
 }
 
 
