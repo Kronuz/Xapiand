@@ -124,15 +124,37 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 	int errnum;
 	pthread_t thread;
 
-	errnum = pthread_create_suspended_np(&thread, nullptr, thread_routine, arg);
+	pthread_attr_t thread_attr;
+	errnum = pthread_attr_init(&thread_attr);
+	if (errnum != 0) {
+		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
+	}
+
+	if (policy.priority) {
+		if (pthread_attr_setschedpolicy(&thread_attr, SCHED_OTHER) != 0) {
+			L_WARNING_ONCE("Cannot set thread policy!");
+		} else {
+			static int priority_min = sched_get_priority_min(SCHED_OTHER);
+			static int priority_max = sched_get_priority_max(SCHED_OTHER);
+			sched_param param;
+			param.sched_priority = (policy.priority * (priority_max - priority_min) / 100) + priority_min;
+			if (pthread_attr_setschedparam(&thread_attr, &param) != 0) {
+				L_WARNING_ONCE("Cannot set thread priority!");
+			}
+		}
+	}
+
+	errnum = pthread_create_suspended_np(&thread, &thread_attr, thread_routine, arg);
 	if (errnum != 0) {
 		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
 	}
 
 	mach_port_t mach_thread = pthread_mach_thread_np(thread);
+
+	pthread_attr_destroy(&thread_attr);
+
 	pthread_detach(thread);
 
-	thread_affinity_policy_data_t policy_data;
 	if (policy.afinity) {
 		int tag = 0;
 		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
@@ -141,6 +163,7 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 				break;
 			}
 		}
+		thread_affinity_policy_data_t policy_data;
 		policy_data.affinity_tag = tag;
 		if (thread_policy_set(mach_thread,
 				THREAD_AFFINITY_POLICY, (thread_policy_t)&policy_data,
@@ -149,35 +172,7 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 		}
 	}
 
-	if (policy.priority) {
-		thread_precedence_policy_data_t tppolicy;
-		tppolicy.importance = policy.priority;
-		if (thread_policy_set(mach_thread,
-				THREAD_PRECEDENCE_POLICY, (thread_policy_t)&tppolicy,
-				THREAD_PRECEDENCE_POLICY_COUNT) != KERN_SUCCESS) {
-			L_WARNING_ONCE("Cannot set thread precedence policy!");
-		}
-
-		static double clock2abs = []{
-			mach_timebase_info_data_t tbinfo;
-			mach_timebase_info(&tbinfo);
-			return ((double)tbinfo.denom / (double)tbinfo.numer) * 1000000;
-		}();
-		thread_time_constraint_policy_data_t ttcpolicy;
-		ttcpolicy.period = 50 * clock2abs;
-		ttcpolicy.computation = 1 * clock2abs;
-		ttcpolicy.constraint = 2 * clock2abs;
-		ttcpolicy.preemptible = TRUE;
-		if (thread_policy_set(mach_thread,
-				THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&ttcpolicy,
-				THREAD_TIME_CONSTRAINT_POLICY_COUNT) != KERN_SUCCESS) {
-			L_WARNING_ONCE("Cannot set thread time constraint policy!");
-		}
-	}
-
 	thread_resume(mach_thread);
-
-	return thread;
 }
 #else
 
@@ -200,10 +195,13 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 	}
 
 	if (policy.priority) {
-		// [https://docs.oracle.com/cd/E19455-01/806-5257/attrib-16/index.html]
-		sched_param param;
-		if (pthread_attr_getschedparam(&thread_attr, &param) == 0) {
-			param.sched_priority = policy.priority;
+		if (pthread_attr_setschedpolicy(&thread_attr, SCHED_OTHER) != 0) {
+			L_WARNING_ONCE("Cannot set thread policy!");
+		} else {
+			static int priority_min = sched_get_priority_min(SCHED_OTHER);
+			static int priority_max = sched_get_priority_max(SCHED_OTHER);
+			sched_param param;
+			param.sched_priority = (policy.priority * (priority_max - priority_min) / 100) + priority_min;
 			if (pthread_attr_setschedparam(&thread_attr, &param) != 0) {
 				L_WARNING_ONCE("Cannot set thread priority!");
 			}
