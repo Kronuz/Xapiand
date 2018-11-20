@@ -884,7 +884,8 @@ HttpClient::process(Request& request, Response& response)
 	L_OBJ_END("HttpClient::process:END");
 
 	request.log->clear();
-	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long...").release();
+	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long: %s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&request.parser)), request.path, request.parser.http_major, request.parser.http_minor).release();
+
 	request.received = std::chrono::system_clock::now();
 
 	std::string error;
