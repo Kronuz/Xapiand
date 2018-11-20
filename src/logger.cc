@@ -46,7 +46,7 @@
 #include "opts.h"             // for opts
 #include "repr.hh"            // for repr
 #include "string.hh"          // for string::format
-#include "thread.hh"          // for get_thread_name
+#include "thread.hh"          // for get_thread_name, ThreadPolicyType::*
 #include "time_point.hh"      // for time_point_to_ullong
 
 
@@ -297,7 +297,7 @@ Logging::Logging(
 	int priority,
 	const std::chrono::time_point<std::chrono::system_clock>& created_at
 ) :
-	ScheduledTask<Scheduler<Logging, cpu_affinity_logging>, Logging, cpu_affinity_logging>(created_at),
+	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
 	function(function),
 	filename(filename),
@@ -409,10 +409,10 @@ Logging::age()
  * Avoid the "static initialization order fiasco"
  */
 
-Scheduler<Logging, cpu_affinity_logging>&
+Scheduler<Logging, ThreadPolicyType::logging>&
 Logging::scheduler()
 {
-	static Scheduler<Logging, cpu_affinity_logging> scheduler("LOG");
+	static Scheduler<Logging, ThreadPolicyType::logging> scheduler("LOG");
 	return scheduler;
 }
 

@@ -28,7 +28,6 @@
 #include "string_view.hh"        // for std::string_view
 #include <unistd.h>
 
-#include "affinity.h"            // for cpu_affinity_*
 #include "compressor_lz4.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "debouncer.h"           // for make_debouncer
 #include "fs.hh"                 // for opendir, find_file_dir, closedir
@@ -39,6 +38,7 @@
 #include "opts.h"                // for opts::*
 #include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified
+#include "thread.hh"             // for ThreadPolicyType::*
 
 
 #ifndef L_CALL
@@ -132,7 +132,7 @@ public:
 
 
 inline auto& fsyncher() {
-	static auto fsyncher = make_debouncer<int, 500, 500, 3000, cpu_affinity_fsynchers>("F--", "F%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
+	static auto fsyncher = make_debouncer<int, 500, 500, 3000, ThreadPolicyType::fsynchers>("F--", "F%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
 		auto start = std::chrono::system_clock::now();
 
 		int err = full_fsync

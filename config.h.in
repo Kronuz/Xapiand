@@ -135,9 +135,6 @@
 /* 2-arg pthread_set_name_np */
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP @HAVE_PTHREAD_SET_NAME_NP@
 
-/* pthread_setaffinity_np */
-#cmakedefine HAVE_PTHREAD_SETAFFINITY_NP @HAVE_PTHREAD_SETAFFINITY_NP@
-
 
 /* Define to 1 if you have the `epoll_ctl' function. */
 #cmakedefine HAVE_EPOLL_CTL @HAVE_EPOLL_CTL@

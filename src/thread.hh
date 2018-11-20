@@ -25,16 +25,30 @@
 #include <atomic>                // for std::atomic_bool
 #include <chrono>                // for std::chrono
 #include <future>                // for std::future, std::promise
-#include <thread>                // for std::thread
-
+#include <pthread.h>             // for pthread_t
 
 using namespace std::chrono_literals;
 
 
+enum class ThreadPolicyType {
+	regular,
+	wal_writer,
+	logging,
+	replication,
+	committers,
+	fsynchers,
+	updaters,
+	servers,
+	http_clients,
+	binary_clients,
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
+int sched_getcpu();
 
-void set_thread_afinity(uint64_t afinity_map);
+pthread_t run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy);
 
 void set_thread_name(const std::string& name);
 
@@ -46,26 +60,25 @@ const std::string& get_thread_name();
 ////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename ThreadImpl, uint64_t Affinity>
+template <typename ThreadImpl, ThreadPolicyType thread_policy>
 class Thread {
-	std::thread _thread;
 	std::promise<void> _promise;
 	std::future<void> _future;
 
 	std::atomic_bool _started;
 	std::atomic_bool _joined;
 
-	void _runner() {
-		set_thread_afinity(Affinity);
+	static void* _runner(void* arg) {
 		try {
-			static_cast<ThreadImpl*>(this)->operator()();
-			_promise.set_value();
+			static_cast<ThreadImpl*>(arg)->operator()();
+			static_cast<Thread*>(arg)->_promise.set_value();
 		} catch (...) {
 			try {
 				// store anything thrown in the promise
-				_promise.set_exception(std::current_exception());
+				static_cast<Thread*>(arg)->_promise.set_exception(std::current_exception());
 			} catch(...) {} // set_exception() may throw too
 		}
+		return nullptr;
 	}
 
 public:
@@ -75,7 +88,6 @@ public:
 		_joined{false} {};
 
 	Thread(Thread&& other) :
-		_thread(std::move(other._thread)),
 		_promise(std::move(other._promise)),
 		_future(std::move(other._future)),
 		_started(other._started.load()),
@@ -83,7 +95,6 @@ public:
 	{}
 
 	Thread& operator=(Thread&& other) {
-		_thread = std::move(other._thread);
 		_promise = std::move(other._promise);
 		_future = std::move(other._future);
 		_started = other._started.load();
@@ -93,8 +104,7 @@ public:
 
 	void start() {
 		if (!_started.exchange(true)) {
-			_thread = std::thread(&Thread::_runner, this);
-			_thread.detach();
+			run_thread(&Thread::_runner, this, thread_policy);
 		}
 	}
 

@@ -37,9 +37,9 @@
 #include <utility>            // for pair
 #include <vector>             // for vector
 
-#include "affinity.h"         // for cpu_affinity_*
 #include "logger_fwd.h"
 #include "scheduler.h"
+#include "thread.hh"          // for ThreadPolicyType::*
 
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
@@ -81,10 +81,10 @@ public:
 class Log;
 
 
-class Logging : public ScheduledTask<Scheduler<Logging, cpu_affinity_logging>, Logging, cpu_affinity_logging> {
+class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging> {
 	friend class Log;
 
-	static Scheduler<Logging, cpu_affinity_logging>& scheduler();
+	static Scheduler<Logging, ThreadPolicyType::logging>& scheduler();
 
 	static std::mutex collected_mtx;
 	static std::vector<std::pair<std::string, bool>> collected;

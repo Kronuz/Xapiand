@@ -28,6 +28,7 @@
 #include <string>                // for std::string
 #include <tuple>                 // for std::forward_as_tuple
 #include <unordered_map>         // for std::unordered_map
+#include <system_error>          // for std::system_error
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
@@ -44,76 +45,194 @@ static std::mutex thread_names_mutex;
 static std::unordered_map<std::thread::id, std::string> thread_names;
 
 
-#ifndef HAVE_PTHREAD_SETAFFINITY_NP
+struct ThreadPolicy {
+	int priority;
+	uint64_t afinity;
 
-typedef struct cpu_set {
-	uint32_t count;
-} cpu_set_t;
-
-
-static inline void
-CPU_ZERO(cpu_set_t *cs) {
-	cs->count = 0;
-}
-
-
-static inline void
-CPU_SET(int num, cpu_set_t *cs) {
-	cs->count |= (1 << num);
-}
-
-
-static inline int
-CPU_ISSET(int num, cpu_set_t *cs) {
-	return (cs->count & (1 << num));
-}
-
-
-#if defined(__APPLE__)
-#include <mach/thread_act.h>
-#endif
-
-static inline int
-pthread_setaffinity_np(pthread_t thread, size_t cpu_size, cpu_set_t *cpu_set)
-{
-#if defined(__APPLE__)
-	int core = 0;
-	for (; core < 8 * static_cast<int>(cpu_size); ++core) {
-		if (CPU_ISSET(core, cpu_set)) {
-			break;
+	ThreadPolicy(ThreadPolicyType thread_policy) {
+		switch (thread_policy) {
+			case ThreadPolicyType::regular:
+				priority = 0;
+				afinity = 0b0000000000000000000000000000000000000000000000000000000000000000;
+				break;
+			case ThreadPolicyType::wal_writer:
+				priority = 20;
+				afinity = 0b0000000000000000000000000000000000000000000000000000000000001111;
+				break;
+			case ThreadPolicyType::logging:
+				priority = 0;
+				afinity = 0b0000000000000000000000000000000000000000000000000000000011111111;
+				break;
+			case ThreadPolicyType::replication:
+				priority = 10;
+				afinity = 0b0000000000000000000000000000000000000000000000000000000000000000;
+				break;
+			case ThreadPolicyType::committers:
+				priority = 100;
+				afinity = 0b1111111111111111111100000000000000000000000000000000000000000000;
+				break;
+			case ThreadPolicyType::fsynchers:
+				priority = 20;
+				afinity = 0b0000000000000000000000000000000000000000000000001111111111111111;
+				break;
+			case ThreadPolicyType::updaters:
+				priority = 10;
+				afinity = 0b0000000000000000000000000000000000000000000000000000000000000001;
+				break;
+			case ThreadPolicyType::servers:
+				priority = 5;
+				afinity = 0b0000000000000000000000000000000000000000000000001111111111111111;
+				break;
+			case ThreadPolicyType::http_clients:
+				priority = 10;
+				afinity = 0b0000000000000000111111111111111111111111111111110000000000000000;
+				break;
+			case ThreadPolicyType::binary_clients:
+				priority = 20;
+				afinity = 0b0000000000000000000000000000000011111111111111111111111111111111;
+				break;
 		}
 	}
-	thread_affinity_policy_data_t policy = { core };
-	thread_port_t mach_thread = pthread_mach_thread_np(thread);
-	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
-#else
-	L_WARNING_ONCE("WARNING: No way of setting cpu affinity.");
-#endif
-	return 0;
+};
+
+
+#ifdef __APPLE__
+#include <mach/thread_act.h>
+#include <cpuid.h>
+
+int
+sched_getcpu()
+{
+	uint32_t info[4];
+	__cpuid_count(1, 0, info[0], info[1], info[2], info[3]);
+	if ( (info[3] & (1 << 9)) == 0) {
+		return -1;  // no APIC on chip
+	}
+	// info[1] is EBX, bits 24-31 are APIC ID
+	return (unsigned)info[1] >> 24;
 }
 
+
+pthread_t
+run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+{
+	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
+
+	ThreadPolicy policy(thread_policy);
+
+	int errnum;
+	pthread_t thread;
+
+	errnum = pthread_create_suspended_np(&thread, nullptr, thread_routine, arg);
+	if (errnum != 0) {
+		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
+	}
+
+	mach_port_t mach_thread = pthread_mach_thread_np(thread);
+	pthread_detach(thread);
+
+	thread_affinity_policy_data_t policy_data;
+	if (policy.afinity) {
+		int tag = 0;
+		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
+			if ((policy.afinity >> core) & 1) {
+				tag = core / hardware_concurrency + 1;
+				break;
+			}
+		}
+		policy_data.affinity_tag = tag;
+		if (thread_policy_set(mach_thread,
+				THREAD_AFFINITY_POLICY, (thread_policy_t)&policy_data,
+				THREAD_AFFINITY_POLICY_COUNT) != KERN_SUCCESS) {
+			L_WARNING_ONCE("Cannot set thread affinity policy!");
+		}
+	}
+
+	if (policy.priority) {
+		thread_precedence_policy_data_t tppolicy;
+		tppolicy.importance = policy.priority;
+		if (thread_policy_set(mach_thread,
+				THREAD_PRECEDENCE_POLICY, (thread_policy_t)&tppolicy,
+				THREAD_PRECEDENCE_POLICY_COUNT) != KERN_SUCCESS) {
+			L_WARNING_ONCE("Cannot set thread precedence policy!");
+		}
+
+		thread_time_constraint_policy_data_t ttcpolicy;
+		ttcpolicy.period = 100000; // HZ/160
+		ttcpolicy.computation = 10000; // HZ/3300;
+		ttcpolicy.constraint = 50000; // HZ/2200;
+		ttcpolicy.preemptible = 1;
+		if (thread_policy_set(mach_thread,
+				THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&ttcpolicy,
+				THREAD_TIME_CONSTRAINT_POLICY_COUNT) != KERN_SUCCESS) {
+			L_WARNING_ONCE("Cannot set thread time constraint policy!");
+		}
+	}
+
+	thread_resume(mach_thread);
+
+	return thread;
+}
+#else
+
+#include <sched.h>
+
+pthread_t
+run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+{
+	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
+
+	ThreadPolicy policy(thread_policy);
+
+	int errnum;
+	pthread_t thread;
+
+	pthread_attr_t thread_attr;
+	errnum = pthread_attr_init(&thread_attr);
+	if (errnum != 0) {
+		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
+	}
+
+	if (policy.priority) {
+		// [https://docs.oracle.com/cd/E19455-01/806-5257/attrib-16/index.html]
+		sched_param param;
+		if (pthread_attr_getschedparam(&thread_attr, &param) == 0) {
+			param.sched_priority = policy.priority;
+			if (pthread_attr_setschedparam(&thread_attr, &param) != 0) {
+				L_WARNING_ONCE("Cannot set thread priority!");
+			}
+		}
+	}
+
+	if (policy.afinity) {
+		// [https://stackoverflow.com/a/25494651/167522]
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
+			if ((policy.afinity >> core) & 1) {
+				CPU_SET(core / hardware_concurrency, &cpuset);
+			}
+		}
+		if (pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpuset) != 0) {
+			L_WARNING_ONCE("Cannot set thread affinity!");
+		}
+	}
+
+	errnum = pthread_create(&thread, &thread_attr, thread_routine, arg);
+	if (errnum != 0) {
+		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
+	}
+
+	pthread_attr_destroy(&thread_attr);
+
+	pthread_detach(thread);
+
+	return thread;
+}
 #endif
 
 
 ////////////////////////////////////////////////////////////////////////////////
-
-
-void
-set_thread_afinity(uint64_t afinity_map)
-{
-	if (afinity_map) {
-		static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
-
-		cpu_set_t cpuset;
-		CPU_ZERO(&cpuset);
-		for (int core = 0; core < 64; ++core) {
-			if ((afinity_map >> core) & 1) {
-				CPU_SET(core / hardware_concurrency, &cpuset);
-			}
-		}
-		pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-	}
-}
 
 
 void

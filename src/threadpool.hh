@@ -71,12 +71,12 @@ class PackagedTask : public std::packaged_task<Result> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename TaskType, uint64_t Affinity>
+template <typename TaskType, ThreadPolicyType thread_policy>
 class ThreadPool;
 
-template <typename TaskType, uint64_t Affinity>
-class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType, Affinity>, Affinity> {
-	ThreadPool<TaskType, Affinity>* _pool;
+template <typename TaskType, ThreadPolicyType thread_policy>
+class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType, thread_policy>, thread_policy> {
+	ThreadPool<TaskType, thread_policy>* _pool;
 	std::size_t _idx;
 
 public:
@@ -84,7 +84,7 @@ public:
 		_pool(nullptr),
 		_idx(0) {}
 
-	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, Affinity>* pool) noexcept :
+	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, thread_policy>* pool) noexcept :
 		_pool(pool),
 		_idx(idx) {}
 
@@ -160,11 +160,11 @@ struct TaskWrapper<std::unique_ptr<P>> {
 };
 
 
-template <typename TaskType = std::function<void()>, uint64_t Affinity = 0>
+template <typename TaskType = std::function<void()>, ThreadPolicyType thread_policy = ThreadPolicyType::regular>
 class ThreadPool {
-	friend ThreadPoolThread<TaskType, Affinity>;
+	friend ThreadPoolThread<TaskType, thread_policy>;
 
-	std::vector<ThreadPoolThread<TaskType, Affinity>> _threads;
+	std::vector<ThreadPoolThread<TaskType, thread_policy>> _threads;
 	BlockingConcurrentQueue<TaskWrapper<TaskType>> _queue;
 
 	const char* _format;
@@ -186,7 +186,7 @@ public:
 		_running(0),
 		_workers(0) {
 		for (std::size_t idx = 0; idx < num_threads; ++idx) {
-			_threads[idx] = ThreadPoolThread<TaskType, Affinity>(idx, this);
+			_threads[idx] = ThreadPoolThread<TaskType, thread_policy>(idx, this);
 			_threads[idx].start();
 		}
 	}
@@ -311,9 +311,9 @@ public:
 };
 
 
-template <typename TaskType, uint64_t Affinity>
+template <typename TaskType, ThreadPolicyType thread_policy>
 inline void
-ThreadPoolThread<TaskType, Affinity>::operator()()
+ThreadPoolThread<TaskType, thread_policy>::operator()()
 {
 	set_thread_name(string::format(_pool->_format, _idx));
 

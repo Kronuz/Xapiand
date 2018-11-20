@@ -34,13 +34,12 @@
 #include <utility>                          // for pair, make_pair
 #include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
-#include "affinity.h"                       // for cpu_affinity_*
+#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
-#include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
-#include "thread.hh"                        // for Thread
 #include "lru.h"                            // for lru::LRU
-#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
+#include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
+#include "thread.hh"                        // for Thread, ThreadPolicyType::*
 
 
 class MsgPack;
@@ -255,7 +254,7 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 
 class DatabaseWALWriter;
 
-class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, cpu_affinity_wal_writer> {
+class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPolicyType::wal_writer> {
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;

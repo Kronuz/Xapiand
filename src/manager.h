@@ -30,7 +30,6 @@
 #include "string_view.hh"                     // for std::string_view
 #include <vector>                             // for std::vector
 
-#include "affinity.h"                         // for cpu_affinity_*
 #include "base_x.hh"                          // for Base62
 #include "database_pool.h"                    // for DatabasePool
 #include "database_wal.h"                     // for DatabaseWALWriter
@@ -40,6 +39,7 @@
 #include "length.h"                           // for serialise_length
 #include "node.h"                             // for Node, local_node
 #include "schemas_lru.h"                      // for SchemasLRU
+#include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
 #include "worker.h"                           // for Worker
 
@@ -138,11 +138,11 @@ public:
 
 	DatabaseWALWriter wal_writer;
 
-	ThreadPool<std::shared_ptr<HttpClient>, cpu_affinity_binary_clients> http_client_pool;
+	ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients> http_client_pool;
 #ifdef XAPIAND_CLUSTERING
-	ThreadPool<std::shared_ptr<BinaryClient>, cpu_affinity_http_clients> binary_client_pool;
+	ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients> binary_client_pool;
 #endif
-	ThreadPool<std::shared_ptr<XapiandServer>, cpu_affinity_servers> server_pool;
+	ThreadPool<std::shared_ptr<XapiandServer>, ThreadPolicyType::servers> server_pool;
 
 	std::atomic_llong shutdown_asap;
 	std::atomic_llong shutdown_now;
@@ -194,7 +194,7 @@ public:
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication() {
-	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000, cpu_affinity_replication>("R--", "R%02zu", 3, trigger_replication_trigger);
+	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("R--", "R%02zu", 3, trigger_replication_trigger);
 	return trigger_replication;
 }
 #endif
