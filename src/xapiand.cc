@@ -49,6 +49,11 @@
 #include <vector>                   // for vector
 #include <xapian.h>                 // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
+#ifdef HAVE_SYS_CAPABILITY_H
+#include <sys/capability.h>
+#include <sys/prctl.h>
+#endif
+
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
@@ -831,17 +836,27 @@ void adjustOpenFilesLimit() {
 
 
 void demote(const char* username, const char* group) {
-	/* lose root privileges if we have them */
+	// lose root privileges if we have them
 	uid_t uid = getuid();
-	if (uid == 0 || geteuid() == 0) {
+
+	if (
+		uid == 0
+		#ifdef HAVE_SETRESUID
+		// Get full root privileges. Normally being effectively root is enough,
+		// but some security modules restrict actions by processes that are only
+		// effectively root. To make sure we don't hit those problems, we try
+		// to switch to root fully.
+		|| setresuid(0, 0, 0) == 0
+		#endif
+		|| geteuid() == 0
+	) {
 		if (username == nullptr || *username == '\0') {
 			L_CRIT("Can't run as root without the --uid switch");
 			throw Exit(EX_USAGE);
 		}
 
+		// Get the target user:
 		struct passwd *pw;
-		struct group *gr;
-
 		if ((pw = getpwnam(username)) == nullptr) {
 			uid = std::atoi(username);
 			if ((uid == 0u) || (pw = getpwuid(uid)) == nullptr) {
@@ -853,6 +868,8 @@ void demote(const char* username, const char* group) {
 		gid_t gid = pw->pw_gid;
 		username = pw->pw_name;
 
+		// Get the target group:
+		struct group *gr;
 		if ((group != nullptr) && (*group != 0)) {
 			if ((gr = getgrnam(group)) == nullptr) {
 				gid = std::atoi(group);
@@ -870,10 +887,76 @@ void demote(const char* username, const char* group) {
 			}
 			group = gr->gr_name;
 		}
+
+		#ifdef HAVE_SYS_CAPABILITY_H
+		// Create an empty set of capabilities.
+		cap_t capabilities = cap_init();
+
+		// Capabilities have three subsets:
+		//      INHERITABLE:    Capabilities permitted after an execv()
+		//      EFFECTIVE:      Currently effective capabilities
+		//      PERMITTED:      Limiting set for the two above.
+		// See man 7 capabilities for details, Thread Capability Sets.
+		//
+		// We need the following capabilities:
+		//      CAP_SYS_NICE    For nice(2), setpriority(2),
+		//                      sched_setscheduler(2), sched_setparam(2),
+		//                      sched_setaffinity(2), etc.
+		//      CAP_SETUID      For setuid(), setresuid()
+		// in the last two subsets. We do not need to retain any capabilities
+		// over an exec().
+		cap_value_t root_caps[2] = { CAP_SYS_NICE, CAP_SETUID };
+		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET) ||
+			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET)) {
+			L_CRIT("Cannot manipulate capability data structure as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+
+		// Above, we just manipulated the data structure describing the flags,
+		// not the capabilities themselves. So, set those capabilities now.
+		if (cap_set_proc(capabilities)) {
+			L_CRIT("Cannot set capabilities as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+
+		// We wish to retain the capabilities across the identity change,
+		// so we need to tell the kernel.
+		if (prctl(PR_SET_KEEPCAPS, 1L)) {
+			L_CRIT("Cannot keep capabilities after dropping privileges: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+		#endif
+
+		// Drop extra privileges (aside from capabilities) by switching
+		// to the target group and user:
 		if (setgid(gid) < 0 || setuid(uid) < 0) {
 			L_CRIT("Failed to assume identity of %s:%s", username, group);
 			throw Exit(EX_OSERR);
 		}
+
+		#ifdef HAVE_SYS_CAPABILITY_H
+		// We can still switch to a different user due to having the CAP_SETUID
+		// capability. Let's clear the capability set, except for the CAP_SYS_NICE
+		// in the permitted and effective sets.
+		if (cap_clear(capabilities)) {
+			L_CRIT("Cannot clear capability data structure: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+
+		cap_value_t user_caps[1] = { CAP_SYS_NICE };
+		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET) ||
+			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET)) {
+			L_CRIT("Cannot manipulate capability data structure as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+
+		// Apply modified capabilities.
+		if (cap_set_proc(capabilities)) {
+			L_CRIT("Cannot set capabilities as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			throw Exit(EX_OSERR);
+		}
+		#endif
+
 		L_NOTICE("Running as %s:%s", username, group);
 	}
 }
