@@ -308,9 +308,9 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		request.ends = std::chrono::system_clock::now();
 
 		if ((mode & HTTP_CHUNKED_RESPONSE) == 0) {
-			headers += string::format("Response-Time: %lu", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count()) + eol;
+			headers += string::format("Response-Time: %s", string::Number(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9).str()) + eol;
 			if (request.ready >= request.processing) {
-				headers += string::format("Operation-Time: %lu", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count()) + eol;
+				headers += string::format("Operation-Time: %s", string::Number(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9).str()) + eol;
 			}
 		}
 
