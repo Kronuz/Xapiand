@@ -173,7 +173,7 @@ class BaseScheduler : public Thread<BaseScheduler<SchedulerImpl, ScheduledTaskIm
 
 	SchedulerQueue<SchedulerImpl, ScheduledTaskImpl, thread_policy> scheduler_queue;
 
-	const std::string name;
+	std::string _name;
 	std::atomic_int ending;
 
 protected:
@@ -187,17 +187,19 @@ protected:
 	}
 
 public:
-	BaseScheduler(std::string name_) :
+	BaseScheduler(std::string name) :
 		atom_next_wakeup_time(0),
-		name(std::move(name_)),
+		_name(std::move(name)),
 		ending(-1) {
 		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, thread_policy>, thread_policy>::start();
 	}
 
+	const std::string& name() {
+		return _name;
+	}
+
 	void operator()() {
 		L_SCHEDULER("BaseScheduler::" + LIGHT_SKY_BLUE + "STARTED" + CLEAR_COLOR);
-
-		set_thread_name(name);
 
 		std::unique_lock<std::mutex> lk(mtx);
 		auto next_wakeup_time = atom_next_wakeup_time.load();

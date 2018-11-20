@@ -258,19 +258,21 @@ class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPol
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;
-	size_t _idx;
+	std::string _name;
 	BlockingConcurrentQueue<std::function<void(DatabaseWALWriterThread&)>> _queue;
 
 	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
 
 public:
 	DatabaseWALWriterThread() noexcept;
-	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept;
+	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* wal_writer) noexcept;
 	DatabaseWALWriterThread& operator=(DatabaseWALWriterThread&& other);
 
 	void operator()();
 	void clear();
 	DatabaseWAL& wal(const std::string& path);
+
+	const std::string& name() const;
 };
 
 

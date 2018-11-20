@@ -850,15 +850,14 @@ DatabaseWAL::get_current_line(uint32_t end_off)
 //
 
 DatabaseWALWriterThread::DatabaseWALWriterThread() noexcept :
-	_wal_writer(nullptr),
-	_idx(0)
+	_wal_writer(nullptr)
 {
 }
 
 
-DatabaseWALWriterThread::DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* async_wal) noexcept :
-	_wal_writer(async_wal),
-	_idx(idx)
+DatabaseWALWriterThread::DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* wal_writer) noexcept :
+	_wal_writer(wal_writer),
+	_name(string::format(wal_writer->_format, idx))
 {
 }
 
@@ -867,17 +866,22 @@ DatabaseWALWriterThread&
 DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 {
 	_wal_writer = std::move(other._wal_writer);
-	_idx = std::move(other._idx);
+	_name = std::move(other._name);
 	Thread::operator=(static_cast<Thread&&>(other));
 	return *this;
+}
+
+
+const std::string&
+DatabaseWALWriterThread::name() const
+{
+	return _name;
 }
 
 
 void
 DatabaseWALWriterThread::operator()()
 {
-	set_thread_name(string::format(_wal_writer->_format, _idx));
-
 	_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
 		std::function<void(DatabaseWALWriterThread&)> task;

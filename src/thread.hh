@@ -25,7 +25,6 @@
 #include <atomic>                // for std::atomic_bool
 #include <chrono>                // for std::chrono
 #include <future>                // for std::future, std::promise
-#include <pthread.h>             // for pthread_t
 
 using namespace std::chrono_literals;
 
@@ -48,7 +47,8 @@ enum class ThreadPolicyType {
 
 int sched_getcpu();
 
-pthread_t run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy);
+void start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy);
+void setup_thread(const std::string& name, ThreadPolicyType thread_policy);
 
 void set_thread_name(const std::string& name);
 
@@ -69,6 +69,7 @@ class Thread {
 	std::atomic_bool _joined;
 
 	static void* _runner(void* arg) {
+		setup_thread(static_cast<ThreadImpl*>(arg)->name(), thread_policy);
 		try {
 			static_cast<ThreadImpl*>(arg)->operator()();
 			static_cast<Thread*>(arg)->_promise.set_value();
@@ -104,7 +105,7 @@ public:
 
 	void start() {
 		if (!_started.exchange(true)) {
-			run_thread(&Thread::_runner, this, thread_policy);
+			start_thread(&Thread::_runner, this, thread_policy);
 		}
 	}
 

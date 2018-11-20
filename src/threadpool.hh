@@ -35,7 +35,7 @@
 #include "likely.h"              // for likely, unlikely
 #include "log.h"                 // for L_EXC
 #include "string.hh"             // for string::format
-#include "thread.hh"             // for Thread, set_thread_name
+#include "thread.hh"             // for Thread
 
 
 using namespace std::chrono_literals;
@@ -77,18 +77,19 @@ class ThreadPool;
 template <typename TaskType, ThreadPolicyType thread_policy>
 class ThreadPoolThread : public Thread<ThreadPoolThread<TaskType, thread_policy>, thread_policy> {
 	ThreadPool<TaskType, thread_policy>* _pool;
-	std::size_t _idx;
+	std::string _name;
 
 public:
 	ThreadPoolThread() noexcept :
-		_pool(nullptr),
-		_idx(0) {}
+		_pool(nullptr) {}
 
 	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, thread_policy>* pool) noexcept :
 		_pool(pool),
-		_idx(idx) {}
+		_name(string::format(pool->_format, idx)) {}
 
 	void operator()();
+
+	const std::string& name() const;
 };
 
 
@@ -312,11 +313,17 @@ public:
 
 
 template <typename TaskType, ThreadPolicyType thread_policy>
+inline const std::string&
+ThreadPoolThread<TaskType, thread_policy>::name() const
+{
+	return _name;
+}
+
+
+template <typename TaskType, ThreadPolicyType thread_policy>
 inline void
 ThreadPoolThread<TaskType, thread_policy>::operator()()
 {
-	set_thread_name(string::format(_pool->_format, _idx));
-
 	_pool->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_pool->_finished.load(std::memory_order_acquire)) {
 		TaskWrapper<TaskType> task;

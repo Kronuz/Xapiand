@@ -97,6 +97,7 @@ struct ThreadPolicy {
 
 
 #ifdef __APPLE__
+#include <mach/mach_time.h>
 #include <mach/thread_act.h>
 #include <cpuid.h>
 
@@ -113,8 +114,8 @@ sched_getcpu()
 }
 
 
-pthread_t
-run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+void
+start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
 {
 	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
 
@@ -157,11 +158,16 @@ run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_p
 			L_WARNING_ONCE("Cannot set thread precedence policy!");
 		}
 
+		static double clock2abs = []{
+			mach_timebase_info_data_t tbinfo;
+			mach_timebase_info(&tbinfo);
+			return ((double)tbinfo.denom / (double)tbinfo.numer) * 1000000;
+		}();
 		thread_time_constraint_policy_data_t ttcpolicy;
-		ttcpolicy.period = 100000; // HZ/160
-		ttcpolicy.computation = 10000; // HZ/3300;
-		ttcpolicy.constraint = 50000; // HZ/2200;
-		ttcpolicy.preemptible = 1;
+		ttcpolicy.period = 50 * clock2abs;
+		ttcpolicy.computation = 1 * clock2abs;
+		ttcpolicy.constraint = 2 * clock2abs;
+		ttcpolicy.preemptible = TRUE;
 		if (thread_policy_set(mach_thread,
 				THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&ttcpolicy,
 				THREAD_TIME_CONSTRAINT_POLICY_COUNT) != KERN_SUCCESS) {
@@ -177,8 +183,8 @@ run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_p
 
 #include <sched.h>
 
-pthread_t
-run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+void
+start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
 {
 	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
 
@@ -226,10 +232,15 @@ run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_p
 	pthread_attr_destroy(&thread_attr);
 
 	pthread_detach(thread);
-
-	return thread;
 }
 #endif
+
+
+void
+setup_thread(const std::string& name, ThreadPolicyType thread_policy)
+{
+	set_thread_name(name);
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
