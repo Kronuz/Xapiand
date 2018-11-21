@@ -51,6 +51,7 @@ constexpr int RECOVER_REMOVE_DATABASE         = 0x02; // Remove endpoint from da
 constexpr int RECOVER_REMOVE_ALL              = 0x04; // Remove endpoint from writable database and database
 constexpr int RECOVER_DECREMENT_COUNT         = 0x08; // Decrement count queue
 
+constexpr double DB_TIMEOUT = 60.0;
 
 struct DatabaseCount {
 	size_t count;
@@ -180,10 +181,10 @@ class DatabasePool {
 	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
-	void lock(const std::shared_ptr<Database>& database, double timeout = -1);
+	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
 
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout = -1);
+	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
 	void checkin(std::shared_ptr<Database>& database);
 
 	template <typename Func>
