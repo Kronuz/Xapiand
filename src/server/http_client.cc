@@ -578,8 +578,10 @@ HttpClient::on_message_begin(http_parser* parser)
 
 	waiting = true;
 	new_request.begins = std::chrono::system_clock::now();
-	new_request.log->clear();
-	new_request.log = L_DELAYED(true, 10s, LOG_INFO, PURPLE, "Request taking too long...").release();
+	if (new_request.log) {
+		new_request.log->clear();
+	}
+	new_request.log = L_DELAYED(true, 10s, LOG_DEBUG, PURPLE, "Request taking too long...").release();
 
 	return 0;
 }
@@ -885,8 +887,10 @@ HttpClient::process(Request& request, Response& response)
 	L_OBJ_BEGIN("HttpClient::process:BEGIN");
 	L_OBJ_END("HttpClient::process:END");
 
-	request.log->clear();
-	request.log = L_DELAYED(true, 1s, LOG_INFO, PURPLE, "Response taking too long: %s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&request.parser)), request.path, request.parser.http_major, request.parser.http_minor).release();
+	if (request.log) {
+		request.log->clear();
+	}
+	request.log = L_DELAYED(true, 1s, LOG_DEBUG, PURPLE, "Response taking too long: %s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&request.parser)), request.path, request.parser.http_major, request.parser.http_minor).release();
 
 	request.received = std::chrono::system_clock::now();
 
@@ -2817,7 +2821,10 @@ HttpClient::clean_http_request(Request& request, Response& response)
 	request.ends = std::chrono::system_clock::now();
 	waiting = false;
 
-	request.log->clear();
+	if (request.log) {
+		request.log->clear();
+		request.log.reset();
+	}
 	if (request.parser.http_errno != 0u) {
 		L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
 	} else {
@@ -3165,7 +3172,7 @@ Request::Request(HttpClient* client)
 	: indented{-1},
 	  expect_100{false},
 	  closing{false},
-	  log{L_DELAYED(true, 300s, LOG_INFO, PURPLE, "Client idle for too long...").release()},
+	  log{L_DELAYED(true, 300s, LOG_DEBUG, PURPLE, "Client idle for too long...").release()},
 	  begins{std::chrono::system_clock::now()}
 {
 	parser.data = client;
