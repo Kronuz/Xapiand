@@ -111,7 +111,9 @@ public:
 	// memory:
 	prometheus::Gauge& xapiand_resident_memory_bytes;
 	prometheus::Gauge& xapiand_virtual_memory_bytes;
-	prometheus::Gauge& xapiand_used_memory_bytes;
+#ifdef XAPIAND_TRACKED_MEM
+	prometheus::Gauge& xapiand_tracked_memory_bytes;
+#endif
 	prometheus::Gauge& xapiand_total_memory_system_bytes;
 	prometheus::Gauge& xapiand_total_virtual_memory_used;
 	prometheus::Gauge& xapiand_total_disk_bytes;

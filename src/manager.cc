@@ -1102,7 +1102,9 @@ XapiandManager::server_metrics()
 	// memory:
 	metrics.xapiand_resident_memory_bytes.Set(get_current_memory_by_process());
 	metrics.xapiand_virtual_memory_bytes.Set(get_current_memory_by_process(false));
-	metrics.xapiand_used_memory_bytes.Set(allocator::total_allocated());
+#ifdef XAPIAND_TRACKED_MEM
+	metrics.xapiand_tracked_memory_bytes.Set(allocator::total_allocated());
+#endif
 	metrics.xapiand_total_memory_system_bytes.Set(get_total_ram());
 	metrics.xapiand_total_virtual_memory_used.Set(get_total_virtual_memory());
 	metrics.xapiand_total_disk_bytes.Set(get_total_disk_size());

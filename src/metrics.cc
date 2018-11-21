@@ -339,13 +339,15 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_used_memory_bytes{
+#ifdef XAPIAND_TRACKED_MEM
+	xapiand_tracked_memory_bytes{
 		registry.AddGauge(
-			"xapiand_used_memory_bytes",
+			"xapiand_tracked_memory_bytes",
 			"Total memory currently allocated",
 			constant_labels)
 		.Add({})
 	},
+#endif
 	xapiand_total_memory_system_bytes{
 		registry.AddGauge(
 			"xapiand_total_memory_system_bytes",
