@@ -766,6 +766,8 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 				db_updater().debounce(base_path, base_path);
 			}
 		}
+#else
+	ignore_unused(send_update);
 #endif
 
 	} catch (const StorageException& exc) {
