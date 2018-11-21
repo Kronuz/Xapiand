@@ -785,7 +785,6 @@ HttpClient::on_headers_complete(http_parser* parser)
 	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	new_request.head = string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(parser)), new_request.path, parser->http_major, parser->http_minor);
 	if (new_request.expect_100) {
 		// Return 100 if client is expecting it
 		Response response;
@@ -881,7 +880,7 @@ HttpClient::process(Request& request, Response& response)
 	if (request.log) {
 		request.log->clear();
 	}
-	request.log = L_DELAYED(true, 1s, LOG_DEBUG, PURPLE, "Response taking too long: %s", request.head).release();
+	request.log = L_DELAYED(true, 1s, LOG_DEBUG, PURPLE, "Response taking too long: %s", request.head()).release();
 
 	request.received = std::chrono::system_clock::now();
 
@@ -2851,7 +2850,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 			})
 			.Observe(took / 1e9);
 
-		L(priority, NO_COLOR, fmt, request.head, (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
+		L(priority, NO_COLOR, fmt, request.head(), (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
 	}
 
 	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
@@ -3232,6 +3231,13 @@ Request::_decode()
 
 
 std::string
+Request::head()
+{
+	return string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&parser)), path, parser.http_major, parser.http_minor);
+}
+
+
+std::string
 Request::to_text(bool decode)
 {
 	static constexpr auto no_col = NO_COLOR;
@@ -3334,7 +3340,7 @@ Request::to_text(bool decode)
 			break;
 	};
 
-	auto request_text = request_head_color + head + "\n" + request_headers_color + headers + request_body_color;
+	auto request_text = request_head_color + head() + "\n" + request_headers_color + headers + request_body_color;
 	if (!raw.empty()) {
 		if (!decode) {
 			if (raw.size() > 1024 * 10) {

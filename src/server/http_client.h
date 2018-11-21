@@ -212,7 +212,6 @@ public:
 	std::string path;
 	struct http_parser parser;
 
-	std::string head;
 	std::string headers;
 	std::string body;
 
@@ -248,6 +247,8 @@ public:
 		_decode();
 		return _decoded_body;
 	}
+
+	std::string head();
 
 	std::string to_text(bool decode);
 };
