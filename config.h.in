@@ -126,17 +126,20 @@
 #cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
 
 
-/* 3-arg pthread_getname_np */
+/* Define to 1 if you have 3-arg `pthread_getname_np' */
 #cmakedefine HAVE_PTHREAD_GETNAME_NP @HAVE_PTHREAD_GETNAME_NP@
 
-/* 1-arg and 3-arg pthread_get_name_np */
+/* Define to 1 if you have 1-arg and 3-arg `pthread_get_name_np' */
 #cmakedefine HAVE_PTHREAD_GET_NAME_NP @HAVE_PTHREAD_GET_NAME_NP@
 
-/* 1-arg, 2-arg and 3-arg pthread_setname_np */
+/* Define to 1 if you have 1-arg, 2-arg and 3-arg `pthread_setname_np' */
 #cmakedefine HAVE_PTHREAD_SETNAME_NP @HAVE_PTHREAD_SETNAME_NP@
 
-/* 2-arg pthread_set_name_np */
+/* Define to 1 if you have 2-arg `pthread_set_name_np' */
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP @HAVE_PTHREAD_SET_NAME_NP@
+
+/* Define to 1 if you have `pthread_attr_setaffinity_np' */
+#cmakedefine HAVE_PTHREAD_ATTR_SETAFFINITY_NP @HAVE_PTHREAD_ATTR_SETAFFINITY_NP@
 
 
 /* Define to 1 if you have the `epoll_ctl' function. */

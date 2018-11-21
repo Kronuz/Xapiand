@@ -152,13 +152,13 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 	}
 
 	errnum = pthread_create_suspended_np(&thread, &thread_attr, thread_routine, arg);
+	pthread_attr_destroy(&thread_attr);
 	if (errnum != 0) {
 		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
 	}
 
 	mach_port_t mach_thread = pthread_mach_thread_np(thread);
 
-	pthread_attr_destroy(&thread_attr);
 
 	pthread_detach(thread);
 
@@ -215,8 +215,8 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 		}
 	}
 
+#ifdef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
 	if (policy.afinity) {
-		// [https://stackoverflow.com/a/25494651/167522]
 		cpu_set_t cpuset;
 		CPU_ZERO(&cpuset);
 		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
@@ -224,21 +224,32 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 				CPU_SET(core / hardware_concurrency, &cpuset);
 			}
 		}
-#if defined (HAVE_PTHREAD_ATTR_SETAFFINITY_NP) && defined(__linux__)
 		if (pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpuset) != 0) {
-#elif defined(__linux__)
-		if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
-#endif
 			L_WARNING_ONCE("Cannot set thread affinity!");
 		}
 	}
+#endif
 
 	errnum = pthread_create(&thread, &thread_attr, thread_routine, arg);
+	pthread_attr_destroy(&thread_attr);
 	if (errnum != 0) {
 		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
 	}
 
-	pthread_attr_destroy(&thread_attr);
+#ifndef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
+	if (policy.afinity) {
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
+			if ((policy.afinity >> core) & 1) {
+				CPU_SET(core / hardware_concurrency, &cpuset);
+			}
+		}
+		if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+			L_WARNING_ONCE("Cannot set thread affinity!");
+		}
+	}
+#endif
 
 	pthread_detach(thread);
 }
