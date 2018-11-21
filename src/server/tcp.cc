@@ -92,9 +92,15 @@ TCP::bind(int tries)
 	}
 
 	if ((flags & TCP_SO_REUSEPORT) != 0) {
+#ifdef SO_REUSEPORT_LB
+		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		}
+#else
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		}
+#endif
 	}
 
 #ifdef SO_NOSIGPIPE

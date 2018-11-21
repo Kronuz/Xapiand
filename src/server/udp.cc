@@ -89,9 +89,15 @@ UDP::bind(int tries, const std::string& group)
 	}
 
 	if ((flags & UDP_SO_REUSEPORT) != 0) {
+#ifdef SO_REUSEPORT_LB
+		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		}
+#else
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		}
+#endif
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
