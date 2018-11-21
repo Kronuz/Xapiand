@@ -834,17 +834,19 @@ HttpClient::on_message_complete(http_parser* parser)
 			}
 			new_request.accept_set.emplace(1, 1.0, any_type, 0);
 		}
-		std::lock_guard<std::mutex> lk(runner_mutex);
 		L_HTTP_PROTO("New request added:\n%s", string::indent(new_request.to_text(false), ' ', 8));
-		if (!running) {
-			// Enqueue request...
-			requests.push_back(std::move(new_request));
-			// And start a runner.
-			running = true;
-			XapiandManager::manager->http_client_pool.enqueue(share_this<HttpClient>());
-		} else {
-			// There should be a runner, just enqueue request.
-			requests.push_back(std::move(new_request));
+		{
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (!running) {
+				// Enqueue request...
+				requests.push_back(std::move(new_request));
+				// And start a runner.
+				running = true;
+				XapiandManager::manager->http_client_pool.enqueue(share_this<HttpClient>());
+			} else {
+				// There should be a runner, just enqueue request.
+				requests.push_back(std::move(new_request));
+			}
 		}
 		new_request = Request(this);
 	}
