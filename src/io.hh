@@ -28,6 +28,7 @@
 #include <errno.h>               // for errno, EINTR
 #include <fcntl.h>               // for fchmod, open, O_RDONLY
 #include <stddef.h>              // for size_t
+#include <stdlib.h>              // for mkdtemp
 #include <sys/stat.h>            // for fstat
 #include <sys/socket.h>          // for send
 #include <unistd.h>              // for off_t, ssize_t, close, lseek, unlink
