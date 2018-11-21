@@ -560,6 +560,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 	}
 
+	if (database->log) {
+		database->log->clear();
+	}
+	database->log = L_DELAYED(true, 200ms, LOG_DEBUG, PURPLE, "%s %s checked out for too long...", db_writable ? "WritableDatabase" : "Database", repr(endpoints.to_string())).release();
 	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "RO", repr(endpoints.to_string()), database->reopen_revision);
 }
 
@@ -575,6 +579,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	if (database->log) {
+		database->log->clear();
+		database->log.reset();
+	}
 
 	Database::autocommit(database);
 

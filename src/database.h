@@ -38,6 +38,7 @@
 #include "endpoint.h"             // for Endpoints, Endpoint
 
 
+class Logging;
 class DatabaseWAL;
 class DatabaseQueue;
 class MsgPack;
@@ -102,6 +103,8 @@ public:
 #ifdef XAPIAND_DATABASE_WAL
 	std::unique_ptr<ProducerToken> producer_token;
 #endif
+
+	std::shared_ptr<Logging> log;
 
 	Database(std::shared_ptr<DatabaseQueue>& queue_);
 	~Database();

@@ -244,6 +244,10 @@ Database::~Database()
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
 	}
+
+	if (log) {
+		log->clear();
+	}
 }
 
 
