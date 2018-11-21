@@ -76,7 +76,7 @@ namespace queue {
 						return false;
 					}
 				} else {
-					_state->_push_cond.wait(lk, push_wait_pred);
+					while (!_state->_push_cond.wait_for(lk, 1s, push_wait_pred)) {}
 				}
 			} else {
 				if (!push_wait_pred()) {
@@ -103,7 +103,7 @@ namespace queue {
 						return false;
 					}
 				} else {
-					_state->_pop_cond.wait(lk, pop_wait_pred);
+					while (!_state->_pop_cond.wait_for(lk, 1s, pop_wait_pred)) {}
 				}
 			} else {
 				if (!pop_wait_pred()) {
