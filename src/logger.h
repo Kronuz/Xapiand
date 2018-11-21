@@ -124,8 +124,8 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 		const char* function,
 		const char* filename,
 		int line,
-		const std::string& str,
-		std::exception_ptr eptr,
+		std::string&& str,
+		std::exception_ptr&& eptr,
 		bool clears,
 		bool async,
 		bool info,
@@ -148,8 +148,8 @@ public:
 		const char *function,
 		const char *filename,
 		int line,
-		std::string str,
-		std::exception_ptr eptr,
+		std::string&& str,
+		std::exception_ptr&& eptr,
 		bool clears,
 		bool async,
 		bool info,
@@ -182,7 +182,7 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 	template <typename... Args>
 	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {

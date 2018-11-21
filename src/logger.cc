@@ -144,9 +144,9 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
-	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, eptr, function, filename, line, format, args);
+	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, args);
 }
 
 
@@ -287,8 +287,8 @@ Logging::Logging(
 	const char *function,
 	const char *filename,
 	int line,
-	std::string  str,
-	std::exception_ptr eptr,
+	std::string&& str,
+	std::exception_ptr&& eptr,
 	bool clears,
 	bool async,
 	bool info,
@@ -305,7 +305,7 @@ Logging::Logging(
 	stack_level(0),
 	clears(clears),
 	str(std::move(str)),
-	eptr(eptr),
+	eptr(std::move(eptr)),
 	async(async),
 	info(info),
 	stacked(stacked),
@@ -373,8 +373,8 @@ Logging::clean()
 				unlog_function,
 				unlog_filename,
 				unlog_line,
-				unlog_str,
-				nullptr,
+				std::move(unlog_str),
+				std::exception_ptr{},
 				false,
 				async,
 				info,
@@ -714,14 +714,14 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
 		L_DEBUG_TRY {
 			str = fmt::vsprintf(format, args);
 		} L_DEBUG_RETHROW("Cannot format %s", repr(format));
-		return add(wakeup, function, filename, line, str, eptr, clears, async, info, stacked, once, priority);
+		return add(wakeup, function, filename, line, std::move(str), std::move(eptr), clears, async, info, stacked, once, priority);
 	}
 	return Log();
 }
@@ -733,8 +733,8 @@ Logging::add(
 	const char* function,
 	const char* filename,
 	int line,
-	const std::string& str,
-	std::exception_ptr eptr,
+	std::string&& str,
+	std::exception_ptr&& eptr,
 	bool clears,
 	bool async,
 	bool info,
@@ -747,8 +747,8 @@ Logging::add(
 		function,
 		filename,
 		line,
-		str,
-		eptr,
+		std::move(str),
+		std::move(eptr),
 		clears,
 		async,
 		info,
