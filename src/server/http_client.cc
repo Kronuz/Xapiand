@@ -663,9 +663,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 			static AcceptLRU accept_sets;
 			auto value = string::lower(new_request._header_value);
 			auto lookup = accept_sets.lookup(value);
-			if (lookup.first) {
-				new_request.accept_set = std::move(lookup.second);
-			} else {
+			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
 				std::sregex_iterator end;
 				int i = 0;
@@ -686,12 +684,13 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 							++next_param;
 						}
 					}
-					new_request.accept_set.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
+					lookup.second.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
 					++next;
 					++i;
 				}
-				accept_sets.emplace(value, new_request.accept_set);
+				accept_sets.emplace(value, std::move(lookup.second));
 			}
+			new_request.accept_set = std::move(lookup.second);
 			break;
 		}
 
@@ -699,9 +698,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 			static AcceptEncodingLRU accept_encoding_sets;
 			auto value = string::lower(new_request._header_value);
 			auto lookup = accept_encoding_sets.lookup(value);
-			if (lookup.first) {
-				new_request.accept_encoding_set = std::move(lookup.second);
-			} else {
+			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
 				std::sregex_iterator end;
 				int i = 0;
@@ -718,12 +715,13 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 						}
 					} else {
 					}
-					new_request.accept_encoding_set.emplace(i, q, next->str(1));
+					lookup.second.emplace(i, q, next->str(1));
 					++next;
 					++i;
 				}
-				accept_encoding_sets.emplace(value, new_request.accept_encoding_set);
+				accept_encoding_sets.emplace(value, std::move(lookup.second));
 			}
+			new_request.accept_encoding_set = std::move(lookup.second);
 			break;
 		}
 
