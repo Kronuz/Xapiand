@@ -205,7 +205,6 @@ class Request {
 
 public:
 	std::string _header_name;
-	std::string _header_value;
 
 	accept_set_t accept_set;
 	accept_encoding_set_t accept_encoding_set;

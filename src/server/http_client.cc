@@ -621,7 +621,7 @@ HttpClient::on_header_field(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_header_field {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request._header_name.append(at, length);
+	new_request._header_name = std::string(at, length);
 
 	return 0;
 }
@@ -634,9 +634,12 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_header_value {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request._header_value.append(at, length);
+	auto _header_value = std::string_view(at, length);
 	if (Logging::log_level > LOG_DEBUG) {
-		new_request.headers += new_request._header_name + ": " + new_request._header_value + eol;
+		new_request.headers.append(new_request._header_name);
+		new_request.headers.append(": ");
+		new_request.headers.append(_header_value);
+		new_request.headers.append(eol);
 	}
 
 	constexpr static auto _ = phf::make_phf({
@@ -657,11 +660,11 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 			break;
 
 		case _.fhhl("content-type"):
-			new_request.ct_type = ct_type_t(new_request._header_value);
+			new_request.ct_type = ct_type_t(_header_value);
 			break;
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;
-			auto value = string::lower(new_request._header_value);
+			auto value = string::lower(_header_value);
 			auto lookup = accept_sets.lookup(value);
 			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
@@ -696,7 +699,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 
 		case _.fhhl("accept-encoding"): {
 			static AcceptEncodingLRU accept_encoding_sets;
-			auto value = string::lower(new_request._header_value);
+			auto value = string::lower(_header_value);
 			auto lookup = accept_encoding_sets.lookup(value);
 			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
@@ -741,7 +744,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 				hhl("POST"),
 			});
 
-			switch (__.fhhl(new_request._header_value)) {
+			switch (__.fhhl(_header_value)) {
 				case __.fhhl("PUT"):
 					parser->method = HTTP_PUT;
 					break;
@@ -770,10 +773,6 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 			break;
 		}
 	}
-
-	// header used, expect next header
-	new_request._header_name.clear();
-	new_request._header_value.clear();
 
 	return 0;
 }
