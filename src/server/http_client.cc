@@ -662,9 +662,10 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;
 			auto value = string::lower(new_request._header_value);
-			try {
-				new_request.accept_set = accept_sets.at(value);
-			} catch (const std::out_of_range&) {
+			auto lookup = accept_sets.lookup(value);
+			if (lookup.first) {
+				new_request.accept_set = std::move(lookup.second);
+			} else {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
 				std::sregex_iterator end;
 				int i = 0;
@@ -697,9 +698,10 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 		case _.fhhl("accept-encoding"): {
 			static AcceptEncodingLRU accept_encoding_sets;
 			auto value = string::lower(new_request._header_value);
-			try {
-				new_request.accept_encoding_set = accept_encoding_sets.at(value);
-			} catch (const std::out_of_range&) {
+			auto lookup = accept_encoding_sets.lookup(value);
+			if (lookup.first) {
+				new_request.accept_encoding_set = std::move(lookup.second);
+			} else {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
 				std::sregex_iterator end;
 				int i = 0;

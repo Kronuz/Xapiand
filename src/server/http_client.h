@@ -73,9 +73,13 @@ public:
 	AcceptLRU()
 		: LRU<std::string, accept_set_t>(100) { }
 
-	auto at(std::string key) {
+	std::pair<bool, accept_set_t> lookup(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::at(key);
+		auto it = LRU::find(key);
+		if (it == LRU::end()) {
+			return std::make_pair(false, accept_set_t{});
+		}
+		return std::make_pair(true, it->second);
 	}
 
 	auto emplace(std::string key, accept_set_t set) {
@@ -93,22 +97,26 @@ struct AcceptEncoding {
 
 	AcceptEncoding(int position, double priority, std::string encoding) : position(position), priority(priority), encoding(encoding) { }
 };
-using accept_encoding_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
+using accept_encoding_set_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
 
 
-class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_t> {
+class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_set_t> {
 	std::mutex qmtx;
 
 public:
 	AcceptEncodingLRU()
-	: LRU<std::string, accept_encoding_t>(100) { }
+	: LRU<std::string, accept_encoding_set_t>(100) { }
 
-	auto at(std::string key) {
+	std::pair<bool, accept_encoding_set_t> lookup(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::at(key);
+		auto it = LRU::find(key);
+		if (it == LRU::end()) {
+			return std::make_pair(false, accept_encoding_set_t{});
+		}
+		return std::make_pair(true, it->second);
 	}
 
-	auto emplace(std::string key, accept_encoding_t set) {
+	auto emplace(std::string key, accept_encoding_set_t set) {
 		std::lock_guard<std::mutex> lk(qmtx);
 		return LRU::emplace(key, set);
 	}
@@ -181,7 +189,9 @@ public:
 
 	Response();
 
+	Response(const Response&) = delete;
 	Response(Response&&) = default;
+	Response& operator=(const Response&) = delete;
 	Response& operator=(Response&&) = default;
 
 	std::string to_text(bool decode);
@@ -198,7 +208,7 @@ public:
 	std::string _header_value;
 
 	accept_set_t accept_set;
-	accept_encoding_t accept_encoding_set;
+	accept_encoding_set_t accept_encoding_set;
 
 	std::string path;
 	struct http_parser parser;
@@ -230,7 +240,9 @@ public:
 	Request(class HttpClient* client);
 	~Request();
 
+	Request(const Request&) = delete;
 	Request(Request&&) = default;
+	Request& operator=(const Request&) = delete;
 	Request& operator=(Request&&) = default;
 
 	const MsgPack& decoded_body() {
