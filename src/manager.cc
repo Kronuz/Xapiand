@@ -349,6 +349,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			if (!opts.solo) {
 				raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
 			}
+			#else
+				ignore_unused(did);
 			#endif
 		} catch (const CheckoutError&) {
 			L_CRIT("Cannot generate cluster database");
@@ -1012,6 +1014,8 @@ XapiandManager::resolve_index_nodes(std::string_view path)
 		}
 	}
 	else
+#else
+	ignore_unused(path);
 #endif
 	{
 		nodes.push_back(Node::local_node());
