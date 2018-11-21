@@ -1524,7 +1524,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 		(void)schema_begins;
 		(void)schema_ends;
 		if (updated) {
-			L_INFO("Schema for %s %s", repr(endpoints.to_string()), created ? "created" : "updated");
+			L_DEBUG("Schema for %s %s", repr(endpoints.to_string()), created ? "created" : "updated");
 			// Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 		} else {
 			// Stats::add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
