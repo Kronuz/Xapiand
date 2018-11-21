@@ -640,11 +640,9 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 	}
 
 	constexpr static auto _ = phf::make_phf({
-		hhl("host"),
 		hhl("expect"),
 		hhl("100-continue"),
 		hhl("content-type"),
-		hhl("content-length"),
 		hhl("accept"),
 		hhl("accept-encoding"),
 		hhl("http-method-override"),
@@ -652,9 +650,6 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 	});
 
 	switch (_.fhhl(new_request._header_name)) {
-		case _.fhhl("host"):
-			new_request.host = new_request._header_value;
-			break;
 		case _.fhhl("expect"):
 		case _.fhhl("100-continue"):
 			// Respond with HTTP/1.1 100 Continue
@@ -663,9 +658,6 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 
 		case _.fhhl("content-type"):
 			new_request.ct_type = ct_type_t(new_request._header_value);
-			break;
-		case _.fhhl("content-length"):
-			new_request.content_length = new_request._header_value;
 			break;
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;

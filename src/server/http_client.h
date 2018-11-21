@@ -207,13 +207,10 @@ public:
 	std::string raw;
 
 	ct_type_t ct_type;
-	std::string content_length;
 
 	int indented;
 	bool expect_100;
 	bool closing;
-
-	std::string host;
 
 	PathParser path_parser;
 	QueryParser query_parser;
