@@ -316,15 +316,15 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 void
 BaseClient::io_cb_write(ev::io &watcher, int revents)
 {
-	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 	L_EV_END("BaseClient::io_cb_write:END");
 
-	ASSERT(sock == watcher.fd);
+	ASSERT(sock == -1 || sock == watcher.fd);
 	ignore_unused(watcher);
 
-	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if (closed) {
 		detach();
@@ -332,7 +332,7 @@ BaseClient::io_cb_write(ev::io &watcher, int revents)
 	}
 
 	if ((revents & EV_ERROR) != 0) {
-		L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		detach();
 		return;
 	}

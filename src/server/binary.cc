@@ -33,11 +33,16 @@
 #include "remote_protocol.h"                  // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
 	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "Binary", TCP_TCP_NODELAY)
 {
-	find(port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1);
-
+	bind(port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1);
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);
 	node_copy->binary_port = port;
@@ -56,6 +61,8 @@ Binary::getDescription() const
 void
 Binary::add_server(const std::shared_ptr<BinaryServer>& server)
 {
+	L_CALL("Binary::add_server(<server>)");
+
 	std::lock_guard<std::mutex> lk(bsmtx);
 	servers_weak.push_back(server);
 }
@@ -64,6 +71,8 @@ Binary::add_server(const std::shared_ptr<BinaryServer>& server)
 void
 Binary::start()
 {
+	L_CALL("Binary::start()");
+
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = it->lock();
@@ -80,6 +89,8 @@ Binary::start()
 void
 Binary::process_tasks()
 {
+	L_CALL("Binary::process_tasks()");
+
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = it->lock();
@@ -96,6 +107,8 @@ Binary::process_tasks()
 void
 Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
 {
+	L_CALL("Binary::trigger_replication(<src_endpoint>, <dst_endpoint>, <cluster_database>)");
+
 	tasks.enqueue([
 		src_endpoint,
 		dst_endpoint,

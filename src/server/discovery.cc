@@ -154,22 +154,22 @@ Discovery::send_message(Message type, const std::string& message)
 void
 Discovery::io_accept_cb(ev::io &watcher, int revents)
 {
-	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(watcher);
-	ASSERT(sock == watcher.fd);
+	ASSERT(sock == -1 || sock == watcher.fd);
 
 	if (closed) {
 		return;
 	}
 
-	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid discovery event {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid discovery event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

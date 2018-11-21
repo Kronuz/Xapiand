@@ -155,15 +155,15 @@ protected:
 
 	// Receive message from client socket
 	void io_cb_read(ev::io &watcher, int revents) {
-		L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+		L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 		L_EV_END("BaseClient::io_cb_read:END");
 
-		ASSERT(sock == watcher.fd);
+		ASSERT(sock == -1 || sock == watcher.fd);
 		ignore_unused(watcher);
 
-		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 		if (closed) {
 			detach();
@@ -171,28 +171,28 @@ protected:
 		}
 
 		if ((revents & EV_ERROR) != 0) {
-			L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 			detach();
 			return;
 		}
 
 		char read_buffer[BUF_SIZE];
-		ssize_t received = io::read(sock, read_buffer, BUF_SIZE);
+		ssize_t received = io::read(watcher.fd, read_buffer, BUF_SIZE);
 
 		if (received < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("Ignored error: {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_CONN("Ignored error: {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 				return;
 			}
 
 			if (errno == ECONNRESET) {
-				L_CONN("Received ECONNRESET {sock:%d}!", sock);
+				L_CONN("Received ECONNRESET {sock:%d}!", watcher.fd);
 				on_read(nullptr, received);
 				detach();
 				return;
 			}
 
-			L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", watcher.fd, error::name(errno), errno, error::description(errno));
 			on_read(nullptr, received);
 			detach();
 			return;
@@ -200,7 +200,7 @@ protected:
 
 		if (received == 0) {
 			// The peer has closed its half side of the connection.
-			L_CONN("Received EOF {sock:%d}!", sock);
+			L_CONN("Received EOF {sock:%d}!", watcher.fd);
 			on_read(nullptr, received);
 			detach();
 			return;
@@ -210,7 +210,7 @@ protected:
 		const char* buf_end = read_buffer + received;
 
 		total_received_bytes += received;
-		L_TCP_WIRE("{sock:%d} -->> %s (%zu bytes)", sock, repr(buf_data, received, true, true, 500), received);
+		L_TCP_WIRE("{sock:%d} -->> %s (%zu bytes)", watcher.fd, repr(buf_data, received, true, true, 500), received);
 
 		do {
 			if ((received > 0) && mode == MODE::READ_BUF) {
@@ -219,7 +219,7 @@ protected:
 			}
 
 			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
-				L_CONN("Receiving file {sock:%d}...", sock);
+				L_CONN("Receiving file {sock:%d}...", watcher.fd);
 				decompressor = std::make_unique<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>>(static_cast<MetaBaseClient<ClientImpl>&>(*this));
 				file_size_buffer.clear();
 				receive_checksum = false;

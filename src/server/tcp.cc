@@ -44,6 +44,12 @@
 #include "manager.h"                // for sig_exit
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 TCP::TCP(int port, const char* description, int flags)
 	: port(port),
 	  sock(-1),
@@ -62,10 +68,19 @@ TCP::~TCP()
 
 
 bool
-TCP::close() {
+TCP::close(bool close) {
+	L_CALL("TCP::close(%s)", close ? "true" : "false");
+
 	bool was_closed = closed.exchange(true);
 	if (!was_closed && sock != -1) {
-		io::shutdown(sock, SHUT_RDWR);
+		if (close) {
+			// Dangerously close socket!
+			// (make sure no threads are using the file descriptor)
+			io::close(sock);
+			sock = -1;
+		} else {
+			io::shutdown(sock, SHUT_RDWR);
+		}
 	}
 	return was_closed;
 }
@@ -74,6 +89,8 @@ TCP::close() {
 void
 TCP::bind(int tries)
 {
+	L_CALL("TCP::bind(%d)", tries);
+
 	if (!closed.exchange(false)) {
 		return;
 	}
@@ -170,20 +187,11 @@ TCP::bind(int tries)
 }
 
 
-void
-TCP::find(int tries)
-{
-	bind(tries);
-	if (!close() && sock != -1) {
-		io::close(sock);
-		sock = -1;
-	}
-}
-
-
 int
 TCP::accept()
 {
+	L_CALL("TCP::accept() {sock=%d}", sock);
+
 	int client_sock;
 
 	int optval = 1;
@@ -277,6 +285,8 @@ TCP::_check_backlog(int tcp_backlog)
 int
 TCP::connect(int sock_, const std::string& hostname, const std::string& servname)
 {
+	L_CALL("TCP::connect(%d, %s, servname)", sock_, hostname, servname);
+
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET;
@@ -313,6 +323,8 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 int
 TCP::socket()
 {
+	L_CALL("TCP::socket()");
+
 	int sock_;
 	int optval = 1;
 

@@ -30,10 +30,16 @@
 #include "node.h"                             // for Node::local_node
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
 	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
 {
-	find(port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1);
+	bind(port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1);
 
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);
@@ -52,6 +58,8 @@ Http::getDescription() const
 void
 Http::add_server(const std::shared_ptr<HttpServer>& server)
 {
+	L_CALL("Http::add_server(<server>)");
+
 	std::lock_guard<std::mutex> lk(bsmtx);
 	servers_weak.push_back(server);
 }
@@ -60,6 +68,8 @@ Http::add_server(const std::shared_ptr<HttpServer>& server)
 void
 Http::start()
 {
+	L_CALL("Http::start()");
+
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = it->lock();

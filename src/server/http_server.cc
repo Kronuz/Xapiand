@@ -38,6 +38,12 @@
 #include "worker.h"                         // for Worker
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http)
 	: BaseServer<HttpServer>(parent_, ev_loop_, ev_flags_, http->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
 	  http(http)
@@ -58,40 +64,57 @@ HttpServer::start_impl()
 
 	Worker::start_impl();
 
-	http->close();
+#if defined(__linux) || defined(__linux__) || defined(linux) || defined(SO_REUSEPORT_LB)
+	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
+	// of the incoming clients. It's not the case in other systems; FreeBSD is
+	// adding SO_REUSEPORT_LB for that.
+	http->close(true);
 	bind(1);
-
 	io.start(sock, ev::READ);
 	L_EV("Start http's server accept event (sock=%d)", sock);
+#else
+	io.start(http->sock, ev::READ);
+	L_EV("Start http's server accept event (sock=%d)", http->sock);
+#endif
+}
+
+
+int
+HttpServer::accept()
+{
+	L_CALL("HttpServer::accept()");
+
+	if (sock != -1) {
+		// If using SO_REUSEPORT for load balancing, this->sock
+		// will be opened and binary->sock will not.
+		return TCP::accept();
+	}
+	return http->accept();
 }
 
 
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), sock);
+	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 	L_EV_END("HttpServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
-	ASSERT(sock == watcher.fd);
+	ASSERT(sock == -1 || sock == watcher.fd);
 
-	if (closed) {
-		return;
-	}
-
-	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), sock);
+	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid http event {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid http event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
 	int client_sock = accept();
 	if (client_sock == -1) {
 		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept http error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: accept http error {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);

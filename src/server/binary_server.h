@@ -50,6 +50,8 @@ public:
 	BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary);
 	~BinaryServer();
 
+	int accept();
+
 	void io_accept_cb(ev::io& watcher, int revents);
 
 	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database);

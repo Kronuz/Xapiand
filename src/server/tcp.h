@@ -53,9 +53,8 @@ protected:
 	const char* description;
 
 	void bind(int tries);
-	void find(int tries);
 
-	bool close();
+	bool close(bool close = false);
 
 public:
 	TCP(int port, const char* description, int flags);

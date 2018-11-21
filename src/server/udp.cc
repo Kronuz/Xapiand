@@ -59,10 +59,17 @@ UDP::~UDP()
 
 
 bool
-UDP::close() {
+UDP::close(bool close) {
 	bool was_closed = closed.exchange(true);
 	if (!was_closed && sock != -1) {
-		io::shutdown(sock, SHUT_RDWR);
+		if (close) {
+			// Dangerously close socket!
+			// (make sure no threads are using the file descriptor)
+			io::close(sock);
+			sock = -1;
+		} else {
+			io::shutdown(sock, SHUT_RDWR);
+		}
 	}
 	return was_closed;
 }
@@ -157,17 +164,6 @@ UDP::bind(int tries, const std::string& group)
 	L_CRIT("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
-}
-
-
-void
-UDP::find(int tries, const std::string& group)
-{
-	bind(tries, group);
-	if (!close() && sock != -1) {
-		io::close(sock);
-		sock = -1;
-	}
 }
 
 
