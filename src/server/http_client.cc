@@ -1016,6 +1016,7 @@ HttpClient::operator()()
 		} catch (...) {
 			lk.lock();
 			running = false;
+			lk.unlock();
 			L_CONN("Running in worker ended with an exception.");
 			detach();
 			throw;
@@ -1023,9 +1024,12 @@ HttpClient::operator()()
 		lk.lock();
 
 		if (request.closing) {
+			running = false;
+			lk.unlock();
+			L_CONN("Running in worker ended after request closing.");
 			destroy();
 			detach();
-			break;
+			return;
 		}
 	}
 
@@ -1033,7 +1037,9 @@ HttpClient::operator()()
 	lk.unlock();
 
 	if (shutting_down && is_idle()) {
+		L_CONN("Running in worker ended due shutdown.");
 		detach();
+		return;
 	}
 
 	L_CONN("Running in worker ended.");

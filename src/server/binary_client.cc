@@ -384,6 +384,7 @@ BinaryClient::operator()()
 		} catch (...) {
 			lk.lock();
 			running = false;
+			lk.unlock();
 			L_CONN("Running in worker ended with an exception.");
 			detach();
 			throw;
@@ -415,6 +416,7 @@ BinaryClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
+					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
 					detach();
 					throw;
@@ -445,6 +447,7 @@ BinaryClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
+					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
 					detach();
 					throw;
@@ -475,6 +478,7 @@ BinaryClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
+					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
 					detach();
 					throw;
@@ -484,12 +488,20 @@ BinaryClient::operator()()
 			}
 
 			case State::INIT:
+				running = false;
+				lk.unlock();
 				L_ERR("Unexpected BinaryClient State::INIT!");
-				break;
+				destroy();
+				detach();
+				return;
 
 			default:
+				running = false;
+				lk.unlock();
 				L_ERR("Unexpected BinaryClient State!");
-				break;
+				destroy();
+				detach();
+				return;
 		}
 	}
 
@@ -497,7 +509,9 @@ BinaryClient::operator()()
 	lk.unlock();
 
 	if (shutting_down && is_idle()) {
+		L_CONN("Running in worker ended due shutdown.");
 		detach();
+		return;
 	}
 
 	L_CONN("Running in binary worker ended.");
