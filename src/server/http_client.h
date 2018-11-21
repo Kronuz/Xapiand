@@ -181,6 +181,9 @@ public:
 
 	Response();
 
+	Response(Response&&) = default;
+	Response& operator=(Response&&) = default;
+
 	std::string to_text(bool decode);
 };
 
@@ -226,6 +229,9 @@ public:
 	Request() = default;
 	Request(class HttpClient* client);
 	~Request();
+
+	Request(Request&&) = default;
+	Request& operator=(Request&&) = default;
 
 	const MsgPack& decoded_body() {
 		_decode();
