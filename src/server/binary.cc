@@ -107,7 +107,7 @@ Binary::process_tasks()
 void
 Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
 {
-	L_CALL("Binary::trigger_replication(<src_endpoint>, <dst_endpoint>, <cluster_database>)");
+	L_CALL("Binary::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
 
 	tasks.enqueue([
 		src_endpoint,

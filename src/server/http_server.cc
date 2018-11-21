@@ -42,6 +42,8 @@
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_EV
+// #define L_EV L_MEDIUM_PURPLE
 
 
 HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http)
