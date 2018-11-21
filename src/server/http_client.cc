@@ -579,7 +579,7 @@ HttpClient::on_message_begin(http_parser* parser)
 	waiting = true;
 	new_request.begins = std::chrono::system_clock::now();
 	new_request.log->clear();
-	new_request.log = L_DELAYED(true, 10s, LOG_WARNING, PURPLE, "Request taking too long...").release();
+	new_request.log = L_DELAYED(true, 10s, LOG_INFO, PURPLE, "Request taking too long...").release();
 
 	return 0;
 }
@@ -884,7 +884,7 @@ HttpClient::process(Request& request, Response& response)
 	L_OBJ_END("HttpClient::process:END");
 
 	request.log->clear();
-	request.log = L_DELAYED(true, 1s, LOG_WARNING, PURPLE, "Response taking too long: %s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&request.parser)), request.path, request.parser.http_major, request.parser.http_minor).release();
+	request.log = L_DELAYED(true, 1s, LOG_INFO, PURPLE, "Response taking too long: %s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&request.parser)), request.path, request.parser.http_major, request.parser.http_minor).release();
 
 	request.received = std::chrono::system_clock::now();
 
@@ -3157,7 +3157,7 @@ Request::Request(HttpClient* client)
 	: indented{-1},
 	  expect_100{false},
 	  closing{false},
-	  log{L_DELAYED(true, 300s, LOG_WARNING, PURPLE, "Client idle for too long...").release()},
+	  log{L_DELAYED(true, 300s, LOG_INFO, PURPLE, "Client idle for too long...").release()},
 	  begins{std::chrono::system_clock::now()}
 {
 	parser.data = client;
