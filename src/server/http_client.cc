@@ -2561,6 +2561,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		Endpoint endpoint(string::format("xapian://%s:%d/%s", node->host(), node_port, index_path), nullptr, node_name);
 #else
 		Endpoint endpoint(index_path);
+		ignore_unused(node_name);
 #endif
 		endpoints.add(endpoint);
 	} else {

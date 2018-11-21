@@ -193,7 +193,7 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 	ThreadPolicy policy(thread_policy);
 
 	int errnum;
-	pthread_t thread;
+	pthread_t thread = 0;
 
 	pthread_attr_t thread_attr;
 	errnum = pthread_attr_init(&thread_attr);
@@ -224,7 +224,11 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 				CPU_SET(core / hardware_concurrency, &cpuset);
 			}
 		}
+#if defined (HAVE_PTHREAD_ATTR_SETAFFINITY_NP) && defined(__linux__)
 		if (pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpuset) != 0) {
+#elif defined(__linux__)
+		if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+#endif
 			L_WARNING_ONCE("Cannot set thread affinity!");
 		}
 	}

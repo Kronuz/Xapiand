@@ -616,6 +616,8 @@ check_library_exists(pthread "pthread_get_name_np" "" HAVE_PTHREAD_GET_NAME_NP)
 check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP)
 check_library_exists(pthread "pthread_set_name_np" "" HAVE_PTHREAD_SET_NAME_NP)
 
+check_function_exists("pthread_attr_setaffinity_np" HAVE_PTHREAD_ATTR_SETAFFINITY_NP)
+
 check_cxx_source_compiles("
 	int main() {
 		if (__builtin_expect(1<2, 1)) {}
