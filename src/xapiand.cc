@@ -67,7 +67,7 @@
 #include "endpoint.h"               // for Endpoint, Endpoint::cwd
 #include "error.hh"                 // for error:name, error::description
 #include "ev/ev++.h"                // for ::DEVPOLL, ::EPOLL, ::KQUEUE
-#include "exception.h"              // for Exit
+#include "exception.h"              // for SystemExit
 #include "fs.hh"                    // for build_path
 #include "hashes.hh"                // for fnv1ah32
 #include "ignore_unused.h"          // for ignore_unused
@@ -234,7 +234,7 @@ void sig_handler(int sig) {
 	if (manager) {
 		try {
 			manager->signal_sig(sig);
-		} catch (const Exit& exc) {
+		} catch (const SystemExit& exc) {
 			// Flag atom_sig for clean exit in the next Manager::join() timeout
 			manager->atom_sig = -exc.code;
 		}
@@ -819,7 +819,7 @@ void adjustOpenFilesLimit() {
 			max_files,
 			minimum_files);
 		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
-		throw Exit(EX_OSFILE);
+		throw SystemExit(EX_OSFILE);
 	} else if (max_files < recommended_files) {
 		L_WARNING_ONCE("Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
 			max_files,
@@ -852,7 +852,7 @@ void demote(const char* username, const char* group) {
 	) {
 		if (username == nullptr || *username == '\0') {
 			L_CRIT("Can't run as root without the --uid switch");
-			throw Exit(EX_USAGE);
+			throw SystemExit(EX_USAGE);
 		}
 
 		// Get the target user:
@@ -861,7 +861,7 @@ void demote(const char* username, const char* group) {
 			uid = std::atoi(username);
 			if ((uid == 0u) || (pw = getpwuid(uid)) == nullptr) {
 				L_CRIT("Can't find the user %s to switch to", username);
-				throw Exit(EX_NOUSER);
+				throw SystemExit(EX_NOUSER);
 			}
 		}
 		uid = pw->pw_uid;
@@ -875,7 +875,7 @@ void demote(const char* username, const char* group) {
 				gid = std::atoi(group);
 				if ((gid == 0u) || (gr = getgrgid(gid)) == nullptr) {
 					L_CRIT("Can't find the group %s to switch to", group);
-					throw Exit(EX_NOUSER);
+					throw SystemExit(EX_NOUSER);
 				}
 			}
 			gid = gr->gr_gid;
@@ -883,7 +883,7 @@ void demote(const char* username, const char* group) {
 		} else {
 			if ((gr = getgrgid(gid)) == nullptr) {
 				L_CRIT("Can't find the group id %d", gid);
-				throw Exit(EX_NOUSER);
+				throw SystemExit(EX_NOUSER);
 			}
 			group = gr->gr_name;
 		}
@@ -909,21 +909,21 @@ void demote(const char* username, const char* group) {
 		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET) ||
 			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET)) {
 			L_CRIT("Cannot manipulate capability data structure as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 
 		// Above, we just manipulated the data structure describing the flags,
 		// not the capabilities themselves. So, set those capabilities now.
 		if (cap_set_proc(capabilities)) {
 			L_CRIT("Cannot set capabilities as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 
 		// We wish to retain the capabilities across the identity change,
 		// so we need to tell the kernel.
 		if (prctl(PR_SET_KEEPCAPS, 1L)) {
 			L_CRIT("Cannot keep capabilities after dropping privileges: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 		#endif
 
@@ -931,7 +931,7 @@ void demote(const char* username, const char* group) {
 		// to the target group and user:
 		if (setgid(gid) < 0 || setuid(uid) < 0) {
 			L_CRIT("Failed to assume identity of %s:%s", username, group);
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 
 		#ifdef HAVE_SYS_CAPABILITY_H
@@ -940,20 +940,20 @@ void demote(const char* username, const char* group) {
 		// in the permitted and effective sets.
 		if (cap_clear(capabilities)) {
 			L_CRIT("Cannot clear capability data structure: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 
 		cap_value_t user_caps[1] = { CAP_SYS_NICE };
 		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET) ||
 			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET)) {
 			L_CRIT("Cannot manipulate capability data structure as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 
 		// Apply modified capabilities.
 		if (cap_set_proc(capabilities)) {
 			L_CRIT("Cannot set capabilities as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
-			throw Exit(EX_OSERR);
+			throw SystemExit(EX_OSERR);
 		}
 		#endif
 
@@ -1000,7 +1000,7 @@ void usedir(const char* path, bool force) {
 		dirp = opendir(path, true);
 		if (!dirp) {
 			L_CRIT("Cannot open working directory: %s", path);
-			throw Exit(EX_OSFILE);
+			throw SystemExit(EX_OSFILE);
 		}
 
 		bool empty = true;
@@ -1026,7 +1026,7 @@ void usedir(const char* path, bool force) {
 
 		if (!empty) {
 			L_CRIT("Working directory must be empty or a valid xapian database: %s", path);
-			throw Exit(EX_DATAERR);
+			throw SystemExit(EX_DATAERR);
 		}
 	}
 
@@ -1034,7 +1034,7 @@ void usedir(const char* path, bool force) {
 		if (build_path(std::string(path))) {
 			if (chdir(path) == -1) {
 				L_CRIT("Cannot change current working directory to %s", path);
-				throw Exit(EX_OSFILE);
+				throw SystemExit(EX_OSFILE);
 			}
 		} else {
 			L_ERR("Cannot create working directory: %s: %s (%d): %s", repr(path), error::name(errno), errno, error::description(errno));
@@ -1178,7 +1178,7 @@ void dump_metadata() {
 		}
 	} else {
 		L_CRIT("Cannot open file: %s", opts.filename);
-		throw Exit(EX_OSFILE);
+		throw SystemExit(EX_OSFILE);
 	}
 }
 
@@ -1208,7 +1208,7 @@ void dump_schema() {
 		}
 	} else {
 		L_CRIT("Cannot open file: %s", opts.filename);
-		throw Exit(EX_OSFILE);
+		throw SystemExit(EX_OSFILE);
 	}
 }
 
@@ -1238,7 +1238,7 @@ void dump_documents() {
 		}
 	} else {
 		L_CRIT("Cannot open file: %s", opts.filename);
-		throw Exit(EX_OSFILE);
+		throw SystemExit(EX_OSFILE);
 	}
 }
 
@@ -1268,7 +1268,7 @@ void restore() {
 		}
 	} else {
 		L_CRIT("Cannot open file: %s", opts.filename);
-		throw Exit(EX_OSFILE);
+		throw SystemExit(EX_OSFILE);
 	}
 }
 
@@ -1352,7 +1352,7 @@ int main(int argc, char **argv) {
 			} else {
 				server(process_start);
 			}
-		} catch (const Exit& exc) {
+		} catch (const SystemExit& exc) {
 			exit_code = exc.code;
 		} catch (const BaseException& exc) {
 			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
@@ -1368,7 +1368,7 @@ int main(int argc, char **argv) {
 			exit_code = EX_SOFTWARE;
 		}
 
-	} catch (const Exit& exc) {
+	} catch (const SystemExit& exc) {
 		exit_code = exc.code;
 	} catch (...) {
 		L_CRIT("Uncaught exception!!");

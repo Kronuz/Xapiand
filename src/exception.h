@@ -126,10 +126,10 @@ public:
 };
 
 
-class Exit : public BaseException, public std::runtime_error {
+class SystemExit : public BaseException, public std::runtime_error {
 public:
 	int code;
-	explicit Exit(int code_) : BaseException(__func__, __FILE__, __LINE__, "Exit"), std::runtime_error(message), code(code_) { }
+	explicit SystemExit(int code_) : BaseException(__func__, __FILE__, __LINE__, "SystemExit"), std::runtime_error(message), code(code_) { }
 };
 
 

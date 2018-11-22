@@ -58,7 +58,7 @@
 #include "epoch.hh"                           // for epoch::now
 #include "error.hh"                           // for error:name, error::description
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
-#include "exception.h"                        // for Exit, Excep...
+#include "exception.h"                        // for SystemExit, Excep...
 #include "hashes.hh"                          // for jump_consistent_hash
 #include "ignore_unused.h"                    // for ignore_unused
 #include "io.hh"                              // for io::*
@@ -114,10 +114,10 @@ void sig_exit(int sig) {
 	if (XapiandManager::manager) {
 		XapiandManager::manager->signal_sig(sig);
 	} else if (sig < 0) {
-		throw Exit(-sig);
+		throw SystemExit(-sig);
 	} else {
 		if (sig == SIGTERM || sig == SIGINT) {
-			throw Exit(EX_SOFTWARE);
+			throw SystemExit(EX_SOFTWARE);
 		}
 	}
 }
@@ -549,7 +549,7 @@ XapiandManager::shutdown_sig(int sig)
 		if (ev_loop->depth()) {
 			break_loop();
 		} else {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 		return;
 	}
@@ -563,7 +563,7 @@ XapiandManager::shutdown_sig(int sig)
 					break_loop();
 				} else {
 					L_WARNING("You insisted... %s exiting now!", Package::NAME);
-					throw Exit(-sig);
+					throw SystemExit(-sig);
 				}
 				return;
 			}
@@ -740,7 +740,7 @@ XapiandManager::run()
 	int sig = atom_sig;
 	if (sig < 0) {
 		detach();
-		throw Exit(-sig);
+		throw SystemExit(-sig);
 	}
 
 	stop();
@@ -780,7 +780,7 @@ XapiandManager::join()
 	while (!server_pool.join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 	}
 
@@ -788,7 +788,7 @@ XapiandManager::join()
 	while (!http_client_pool.join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 	}
 
@@ -797,7 +797,7 @@ XapiandManager::join()
 	while (!binary_client_pool.join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 	}
 #endif
@@ -812,7 +812,7 @@ XapiandManager::join()
 	while (!committer().join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 	}
 
@@ -825,7 +825,7 @@ XapiandManager::join()
 		while (!wal_writer.join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
-				throw Exit(-sig);
+				throw SystemExit(-sig);
 			}
 		}
 	}
@@ -838,7 +838,7 @@ XapiandManager::join()
 	while (!fsyncher().join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
-			throw Exit(-sig);
+			throw SystemExit(-sig);
 		}
 	}
 
