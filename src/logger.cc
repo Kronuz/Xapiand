@@ -348,13 +348,10 @@ Logging::colorized(std::string_view str, bool try_coloring)
 void
 Logging::clean()
 {
-	bool unlog = false;
 	if (clears) {
-		if (!clear()) {
-			unlog = !unlog_str.empty();
+		if (clear(true)) {
+			unlog_str.clear();
 		}
-	} else {
-		unlog = !unlog_str.empty();
 	}
 
 	auto now = std::chrono::system_clock::now();
@@ -367,7 +364,7 @@ Logging::clean()
 				stack_levels.erase(thread_id);
 			}
 		}
-		if (unlog && unlog_priority <= log_level) {
+		if (!unlog_str.empty() && unlog_priority <= log_level) {
 			add(
 				now,
 				unlog_function,

@@ -82,7 +82,7 @@ public:
 		static_cast<ScheduledTaskImpl*>(this)->operator()();
 	}
 
-	bool clear() {
+	bool clear(bool /*internal*/ = false) {
 		unsigned long long c = 0;
 		return cleared_at.compare_exchange_strong(c, time_point_to_ullong(std::chrono::system_clock::now()));
 	}
@@ -326,7 +326,7 @@ public:
 
 	void operator()(TaskType& task) {
 		if (*task) {
-			if (task->clear()) {
+			if (task->clear(true)) {
 				L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 				task->operator()();
 			}
@@ -394,7 +394,7 @@ public:
 
 	void operator()(TaskType& task) {
 		if (*task) {
-			if (task->clear()) {
+			if (task->clear(true)) {
 				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 				try {
 					thread_pool.enqueue(task);

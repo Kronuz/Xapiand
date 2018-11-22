@@ -192,6 +192,16 @@ public:
 
 	void clean();
 
+	bool clear(bool internal = false) {
+		if (ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>::clear(internal)) {
+			if (!internal) {
+				unlog_str.clear();
+			}
+			return true;
+		}
+		return false;
+	}
+
 	long double age();
 
 	void operator()();
