@@ -4,6 +4,13 @@ read_only: true
 ---
 
 
+## 0.8.0 / 2018-11-21
+{: #v0-8-0}
+
+- Cluster mode enabled
+- Adds replication and remote protocol
+
+
 ## 0.7.0 / 2018-09-21
 {: #v0-7-0}
 

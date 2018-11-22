@@ -12,8 +12,7 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 
 ```sh
 # Install with Homebrew:
-~ $ brew tap Kronuz/tap
-~ $ brew install xapiand
+~ $ brew install Kronuz/tap/xapiand
 
 # Run in foreground with very verbose output:
 ~ $ mkdir my-database
