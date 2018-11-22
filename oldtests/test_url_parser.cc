@@ -95,7 +95,7 @@ int test_url_path() {
 		{ "/database/", false, "_|id=database|_|pth=|(end)" },
 		{ "path/1", false, "_|id=1|_|pth=path|(end)" },
 		{ "/db_titles/localhost/:upload/", false, "_|cmd=:upload|id=localhost|_|pth=/db_titles|(end)" },
-		{ "//path/to:namespace1/index1@host1,//namespace2/index2@host2:8890,namespace3/index3@host3/type1,type2/search////", false, "_|id=search|_|hst=host1|nsp=//path/to|pth=namespace1/index1|_|hst=host2:8890|nsp=//path/to|pth=//namespace2/index2|_|hst=host3/type1|nsp=//path/to|pth=namespace3/index3|_|nsp=//path/to|pth=type2|(end)" },
+		{ "//path/to:namespace1/index1@host1,//namespace2/index2@host2:9880,namespace3/index3@host3/type1,type2/search////", false, "_|id=search|_|hst=host1|nsp=//path/to|pth=namespace1/index1|_|hst=host2:9880|nsp=//path/to|pth=//namespace2/index2|_|hst=host3/type1|nsp=//path/to|pth=namespace3/index3|_|nsp=//path/to|pth=type2|(end)" },
 		{ "/path/to:namespace1/index1@host1,/namespace2/index2@host2,namespace3/index3@host3/t1/:upload/search/", false, "_|cmd=:upload|pmt=search|id=t1|_|hst=host1|nsp=/path/to|pth=namespace1/index1|_|hst=host2|nsp=/path/to|pth=/namespace2/index2|_|hst=host3|nsp=/path/to|pth=namespace3/index3|(end)" },
 		{ "/database.db/subdir/:upload/3/", true, "_|cmd=:upload|pmt=3|_|pth=/database.db/subdir|(end)" },
 		{ "usr/dir:subdir,/:upload/1", false, "_|cmd=:upload|pmt=1|_|nsp=usr/dir|pth=subdir|_|nsp=usr/dir|pth=|(end)" },

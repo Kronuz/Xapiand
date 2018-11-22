@@ -625,7 +625,7 @@ def main():
         print("Proxy listens to <in_port> and redirects traffic to a server listening on <out_port>")
         print("usage: %s [%s] <in_port> [<host>:]<out_port>" % (os.path.basename(sys.argv[0]), servers))
         print("example:")
-        print("    %s %s 8860 localhost:8890" % (os.path.basename(sys.argv[0]), servers_opts[-1]))
+        print("    %s %s 8860 localhost:9880" % (os.path.basename(sys.argv[0]), servers_opts[-1]))
         sys.exit(1)
     try:
         try:
