@@ -22,6 +22,7 @@
 
 #pragma once
 
+#ifndef ASSERT
 #include "config.h"
 
 #include "likely.h"
@@ -49,3 +50,4 @@ extern "C" {
 #else // XAPIAND_TRACEBACKS
 #define ASSERT assert
 #endif // XAPIAND_TRACEBACKS
+#endif
