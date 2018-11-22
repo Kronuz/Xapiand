@@ -59,6 +59,12 @@
 # include <stdexcept>
 #endif
 
+#include <exception>
+
+std::exception_ptr& ev_eptr (EV_P);
+void ev_capture_exception (EV_P);
+void ev_rethrow_exception (EV_P);
+
 namespace ev {
 
   typedef ev_tstamp tstamp;
@@ -203,6 +209,7 @@ namespace ev {
     void loop (int flags = 0)
     {
       ev_run (EV_AX_ flags);
+      ev_rethrow_exception (EV_AX);
     }
 
     void unloop (how_t how = ONE)
@@ -214,6 +221,7 @@ namespace ev {
     void run (int flags = 0)
     {
       ev_run (EV_AX_ flags);
+      ev_rethrow_exception (EV_AX);
     }
 
     void break_loop (how_t how = ONE)
@@ -289,10 +297,15 @@ namespace ev {
     }
 
     template<class K, void (K::*method)(int)>
-    static void method_thunk (int revents, void *arg) EV_THROW
+    static void method_thunk (EV_P_ int revents, void *arg) EV_THROW
     {
-      (static_cast<K *>(arg)->*method)
-        (revents);
+      try {
+        (static_cast<K *>(arg)->*method)
+          (revents);
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     // no-argument method callback
@@ -303,10 +316,15 @@ namespace ev {
     }
 
     template<class K, void (K::*method)()>
-    static void method_noargs_thunk (int revents, void *arg) EV_THROW
+    static void method_noargs_thunk (EV_P_ int revents, void *arg) EV_THROW
     {
-      (static_cast<K *>(arg)->*method)
-        ();
+      try {
+        (static_cast<K *>(arg)->*method)
+          ();
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     // simpler function callback
@@ -317,10 +335,15 @@ namespace ev {
     }
 
     template<void (*cb)(int) EV_THROW>
-    static void simpler_func_thunk (int revents, void *arg) EV_THROW
+    static void simpler_func_thunk (EV_P_ int revents, void *arg) EV_THROW
     {
-      (*cb)
-        (revents);
+      try {
+        (*cb)
+          (revents);
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     // simplest function callback
@@ -331,10 +354,15 @@ namespace ev {
     }
 
     template<void (*cb)() EV_THROW>
-    static void simplest_func_thunk (int revents, void *arg) EV_THROW
+    static void simplest_func_thunk (EV_P_ int revents, void *arg) EV_THROW
     {
-      (*cb)
-        ();
+      try {
+        (*cb)
+          ();
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     void feed_fd_event (int fd, int revents)
@@ -349,6 +377,7 @@ namespace ev {
 
 #if EV_MULTIPLICITY
     struct ev_loop* EV_AX;
+    std::exception_ptr eptr;
 #endif
 
   };
@@ -460,8 +489,13 @@ namespace ev {
     template<void (*function)(watcher &w, int)>
     static void function_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
-      function
-        (*static_cast<watcher *>(w), revents);
+      try {
+        function
+          (*static_cast<watcher *>(w), revents);
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     // method callback
@@ -481,8 +515,13 @@ namespace ev {
     template<class K, void (K::*method)(watcher &w, int)>
     static void method_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
-      (static_cast<K *>(w->data)->*method)
-        (*static_cast<watcher *>(w), revents);
+      try {
+        (static_cast<K *>(w->data)->*method)
+          (*static_cast<watcher *>(w), revents);
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     // no-argument callback
@@ -495,8 +534,13 @@ namespace ev {
     template<class K, void (K::*method)()>
     static void method_noargs_thunk (EV_P_ ev_watcher *w, int revents) EV_THROW
     {
-      (static_cast<K *>(w->data)->*method)
-        ();
+      try {
+        (static_cast<K *>(w->data)->*method)
+          ();
+      } catch (...) {
+        ev_capture_exception (EV_A);
+        ev_break (EV_A_ ALL);
+      }
     }
 
     void operator ()(int events = EV_UNDEF)
@@ -815,6 +859,31 @@ namespace ev {
   #undef EV_CONSTRUCT
   #undef EV_BEGIN_WATCHER
   #undef EV_END_WATCHER
+}
+
+inline
+std::exception_ptr&
+ev_eptr (EV_P)
+{
+  static thread_local std::exception_ptr eptr;
+  return eptr;
+}
+
+inline
+void
+ev_capture_exception (EV_P)
+{
+  ev_eptr(EV_A) = std::current_exception();
+}
+
+inline
+void
+ev_rethrow_exception (EV_P)
+{
+  std::exception_ptr& eptr = ev_eptr(EV_A);
+  if (eptr) {
+    std::rethrow_exception(eptr);
+  }
 }
 
 #pragma GCC diagnostic pop
