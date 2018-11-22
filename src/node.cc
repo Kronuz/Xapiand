@@ -25,7 +25,6 @@
 #include <cstdlib>              // for atoi
 #include <xapian.h>             // for SerialisationError
 
-#include "color_tools.hh"       // for hsv2rgb
 #include "hashes.hh"            // for fnv1ah32::hash
 #include "length.h"             // for serialise_length, unserialise_length, ser...
 #include "log.h"                // for L_CALL

@@ -2546,8 +2546,8 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		auto node_name = request.path_parser.get_hst();
 #ifdef XAPIAND_CLUSTERING
 		Endpoint index("xapian://" + std::string(node_name) + "/" + index_path);
-		int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
-		node_name = index.host.empty() ? node_name : index.host;
+		int node_port = (index.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.node.binary_port;
+		node_name = index.node.host().empty() ? node_name : index.node.host();
 
 		// Convert node to endpoint:
 		auto node = Node::get_node(node_name);

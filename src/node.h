@@ -39,6 +39,7 @@
 #include <vector>               // for std::vector
 
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
+#include "color_tools.hh"       // for color, hsv2rgb
 #include "epoch.hh"             // for epoch::now
 #include "net.hh"               // for fast_inet_ntop4
 #include "string.hh"            // for string::lower
@@ -47,8 +48,6 @@
 
 constexpr long long NODE_LIFESPAN = 120000;  // in milliseconds
 
-
-class color;
 
 class Node {
 	std::string _host;
