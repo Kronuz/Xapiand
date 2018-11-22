@@ -878,7 +878,7 @@ HttpClient::process(Request& request, Response& response)
 
 	L_TIMED_VAR(request.log, 1s,
 		"Response taking too long: %s",
-		"Response took too long: %s!",
+		"Response took too long: %s",
 		request.head());
 
 	request.received = std::chrono::system_clock::now();

@@ -561,9 +561,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	}
 
 	L_TIMED_VAR(database->log, 200ms,
-		"%s %s checkout is taking too long...",
-		"%s %s was checked out for too long!",
-		db_writable ? "WritableDatabase" : "Database", repr(endpoints.to_string()));
+		"%s checkout is taking too long: %s",
+		"%s checked out for too long: %s",
+		database->is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : database->is_writable_and_local ? "LocalWritableDatabase" : database->is_writable ? "WritableDatabase" : "Database",
+		repr(endpoints.to_string()));
 	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "RO", repr(endpoints.to_string()), database->reopen_revision);
 }
 
