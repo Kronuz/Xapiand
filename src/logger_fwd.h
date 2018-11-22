@@ -155,6 +155,20 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, bo
 #define L_DELAYED_N_UNLOG(...) __log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 #define L_DELAYED_N_CLEAR() __log_timed.L_DELAYED_CLEAR()
 
+#define _L_TIMED_VAR(var, delay, format_timeout, format_done, ...) { \
+	if (var) { \
+		var->clear(); \
+	} \
+	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, LIGHT_PURPLE, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, (format_done), ##__VA_ARGS__); \
+	var = __log_timed.release(); \
+}
+
+#define _L_TIMED(delay, format_timeout, format_done, ...) \
+	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, LIGHT_PURPLE, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, (format_done), ##__VA_ARGS__); \
+}
+
 #define L_NOTHING(...)
 
 #define LOG(stacked, once, priority, prefix, suffix, format, ...) LAZY_LOG(false, 0ms, priority >= ASYNC_LOG_LEVEL, true, stacked, once, priority, std::exception_ptr{}, __func__, __FILE__, __LINE__, (prefix + (format) + suffix), ##__VA_ARGS__)
@@ -197,10 +211,14 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, bo
 #define L_DEBUG L_NOTHING
 #define L_DEBUG_HOOK L_NOTHING
 #define L_DEBUG_NOW(name)
+#define L_TIMED L_NOTHING
+#define L_TIMED_VAR L_NOTHING
 #else
 #define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
 #define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, CLEAR_COLOR, __VA_ARGS__)
 #define L_DEBUG_NOW(name) auto name = std::chrono::system_clock::now()
+#define L_TIMED _L_TIMED
+#define L_TIMED_VAR _L_TIMED_VAR
 #endif
 
 #pragma GCC diagnostic pop
