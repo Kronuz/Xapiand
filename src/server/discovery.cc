@@ -349,12 +349,12 @@ Discovery::bye(Message type, const std::string& message)
 
 	auto leader_node = Node::leader_node();
 	if (*leader_node == remote_node) {
-		L_INFO("Leader node %s left the party!", remote_node.name());
+		L_INFO("Leader node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 
 		Node::leader_node(std::make_shared<const Node>());
 		XapiandManager::manager->renew_leader();
 	} else {
-		L_INFO("Node %s left the party!", remote_node.name());
+		L_INFO("Node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 	}
 
 	L_DEBUG("Nodes still active after %s left: %zu", remote_node.name(), Node::active_nodes());
