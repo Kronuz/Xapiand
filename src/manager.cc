@@ -383,7 +383,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (!is_leader) {
 			ASSERT(!cluster_endpoint.is_local());
 			Endpoint local_endpoint(".");
-			L_INFO("Synchronizing cluster database from %s...", leader_node->name());
+			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			new_cluster = 2;
 			if (auto binary = weak_binary.lock()) {
 				binary->trigger_replication(cluster_endpoint, local_endpoint, true);
