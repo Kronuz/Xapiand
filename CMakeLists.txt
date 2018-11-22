@@ -60,6 +60,8 @@ option(UUID_ENCODED  "Allow encoded (base59) as UUID encoding"       ON)
 option(UUID_GUID     "Allow GUID as UUID encoding"                  OFF)
 option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
+option(CHECK_SIZES   "Print the objects sizes"                      OFF)
+
 
 foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS CHECK_IO_FDES TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS)
 	if (${opt})

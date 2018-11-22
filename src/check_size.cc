@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#ifndef NDEBUG
+#ifdef XAPIAND_CHECK_SIZES
 #include "config.h"
 #include "check_size.h"
 #define STATIC_ASSERT(...)

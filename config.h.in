@@ -280,6 +280,8 @@
 
 #cmakedefine XAPIAND_RANDOM_ERRORS @XAPIAND_RANDOM_ERRORS@
 
+#cmakedefine XAPIAND_CHECK_SIZES @XAPIAND_CHECK_SIZES@
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
