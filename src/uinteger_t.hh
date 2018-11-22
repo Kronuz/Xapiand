@@ -2265,23 +2265,23 @@ public:
 					digit alphabet_base_mask = alphabet_base - 1;
 					std::size_t shift = 0;
 					auto ptr = reinterpret_cast<const half_digit*>(data());
-					digit num = *ptr++;
-					num <<= half_digit_bits;
+					digit v = *ptr++;
+					v <<= half_digit_bits;
 					for (auto i = num_sz * 2 - 1; i; --i) {
-						num >>= half_digit_bits;
-						num |= (static_cast<digit>(*ptr++) << half_digit_bits);
+						v >>= half_digit_bits;
+						v |= (static_cast<digit>(*ptr++) << half_digit_bits);
 						do {
-							auto d = static_cast<int>((num >> shift) & alphabet_base_mask);
+							auto d = static_cast<int>((v >> shift) & alphabet_base_mask);
 							result.push_back(chr(d));
 							shift += alphabet_base_bits;
 						} while (shift <= half_digit_bits);
 						shift -= half_digit_bits;
 					}
-					num >>= (shift + half_digit_bits);
-					while (num) {
-						auto d = static_cast<int>(num & alphabet_base_mask);
+					v >>= (shift + half_digit_bits);
+					while (v) {
+						auto d = static_cast<int>(v & alphabet_base_mask);
 						result.push_back(chr(d));
-						num >>= alphabet_base_bits;
+						v >>= alphabet_base_bits;
 					}
 					auto s = chr(0);
 					auto rit_f = std::find_if(result.rbegin(), result.rend(), [s](const char& c) { return c != s; });

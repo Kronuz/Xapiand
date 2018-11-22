@@ -41,11 +41,11 @@ class BaseX {
 	int _ord[256];
 
 	const int size;
-	const int base;
+	const int alphabet_base;
 	const unsigned base_size;
-	const unsigned base_bits;
+	const unsigned alphabet_base_bits;
 	const unsigned block_size;
-	const uinteger_t::digit base_mask;
+	const uinteger_t::digit alphabet_base_mask;
 	const unsigned padding_size;
 	const char padding;
 	const int flags;
@@ -69,23 +69,23 @@ public:
 		_chr(),
 		_ord(),
 		size(alphabet_size1 - 1 + extended_size1 - 1),
-		base(alphabet_size1 - 1),
-		base_size(uinteger_t::base_size(base)),
-		base_bits(uinteger_t::base_bits(base)),
-		block_size((flgs & BaseX::block_padding) ? base_bits : 0),
-		base_mask(base - 1),
+		alphabet_base(alphabet_size1 - 1),
+		base_size(uinteger_t::base_size(alphabet_base)),
+		alphabet_base_bits(uinteger_t::base_bits(alphabet_base)),
+		block_size((flgs & BaseX::block_padding) ? alphabet_base_bits : 0),
+		alphabet_base_mask(alphabet_base - 1),
 		padding_size(padding_size1 - 1),
 		padding(padding_size ? padding_string[0] : '\0'),
 		flags(flgs)
 	{
 		for (int c = 0; c < 256; ++c) {
 			_chr[c] = 0;
-			_ord[c] = base;
+			_ord[c] = alphabet_base;
 		}
-		for (int cp = 0; cp < base; ++cp) {
+		for (int cp = 0; cp < alphabet_base; ++cp) {
 			auto ch = alphabet[cp];
 			_chr[cp] = ch;
-			ASSERT(_ord[(unsigned char)ch] == base);  // Duplicate character in the alphabet
+			ASSERT(_ord[(unsigned char)ch] == alphabet_base);  // Duplicate character in the alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -97,9 +97,9 @@ public:
 		}
 		for (std::size_t i = 0; i < extended_size1 - 1; ++i) {
 			auto ch = extended[i];
-			auto cp = base + i;
+			auto cp = alphabet_base + i;
 			_chr[cp] = ch;
-			ASSERT(_ord[(unsigned char)ch] == base); // Duplicate character in the extended alphabet
+			ASSERT(_ord[(unsigned char)ch] == alphabet_base); // Duplicate character in the extended alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -113,8 +113,8 @@ public:
 		for (std::size_t i = 0; i < translate_size1 - 1; ++i) {
 			auto ch = translate[i];
 			auto ncp = _ord[(unsigned char)ch];
-			if (ncp >= base) {
-				ASSERT(_ord[(unsigned char)ch] == base); // Invalid translation character
+			if (ncp >= alphabet_base) {
+				ASSERT(_ord[(unsigned char)ch] == alphabet_base); // Invalid translation character
 				_ord[(unsigned char)ch] = cp;
 				if (flags & BaseX::ignore_case) {
 					if (ch >= 'A' && ch <='Z') {
@@ -132,7 +132,7 @@ public:
 	// Get string representation of value
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
 	void encode(Result& result, const uinteger_t& input) const {
-		int bp = 0;
+		size_t bp = 0;
 		uinteger_t quotient;
 		if (block_size) {
 			bp = ((input.bits() + 7) & 0xf8) % block_size;
@@ -146,8 +146,8 @@ public:
 		if (num_sz) {
 			int sum = 0;
 			result.reserve(num_sz * base_size);
-			if (base_bits) {
-				std::size_t shift = 0;
+			if (alphabet_base_bits) {
+				size_t shift = 0;
 				auto ptr = reinterpret_cast<const uinteger_t::half_digit*>(num.data());
 				uinteger_t::digit v = *ptr++;
 				v <<= uinteger_t::half_digit_bits;
@@ -155,34 +155,34 @@ public:
 					v >>= uinteger_t::half_digit_bits;
 					v |= (static_cast<uinteger_t::digit>(*ptr++) << uinteger_t::half_digit_bits);
 					do {
-						auto d = static_cast<int>((v >> shift) & base_mask);
-						sum += d;
+						auto d = static_cast<int>((v >> shift) & alphabet_base_mask);
 						result.push_back(chr(d));
-						shift += base_bits;
+						shift += alphabet_base_bits;
+						sum += d;
 					} while (shift <= uinteger_t::half_digit_bits);
 					shift -= uinteger_t::half_digit_bits;
 				}
 				v >>= (shift + uinteger_t::half_digit_bits);
 				while (v) {
-					auto d = static_cast<int>(v & base_mask);
-					sum += d;
+					auto d = static_cast<int>(v & alphabet_base_mask);
 					result.push_back(chr(d));
-					v >>= base_bits;
+					v >>= alphabet_base_bits;
+					sum += d;
 				}
 				auto s = chr(0);
 				auto rit_f = std::find_if(result.rbegin(), result.rend(), [s](const char& c) { return c != s; });
 				result.resize(result.rend() - rit_f); // shrink
 			} else {
-				uinteger_t uint_base = base;
+				uinteger_t uint_base = alphabet_base;
 				if (!bp) {
 					quotient = num;
 				}
 				do {
 					auto r = quotient.divmod(uint_base);
 					auto d = static_cast<int>(r.second);
-					sum += d;
 					result.push_back(chr(d));
 					quotient = std::move(r.first);
+					sum += d;
 				} while (quotient);
 			}
 			std::reverse(result.begin(), result.end());
@@ -275,28 +275,28 @@ public:
 
 		int bp = 0;
 
-		if (base_bits) {
+		if (alphabet_base_bits) {
 			for (; sz; --sz, encoded += direction) {
 				auto c = *encoded;
 				if (c == padding) break;
 				auto d = ord(static_cast<int>(c));
 				if (d < 0) continue; // ignored character
-				if (d >= base) {
+				if (d >= alphabet_base) {
 					throw std::invalid_argument("Error: Invalid character: '" + std::string(1, c) + "' at " + std::to_string(encoded_size - sz));
 				}
 				sum += d;
 				++sumsz;
-				result = (result << base_bits) | d;
+				result = (result << alphabet_base_bits) | d;
 				bp += block_size;
 			}
 		} else {
-			uinteger_t uint_base = base;
+			uinteger_t uint_base = alphabet_base;
 			for (; sz; --sz, encoded += direction) {
 				auto c = *encoded;
 				if (c == padding) break;
 				auto d = ord(static_cast<int>(c));
 				if (d < 0) continue; // ignored character
-				if (d >= base) {
+				if (d >= alphabet_base) {
 					throw std::invalid_argument("Error: Invalid character: '" + std::string(1, c) + "' at " + std::to_string(encoded_size - sz));
 				}
 				sum += d;
@@ -384,7 +384,7 @@ public:
 		for (; encoded_size; --encoded_size, ++encoded) {
 			auto d = ord(static_cast<int>(*encoded));
 			if (d < 0) continue; // ignored character
-			if (d >= base) {
+			if (d >= alphabet_base) {
 				return false;
 			}
 			sum += d;
