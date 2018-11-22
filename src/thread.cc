@@ -57,6 +57,7 @@ struct ThreadPolicy {
 
 	ThreadPolicy(ThreadPolicyType thread_policy) {
 		switch (thread_policy) {
+			/*
 			case ThreadPolicyType::regular:
 				priority = 0;
 				break;
@@ -87,6 +88,9 @@ struct ThreadPolicy {
 			case ThreadPolicyType::binary_clients:
 				priority = 20;
 				break;
+			*/
+			default:
+				priority = 0;
 		}
 	}
 };
