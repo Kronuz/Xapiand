@@ -181,13 +181,21 @@ normalizer(const void *p, size_t size)
 std::string Endpoint::cwd("/");
 
 
-Endpoint::Endpoint()
-	: port(-1) { }
-
-
 Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view node_name_)
-	: node_name(node_name_)
 {
+	if (node_ == nullptr) {
+		auto local_node = Node::local_node();
+		node_ = local_node.get();
+	}
+
+	if (node_ != nullptr) {
+		node = *node_;
+	}
+
+	if (!node_name_.empty()) {
+		node.name(node_name_);
+	}
+
 	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
 		protocol = "file";
@@ -204,12 +212,11 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 		} else {
 			_path = path = std::string(uri) + "/" + std::string(_path);
 		}
-		port = 0;
 	} else {
-		host = uri;
-		port = strict_stoi(nullptr, _port);
-		if (port == 0) {
-			port = XAPIAND_BINARY_SERVERPORT;
+		node.host(uri);
+		node.binary_port = strict_stoi(nullptr, _port);
+		if (!node.binary_port) {
+			node.binary_port = XAPIAND_BINARY_SERVERPORT;
 		}
 		search = _search;
 		password = _password;
@@ -236,19 +243,6 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 		path = normalizer<normalize_and_partition>(_path.data(), _path.size());
 	} else {
 		path = normalizer<normalize>(_path.data(), _path.size());
-	}
-
-	if (protocol == "file") {
-		auto local_node = Node::local_node();
-		if (node_ == nullptr) {
-			node_ = local_node.get();
-		}
-		node_name = node_->name();
-		host = node_->host();
-		port = node_->binary_port;
-		if (port == 0) {
-			port = XAPIAND_BINARY_SERVERPORT;
-		}
 	}
 }
 
@@ -298,12 +292,12 @@ Endpoint::to_string() const
 		}
 		ret += "@";
 	}
-	ret += host;
-	if (port > 0) {
+	ret += node.host();
+	if (node.binary_port > 0) {
 		ret += ":";
-		ret += string::Number(port);
+		ret += string::Number(node.binary_port);
 	}
-	if (!host.empty() || port > 0) {
+	if (!node.host().empty() || node.binary_port > 0) {
 		ret += "/";
 	}
 	ret += path;
@@ -327,21 +321,21 @@ Endpoint::is_local() const
 	auto local_node = Node::local_node();
 	int binary_port = local_node->binary_port;
 	if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-	return (host == local_node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+	return (node.host() == local_node->host() || node.host() == "127.0.0.1" || node.host() == "localhost") && node.binary_port == binary_port;
 }
 
 
 size_t
 Endpoint::hash() const
 {
-	std::hash<std::string> hash_fn_string;
-	std::hash<int> hash_fn_int;
+	static const std::hash<std::string> hash_fn_string;
+	static const std::hash<int> hash_fn_int;
 	return (
 		hash_fn_string(path) ^
 		hash_fn_string(user) ^
 		hash_fn_string(password) ^
-		hash_fn_string(host) ^
-		hash_fn_int(port) ^
+		hash_fn_string(node.host()) ^
+		hash_fn_int(node.binary_port) ^
 		hash_fn_string(search)
 	);
 }

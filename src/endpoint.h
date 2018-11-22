@@ -59,12 +59,10 @@ class Endpoint {
 public:
 	static std::string cwd;
 
-	int port;
-	std::string user, password, host, path, search;
+	Node node;
+	std::string user, password, path, search;
 
-	std::string node_name;
-
-	Endpoint();
+	Endpoint() = default;
 	Endpoint(std::string_view uri, const Node* node_=nullptr, std::string_view node_name_="");
 
 	bool is_local() const;
@@ -74,12 +72,12 @@ public:
 
 	bool empty() const noexcept {
 		return path.empty() || (
-			port == -1 &&
+			node.binary_port == -1 &&
 			user.empty() &&
 			password.empty() &&
-			host.empty() &&
+			node.host().empty() &&
 			search.empty() &&
-			node_name.empty()
+			node.name().empty()
 		);
 	}
 

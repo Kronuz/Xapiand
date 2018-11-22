@@ -24,6 +24,7 @@
 
 #include "config.h"             // for XAPIAND_CLUSTERING
 
+#include <arpa/inet.h>          // for inet_addr
 #include <atomic>               // for std::atomic_size_t
 #include <cstddef>              // for size_t
 #include <functional>           // for std::hash
@@ -41,6 +42,7 @@
 #include "epoch.hh"             // for epoch::now
 #include "net.hh"               // for fast_inet_ntop4
 #include "string.hh"            // for string::lower
+#include "stringified.hh"       // for stringified
 
 
 constexpr long long NODE_LIFESPAN = 120000;  // in milliseconds
@@ -132,8 +134,8 @@ public:
 	std::string serialise() const;
 	static Node unserialise(const char **p, const char *end);
 
-	void name(const std::string& name) {
-		_name = name;
+	void name(std::string_view name) {
+		_name = std::string(name);
 		_lower_name = string::lower(_name);
 	}
 
@@ -152,6 +154,11 @@ public:
 
 	const struct sockaddr_in& addr() const noexcept {
 		return _addr;
+	}
+
+	void host(std::string_view host) {
+		_addr.sin_addr.s_addr = inet_addr(stringified(host).c_str());
+		_host = fast_inet_ntop4(_addr.sin_addr);
 	}
 
 	const std::string& host() const noexcept {
