@@ -21,8 +21,9 @@
  */
 
 #pragma once
-#ifndef NDEBUG
+
+#include "config.h"
+
+#ifdef XAPIAND_CHECK_SIZES
 void check_size();
-#else
-inline void check_size() {}
 #endif

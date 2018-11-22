@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 
-#ifdef XAPIAND_CHECK_SIZES
-#include "config.h"
 #include "check_size.h"
+
+#ifdef XAPIAND_CHECK_SIZES
 #define STATIC_ASSERT(...)
 // #define STATIC_ASSERT static_assert
 #define CHECK_MAX_SIZE(max_size, name) \

@@ -1274,7 +1274,9 @@ void restore() {
 
 
 int main(int argc, char **argv) {
+#ifdef XAPIAND_CHECK_SIZES
 	check_size();
+#endif
 
 	int exit_code = EX_OK;
 
