@@ -54,49 +54,38 @@ static std::unordered_map<std::thread::id, std::string> thread_names;
 
 struct ThreadPolicy {
 	int priority;
-	uint64_t afinity;
 
 	ThreadPolicy(ThreadPolicyType thread_policy) {
 		switch (thread_policy) {
 			case ThreadPolicyType::regular:
 				priority = 0;
-				afinity = 0b0000000000000000000000000000000000000000000000000000000000000000;
 				break;
 			case ThreadPolicyType::wal_writer:
 				priority = 20;
-				afinity = 0b0000000000000000000000000000000000000000000000000000000000001111;
 				break;
 			case ThreadPolicyType::logging:
 				priority = 0;
-				afinity = 0b0000000000000000000000000000000000000000000000000000000011111111;
 				break;
 			case ThreadPolicyType::replication:
 				priority = 10;
-				afinity = 0b0000000000000000000000000000000000000000000000000000000000000000;
 				break;
 			case ThreadPolicyType::committers:
 				priority = 100;
-				afinity = 0b1111111111111111111100000000000000000000000000000000000000000000;
 				break;
 			case ThreadPolicyType::fsynchers:
 				priority = 20;
-				afinity = 0b0000000000000000000000000000000000000000000000001111111111111111;
 				break;
 			case ThreadPolicyType::updaters:
 				priority = 10;
-				afinity = 0b0000000000000000000000000000000000000000000000000000000000000001;
 				break;
 			case ThreadPolicyType::servers:
 				priority = 5;
-				afinity = 0b0000000000000000000000000000000000000000000000001111111111111111;
 				break;
 			case ThreadPolicyType::http_clients:
 				priority = 10;
-				afinity = 0b0000000000000000111111111111111111111111111111110000000000000000;
 				break;
 			case ThreadPolicyType::binary_clients:
 				priority = 20;
-				afinity = 0b0000000000000000000000000000000011111111111111111111111111111111;
 				break;
 		}
 	}
@@ -124,8 +113,6 @@ sched_getcpu()
 void
 start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
 {
-	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
-
 	ThreadPolicy policy(thread_policy);
 
 	int errnum;
@@ -162,23 +149,6 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 
 	pthread_detach(thread);
 
-	if (policy.afinity) {
-		int tag = 0;
-		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
-			if ((policy.afinity >> core) & 1) {
-				tag = core / hardware_concurrency + 1;
-				break;
-			}
-		}
-		thread_affinity_policy_data_t policy_data;
-		policy_data.affinity_tag = tag;
-		if (thread_policy_set(mach_thread,
-				THREAD_AFFINITY_POLICY, (thread_policy_t)&policy_data,
-				THREAD_AFFINITY_POLICY_COUNT) != KERN_SUCCESS) {
-			L_WARNING_ONCE("Cannot set thread affinity policy!");
-		}
-	}
-
 	thread_resume(mach_thread);
 }
 #else
@@ -188,8 +158,6 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 void
 start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
 {
-	static const unsigned int hardware_concurrency = std::thread::hardware_concurrency();
-
 	ThreadPolicy policy(thread_policy);
 
 	int errnum;
@@ -215,41 +183,11 @@ start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread
 		}
 	}
 
-#ifdef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
-	if (policy.afinity) {
-		cpu_set_t cpuset;
-		CPU_ZERO(&cpuset);
-		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
-			if ((policy.afinity >> core) & 1) {
-				CPU_SET(core / hardware_concurrency, &cpuset);
-			}
-		}
-		if (pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpuset) != 0) {
-			L_WARNING_ONCE("Cannot set thread affinity!");
-		}
-	}
-#endif
-
 	errnum = pthread_create(&thread, &thread_attr, thread_routine, arg);
 	pthread_attr_destroy(&thread_attr);
 	if (errnum != 0) {
 		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
 	}
-
-#ifndef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
-	if (policy.afinity) {
-		cpu_set_t cpuset;
-		CPU_ZERO(&cpuset);
-		for (size_t core = 0; core < sizeof(policy.afinity) * 8; ++core) {
-			if ((policy.afinity >> core) & 1) {
-				CPU_SET(core / hardware_concurrency, &cpuset);
-			}
-		}
-		if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
-			L_WARNING_ONCE("Cannot set thread affinity!");
-		}
-	}
-#endif
 
 	pthread_detach(thread);
 }
