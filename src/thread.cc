@@ -293,12 +293,12 @@ void
 set_thread_name(const std::string& name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP) && defined(__linux__)
-	pthread_setname_np(pthread_self(), ("Xapiand-" + name).c_str());
-	// pthread_setname_np(pthread_self(), ("Xapiand-" + name).c_str(), nullptr);
+	pthread_setname_np(pthread_self(), ("Xapiand:" + name).c_str());
+	// pthread_setname_np(pthread_self(), ("Xapiand:" + name).c_str(), nullptr);
 #elif defined(HAVE_PTHREAD_SETNAME_NP)
-	pthread_setname_np(("Xapiand-" + name).c_str());
+	pthread_setname_np(("Xapiand:" + name).c_str());
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
-	pthread_set_name_np(pthread_self(), ("Xapiand-" + name).c_str());
+	pthread_set_name_np(pthread_self(), ("Xapiand:" + name).c_str());
 #endif
 	std::lock_guard<std::mutex> lk(thread_names_mutex);
 	thread_names.emplace(std::piecewise_construct,
