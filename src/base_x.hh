@@ -131,21 +131,24 @@ public:
 
 	// Get string representation of value
 	template <typename Result = std::string, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	void encode(Result& result, const uinteger_t& num) const {
+	void encode(Result& result, const uinteger_t& input) const {
+		int bp = 0;
+		uinteger_t quotient;
+		if (block_size) {
+			bp = ((input.bits() + 7) & 0xf8) % block_size;
+			bp = bp ? (block_size - bp) % block_size : 0;
+			if (bp) {
+				quotient = input << bp;
+			}
+		}
+		const uinteger_t& num = bp ? quotient : input;
 		auto num_sz = num.size();
 		if (num_sz) {
 			int sum = 0;
-			auto alphabet_base = base;
 			result.reserve(num_sz * base_size);
-			int bp = 0;
-			if (block_size) {
-				bp = ((num.bits() + 7) & 0xf8) % block_size;
-				bp = bp ? (block_size - bp) % block_size : 0;
-			}
-			uinteger_t quotient = num << bp;
 			if (base_bits) {
 				std::size_t shift = 0;
-				auto ptr = reinterpret_cast<const uinteger_t::half_digit*>(quotient.data());
+				auto ptr = reinterpret_cast<const uinteger_t::half_digit*>(num.data());
 				uinteger_t::digit v = *ptr++;
 				v <<= uinteger_t::half_digit_bits;
 				for (auto i = num_sz * 2 - 1; i; --i) {
@@ -170,7 +173,10 @@ public:
 				auto rit_f = std::find_if(result.rbegin(), result.rend(), [s](const char& c) { return c != s; });
 				result.resize(result.rend() - rit_f); // shrink
 			} else {
-				uinteger_t uint_base = alphabet_base;
+				uinteger_t uint_base = base;
+				if (!bp) {
+					quotient = num;
+				}
 				do {
 					auto r = quotient.divmod(uint_base);
 					auto d = static_cast<int>(r.second);
