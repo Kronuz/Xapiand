@@ -248,13 +248,11 @@ XapiandManager::save_node_name(std::string_view _node_name)
 	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
 	if (fd != -1) {
 		if (io::write(fd, _node_name.data(), _node_name.size()) != static_cast<ssize_t>(_node_name.size())) {
-			L_CRIT("Cannot write in node file");
-			sig_exit(-EX_IOERR);
+			THROW(Error, "Cannot write in node file");
 		}
 		io::close(fd);
 	} else {
-		L_CRIT("Cannot open or create the node file");
-		sig_exit(-EX_NOINPUT);
+		THROW(Error, "Cannot open or create the node file");
 	}
 }
 
@@ -292,15 +290,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	L_MANAGER("Setup Node!");
 
-	#ifdef XAPIAND_CLUSTERING
-	auto raft = weak_raft.lock();
-	if (!opts.solo && !raft) {
-		L_CRIT("Raft not available");
-		sig_exit(-EX_SOFTWARE);
-		return;
-	}
-	#endif
-
 	auto leader_node = Node::leader_node();
 	auto local_node = Node::local_node();
 	auto is_leader = Node::is_equal(leader_node, local_node);
@@ -322,7 +311,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 				#ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					if (auto raft = weak_raft.lock()) {
+						raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					}
 				}
 				#endif
 			}
@@ -336,35 +327,23 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			THROW(NotFoundError);
 		}
 	} catch (const NotFoundError&) {
-		try {
-			L_INFO("Cluster database doesn't exist. Generating database...");
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			auto did = db_handler.index(local_node->lower_name(), false, {
-				{ RESERVED_INDEX, "field_all" },
-				{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-				{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
-			}, false, msgpack_type).first;
-			new_cluster = 1;
-			#ifdef XAPIAND_CLUSTERING
-			if (!opts.solo) {
+		L_INFO("Cluster database doesn't exist. Generating database...");
+		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		auto did = db_handler.index(local_node->lower_name(), false, {
+			{ RESERVED_INDEX, "field_all" },
+			{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+			{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
+		}, false, msgpack_type).first;
+		new_cluster = 1;
+		#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			if (auto raft = weak_raft.lock()) {
 				raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
 			}
-			#else
-				ignore_unused(did);
-			#endif
-		} catch (const CheckoutError&) {
-			L_CRIT("Cannot generate cluster database");
-			sig_exit(-EX_CANTCREAT);
-			return;
 		}
-	} catch (const Exception& exc) {
-		L_CRIT("Exception: %s", exc.get_message());
-		sig_exit(-EX_SOFTWARE);
-		return;
-	} catch (const Xapian::Error& exc) {
-		L_CRIT("Exception: %s", exc.get_description());
-		sig_exit(-EX_SOFTWARE);
-		return;
+		#else
+			ignore_unused(did);
+		#endif
 	}
 
 	// Set node as ready!
@@ -902,44 +881,34 @@ XapiandManager::new_leader(std::shared_ptr<const Node>&& leader_node)
 		// If any is missing, it gets added.
 
 		Endpoint cluster_endpoint(".");
-		try {
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			auto mset = db_handler.get_all_mset();
-			const auto m_e = mset.end();
+		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		auto mset = db_handler.get_all_mset();
+		const auto m_e = mset.end();
 
-			std::vector<std::pair<size_t, std::string>> db_nodes;
-			for (auto m = mset.begin(); m != m_e; ++m) {
-				auto did = *m;
-				auto document = db_handler.get_document(did);
-				auto obj = document.get_obj();
-				db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
-			}
+		std::vector<std::pair<size_t, std::string>> db_nodes;
+		for (auto m = mset.begin(); m != m_e; ++m) {
+			auto did = *m;
+			auto document = db_handler.get_document(did);
+			auto obj = document.get_obj();
+			db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
+		}
 
-			for (const auto& node : Node::nodes()) {
-				if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
-					return db_node.first == node->idx && db_node.second == node->lower_name();
-				}) == db_nodes.end()) {
-					if (node->idx) {
-						// Node is not in our local database, add it now!
-						L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
-						auto prepared = db_handler.prepare(node->lower_name(), false, {
-							{ RESERVED_INDEX, "field_all" },
-							{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-							{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
-						}, msgpack_type);
-						auto& doc = std::get<1>(prepared);
-						db_handler.replace_document(node->idx, std::move(doc), false);
-					}
+		for (const auto& node : Node::nodes()) {
+			if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
+				return db_node.first == node->idx && db_node.second == node->lower_name();
+			}) == db_nodes.end()) {
+				if (node->idx) {
+					// Node is not in our local database, add it now!
+					L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
+					auto prepared = db_handler.prepare(node->lower_name(), false, {
+						{ RESERVED_INDEX, "field_all" },
+						{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+						{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
+					}, msgpack_type);
+					auto& doc = std::get<1>(prepared);
+					db_handler.replace_document(node->idx, std::move(doc), false);
 				}
 			}
-		} catch (const Exception& exc) {
-			L_CRIT("Exception: %s", exc.get_message());
-			sig_exit(-EX_SOFTWARE);
-			return;
-		} catch (const Xapian::Error& exc) {
-			L_CRIT("Exception: %s", exc.get_description());
-			sig_exit(-EX_SOFTWARE);
-			return;
 		}
 	}
 }
