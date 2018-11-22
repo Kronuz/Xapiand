@@ -180,7 +180,9 @@ UDP::send_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			L_ERR("ERROR: sendto error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			if (!io::ignored_errno(errno, true, true, true)) {
+				L_ERR("ERROR: sendto error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			}
 		}
 		return written;
 	}
