@@ -170,6 +170,8 @@ typedef double ev_tstamp;
 /* support multiple event loops? */
 #if EV_MULTIPLICITY
 struct ev_loop;
+# define EV_T  struct ev_loop *_                  /* a loop as sole type parameter in a declaration */
+# define EV_T_ EV_T,                              /* a loop as first of multiple type parameters */
 # define EV_P  struct ev_loop *loop               /* a loop as sole parameter in a declaration */
 # define EV_P_ EV_P,                              /* a loop as first of multiple parameters */
 # define EV_A  loop                               /* a loop as sole argument to a function call */
@@ -179,6 +181,8 @@ struct ev_loop;
 # define EV_DEFAULT  ev_default_loop (0)          /* the default loop as sole arg */
 # define EV_DEFAULT_ EV_DEFAULT,                  /* the default loop as first of multiple arguments */
 #else
+# define EV_T void
+# define EV_T_
 # define EV_P void
 # define EV_P_
 # define EV_A
@@ -651,7 +655,7 @@ EV_API_DECL void ev_unref (EV_P) EV_THROW;
  * convenience function, wait for a single event, without registering an event watcher
  * if timeout is < 0, do wait indefinitely
  */
-EV_API_DECL void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revents, void *arg), void *arg) EV_THROW;
+EV_API_DECL void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(EV_P_ int revents, void *arg), void *arg) EV_THROW;
 
 # if EV_FEATURE_API
 EV_API_DECL unsigned int ev_iteration (EV_P) EV_THROW; /* number of loop iterations */

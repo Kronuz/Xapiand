@@ -367,7 +367,7 @@ int event_base_dispatch (struct event_base *base)
 }
 
 static void
-ev_x_loopexit_cb (int revents, void *base)
+ev_x_loopexit_cb (EV_T_ int revents, void *base)
 {
   dLOOPbase;
 
@@ -392,7 +392,7 @@ struct ev_x_once
 };
 
 static void
-ev_x_once_cb (int revents, void *arg)
+ev_x_once_cb (EV_P_ int revents, void *arg)
 {
   struct ev_x_once *once = (struct ev_x_once *)arg;
 

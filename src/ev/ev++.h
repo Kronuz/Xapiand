@@ -269,7 +269,7 @@ namespace ev {
 #endif
 
     // function callback
-    void once (int fd, int events, tstamp timeout, void (*cb)(int, void *) EV_THROW, void *arg = 0)
+    void once (int fd, int events, tstamp timeout, void (*cb)(EV_P_ int revents, void *arg) EV_THROW, void *arg = 0)
     {
       ev_once (EV_AX_ fd, events, timeout, cb, arg);
     }
