@@ -1,0 +1,239 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+:author: Dubalu LLC Team.
+:copyright: Copyright (C) 2018 Dubalu LLC. All rights reserved.
+:license: MIT License
+
+This is a script aimed ot strees out Xapiand
+
+$ python fortune.py
+"""
+from __future__ import absolute_import, unicode_literals, print_function
+
+import os
+import sys
+import signal
+from multiprocessing import Pool
+import re
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
+
+TASKS = 10000
+WORKERS = 200
+
+DEFAULT_HOST = '127.0.0.1'
+DEFAULT_PORT = 8880
+NUM_DATABASES = 20
+NUM_HOSTS = 1
+
+
+class Args:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
+def _task(args):
+    offset = args.start
+
+    import random
+    import msgpack
+    import requests
+
+    while offset < args.end:
+        offset += 1
+
+        client = random.choice(args.clients)
+        db = random.choice(args.databases)
+        body = {
+            'fortune': args.fortune(),
+        }
+
+        try:
+            client.put(
+                db,
+                body,
+                '{}'.format(offset),
+            )
+        except requests.HTTPError as e:
+            if e.response is None:
+                sys.stderr.write("x")
+            else:
+                content = msgpack.loads(e.response.content)
+                message = content.get('#message', [content])[0]
+                print('\n{}: {}'.format(e, message))
+        except requests.ConnectionError:
+            # (RequestException)
+            sys.stderr.write("C")
+        except requests.ProxyError:
+            # (ConnectionError)
+            sys.stderr.write("P")
+        except requests.SSLError:
+            # (ConnectionError)
+            sys.stderr.write("S")
+        except requests.Timeout:
+            # (RequestException)
+            sys.stderr.write("t")
+        except requests.ConnectTimeout:
+            # (ConnectionError, Timeout)
+            sys.stderr.write("T")
+        except requests.ReadTimeout:
+            # (Timeout)
+            sys.stderr.write("t")
+        except requests.URLRequired:
+            # (RequestException)
+            sys.stderr.write("u")
+        except requests.TooManyRedirects:
+            # (RequestException)
+            sys.stderr.write("d")
+        except requests.MissingSchema:
+            # (RequestException, ValueError)
+            sys.stderr.write("h")
+        except requests.InvalidSchema:
+            # (RequestException, ValueError)
+            sys.stderr.write("h")
+        except requests.InvalidURL:
+            # (RequestException, ValueError)
+            sys.stderr.write("u")
+        except requests.InvalidHeader:
+            # (RequestException, ValueError)
+            sys.stderr.write("h")
+        except requests.ChunkedEncodingError:
+            # (RequestException)
+            sys.stderr.write("c")
+        except requests.ContentDecodingError:
+            # (RequestException, BaseHTTPError)
+            sys.stderr.write("d")
+        except requests.StreamConsumedError:
+            # (RequestException, TypeError)
+            sys.stderr.write("s")
+        except requests.RetryError:
+            # (RequestException)
+            sys.stderr.write("r")
+        except requests.UnrewindableBodyError:
+            # (RequestException)
+            sys.stderr.write("e")
+        except requests.RequestsWarning:
+            # (Warning)
+            sys.stderr.write("w")
+        except requests.FileModeWarning:
+            # (RequestsWarning, DeprecationWarning)
+            sys.stderr.write("f")
+        except requests.RequestsDependencyWarning:
+            # (RequestsWarning)
+            sys.stderr.write("e")
+        except Exception:
+            sys.stderr.write("X")
+        else:
+            sys.stderr.write(".")
+
+
+def task(args):
+    try:
+        _task(args)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise
+
+
+def main():
+    hosts = []
+    databases = []
+    tasks = TASKS
+    workers = WORKERS
+    try:
+        # "10000/200" "127.0.0.1:8880" ":8881" ":8882-8883" "fortune.0-20"
+        for arg in sys.argv[1:]:
+            if arg in ("-h", "--help"):
+                raise ValueError("Help!")
+            m = re.match(r'^(\d+)?(?:/(\d+))?$', arg)
+            if m and any(m.groups()):
+                tasks = int(m.group(1) or tasks)
+                workers = int(m.group(2) or workers)
+                continue
+            m = re.match(r'^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))?(?::(\d+)(?:-(\d+))?)?$', arg)
+            if m and any(m.groups()):
+                ip = m.group(1) or DEFAULT_HOST
+                port1 = int(m.group(2) or 8880)
+                port2 = int(m.group(3) or port1)
+                hosts += [(ip, port) for port in range(port1, port2 + 1)]
+                continue
+            m = re.match(r'^([^.]+)?(?:\.(\d+)(?:-(\d+))?)?$', arg)
+            if m and any(m.groups()):
+                db = m.group(1) or 'fortune'
+                n1 = int(m.group(2) or DEFAULT_PORT)
+                n2 = int(m.group(3) or n1)
+                databases += ["{}.{}".format(db, n) for n in range(n1, n2 + 1)]
+                databases = databases
+                continue
+            databases += [arg]
+    except Exception:
+        print((
+            "usage: {fortune} [options...]\n"
+            "\n"
+            "options:\n"
+            "  tasks/workers         set number of tasks and number of worker\n"
+            "                        threads. default is {TASKS}/{WORKERS}\n"
+            "  ip[:port1[-port2]]    add ip with port or range of ip with ports\n"
+            "  dbname[.num1[-num2]]  add database or range of databases\n"
+            "\n"
+            "example:\n"
+            "  The following starts {NUM_DATABASES} worker threads to index {TASKS} elements to\n"
+            "  {NUM_DATABASES} databases in a range of {NUM_HOSTS} ports in the address {DEFAULT_HOST}\n"
+            "  (this is also the default):\n"
+            "    {fortune} {TASKS}/{WORKERS} fortune.0-{NUM_DATABASES} {DEFAULT_HOST}:{DEFAULT_PORT}-{last_port}\n"
+        ).format(
+            fortune=sys.argv[0],
+            last_port=DEFAULT_PORT + NUM_HOSTS - 1,
+            **globals()
+        ), file=sys.stderr)
+        sys.exit(64)
+
+    hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
+    databases = databases or ['fortune.{}'.format(i) for i in range(NUM_DATABASES)]
+
+    from xapiand import Xapiand
+    clients = []
+    for host, port in hosts:
+        clients.append(Xapiand(host=host, port=port))
+
+    try:
+        import fortunate
+    except ImportError:
+        print("You need to install 'fortunate' package:\nUse: pip install fortunate", file=sys.stderr)
+        sys.exit(70)
+    fortune = fortunate.Fortunate()
+    fortune()
+
+    def init_worker():
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    try:
+        if workers:
+            tpw = tasks / workers
+            jobs = []
+            for i in range(workers):
+                jobs.append(Args(
+                    start=i * tpw,
+                    end=i * tpw + tpw,
+                    clients=clients,
+                    databases=databases,
+                    fortune=fortune,
+                ))
+            pool = Pool(workers, init_worker)
+            pool.map_async(task, jobs).wait(1000000)
+        else:
+            task(Args(
+                start=0,
+                end=tasks,
+                clients=clients,
+                databases=databases,
+                fortune=fortune,
+            ))
+    except KeyboardInterrupt:
+        pool.terminate()
+        pool.join()
+
+if __name__ == '__main__':
+    main()
