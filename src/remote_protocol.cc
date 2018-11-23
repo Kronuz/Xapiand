@@ -1117,7 +1117,7 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 	lock_database lk_db(this);
 	auto result = database()->remove_spelling(std::string(p, p_end - p), freqdec);
 #if XAPIAN_AT_LEAST(1, 5, 0)
-	send_message(REPLY_REMOVESPELLING, encode_length(result));
+	send_message(RemoteReplyType::REPLY_REMOVESPELLING, serialise_length(result));
 #else
 	ignore_unused(result);
 #endif
