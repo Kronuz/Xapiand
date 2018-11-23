@@ -191,6 +191,12 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 			case RemoteMessageType::MSG_REMOVESPELLING:
 				msg_removespelling(message);
 				return;
+			case RemoteMessageType::MSG_GETMSET:
+				msg_getmset(message);
+				return;
+			case RemoteMessageType::MSG_SHUTDOWN:
+				msg_shutdown(message);
+				return;
 			case RemoteMessageType::MSG_METADATAKEYLIST:
 				msg_metadatakeylist(message);
 				return;
@@ -202,6 +208,9 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 				return;
 			case RemoteMessageType::MSG_POSITIONLISTCOUNT:
 				msg_positionlistcount(message);
+				return;
+			case RemoteMessageType::MSG_READACCESS:
+				msg_readaccess(message);
 				return;
 			default: {
 				std::string errmsg("Unexpected message type ");
