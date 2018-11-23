@@ -106,6 +106,13 @@ TermIterator::operator++()
 }
 
 Xapian::termcount
+TermIterator::get_approx_size() const
+{
+    LOGCALL(API, Xapian::termcount, "TermIterator::get_approx_size", NO_ARGS);
+    RETURN(internal ? internal->get_approx_size() : 0);
+}
+
+Xapian::termcount
 TermIterator::get_wdf() const
 {
     LOGCALL(API, Xapian::termcount, "TermIterator::get_wdf", NO_ARGS);
