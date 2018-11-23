@@ -71,11 +71,14 @@ throw_connection_closed_unexpectedly()
 }
 
 RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-			       const string & context_, bool writable,
-			       int flags)
-    : Xapian::Database::Internal(writable ?
+			       const string & context_, bool writable_,
+			       int flags_, const string & dir)
+    : Xapian::Database::Internal(writable_ ?
 				 TRANSACTION_NONE :
 				 TRANSACTION_READONLY),
+      db_dir(dir),
+      writable(writable_),
+      flags(flags_),
       link(fd, fd, context_),
       context(context_),
       cached_stats_valid(),
@@ -92,16 +95,6 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
 #endif
 
     update_stats(MSG_MAX);
-
-    if (writable) {
-	if (flags & Xapian::DB_RETRY_LOCK) {
-	    string message;
-	    pack_uint_last(message, unsigned(flags & Xapian::DB_RETRY_LOCK));
-	    update_stats(MSG_WRITEACCESS, message);
-	} else {
-	    update_stats(MSG_WRITEACCESS);
-	}
-    }
 }
 
 Xapian::termcount
@@ -322,7 +315,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	return false;
     }
 
-    if (message.size() < 3) {
+    if (message.size() < 2) {
 	throw_handshake_failed(context);
     }
     const char *p = message.c_str();
@@ -349,6 +342,46 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	    "."
 	    STRINGIZE(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 	throw Xapian::NetworkError(errmsg, context);
+    }
+
+    if (p == p_end) {
+	message.clear();
+	pack_uint(message, unsigned(flags));
+	pack_string(message, db_dir);
+
+	if (writable) {
+	    send_message(MSG_WRITEACCESS, message);
+	} else {
+	    send_message(MSG_READACCESS, message);
+	}
+
+	get_message(message, REPLY_UPDATE);
+	if (message.size() < 3) {
+	    throw Xapian::NetworkError("Database was not selected", context);
+	}
+
+	p = message.c_str();
+	p_end = p + message.size();
+
+	p += 2;  // The protocol versions where already checked.
+    } else if (msg_code == MSG_MAX && writable) {
+	if (flags) {
+	    message.clear();
+	    pack_uint(message, unsigned(flags));
+	    send_message(MSG_WRITEACCESS, message);
+	} else {
+	    send_message(MSG_WRITEACCESS, string());
+	}
+
+	get_message(message, REPLY_UPDATE);
+	if (message.size() < 3) {
+	    throw Xapian::NetworkError("Database was not selected", context);
+	}
+
+	p = message.c_str();
+	p_end = p + message.size();
+
+	p += 2;  // The protocol versions where already checked.
     }
 
     if (!unpack_uint(&p, p_end, &doccount) ||
@@ -409,8 +442,8 @@ RemoteDatabase::get_freqs(const string & term,
     Assert(!term.empty());
     string message;
     if (termfreq_ptr && collfreq_ptr) {
-	send_message(MSG_FREQS, term);
-	get_message(message, REPLY_FREQS);
+	    send_message(MSG_FREQS, term);
+	    get_message(message, REPLY_FREQS);
 	const char* p = message.data();
 	const char* p_end = p + message.size();
 	if (unpack_uint(&p, p_end, termfreq_ptr) &&
@@ -418,8 +451,8 @@ RemoteDatabase::get_freqs(const string & term,
 	    return;
 	}
     } else if (termfreq_ptr) {
-	send_message(MSG_TERMFREQ, term);
-	get_message(message, REPLY_TERMFREQ);
+	    send_message(MSG_TERMFREQ, term);
+	    get_message(message, REPLY_TERMFREQ);
 	const char* p = message.data();
 	const char* p_end = p + message.size();
 	if (unpack_uint_last(&p, p_end, termfreq_ptr)) {
@@ -432,7 +465,7 @@ RemoteDatabase::get_freqs(const string & term,
 	const char* p_end = p + message.size();
 	if (unpack_uint_last(&p, p_end, collfreq_ptr)) {
 	    return;
-	}
+    }
     } else {
 	Assert(false);
 	return;
@@ -447,14 +480,14 @@ RemoteDatabase::read_value_stats(Xapian::valueno slot) const
     if (mru_slot == slot)
 	return;
 
-    string message;
+	string message;
     pack_uint_last(message, slot);
     send_message(MSG_VALUESTATS, message);
 
-    get_message(message, REPLY_VALUESTATS);
+	get_message(message, REPLY_VALUESTATS);
     const char* p = message.data();
     const char* p_end = p + message.size();
-    mru_slot = slot;
+	mru_slot = slot;
     if (!unpack_uint(&p, p_end, &mru_valstats.freq) ||
 	!unpack_string(&p, p_end, mru_valstats.lower_bound)) {
 	throw Xapian::NetworkError("Bad REPLY_VALUESTATS", context);
