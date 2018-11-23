@@ -88,7 +88,8 @@ class ProgClient : public RemoteDatabase {
 	       const std::string &arg,
 	       double msecs_timeout,
 	       bool writable,
-	       int flags);
+	       int flags,
+	       const std::string &dir);
 
     /** Destructor. */
     ~ProgClient();
