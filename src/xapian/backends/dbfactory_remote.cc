@@ -34,11 +34,29 @@ namespace Xapian {
 
 Database
 Remote::open(const string &host, unsigned int port, unsigned timeout_,
+	     unsigned connect_timeout, int flags, const string &dir)
+{
+    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout | flags | dir);
+    RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+					connect_timeout * 1e-3, false, flags, dir)));
+}
+
+Database
+Remote::open(const string &host, unsigned int port, unsigned timeout_,
 	     unsigned connect_timeout)
 {
-    LOGCALL_STATIC(API, Database, "Remote::open", host | port | timeout_ | connect_timeout);
-    RETURN(Database(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-					connect_timeout * 1e-3, false, 0)));
+	RETURN(Remote::open(host, port, timeout_, connect_timeout, 0, string()));
+}
+
+WritableDatabase
+Remote::open_writable(const string &host, unsigned int port,
+		      unsigned timeout_, unsigned connect_timeout,
+		      int flags, const string &dir)
+{
+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags | dir);
+    RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
+						connect_timeout * 1e-3, true,
+						flags, dir)));
 }
 
 WritableDatabase
@@ -46,27 +64,38 @@ Remote::open_writable(const string &host, unsigned int port,
 		      unsigned timeout_, unsigned connect_timeout,
 		      int flags)
 {
-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", host | port | timeout_ | connect_timeout | flags);
-    RETURN(WritableDatabase(new RemoteTcpClient(host, port, timeout_ * 1e-3,
-						connect_timeout * 1e-3, true,
-						flags)));
+	RETURN(Remote::open_writable(host, port, timeout_, connect_timeout, flags, string()));
+}
+
+Database
+Remote::open(const string &program, const string &args,
+	     unsigned timeout_, int flags, const string &dir)
+{
+    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_ | flags | dir);
+    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, flags, dir)));
 }
 
 Database
 Remote::open(const string &program, const string &args,
 	     unsigned timeout_)
 {
-    LOGCALL_STATIC(API, Database, "Remote::open", program | args | timeout_);
-    RETURN(Database(new ProgClient(program, args, timeout_ * 1e-3, false, 0)));
+	RETURN(Remote::open(program, args, timeout_, 0, string()));
+}
+
+WritableDatabase
+Remote::open_writable(const string &program, const string &args,
+		      unsigned timeout_, int flags, const string &dir)
+{
+    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags | dir);
+    RETURN(WritableDatabase(new ProgClient(program, args,
+					   timeout_ * 1e-3, true, flags, dir)));
 }
 
 WritableDatabase
 Remote::open_writable(const string &program, const string &args,
 		      unsigned timeout_, int flags)
 {
-    LOGCALL_STATIC(API, WritableDatabase, "Remote::open_writable", program | args | timeout_ | flags);
-    RETURN(WritableDatabase(new ProgClient(program, args,
-					   timeout_ * 1e-3, true, flags)));
+	RETURN(open_writable(program, args, timeout_, flags, string()));
 }
 
 }

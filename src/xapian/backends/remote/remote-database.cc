@@ -71,11 +71,14 @@ throw_connection_closed_unexpectedly()
 }
 
 RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-			       const string & context_, bool writable,
-			       int flags)
-    : Xapian::Database::Internal(writable ?
+			       const string & context_, bool writable_,
+			       int flags_, const string & dir)
+    : Xapian::Database::Internal(writable_ ?
 				 TRANSACTION_NONE :
 				 TRANSACTION_READONLY),
+      db_dir(dir),
+      writable(writable_),
+      flags(flags_),
       link(fd, fd, context_),
       context(context_),
       cached_stats_valid(),
@@ -92,15 +95,6 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
 #endif
 
     update_stats(MSG_MAX);
-
-    if (writable) {
-	if (flags & Xapian::DB_RETRY_LOCK) {
-	    const string & body = encode_length(flags & Xapian::DB_RETRY_LOCK);
-	    update_stats(MSG_WRITEACCESS, body);
-	} else {
-	    update_stats(MSG_WRITEACCESS);
-	}
-    }
 }
 
 Xapian::termcount
@@ -315,7 +309,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	return false;
     }
 
-    if (message.size() < 3) {
+    if (message.size() < 2) {
 	throw_handshake_failed(context);
     }
     const char *p = message.c_str();
@@ -342,6 +336,46 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	    "."
 	    STRINGIZE(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 	throw Xapian::NetworkError(errmsg, context);
+    }
+
+    if (p == p_end) {
+	message = encode_length(flags);
+	message += encode_length(db_dir.size());
+	message += db_dir;
+
+	if (writable) {
+	    send_message(MSG_WRITEACCESS, message);
+	} else {
+	    send_message(MSG_READACCESS, message);
+	}
+
+	get_message(message, REPLY_UPDATE);
+	if (message.size() < 3) {
+	    throw Xapian::NetworkError("Database was not selected", context);
+	}
+
+	p = message.c_str();
+	p_end = p + message.size();
+
+	// The protocol versions where already checked.
+	p += 2;
+    } else if (msg_code == MSG_MAX && writable) {
+	if (flags) {
+	    send_message(MSG_WRITEACCESS, encode_length(flags));
+	} else {
+	    send_message(MSG_WRITEACCESS, string());
+	}
+
+	get_message(message, REPLY_UPDATE);
+	if (message.size() < 3) {
+	    throw Xapian::NetworkError("Database was not selected", context);
+	}
+
+	p = message.c_str();
+	p_end = p + message.size();
+
+	// The protocol versions where already checked.
+	p += 2;
     }
 
     decode_length(&p, p_end, doccount);
