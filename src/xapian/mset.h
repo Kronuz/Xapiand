@@ -379,6 +379,14 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /** Return iterator pointing to the last object in this MSet. */
     MSetIterator back() const;
 
+    /** Serialise MSet into a string.
+     */
+    std::string serialise() const;
+
+    /** Unserialise an MSet from a string produced by serialise().
+      */
+    static MSet unserialise(const std::string &s);
+
     /// Return a string describing this object.
     std::string get_description() const;
 

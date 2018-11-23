@@ -27,6 +27,7 @@
 #include "xapian/expand/expandweight.h"
 #include "xapian/matcher/matcher.h"
 #include "xapian/api/msetinternal.h"
+#include "xapian/net/serialise.h"
 #include "xapian/api/vectortermlist.h"
 #include "xapian/weight/weightinternal.h"
 #include "xapian/database.h"
@@ -195,6 +196,25 @@ Enquire::set_time_limit(double time_limit)
     internal->time_limit = time_limit;
 }
 
+void
+Enquire::unserialise_stats(const string& serialised)
+{
+    internal->unserialise_stats(serialised);
+}
+
+const string
+Enquire::serialise_stats() const
+{
+    return internal->serialise_stats();
+}
+
+void
+Enquire::prepare_mset(const RSet *rset,
+		      const MatchDecider *mdecider) const
+{
+    internal->prepare_mset(rset, mdecider);
+}
+
 MSet
 Enquire::get_mset(doccount first,
 		  doccount maxitems,
@@ -251,6 +271,51 @@ Enquire::get_description() const
 Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
 
+void
+Enquire::Internal::unserialise_stats(const string& serialised)
+{
+    stats.reset(new Xapian::Weight::Internal);
+    ::unserialise_stats(serialised, *(stats.get()));
+    stats->set_bounds_from_db(db);
+}
+
+const string
+Enquire::Internal::serialise_stats() const
+{
+    return ::serialise_stats(*(stats.get()));
+}
+
+void
+Enquire::Internal::prepare_mset(const RSet *rset,
+				const MatchDecider *mdecider) const
+{
+    if (percent_threshold && (sort_by == VAL || sort_by == VAL_REL)) {
+	throw Xapian::UnimplementedError("Use of a percentage cutoff while "
+					 "sorting primary by value isn't "
+					 "currently supported");
+    }
+
+    stats.reset(new Xapian::Weight::Internal);
+    match.reset(new ::Matcher(db,
+				    query,
+				    query_length,
+				    rset,
+				    *stats,
+				    *weight,
+				    (sort_functor.get() != NULL),
+				    (mdecider != NULL),
+				    collapse_key,
+				    collapse_max,
+				    percent_threshold,
+				    weight_threshold,
+				    order,
+				    sort_key,
+				    sort_by,
+				    sort_val_reverse,
+				    time_limit,
+				    matchspies));
+}
+
 MSet
 Enquire::Internal::get_mset(doccount first,
 			    doccount maxitems,
@@ -288,55 +353,49 @@ Enquire::Internal::get_mset(doccount first,
 	checkatleast = max(checkatleast, first + maxitems);
     }
 
-    unique_ptr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
-    ::Matcher match(db,
-		    query,
-		    query_length,
-		    rset,
-		    *stats,
-		    *weight,
-		    (sort_functor.get() != NULL),
-		    (mdecider != NULL),
-		    collapse_key,
-		    collapse_max,
-		    percent_threshold,
-		    weight_threshold,
-		    order,
-		    sort_key,
-		    sort_by,
-		    sort_val_reverse,
-		    time_limit,
-		    matchspies);
+    try {
+	if (!stats || !match) {
+	    prepare_mset(rset, mdecider);
+	}
 
-    MSet mset = match.get_mset(first,
-			       maxitems,
-			       checkatleast,
-			       *stats,
-			       *weight,
-			       mdecider,
-			       sort_functor.get(),
-			       collapse_key,
-			       collapse_max,
-			       percent_threshold,
-			       weight_threshold,
-			       order,
-			       sort_key,
-			       sort_by,
-			       sort_val_reverse,
-			       time_limit,
-			       matchspies);
+	MSet mset = match->get_mset(first,
+				    maxitems,
+				    checkatleast,
+				    *stats,
+				    *weight,
+				    mdecider,
+				    sort_functor.get(),
+				    collapse_key,
+				    collapse_max,
+				    percent_threshold,
+				    weight_threshold,
+				    order,
+				    sort_key,
+				    sort_by,
+				    sort_val_reverse,
+				    time_limit,
+				    matchspies);
 
-    if (first_orig != first && mset.internal.get()) {
-	mset.internal->set_first(first_orig);
+	if (first_orig != first && mset.internal.get()) {
+	    mset.internal->set_first(first_orig);
+	}
+
+	mset.internal->set_enquire(this);
+
+	if (!mset.internal->get_stats()) {
+	    mset.internal->set_stats(stats.release());
+	} else {
+	    stats.reset();
+	}
+
+	match.reset();
+
+	return mset;
+    } catch (...) {
+	stats.reset();
+	match.reset();
+	throw;
     }
-
-    mset.internal->set_enquire(this);
-
-    if (!mset.internal->get_stats()) {
-	mset.internal->set_stats(stats.release());
-    }
-
-    return mset;
 }
 
 TermIterator
