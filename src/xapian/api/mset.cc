@@ -25,6 +25,7 @@
 
 #include "xapian/net/length.h"
 #include "xapian/net/serialise.h"
+#include "xapian/matcher/matcher.h"
 #include "xapian/matcher/msetcmp.h"
 #include "xapian/api/roundestimate.h"
 #include "xapian/common/serialise-double.h"
@@ -195,9 +196,57 @@ MSet::snippet(const std::string& text,
 }
 
 std::string
+MSet::serialise() const
+{
+    return internal->serialise();
+}
+
+MSet
+MSet::unserialise(const std::string &s)
+{
+    MSet mset;
+    mset.internal->unserialise(s.data(), s.data() + s.size());
+    return mset;
+}
+
+std::string
 MSet::get_description() const
 {
     return internal->get_description();
+}
+
+MSet::Internal::Internal()
+{
+}
+
+MSet::Internal::Internal(Xapian::doccount first_,
+	    Xapian::doccount matches_upper_bound_,
+	    Xapian::doccount matches_lower_bound_,
+	    Xapian::doccount matches_estimated_,
+	    Xapian::doccount uncollapsed_upper_bound_,
+	    Xapian::doccount uncollapsed_lower_bound_,
+	    Xapian::doccount uncollapsed_estimated_,
+	    double max_possible_,
+	    double max_attained_,
+	    std::vector<Result>&& items_,
+	    double percent_scale_factor_)
+    : items(std::move(items_)),
+      matches_lower_bound(matches_lower_bound_),
+      matches_estimated(matches_estimated_),
+      matches_upper_bound(matches_upper_bound_),
+      uncollapsed_lower_bound(uncollapsed_lower_bound_),
+      uncollapsed_estimated(uncollapsed_estimated_),
+      uncollapsed_upper_bound(uncollapsed_upper_bound_),
+      first(first_),
+      max_possible(max_possible_),
+      max_attained(max_attained_),
+      percent_scale_factor(percent_scale_factor_)
+{
+}
+
+void
+MSet::Internal::set_enquire(const Xapian::Enquire::Internal* enquire_) {
+    enquire = enquire_;
 }
 
 Document

@@ -358,6 +358,13 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
      */
     void set_time_limit(double time_limit);
 
+    void unserialise_stats(const std::string& serialised);
+
+    const std::string serialise_stats() const;
+
+    void prepare_mset(const RSet *omrset,
+		      const MatchDecider *mdecider) const;
+
     /** Run the query.
      *
      *  Run the query using the settings in this Enquire object and those
