@@ -185,10 +185,8 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 {
 	if (node_ == nullptr) {
 		auto local_node = Node::local_node();
-		node_ = local_node.get();
-	}
-
-	if (node_ != nullptr) {
+		node = *local_node;
+	} else {
 		node = *node_;
 	}
 
