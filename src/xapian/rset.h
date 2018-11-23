@@ -120,6 +120,14 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
 	return contains(*it);
     }
 
+    /** Serialise RSet into a string.
+     */
+    std::string serialise() const;
+
+    /** Unserialise an RSet from a string produced by serialise().
+      */
+    static RSet unserialise(const std::string &s);
+
     /// Return a string describing this object.
     std::string get_description() const;
 };

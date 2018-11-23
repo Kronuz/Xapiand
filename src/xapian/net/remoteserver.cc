@@ -29,6 +29,7 @@
 #include "xapian/matchspy.h"
 #include "xapian/query.h"
 #include "xapian/rset.h"
+#include "xapian/mset.h"
 #include "xapian/valueiterator.h"
 
 #include <signal.h>
@@ -36,10 +37,7 @@
 #include <cstdlib>
 #include <memory>
 
-#include "xapian/api/msetinternal.h"
-#include "xapian/api/termlist.h"
 #include "xapian/net/length.h"
-#include "xapian/matcher/matcher.h"
 #include "xapian/common/omassert.h"
 #include "xapian/common/realtime.h"
 #include "xapian/net/serialise.h"
@@ -47,7 +45,7 @@
 #include "xapian/net/serialise-error.h"
 #include "xapian/common/str.h"
 #include "xapian/common/stringutils.h"
-#include "xapian/weight/weightinternal.h"
+#include "xapian/api/enquireinternal.h"
 
 using namespace std;
 
@@ -323,9 +321,7 @@ RemoteServer::msg_termlist(const string &message)
     Xapian::docid did;
     decode_length(&p, p_end, did);
     Xapian::TermIterator t = db->termlist_begin(did);
-    Xapian::termcount num_terms = 0;
-    if (t.internal)
-	num_terms = t.internal->get_approx_size();
+    Xapian::termcount num_terms = t.get_approx_size();
     send_message(REPLY_TERMLIST0, encode_length(db->get_doclength(did)) +
 				  encode_length(num_terms));
     string reply;
@@ -529,6 +525,8 @@ RemoteServer::msg_query(const string &message_in)
     const char *p = message_in.c_str();
     const char *p_end = p + message_in.size();
 
+    Xapian::Enquire enquire(*db);
+
     // Unserialise the Query.
     size_t len;
     decode_length_and_check(&p, p_end, len);
@@ -539,6 +537,8 @@ RemoteServer::msg_query(const string &message_in)
     Xapian::termcount qlen;
     decode_length(&p, p_end, qlen);
 
+    enquire.set_query(query, qlen);
+
     Xapian::valueno collapse_max;
     decode_length(&p, p_end, collapse_max);
 
@@ -546,16 +546,20 @@ RemoteServer::msg_query(const string &message_in)
     if (collapse_max)
 	decode_length(&p, p_end, collapse_key);
 
+    enquire.set_collapse_key(collapse_key, collapse_max);
+
     if (p_end - p < 4 || *p < '0' || *p > '2') {
 	throw Xapian::NetworkError("bad message (docid_order)");
     }
     Xapian::Enquire::docid_order order;
     order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
 
+    enquire.set_docid_order(order);
+
     Xapian::valueno sort_key;
     decode_length(&p, p_end, sort_key);
 
-    if (*p < '0' || *p > '3') {
+    if (*p < '0' || *p > '4') {
 	throw Xapian::NetworkError("bad message (sort_by)");
     }
     Xapian::Enquire::Internal::sort_setting sort_by;
@@ -566,7 +570,27 @@ RemoteServer::msg_query(const string &message_in)
     }
     bool sort_value_forward(*p++ != '0');
 
+    switch (sort_by) {
+	case Xapian::Enquire::Internal::REL:
+	    enquire.set_sort_by_relevance();
+	    break;
+	case Xapian::Enquire::Internal::VAL:
+	    enquire.set_sort_by_value(sort_key, sort_value_forward);
+	    break;
+	case Xapian::Enquire::Internal::VAL_REL:
+	    enquire.set_sort_by_value_then_relevance(sort_key, sort_value_forward);
+	    break;
+	case Xapian::Enquire::Internal::REL_VAL:
+	    enquire.set_sort_by_relevance_then_value(sort_key, sort_value_forward);
+	    break;
+	case Xapian::Enquire::Internal::DOCID:
+	    enquire.set_weighting_scheme(Xapian::BoolWeight());
+	    break;
+    }
+
     double time_limit = unserialise_double(&p, p_end);
+
+    enquire.set_time_limit(time_limit);
 
     int percent_threshold = *p++;
     if (percent_threshold < 0 || percent_threshold > 100) {
@@ -577,6 +601,8 @@ RemoteServer::msg_query(const string &message_in)
     if (weight_threshold < 0) {
 	throw Xapian::NetworkError("bad message (weight_threshold)");
     }
+
+    enquire.set_cutoff(percent_threshold, weight_threshold);
 
     // Unserialise the Weight object.
     decode_length_and_check(&p, p_end, len);
@@ -596,13 +622,15 @@ RemoteServer::msg_query(const string &message_in)
     unique_ptr<Xapian::Weight> wt(wttype->unserialise(string(p, len)));
     p += len;
 
+    enquire.set_weighting_scheme(*wt);
+
     // Unserialise the RSet object.
     decode_length_and_check(&p, p_end, len);
     Xapian::RSet rset = unserialise_rset(string(p, len));
     p += len;
 
     // Unserialise any MatchSpy objects.
-    vector<Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy>> matchspies;
+    vector<Xapian::MatchSpy*> matchspies;
     while (p != p_end) {
 	decode_length_and_check(&p, p_end, len);
 	string spytype(p, len);
@@ -614,19 +642,14 @@ RemoteServer::msg_query(const string &message_in)
 	p += len;
 
 	decode_length_and_check(&p, p_end, len);
-	matchspies.push_back(spyclass->unserialise(string(p, len), reg)->release());
+	Xapian::MatchSpy *spy = spyclass->unserialise(string(p, len), reg);
+	matchspies.push_back(spy);
+	enquire.add_matchspy(spy->release());
 	p += len;
     }
 
-    Xapian::Weight::Internal local_stats;
-    Matcher matcher(*db, query, qlen, &rset, local_stats, *wt,
-		    false, false,
-		    collapse_key, collapse_max,
-		    percent_threshold, weight_threshold,
-		    order, sort_key, sort_by, sort_value_forward, time_limit,
-		    matchspies);
-
-    send_message(REPLY_STATS, serialise_stats(local_stats));
+    Xapian::MSet prepared_mset = enquire.prepare_mset(&rset, nullptr);
+    send_message(REPLY_STATS, prepared_mset.serialise_stats());
 
     string message;
     get_message(active_timeout, message, MSG_GETMSET);
@@ -641,21 +664,9 @@ RemoteServer::msg_query(const string &message_in)
     Xapian::termcount check_at_least;
     decode_length(&p, p_end, check_at_least);
 
-    message.erase(0, message.size() - (p_end - p));
-    unique_ptr<Xapian::Weight::Internal> total_stats(new Xapian::Weight::Internal);
-    unserialise_stats(message, *total_stats);
-    total_stats->set_bounds_from_db(*db);
+    enquire.set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
-    Xapian::MSet mset = matcher.get_mset(first, maxitems, check_at_least,
-					 *total_stats, *wt, 0, 0,
-					 collapse_key, collapse_max,
-					 percent_threshold, weight_threshold,
-					 order,
-					 sort_key, sort_by, sort_value_forward,
-					 time_limit, matchspies);
-    // FIXME: The local side already has these stats, except for the maxpart
-    // information.
-    mset.internal->set_stats(total_stats.release());
+    Xapian::MSet mset = enquire.get_mset(first, maxitems, check_at_least);
 
     message.resize(0);
     for (auto i : matchspies) {
@@ -663,7 +674,7 @@ RemoteServer::msg_query(const string &message_in)
 	message += encode_length(spy_results.size());
 	message += spy_results;
     }
-    message += mset.internal->serialise();
+    message += mset.serialise();
     send_message(REPLY_RESULTS, message);
 }
 
