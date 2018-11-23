@@ -1208,10 +1208,12 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 }
 
 
-void
+Xapian::termcount
 Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_, bool wal_)
 {
 	L_CALL("Database::remove_spelling(<word>, <freqdec>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
+
+	Xapian::termcount result = 0;
 
 	if (!is_writable) {
 		THROW(Error, "database is read-only");
@@ -1226,7 +1228,11 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
+#if XAPIAN_AT_LEAST(1, 5, 0)
+			result = wdb->remove_spelling(word, freqdec);
+#else
 			wdb->remove_spelling(word, freqdec);
+#endif
 			modified = true;
 			break;
 		} catch (const Xapian::NetworkError& exc) {
@@ -1255,6 +1261,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	if (commit_) {
 		commit(wal_);
 	}
+
+	return result;
 }
 
 

@@ -32,10 +32,13 @@
 
 #include "lock_database.h"
 
-
-#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
+#if XAPIAN_AT_LEAST(1, 5, 0)
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 40
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
-
+#else
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
+#define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 1
+#endif
 
 class BinaryClient;
 
@@ -72,6 +75,7 @@ enum class RemoteMessageType {
 	MSG_METADATAKEYLIST,        // Iterator for metadata keys
 	MSG_FREQS,                  // Get termfreq and collfreq
 	MSG_UNIQUETERMS,            // Get number of unique terms in doc
+	MSG_POSITIONLISTCOUNT,      // Get PositionList length
 	MSG_READACCESS,             // Select current database
 	MSG_MAX
 };
@@ -87,7 +91,8 @@ inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
 		"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
 		"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
 		"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
-		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
+		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS",
+		"MSG_POSITIONLISTCOUNT", "MSG_READACCESS",
 	};
 	auto type_int = static_cast<int>(type);
 	if (type_int >= 0 || type_int < static_cast<int>(RemoteMessageType::MSG_MAX)) {
@@ -122,6 +127,8 @@ enum class RemoteReplyType {
 	REPLY_METADATAKEYLIST,      // Iterator for metadata keys
 	REPLY_FREQS,                // Get termfreq and collfreq
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
+    REPLY_POSITIONLISTCOUNT,    // Get PositionList length
+    REPLY_REMOVESPELLING,       // Remove a spelling
 	REPLY_MAX
 };
 
@@ -134,6 +141,7 @@ inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 		"REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
 		"REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
 		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
+		"REPLY_POSITIONLISTCOUNT", "REPLY_REMOVESPELLING",
 	};
 	auto type_int = static_cast<int>(type);
 	if (type_int >= 0 || type_int < static_cast<int>(RemoteReplyType::REPLY_MAX)) {
@@ -167,6 +175,7 @@ public:
 	void msg_termlist(const std::string& message);
 	void msg_positionlist(const std::string& message);
 	void msg_postlist(const std::string& message);
+	void msg_positionlistcount(const std::string& message);
 	void msg_readaccess(const std::string& message);
 	void msg_writeaccess(const std::string& message);
 	void msg_reopen(const std::string& message);
@@ -190,7 +199,7 @@ public:
 	void msg_replacedocument(const std::string& message);
 	void msg_replacedocumentterm(const std::string& message);
 	void msg_getmetadata(const std::string& message);
-	void msg_openmetadatakeylist(const std::string& message);
+	void msg_metadatakeylist(const std::string& message);
 	void msg_setmetadata(const std::string& message);
 	void msg_addspelling(const std::string& message);
 	void msg_removespelling(const std::string& message);

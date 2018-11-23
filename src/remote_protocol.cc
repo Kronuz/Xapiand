@@ -24,6 +24,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "database.h"                         // for Database
+#include "ignore_unused.h"                    // for ignore_unused
 #include "length.h"                           // for serialise_length, unserialise_length
 #include "repr.hh"                            // for repr
 #include "server/binary_client.h"             // for BinaryClient
@@ -51,7 +52,7 @@
  * |  _ <  __/ | | | | | (_) | ||  __/  __/| | | (_) | || (_) | (_| (_) | |
  * |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
  *
- * Based on xapian/xapian-core/net/remoteserver.cc @ 6a76cee
+ * Based on xapian/xapian-core/net/remoteserver.cc @ 62d608e
  *
  */
 
@@ -141,9 +142,10 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 		&RemoteProtocol::msg_removespelling,
 		&RemoteProtocol::msg_getmset,
 		&RemoteProtocol::msg_shutdown,
-		&RemoteProtocol::msg_openmetadatakeylist,
+		&RemoteProtocol::msg_metadatakeylist,
 		&RemoteProtocol::msg_freqs,
 		&RemoteProtocol::msg_uniqueterms,
+		&RemoteProtocol::msg_positionlistcount,
 		&RemoteProtocol::msg_readaccess,
 	};
 	try {
@@ -151,7 +153,7 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
 			THROW(InvalidArgumentError, errmsg);
-		}
+			}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		L_EXC("ERROR: Dispatching remote protocol message");
@@ -162,10 +164,10 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 		} catch (...) {}
 		client.detach();
 	} catch (const Xapian::NetworkError&) {
-	    // All other network errors mean we are fatally confused and are unlikely
-	    // to be able to communicate further across this connection. So we don't
-	    // try to propagate the error to the client, but instead just log the
-	    // exception and close the connection.
+		// All other network errors mean we are fatally confused and are unlikely
+		// to be able to communicate further across this connection. So we don't
+		// try to propagate the error to the client, but instead just log the
+		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
 		client.detach();
 	} catch (const Xapian::Error& exc) {
@@ -274,6 +276,30 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 
 
 void
+RemoteProtocol::msg_positionlistcount(const std::string &message)
+{
+	L_CALL("RemoteProtocol::msg_positionlistcount(<message>)");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	// This is kind of clumsy, but what the public API requires.
+	Xapian::termcount result = 0;
+	Xapian::TermIterator termit = db()->termlist_begin(did);
+	if (termit != db()->termlist_end(did)) {
+	   std::string term(p, p_end - p);
+	   termit.skip_to(term);
+	   if (termit != db()->termlist_end(did)) {
+		   result = termit.positionlist_count();
+	   }
+	}
+
+	send_message(RemoteReplyType::REPLY_POSITIONLISTCOUNT, serialise_length(result));
+}
+
+
+void
 RemoteProtocol::msg_postlist(const std::string &message)
 {
 	L_CALL("RemoteProtocol::msg_postlist(<message>)");
@@ -344,8 +370,7 @@ RemoteProtocol::msg_readaccess(const std::string &message)
 		while (p != p_end) {
 			size_t len;
 			len = unserialise_length(&p, p_end, true);
-			std::string path(p, len);
-			endpoints.add(Endpoint{path});
+			endpoints.add(Endpoint{std::string_view(p, len)});
 			p += len;
 		}
 	}
@@ -391,8 +416,7 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 	if (p != p_end) {
 		size_t len;
 		len = unserialise_length(&p, p_end, true);
-		std::string path(p, len);
-		endpoints.add(Endpoint{path});
+		endpoints.add(Endpoint{std::string_view(p, len)});
 		p += len;
 		if (p != p_end) {
 			THROW(NetworkError, "only one database directory allowed on writable databases");
@@ -446,10 +470,10 @@ RemoteProtocol::msg_update(const std::string &)
 		message += serialise_length(doclen_lb);
 		message += serialise_length(db()->get_doclength_upper_bound() - doclen_lb);
 		message += (db()->has_positions() ? '1' : '0');
-#if XAPIAN_MAJOR_VERSION <= 1 && XAPIAN_MINOR_VERSION <= 4 && XAPIAN_REVISION <= 4
-		message += serialise_length(db()->get_avlength() * db()->get_doccount() + .5);
-#else
+#if XAPIAN_AT_LEAST(1, 4, 4)
 		message += serialise_length(db()->get_total_length());
+#else
+		message += serialise_length(db()->get_avlength() * db()->get_doccount() + .5);
 #endif
 		std::string uuid = db()->get_uuid();
 		message += uuid;
@@ -529,7 +553,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Sort by
-	using sort_setting = enum { REL, VAL, VAL_REL, REL_VAL };
+	using sort_setting = enum { REL, VAL, VAL_REL, REL_VAL, DOCID };
 
 	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
@@ -544,7 +568,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	}
 	bool sort_value_forward(*p++ != '0');
 
-	switch(sort_by) {
+	switch (sort_by) {
 		case REL:
 			_msg_query_enquire->set_sort_by_relevance();
 			break;
@@ -557,6 +581,9 @@ RemoteProtocol::msg_query(const std::string &message_in)
 		case REL_VAL:
 			_msg_query_enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
 			break;
+		case DOCID:
+			// _msg_query_enquire->set_sort_by_id(sort_key, sort_value_forward);
+			break;
 	}
 
 	////////////////////////////////////////////////////////////////////////////
@@ -567,19 +594,19 @@ RemoteProtocol::msg_query(const std::string &message_in)
 	_msg_query_enquire->set_time_limit(time_limit);
 
 	////////////////////////////////////////////////////////////////////////////
-	// cutoff
+	// Threshold
 
-	int percent_cutoff = *p++;
-	if (percent_cutoff < 0 || percent_cutoff > 100) {
-		THROW(NetworkError, "bad message (percent_cutoff)");
+	int percent_threshold = *p++;
+	if (percent_threshold < 0 || percent_threshold > 100) {
+		THROW(NetworkError, "bad message (percent_threshold)");
 	}
 
-	double weight_cutoff = unserialise_double(&p, p_end);
-	if (weight_cutoff < 0) {
-		THROW(NetworkError, "bad message (weight_cutoff)");
+	double weight_threshold = unserialise_double(&p, p_end);
+	if (weight_threshold < 0) {
+		THROW(NetworkError, "bad message (weight_threshold)");
 	}
 
-	_msg_query_enquire->set_cutoff(percent_cutoff, weight_cutoff);
+	_msg_query_enquire->set_cutoff(percent_threshold, weight_threshold);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Weight object.
@@ -854,8 +881,8 @@ RemoteProtocol::msg_cancel(const std::string &)
 
 	reset();
 	lock_database lk_db(this);
-    // We can't call cancel since that's an internal method, but this
-    // has the same effect with minimal additional overhead.
+	// We can't call cancel since that's an internal method, but this
+	// has the same effect with minimal additional overhead.
 	database()->begin_transaction(false);
 	database()->cancel_transaction();
 }
@@ -960,9 +987,9 @@ RemoteProtocol::msg_getmetadata(const std::string & message)
 
 
 void
-RemoteProtocol::msg_openmetadatakeylist(const std::string & message)
+RemoteProtocol::msg_metadatakeylist(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_openmetadatakeylist(<message>)");
+	L_CALL("RemoteProtocol::msg_metadatakeylist(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -1034,7 +1061,12 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 
 	reset();
 	lock_database lk_db(this);
-	database()->remove_spelling(std::string(p, p_end - p), freqdec);
+	auto result = database()->remove_spelling(std::string(p, p_end - p), freqdec);
+#if XAPIAN_AT_LEAST(1, 5, 0)
+	send_message(REPLY_REMOVESPELLING, encode_length(result));
+#else
+	ignore_unused(result);
+#endif
 }
 
 
