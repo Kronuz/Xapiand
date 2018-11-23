@@ -87,6 +87,9 @@ class XAPIAN_VISIBILITY_DEFAULT TermIterator {
     /// Return the term at the current position.
     std::string operator*() const;
 
+    /// Return approximate size of this termlist.
+    Xapian::termcount get_approx_size() const;
+
     /// Return the wdf for the term at the current position.
     Xapian::termcount get_wdf() const;
 

@@ -39,11 +39,12 @@ RemoteSubMatch::prepare_match(Xapian::Weight::Internal& total_stats)
 }
 
 void
-RemoteSubMatch::start_match(Xapian::doccount first,
+RemoteSubMatch::start_match(const std::string& query_id,
+				Xapian::doccount first,
 			    Xapian::doccount maxitems,
 			    Xapian::doccount check_at_least,
 			    Xapian::Weight::Internal & total_stats)
 {
-    LOGCALL_VOID(MATCH, "RemoteSubMatch::start_match", first | maxitems | check_at_least | total_stats);
-    db->send_global_stats(first, maxitems, check_at_least, total_stats);
+    LOGCALL_VOID(MATCH, "RemoteSubMatch::start_match", query_id | first | maxitems | check_at_least | total_stats);
+    db->send_global_stats(query_id, first, maxitems, check_at_least, total_stats);
 }

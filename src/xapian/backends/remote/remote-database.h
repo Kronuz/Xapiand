@@ -179,7 +179,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
      * @param matchspies                The matchspies to use.
      * @param full_db_has_positions	Does the full DB have positions?
      */
-    void set_query(const Xapian::Query& query,
+    void set_query(const std::string& query_id,
+		   const Xapian::Query& query,
 		   Xapian::termcount qlen,
 		   Xapian::valueno collapse_key,
 		   Xapian::doccount collapse_max,
@@ -207,7 +208,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
     void get_remote_stats(Xapian::Weight::Internal& out) const;
 
     /// Send the global stats to the remote server.
-    void send_global_stats(Xapian::doccount first,
+    void send_global_stats(const std::string& query_id,
+			   Xapian::doccount first,
 			   Xapian::doccount maxitems,
 			   Xapian::doccount check_at_least,
 			   const Xapian::Weight::Internal &stats) const;

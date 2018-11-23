@@ -634,7 +634,8 @@ RemoteDatabase::do_close()
 }
 
 void
-RemoteDatabase::set_query(const Xapian::Query& query,
+RemoteDatabase::set_query(const std::string& query_id,
+			  const Xapian::Query& query,
 			  Xapian::termcount qlen,
 			  Xapian::valueno collapse_key,
 			  Xapian::doccount collapse_max,
@@ -650,6 +651,8 @@ RemoteDatabase::set_query(const Xapian::Query& query,
 			  bool full_db_has_positions) const
 {
     string message;
+    pack_string(message, query_id);
+
     pack_string(message, query.serialise());
 
     // Serialise assorted Enquire settings.
@@ -694,12 +697,14 @@ RemoteDatabase::get_remote_stats(Xapian::Weight::Internal& out) const
 }
 
 void
-RemoteDatabase::send_global_stats(Xapian::doccount first,
+RemoteDatabase::send_global_stats(const std::string& query_id,
+				  Xapian::doccount first,
 				  Xapian::doccount maxitems,
 				  Xapian::doccount check_at_least,
 				  const Xapian::Weight::Internal &stats) const
 {
     string message;
+    pack_string(message, query_id);
     pack_uint(message, first);
     pack_uint(message, maxitems);
     pack_uint(message, check_at_least);

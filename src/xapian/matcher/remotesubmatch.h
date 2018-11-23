@@ -69,7 +69,8 @@ class RemoteSubMatch {
      *  @param check_at_least The minimum number of items to check.
      *  @param total_stats    The total statistics for the collection.
      */
-    void start_match(Xapian::doccount first,
+    void start_match(const std::string& query_id,
+		     Xapian::doccount first,
 		     Xapian::doccount maxitems,
 		     Xapian::doccount check_at_least,
 		     Xapian::Weight::Internal& total_stats);

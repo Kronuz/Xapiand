@@ -175,27 +175,38 @@ Matcher::for_all_remotes(Action action)
 }
 #endif
 
-Matcher::Matcher(const Xapian::Database& db_,
-		 bool full_db_has_positions_,
-		 const Xapian::Query& query_,
-		 Xapian::termcount query_length,
-		 const Xapian::RSet* rset,
-		 Xapian::Weight::Internal& stats,
-		 const Xapian::Weight& wtscheme,
-		 bool have_sorter,
-		 bool have_mdecider,
-		 Xapian::valueno collapse_key,
-		 Xapian::doccount collapse_max,
-		 int percent_threshold,
-		 double weight_threshold,
-		 Xapian::Enquire::docid_order order,
-		 Xapian::valueno sort_key,
-		 Xapian::Enquire::Internal::sort_setting sort_by,
-		 bool sort_val_reverse,
-		 double time_limit,
-		 const vector<opt_intrusive_ptr<Xapian::MatchSpy>>& matchspies)
-    : db(db_), query(query_), full_db_has_positions(full_db_has_positions_)
+Matcher::Matcher(const Xapian::Database& db_)
+    : db(db_)
 {
+}
+
+void
+Matcher::prepare_mset(const std::string& query_id_,
+		      bool full_db_has_positions_,
+		      const Xapian::Query& query_,
+		      Xapian::termcount query_length,
+		      const Xapian::RSet* rset,
+		      Xapian::Weight::Internal& stats,
+		      const Xapian::Weight& wtscheme,
+		      bool have_sorter,
+		      bool have_mdecider,
+		      Xapian::valueno collapse_key,
+		      Xapian::doccount collapse_max,
+		      int percent_threshold,
+		      double weight_threshold,
+		      Xapian::Enquire::docid_order order,
+		      Xapian::valueno sort_key,
+		      Xapian::Enquire::Internal::sort_setting sort_by,
+		      bool sort_val_reverse,
+		      double time_limit,
+		      const vector<opt_intrusive_ptr<Xapian::MatchSpy>>& matchspies)
+{
+    query_id = query_id_;
+
+    full_db_has_positions = full_db_has_positions_;
+
+    query = query_;
+
     // An empty query should get handled higher up.
     Assert(!query.empty());
 
@@ -225,7 +236,8 @@ Matcher::Matcher(const Xapian::Database& db_,
 		unimplemented("Xapian::MatchDecider not supported by the "
 			      "remote backend");
 	    }
-	    as_rem->set_query(query, query_length,
+	    as_rem->set_query(query_id,
+			      query, query_length,
 			      collapse_key, collapse_max,
 			      order, sort_key, sort_by, sort_val_reverse,
 			      time_limit,
@@ -319,8 +331,6 @@ Matcher::Matcher(const Xapian::Database& db_,
 	    submatch->prepare_match(stats);
 	});
 #endif
-
-    stats.set_bounds_from_db(db);
 }
 
 Xapian::MSet
@@ -548,7 +558,7 @@ Matcher::get_mset(Xapian::doccount first,
     if (locals.empty() && remotes.size() == 1) {
 	// Short cut for a single remote database.
 	Assert(remotes[0].get());
-	remotes[0]->start_match(first, maxitems, check_at_least, stats);
+	remotes[0]->start_match(query_id, first, maxitems, check_at_least, stats);
 	return remotes[0]->get_mset(matchspies);
     }
 #endif
@@ -565,7 +575,7 @@ Matcher::get_mset(Xapian::doccount first,
 	// We need to fetch the first "first" results too, as merging may push
 	// those down into the part of the merged MSet we care about.
 	if (submatch.get())
-	    submatch->start_match(0, first + maxitems, check_at_least, stats);
+	    submatch->start_match(query_id, 0, first + maxitems, check_at_least, stats);
     }
 #endif
 
@@ -598,25 +608,70 @@ Matcher::get_mset(Xapian::doccount first,
     // We need to merge MSet objects.  We only need the number of remote shards
     // + 1 if there are any local shards, so reserving n_shards may be more
     // than we need.
-    vector<pair<Xapian::MSet, Xapian::doccount>> msets;
-    Xapian::MSet merged_mset;
+    vector<Xapian::MSet> msets;
     if (!locals.empty()) {
 	if (!local_mset.empty())
-	    msets.push_back({local_mset, 0});
-	merged_mset.internal->merge_stats(local_mset.internal.get());
+	    msets.push_back(local_mset);
     }
 
     for_all_remotes(
 	[&](RemoteSubMatch* submatch) {
 	    Xapian::MSet remote_mset = submatch->get_mset(matchspies);
-	    merged_mset.internal->merge_stats(remote_mset.internal.get());
 	    if (remote_mset.empty()) {
 		return;
 	    }
 	    remote_mset.internal->unshard_docids(submatch->get_shard(),
 						 db.internal->size());
-	    msets.push_back({remote_mset, 0});
+	    msets.push_back(remote_mset);
 	});
+
+    return merge_mset(
+	msets,
+	first,
+	maxitems,
+	collapse_max,
+	percent_threshold,
+	order,
+	sort_by,
+	sort_val_reverse);
+#else
+    return local_mset;
+#endif
+}
+
+
+Xapian::MSet
+Matcher::merge_mset(
+    const std::vector<Xapian::MSet>& vmsets,
+    Xapian::doccount first,
+    Xapian::doccount maxitems,
+    Xapian::doccount collapse_max,
+    int percent_threshold,
+    Xapian::Enquire::docid_order order,
+    Xapian::Enquire::Internal::sort_setting sort_by,
+    bool sort_val_reverse
+)
+{
+    Xapian::MSet merged_mset;
+
+    std::vector<std::pair<Xapian::MSet, Xapian::doccount>> msets;
+    for (auto& mset : vmsets) {
+	merged_mset.internal->merge_stats(mset.internal.get());
+	if (!mset.empty()) {
+	    msets.push_back({mset, 0});
+	}
+    }
+
+    if (msets.empty()) {
+	return merged_mset;
+    }
+
+    // Factor to multiply maximum weight seen by to get the minimum weight we
+    // need to consider.
+    double percent_threshold_factor = percent_threshold / 100.0;
+    // Corresponding correction to that in api/mset.cc to account for excess
+    // precision on x86.
+    percent_threshold_factor -= DBL_EPSILON;
 
     if (merged_mset.internal->max_possible == 0.0) {
 	// All the weights are zero.
@@ -714,7 +769,4 @@ Matcher::get_mset(Xapian::doccount first,
     }
 
     return merged_mset;
-#else
-    return local_mset;
-#endif
 }
