@@ -39,17 +39,17 @@
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
-	MSG_MAX,
+	MSG_MAX
 };
 
 
 inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
-	static const std::string ReplicationMessageTypeNames[] = {
+	static const std::string _[] = {
 		"MSG_GET_CHANGESETS",
 	};
-	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < static_cast<int>(ReplicationMessageType::MSG_MAX)) {
-		return ReplicationMessageTypeNames[type_int];
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
@@ -65,23 +65,23 @@ enum class ReplicationReplyType {
 	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy
 	REPLY_DB_FOOTER,            // End of a whole DB copy
 	REPLY_CHANGESET,            // A changeset file is being sent
-	REPLY_MAX,
+	REPLY_MAX
 };
 
 
 inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
-	static const std::string ReplicationReplyTypeNames[] = {
+	static const std::string _[] = {
 		"REPLY_WELCOME",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
 		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
 	};
-	auto type_int = static_cast<int>(type);
-	if (type_int == static_cast<int>(SWITCH_TO_REPL)) {
+	auto type_int = static_cast<size_t>(type);
+	if (type_int == static_cast<size_t>(SWITCH_TO_REPL)) {
 		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
 		return SWITCH_TO_REPL_NAME;
-	} else if (type_int >= 0 || type_int < static_cast<int>(ReplicationReplyType::REPLY_MAX)) {
-		return ReplicationReplyTypeNames[type_int];
+	} else if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;

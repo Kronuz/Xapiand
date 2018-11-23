@@ -55,13 +55,12 @@ public:
 	};
 
 	static const std::string& MessageNames(Message type) {
-		static const std::string MessageNames[] = {
+		static const std::string _[] = {
 			"HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
 		};
-
-		auto type_int = static_cast<int>(type);
-		if (type_int >= 0 || type_int < static_cast<int>(Message::MAX)) {
-			return MessageNames[type_int];
+		auto type_int = static_cast<size_t>(type);
+		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+			return _[type_int];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;

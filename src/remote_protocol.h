@@ -82,7 +82,7 @@ enum class RemoteMessageType {
 
 
 inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
-	static const std::string RemoteMessageTypeNames[] = {
+	static const std::string _[] = {
 		"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
 		"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
 		"MSG_QUERY", "MSG_TERMLIST", "MSG_POSITIONLIST", "MSG_POSTLIST",
@@ -94,9 +94,9 @@ inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
 		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS",
 		"MSG_POSITIONLISTCOUNT", "MSG_READACCESS",
 	};
-	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < static_cast<int>(RemoteMessageType::MSG_MAX)) {
-		return RemoteMessageTypeNames[type_int];
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
@@ -134,7 +134,7 @@ enum class RemoteReplyType {
 
 
 inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
-	static const std::string RemoteReplyTypeNames[] = {
+	static const std::string _[] = {
 		"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
 		"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
 		"REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
@@ -143,9 +143,9 @@ inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
 		"REPLY_POSITIONLISTCOUNT", "REPLY_REMOVESPELLING",
 	};
-	auto type_int = static_cast<int>(type);
-	if (type_int >= 0 || type_int < static_cast<int>(RemoteReplyType::REPLY_MAX)) {
-		return RemoteReplyTypeNames[type_int];
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;

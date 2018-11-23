@@ -59,16 +59,14 @@ public:
 		FOLLOWER,
 		CANDIDATE,
 		LEADER,
-		MAX,
 	};
 
 	static const std::string& RoleNames(Role type) {
 		static const std::string _[] = {
 			"LEADER", "FOLLOWER", "CANDIDATE",
 		};
-
-		auto type_int = static_cast<int>(type);
-		if (type_int >= 0 || type_int < static_cast<int>(Role::MAX)) {
+		auto type_int = static_cast<size_t>(type);
+		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
 			return _[type_int];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
@@ -87,16 +85,15 @@ public:
 	};
 
 	static const std::string& MessageNames(Message type) {
-		static const std::string MessageNames[] = {
+		static const std::string _[] = {
 			"HEARTBEAT", "HEARTBEAT_RESPONSE",
 			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
 			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
 			"ADD_COMMAND",
 		};
-
-		auto type_int = static_cast<int>(type);
-		if (type_int >= 0 || type_int < static_cast<int>(Message::MAX)) {
-			return MessageNames[type_int];
+		auto type_int = static_cast<size_t>(type);
+		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+			return _[type_int];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;

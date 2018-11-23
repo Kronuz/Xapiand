@@ -48,7 +48,6 @@ enum class State {
 	REMOTEPROTOCOL_SERVER,
 	REPLICATIONPROTOCOL_CLIENT,
 	REPLICATIONPROTOCOL_SERVER,
-	MAX,
 };
 
 inline const std::string& StateNames(State type) {
@@ -57,9 +56,13 @@ inline const std::string& StateNames(State type) {
 		"REMOTEPROTOCOL_SERVER",
 		"REPLICATIONPROTOCOL_CLIENT",
 		"REPLICATIONPROTOCOL_SERVER",
-		"UNKNOWN",
 	};
-	return _[static_cast<int>(type >= static_cast<State>(0) || type < State::MAX ? type : State::MAX)];
+	auto type_int = static_cast<size_t>(type);
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+		return _[type_int];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
 }
 
 

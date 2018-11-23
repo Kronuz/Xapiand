@@ -107,17 +107,15 @@ public:
 		WAITING_MORE,
 		WAITING,
 		RESET,
-		MAX,
 	};
 
 	static const std::string& StateNames(State type) {
-		static const std::string StateNames[] = {
+		static const std::string _[] = {
 			"BAD", "READY", "SETUP", "JOINING", "WAITING_MORE", "WAITING", "RESET",
 		};
-
-		auto type_int = static_cast<int>(type);
-		if (type_int >= 0 || type_int < static_cast<int>(State::MAX)) {
-			return StateNames[type_int];
+		auto type_int = static_cast<size_t>(type);
+		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
+			return _[type_int];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;

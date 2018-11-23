@@ -201,7 +201,7 @@ const std::string& HttpParserStateNames(int type) {
 		"s_message_done",
 	};
 	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
 		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
@@ -236,7 +236,7 @@ const std::string& HttpParserHeaderStateNames(int type) {
 		"h_connection_upgrade",
 	};
 	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(std::string)) {
+	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
 		return _[type_int];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
