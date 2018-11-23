@@ -66,7 +66,7 @@ class XAPIAN_VISIBILITY_DEFAULT Document {
     /// Class representing the Document internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, Document> internal;
 
     /// @private @internal Wrap an existing Internal.
     XAPIAN_VISIBILITY_INTERNAL

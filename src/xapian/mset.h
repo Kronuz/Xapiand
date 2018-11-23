@@ -66,7 +66,7 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /// Class representing the MSet internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, MSet> internal;
 
     /** Copying is allowed.
      *
