@@ -611,7 +611,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
-	if (*p < '0' || *p > '3') {
+	if (*p < '0' || *p > '4') {
 		THROW(NetworkError, "bad message (sort_by)");
 	}
 	sort_setting sort_by;
@@ -636,7 +636,7 @@ RemoteProtocol::msg_query(const std::string &message_in)
 			_msg_query_enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
 			break;
 		case DOCID:
-			// _msg_query_enquire->set_sort_by_id(sort_key, sort_value_forward);
+			_msg_query_enquire->set_weighting_scheme(Xapian::BoolWeight());
 			break;
 	}
 
