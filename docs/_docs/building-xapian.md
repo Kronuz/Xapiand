@@ -78,7 +78,7 @@ step above and replace accordingly with the following:
 Sanitized versions of libc++ are needed for these builds to be reliable.
 
 
-### Address Sanitizer (ASAN)
+### Address Sanitizer (ASAN + UBSAN)
 
 ```sh
 ~/xapian/xapian-core $ ./configure \
@@ -86,8 +86,8 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-documentation \
   --enable-maintainer-mode \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/ASAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
-  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address $LDFLAGS"
+  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
 
 
@@ -101,19 +101,6 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/MSAN' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
-```
-
-
-### Undefined Behavior Sanitizer (UBSAN)
-
-```sh
-~/xapian/xapian-core $ ./configure \
-  --disable-dependency-tracking \
-  --disable-documentation \
-  --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/UBSAN' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
-  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
 
 
