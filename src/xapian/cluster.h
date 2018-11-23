@@ -76,7 +76,7 @@ class XAPIAN_VISIBILITY_DEFAULT DocumentSet {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, DocumentSet> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
@@ -375,7 +375,7 @@ class XAPIAN_VISIBILITY_DEFAULT Cluster {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, Cluster> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
@@ -460,7 +460,7 @@ class XAPIAN_VISIBILITY_DEFAULT ClusterSet {
   public:
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+    Xapian::Internal::internal_intrusive_ptr<Internal, ClusterSet> internal;
 
     /** Copying is allowed.  The internals are reference counted, so
      *  copying is cheap.
