@@ -28,19 +28,14 @@
 #include <mutex>                 // for std::mutex, std::lock_guard
 #include <string>                // for std::string
 #include <system_error>          // for std::system_error
+#include <thread>                // for std::thread
 #include <tuple>                 // for std::forward_as_tuple
 #include <unordered_map>         // for std::unordered_map
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
 #endif
 #ifdef HAVE_PTHREAD_NP_H
-#include <pthread_np.h>          // for pthread_setaffinity_np
-#endif
-
-#if defined(__linux) || defined(__linux__) || defined(linux)
-#include <unistd.h>
-#include <sys/syscall.h>         // for syscall
-#include <sys/resource.h>        // for setpriority
+#include <pthread_np.h>          // for pthread_setname_np
 #endif
 
 #include "error.hh"              // for error::name, error::description
@@ -52,55 +47,8 @@ static std::mutex thread_names_mutex;
 static std::unordered_map<std::thread::id, std::string> thread_names;
 
 
-struct ThreadPolicy {
-	int priority;
-
-	ThreadPolicy(ThreadPolicyType thread_policy) {
-		switch (thread_policy) {
-			/*
-			case ThreadPolicyType::regular:
-				priority = 0;
-				break;
-			case ThreadPolicyType::wal_writer:
-				priority = 20;
-				break;
-			case ThreadPolicyType::logging:
-				priority = 0;
-				break;
-			case ThreadPolicyType::replication:
-				priority = 10;
-				break;
-			case ThreadPolicyType::committers:
-				priority = 100;
-				break;
-			case ThreadPolicyType::fsynchers:
-				priority = 20;
-				break;
-			case ThreadPolicyType::updaters:
-				priority = 10;
-				break;
-			case ThreadPolicyType::servers:
-				priority = 5;
-				break;
-			case ThreadPolicyType::http_clients:
-				priority = 10;
-				break;
-			case ThreadPolicyType::binary_clients:
-				priority = 20;
-				break;
-			*/
-			default:
-				priority = 0;
-		}
-	}
-};
-
-
 #ifdef __APPLE__
-#include <mach/mach_time.h>
-#include <mach/thread_act.h>
 #include <cpuid.h>
-
 int
 sched_getcpu()
 {
@@ -112,119 +60,24 @@ sched_getcpu()
 	// info[1] is EBX, bits 24-31 are APIC ID
 	return (unsigned)info[1] >> 24;
 }
-
-
-void
-start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
-{
-	ThreadPolicy policy(thread_policy);
-
-	int errnum;
-	pthread_t thread;
-
-	pthread_attr_t thread_attr;
-	errnum = pthread_attr_init(&thread_attr);
-	if (errnum != 0) {
-		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
-	}
-
-	if (policy.priority) {
-		if (pthread_attr_setschedpolicy(&thread_attr, SCHED_OTHER) != 0) {
-			L_WARNING_ONCE("Cannot set thread policy!");
-		} else {
-			static int priority_min = sched_get_priority_min(SCHED_OTHER);
-			static int priority_max = sched_get_priority_max(SCHED_OTHER);
-			sched_param param;
-			param.sched_priority = (policy.priority * (priority_max - priority_min) / 100) + priority_min;
-			if (pthread_attr_setschedparam(&thread_attr, &param) != 0) {
-				L_WARNING_ONCE("Cannot set thread priority!");
-			}
-		}
-	}
-
-	errnum = pthread_create_suspended_np(&thread, &thread_attr, thread_routine, arg);
-	pthread_attr_destroy(&thread_attr);
-	if (errnum != 0) {
-		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
-	}
-
-	mach_port_t mach_thread = pthread_mach_thread_np(thread);
-
-
-	pthread_detach(thread);
-
-	thread_resume(mach_thread);
-}
-#else
-
-#include <sched.h>              // for sched_get_priority_*
-
-void
-start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
-{
-	ThreadPolicy policy(thread_policy);
-
-	int errnum;
-	pthread_t thread = 0;
-
-	pthread_attr_t thread_attr;
-	errnum = pthread_attr_init(&thread_attr);
-	if (errnum != 0) {
-		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
-	}
-
-	if (policy.priority) {
-		if (pthread_attr_setschedpolicy(&thread_attr, SCHED_OTHER) != 0) {
-			L_WARNING_ONCE("Cannot set thread policy!");
-		} else {
-			static int priority_min = sched_get_priority_min(SCHED_OTHER);
-			static int priority_max = sched_get_priority_max(SCHED_OTHER);
-			sched_param param;
-			param.sched_priority = (policy.priority * (priority_max - priority_min) / 100) + priority_min;
-			if (pthread_attr_setschedparam(&thread_attr, &param) != 0) {
-				L_WARNING_ONCE("Cannot set thread priority!");
-			}
-		}
-	}
-
-	errnum = pthread_create(&thread, &thread_attr, thread_routine, arg);
-	pthread_attr_destroy(&thread_attr);
-	if (errnum != 0) {
-		throw std::system_error(std::error_code(errnum, std::system_category()), "thread creation failed");
-	}
-
-	pthread_detach(thread);
-}
 #endif
+
+
+void
+start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+{
+	ignore_unused(thread_policy);
+
+	std::thread(thread_routine, arg).detach();
+}
 
 
 void
 setup_thread(const std::string& name, ThreadPolicyType thread_policy)
 {
-	set_thread_name(name);
-
-#if defined(__linux) || defined(__linux__) || defined(linux)
-	ThreadPolicy policy(thread_policy);
-	if (policy.priority) {
-		// It turns out that threading implementations on Linux actually violate
-		// POSIX.1, and you can set a specific niceness for one or more
-		// individual threads by passing a tid to setpriority() on these systems
-		constexpr int sched_nice_max = 10;
-		constexpr int sched_nice_min = -20;
-		#ifdef SYS_gettid
-		pid_t tid = syscall(SYS_gettid);
-		#else
-		#warning "SYS_gettid unavailable on this system"
-		pid_t tid = 0;
-		#endif
-		int priority = ((100 - policy.priority) * (sched_nice_max - sched_nice_min) / 100) + sched_nice_min;
-		if (setpriority(PRIO_PROCESS, tid, priority) == -1) {
-			L_WARNING_ONCE("ERROR: setpriority(): %s (%d): %s", error::name(errno), errno, error::description(errno));
-		}
-	}
-#else
 	ignore_unused(thread_policy);
-#endif
+
+	set_thread_name(name);
 }
 
 
