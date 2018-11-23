@@ -55,9 +55,6 @@
 // #define L_EV_END L_DELAYED_N_UNLOG
 
 
-using dispatch_func = void (Raft::*)(Raft::Message type, const std::string&);
-
-
 static inline bool has_consensus(size_t votes) {
 	auto active_nodes = Node::active_nodes();
 	return active_nodes == 1 || votes > active_nodes / 2;
@@ -225,21 +222,30 @@ Raft::raft_server(Message type, const std::string& message)
 	L_EV_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 	L_EV_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
-	static const dispatch_func dispatch[] = {
-		&Raft::append_entries,
-		&Raft::append_entries_response,
-		&Raft::append_entries,
-		&Raft::append_entries_response,
-		&Raft::request_vote,
-		&Raft::request_vote_response,
-		&Raft::add_command,
-	};
-	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-		std::string errmsg("Unexpected message type ");
-		errmsg += std::to_string(toUType(type));
-		THROW(InvalidArgumentError, errmsg);
+	switch (type) {
+		case Message::HEARTBEAT:
+		case Message::APPEND_ENTRIES:
+			append_entries(type, message);
+			return;
+		case Message::HEARTBEAT_RESPONSE:
+		case Message::APPEND_ENTRIES_RESPONSE:
+			append_entries_response(type, message);
+			return;
+		case Message::REQUEST_VOTE:
+			request_vote(type, message);
+			return;
+		case Message::REQUEST_VOTE_RESPONSE:
+			request_vote_response(type, message);
+			return;
+		case Message::ADD_COMMAND:
+			add_command(type, message);
+			return;
+		default: {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			THROW(InvalidArgumentError, errmsg);
+		}
 	}
-	(this->*(dispatch[toUType(type)]))(type, message);
 }
 
 

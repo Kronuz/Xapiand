@@ -55,9 +55,6 @@
 // #define L_EV_END L_DELAYED_N_UNLOG
 
 
-using dispatch_func = void (Discovery::*)(Discovery::Message, const std::string&);
-
-
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group)
 	: UDP(port, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
 	  Worker(parent_, ev_loop_, ev_flags_),
@@ -201,20 +198,31 @@ Discovery::discovery_server(Message type, const std::string& message)
 	L_EV_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
 
-	static const dispatch_func dispatch[] = {
-		&Discovery::hello,
-		&Discovery::wave,
-		&Discovery::sneer,
-		&Discovery::enter,
-		&Discovery::bye,
-		&Discovery::db_updated,
-	};
-	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-		std::string errmsg("Unexpected message type ");
-		errmsg += std::to_string(toUType(type));
-		THROW(InvalidArgumentError, errmsg);
+	switch (type) {
+		case Message::HELLO:
+			hello(type, message);
+			return;
+		case Message::WAVE:
+			wave(type, message);
+			return;
+		case Message::SNEER:
+			sneer(type, message);
+			return;
+		case Message::ENTER:
+			enter(type, message);
+			return;
+		case Message::BYE:
+			bye(type, message);
+			return;
+		case Message::DB_UPDATED:
+			db_updated(type, message);
+			return;
+		default: {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			THROW(InvalidArgumentError, errmsg);
+		}
 	}
-	(this->*(dispatch[toUType(type)]))(type, message);
 }
 
 

@@ -57,8 +57,6 @@
  */
 
 
-using dispatch_func = void (RemoteProtocol::*)(const std::string&);
-
 constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
 
 
@@ -113,48 +111,104 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 	L_OBJ_BEGIN("RemoteProtocol::remote_server:BEGIN {type:%s}", RemoteMessageTypeNames(type));
 	L_OBJ_END("RemoteProtocol::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
 
-	static const dispatch_func dispatch[] = {
-		&RemoteProtocol::msg_allterms,
-		&RemoteProtocol::msg_collfreq,
-		&RemoteProtocol::msg_document,
-		&RemoteProtocol::msg_termexists,
-		&RemoteProtocol::msg_termfreq,
-		&RemoteProtocol::msg_valuestats,
-		&RemoteProtocol::msg_keepalive,
-		&RemoteProtocol::msg_doclength,
-		&RemoteProtocol::msg_query,
-		&RemoteProtocol::msg_termlist,
-		&RemoteProtocol::msg_positionlist,
-		&RemoteProtocol::msg_postlist,
-		&RemoteProtocol::msg_reopen,
-		&RemoteProtocol::msg_update,
-		&RemoteProtocol::msg_adddocument,
-		&RemoteProtocol::msg_cancel,
-		&RemoteProtocol::msg_deletedocumentterm,
-		&RemoteProtocol::msg_commit,
-		&RemoteProtocol::msg_replacedocument,
-		&RemoteProtocol::msg_replacedocumentterm,
-		&RemoteProtocol::msg_deletedocument,
-		&RemoteProtocol::msg_writeaccess,
-		&RemoteProtocol::msg_getmetadata,
-		&RemoteProtocol::msg_setmetadata,
-		&RemoteProtocol::msg_addspelling,
-		&RemoteProtocol::msg_removespelling,
-		&RemoteProtocol::msg_getmset,
-		&RemoteProtocol::msg_shutdown,
-		&RemoteProtocol::msg_metadatakeylist,
-		&RemoteProtocol::msg_freqs,
-		&RemoteProtocol::msg_uniqueterms,
-		&RemoteProtocol::msg_positionlistcount,
-		&RemoteProtocol::msg_readaccess,
-	};
 	try {
-		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-			std::string errmsg("Unexpected message type ");
-			errmsg += std::to_string(toUType(type));
-			THROW(InvalidArgumentError, errmsg);
+		switch (type) {
+			case RemoteMessageType::MSG_ALLTERMS:
+				msg_allterms(message);
+				return;
+			case RemoteMessageType::MSG_COLLFREQ:
+				msg_collfreq(message);
+				return;
+			case RemoteMessageType::MSG_DOCUMENT:
+				msg_document(message);
+				return;
+			case RemoteMessageType::MSG_TERMEXISTS:
+				msg_termexists(message);
+				return;
+			case RemoteMessageType::MSG_TERMFREQ:
+				msg_termfreq(message);
+				return;
+			case RemoteMessageType::MSG_VALUESTATS:
+				msg_valuestats(message);
+				return;
+			case RemoteMessageType::MSG_KEEPALIVE:
+				msg_keepalive(message);
+				return;
+			case RemoteMessageType::MSG_DOCLENGTH:
+				msg_doclength(message);
+				return;
+			case RemoteMessageType::MSG_QUERY:
+				msg_query(message);
+				return;
+			case RemoteMessageType::MSG_TERMLIST:
+				msg_termlist(message);
+				return;
+			case RemoteMessageType::MSG_POSITIONLIST:
+				msg_positionlist(message);
+				return;
+			case RemoteMessageType::MSG_POSTLIST:
+				msg_postlist(message);
+				return;
+			case RemoteMessageType::MSG_REOPEN:
+				msg_reopen(message);
+				return;
+			case RemoteMessageType::MSG_UPDATE:
+				msg_update(message);
+				return;
+			case RemoteMessageType::MSG_ADDDOCUMENT:
+				msg_adddocument(message);
+				return;
+			case RemoteMessageType::MSG_CANCEL:
+				msg_cancel(message);
+				return;
+			case RemoteMessageType::MSG_DELETEDOCUMENTTERM:
+				msg_deletedocumentterm(message);
+				return;
+			case RemoteMessageType::MSG_COMMIT:
+				msg_commit(message);
+				return;
+			case RemoteMessageType::MSG_REPLACEDOCUMENT:
+				msg_replacedocument(message);
+				return;
+			case RemoteMessageType::MSG_REPLACEDOCUMENTTERM:
+				msg_replacedocumentterm(message);
+				return;
+			case RemoteMessageType::MSG_DELETEDOCUMENT:
+				msg_deletedocument(message);
+				return;
+			case RemoteMessageType::MSG_WRITEACCESS:
+				msg_writeaccess(message);
+				return;
+			case RemoteMessageType::MSG_GETMETADATA:
+				msg_getmetadata(message);
+				return;
+			case RemoteMessageType::MSG_SETMETADATA:
+				msg_setmetadata(message);
+				return;
+			case RemoteMessageType::MSG_ADDSPELLING:
+				msg_addspelling(message);
+				return;
+			case RemoteMessageType::MSG_REMOVESPELLING:
+				msg_removespelling(message);
+				return;
+			case RemoteMessageType::MSG_METADATAKEYLIST:
+				msg_metadatakeylist(message);
+				return;
+			case RemoteMessageType::MSG_FREQS:
+				msg_freqs(message);
+				return;
+			case RemoteMessageType::MSG_UNIQUETERMS:
+				msg_uniqueterms(message);
+				return;
+			case RemoteMessageType::MSG_POSITIONLISTCOUNT:
+				msg_positionlistcount(message);
+				return;
+			default: {
+				std::string errmsg("Unexpected message type ");
+				errmsg += std::to_string(toUType(type));
+				THROW(InvalidArgumentError, errmsg);
 			}
-		(this->*(dispatch[static_cast<int>(type)]))(message);
+		}
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		try {

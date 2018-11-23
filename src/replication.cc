@@ -63,9 +63,6 @@
  */
 
 
-using dispatch_func = void (Replication::*)(const std::string&);
-
-
 Replication::Replication(BinaryClient& client_)
 	: LockableDatabase(),
 	  client(client_),
@@ -148,15 +145,16 @@ Replication::replication_server(ReplicationMessageType type, const std::string& 
 	L_OBJ_BEGIN("Replication::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
 	L_OBJ_END("Replication::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
 
-	static const dispatch_func dispatch[] = {
-		&Replication::msg_get_changesets,
-	};
-	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-		std::string errmsg("Unexpected message type ");
-		errmsg += std::to_string(toUType(type));
-		THROW(InvalidArgumentError, errmsg);
+	switch (type) {
+		case ReplicationMessageType::MSG_GET_CHANGESETS:
+			msg_get_changesets(message);
+			return;
+		default: {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			THROW(InvalidArgumentError, errmsg);
+		}
 	}
-	(this->*(dispatch[static_cast<int>(type)]))(message);
 }
 
 
@@ -276,22 +274,37 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 	L_OBJ_BEGIN("Replication::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
 	L_OBJ_END("Replication::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
 
-	static const dispatch_func dispatch[] = {
-		&Replication::reply_welcome,
-		&Replication::reply_end_of_changes,
-		&Replication::reply_fail,
-		&Replication::reply_db_header,
-		&Replication::reply_db_filename,
-		&Replication::reply_db_filedata,
-		&Replication::reply_db_footer,
-		&Replication::reply_changeset,
-	};
-	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
-		std::string errmsg("Unexpected message type ");
-		errmsg += std::to_string(toUType(type));
-		THROW(InvalidArgumentError, errmsg);
+	switch (type) {
+		case ReplicationReplyType::REPLY_WELCOME:
+			reply_welcome(message);
+			return;
+		case ReplicationReplyType::REPLY_END_OF_CHANGES:
+			reply_end_of_changes(message);
+			return;
+		case ReplicationReplyType::REPLY_FAIL:
+			reply_fail(message);
+			return;
+		case ReplicationReplyType::REPLY_DB_HEADER:
+			reply_db_header(message);
+			return;
+		case ReplicationReplyType::REPLY_DB_FILENAME:
+			reply_db_filename(message);
+			return;
+		case ReplicationReplyType::REPLY_DB_FILEDATA:
+			reply_db_filedata(message);
+			return;
+		case ReplicationReplyType::REPLY_DB_FOOTER:
+			reply_db_footer(message);
+			return;
+		case ReplicationReplyType::REPLY_CHANGESET:
+			reply_changeset(message);
+			return;
+		default: {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			THROW(InvalidArgumentError, errmsg);
+		}
 	}
-	(this->*(dispatch[static_cast<int>(type)]))(message);
 }
 
 
