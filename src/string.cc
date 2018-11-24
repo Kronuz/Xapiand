@@ -25,29 +25,60 @@
 #include "colors.h"
 
 #include <cmath>              // for std::log, std::pow
+#include <vector>             // for std::vector
 
 
-static inline std::string humanize(long double delta, bool colored, const int i, const int n, const long double div, const char* prefix, const char* const units[], const long double scaling[], const char* const colors[], long double rounding) {
-	long double num = delta;
+class Humanize {
+	long double base;
+	long double div;
+	std::vector<long double> scaling;
+	std::vector<std::string> units;
+	std::vector<std::string> colors;
+	int needle;
 
-	if (delta < 0) { delta = -delta; }
-	int order = (delta == 0) ? n : -std::floor(std::log(delta) / div);
-	order += i;
-	if (order < 0) { order = 0;
-	} else if (order > n) { order = n; }
+public:
+	Humanize(
+		long double base_,
+		std::vector<long double>&& scaling_,
+		std::vector<std::string>&& units_,
+		std::vector<std::string>&& colors_
+	) :
+		base(base_),
+		div(std::log(base)),
+		scaling(std::move(scaling_)),
+		units(std::move(units_)),
+		colors(std::move(colors_)),
+		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 1)))
+	{}
 
-	const char* color = colored ? colors[order] : "";
-	num = std::round(rounding * num / scaling[order]) / rounding;
-	const char* unit = units[order];
-	const char* reset = colored ? colors[n + 1] : "";
+	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
+		long double num = delta;
+		auto n = units.size();
 
-	return string::format("%s%s%s%s%s", color, prefix, string::Number(static_cast<double>(num)), unit, reset);
-}
+		if (delta < 0) {
+			delta = -delta;
+		}
+		size_t order = (delta == 0) ? n : -std::floor(std::log(delta) / div);
+		order += needle;
+		if (order < 0) {
+			order = 0;
+		} else if (order > n) {
+			order = n;
+		}
 
+		num = std::round(rounding * num / scaling[order]) / rounding;
+		auto& unit = units[order];
 
-static inline int find_val(long double val, const long double* input, int i=0) {
-	return (*input == val) ? i : find_val(val, input + 1, i + 1);
-}
+		if (colored) {
+			auto& color = colors[order];
+			auto& reset = colors[n + 1];
+			return string::format("%s%s%s%s%s", color, prefix, string::Number(static_cast<double>(num)), unit, reset);
+		}
+
+		return string::format("%s%s%s", prefix, string::Number(static_cast<double>(num)), unit);
+	}
+
+};
 
 // MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
 // MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
@@ -60,15 +91,13 @@ static inline int find_val(long double val, const long double* input, int i=0) {
 // BROWN             -> rgb(165, 42, 42);
 
 static inline std::string _from_bytes(size_t bytes, const char* prefix, bool colored) {
-	static const long double base = 1024;
-	static const long double div = std::log(base);
-	static const long double scaling[] = { std::pow(base, 8), std::pow(base, 7), std::pow(base, 6), std::pow(base, 5), std::pow(base, 4), std::pow(base, 3), std::pow(base, 2), std::pow(base, 1), 1 };
-	static const char* const units[] = { "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" };
-	static const char* const colors[] = { BROWN, BROWN, BROWN, BROWN, BROWN, PERU, OLIVE, SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
-	static const int n = sizeof(units) / sizeof(const char*) - 1;
-	static const int i = find_val(1, scaling);
-
-	return humanize(bytes, colored, i, n, div, prefix, units, scaling, colors, 10.0L);
+	static const Humanize humanize(
+		1024,
+		{ std::pow(1024, 8), std::pow(1024, 7), std::pow(1024, 6), std::pow(1024, 5), std::pow(1024, 4), std::pow(1024, 3), std::pow(1024, 2), std::pow(1024, 1), 1 },
+		{ "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" },
+		{ BROWN, BROWN, BROWN, BROWN, BROWN, PERU, OLIVE, SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR }
+	);
+	return humanize(bytes, prefix, colored, 10.0L);
 }
 
 std::string string::from_bytes(size_t bytes, const char* prefix, bool colored) {
@@ -77,15 +106,13 @@ std::string string::from_bytes(size_t bytes, const char* prefix, bool colored) {
 
 
 static inline std::string _from_small_time(long double seconds, const char* prefix, bool colored) {
-	static const long double base = 1000;
-	static const long double div = std::log(base);
-	static const long double scaling[] = { 1, std::pow(base, -1), std::pow(base, -2), std::pow(base, -3), std::pow(base, -4) };
-	static const char* const units[] = { "s", "ms", R"(µs)", "ns", "ps" };
-	static const char* const colors[] = { OLIVE, OLIVE_DRAB, SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR };
-	static const int n = sizeof(units) / sizeof(const char*) - 1;
-	static const int i = find_val(1, scaling);
-
-	return humanize(seconds, colored, i, n, div, prefix, units, scaling, colors, 1000.0L);
+	static const Humanize humanize(
+		1000,
+		{ 1, std::pow(1000, -1), std::pow(1000, -2), std::pow(1000, -3), std::pow(1000, -4) },
+		{ "s", "ms", R"(µs)", "ns", "ps" },
+		{ OLIVE, OLIVE_DRAB, SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR }
+	);
+	return humanize(seconds, prefix, colored, 1000.0L);
 }
 
 std::string string::from_small_time(long double seconds, const char* prefix, bool colored) {
@@ -93,15 +120,13 @@ std::string string::from_small_time(long double seconds, const char* prefix, boo
 }
 
 static inline std::string _from_time(long double seconds, const char* prefix, bool colored) {
-	static const long double base = 60;
-	static const long double div = std::log(base);
-	static const long double scaling[] = { std::pow(base, 2), std::pow(base, 1), 1 };
-	static const char* const units[] = { "hrs", "min", "s" };
-	static const char* const colors[] = { SADDLE_BROWN, PERU, DARK_GOLDEN_ROD, CLEAR_COLOR };
-	static const int n = sizeof(units) / sizeof(const char*) - 1;
-	static const int i = find_val(1, scaling);
-
-	return humanize(seconds, colored, i, n, div, prefix, units, scaling, colors, 100.0L);
+	static const Humanize humanize(
+		60,
+		{ std::pow(60, 2), std::pow(60, 1), 1 },
+		{ "hrs", "min", "s" },
+		{ SADDLE_BROWN, PERU, DARK_GOLDEN_ROD, CLEAR_COLOR }
+	);
+	return humanize(seconds, prefix, colored, 100.0L);
 }
 
 std::string string::from_time(long double seconds, const char* prefix, bool colored) {
