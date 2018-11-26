@@ -7,16 +7,15 @@ with instrumented libc++ libraries. This documents how to build such
 instrumented libc++.
 
 
-## Building sanitized libc++
+## Preparing the source code
 
 Download llvm and libc++ (it should be the same version your compiler is).
 
 ```sh
 ~/llvm $ mkdir -p src && cd src
-~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/llvm-7.0.0.src.tar.xz
-~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/libcxx-7.0.0.src.tar.xz
-~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/libcxxabi-7.0.0.src.tar.xz
 ~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/libunwind-7.0.0.src.tar.xz
+~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/libcxxabi-7.0.0.src.tar.xz
+~/llvm/src $ curl -LO https://releases.llvm.org/7.0.0/libcxx-7.0.0.src.tar.xz
 ~/llvm/src $ cd ..
 ```
 
@@ -24,14 +23,10 @@ Uncompress and configure directories
 
 ```sh
 ~/llvm $ for f in src/*.xz; do tar -xf "$f"; done
-~/llvm $ ln -fs llvm-7.0.0.src llvm
-~/llvm/llvm/projects $ cd llvm/projects
-~/llvm/llvm/projects $ ln -fs ../../libcxx-* libcxx
-~/llvm/llvm/projects $ ln -fs ../../libcxxabi-* libcxxabi
-~/llvm/llvm/projects $ ln -fs ../../libunwind-* libunwind
-~/llvm/llvm/projects $ cd ../..
+~/llvm $ ln -fs ../../libunwind-* libunwind
+~/llvm $ ln -fs ../../libcxxabi-* libcxxabi
+~/llvm $ ln -fs ../../libcxx-* libcxx
 ```
-
 
 {: .note}
 **_OS X: About error during cmake configure_**<br>
@@ -43,9 +38,8 @@ echo `clang/7.0.0/lib/darwin` instead. (See the fix below)
 Fix compiler-rt path:
 
 ```sh
-ln -fs "$(clang++ -print-file-name=lib)/clang/*/lib/darwin" "$(clang++ -print-file-name=lib)"
+ln -fs "$(clang++ -print-file-name=lib)/clang/"*"/lib/darwin" "$(clang++ -print-file-name=lib)"
 ```
-
 
 {: .note}
 **_OS X: About error during build_**<br>
@@ -56,11 +50,11 @@ Manually linking compiler-rt library (libunwind + libcxxabi):
 
 ```sh
 cat <<"__EOF__" | patch -sup0
---- llvm/projects/libunwind/CMakeLists.txt
-+++ llvm/projects/libunwind/CMakeLists.txt
+--- libunwind/CMakeLists.txt
++++ libunwind/CMakeLists.txt
 @@ -233,6 +233,31 @@
- # Configure compiler.
- include(config-ix)
+   set(TARGET_TRIPLE "${LIBUNWIND_TARGET_TRIPLE}")
+ endif()
  
 +if (APPLE AND LLVM_USE_SANITIZER)
 +  if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -87,25 +81,11 @@ cat <<"__EOF__" | patch -sup0
 +  endif()
 +endif()
 +
- if (LIBUNWIND_USE_COMPILER_RT)
-   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
- endif()
---- llvm/projects/libcxx/lib/CMakeLists.txt
-+++ llvm/projects/libcxx/lib/CMakeLists.txt
-@@ -169,9 +169,9 @@
-           "-Wl,-reexport_library,${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib")
-       endif()
-     else()
--      set(OSX_RE_EXPORT_LINE "/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
-+      set(OSX_RE_EXPORT_LINE "lib/libc++abi.${LIBCXX_ABI_VERSION}.0.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
-       if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
--        add_link_flags("/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
-+        add_link_flags("lib/libc++abi.${LIBCXX_ABI_VERSION}.0.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
-       endif()
-     endif()
-     add_link_flags(
---- llvm/projects/libcxxabi/CMakeLists.txt
-+++ llvm/projects/libcxxabi/CMakeLists.txt
+ 
+ # Configure compiler.
+ include(config-ix)
+--- libcxxabi/CMakeLists.txt
++++ libcxxabi/CMakeLists.txt
 @@ -249,6 +249,31 @@
    string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
  endif()
@@ -138,71 +118,161 @@ cat <<"__EOF__" | patch -sup0
  if (LIBCXXABI_USE_COMPILER_RT)
    list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
  endif()
+--- libcxx/lib/CMakeLists.txt
++++ libcxx/lib/CMakeLists.txt
+@@ -169,9 +169,9 @@
+           "-Wl,-reexport_library,${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib")
+       endif()
+     else()
+-      set(OSX_RE_EXPORT_LINE "/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
++      set(OSX_RE_EXPORT_LINE "${LIBCXXABI_LIBCXX_LIBRARY_PATH}/libc++abi.${LIBCXX_ABI_VERSION}.0.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
+       if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+-        add_link_flags("/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
++        add_link_flags("${LIBCXXABI_LIBCXX_LIBRARY_PATH}/libc++abi.${LIBCXX_ABI_VERSION}.0.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
+       endif()
+     endif()
+     add_link_flags(
 __EOF__
+```
+
+
+## Building sanitized libc++
+
+This is a common build function for each and all of the sanitized 
+which follow.
+
+```sh
+install_libcxx() {
+_sanitizer="$1"
+
+if [ "$_sanitizer" = "Address" ]; then
+    _suffix="-asan"
+    _flags="-fno-omit-frame-pointer -fsanitize=address"
+elif [ "$_sanitizer" = "Undefined" ]; then
+    _suffix="-ubsan"
+    _flags="-fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all"
+elif [ "$_sanitizer" = "Address;Undefined" ] || [ "$_sanitizer" = "Undefined;Address" ]; then
+    _suffix="-asan"
+    _flags="-fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all"
+elif [ "$_sanitizer" = "Thread" ]; then
+    _suffix="-tsan"
+    _flags="-fno-omit-frame-pointer -fsanitize=thread"
+elif [ "$_sanitizer" = "Memory" ]; then
+    _suffix="-msan"
+    _flags="-fno-omit-frame-pointer -fsanitize=memory"
+elif [ "$_sanitizer" = "MemoryWithOrigins" ]; then
+    _suffix="-msan"
+    _flags="-fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins"
+fi
+
+_basedir="$(pwd)"
+_libunwinddir="$_basedir/libunwind"
+_libcxxdir="$_basedir/libcxx"
+_libcxxabidir="$_basedir/libcxxabi"
+_libdir="$_basedir/$_suffix/lib"
+
+
+# Cleanup lib directory
+rm -rf $_libdir
+mkdir -p $_libdir
+
+
+# Build and install libunwind
+cd $_libunwinddir
+rm -rf build$_suffix
+mkdir build$_suffix
+cd build$_suffix
+ln -fs $_libdir
+cmake .. \
+    -Wno-dev \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))$_suffix" \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="$_flags $CXXFLAGS" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_C_FLAGS="$_flags $CFLAGS" \
+    -DLIBUNWIND_INCLUDE_TESTS=OFF \
+    -DLIBUNWIND_INCLUDE_DOCS=OFF \
+    -DLLVM_USE_SANITIZER=$_sanitizer
+make -j4 install
+
+
+# Build and install libc++abi
+cd $_libcxxabidir
+rm -rf build$_suffix
+mkdir build$_suffix
+cd build$_suffix
+ln -fs $_libdir
+cmake .. \
+    -Wno-dev \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))$_suffix" \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="$_flags $CXXFLAGS" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_C_FLAGS="$_flags $CFLAGS" \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+    -DLIBCXXABI_LIBUNWIND_INCLUDES=/usr/include \
+    -DLIBCXXABI_LIBCXX_INCLUDES="$_libcxxdir"/include \
+    -DLIBCXXABI_LIBCXX_LIBRARY_PATH=$_libdir \
+    -DLIBCXXABI_INCLUDE_TESTS=OFF \
+    -DLIBCXXABI_INCLUDE_DOCS=OFF \
+    -DLLVM_USE_SANITIZER=$_sanitizer
+make -j4 install
+
+
+# Build and install libc++
+cd $_libcxxdir
+rm -rf build$_suffix
+mkdir build$_suffix
+cd build$_suffix
+ln -fs $_libdir
+cmake .. \
+    -Wno-dev \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))$_suffix" \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="$_flags $CXXFLAGS" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_C_FLAGS="$_flags $CFLAGS" \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+    -DLIBCXXABI_LIBUNWIND_INCLUDES=/usr/include \
+    -DLIBCXXABI_LIBCXX_INCLUDES="$_libcxxdir"/include \
+    -DLIBCXXABI_LIBCXX_LIBRARY_PATH=$_libdir \
+    -DLIBCXXABI_INCLUDE_TESTS=OFF \
+    -DLIBCXXABI_INCLUDE_DOCS=OFF \
+    -DLIBCXX_CXX_ABI=libcxxabi \
+    -DLIBCXX_CXX_ABI_INCLUDE_PATHS="$_libcxxabidir"/include \
+    -DLIBCXX_CXX_ABI_LIBRARY_PATH=$_libdir \
+    -DLIBCXX_ENABLE_ASSERTIONS=ON \
+    -DLIBCXX_BENCHMARK_NATIVE_STDLIB=OFF \
+    -DLIBCXX_INCLUDE_TESTS=OFF \
+    -DLIBCXX_INCLUDE_DOCS=OFF \
+    -DLLVM_USE_SANITIZER=$_sanitizer
+make -j4 install
+
+}
 ```
 
 
 ### Address Sanitizer (ASAN)
 
 ```sh
-~/llvm $ mkdir -p build/asan && cd build/asan
-~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-asan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-asan/lib"
-~/llvm/build/asan $ cmake ../../llvm \
-  -GNinja \
-  -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-asan" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_USE_SANITIZER=Address \
-  -DLLVM_INCLUDE_TESTS=OFF
-~/llvm/build/asan $ ninja install-unwind install-libcxxabi install-libcxx
-~/llvm/build/asan $ cd ../..
-```
-
-
-### Memory Sanitizer (MSAN)
-
-```sh
-~/llvm $ mkdir -p build/msan && cd build/msan
-~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-msan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-msan/lib"
-~/llvm/build/msan $ cmake ../../llvm \
-  -GNinja \
-  -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-msan" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_USE_SANITIZER=MemoryWithOrigins \
-  -DLLVM_INCLUDE_TESTS=OFF
-~/llvm/build/msan $ ninja install-unwind install-libcxxabi install-libcxx
-~/llvm/build/msan $ cd ../..
-```
-
-
-### Undefined Behavior Sanitizer (UBSAN)
-
-```sh
-~/llvm $ mkdir -p build/ubsan && cd build/ubsan
-~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-ubsan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-ubsan/lib"
-~/llvm/build/ubsan $ cmake ../../llvm \
-  -GNinja \
-  -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-ubsan" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_USE_SANITIZER=Undefined \
-  -DLLVM_INCLUDE_TESTS=OFF
-~/llvm/build/ubsan $ ninja install-unwind install-libcxxabi install-libcxx
-~/llvm/build/ubsan $ cd ../..
+install_libcxx "Address;Undefined"
 ```
 
 
 ### Thread Sanitizer (TSAN)
 
 ```sh
-~/llvm $ mkdir -p build/tsan && cd build/tsan
-~/llvm $ export LDFLAGS="-L$(dirname $(clang++ -print-file-name=lib))-tsan/lib -Wl,-rpath,$(dirname $(clang++ -print-file-name=lib))-tsan/lib"
-~/llvm/build/tsan $ cmake ../../llvm \
-  -GNinja \
-  -DCMAKE_INSTALL_PREFIX="$(dirname $(clang++ -print-file-name=lib))-tsan" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DLLVM_USE_SANITIZER=Thread \
-  -DLLVM_INCLUDE_TESTS=OFF
-~/llvm/build/tsan $ ninja install-unwind install-libcxxabi install-libcxx
-~/llvm/build/tsan $ cd ../..
+install_libcxx "Thread"
+```
+
+
+### Memory Sanitizer (MSAN)
+
+```sh
+install_libcxx "MemoryWithOrigins"
 ```
 
 
