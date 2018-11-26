@@ -64,8 +64,8 @@ class MsgPack {
 	template <typename T>
 	class Iterator;
 
-	const std::shared_ptr<Body> _body;
-	const Body* const _const_body;
+	std::shared_ptr<Body> _body;
+	const Body* _const_body;
 
 	MsgPack(const std::shared_ptr<Body>& b);
 	MsgPack(std::shared_ptr<Body>&& b);
