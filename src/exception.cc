@@ -266,13 +266,13 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::printf_args args)
+BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, VFPRINTF_ARGS args)
 	: type(type),
 	  function(function_),
 	  filename(filename_),
 	  line(line_),
 	  frames(0),
-	  message(fmt::vsprintf(format, args))
+	  message(VSPRINTF(format, args))
 {
 	if (!exc.type.empty() && (exc.frames != 0u)) {
 		function = exc.function;
