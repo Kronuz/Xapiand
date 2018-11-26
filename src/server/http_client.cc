@@ -838,8 +838,12 @@ HttpClient::on_message_complete(http_parser* parser)
 				// There should be a runner, just enqueue request.
 				requests.push_back(std::move(new_request));
 			}
+
+			// FIXME: The following assignment should be outside this scope
+			// (shouldn't need th lock) but MsgPack's move (above) must have an
+			// error and isn't really moving something.
+			new_request = Request(this);
 		}
-		new_request = Request(this);
 	}
 	waiting = false;
 
