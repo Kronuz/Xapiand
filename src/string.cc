@@ -22,10 +22,11 @@
 
 #include "string.hh"
 
-#include "colors.h"
-
 #include <cmath>              // for std::log, std::pow
 #include <vector>             // for std::vector
+
+#include "cassert.h"          // for ASSERT
+#include "colors.h"
 
 
 class Humanize {
@@ -50,6 +51,8 @@ public:
 		colors(std::move(colors_)),
 		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 0)))
 	{
+		ASSERT(scaling.size() == units.size());
+		ASSERT(colors.size() == units.size() + 1);
 		std::transform(scaling.begin(), scaling.end(), scaling.begin(), [&](long double s) {
 			return std::pow(base, s);
 		});
@@ -57,25 +60,28 @@ public:
 
 	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
 		long double num = delta;
-		auto n = units.size();
+		auto last = units.size();
 
 		if (delta < 0) {
 			delta = -delta;
 		}
-		size_t order = (delta == 0) ? n : -std::floor(std::log(delta) / div);
+		size_t order = (delta == 0) ? last : -std::floor(std::log(delta) / div);
 		order += needle;
 		if (order < 0) {
 			order = 0;
-		} else if (order > n) {
-			order = n;
+		} else if (order > last) {
+			order = last;
 		}
 
 		num = std::round(rounding * num / scaling[order]) / rounding;
+		ASSERT(order >= 0 && order < units.size());
 		auto& unit = units[order];
 
 		if (colored) {
+			ASSERT(order >= 0 && order < colors.size());
 			auto& color = colors[order];
-			auto& reset = colors[n + 1];
+			ASSERT(last >= 0 && last < colors.size());
+			auto& reset = colors[last];
 			return string::format("%s%s%s%s%s", color, prefix, string::Number(static_cast<double>(num)), unit, reset);
 		}
 
