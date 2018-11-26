@@ -730,6 +730,10 @@ inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 
 
 inline void MsgPack::_assignment(const msgpack::object& obj) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
+	ASSERT(!_body->_lock);
 	if (_body->_is_key) {
 		// Rename key, if the assignment is acting on a map key...
 		// We expect obj to be a string:
@@ -764,7 +768,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 
 
 inline MsgPack::MsgPack()
-	: MsgPack(MsgPack::undefined()) { }
+	: MsgPack(_undefined()) { }
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
@@ -779,7 +783,7 @@ inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
 	  _const_body(_body.get())
 {
-	other._body = MsgPack::undefined()._body;
+	other._body = std::make_shared<Body>(_undefined());
 	other._const_body = other._body.get();
 }
 
@@ -796,14 +800,14 @@ inline MsgPack::MsgPack(T&& v)
 
 
 inline MsgPack::MsgPack(std::initializer_list<MsgPack> list)
-	: MsgPack(MsgPack::undefined())
+	: MsgPack(_undefined())
 {
 	_initializer(list);
 }
 
 
 inline MsgPack::MsgPack(Type type)
-	: MsgPack(MsgPack::undefined())
+	: MsgPack(_undefined())
 {
 	_deinit();
 	switch (type) {
