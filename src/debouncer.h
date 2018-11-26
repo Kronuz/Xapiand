@@ -180,11 +180,12 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::
 			}
 			status->task->clear();
 		}
-		status->task = std::make_shared<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>>(*this, forced, key, std::make_tuple(std::forward<Args>(args)...));
-		task = status->task;
+		task = std::make_shared<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>>(*this, forced, key, std::make_tuple(std::forward<Args>(args)...));
+		task->wakeup_time = next_wakeup_time;
+		status->task = task;
 	}
 
-	this->add(task, next_wakeup_time);
+	this->add(task);
 }
 
 
