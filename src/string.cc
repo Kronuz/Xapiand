@@ -48,8 +48,12 @@ public:
 		scaling(std::move(scaling_)),
 		units(std::move(units_)),
 		colors(std::move(colors_)),
-		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 1)))
-	{}
+		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 0)))
+	{
+		std::transform(scaling.begin(), scaling.end(), scaling.begin(), [&](long double s) {
+			return std::pow(base, s);
+		});
+	}
 
 	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
 		long double num = delta;
@@ -93,7 +97,7 @@ public:
 static inline std::string _from_bytes(size_t bytes, const char* prefix, bool colored) {
 	static const Humanize humanize(
 		1024,
-		{ std::pow(1024, 8), std::pow(1024, 7), std::pow(1024, 6), std::pow(1024, 5), std::pow(1024, 4), std::pow(1024, 3), std::pow(1024, 2), std::pow(1024, 1), 1 },
+		{ 8, 7, 6, 5, 4, 3, 2, 1, 0 },
 		{ "YiB", "ZiB", "EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B" },
 		{ BROWN, BROWN, BROWN, BROWN, BROWN, PERU, OLIVE, SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR }
 	);
@@ -108,7 +112,7 @@ std::string string::from_bytes(size_t bytes, const char* prefix, bool colored) {
 static inline std::string _from_small_time(long double seconds, const char* prefix, bool colored) {
 	static const Humanize humanize(
 		1000,
-		{ 1, std::pow(1000, -1), std::pow(1000, -2), std::pow(1000, -3), std::pow(1000, -4) },
+		{ 0, -1, -2, -3, -4 },
 		{ "s", "ms", R"(µs)", "ns", "ps" },
 		{ OLIVE, OLIVE_DRAB, SEA_GREEN, MEDIUM_SEA_GREEN, MEDIUM_SEA_GREEN, CLEAR_COLOR }
 	);
@@ -122,7 +126,7 @@ std::string string::from_small_time(long double seconds, const char* prefix, boo
 static inline std::string _from_time(long double seconds, const char* prefix, bool colored) {
 	static const Humanize humanize(
 		60,
-		{ std::pow(60, 2), std::pow(60, 1), 1 },
+		{ 2, 1, 0 },
 		{ "hrs", "min", "s" },
 		{ SADDLE_BROWN, PERU, DARK_GOLDEN_ROD, CLEAR_COLOR }
 	);
