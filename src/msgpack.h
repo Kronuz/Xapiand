@@ -35,11 +35,14 @@
 #include "exception.h"
 #include "msgpack.hpp"
 #include "strict_stox.hh"
-#include "xchange/string_view.hpp"
+#include "ignore_unused.h"      // for ignore_unused
+#ifndef WITHOUT_RAPIDJSON
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
 #include "xchange/rapidjson.hpp"
+#endif
+#include "xchange/string_view.hpp"
 #if XAPIAND_CHAISCRIPT
 #include "xchange/chaiscript.hpp"
 #endif
@@ -318,7 +321,10 @@ public:
 	double as_f64() const;
 	std::string as_str() const;
 	bool as_boolean() const;
+
+#ifndef WITHOUT_RAPIDJSON
 	rapidjson::Document as_document() const;
+#endif
 
 	bool is_undefined() const noexcept;
 	bool is_null() const noexcept;
@@ -702,7 +708,7 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	for (const auto& val : list) {
 		std::tie(std::ignore, inserted) = _put(val.at(0), val.at(1), false);
 		if unlikely(!inserted) {
-			THROW(duplicate_key, "Duplicate key: %s", val.at(0).to_string());
+			THROW(duplicate_key, "Duplicate key");
 		}
 	}
 }
@@ -742,7 +748,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Cannot rename to duplicate key: %s", str_key);
+						THROW(duplicate_key, "Cannot rename to duplicate key");
 					}
 					ASSERT(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -889,7 +895,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key: %s", str_key);
+			THROW(duplicate_key, "Duplicate key");
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -1874,14 +1880,14 @@ inline MsgPack& MsgPack::path(const std::vector<T>& path) {
 				int errno_save;
 				auto pos = strict_stoz(&errno_save, s);
 				if (errno_save != 0) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
+					THROW(invalid_argument, "The index for the array must be a positive integer");
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", s);
+				THROW(invalid_argument, "The container must be a map or an array to access");
 		}
 	}
 
@@ -1902,14 +1908,14 @@ inline const MsgPack& MsgPack::path(const std::vector<T>& path) const {
 				int errno_save;
 				auto pos = strict_stoz(&errno_save, s);
 				if (errno_save != 0) {
-					THROW(invalid_argument, "The index for the array must be a positive integer, it is: %s", s);
+					THROW(invalid_argument, "The index for the array must be a positive integer");
 				}
 				current = &current->at(pos);
 				break;
 			}
 
 			default:
-				THROW(invalid_argument, "The container must be a map or an array to access: %s", s);
+				THROW(invalid_argument, "The container must be a map or an array to access");
 		}
 	}
 
@@ -2401,11 +2407,13 @@ inline bool MsgPack::as_boolean() const {
 }
 
 
+#ifndef WITHOUT_RAPIDJSON
 inline rapidjson::Document MsgPack::as_document() const {
 	rapidjson::Document doc;
 	_const_body->_obj->convert(&doc);
 	return doc;
 }
+#endif
 
 
 inline bool MsgPack::is_undefined() const noexcept {
@@ -2522,6 +2530,12 @@ inline MsgPack& MsgPack::operator+=(double val) {
 
 
 inline std::string MsgPack::to_string(int indent) const {
+#ifdef WITHOUT_RAPIDJSON
+	std::ostringstream oss;
+	oss << *_const_body->_obj;
+	return oss.str();
+	ignore_unused(indent);
+#else
 	if (indent >= 0) {
 		rapidjson::Document doc = as_document();
 		rapidjson::StringBuffer buffer;
@@ -2536,6 +2550,7 @@ inline std::string MsgPack::to_string(int indent) const {
 		doc.Accept(writer);
 		return std::string(buffer.GetString(), buffer.GetSize());
 	}
+#endif
 }
 
 
