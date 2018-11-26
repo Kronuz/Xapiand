@@ -777,7 +777,11 @@ inline MsgPack::MsgPack(const MsgPack& other)
 
 inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
-	  _const_body(_body.get()) { }
+	  _const_body(_body.get())
+{
+	other._body = MsgPack::undefined()._body;
+	other._const_body = other._body.get();
+}
 
 
 inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
