@@ -78,6 +78,17 @@ endif ()
 
 
 ########################################################################
+# Check CMAKE_BUILD_TYPE:  Debug Release RelWithDebInfo MinSizeRel
+########################################################################
+
+# Default value for CMAKE_BUILD_TYPE.
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
+string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_CMAKE_BUILD_TYPE)
+
+
+########################################################################
 # CMake Includes
 ########################################################################
 
@@ -742,16 +753,9 @@ endif ()
 
 
 ########################################################################
-# Check CMAKE_BUILD_TYPE:  Debug Release RelWithDebInfo MinSizeRel
+# Remove duplicates compilation flags
 ########################################################################
 
-# Default value for CMAKE_BUILD_TYPE.
-if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
-endif ()
-string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_CMAKE_BUILD_TYPE)
-
-# Remove duplicates compilation flags
 remove_duplicate_substrings("${CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
 remove_duplicate_substrings("${CMAKE_CXX_FLAGS_DEBUG}" CMAKE_CXX_FLAGS_DEBUG)
 remove_duplicate_substrings("${CMAKE_CXX_FLAGS_RELEASE}" CMAKE_CXX_FLAGS_RELEASE)
