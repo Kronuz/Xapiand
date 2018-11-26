@@ -77,11 +77,11 @@ class MsgPack {
 	void _assignment(const msgpack::object& obj);
 
 	static msgpack::object _undefined() {
-		msgpack::object o;
-		o.type = msgpack::type::EXT;
-		o.via.ext.ptr = ::undefined;
-		o.via.ext.size = 1;
-		return o;
+		msgpack::object obj;
+		obj.type = msgpack::type::EXT;
+		obj.via.ext.ptr = ::undefined;
+		obj.via.ext.size = 1;
+		return obj;
 	}
 
 	MsgPack(msgpack::object&& _object, bool _const);
