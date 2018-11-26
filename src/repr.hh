@@ -33,8 +33,13 @@ inline std::string repr(const void* p, const void* e, bool friendly = true, char
 	return repr(p, static_cast<const char*>(e) - static_cast<const char*>(p), friendly, quote, max_size);
 }
 
-inline std::string repr(std::string_view string, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
-	return repr(string.data(), string.size(), friendly, quote, max_size);
+template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value or std::is_same<std::string_view, std::decay_t<T>>::value>>
+inline std::string repr(T&& s, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
+	return repr(s.data(), s.size(), friendly, quote, max_size);
+}
+
+inline std::string repr(std::string_view s, bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
+	return repr(s.data(), s.size(), friendly, quote, max_size);
 }
 
 template<typename T, std::size_t N>

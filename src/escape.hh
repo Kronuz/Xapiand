@@ -29,8 +29,9 @@
 
 std::string escape(const void* p, std::size_t size, char quote = '\'');
 
-inline std::string escape(std::string_view string, char quote = '\'') {
-	return escape(string.data(), string.size(), quote);
+template <typename T, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<T>>::value or std::is_same<std::string_view, std::decay_t<T>>::value>>
+inline std::string escape(T&& s, char quote = '\'') {
+	return escape(s.data(), s.size(), quote);
 }
 
 template<typename T, std::size_t N>
