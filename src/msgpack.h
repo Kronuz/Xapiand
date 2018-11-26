@@ -53,6 +53,9 @@ constexpr size_t  MSGPACK_ARRAY_INIT_SIZE = 4;
 constexpr double  MSGPACK_GROWTH_FACTOR   = 1.5;  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
 constexpr uint8_t MSGPACK_EXT_BEGIN       = 0x80;
 constexpr uint8_t MSGPACK_EXT_MASK        = 0x7f;
+constexpr uint8_t MSGPACK_UNDEFINED       = MSGPACK_EXT_BEGIN;
+
+static const char* undefined = "\0";
 
 
 class MsgPack {
@@ -74,10 +77,9 @@ class MsgPack {
 	void _assignment(const msgpack::object& obj);
 
 	static msgpack::object _undefined() {
-		static const char data = (char)Type::UNDEFINED & MSGPACK_EXT_MASK;
 		msgpack::object o;
 		o.type = msgpack::type::EXT;
-		o.via.ext.ptr = &data;
+		o.via.ext.ptr = ::undefined;
 		o.via.ext.size = 1;
 		return o;
 	}
@@ -99,7 +101,7 @@ public:
 		BIN                 = msgpack::type::BIN,               //0x08
 
 		// Custom external types follow:
-		UNDEFINED           = MSGPACK_EXT_BEGIN,
+		UNDEFINED           = MSGPACK_UNDEFINED,
 	};
 
 	using out_of_range = OutOfRange;
