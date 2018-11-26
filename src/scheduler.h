@@ -28,6 +28,7 @@
 #include <mutex>                  // for std::condition_variable, std::mutex
 #include <utility>                // for std::move
 
+#include "cassert.h"              // for ASSERT
 #include "log.h"                  // for L_*
 #include "stash.h"                // for StashValues, StashSlots, StashContext
 #include "thread.hh"              // for Thread
@@ -180,9 +181,7 @@ protected:
 	void end(int wait = 10) {
 		ending = wait;
 
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-		}
+		std::lock_guard<std::mutex> lk(mtx);
 		wakeup_signal.notify_all();
 	}
 
@@ -264,29 +263,34 @@ public:
 		}
 	}
 
-	void add(const TaskType& task, unsigned long long wakeup_time) {
+	void add(const TaskType& task) {
 		if (ending != 0) {
-			auto now = time_point_to_ullong(std::chrono::system_clock::now());
-			if (wakeup_time < now) {
-				wakeup_time = now;
-			}
+			unsigned long long wakeup_time = task->wakeup_time;
+			ASSERT(wakeup_time != 0);
 
-			task->wakeup_time = wakeup_time;
 			scheduler_queue.add(task, wakeup_time);
 
 			auto next_wakeup_time = atom_next_wakeup_time.load();
 			while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time)) { }
 
+			auto now = time_point_to_ullong(std::chrono::system_clock::now());
 			if (next_wakeup_time >= wakeup_time || next_wakeup_time <= now) {
-				{
-					std::lock_guard<std::mutex> lk(mtx);
-				}
+				std::lock_guard<std::mutex> lk(mtx);
 				wakeup_signal.notify_one();
 				L_SCHEDULER("BaseScheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
 			} else {
 				L_SCHEDULER("BaseScheduler::" + FOREST_GREEN + "ADDED" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
 			}
 		}
+	}
+
+	void add(const TaskType& task, unsigned long long wakeup_time) {
+		auto now = time_point_to_ullong(std::chrono::system_clock::now());
+		if (wakeup_time < now) {
+			wakeup_time = now;
+		}
+		task->wakeup_time = wakeup_time;
+		add(task);
 	}
 
 	void add(const TaskType& task, const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
