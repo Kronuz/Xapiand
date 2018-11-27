@@ -102,7 +102,12 @@ DatabaseQueue::inc_count()
 {
 	L_CALL("DatabaseQueue::inc_count()");
 
-	return ++count;
+	auto current_count = count++;
+
+	L_DATABASE("++ inc_count: {endpoints:%s, flags:%d, count:%zu}", repr(endpoints.to_string()), flags, current_count);
+
+	++current_count;
+	return current_count;
 }
 
 
@@ -111,7 +116,10 @@ DatabaseQueue::dec_count()
 {
 	L_CALL("DatabaseQueue::dec_count()");
 
-	auto current_count = count++;
+	auto current_count = count--;
+
+	L_DATABASE("-- dec_count: {endpoints:%s, flags:%d, count:%zu}", repr(endpoints.to_string()), flags, current_count);
+
 	if (current_count == 0) {
 		L_CRIT("Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
