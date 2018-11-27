@@ -217,16 +217,15 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_)
 	: weak_queue(queue_),
 	  endpoints(queue_->endpoints),
 	  flags(queue_->flags),
-	  hash(endpoints.hash()),
-	  modified(false),
-	  transaction(Transaction::none),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
+	  modified(false),
 	  incomplete(false),
-	  closed(false),
 	  is_writable(false),
 	  is_writable_and_local(false),
-	  is_writable_and_local_with_wal(false)
+	  is_writable_and_local_with_wal(false),
+	  closed(false),
+	  transaction(Transaction::none)
 {
 	reopen();
 
@@ -262,20 +261,18 @@ Database::reopen_writable()
 	//    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
 	//
 
-	incomplete = false;
-	modified = false;
-	dbs.clear();
-#ifdef XAPIAND_DATA_STORAGE
-	storages.clear();
-	writable_storages.clear();
-#endif  // XAPIAND_DATA_STORAGE
+	if (closed) {
+		THROW(Error, "database is closed");
+	}
+
+	reset();
 
 	auto endpoints_size = endpoints.size();
 	if (endpoints_size != 1) {
 		THROW(Error, "Writable database must have one single endpoint");
 	}
 
-	_db = std::make_unique<Xapian::WritableDatabase>();
+	auto database = std::make_unique<Xapian::WritableDatabase>();
 
 	const auto& endpoint = endpoints[0];
 	if (endpoint.empty()) {
@@ -316,15 +313,15 @@ Database::reopen_writable()
 		local = true;
 	}
 
-	_db->add_database(wsdb);
-	dbs.emplace_back(wsdb, local);
+	database->add_database(wsdb);
+	_databases.emplace_back(wsdb, local);
 
 	if (local) {
 		reopen_revision = get_revision();
 	}
 
 	if (transaction != Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(_db.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(database.get());
 		wdb->begin_transaction(transaction == Transaction::flushed);
 	}
 
@@ -342,7 +339,7 @@ Database::reopen_writable()
 		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 	}
 #endif  // XAPIAND_DATA_STORAGE
-	ASSERT(dbs.size() == endpoints_size);
+	ASSERT(_databases.size() == endpoints_size);
 
 	is_writable = true;
 	is_writable_and_local = local;
@@ -364,6 +361,9 @@ Database::reopen_writable()
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
+
+	_database = std::move(database);
+	reopen_time = std::chrono::system_clock::now();
 	// Ends Writable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -379,20 +379,18 @@ Database::reopen_readable()
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
 
-	incomplete = false;
-	modified = false;
-	dbs.clear();
-#ifdef XAPIAND_DATA_STORAGE
-	storages.clear();
-	writable_storages.clear();
-#endif  // XAPIAND_DATA_STORAGE
+	if (closed) {
+		THROW(Error, "database is closed");
+	}
+
+	reset();
 
 	auto endpoints_size = endpoints.size();
 	if (endpoints_size == 0) {
 		THROW(Error, "Writable database must have at least one endpoint");
 	}
 
-	_db = std::make_unique<Xapian::Database>();
+	auto database = std::make_unique<Xapian::Database>();
 
 	size_t failures = 0;
 
@@ -451,7 +449,6 @@ Database::reopen_readable()
 					++failures;
 					if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 						if (endpoints.size() == failures) {
-							_db.reset();
 							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
 						incomplete = true;
@@ -470,8 +467,8 @@ Database::reopen_readable()
 			}
 		}
 
-		_db->add_database(rsdb);
-		dbs.emplace_back(rsdb, local);
+		database->add_database(rsdb);
+		_databases.emplace_back(rsdb, local);
 
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
@@ -482,11 +479,10 @@ Database::reopen_readable()
 		}
 #endif  // XAPIAND_DATA_STORAGE
 	}
-	ASSERT(dbs.size() == endpoints_size);
+	ASSERT(_databases.size() == endpoints_size);
 
-	is_writable = false;
-	is_writable_and_local = false;
-	is_writable_and_local_with_wal = false;
+	_database = std::move(database);
+	reopen_time = std::chrono::system_clock::now();
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 }
@@ -499,11 +495,11 @@ Database::reopen()
 	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN: %s [%s]", repr(endpoints.to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Database::reopen:END: %s [%s]", repr(endpoints.to_string()), readable_flags(flags));
 
-	if (_db) {
+	if (_database) {
 		if (!incomplete) {
 			// Try to reopen
 			try {
-				bool ret = _db->reopen();
+				bool ret = _database->reopen();
 				return ret;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 			} catch (const Xapian::DatabaseError& exc) {
@@ -516,10 +512,15 @@ Database::reopen()
 		do_close(true, closed, transaction);
 	}
 
-	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
-		reopen_writable();
-	} else {
-		reopen_readable();
+	try {
+		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
+			reopen_writable();
+		} else {
+			reopen_readable();
+		}
+	} catch (...) {
+		reset();
+		throw;
 	}
 
 	return true;
@@ -533,11 +534,11 @@ Database::db()
 		THROW(Error, "database is closed");
 	}
 
-	if (!_db) {
+	if (!_database) {
 		reopen();
 	}
 
-	return _db.get();
+	return _database.get();
 }
 
 
@@ -577,13 +578,33 @@ Database::get_revision()
 
 
 void
+Database::reset()
+{
+	L_CALL("Database::reset()");
+
+	_database.reset();
+	_databases.clear();
+	reopen_revision = 0;
+	modified = false;
+	incomplete = false;
+	is_writable = false;
+	is_writable_and_local = false;
+	is_writable_and_local_with_wal = false;
+#ifdef XAPIAND_DATA_STORAGE
+	storages.clear();
+	writable_storages.clear();
+#endif  // XAPIAND_DATA_STORAGE
+}
+
+
+void
 Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
 	L_CALL("Database::do_close(...)");
 
 	if (
 		commit_ &&
-		_db &&
+		_database &&
 		modified &&
 		transaction == Database::Transaction::none &&
 		!closed &&
@@ -597,23 +618,15 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		}
 	}
 
-	if (_db) {
+	if (_database) {
 		try {
-			_db->close();
-		} catch (...) {
-		}
-		_db.reset();
+			_database->close();
+		} catch (...) {}
 	}
 
+	reset();
 	closed = closed_;
 	transaction = transaction_;
-	incomplete = false;
-	modified = false;
-	dbs.clear();
-#ifdef XAPIAND_DATA_STORAGE
-	storages.clear();
-	writable_storages.clear();
-#endif  // XAPIAND_DATA_STORAGE
 }
 
 
@@ -635,7 +648,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 {
 	// Auto commit only local writable databases
 	if (
-		database->_db &&
+		database->_database &&
 		database->modified &&
 		database->transaction == Database::Transaction::none &&
 		!database->closed &&

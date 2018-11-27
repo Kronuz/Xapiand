@@ -90,20 +90,20 @@ public:
 	const Endpoints endpoints;
 	const int flags;
 
-	const size_t hash;
-	bool modified;
-	Transaction transaction;
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
+	bool modified;
 	bool incomplete;
-	bool closed;
 
 	bool is_writable;
 	bool is_writable_and_local;
 	bool is_writable_and_local_with_wal;
 
-	std::unique_ptr<Xapian::Database> _db;
-	std::vector<std::pair<Xapian::Database, bool>> dbs;
+	bool closed;
+	Transaction transaction;
+
+	std::unique_ptr<Xapian::Database> _database;
+	std::vector<std::pair<Xapian::Database, bool>> _databases;
 
 #ifdef XAPIAND_DATA_STORAGE
 	std::vector<std::unique_ptr<DataStorage>> writable_storages;
@@ -130,6 +130,8 @@ public:
 	UUID get_uuid();
 	std::string get_uuid_string();
 	Xapian::rev get_revision();
+
+	void reset();
 
 	void do_close(bool commit_, bool closed_, Transaction transaction_);
 	void close();
