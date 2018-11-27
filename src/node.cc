@@ -40,8 +40,9 @@
 #define L_NODE_NODES(args...) \
 	L_SLATE_GREY(args); \
 	for (const auto& _ : _nodes) { \
-		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s", \
+		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s", \
 			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched, \
+			Node::is_active(_.second) ? " active" : "", \
 			Node::is_local(_.second) ? " (local)" : "", \
 			Node::is_leader(_.second) ? " (leader)" : ""); \
 	}
@@ -108,9 +109,10 @@ Node::unserialise(const char **p, const char *end)
 std::string
 Node::__repr__() const
 {
-	return string::format("<Node at %p: {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s>",
+	return string::format("<Node at %p: {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s>",
 		static_cast<const void*>(this),
 		idx, name(), http_port, binary_port, touched,
+		is_active() ? " active" : "",
 		is_local() ? " (local)" : "",
 		is_leader() ? " (leader)" : "");
 }
