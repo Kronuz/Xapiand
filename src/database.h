@@ -50,6 +50,16 @@ namespace moodycamel {
 using namespace moodycamel;
 
 
+inline std::string readable_flags(int flags) {
+	std::vector<std::string> values;
+	if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
+	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
+	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
+	if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
+	if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
+	return string::join(values, " | ");
+}
+
 //  ____        _        _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
 // | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \

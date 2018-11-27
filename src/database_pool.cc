@@ -104,7 +104,7 @@ DatabaseQueue::inc_count()
 
 	auto current_count = count++;
 
-	L_DATABASE("++ inc_count: {endpoints:%s, flags:%d, count:%zu}", repr(endpoints.to_string()), flags, current_count);
+	L_DATABASE("++%zu (inc_count) %s [%s]", current_count, repr(endpoints.to_string()), readable_flags(flags));
 
 	++current_count;
 	return current_count;
@@ -118,7 +118,7 @@ DatabaseQueue::dec_count()
 
 	auto current_count = count--;
 
-	L_DATABASE("-- dec_count: {endpoints:%s, flags:%d, count:%zu}", repr(endpoints.to_string()), flags, current_count);
+	L_DATABASE("--%zu (dec_count) %s [%s]", current_count, repr(endpoints.to_string()), readable_flags(flags));
 
 	if (current_count == 0) {
 		L_CRIT("Inconsistency in the number of databases in queue");
@@ -136,10 +136,11 @@ DatabaseQueue::dec_count()
 std::string
 DatabaseQueue::__repr__() const
 {
-	return string::format("<%s at %p: %s>",
+	return string::format("<%s at %p: %s [%s]>",
 		((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableQueue" : "Queue",
 		static_cast<const void*>(this),
-		repr(endpoints.to_string()));
+		repr(endpoints.to_string()),
+		readable_flags(flags));
 }
 
 
@@ -165,9 +166,10 @@ DatabaseQueue::dump_databases(int level) const
 	}
 	while (current_count) {
 		ret += indent;
-		ret += string::format("<%s (checked out): %s>",
+		ret += string::format("<%s (checked out): %s [%s]>",
 			((flags & DB_WRITABLE) == DB_WRITABLE) ? "WritableDatabase" : "Database",
-			repr(endpoints.to_string()));
+			repr(endpoints.to_string()),
+			readable_flags(flags));
 		ret.push_back('\n');
 		--current_count;
 	}
@@ -202,7 +204,7 @@ DatabasesLRU::get(const Endpoints& endpoints)
 std::pair<std::shared_ptr<DatabaseQueue>, bool>
 DatabasesLRU::get(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags)
 {
-	L_CALL("DatabasesLRU::get(%s, <flags>)", repr(endpoints.to_string()));
+	L_CALL("DatabasesLRU::get(%s, [%s])", repr(endpoints.to_string()), readable_flags(flags));
 
 	const auto now = std::chrono::system_clock::now();
 
@@ -473,20 +475,12 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 void
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout)
 {
-	L_CALL("DatabasePool::checkout(%s, 0x%02x (%s))", repr(endpoints.to_string()), flags, [&flags]() {
-		std::vector<std::string> values;
-		if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
-		if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
-		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
-		if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
-		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
-		return string::join(values, " | ");
-	}());
+	L_CALL("DatabasePool::checkout(%s, [%s])", repr(endpoints.to_string()), readable_flags(flags));
 
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
-	L_DATABASE_BEGIN("++ CHECKING OUT DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
-	L_DATABASE_END("!! FAILED CHECKOUT DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_BEGIN("++ CHECKING OUT DB: %s [%s] ...", repr(endpoints.to_string()), readable_flags(flags));
+	L_DATABASE_END("!! FAILED CHECKOUT DB: %s [%s] ...", repr(endpoints.to_string()), readable_flags(flags));
 
 	ASSERT(!database);
 
@@ -624,7 +618,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		}
 		if (reopen) {
 			database->reopen();
-			L_DATABASE("== REOPEN DB [%s]: %s", db_writable ? "WR" : "RO", repr(database->endpoints.to_string()));
+			L_DATABASE("== REOPEN DB: %s [%s]", repr(database->endpoints.to_string()), readable_flags(flags));
 		}
 	}
 
@@ -633,7 +627,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		"%s checked out for too long: %s",
 		database->is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : database->is_writable_and_local ? "LocalWritableDatabase" : database->is_writable ? "WritableDatabase" : "Database",
 		repr(endpoints.to_string()));
-	L_DATABASE_END("++ CHECKED OUT DB [%s]: %s (rev:%llu)", db_writable ? "WR" : "RO", repr(endpoints.to_string()), database->reopen_revision);
+	L_DATABASE_END("++ CHECKED OUT DB: %s [%s] (rev:%llu)", repr(endpoints.to_string()), readable_flags(flags), database->reopen_revision);
 }
 
 
@@ -647,7 +641,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	int flags = database->flags;
 	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
-	L_DATABASE_BEGIN("-- CHECKING IN DB [%s]: %s ...", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_BEGIN("-- CHECKING IN DB: %s [%s] ...", repr(endpoints.to_string()), readable_flags(flags));
 	if (database->log) {
 		database->log->clear();
 		database->log.reset();
@@ -682,7 +676,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	while (callbacks.call()) {};
 
-	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+	L_DATABASE_END("-- CHECKED IN DB: %s [%s]", repr(endpoints.to_string()), readable_flags(flags));
 }
 
 
