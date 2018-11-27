@@ -87,6 +87,11 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_CMAKE_BUILD_TYPE)
 
+# set (CMAKE_CXX_FLAGS_DEBUG "-g")
+# set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+# set (CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
+
 
 ########################################################################
 # CMake Includes
