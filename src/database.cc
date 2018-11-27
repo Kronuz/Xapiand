@@ -260,6 +260,7 @@ Database::reopen_writable()
 	//   \ V  V /| |  | | || (_| | |_) | |  __/ | |_| | |_) |
 	//    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
 	//
+	L_CALL("Database::reopen_writable()");
 
 	if (closed) {
 		THROW(Error, "database is closed");
@@ -378,6 +379,7 @@ Database::reopen_readable()
 	// |  _ <  __/ (_| | (_| | (_| | |_) | |  __/ | |_| | |_) |
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
+	L_CALL("Database::reopen_readable()");
 
 	if (closed) {
 		THROW(Error, "database is closed");
@@ -530,6 +532,8 @@ Database::reopen()
 Xapian::Database*
 Database::db()
 {
+	L_CALL("Database::db()");
+
 	if (closed) {
 		THROW(Error, "database is closed");
 	}
@@ -545,7 +549,7 @@ Database::db()
 UUID
 Database::get_uuid()
 {
-	L_CALL("Database::get_uuid");
+	L_CALL("Database::get_uuid()");
 
 	return UUID(get_uuid_string());
 }
@@ -554,7 +558,7 @@ Database::get_uuid()
 std::string
 Database::get_uuid_string()
 {
-	L_CALL("Database::get_uuid_string");
+	L_CALL("Database::get_uuid_string()");
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -646,6 +650,8 @@ Database::close()
 void
 Database::autocommit(const std::shared_ptr<Database>& database)
 {
+	L_CALL("Database::autocommit(<database>)");
+
 	// Auto commit only local writable databases
 	if (
 		database->_database &&
