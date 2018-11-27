@@ -133,6 +133,8 @@ public:
 	std::string serialise() const;
 	static Node unserialise(const char **p, const char *end);
 
+	std::string __repr__() const;
+
 	void name(std::string_view name) {
 		_name = std::string(name);
 		_lower_name = string::lower(_name);
@@ -182,20 +184,36 @@ public:
 
 	color col() const;
 
+	bool is_equal(const std::shared_ptr<const Node>& other) const {
+		return other && (this == other.get() || *this == *other);
+	}
+
+	bool is_local() const {
+		return is_equal(_local_node.load());
+	}
+
+	bool is_leader() const {
+		return is_equal(_leader_node.load());
+	}
+
+	bool is_active() const {
+		return (touched >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
+	}
+
 	static bool is_equal(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
 		return a && b && (a == b || *a == *b);
 	}
 
 	static bool is_local(const std::shared_ptr<const Node>& node) {
-		return node && is_equal(_local_node.load(), node);
+		return node && node->is_local();
 	}
 
 	static bool is_leader(const std::shared_ptr<const Node>& node) {
-		return node && is_equal(_leader_node.load(), node);
+		return node && node->is_leader();
 	}
 
 	static bool is_active(const std::shared_ptr<const Node>& node) {
-		return node && (node->touched >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local(node));
+		return node && node->is_active();
 	}
 
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
@@ -237,5 +255,7 @@ public:
 	static void reset();
 
 	static std::vector<std::shared_ptr<const Node>> nodes();
+
+	static std::string dump_nodes(int level = 1);
 #endif
 };

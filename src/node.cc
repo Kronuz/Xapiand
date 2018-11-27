@@ -105,6 +105,37 @@ Node::unserialise(const char **p, const char *end)
 }
 
 
+std::string
+Node::__repr__() const
+{
+	return string::format("<Node at %p: {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s>",
+		static_cast<const void*>(this),
+		idx, name(), http_port, binary_port, touched,
+		is_local() ? " (local)" : "",
+		is_leader() ? " (leader)" : "");
+}
+
+
+std::string
+Node::dump_nodes(int level)
+{
+	std::string indent;
+	for (int l = 0; l < level; ++l) {
+		indent += "    ";
+	}
+
+	std::string ret = "\n";
+
+	for (auto& node : nodes()) {
+		ret += indent;
+		ret += node->__repr__();
+		ret.push_back('\n');
+	}
+
+	return ret;
+}
+
+
 atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};
 atomic_shared_ptr<const Node> Node::_leader_node{std::make_shared<const Node>()};
 

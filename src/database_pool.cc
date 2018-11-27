@@ -835,7 +835,7 @@ DatabasePool::dump_databases(int level)
 		indent += "    ";
 	}
 
-	std::string ret = "Databases:\n";
+	std::string ret = "\n";
 
 	for (const auto& queue_database : writable_databases) {
 		ret += indent;
