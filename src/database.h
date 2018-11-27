@@ -75,7 +75,7 @@ private:
 	void reopen_readable();
 
 public:
-	const std::weak_ptr<DatabaseQueue> weak_queue;
+	std::weak_ptr<DatabaseQueue> weak_queue;
 
 	const Endpoints endpoints;
 	const int flags;

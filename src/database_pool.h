@@ -78,7 +78,6 @@ class DatabaseQueue :
 	friend DatabasePool;
 	friend DatabasesLRU;
 
-private:
 	bool locked;
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
@@ -93,15 +92,22 @@ private:
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
+public:
+	std::weak_ptr<DatabasePool> weak_database_pool;
+
 protected:
 	template <typename... Args>
-	DatabaseQueue(const Endpoints& endpoints, int flags, Args&&... args);
+	DatabaseQueue(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags, Args&&... args);
 
 public:
 	DatabaseQueue(const DatabaseQueue&) = delete;
 	DatabaseQueue(DatabaseQueue&&) = delete;
 	DatabaseQueue& operator=(const DatabaseQueue&) = delete;
 	DatabaseQueue& operator=(DatabaseQueue&&) = delete;
+
+	~DatabaseQueue();
+
+	void clear();
 
 	size_t inc_count();
 	size_t dec_count();
@@ -128,21 +134,18 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___|  _ <| |_| |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| \_\\___/
 //
-class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
-
-	const std::shared_ptr<queue::QueueState> _queue_state;
-
-	DatabasePool& database_pool;
-
+class DatabasesLRU : public lru::LRU<Endpoints, std::shared_ptr<DatabaseQueue>> {
 public:
-	DatabasesLRU(DatabasePool& database_pool_, size_t dbpool_size, std::shared_ptr<queue::QueueState> queue_state);
+	DatabasesLRU(size_t dbpool_size);
 
-	std::shared_ptr<DatabaseQueue> get(size_t hash);
-	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(size_t hash, const Endpoints& endpoints, int flags);
+	std::shared_ptr<DatabaseQueue> get(const Endpoints& endpoints);
+	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags);
 
 	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
 
 	void finish();
+
+	void clear();
 };
 
 
@@ -152,7 +155,7 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
-class DatabasePool {
+class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
 	friend DatabaseQueue;
@@ -164,7 +167,7 @@ class DatabasePool {
 
 	const std::shared_ptr<queue::QueueState> queue_state;
 
-	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
+	std::unordered_map<Endpoint, std::unordered_set<Endpoints>> used_endpoints_map;
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
@@ -176,11 +179,13 @@ class DatabasePool {
 
 	void _cleanup(bool writable, bool readable);
 
-	std::shared_ptr<DatabaseQueue> _spawn_queue(bool db_writable, size_t hash, const Endpoints& endpoints, int flags);
+	std::shared_ptr<DatabaseQueue> _spawn_queue(const Endpoints& endpoints, int flags);
 
-	void _drop_queue(const std::shared_ptr<DatabaseQueue>& queue);
+	void _drop_queue(const Endpoints& endpoints);
 
 public:
+	void release_queue(const Endpoints& endpoints, int flags);
+
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
 
@@ -192,12 +197,11 @@ public:
 		try {
 			checkout(database, endpoints, flags, timeout);
 		} catch (const TimeOutError&) {
-			size_t hash = endpoints.hash();
 			bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 			std::lock_guard<std::mutex> lk(qmtx);
 			auto queue = db_writable
-					? writable_databases.get(hash)
-					: databases.get(hash);
+					? writable_databases.get(endpoints)
+					: databases.get(endpoints);
 			if (queue) {
 				queue->callbacks.enqueue(callback);
 			}

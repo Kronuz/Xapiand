@@ -84,7 +84,7 @@ Replication::reset()
 
 	if (switch_database) {
 		switch_database->close();
-		XapiandManager::manager->database_pool.checkin(switch_database);
+		XapiandManager::manager->database_pool->checkin(switch_database);
 	}
 
 	if (!switch_database_path.empty()) {
@@ -336,18 +336,18 @@ Replication::reply_end_of_changes(const std::string&)
 
 		if (switch_database) {
 			switch_database->close();
-			XapiandManager::manager->database_pool.checkin(switch_database);
+			XapiandManager::manager->database_pool->checkin(switch_database);
 		}
 
 		// get exclusive lock
-		XapiandManager::manager->database_pool.lock(database());
+		XapiandManager::manager->database_pool->lock(database());
 
 		// Now we are sure no readers are using the database before moving the files
 		delete_files(endpoints[0].path, {"*glass", "wal.*"});
 		move_files(switch_database_path, endpoints[0].path);
 
 		// release exclusive lock
-		XapiandManager::manager->database_pool.unlock(database());
+		XapiandManager::manager->database_pool->unlock(database());
 	}
 
 	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy" : "from a set of changesets");
@@ -469,7 +469,7 @@ Replication::reply_changeset(const std::string& line)
 			wal = std::make_unique<DatabaseWAL>(database().get());
 		} else {
 			if (!switch_database) {
-				XapiandManager::manager->database_pool.checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
+				XapiandManager::manager->database_pool->checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
 			}
 			switch_database->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_database.get());

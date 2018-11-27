@@ -131,7 +131,7 @@ public:
 	std::weak_ptr<Raft> weak_raft;
 #endif
 
-	DatabasePool database_pool;
+	std::shared_ptr<DatabasePool> database_pool;
 	SchemasLRU schemas;
 
 	DatabaseWALWriter wal_writer;

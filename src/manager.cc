@@ -125,7 +125,7 @@ void sig_exit(int sig) {
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
-	  database_pool(opts.dbpool_size, opts.max_databases),
+	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
 	  http_client_pool("H%02zu", opts.num_http_clients),
@@ -151,7 +151,7 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
-	  database_pool(opts.dbpool_size, opts.max_databases),
+	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("W%02zu", opts.num_async_wal_writers),
 	  http_client_pool("H%02zu", opts.num_http_clients),
@@ -458,7 +458,7 @@ XapiandManager::cleanup_cb(ev::timer& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	database_pool.cleanup();
+	database_pool->cleanup();
 }
 
 
@@ -506,7 +506,7 @@ XapiandManager::signal_sig_impl()
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 #endif
-			print(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool.dump_databases());
+			print(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool->dump_databases());
 			break;
 	}
 }
@@ -751,7 +751,7 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	L_MANAGER(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool.dump_databases());
+	L_MANAGER(STEEL_BLUE + "Workers: %s\n%s", dump_tree(), database_pool->dump_databases());
 
 	finish();
 
@@ -782,7 +782,7 @@ XapiandManager::join()
 #endif
 
 	L_MANAGER("Finishing database pool!");
-	database_pool.finish();
+	database_pool->finish();
 
 	L_MANAGER("Finishing autocommitter scheduler!");
 	committer().finish();
@@ -822,7 +822,7 @@ XapiandManager::join()
 	}
 
 	L_MANAGER("Clearing database pool!");
-	database_pool.clear();
+	database_pool->clear();
 
 	L_MANAGER("Server ended!");
 }
@@ -1080,8 +1080,8 @@ XapiandManager::server_metrics()
 	metrics.xapiand_free_disk_bytes.Set(get_free_disk_size());
 
 	// databases:
-	auto wdb = database_pool.total_writable_databases();
-	auto rdb = database_pool.total_readable_databases();
+	auto wdb = database_pool->total_writable_databases();
+	auto rdb = database_pool->total_readable_databases();
 	metrics.xapiand_readable_db_queues.Set(rdb.queues);
 	metrics.xapiand_readable_db.Set(rdb.count);
 	metrics.xapiand_writable_db_queues.Set(wdb.queues);
