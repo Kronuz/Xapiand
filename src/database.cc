@@ -317,7 +317,7 @@ Database::reopen_writable()
 	_databases.emplace_back(wsdb, local);
 
 	if (local) {
-		reopen_revision = get_revision();
+		reopen_revision = database->get_revision();
 	}
 
 	if (transaction != Transaction::none) {
