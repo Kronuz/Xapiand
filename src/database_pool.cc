@@ -86,7 +86,7 @@ void
 DatabaseQueue::clear()
 {
 	std::shared_ptr<Database> database;
-	while (pop(database)) {
+	while (pop(database, 0)) {
 		database->weak_queue.reset();
 		database.reset();
 	}
