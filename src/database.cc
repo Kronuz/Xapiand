@@ -630,9 +630,19 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		} catch (...) {}
 	}
 
-	reset();
 	closed = closed_;
 	transaction = transaction_;
+
+	// Partial reset():
+	_database.reset();
+	_databases.clear();
+	reopen_revision = 0;
+	modified = false;
+	incomplete = false;
+#ifdef XAPIAND_DATA_STORAGE
+	storages.clear();
+	writable_storages.clear();
+#endif  // XAPIAND_DATA_STORAGE
 }
 
 
