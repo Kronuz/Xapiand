@@ -111,7 +111,7 @@ DatabaseQueue::dec_count()
 {
 	L_CALL("DatabaseQueue::dec_count()");
 
-	auto current_count = count.fetch_sub(1);
+	auto current_count = count++;
 	if (current_count == 0) {
 		L_CRIT("Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
