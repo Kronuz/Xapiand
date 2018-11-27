@@ -342,6 +342,9 @@ Database::reopen_writable()
 #endif  // XAPIAND_DATA_STORAGE
 	ASSERT(_databases.size() == endpoints_size);
 
+	_database = std::move(database);
+	reopen_time = std::chrono::system_clock::now();
+
 	is_writable = true;
 	is_writable_and_local = local;
 	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NO_WAL) != DB_NO_WAL);
@@ -363,8 +366,6 @@ Database::reopen_writable()
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
-	_database = std::move(database);
-	reopen_time = std::chrono::system_clock::now();
 	// Ends Writable DB
 	////////////////////////////////////////////////////////////////
 }
