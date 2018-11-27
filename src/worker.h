@@ -44,8 +44,8 @@ protected:
 	ev::loop_ref *ev_loop;
 
 private:
-	long long _asap;
-	long long _now;
+	std::atomic_llong _asap;
+	std::atomic_llong _now;
 
 	ev::async _shutdown_async;
 	ev::async _break_loop_async;
