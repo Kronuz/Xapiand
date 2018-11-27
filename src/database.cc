@@ -526,6 +526,7 @@ Database::reopen()
 		throw;
 	}
 
+	L_DATABASE("Reopen: %s", __repr__());
 	return true;
 }
 
