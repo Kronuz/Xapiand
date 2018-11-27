@@ -91,7 +91,7 @@ DatabaseQueue::clear()
 		database.reset();
 	}
 	if (auto database_pool = weak_database_pool.lock()) {
-		database_pool->_drop_queue(endpoints);
+		database_pool->_drop_endpoints(endpoints);
 	}
 	weak_database_pool.reset();
 }
@@ -322,9 +322,9 @@ DatabasePool::_spawn_queue(const Endpoints& endpoints, int flags)
 
 
 void
-DatabasePool::_drop_queue(const Endpoints& endpoints)
+DatabasePool::_drop_endpoints(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::_drop_queue(<endpoints>)");
+	L_CALL("DatabasePool::_drop_endpoints(<endpoints>)");
 
 	// Queue was just erased, remove as used queue to the endpoint -> used endpoints map
 	for (const auto& endpoint : endpoints) {
@@ -338,20 +338,39 @@ DatabasePool::_drop_queue(const Endpoints& endpoints)
 
 
 void
-DatabasePool::release_queue(const Endpoints& endpoints, int flags)
+DatabasePool::_unlocked_notify(const std::shared_ptr<DatabaseQueue>& queue)
 {
-	L_CALL("DatabasePool::release_queue(<endpoints>, <flags>)");
-
-	std::unique_lock<std::mutex> lk(qmtx);
-
-	_drop_queue(endpoints);
-
-	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
-	if (db_writable) {
-		writable_databases.erase(endpoints);
-	} else {
-		databases.erase(endpoints);
+	if (queue->locked) {
+		ASSERT(locks > 0);
+		--locks;
+		queue->locked = false;
+		queue->unlocked_cond.notify_all();
 	}
+}
+
+
+bool
+DatabasePool::_lockable_notify(const Endpoints& endpoints)
+{
+	bool was_locked = false;
+	for (auto& endpoint : endpoints) {
+		auto writable_queue = writable_databases.get(Endpoints{endpoint});
+		if (writable_queue && writable_queue->locked) {
+			bool unlock = true;
+			for (auto& used_endpoints : used_endpoints_map[endpoint]) {
+				auto endpoint_queue = databases.get(used_endpoints);
+				if (endpoint_queue && endpoint_queue->size() < endpoint_queue->count) {
+					unlock = false;
+					break;
+				}
+			}
+			if (unlock) {
+				writable_queue->lockable_cond.notify_one();
+				was_locked = true;
+			}
+		}
+	}
+	return was_locked;
 }
 
 
@@ -627,39 +646,16 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	Database::autocommit(database);
 
-	if (auto queue = database->weak_queue.lock()) {
-		std::unique_lock<std::mutex> lk(qmtx);
+	TaskQueue<void()> callbacks;
 
-		if (locks) {
-			if (db_writable) {
-				if (queue->locked) {
-					ASSERT(locks > 0);
-					--locks;
-					queue->locked = false;
-					queue->unlocked_cond.notify_all();
-				}
-			} else {
-				bool was_locked = false;
-				for (auto& endpoint : endpoints) {
-					auto writable_queue = writable_databases.get(Endpoints{endpoint});
-					if (writable_queue && writable_queue->locked) {
-						bool unlock = true;
-						for (auto& used_endpoints : used_endpoints_map[endpoint]) {
-							auto endpoint_queue = databases.get(used_endpoints);
-							if (endpoint_queue && endpoint_queue->size() < endpoint_queue->count) {
-								unlock = false;
-								break;
-							}
-						}
-						if (unlock) {
-							writable_queue->lockable_cond.notify_one();
-							was_locked = true;
-						}
-					}
-				}
-				if (was_locked) {
-					database->close();
-				}
+	if (auto queue = database->weak_queue.lock()) {
+		std::lock_guard<std::mutex> lk(qmtx);
+
+		if (db_writable) {
+			_unlocked_notify(queue);
+		} else if (locks) {
+			if (_lockable_notify(endpoints)) {
+				database->close();
 			}
 		}
 
@@ -670,19 +666,55 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 			}
 		}
 
-		TaskQueue<void()> callbacks;
 		std::swap(callbacks, queue->callbacks);
-
-		lk.unlock();
-
-		database.reset();
-
-		while (callbacks.call()) {};
-	} else {
-		database.reset();
 	}
 
+	database.reset();
+
+	while (callbacks.call()) {};
+
 	L_DATABASE_END("-- CHECKED IN DB [%s]: %s", db_writable ? "WR" : "RO", repr(endpoints.to_string()));
+}
+
+
+void
+DatabasePool::release_queue(const Endpoints& endpoints, int flags)
+{
+	L_CALL("DatabasePool::release_queue(<endpoints>, <flags>)");
+
+	// This releases a queue:
+	// drops endpoints, notifies locks engine, signals callbacks
+	// But first, double check queue was released (race condition)
+	// by checking count == 0 after mutex lock.
+
+	TaskQueue<void()> callbacks;
+
+	{
+		std::lock_guard<std::mutex> lk(qmtx);
+		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
+			auto queue = writable_databases.get(endpoints);
+			if (queue && queue->count == 0) {
+				std::swap(callbacks, queue->callbacks);
+				queue->clear();
+				writable_databases.erase(endpoints);
+				_unlocked_notify(queue);
+			} else {
+				_drop_endpoints(endpoints);
+			}
+		} else {
+			auto queue = databases.get(endpoints);
+			if (queue && queue->count == 0) {
+				std::swap(callbacks, queue->callbacks);
+				queue->clear();
+				databases.erase(endpoints);
+				_lockable_notify(endpoints);
+			} else {
+				_drop_endpoints(endpoints);
+			}
+		}
+	}
+
+	while (callbacks.call()) {};
 }
 
 
