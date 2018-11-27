@@ -514,6 +514,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					}
 					lk.lock();
 				} catch (...) {
+					queue->dec_count();
 					database.reset();
 					throw;
 				}
