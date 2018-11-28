@@ -501,13 +501,17 @@ Database::reopen()
 	if (_database) {
 		if (!incomplete) {
 			// Try to reopen
-			try {
-				bool ret = _database->reopen();
-				return ret;
-			} catch (const Xapian::DatabaseOpeningError& exc) {
-			} catch (const Xapian::DatabaseError& exc) {
-				if (exc.get_msg() != "Database has been closed") {
-					throw;
+			for (int t = DB_RETRIES; t; --t) {
+				try {
+					bool ret = _database->reopen();
+					return ret;
+				} catch (const Xapian::DatabaseModifiedError& exc) {
+					if (t == 0) { close(); throw; }
+				} catch (const Xapian::DatabaseOpeningError& exc) {
+				} catch (const Xapian::DatabaseError& exc) {
+					if (exc.get_msg() != "Database has been closed") {
+						throw;
+					}
 				}
 			}
 		}
