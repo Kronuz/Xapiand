@@ -127,8 +127,8 @@ enum class RemoteReplyType {
 	REPLY_METADATAKEYLIST,      // Iterator for metadata keys
 	REPLY_FREQS,                // Get termfreq and collfreq
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
-    REPLY_POSITIONLISTCOUNT,    // Get PositionList length
-    REPLY_REMOVESPELLING,       // Remove a spelling
+	REPLY_POSITIONLISTCOUNT,    // Get PositionList length
+	REPLY_REMOVESPELLING,       // Remove a spelling
 	REPLY_MAX
 };
 
