@@ -395,23 +395,6 @@ HttpClient::~HttpClient()
 }
 
 
-void
-HttpClient::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("HttpClient::shutdown_impl(%lld, %lld)", asap, now);
-
-	shutting_down = true;
-
-	Worker::shutdown_impl(asap, now);
-
-	if (now != 0 || is_idle()) {
-		stop(false);
-		destroy(false);
-		detach();
-	}
-}
-
-
 bool
 HttpClient::is_idle()
 {

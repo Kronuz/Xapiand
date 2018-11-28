@@ -88,8 +88,6 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 
 	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
-	void shutdown_impl(long long asap, long long now) override;
-
 	bool is_idle();
 
 	ssize_t on_read(const char *buf, ssize_t received);

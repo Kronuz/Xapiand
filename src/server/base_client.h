@@ -134,6 +134,10 @@ protected:
 
 	ClientImpl& client;
 
+	bool is_idle() {
+		return client.is_idle();
+	}
+
 	ssize_t on_read(const char* buf, ssize_t received) {
 		return client.on_read(buf, received);
 	}
@@ -187,15 +191,11 @@ protected:
 
 			if (errno == ECONNRESET) {
 				L_CONN("Received ECONNRESET {sock:%d}!", watcher.fd);
-				on_read(nullptr, received);
-				destroy();
-				detach();
-				return;
+			} else {
+				L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", watcher.fd, error::name(errno), errno, error::description(errno));
 			}
-
-			L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", watcher.fd, error::name(errno), errno, error::description(errno));
+			close();
 			on_read(nullptr, received);
-			destroy();
 			detach();
 			return;
 		}
@@ -203,8 +203,8 @@ protected:
 		if (received == 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN("Received EOF {sock:%d}!", watcher.fd);
+			close();
 			on_read(nullptr, received);
-			destroy();
 			detach();
 			return;
 		}
@@ -305,5 +305,19 @@ protected:
 
 		ClientLZ4Compressor<MetaBaseClient<ClientImpl>> compressor(static_cast<MetaBaseClient<ClientImpl>&>(*this), fd, offset);
 		return (compressor.compress() != -1);
+	}
+
+	void shutdown_impl(long long asap, long long now) override {
+		L_CALL("HttpClient::shutdown_impl(%lld, %lld)", asap, now);
+
+		shutting_down = true;
+
+		Worker::shutdown_impl(asap, now);
+
+		if (now != 0 || is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
 	}
 };

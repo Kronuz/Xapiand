@@ -267,8 +267,6 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 		BAD_QUERY,
 	};
 
-	void shutdown_impl(long long asap, long long now) override;
-
 	bool is_idle();
 
 	Command getCommand(std::string_view command_name);
