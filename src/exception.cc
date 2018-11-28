@@ -56,6 +56,9 @@ static inline int backtrace(void**, int) { return 0; }
 static std::string
 atos(const void* address)
 {
+	static std::mutex mtx;
+	std::lock_guard lk(mtx);
+
 	char tmp[20];
 	static int fd = -1;
 	if (fd == -1) {
