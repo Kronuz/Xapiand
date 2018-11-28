@@ -888,9 +888,9 @@ DatabaseWALWriterThread::operator()()
 {
 	_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
-		std::function<void(DatabaseWALWriterThread&)> task;
+		DatabaseWALWriterTask task;
 		_queue.wait_dequeue(task);
-		if likely(task != nullptr) {
+		if likely(task) {
 			try {
 				task(*this);
 			} catch (...) {
@@ -907,7 +907,7 @@ DatabaseWALWriterThread::operator()()
 void
 DatabaseWALWriterThread::clear()
 {
-	std::function<void(DatabaseWALWriterThread&)> task;
+	DatabaseWALWriterTask task;
 	while (_queue.try_dequeue(task)) {}
 }
 
@@ -938,20 +938,20 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 
 
 void
-DatabaseWALWriter::execute(std::function<void(DatabaseWALWriterThread&)>&& func)
+DatabaseWALWriter::execute(DatabaseWALWriterTask&& task)
 {
 	static thread_local DatabaseWALWriterThread thread(0, this);
-	func(thread);
+	task(thread);
 }
 
 
 bool
-DatabaseWALWriter::enqueue(const ProducerToken& token, const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func)
+DatabaseWALWriter::enqueue(const ProducerToken& token, const std::string& path, DatabaseWALWriterTask&& task)
 {
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
 	auto& thread = _threads[hash % _threads.size()];
-	return thread._queue.enqueue(token, std::move(func));
+	return thread._queue.enqueue(token, std::move(task));
 }
 
 
@@ -990,7 +990,7 @@ DatabaseWALWriter::end()
 {
 	if (!_ending.exchange(true, std::memory_order_release)) {
 		for (auto& _thread : _threads) {
-			_thread._queue.enqueue(nullptr);
+			_thread._queue.enqueue(DatabaseWALWriterTask{});
 		}
 	}
 }
@@ -1001,7 +1001,7 @@ DatabaseWALWriter::finish()
 {
 	if (!_finished.exchange(true, std::memory_order_release)) {
 		for (auto& _thread : _threads) {
-			_thread._queue.enqueue(nullptr);
+			_thread._queue.enqueue(DatabaseWALWriterTask{});
 		}
 	}
 }
@@ -1025,6 +1025,154 @@ DatabaseWALWriter::new_producer_token(const std::string& path)
 
 
 void
+DatabaseWALWriterTask::write_add_document(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = doc.serialise();
+	L_DATABASE("write_add_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_delete_document_term(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_string(term_word_val);  // term
+	L_DATABASE("write_delete_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_length(freq);  // freqdec
+	line.append(term_word_val);  // word
+	L_DATABASE("write_remove_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_length(did);
+	line.append(doc.serialise());
+	L_DATABASE("write_replace_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_replace_document_term(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_string(term_word_val);  // term
+	line.append(doc.serialise());
+	L_DATABASE("write_replace_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_length(did);
+	L_DATABASE("write_delete_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_string(key);
+	line.append(term_word_val);  // val
+	L_DATABASE("write_set_metadata {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
+DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
+{
+	L_DEBUG_NOW(start);
+
+	auto line = serialise_length(freq);  // freqinc
+	line.append(term_word_val);  // word
+	L_DATABASE("write_add_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+
+	auto& wal = thread.wal(path);
+	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
+
+	L_DEBUG_NOW(end);
+	L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
+}
+
+
+void
 DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc)
 {
 	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
@@ -1034,22 +1182,18 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = doc.serialise();
-		L_DATABASE("write_add_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.doc = std::move(doc);
+	task.dispatcher = &DatabaseWALWriterTask::write_add_document;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1064,22 +1208,18 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_string(term);
-		L_DATABASE("write_delete_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.term_word_val = term;
+	task.dispatcher = &DatabaseWALWriterTask::write_delete_document_term;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1094,23 +1234,19 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_length(freqdec);
-		line.append(word);
-		L_DATABASE("write_remove_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.term_word_val = word;
+	task.freq = freqdec;
+	task.dispatcher = &DatabaseWALWriterTask::write_remove_spelling;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1125,21 +1261,18 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.send_update = send_update;
+	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1154,23 +1287,19 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_length(did);
-		line.append(doc.serialise());
-		L_DATABASE("write_replace_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.did = did;
+	task.doc = std::move(doc);
+	task.dispatcher = &DatabaseWALWriterTask::write_replace_document;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1185,23 +1314,19 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=, doc{std::move(doc)}] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_string(term);
-		line.append(doc.serialise());
-		L_DATABASE("write_replace_document_term {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.term_word_val = term;
+	task.doc = std::move(doc);
+	task.dispatcher = &DatabaseWALWriterTask::write_replace_document_term;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1216,22 +1341,18 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_length(did);
-		L_DATABASE("write_delete_document {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.did = did;
+	task.dispatcher = &DatabaseWALWriterTask::write_delete_document;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1246,23 +1367,19 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_string(key);
-		line.append(val);
-		L_DATABASE("write_set_metadata {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.key = key;
+	task.term_word_val = val;
+	task.dispatcher = &DatabaseWALWriterTask::write_set_metadata;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 
@@ -1277,23 +1394,19 @@ DatabaseWALWriter::write_add_spelling(Database& database, const std::string& wor
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
-	auto writer = [=] (DatabaseWALWriterThread& thread) {
-		L_DEBUG_NOW(start);
 
-		auto line = serialise_length(freqinc);
-		line.append(word);
-		L_DATABASE("write_add_spelling {path:%s, rev:%llu}: %s", repr(path), revision, repr(line));
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.uuid = uuid;
+	task.revision = revision;
+	task.term_word_val = word;
+	task.freq = freqinc;
+	task.dispatcher = &DatabaseWALWriterTask::write_add_spelling;
 
-		auto& wal = thread.wal(path);
-		wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
-
-		L_DEBUG_NOW(end);
-		L_DEBUG("Database WAL writer of %s succeeded after %s", repr(path), string::from_delta(start, end));
-	};
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
-		execute(std::move(writer));
+		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(writer));
+		enqueue(*database.producer_token, path, std::move(task));
 	}
 }
 

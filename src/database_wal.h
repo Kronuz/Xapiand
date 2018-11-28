@@ -34,6 +34,7 @@
 #include <utility>                          // for pair, make_pair
 #include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
+#include "cassert.h"                        // for ASSERT
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
@@ -253,13 +254,60 @@ inline DatabaseWAL::iterator DatabaseWAL::end() {
 //
 
 class DatabaseWALWriter;
+class DatabaseWALWriterThread;
+
+
+class DatabaseWALWriterTask {
+	friend DatabaseWALWriter;
+
+	using dispatch_func = void (DatabaseWALWriterTask::*)(DatabaseWALWriterThread&);
+	dispatch_func dispatcher;
+
+	std::string path;
+	UUID uuid;
+	Xapian::rev revision;
+
+	Xapian::Document doc;
+	std::string key;
+	std::string term_word_val;
+	Xapian::termcount freq;
+	Xapian::docid did;
+	bool send_update;
+
+	void write_add_document(DatabaseWALWriterThread& thread);
+	void write_delete_document_term(DatabaseWALWriterThread& thread);
+	void write_remove_spelling(DatabaseWALWriterThread& thread);
+	void write_commit(DatabaseWALWriterThread& thread);
+	void write_replace_document(DatabaseWALWriterThread& thread);
+	void write_replace_document_term(DatabaseWALWriterThread& thread);
+	void write_delete_document(DatabaseWALWriterThread& thread);
+	void write_set_metadata(DatabaseWALWriterThread& thread);
+	void write_add_spelling(DatabaseWALWriterThread& thread);
+
+public:
+	DatabaseWALWriterTask() : dispatcher(nullptr) {}
+	DatabaseWALWriterTask(const DatabaseWALWriterTask&) = delete;
+	DatabaseWALWriterTask(DatabaseWALWriterTask&&) = default;
+	DatabaseWALWriterTask& operator=(const DatabaseWALWriterTask&) = delete;
+	DatabaseWALWriterTask& operator=(DatabaseWALWriterTask&&) = default;
+
+	void operator()(DatabaseWALWriterThread& thread) {
+		ASSERT(dispatcher);
+		(this->*(dispatcher))(thread);
+	}
+
+	operator bool() const {
+		return dispatcher != nullptr;
+	}
+};
+
 
 class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPolicyType::wal_writer> {
 	friend DatabaseWALWriter;
 
 	DatabaseWALWriter* _wal_writer;
 	std::string _name;
-	BlockingConcurrentQueue<std::function<void(DatabaseWALWriterThread&)>> _queue;
+	BlockingConcurrentQueue<DatabaseWALWriterTask> _queue;
 
 	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
 
@@ -286,8 +334,8 @@ class DatabaseWALWriter {
 	std::atomic_bool _finished;
 	std::atomic_size_t _workers;
 
-	void execute(std::function<void(DatabaseWALWriterThread&)>&& func);
-	bool enqueue(const ProducerToken& token, const std::string& path, std::function<void(DatabaseWALWriterThread&)>&& func);
+	void execute(DatabaseWALWriterTask&& task);
+	bool enqueue(const ProducerToken& token, const std::string& path, DatabaseWALWriterTask&& task);
 
 public:
 	DatabaseWALWriter(const char* format, std::size_t size);
