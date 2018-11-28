@@ -55,7 +55,8 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/HEAD' || echo '/usr/local')" \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4' || echo '/usr/local')" \
   CXXFLAGS="-DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS"
 ```
 
@@ -68,16 +69,6 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
 ```
 
 
-## Building sanitized libraries
-
-For building sanitized versions of the library, replace **Configure the Build**
-step above and replace accordingly with the following:
-
-{: .note}
-**_Sanitized libc++ needed!_**<br>
-Sanitized versions of libc++ are needed for these builds to be reliable.
-
-
 ### Address Sanitizer (ASAN + UBSAN)
 
 ```sh
@@ -85,7 +76,8 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/ASAN' || echo '/usr/local')" \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-asan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
@@ -98,7 +90,8 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/MSAN' || echo '/usr/local')" \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-msan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
 ```
@@ -111,7 +104,8 @@ Sanitized versions of libc++ are needed for these builds to be reliable.
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/TSAN' || echo '/usr/local')" \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-tsan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread $LDFLAGS"
 ```
