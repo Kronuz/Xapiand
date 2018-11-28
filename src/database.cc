@@ -610,7 +610,7 @@ Database::reset()
 void
 Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
-	L_CALL("Database::do_close(...)");
+	L_CALL("Database::do_close(%s, %s, <transaction>) {endpoint:%s, database:%s, modified:%s, closed:%s}", commit_ ? "true" : "false", closed_ ? "true" : "false", repr(endpoints.to_string()), _database ? "<database>" : "null", modified ? "true" : "false", closed ? "true" : "false");
 
 	if (
 		commit_ &&
@@ -631,7 +631,8 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 	if (_database) {
 		try {
 			_database->close();
-		} catch (...) {}
+		} catch (...) {
+		}
 	}
 
 	closed = closed_;
