@@ -126,7 +126,7 @@ Node::dump_nodes(int level)
 		indent += "    ";
 	}
 
-	std::string ret = "\n";
+	std::string ret;
 
 	for (auto& node : nodes()) {
 		ret += indent;
