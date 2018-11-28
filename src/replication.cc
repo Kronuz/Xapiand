@@ -52,6 +52,8 @@
 // #define L_BINARY L_TEAL
 // #undef L_BINARY_PROTO
 // #define L_BINARY_PROTO L_TEAL
+// #undef L_TIMED_VAR
+// #define L_TIMED_VAR _L_TIMED_VAR
 
 
 /*  ____            _ _           _   _
