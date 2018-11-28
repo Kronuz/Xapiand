@@ -795,6 +795,9 @@ XapiandManager::join()
 		}
 	}
 
+	L_MANAGER("Clearing database pool!");
+	database_pool->clear();
+
 #if XAPIAND_DATABASE_WAL
 	if (wal_writer.running_size()) {
 		L_MANAGER("Finishing WAL writers!");
@@ -820,9 +823,6 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
-
-	L_MANAGER("Clearing database pool!");
-	database_pool->clear();
 
 	L_MANAGER("Server ended!");
 }
