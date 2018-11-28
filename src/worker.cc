@@ -346,14 +346,14 @@ Worker::_ancestor(int levels)
 std::string
 Worker::__repr__(const std::string& name) const
 {
-	return string::format("<%s at %p, %s of %s %p%s>",
+	return string::format("<%s at %p {cnt:%ld} (%s of %s %p)%s>",
 		name,
 		static_cast<const void *>(this),
+		shared_from_this().use_count(),
 		_runner ? "runner" : "worker",
-		ev_loop->depth() != 0u ? "running loop" : "loop",
+		ev_loop->depth() != 0u ? "running loop" : "stopped loop",
 		static_cast<const void *>(ev_loop->raw_loop),
-		_detaching ? " (deteaching)" : ""
-	);
+		_detaching ? " (deteaching)" : "");
 }
 
 
@@ -364,7 +364,7 @@ Worker::dump_tree(int level)
 	for (int l = 0; l < level; ++l) {
 		ret += "    ";
 	}
-	ret += __repr__() + " (cnt: " + std::to_string(shared_from_this().use_count() - 1) + ")";
+	ret += __repr__();
 	ret.push_back('\n');
 
 	auto weak_children = _gather_children();

@@ -109,10 +109,10 @@ Node::unserialise(const char **p, const char *end)
 std::string
 Node::__repr__() const
 {
-	return string::format("<Node at %p: {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s>",
+	return string::format("<Node at %p {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s>",
 		static_cast<const void*>(this),
 		idx, name(), http_port, binary_port, touched,
-		is_active() ? " active" : "",
+		is_active() ? " (active)" : "",
 		is_local() ? " (local)" : "",
 		is_leader() ? " (leader)" : "");
 }
