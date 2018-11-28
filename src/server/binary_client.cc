@@ -71,7 +71,7 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	  temp_file_template("xapiand.XXXXXX"),
 	  cluster_database(cluster_database_),
 	  remote_protocol(*this),
-	  replication(*this)
+	  replication_protocol(*this)
 {
 	++XapiandServer::binary_clients;
 
@@ -155,7 +155,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
-	if (replication.init_replication(src_endpoint, dst_endpoint)) {
+	if (replication_protocol.init_replication(src_endpoint, dst_endpoint)) {
 		int port = (src_endpoint.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.node.binary_port;
 		if ((sock = TCP::connect(sock, src_endpoint.node.host(), std::to_string(port))) == -1) {
 			L_ERR("Cannot connect to %s", src_endpoint.node.host(), std::to_string(port));
@@ -415,7 +415,7 @@ BinaryClient::operator()()
 				try {
 
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
-					replication.replication_server(type, message);
+					replication_protocol.replication_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
@@ -446,7 +446,7 @@ BinaryClient::operator()()
 				try {
 
 					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
-					replication.replication_client(type, message);
+					replication_protocol.replication_client(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()

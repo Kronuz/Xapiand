@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "replication.h"
+#include "replication_protocol.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -65,7 +65,7 @@
  */
 
 
-Replication::Replication(BinaryClient& client_)
+ReplicationProtocol::ReplicationProtocol(BinaryClient& client_)
 	: LockableDatabase(),
 	  client(client_),
 	  lk_db(this),
@@ -74,14 +74,14 @@ Replication::Replication(BinaryClient& client_)
 }
 
 
-Replication::~Replication()
+ReplicationProtocol::~ReplicationProtocol()
 {
 	reset();
 }
 
 
 void
-Replication::reset()
+ReplicationProtocol::reset()
 {
 	wal.reset();
 
@@ -103,9 +103,9 @@ Replication::reset()
 
 
 bool
-Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	L_CALL("Replication::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocol::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	src_endpoints = Endpoints{src_endpoint};
 
@@ -124,9 +124,9 @@ Replication::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_
 
 
 void
-Replication::send_message(ReplicationReplyType type, const std::string& message)
+ReplicationProtocol::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("Replication::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocol::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
 
 	L_BINARY_PROTO("<< send_message (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 
@@ -135,9 +135,9 @@ Replication::send_message(ReplicationReplyType type, const std::string& message)
 
 
 void
-Replication::send_file(ReplicationReplyType type, int fd)
+ReplicationProtocol::send_file(ReplicationReplyType type, int fd)
 {
-	L_CALL("Replication::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocol::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
 
 	L_BINARY_PROTO("<< send_file (%s): %d", ReplicationReplyTypeNames(type), fd);
 
@@ -146,12 +146,12 @@ Replication::send_file(ReplicationReplyType type, int fd)
 
 
 void
-Replication::replication_server(ReplicationMessageType type, const std::string& message)
+ReplicationProtocol::replication_server(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("Replication::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
+	L_CALL("ReplicationProtocol::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
 
-	L_OBJ_BEGIN("Replication::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
-	L_OBJ_END("Replication::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocol::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_END("ReplicationProtocol::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
 
 	switch (type) {
 		case ReplicationMessageType::MSG_GET_CHANGESETS:
@@ -167,11 +167,11 @@ Replication::replication_server(ReplicationMessageType type, const std::string& 
 
 
 void
-Replication::msg_get_changesets(const std::string& message)
+ReplicationProtocol::msg_get_changesets(const std::string& message)
 {
-	L_CALL("Replication::msg_get_changesets(<message>)");
+	L_CALL("ReplicationProtocol::msg_get_changesets(<message>)");
 
-	L_REPLICATION("Replication::msg_get_changesets");
+	L_REPLICATION("ReplicationProtocol::msg_get_changesets");
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -275,12 +275,12 @@ Replication::msg_get_changesets(const std::string& message)
 
 
 void
-Replication::replication_client(ReplicationReplyType type, const std::string& message)
+ReplicationProtocol::replication_client(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("Replication::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocol::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
 
-	L_OBJ_BEGIN("Replication::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
-	L_OBJ_END("Replication::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocol::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_END("ReplicationProtocol::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
 
 	switch (type) {
 		case ReplicationReplyType::REPLY_WELCOME:
@@ -317,7 +317,7 @@ Replication::replication_client(ReplicationReplyType type, const std::string& me
 
 
 void
-Replication::reply_welcome(const std::string&)
+ReplicationProtocol::reply_welcome(const std::string&)
 {
 	std::string message;
 
@@ -330,9 +330,9 @@ Replication::reply_welcome(const std::string&)
 
 
 void
-Replication::reply_end_of_changes(const std::string&)
+ReplicationProtocol::reply_end_of_changes(const std::string&)
 {
-	L_CALL("Replication::reply_end_of_changes(<message>)");
+	L_CALL("ReplicationProtocol::reply_end_of_changes(<message>)");
 
 	bool switching = !switch_database_path.empty();
 
@@ -356,7 +356,7 @@ Replication::reply_end_of_changes(const std::string&)
 		XapiandManager::manager->database_pool->unlock(database());
 	}
 
-	L_REPLICATION("Replication::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
+	L_REPLICATION("ReplicationProtocol::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
 	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s a set of %zu changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
 	if (client.cluster_database) {
@@ -370,24 +370,24 @@ Replication::reply_end_of_changes(const std::string&)
 
 
 void
-Replication::reply_fail(const std::string&)
+ReplicationProtocol::reply_fail(const std::string&)
 {
-	L_CALL("Replication::reply_fail(<message>)");
+	L_CALL("ReplicationProtocol::reply_fail(<message>)");
 
-	L_REPLICATION("Replication::reply_fail: %s", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocol::reply_fail: %s", repr(endpoints[0].path));
 
 	reset();
 
-	L_ERR("Replication failure!");
+	L_ERR("ReplicationProtocol failure!");
 	client.destroy();
 	client.detach();
 }
 
 
 void
-Replication::reply_db_header(const std::string& message)
+ReplicationProtocol::reply_db_header(const std::string& message)
 {
-	L_CALL("Replication::reply_db_header(<message>)");
+	L_CALL("ReplicationProtocol::reply_db_header(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -407,7 +407,7 @@ Replication::reply_db_header(const std::string& message)
 	}
 	switch_database_path = path;
 
-	L_REPLICATION("Replication::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
+	L_REPLICATION("ReplicationProtocol::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
 	L_TIMED_VAR(log, 1s,
 		"Replication of whole database taking too long: %s",
 		"Replication of whole database took too long: %s",
@@ -416,22 +416,22 @@ Replication::reply_db_header(const std::string& message)
 
 
 void
-Replication::reply_db_filename(const std::string& filename)
+ReplicationProtocol::reply_db_filename(const std::string& filename)
 {
-	L_CALL("Replication::reply_db_filename(<filename>)");
+	L_CALL("ReplicationProtocol::reply_db_filename(<filename>)");
 
 	ASSERT(!switch_database_path.empty());
 
 	file_path = switch_database_path + "/" + filename;
 
-	L_REPLICATION("Replication::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocol::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
 }
 
 
 void
-Replication::reply_db_filedata(const std::string& tmp_file)
+ReplicationProtocol::reply_db_filedata(const std::string& tmp_file)
 {
-	L_CALL("Replication::reply_db_filedata(<tmp_file>)");
+	L_CALL("ReplicationProtocol::reply_db_filedata(<tmp_file>)");
 
 	ASSERT(!switch_database_path.empty());
 
@@ -441,14 +441,14 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 		return;
 	}
 
-	L_REPLICATION("Replication::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocol::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
 }
 
 
 void
-Replication::reply_db_footer(const std::string& message)
+ReplicationProtocol::reply_db_footer(const std::string& message)
 {
-	L_CALL("Replication::reply_db_footer(<message>)");
+	L_CALL("ReplicationProtocol::reply_db_footer(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -461,14 +461,14 @@ Replication::reply_db_footer(const std::string& message)
 		switch_database_path.clear();
 	}
 
-	L_REPLICATION("Replication::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocol::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
 }
 
 
 void
-Replication::reply_changeset(const std::string& line)
+ReplicationProtocol::reply_changeset(const std::string& line)
 {
-	L_CALL("Replication::reply_changeset(<line>)");
+	L_CALL("ReplicationProtocol::reply_changeset(<line>)");
 
 	bool switching = !switch_database_path.empty();
 
@@ -493,7 +493,7 @@ Replication::reply_changeset(const std::string& line)
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("Replication::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocol::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
 }
 
 

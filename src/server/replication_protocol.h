@@ -92,7 +92,7 @@ class BinaryClient;
 class DatabaseWAL;
 
 
-class Replication : protected LockableDatabase {
+class ReplicationProtocol : protected LockableDatabase {
 	BinaryClient& client;
 
 public:
@@ -114,8 +114,8 @@ public:
 	std::shared_ptr<Logging> log;
 
 public:
-	Replication(BinaryClient& client_);
-	~Replication();
+	ReplicationProtocol(BinaryClient& client_);
+	~ReplicationProtocol();
 
 	void reset();
 

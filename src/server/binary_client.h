@@ -36,7 +36,7 @@
 
 #include "base_client.h"                      // for MetaBaseClient
 #include "remote_protocol.h"                  // for RemoteProtocol
-#include "replication.h"                      // for Replication
+#include "replication_protocol.h"             // for ReplicationProtocol
 #include "threadpool.hh"                      // for Task
 
 
@@ -98,11 +98,11 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 	RemoteProtocol remote_protocol;
 
 	// Replication protocol:
-	Replication replication;
+	ReplicationProtocol replication_protocol;
 
 	friend Worker;
 	friend RemoteProtocol;
-	friend Replication;
+	friend ReplicationProtocol;
 
 public:
 	std::string __repr__() const override {
