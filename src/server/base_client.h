@@ -188,12 +188,14 @@ protected:
 			if (errno == ECONNRESET) {
 				L_CONN("Received ECONNRESET {sock:%d}!", watcher.fd);
 				on_read(nullptr, received);
+				destroy();
 				detach();
 				return;
 			}
 
 			L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", watcher.fd, error::name(errno), errno, error::description(errno));
 			on_read(nullptr, received);
+			destroy();
 			detach();
 			return;
 		}
@@ -202,6 +204,7 @@ protected:
 			// The peer has closed its half side of the connection.
 			L_CONN("Received EOF {sock:%d}!", watcher.fd);
 			on_read(nullptr, received);
+			destroy();
 			detach();
 			return;
 		}
