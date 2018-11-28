@@ -289,13 +289,11 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 {
 	L_CALL("BaseClient::write_buffer(<buffer>)");
 
-	if (!write_queue.push(buffer)) {
-		return false;
-	}
-
-	if (closed) {
-		return false;
-	}
+	do {
+		if (closed) {
+			return false;
+		}
+	} while (!write_queue.push(buffer, 1));
 
 	writes += 1;
 	L_TCP_ENQUEUE("{sock:%d} <ENQUEUE> buffer (%zu bytes)", sock, buffer->full_size());
