@@ -57,7 +57,7 @@ inline std::string readable_flags(int flags) {
 	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
 	if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
 	if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
-	return string::join(values, " | ");
+	return string::join(values, "|");
 }
 
 //  ____        _        _
