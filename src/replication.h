@@ -110,6 +110,9 @@ public:
 	std::string current_uuid;
 	Xapian::rev current_revision;
 
+	size_t changesets;
+	std::shared_ptr<Logging> log;
+
 public:
 	Replication(BinaryClient& client_);
 	~Replication();

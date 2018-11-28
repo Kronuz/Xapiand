@@ -66,7 +66,8 @@
 Replication::Replication(BinaryClient& client_)
 	: LockableDatabase(),
 	  client(client_),
-	  lk_db(this)
+	  lk_db(this),
+	  changesets(0)
 {
 }
 
@@ -91,6 +92,11 @@ Replication::reset()
 		delete_files(switch_database_path.c_str());
 		switch_database_path.clear();
 	}
+
+	if (log) {
+		log->clear();
+	}
+	changesets = 0;
 }
 
 
@@ -328,8 +334,6 @@ Replication::reply_end_of_changes(const std::string&)
 
 	bool switching = !switch_database_path.empty();
 
-	L_REPLICATION("Replication::reply_end_of_changes%s", switching ? " (switching database)" : "");
-
 	if (switching) {
 		// Close internal databases
 		database()->do_close(false, false, database()->transaction);
@@ -350,7 +354,8 @@ Replication::reply_end_of_changes(const std::string&)
 		XapiandManager::manager->database_pool->unlock(database());
 	}
 
-	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy" : "from a set of changesets");
+	L_REPLICATION("Replication::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
+	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s a set of %zu changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
 	if (client.cluster_database) {
 		client.cluster_database = false;
@@ -367,7 +372,7 @@ Replication::reply_fail(const std::string&)
 {
 	L_CALL("Replication::reply_fail(<message>)");
 
-	L_REPLICATION("Replication::reply_fail");
+	L_REPLICATION("Replication::reply_fail: %s", repr(endpoints[0].path));
 
 	reset();
 
@@ -381,8 +386,6 @@ void
 Replication::reply_db_header(const std::string& message)
 {
 	L_CALL("Replication::reply_db_header(<message>)");
-
-	L_REPLICATION("Replication::reply_db_header");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -402,7 +405,11 @@ Replication::reply_db_header(const std::string& message)
 	}
 	switch_database_path = path;
 
-	L_REPLICATION("Replication::reply_db_header %s", repr(switch_database_path));
+	L_REPLICATION("Replication::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
+	L_TIMED_VAR(log, 1s,
+		"Replication of whole database taking too long: %s",
+		"Replication of whole database took too long: %s",
+		repr(endpoints[0].path));
 }
 
 
@@ -411,11 +418,11 @@ Replication::reply_db_filename(const std::string& filename)
 {
 	L_CALL("Replication::reply_db_filename(<filename>)");
 
-	L_REPLICATION("Replication::reply_db_filename");
-
 	ASSERT(!switch_database_path.empty());
 
 	file_path = switch_database_path + "/" + filename;
+
+	L_REPLICATION("Replication::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
 }
 
 
@@ -424,8 +431,6 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 {
 	L_CALL("Replication::reply_db_filedata(<tmp_file>)");
 
-	L_REPLICATION("Replication::reply_db_filedata %s -> %s", repr(tmp_file), repr(file_path));
-
 	ASSERT(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
@@ -433,6 +438,8 @@ Replication::reply_db_filedata(const std::string& tmp_file)
 		client.detach();
 		return;
 	}
+
+	L_REPLICATION("Replication::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
 }
 
 
@@ -452,7 +459,7 @@ Replication::reply_db_footer(const std::string& message)
 		switch_database_path.clear();
 	}
 
-	L_REPLICATION("Replication::reply_db_footer%s", revision != current_revision ? " (ignored files)" : "");
+	L_REPLICATION("Replication::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
 }
 
 
@@ -461,22 +468,30 @@ Replication::reply_changeset(const std::string& line)
 {
 	L_CALL("Replication::reply_changeset(<line>)");
 
-	L_REPLICATION("Replication::reply_changeset%s", switch_database ? " (to switch database)" : "");
+	bool switching = !switch_database_path.empty();
 
 	if (!wal) {
-		if (switch_database_path.empty()) {
-			database()->begin_transaction(false);
-			wal = std::make_unique<DatabaseWAL>(database().get());
-		} else {
+		if (switching) {
 			if (!switch_database) {
 				XapiandManager::manager->database_pool->checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
 			}
 			switch_database->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_database.get());
+		} else {
+			database()->begin_transaction(false);
+			wal = std::make_unique<DatabaseWAL>(database().get());
 		}
+		L_TIMED_VAR(log, 1s,
+			"Replication of %schangesets taking too long: %s",
+			"Replication of %schangesets took too long: %s",
+			switching ? "whole database with " : "",
+			repr(endpoints[0].path));
 	}
 
 	wal->execute_line(line, true, false, false);
+
+	++changesets;
+	L_REPLICATION("Replication::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
 }
 
 
