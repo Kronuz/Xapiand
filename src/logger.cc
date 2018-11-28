@@ -79,6 +79,11 @@ static const std::string priorities[MAX_PRIORITY + 1] = {
 };
 
 
+ssize_t write_stderr(const void* buf, size_t nbyte) {
+	return io::write(STDERR_FILENO, buf, nbyte);
+}
+
+
 static inline bool
 is_tty()
 {
@@ -251,7 +256,7 @@ StderrLogger::log(int priority, std::string_view str, bool with_priority, bool w
 	bool colorized = (is_tty() || Logging::colors) && !Logging::no_colors;
 	buf = Logging::colorized(buf, colorized);
 
-	io::write(STDERR_FILENO, buf.data(), buf.size());
+	write_stderr(buf.data(), buf.size());
 }
 
 
@@ -431,7 +436,7 @@ Logging::set_mark()
 {
 	if (is_tty()) {
 		auto buf = std::string("\033]1337;SetMark\a");
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
@@ -444,7 +449,7 @@ Logging::tab_rgb(int red, int green, int blue)
 		buf += string::format("\033]6;1;bg;red;brightness;%d\a", red);
 		buf += string::format("\033]6;1;bg;green;brightness;%d\a", green);
 		buf += string::format("\033]6;1;bg;blue;brightness;%d\a", blue);
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
@@ -453,7 +458,7 @@ Logging::tab_title(std::string_view title)
 {
 	if (is_tty()) {
 		auto buf = string::format("\033]0;%s\a", title);
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
@@ -463,7 +468,7 @@ Logging::badge(std::string_view badge)
 {
 	if (is_tty()) {
 		auto buf = string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
@@ -473,7 +478,7 @@ Logging::growl(std::string_view text)
 {
 	if (is_tty()) {
 		auto buf = string::format("\033]9;%s\a", text);
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
@@ -485,7 +490,7 @@ Logging::reset()
 		std::string buf;
 		buf += std::string("\033]1337;SetBadgeFormat=\a");
 		buf += std::string("\033]6;1;bg;*;default\a");
-		io::write(STDERR_FILENO, buf.data(), buf.size());
+		write_stderr(buf.data(), buf.size());
 	}
 }
 
