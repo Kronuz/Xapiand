@@ -60,6 +60,8 @@
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
+// #undef L_DEBUG_NOW
+// #define L_DEBUG_NOW(name) auto name = std::chrono::system_clock::now()
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DATABASE
