@@ -111,7 +111,17 @@ protected:
 	void read_start_async_cb(ev::async &watcher, int revents);
 
 	// Socket is writable
-	void io_cb_write(ev::io &watcher, int revents);
+	void _io_cb_write(ev::io &watcher, int revents);
+
+	void io_cb_write(ev::io &watcher, int revents) noexcept {
+		try {
+			_io_cb_write(watcher, revents);
+		} catch (...) {
+			L_EXC("ERROR: Client died with an unhandled exception");
+			destroy();
+			detach();
+		}
+	}
 
 	WR write_from_queue();
 	WR write_from_queue(int max);
@@ -158,7 +168,7 @@ protected:
 	}
 
 	// Receive message from client socket
-	void io_cb_read(ev::io &watcher, int revents) {
+	void _io_cb_read(ev::io &watcher, int revents) {
 		L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
@@ -298,6 +308,16 @@ protected:
 				return;
 			}
 		} while (received > 0);
+	}
+
+	void io_cb_read(ev::io &watcher, int revents) noexcept {
+		try {
+			_io_cb_read(watcher, revents);
+		} catch (...) {
+			L_EXC("ERROR: Client died with an unhandled exception");
+			destroy();
+			detach();
+		}
 	}
 
 	bool send_file(int fd, size_t offset = 0) {

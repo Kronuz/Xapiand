@@ -103,22 +103,27 @@ ReplicationProtocol::reset()
 
 
 bool
-ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
 	L_CALL("ReplicationProtocol::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
-	src_endpoints = Endpoints{src_endpoint};
+	try {
+		src_endpoints = Endpoints{src_endpoint};
 
-	flags = DB_WRITABLE | DB_CREATE_OR_OPEN;
-	endpoints = Endpoints{dst_endpoint};
-	lk_db.lock(0, [=] {
-		// If it cannot checkout because database is busy, retry when ready...
-		trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
-	});
+		flags = DB_WRITABLE | DB_CREATE_OR_OPEN;
+		endpoints = Endpoints{dst_endpoint};
+		lk_db.lock(0, [=] {
+			// If it cannot checkout because database is busy, retry when ready...
+			trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
+		});
 
-	client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
+		client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
-	L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+	} catch (...) {
+		L_EXC("ERROR: Replication cannot be initialized");
+		return false;
+	}
 	return true;
 }
 

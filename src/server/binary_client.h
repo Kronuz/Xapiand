@@ -115,8 +115,8 @@ public:
 	void send_message(char type_as_char, const std::string& message);
 	void send_file(char type_as_char, int fd);
 
-	bool init_remote();
-	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	bool init_remote() noexcept;
+	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
 	void operator()();
 };

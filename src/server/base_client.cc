@@ -312,7 +312,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 
 
 void
-BaseClient::io_cb_write(ev::io &watcher, int revents)
+BaseClient::_io_cb_write(ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 

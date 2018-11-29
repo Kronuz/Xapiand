@@ -126,7 +126,7 @@ BinaryClient::is_idle()
 
 
 bool
-BinaryClient::init_remote()
+BinaryClient::init_remote() noexcept
 {
 	L_CALL("BinaryClient::init_remote()");
 
@@ -147,7 +147,7 @@ BinaryClient::init_remote()
 
 
 bool
-BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
 	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
