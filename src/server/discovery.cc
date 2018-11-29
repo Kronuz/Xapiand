@@ -59,11 +59,16 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	: UDP(port, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
-	  discovery(*ev_loop)
+	  discovery(*ev_loop),
+	  db_update_send_async(*ev_loop)
 {
 	bind(1, group);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
 	discovery.set<Discovery, &Discovery::discovery_cb>(this);
+
+	db_update_send_async.set<Discovery, &Discovery::db_update_send_async_cb>(this);
+	db_update_send_async.start();
+	L_EV("Start discovery's async db_update_send signal event");
 }
 
 
@@ -482,16 +487,35 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 
 void
+Discovery::db_update_send_async_cb(ev::async&, int revents)
+{
+	L_CALL("Discovery::db_update_send_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
+	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(state));
+
+	ignore_unused(revents);
+
+	std::string path;
+	while (db_update_send_args.try_dequeue(path)) {
+		auto local_node = Node::local_node();
+		send_message(Message::DB_UPDATED,
+			local_node->serialise() +   // The node where the index is at
+			path);  // The path of the index
+
+		L_DEBUG("Sending database updated signal for %s", repr(path));
+	}
+}
+
+
+void
 Discovery::db_update_send(const std::string& path)
 {
 	L_CALL("Discovery::db_update_send(%s)", repr(path));
 
-	auto local_node = Node::local_node();
-	send_message(Message::DB_UPDATED,
-		local_node->serialise() +   // The node where the index is at
-		path);  // The path of the index
+	db_update_send_args.enqueue(path);
 
-	L_DEBUG("Sending database updated signal for %s", repr(path));
+	db_update_send_async.send();
 }
 
 

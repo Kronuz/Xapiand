@@ -26,6 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "concurrent_queue.h"   // for ConcurrentQueue
 #include "debouncer.h"          // for make_debouncer
 #include "thread.hh"            // for ThreadPolicyType::*
 #include "udp.h"                // for UDP
@@ -69,6 +70,12 @@ public:
 private:
 	ev::io io;
 	ev::timer discovery;
+
+	ev::async db_update_send_async;
+
+	ConcurrentQueue<std::string> db_update_send_args;
+
+	void db_update_send_async_cb(ev::async& watcher, int revents);
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
