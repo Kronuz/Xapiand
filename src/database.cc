@@ -1776,7 +1776,7 @@ std::string
 Database::__repr__() const
 {
 	return string::format("<%s at %p {endpoint:%s, flags:(%s)}>",
-		is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database",
+		_database ? is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database" : "InvalidDatabase",
 		static_cast<const void*>(this),
 		repr(endpoints.to_string()),
 		readable_flags(flags));
