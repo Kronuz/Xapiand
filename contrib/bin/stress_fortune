@@ -19,7 +19,7 @@ import re
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
 
-TASKS = 10000
+TASKS = 100000
 WORKERS = 200
 
 DEFAULT_HOST = '127.0.0.1'
