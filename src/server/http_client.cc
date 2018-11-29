@@ -2779,7 +2779,7 @@ HttpClient::log_response(Response& response)
 		response_prefix = " 💥  ";
 	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 		response_prefix = " 🔥  ";
-		priority = -LOG_WARNING;
+		priority = -LOG_NOTICE;
 	}
 	auto response_text = response.to_text(true);
 	L(priority, NO_COLOR, "%s%s", response_prefix, string::indent(response_text, ' ', 4, false));
@@ -2818,7 +2818,7 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"%s\" %d %s %s";
 			fmt = fmt_5xx.c_str();
-			priority = LOG_WARNING;
+			priority = LOG_NOTICE;
 		}
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(response);
