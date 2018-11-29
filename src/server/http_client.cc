@@ -927,6 +927,32 @@ HttpClient::process(Request& request, Response& response)
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
 		L_EXC("ERROR: Dispatching HTTP request");
+	} catch (const Xapian::NetworkError& exc) {
+		auto error_string = exc.get_error_string();
+		if (error_string) {
+			constexpr static auto _ = phf::make_phf({
+				hhl("Connection refused"),
+				hhl("Connection reset by peer"),
+			});
+			switch (_.fhhl(error_string)) {
+				case _.fhhl("Connection refused"):
+					error_code = HTTP_STATUS_BAD_GATEWAY;
+					error.assign("Endpoint connection refused!");
+					break;
+				case _.fhhl("Connection reset by peer"):
+					error_code = HTTP_STATUS_BAD_GATEWAY;
+					error.assign("Endpoint connection reset by peer!");
+					break;
+				default:
+					error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+					error.assign(exc.get_description());
+					L_EXC("ERROR: Dispatching HTTP request");
+			}
+		} else {
+			error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+			error.assign(exc.get_description());
+			L_EXC("ERROR: Dispatching HTTP request");
+		}
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(exc.get_description());
