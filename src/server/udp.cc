@@ -180,7 +180,7 @@ UDP::send_message(const std::string& message)
 #endif
 
 		if (written < 0) {
-			if (!io::ignored_errno(errno, true, true, true)) {
+			if (!io::ignored_errno(errno, true, false, false)) {
 				L_ERR("ERROR: sendto error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
@@ -212,11 +212,11 @@ UDP::get_message(std::string& result, char max_type)
 	char buf[1024];
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
-		if (!io::ignored_errno(errno, true, true, true)) {
+		if (!io::ignored_errno(errno, true, false, false)) {
 			L_ERR("ERROR: read error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			THROW(NetworkError, error::description(errno));
 		}
-		L_CONN("Received EOF (sock=%d)!", sock);
+		L_CONN("Received ERROR (sock=%d)!", sock);
 		return '\xff';
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
