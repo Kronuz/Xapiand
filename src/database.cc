@@ -342,12 +342,12 @@ Database::reopen_writable()
 #endif  // XAPIAND_DATA_STORAGE
 	ASSERT(_databases.size() == endpoints_size);
 
-	_database = std::move(database);
-	reopen_time = std::chrono::system_clock::now();
-
 	is_writable = true;
 	is_writable_and_local = local;
 	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NO_WAL) != DB_NO_WAL);
+
+	_database = std::move(database);
+	reopen_time = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
@@ -484,6 +484,10 @@ Database::reopen_readable()
 	}
 	ASSERT(_databases.size() == endpoints_size);
 
+	is_writable = false;
+	is_writable_and_local = false;
+	is_writable_and_local_with_wal = false;
+
 	_database = std::move(database);
 	reopen_time = std::chrono::system_clock::now();
 	// Ends Readable DB
@@ -598,9 +602,6 @@ Database::reset()
 	reopen_revision = 0;
 	modified = false;
 	incomplete = false;
-	is_writable = false;
-	is_writable_and_local = false;
-	is_writable_and_local_with_wal = false;
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
 	writable_storages.clear();
@@ -636,19 +637,10 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		}
 	}
 
+	reset();
+
 	closed = closed_;
 	transaction = transaction_;
-
-	// Partial reset():
-	_database.reset();
-	_databases.clear();
-	reopen_revision = 0;
-	modified = false;
-	incomplete = false;
-#ifdef XAPIAND_DATA_STORAGE
-	storages.clear();
-	writable_storages.clear();
-#endif  // XAPIAND_DATA_STORAGE
 }
 
 
