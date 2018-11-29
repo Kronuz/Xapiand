@@ -30,13 +30,22 @@
 #include <string>                             // for std::string
 #include <vector>                             // for std::vector
 
+#include "concurrent_queue.h"                 // for ConcurrentQueue
+#include "endpoint.h"                         // for Endpoint
 #include "tcp.h"                              // for BaseTCP
 #include "threadpool.hh"                      // for TaskQueue
 
 
-class Endpoint;
 class BinaryServer;
 class DiscoveryServer;
+
+
+struct TriggerReplicationArgs {
+	Endpoint src_endpoint;
+	Endpoint dst_endpoint;
+	bool cluster_database;
+};
+
 
 // Configuration data for Binary
 class Binary : public BaseTCP {
@@ -44,9 +53,8 @@ class Binary : public BaseTCP {
 
 	std::mutex bsmtx;
 	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
-	TaskQueue<void(const std::shared_ptr<BinaryServer>&)> tasks;
 
-	void process_tasks();
+	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 
 public:
 	std::string __repr__() const override {
@@ -60,7 +68,7 @@ public:
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();
 
-	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database);
+	void trigger_replication(const TriggerReplicationArgs& args);
 };
 
 

@@ -87,37 +87,22 @@ Binary::start()
 
 
 void
-Binary::process_tasks()
+Binary::trigger_replication(const TriggerReplicationArgs& args)
 {
-	L_CALL("Binary::process_tasks()");
+	L_CALL("Binary::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
+
+	trigger_replication_args.enqueue(args);
 
 	std::lock_guard<std::mutex> lk(bsmtx);
 	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = it->lock();
 		if (server) {
-			server->process_tasks();
+			server->trigger_replication();
 			++it;
 		} else {
 			it = servers_weak.erase(it);
 		}
 	}
-}
-
-
-void
-Binary::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
-{
-	L_CALL("Binary::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
-
-	tasks.enqueue([
-		src_endpoint,
-		dst_endpoint,
-		cluster_database
-	] (const std::shared_ptr<BinaryServer>& server) mutable {
-		server->trigger_replication(src_endpoint, dst_endpoint, cluster_database);
-	});
-
-	process_tasks();
 }
 
 

@@ -31,16 +31,18 @@
 
 class Binary;
 class Endpoint;
+struct TriggerReplicationArgs;
+
 
 // Binary Server
 class BinaryServer : public BaseServer<BinaryServer> {
 	std::shared_ptr<Binary> binary;
 
-	ev::async process_tasks_async;
+	ev::async trigger_replication_async;
 
 	void start_impl() override;
 
-	void process_tasks_async_cb(ev::async& watcher, int revents);
+	void trigger_replication_async_cb(ev::async& watcher, int revents);
 
 public:
 	std::string __repr__() const override {
@@ -54,9 +56,9 @@ public:
 
 	void io_accept_cb(ev::io& watcher, int revents);
 
-	void trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database);
+	void trigger_replication(const TriggerReplicationArgs& args);
 
-	void process_tasks();
+	void trigger_replication();
 };
 
 

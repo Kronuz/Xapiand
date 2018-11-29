@@ -51,11 +51,11 @@
 BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary)
 	: BaseServer<BinaryServer>(parent_, ev_loop_, ev_flags_, binary->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  binary(binary),
-	  process_tasks_async(*ev_loop)
+	  trigger_replication_async(*ev_loop)
 {
-	process_tasks_async.set<BinaryServer, &BinaryServer::process_tasks_async_cb>(this);
-	process_tasks_async.start();
-	L_EV("Start binary's async signal event");
+	trigger_replication_async.set<BinaryServer, &BinaryServer::trigger_replication_async_cb>(this);
+	trigger_replication_async.start();
+	L_EV("Start binary's async trigger replication signal event");
 }
 
 
@@ -88,25 +88,28 @@ BinaryServer::start_impl()
 
 
 void
-BinaryServer::process_tasks()
+BinaryServer::trigger_replication()
 {
-	L_CALL("BinaryServer::process_tasks()");
+	L_CALL("BinaryServer::trigger_replication()");
 
-	process_tasks_async.send();
+	trigger_replication_async.send();
 }
 
 
 void
-BinaryServer::process_tasks_async_cb(ev::async&, int revents)
+BinaryServer::trigger_replication_async_cb(ev::async&, int revents)
 {
-	L_CALL("BinaryServer::process_tasks_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("BinaryServer::trigger_replication_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("BinaryServer::process_tasks_async_cb:BEGIN");
-	L_EV_END("BinaryServer::process_tasks_async_cb:END");
+	L_EV_BEGIN("BinaryServer::trigger_replication_async_cb:BEGIN");
+	L_EV_END("BinaryServer::trigger_replication_async_cb:END");
 
 	ignore_unused(revents);
 
-	while (binary->tasks.call(share_this<BinaryServer>())) {};
+	TriggerReplicationArgs args;
+	while (binary->trigger_replication_args.try_dequeue(args)) {
+		trigger_replication(args);
+	}
 }
 
 
@@ -157,21 +160,21 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 
 void
-BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint, bool cluster_database)
+BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 {
-	if (src_endpoint.is_local()) {
-		ASSERT(!cluster_database);
+	if (args.src_endpoint.is_local()) {
+		ASSERT(!args.cluster_database);
 		return;
 	}
 
 	bool replicated = false;
 
-	if (src_endpoint.path == ".") {
+	if (args.src_endpoint.path == ".") {
 		// Cluster database is always updated
 		replicated = true;
 	}
 
-	if (!replicated && exists(std::string(src_endpoint.path) + "/iamglass")) {
+	if (!replicated && exists(std::string(args.src_endpoint.path) + "/iamglass")) {
 		// If database is already there, its also always updated
 		replicated = true;
 	}
@@ -179,7 +182,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::local_node();
-		auto nodes = XapiandManager::manager->resolve_index_nodes(src_endpoint.path);
+		auto nodes = XapiandManager::manager->resolve_index_nodes(args.src_endpoint.path);
 		for (const auto& node : nodes) {
 			if (Node::is_equal(node, local_node)) {
 				replicated = true;
@@ -189,27 +192,27 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 	}
 
 	if (!replicated) {
-		ASSERT(!cluster_database);
+		ASSERT(!args.cluster_database);
 		return;
 	}
 
 	int client_sock = TCP::socket();
 	if (client_sock < 0) {
-		if (cluster_database) {
+		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
 			sig_exit(-EX_SOFTWARE);
 		}
 		return;
 	}
 
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, cluster_database);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
 
-	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
 		client->destroy();
 		return;
 	}
 
-	L_INFO("Database %s being synchronized from %s%s" + INFO_COL + "...", repr(src_endpoint.to_string()), src_endpoint.node.col().ansi(), src_endpoint.node.name());
+	L_INFO("Database %s being synchronized from %s%s" + INFO_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
 #endif /* XAPIAND_CLUSTERING */

@@ -365,7 +365,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			new_cluster = 2;
 			if (auto binary = weak_binary.lock()) {
-				binary->trigger_replication(cluster_endpoint, local_endpoint, true);
+				binary->trigger_replication({cluster_endpoint, local_endpoint, true});
 			}
 		} else {
 			cluster_database_ready();
@@ -1098,7 +1098,7 @@ void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
 	if (auto binary = XapiandManager::manager->weak_binary.lock()) {
-		binary->trigger_replication(src_endpoint, dst_endpoint, false);
+		binary->trigger_replication({src_endpoint, dst_endpoint, false});
 	}
 }
 #endif
