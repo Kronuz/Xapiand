@@ -67,6 +67,7 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  io(*ev_loop),
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
+	  request_vote_async(*ev_loop),
 	  role(Role::FOLLOWER),
 	  votes_granted(0),
 	  votes_denied(0),
@@ -80,6 +81,10 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 	leader_heartbeat.set<Raft, &Raft::leader_heartbeat_cb>(this);
+
+	request_vote_async.set<Raft, &Raft::request_vote_async_cb>(this);
+	request_vote_async.start();
+	L_EV("Start raft's async request_vote signal event");
 }
 
 
@@ -458,7 +463,7 @@ Raft::append_entries(Message type, const std::string& message)
 	if (role == Role::LEADER) {
 		if (!Node::is_equal(node, local_node)) {
 			// If another leader is around, immediately run for election
-			request_vote(true);
+			_request_vote(true);
 		}
 		return;
 	}
@@ -714,7 +719,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	// If election timeout elapses without receiving AppendEntries
 	// RPC from current leader or granting vote to candidate:
 	// convert to candidate
-	request_vote(true);
+	_request_vote(true);
 }
 
 
@@ -924,9 +929,9 @@ Raft::add_command(const std::string& command)
 
 
 void
-Raft::request_vote(bool immediate)
+Raft::_request_vote(bool immediate)
 {
-	L_CALL("Raft::request_vote(%s)", immediate ? "true" : "false");
+	L_CALL("Raft::_request_vote(%s)", immediate ? "true" : "false");
 
 	if (immediate) {
 		++current_term;
@@ -958,6 +963,29 @@ Raft::request_vote(bool immediate)
 
 		_reset_leader_election_timeout(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
 	}
+}
+
+
+void
+Raft::request_vote()
+{
+	L_CALL("Raft::request_vote()");
+
+	request_vote_async.send();
+}
+
+
+void
+Raft::request_vote_async_cb(ev::async&, int revents)
+{
+	L_CALL("Raft::request_vote_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("Raft::request_vote_async_cb:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_END("Raft::request_vote_async_cb:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+
+	ignore_unused(revents);
+
+	_request_vote(false);
 }
 
 

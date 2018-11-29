@@ -105,6 +105,8 @@ private:
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
 
+	ev::async request_vote_async;
+
 	Role role;
 	size_t votes_granted;
 	size_t votes_denied;
@@ -139,6 +141,10 @@ private:
 	void _apply(const std::string& command);
 	void _commit_log();
 
+	void _request_vote(bool immediate);
+
+	void request_vote_async_cb(ev::async& watcher, int revents);
+
 	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 	void start_impl() override;
@@ -153,7 +159,7 @@ public:
 	~Raft();
 
 	void add_command(const std::string& command);
-	void request_vote(bool immediate = false);
+	void request_vote();
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Raft");
