@@ -456,6 +456,10 @@ Raft::append_entries(Message type, const std::string& message)
 	}
 
 	if (role == Role::LEADER) {
+		if (!Node::is_equal(node, local_node)) {
+			// If another leader is around, immediately run for election
+			request_vote(true);
+		}
 		return;
 	}
 
@@ -710,27 +714,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 	// If election timeout elapses without receiving AppendEntries
 	// RPC from current leader or granting vote to candidate:
 	// convert to candidate
-	++current_term;
-	role = Role::CANDIDATE;
-	voted_for.clear();
-	next_indexes.clear();
-	match_indexes.clear();
-	votes_granted = 0;
-	votes_denied = 0;
-
-	_reset_leader_election_timeout();
-
-	auto last_log_index = log.size();
-	auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
-
-	auto local_node = Node::local_node();
-	L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
-		local_node->name(), current_term, last_log_term, last_log_index, RoleNames(role), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
-	send_message(Message::REQUEST_VOTE,
-		local_node->serialise() +
-		serialise_length(current_term) +
-		serialise_length(last_log_term) +
-		serialise_length(last_log_index));
+	request_vote(true);
 }
 
 
@@ -940,16 +924,40 @@ Raft::add_command(const std::string& command)
 
 
 void
-Raft::request_vote()
+Raft::request_vote(bool immediate)
 {
-	L_CALL("Raft::request_vote()");
+	L_CALL("Raft::request_vote(%s)", immediate ? "true" : "false");
 
-	role = Role::FOLLOWER;
-	voted_for.clear();
-	next_indexes.clear();
-	match_indexes.clear();
+	if (immediate) {
+		++current_term;
+		role = Role::CANDIDATE;
+		voted_for.clear();
+		next_indexes.clear();
+		match_indexes.clear();
+		votes_granted = 0;
+		votes_denied = 0;
 
-	_reset_leader_election_timeout(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
+		_reset_leader_election_timeout();
+
+		auto last_log_index = log.size();
+		auto last_log_term = last_log_index > 0 ? log[last_log_index - 1].term : 0;
+
+		auto local_node = Node::local_node();
+		L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
+			local_node->name(), current_term, last_log_term, last_log_index, RoleNames(role), leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+		send_message(Message::REQUEST_VOTE,
+			local_node->serialise() +
+			serialise_length(current_term) +
+			serialise_length(last_log_term) +
+			serialise_length(last_log_index));
+	} else {
+		role = Role::FOLLOWER;
+		voted_for.clear();
+		next_indexes.clear();
+		match_indexes.clear();
+
+		_reset_leader_election_timeout(0, LEADER_ELECTION_MAX - LEADER_ELECTION_MIN);
+	}
 }
 
 

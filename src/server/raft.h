@@ -153,7 +153,7 @@ public:
 	~Raft();
 
 	void add_command(const std::string& command);
-	void request_vote();
+	void request_vote(bool immediate = false);
 
 	std::string __repr__() const override {
 		return Worker::__repr__("Raft");
