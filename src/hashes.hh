@@ -122,11 +122,12 @@ public:
 		return hash(str.data(), str.size(), seed);
 	}
 
-	static std::uint64_t hash(std::string_view str, std::uint64_t seed = 0) {
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
+	static std::uint64_t hash(S&& str, std::uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
 
-	static std::uint64_t hash(const std::string& str, std::uint64_t seed = 0) {
+	static std::uint64_t hash(std::string_view str, std::uint64_t seed = 0) {
 		return XXH64(str.data(), str.size(), seed);
 	}
 
@@ -148,11 +149,12 @@ public:
 		return hash(str.data(), str.size(), seed);
 	}
 
-	static std::uint32_t hash(std::string_view str, std::uint32_t seed = 0) {
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
+	static std::uint64_t hash(S&& str, std::uint64_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
 
-	static std::uint32_t hash(const std::string& str, std::uint32_t seed = 0) {
+	static std::uint32_t hash(std::string_view str, std::uint32_t seed = 0) {
 		return XXH32(str.data(), str.size(), seed);
 	}
 
@@ -207,11 +209,12 @@ struct fnv1ah {
 		return hash(str.data(), str.size(), seed);
 	}
 
-	constexpr static T hash(std::string_view str, T seed = offset) {
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
+	static T hash(S&& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 
-	static T hash(const std::string& str, T seed = offset) {
+	constexpr static T hash(std::string_view str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 
@@ -260,11 +263,12 @@ struct djb2h {
 		return hash(str.data(), str.size(), seed);
 	}
 
-	constexpr static T hash(std::string_view str, T seed = offset) {
+	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value or std::is_same<std::string_view, std::decay_t<S>>::value>>
+	static T hash(S&& str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 
-	static T hash(const std::string& str, T seed = offset) {
+	constexpr static T hash(std::string_view str, T seed = offset) {
 		return hash(str.data(), str.size(), seed);
 	}
 
