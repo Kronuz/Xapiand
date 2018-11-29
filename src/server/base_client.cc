@@ -120,8 +120,8 @@ BaseClient::~BaseClient()
 	Worker::deinit();
 
 	if (get_thread_name()[0] != 'S') {
-		L_TRACEBACK(CRIT_COL + "BaseClient destroyed from %s!", get_thread_name());
-		sig_exit(-EX_SOFTWARE);
+		L_CRIT("BaseClient destroyed from %s!" + TRACEBACK(), repr(get_thread_name()));
+		// sig_exit(-EX_SOFTWARE);
 	}
 }
 
