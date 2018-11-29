@@ -584,10 +584,6 @@ Raft::append_entries_response(Message type, const std::string& message)
 	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
 	ignore_unused(type);
 
-	if (role != Role::LEADER) {
-		return;
-	}
-
 	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
 		XapiandManager::manager->state != XapiandManager::State::SETUP &&
 		XapiandManager::manager->state != XapiandManager::State::READY) {
@@ -602,6 +598,10 @@ Raft::append_entries_response(Message type, const std::string& message)
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		return;
+	}
+
+	if (role != Role::LEADER) {
 		return;
 	}
 
