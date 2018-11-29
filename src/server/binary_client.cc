@@ -104,7 +104,7 @@ BinaryClient::~BinaryClient()
 	}
 
 	if (shutting_down && !is_idle()) {
-		L_WARNING("Binary client killed!");
+		L_INFO("Binary client killed!");
 	}
 
 	if (cluster_database) {
