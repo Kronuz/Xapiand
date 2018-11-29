@@ -27,6 +27,8 @@ DEFAULT_PORT = 8880
 NUM_DATABASES = 20
 NUM_HOSTS = 1
 
+FIELD = 'fortune'
+
 
 class Args:
     def __init__(self, **kwargs):
@@ -36,96 +38,176 @@ class Args:
 def _task(args):
     offset = args.start
 
+    import time
     import random
     import msgpack
     import requests
 
-    while offset < args.end:
-        offset += 1
-
-        client = random.choice(args.clients)
-        db = random.choice(args.databases)
-        body = {
-            'fortune': args.fortune(),
+    errors = {
+        'put': {
+            'DoesNotExist': "d",
+            'ValueError': "v",
+            'KeyError': "y",
+            'BadResponse': "x",
+            'ConnectionError': "c",
+            'ProxyError': "p",
+            'SSLError': "l",
+            'Timeout': "t",
+            'ConnectTimeout': "t",
+            'ReadTimeout': "t",
+            'URLRequired': "u",
+            'TooManyRedirects': "m",
+            'MissingSchema': "h",
+            'InvalidSchema': "h",
+            'InvalidURL': "u",
+            'InvalidHeader': "h",
+            'ChunkedEncodingError': "k",
+            'ContentDecodingError': "n",
+            'StreamConsumedError': "s",
+            'RetryError': "r",
+            'UnrewindableBodyError': "b",
+            'RequestsWarning': "w",
+            'FileModeWarning': "f",
+            'RequestsDependencyWarning': "d",
+            'Exception': "e",
+            'OK': " ",
+        },
+        'get': {
+            'DoesNotExist': "D",
+            'ValueError': "V",
+            'KeyError': "Y",
+            'BadResponse': "X",
+            'ConnectionError': "C",
+            'ProxyError': "P",
+            'SSLError': "L",
+            'Timeout': "T",
+            'ConnectTimeout': "T",
+            'ReadTimeout': "T",
+            'URLRequired': "U",
+            'TooManyRedirects': "M",
+            'MissingSchema': "H",
+            'InvalidSchema': "H",
+            'InvalidURL': "U",
+            'InvalidHeader': "H",
+            'ChunkedEncodingError': "K",
+            'ContentDecodingError': "N",
+            'StreamConsumedError': "S",
+            'RetryError': "R",
+            'UnrewindableBodyError': "B",
+            'RequestsWarning': "W",
+            'FileModeWarning': "F",
+            'RequestsDependencyWarning': "W",
+            'Exception': "E",
+            'OK': " ",
         }
+    }
 
+    indexed = []
+
+    while offset < args.end:
+        now = time.time()
+        client = random.choice(args.clients)
+        op = random.choice(args.ops)
         try:
-            client.put(
-                db,
-                body,
-                '{}'.format(offset),
-            )
-        except requests.HTTPError as e:
+            err = errors[op]
+            if op == 'put':
+                fortune = args.fortune()
+                body = {
+                    FIELD: fortune,
+                }
+                offset += 1
+                fortune_id = '{}'.format(offset)
+                db = random.choice(args.databases)
+                client.put(db, body, fortune_id)
+                indexed.append((db, fortune_id, fortune, now))
+            elif op == 'get':
+                if not indexed:
+                    continue
+                db, fortune_id, fortune, epoch = random.choice(indexed)
+                if now < epoch + 20:
+                    continue
+                body = client.get(db, fortune_id)
+                if body[FIELD] != fortune:
+                    raise ValueError
+            else:
+                continue
+        except ValueError:
+            sys.stderr.write(err['ValueError'])
+        except KeyError:
+            sys.stderr.write(err['KeyError'])
+        except requests.exceptions.HTTPError as e:
             if e.response is None:
-                sys.stderr.write("x")
+                sys.stderr.write(err['BadResponse'])
             else:
                 content = msgpack.loads(e.response.content)
                 message = content.get('#message', [content])[0]
                 print('\n{}: {}'.format(e, message))
-        except requests.ConnectionError:
+        except requests.exceptions.ConnectionError:
             # (RequestException)
-            sys.stderr.write("C")
-        except requests.ProxyError:
+            sys.stderr.write(err['ConnectionError'])
+        except requests.exceptions.ProxyError:
             # (ConnectionError)
-            sys.stderr.write("P")
-        except requests.SSLError:
+            sys.stderr.write(err['ProxyError'])
+        except requests.exceptions.SSLError:
             # (ConnectionError)
-            sys.stderr.write("S")
-        except requests.Timeout:
+            sys.stderr.write(err['SSLError'])
+        except requests.exceptions.Timeout:
             # (RequestException)
-            sys.stderr.write("t")
-        except requests.ConnectTimeout:
+            sys.stderr.write(err['Timeout'])
+        except requests.exceptions.ConnectTimeout:
             # (ConnectionError, Timeout)
-            sys.stderr.write("T")
-        except requests.ReadTimeout:
+            sys.stderr.write(err['ConnectTimeout'])
+        except requests.exceptions.ReadTimeout:
             # (Timeout)
-            sys.stderr.write("t")
-        except requests.URLRequired:
+            sys.stderr.write(err['ReadTimeout'])
+        except requests.exceptions.URLRequired:
             # (RequestException)
-            sys.stderr.write("u")
-        except requests.TooManyRedirects:
+            sys.stderr.write(err['URLRequired'])
+        except requests.exceptions.TooManyRedirects:
             # (RequestException)
-            sys.stderr.write("d")
-        except requests.MissingSchema:
+            sys.stderr.write(err['TooManyRedirects'])
+        except requests.exceptions.MissingSchema:
             # (RequestException, ValueError)
-            sys.stderr.write("h")
-        except requests.InvalidSchema:
+            sys.stderr.write(err['MissingSchema'])
+        except requests.exceptions.InvalidSchema:
             # (RequestException, ValueError)
-            sys.stderr.write("h")
-        except requests.InvalidURL:
+            sys.stderr.write(err['InvalidSchema'])
+        except requests.exceptions.InvalidURL:
             # (RequestException, ValueError)
-            sys.stderr.write("u")
-        except requests.InvalidHeader:
+            sys.stderr.write(err['InvalidURL'])
+        except requests.exceptions.InvalidHeader:
             # (RequestException, ValueError)
-            sys.stderr.write("h")
-        except requests.ChunkedEncodingError:
+            sys.stderr.write(err['InvalidHeader'])
+        except requests.exceptions.ChunkedEncodingError:
             # (RequestException)
-            sys.stderr.write("c")
-        except requests.ContentDecodingError:
+            sys.stderr.write(err['ChunkedEncodingError'])
+        except requests.exceptions.ContentDecodingError:
             # (RequestException, BaseHTTPError)
-            sys.stderr.write("d")
-        except requests.StreamConsumedError:
+            sys.stderr.write(err['ContentDecodingError'])
+        except requests.exceptions.StreamConsumedError:
             # (RequestException, TypeError)
-            sys.stderr.write("s")
-        except requests.RetryError:
+            sys.stderr.write(err['StreamConsumedError'])
+        except requests.exceptions.RetryError:
             # (RequestException)
-            sys.stderr.write("r")
-        except requests.UnrewindableBodyError:
+            sys.stderr.write(err['RetryError'])
+        except requests.exceptions.UnrewindableBodyError:
             # (RequestException)
-            sys.stderr.write("e")
-        except requests.RequestsWarning:
+            sys.stderr.write(err['UnrewindableBodyError'])
+        except requests.exceptions.RequestsWarning:
             # (Warning)
-            sys.stderr.write("w")
-        except requests.FileModeWarning:
+            sys.stderr.write(err['RequestsWarning'])
+        except requests.exceptions.FileModeWarning:
             # (RequestsWarning, DeprecationWarning)
-            sys.stderr.write("f")
-        except requests.RequestsDependencyWarning:
+            sys.stderr.write(err['FileModeWarning'])
+        except requests.exceptions.RequestsDependencyWarning:
             # (RequestsWarning)
-            sys.stderr.write("e")
+            sys.stderr.write(err['RequestsDependencyWarning'])
+        except client.DoesNotExist:
+            sys.stderr.write(err['DoesNotExist'])
         except Exception:
-            sys.stderr.write("X")
+            sys.stderr.write(err['Exception'])
         else:
-            sys.stderr.write(".")
+            sys.stderr.write(err['OK'])
 
 
 def task(args):
@@ -193,6 +275,10 @@ def main():
     hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
     databases = databases or ['fortune.{}'.format(i) for i in range(NUM_DATABASES)]
 
+    # ops = ['get', 'put', 'put', 'put']  # 25% of the time it's a get
+    ops = ['get', 'get', 'put', 'put']  # 50% of the time it's a get
+    # ops = ['get', 'get', 'get', 'put']  # 75% of the time it's a get
+
     from xapiand import Xapiand
     clients = []
     for host, port in hosts:
@@ -217,6 +303,7 @@ def main():
                 jobs.append(Args(
                     start=i * tpw,
                     end=i * tpw + tpw,
+                    ops=ops,
                     clients=clients,
                     databases=databases,
                     fortune=fortune,
@@ -227,6 +314,7 @@ def main():
             task(Args(
                 start=0,
                 end=tasks,
+                ops=ops,
                 clients=clients,
                 databases=databases,
                 fortune=fortune,
