@@ -696,24 +696,28 @@ DatabasePool::release_queue(const Endpoints& endpoints, int flags)
 		std::lock_guard<std::mutex> lk(qmtx);
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
 			auto queue = writable_databases.get(endpoints);
-			if (queue && queue->count == 0) {
+			if (queue) {
 				std::swap(callbacks, queue->callbacks);
-				queue->clear();
-				writable_databases.erase(endpoints);
-				_unlocked_notify(queue);
+				if (queue->count == 0 && !queue->locked) {
+					queue->clear();
+					writable_databases.erase(endpoints);
+				}
 			} else {
 				_drop_endpoints(endpoints);
 			}
+			_unlocked_notify(queue);
 		} else {
 			auto queue = databases.get(endpoints);
-			if (queue && queue->count == 0) {
+			if (queue) {
 				std::swap(callbacks, queue->callbacks);
-				queue->clear();
-				databases.erase(endpoints);
-				_lockable_notify(endpoints);
+				if (queue->count == 0 && !queue->locked) {
+					queue->clear();
+					databases.erase(endpoints);
+				}
 			} else {
 				_drop_endpoints(endpoints);
 			}
+			_lockable_notify(endpoints);
 		}
 	}
 
