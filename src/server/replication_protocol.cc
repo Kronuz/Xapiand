@@ -180,6 +180,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	auto from_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
 
+	flags = DB_WRITABLE;
 	endpoints = Endpoints{Endpoint{endpoint_path}};
 	if (endpoints.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
