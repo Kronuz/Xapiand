@@ -535,7 +535,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					};
 				} else {
 					has_locked_endpoints = [&]() -> std::shared_ptr<DatabaseQueue> {
-						for (auto& endpoint : database->endpoints) {
+						for (auto& endpoint : endpoints) {
 							auto wq = writable_databases.get(Endpoints{endpoint});
 							if (wq && wq->locked) {
 								return wq;
