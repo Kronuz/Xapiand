@@ -1004,7 +1004,7 @@ XapiandManager::resolve_index_endpoint(std::string_view path, bool master)
 			L_MANAGER("Active node used (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", Node::indexed_nodes, node ? node->idx : 0, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 			return {path, node.get()};
 		}
-		L_DEBUG("Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", Node::indexed_nodes, node ? node->idx : 0, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
+		L_MANAGER("Inactive node ignored (of %zu nodes) {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", Node::indexed_nodes, node ? node->idx : 0, node ? node->name() : "null", node ? node->http_port : 0, node ? node->binary_port : 0, node ? node->touched : 0);
 		if (master) {
 			break;
 		}
