@@ -1,0 +1,86 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXFileReference section */
+		E5E9EBF721B02C5300F6C93A /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; path = src; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		E5E9EBE421B0288E00F6C93A = {
+			isa = PBXGroup;
+			children = (
+				E5E9EBF721B02C5300F6C93A /* src */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E5ED1CC721B0395400DE239C /* Xapiand */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5E9EBE821B0288E00F6C93A /* Build configuration list */;
+			buildPhases = (
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Xapiand;
+			productName = Xapiand;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E5E9EBE521B0288E00F6C93A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1010;
+				ORGANIZATIONNAME = "Dubalu LLC";
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = E5E9EBE821B0288E00F6C93A /* Build configuration list */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = E5E9EBE421B0288E00F6C93A;
+			productRefGroup = E5E9EBE421B0288E00F6C93A;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E5ED1CC721B0395400DE239C /* Xapiand */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		73C001BE32034BC5BA0A8C68 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E5E9EBE821B0288E00F6C93A /* Build configuration list */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73C001BE32034BC5BA0A8C68 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E5E9EBE521B0288E00F6C93A /* Project object */;
+}
