@@ -28,7 +28,7 @@
 
 #include "concurrent_queue.h"   // for ConcurrentQueue
 #include "debouncer.h"          // for make_debouncer
-#include "thread.hh"            // for ThreadPolicyType::*
+#include "thread.hh"            // for Thread, ThreadPolicyType::*
 #include "udp.h"                // for UDP
 
 
@@ -43,7 +43,7 @@ struct DatabaseUpdate;
 class UUID;
 
 // Discovery for nodes and databases
-class Discovery : public UDP, public Worker {
+class Discovery : public UDP, public Worker, public Thread<Discovery, ThreadPolicyType::regular> {
 public:
 	enum class Message {
 		HELLO,         // New node saying hello
@@ -95,8 +95,6 @@ private:
 	void start_impl() override;
 	void stop_impl() override;
 
-	void operator()();
-
 	// No copy constructor
 	Discovery(const Discovery&) = delete;
 	Discovery& operator=(const Discovery&) = delete;
@@ -105,11 +103,17 @@ public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group);
 	~Discovery();
 
+	const char* name() const noexcept {
+		return "DISC";
+	}
+
+	void operator()();
+
+	void db_update_send(const std::string& path);
+
 	std::string __repr__() const override {
 		return Worker::__repr__("Discovery");
 	}
-
-	void db_update_send(const std::string& path);
 
 	std::string getDescription() const;
 };

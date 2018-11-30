@@ -33,6 +33,7 @@
 
 #include "udp.h"                            // for UDP
 #include "node.h"                           // for Node
+#include "thread.hh"                        // for Thread, ThreadPolicyType::*
 #include "worker.h"                         // for Worker
 
 
@@ -53,7 +54,7 @@ struct RaftLogEntry {
 };
 
 // The Raft consensus algorithm
-class Raft : public UDP, public Worker {
+class Raft : public UDP, public Worker, public Thread<Raft, ThreadPolicyType::regular> {
 public:
 	enum class Role {
 		FOLLOWER,
@@ -150,8 +151,6 @@ private:
 	void start_impl() override;
 	void stop_impl() override;
 
-	void operator()();
-
 	// No copy constructor
 	Raft(const Raft&) = delete;
 	Raft& operator=(const Raft&) = delete;
@@ -159,6 +158,12 @@ private:
 public:
 	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group);
 	~Raft();
+
+	const char* name() const noexcept {
+		return "RAFT";
+	}
+
+	void operator()();
 
 	void add_command(const std::string& command);
 	void request_vote();

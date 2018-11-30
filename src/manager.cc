@@ -639,11 +639,13 @@ XapiandManager::make_servers()
 		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, opts.binary_port);
 		msg += binary->getDescription() + ", ";
 
-		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, opts.discovery_port, opts.discovery_group);
+		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
 		msg += discovery->getDescription() + ", ";
+		discovery->run();
 
-		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, opts.raft_port, opts.raft_group);
+		raft = Worker::make_shared<Raft>(XapiandManager::manager, nullptr, ev_flags, opts.raft_port, opts.raft_group);
 		msg += raft->getDescription() + ", ";
+		raft->run();
 	}
 #endif
 
