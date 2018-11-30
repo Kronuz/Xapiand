@@ -106,7 +106,7 @@ public:
 
 	void run() {
 		if (!_running.exchange(true)) {
-			run_thread(&Thread::_runner, this, thread_policy);
+			run_thread(&Thread::_runner, static_cast<ThreadImpl*>(this), thread_policy);
 		}
 	}
 
