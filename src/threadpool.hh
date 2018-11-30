@@ -188,7 +188,7 @@ public:
 		_workers(0) {
 		for (std::size_t idx = 0; idx < num_threads; ++idx) {
 			_threads[idx] = ThreadPoolThread<TaskType, thread_policy>(idx, this);
-			_threads[idx].start();
+			_threads[idx].run();
 		}
 	}
 

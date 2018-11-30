@@ -48,7 +48,7 @@ enum class ThreadPolicyType {
 
 int sched_getcpu();
 
-void start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy);
+void run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy);
 void setup_thread(const std::string& name, ThreadPolicyType thread_policy);
 
 void set_thread_name(const std::string& name);
@@ -66,7 +66,7 @@ class Thread {
 	std::promise<void> _promise;
 	std::future<void> _future;
 
-	std::atomic_bool _started;
+	std::atomic_bool _running;
 	std::atomic_bool _joined;
 
 	static void* _runner(void* arg) {
@@ -86,32 +86,32 @@ class Thread {
 public:
 	Thread() :
 		_future{_promise.get_future()},
-		_started{false},
+		_running{false},
 		_joined{false} {};
 
 	Thread(Thread&& other) :
 		_promise(std::move(other._promise)),
 		_future(std::move(other._future)),
-		_started(other._started.load()),
+		_running(other._running.load()),
 		_joined(other._joined.load())
 	{}
 
 	Thread& operator=(Thread&& other) {
 		_promise = std::move(other._promise);
 		_future = std::move(other._future);
-		_started = other._started.load();
+		_running = other._running.load();
 		_joined = other._joined.load();
 		return *this;
 	}
 
-	void start() {
-		if (!_started.exchange(true)) {
-			start_thread(&Thread::_runner, this, thread_policy);
+	void run() {
+		if (!_running.exchange(true)) {
+			run_thread(&Thread::_runner, this, thread_policy);
 		}
 	}
 
 	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
-		if (_started && !_joined) {
+		if (_running && !_joined) {
 			std::future_status status;
 			do {
 				status = _future.wait_until(wakeup);

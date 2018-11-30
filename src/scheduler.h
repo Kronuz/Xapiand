@@ -190,7 +190,7 @@ public:
 		atom_next_wakeup_time(0),
 		_name(std::move(name)),
 		ending(-1) {
-		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, thread_policy>, thread_policy>::start();
+		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, thread_policy>, thread_policy>::run();
 	}
 
 	const std::string& name() {

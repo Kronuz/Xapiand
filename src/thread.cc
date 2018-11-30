@@ -64,7 +64,7 @@ sched_getcpu()
 
 
 void
-start_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
 {
 	ignore_unused(thread_policy);
 

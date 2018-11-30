@@ -933,7 +933,7 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 {
 	for (std::size_t idx = 0; idx < num_threads; ++idx) {
 		_threads[idx] = DatabaseWALWriterThread(idx, this);
-		_threads[idx].start();
+		_threads[idx].run();
 	}
 }
 
