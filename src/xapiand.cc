@@ -1049,7 +1049,7 @@ void usedir(const char* path, bool force) {
 
 
 void banner() {
-	set_thread_name("-==-");
+	set_thread_name("MAIN");
 
 	std::vector<std::string> values({
 			string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),

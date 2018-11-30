@@ -127,11 +127,11 @@ XapiandManager::XapiandManager()
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("WW%02zu", opts.num_async_wal_writers),
-	  http_client_pool("HC%02zu", opts.num_http_clients),
-	  http_server_pool("HS%02zu", opts.num_servers),
+	  http_client_pool("CH%02zu", opts.num_http_clients),
+	  http_server_pool("SH%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("BC%02zu", opts.num_binary_clients),
-	  binary_server_pool("BS%02zu", opts.num_servers),
+	  binary_client_pool("CB%02zu", opts.num_binary_clients),
+	  binary_server_pool("SB%02zu", opts.num_servers),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -154,11 +154,11 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("WW%02zu", opts.num_async_wal_writers),
-	  http_client_pool("HC%02zu", opts.num_http_clients),
-	  http_server_pool("HS%02zu", opts.num_servers),
+	  http_client_pool("CH%02zu", opts.num_http_clients),
+	  http_server_pool("SH%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("BC%02zu", opts.num_binary_clients),
-	  binary_server_pool("BS%02zu", opts.num_servers),
+	  binary_client_pool("CB%02zu", opts.num_binary_clients),
+	  binary_server_pool("SB%02zu", opts.num_servers),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
