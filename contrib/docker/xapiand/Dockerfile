@@ -30,9 +30,9 @@ RUN apk add libuuid \
     util-linux-dev
 
 # Build xapian using clang (from Kronuz git repo using layer cache buster)
-ADD https://api.github.com/repos/Kronuz/xapian/git/refs/heads/RELEASE/1.4 xapian-version.json
+ADD https://api.github.com/repos/Kronuz/xapian/git/refs/heads/master xapian-version.json
 RUN mkdir -p /usr/src \
-  && git clone -b RELEASE/1.4 --single-branch --depth 1 "https://github.com/Kronuz/xapian.git" /usr/src/xapian \
+  && git clone -b master --single-branch --depth 1 "https://github.com/Kronuz/xapian.git" /usr/src/xapian \
   && cd /usr/src/xapian/xapian-core \
   && ./preautoreconf \
   && autoreconf --force --install -Im4 \

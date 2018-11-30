@@ -36,7 +36,7 @@ First download and untar the xapian official distribution or clone the
 repository from [https://github.com/xapian/xapian.git](https://github.com/xapian/xapian.git)
 
 ```sh
-~/ $ git clone -b RELEASE/1.4 --single-branch --depth 1 \
+~/ $ git clone -b master --single-branch --depth 1 \
   "https://github.com/xapian/xapian.git"
 ```
 
@@ -56,7 +56,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-documentation \
   --enable-maintainer-mode \
   --program-suffix="" \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4' || echo '/usr/local')" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5' || echo '/usr/local')" \
   CXXFLAGS="-DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS"
 ```
 
@@ -77,7 +77,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-documentation \
   --enable-maintainer-mode \
   --program-suffix="" \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-asan' || echo '/usr/local')" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-asan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
@@ -91,7 +91,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-documentation \
   --enable-maintainer-mode \
   --program-suffix="" \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-msan' || echo '/usr/local')" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-msan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
 ```
@@ -105,7 +105,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-documentation \
   --enable-maintainer-mode \
   --program-suffix="" \
-  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.4-tsan' || echo '/usr/local')" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-tsan' || echo '/usr/local')" \
   CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread $LDFLAGS"
 ```

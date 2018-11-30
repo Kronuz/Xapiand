@@ -85,8 +85,19 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
   so you'll have to **Configure the Build** using something like:
 
     ```sh
-~/Xapiand/build $ brew switch xapian 1.4-asan
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON -DUBSAN=ON ..
+~/Xapiand/build $ brew switch xapian 1.5-asan
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DASAN=ON -DUBSAN=ON ..
+```
+
+#### Memory Sanitizer (MSAN)
+
+* For debugging memory issues, enable *Memory Sanitizer* and debugging
+  symbols in release mode, so you'll have to **Configure the Build** using
+  something like:
+
+    ```sh
+~/Xapiand/build $ brew switch xapian 1.5-msan
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMSAN=ON ..
 ```
 
 #### Thread Sanitizer (TSAN)
@@ -96,7 +107,7 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
   something like:
 
     ```sh
-~/Xapiand/build $ brew switch xapian 1.4-tsan
+~/Xapiand/build $ brew switch xapian 1.5-tsan
 ~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTSAN=ON ..
 ```
 
