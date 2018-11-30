@@ -193,7 +193,7 @@ public:
 		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, thread_policy>, thread_policy>::run();
 	}
 
-	const std::string& name() {
+	const std::string& name() const noexcept {
 		return _name;
 	}
 

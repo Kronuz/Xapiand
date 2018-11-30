@@ -89,7 +89,7 @@ public:
 
 	void operator()();
 
-	const std::string& name() const;
+	const std::string& name() const noexcept;
 };
 
 
@@ -314,7 +314,7 @@ public:
 
 template <typename TaskType, ThreadPolicyType thread_policy>
 inline const std::string&
-ThreadPoolThread<TaskType, thread_policy>::name() const
+ThreadPoolThread<TaskType, thread_policy>::name() const noexcept
 {
 	return _name;
 }

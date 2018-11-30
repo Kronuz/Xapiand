@@ -878,7 +878,7 @@ DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 
 
 const std::string&
-DatabaseWALWriterThread::name() const
+DatabaseWALWriterThread::name() const noexcept
 {
 	return _name;
 }

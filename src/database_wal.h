@@ -320,7 +320,7 @@ public:
 	void clear();
 	DatabaseWAL& wal(const std::string& path);
 
-	const std::string& name() const;
+	const std::string& name() const noexcept;
 };
 
 
