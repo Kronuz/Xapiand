@@ -22,9 +22,15 @@
 
 #pragma once
 
-#ifndef ASSERT
-#include "config.h"
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
+#ifndef ASSERT
 #include "likely.h"
 
 #if defined(__cplusplus)
@@ -33,21 +39,12 @@
 #include <assert.h>
 #endif
 
-#ifdef XAPIAND_TRACEBACKS
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
-#ifdef __cplusplus
-}
-#endif // __cplusplus
 #define ASSERT(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
+
 #ifdef assert
 #undef assert
 #define assert ASSERT
+#endif // assert
+
 #endif // ASSERT
-#else // XAPIAND_TRACEBACKS
-#define ASSERT assert
-#endif // XAPIAND_TRACEBACKS
-#endif

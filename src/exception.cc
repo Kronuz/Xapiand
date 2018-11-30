@@ -237,8 +237,13 @@ traceback(const char* function, const char* filename, int line, int skip)
 extern "C" void
 __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
 {
+#ifdef XAPIAND_TRACEBACKS
 	(void)fprintf(stderr, "Assertion failed: %s, function %s, file %s, line %u.%s\n",
 		expression, function, filename, line, traceback(function, filename, line, 2).c_str());
+#else
+	(void)fprintf(stderr, "Assertion failed: %s, function %s, file %s, line %u.\n",
+		expression, function, filename, line);
+#endif
 	abort();
 }
 
