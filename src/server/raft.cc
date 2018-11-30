@@ -998,8 +998,8 @@ Raft::request_vote_async_cb(ev::async&, int revents)
 {
 	L_CALL("Raft::request_vote_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Raft::request_vote_async_cb:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_EV_END("Raft::request_vote_async_cb:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_BEGIN("Raft::request_vote_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_END("Raft::request_vote_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(revents);
 

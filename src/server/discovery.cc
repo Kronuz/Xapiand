@@ -509,8 +509,8 @@ Discovery::db_update_send_async_cb(ev::async&, int revents)
 {
 	L_CALL("Discovery::db_update_send_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
-	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(state));
+	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
 
 	ignore_unused(revents);
 
