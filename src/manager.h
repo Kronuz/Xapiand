@@ -123,7 +123,6 @@ public:
 
 	static std::shared_ptr<XapiandManager> manager;
 
-	std::vector<std::weak_ptr<XapiandServer>> servers_weak;
 	std::weak_ptr<Http> weak_http;
 #ifdef XAPIAND_CLUSTERING
 	std::weak_ptr<Binary> weak_binary;

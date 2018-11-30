@@ -651,7 +651,6 @@ XapiandManager::make_servers()
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
-		servers_weak.push_back(server);
 
 		auto http_server = Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
 		http->add_server(http_server);
