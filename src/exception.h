@@ -22,10 +22,11 @@
 
 #pragma once
 
-#include <stdexcept>          // for runtime_error
-#include <string>             // for string
+#include <stdexcept>          // for std::runtime_error
+#include <string>             // for std::string
 #include "string_view.hh"     // for std::string_view
-#include <type_traits>        // for forward
+#include <type_traits>        // for std::forward
+#include <vector>             // for std::vector
 #include <xapian.h>           // for DocNotFoundError, InternalError, InvalidArgum...
 
 #ifdef WITHOUT_FMT
@@ -73,8 +74,8 @@ protected:
 	const char* function;
 	const char* filename;
 	int line;
-	void* callstack[128];
-	size_t frames;
+
+	std::vector<void*> callstack;
 
 	mutable std::string message;
 	mutable std::string context;
