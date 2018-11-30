@@ -119,9 +119,11 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 
 		client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
-		L_REPLICATION("init_replication: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+	} catch (const TimeOutError&) {
+		L_REPLICATION("init_replication deferred: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	} catch (...) {
-		L_EXC("ERROR: Replication cannot be initialized");
+		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
 		return false;
 	}
 	return true;
