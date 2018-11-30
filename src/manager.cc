@@ -526,7 +526,7 @@ XapiandManager::shutdown_sig(int sig)
 
 	if (sig < 0) {
 		atom_sig = sig;
-		if (ev_loop->depth()) {
+		if (runner() && ev_loop->depth() != 0u) {
 			break_loop();
 		} else {
 			throw SystemExit(-sig);
@@ -538,7 +538,7 @@ XapiandManager::shutdown_sig(int sig)
 			if (now <= shutdown_now + 3000) {
 				io::ignore_eintr().store(false);
 				atom_sig = sig = -EX_SOFTWARE;
-				if (ev_loop->depth()) {
+				if (runner() && ev_loop->depth() != 0u) {
 					L_WARNING("Trying breaking the loop.");
 					break_loop();
 				} else {
@@ -595,7 +595,9 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 
 	if (now != 0) {
 		detach();
-		break_loop();
+		if (runner()) {
+			break_loop();
+		}
 	}
 }
 
