@@ -90,11 +90,9 @@ Discovery::shutdown_impl(long long asap, long long now)
 	stop(false);
 	destroy(false);
 
-	if (now != 0) {
-		detach();
-		if (runner()) {
-			break_loop();
-		}
+	detach();
+	if (runner()) {
+		break_loop();
 	}
 }
 
