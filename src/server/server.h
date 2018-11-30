@@ -48,7 +48,6 @@ public:
 		return Worker::__repr__("XapiandServer");
 	}
 
-	static std::mutex static_mutex;
 	static std::atomic_int total_clients;
 	static std::atomic_int http_clients;
 	static std::atomic_int binary_clients;
