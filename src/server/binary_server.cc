@@ -212,7 +212,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		return;
 	}
 
-	L_INFO("Database %s being synchronized from %s%s" + INFO_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
+	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
 #endif /* XAPIAND_CLUSTERING */
