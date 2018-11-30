@@ -39,7 +39,6 @@
 #include "manager.h"                          // for XapiandManager::manager
 #include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
-#include "server.h"
 #include "utype.hh"                           // for toUType
 
 
@@ -73,19 +72,19 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	  remote_protocol(*this),
 	  replication_protocol(*this)
 {
-	++XapiandServer::binary_clients;
+	++XapiandManager::manager->binary_clients;
 
 	Metrics::metrics()
 		.xapiand_binary_connections
 		.Increment();
 
-	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::binary_clients.load(), XapiandServer::total_clients.load());
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::manager->binary_clients.load(), XapiandManager::manager->total_clients.load());
 }
 
 
 BinaryClient::~BinaryClient()
 {
-	if (XapiandServer::binary_clients.fetch_sub(1) == 0) {
+	if (XapiandManager::manager->binary_clients.fetch_sub(1) == 0) {
 		L_CRIT("Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
 	}

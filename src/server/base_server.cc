@@ -20,37 +20,77 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#include "base_server.h"
 
-#include <atomic>               // for std::atomic_int
-#include <memory>               // for std::shared_ptr
-#include <mutex>                // for std::mutex
-#include <string>               // for std::string
-
-#include "ev/ev++.h"            // for ev::async, ev::loop_ref
-#include "worker.h"             // for Worker
+#include "log.h"                              // for L_CALL
 
 
-class XapiandManager;
+BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags) :
+	TCP(port, description, flags),
+	Worker(parent_, ev_loop_, ev_flags_),
+	io(*ev_loop)
+{
+}
 
 
-class XapiandServer : public Worker {
-	friend Worker;
-	friend XapiandManager;
+BaseServer::~BaseServer()
+{
+	TCP::close();
 
-	XapiandServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
-	~XapiandServer();
+	Worker::deinit();
+}
 
-	void shutdown_impl(long long asap, long long now) override;
 
-public:
-	std::string __repr__() const override {
-		return Worker::__repr__("XapiandServer");
+void
+BaseServer::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("BaseServer::stop_impl(...)");
+
+	Worker::shutdown_impl(asap, now);
+
+	stop(false);
+	destroy(false);
+
+	if (now != 0) {
+		detach();
+		if (runner()) {
+			break_loop();
+		}
 	}
+}
 
-	static std::atomic_int total_clients;
-	static std::atomic_int http_clients;
-	static std::atomic_int binary_clients;
 
-	void operator()();
-};
+void
+BaseServer::destroy_impl()
+{
+	L_CALL("BaseServer::destroy_impl()");
+
+	Worker::destroy_impl();
+
+	TCP::close();
+}
+
+
+void
+BaseServer::stop_impl()
+{
+	L_CALL("BaseServer::stop_impl()");
+
+	Worker::stop_impl();
+
+	io.stop();
+	L_EV("Stop server accept event");
+}
+
+
+void
+BaseServer::operator()()
+{
+	L_CALL("BaseServer::operator()()");
+
+	L_EV("Starting server loop...");
+	run_loop();
+	L_EV("Server loop ended!");
+
+	detach();
+}

@@ -384,6 +384,9 @@ BaseTCP::shutdown_impl(long long asap, long long now)
 
 	if (now != 0) {
 		detach();
+		if (runner()) {
+			break_loop();
+		}
 	}
 }
 

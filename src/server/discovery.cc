@@ -74,6 +74,8 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 
 Discovery::~Discovery()
 {
+	UDP::close();
+
 	Worker::deinit();
 }
 
@@ -90,6 +92,9 @@ Discovery::shutdown_impl(long long asap, long long now)
 
 	if (now != 0) {
 		detach();
+		if (runner()) {
+			break_loop();
+		}
 	}
 }
 
@@ -140,6 +145,19 @@ Discovery::stop_impl()
 	L_EV("Stop discovery's server accept event");
 
 	L_DISCOVERY("Discovery was stopped!");
+}
+
+
+void
+Discovery::operator()()
+{
+	L_CALL("Discovery::operator()()");
+
+	L_EV("Starting discovery server loop...");
+	run_loop();
+	L_EV("Discovery server loop ended!");
+
+	detach();
 }
 
 

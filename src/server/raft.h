@@ -150,6 +150,8 @@ private:
 	void start_impl() override;
 	void stop_impl() override;
 
+	void operator()();
+
 	// No copy constructor
 	Raft(const Raft&) = delete;
 	Raft& operator=(const Raft&) = delete;

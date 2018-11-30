@@ -49,7 +49,7 @@
 
 
 BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary)
-	: BaseServer<BinaryServer>(parent_, ev_loop_, ev_flags_, binary->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+	: MetaBaseServer<BinaryServer>(parent_, ev_loop_, ev_flags_, binary->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  binary(binary),
 	  trigger_replication_async(*ev_loop)
 {

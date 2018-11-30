@@ -49,11 +49,12 @@ class Http;
 class Binary;
 class Discovery;
 class Raft;
+class BinaryClient;
+class BinaryServer;
 #endif
 
 class HttpClient;
-class BinaryClient;
-class XapiandServer;
+class HttpServer;
 
 extern void sig_exit(int sig);
 
@@ -122,6 +123,9 @@ public:
 	}
 
 	static std::shared_ptr<XapiandManager> manager;
+	std::atomic_int total_clients;
+	std::atomic_int http_clients;
+	std::atomic_int binary_clients;
 
 	std::weak_ptr<Http> weak_http;
 #ifdef XAPIAND_CLUSTERING
@@ -136,10 +140,11 @@ public:
 	DatabaseWALWriter wal_writer;
 
 	ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients> http_client_pool;
+	ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers> http_server_pool;
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients> binary_client_pool;
+	ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers> binary_server_pool;
 #endif
-	ThreadPool<std::shared_ptr<XapiandServer>, ThreadPolicyType::servers> server_pool;
 
 	std::atomic_llong shutdown_asap;
 	std::atomic_llong shutdown_now;
@@ -191,7 +196,7 @@ public:
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication() {
-	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("R--", "R%02zu", 3, trigger_replication_trigger);
+	static auto trigger_replication = make_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("TR--", "TR%02zu", 3, trigger_replication_trigger);
 	return trigger_replication;
 }
 #endif

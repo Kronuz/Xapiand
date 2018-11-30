@@ -989,7 +989,7 @@ DatabaseHandler::restore(int fd)
 		std::atomic_size_t processed = 0;
 		std::size_t total = 0;
 
-		ThreadPool<> thread_pool("T%02zu", 4 * std::thread::hardware_concurrency());
+		ThreadPool<> thread_pool("TP%02zu", 4 * std::thread::hardware_concurrency());
 
 		// Index documents.
 		auto indexer = thread_pool.async([&]{
@@ -1209,7 +1209,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::atomic_size_t processed = 0;
 	std::size_t total = docs.size();
 
-	ThreadPool<> thread_pool("T%02zu", 4 * std::thread::hardware_concurrency());
+	ThreadPool<> thread_pool("TP%02zu", 4 * std::thread::hardware_concurrency());
 
 	// Index documents.
 	auto indexer = thread_pool.async([&]{

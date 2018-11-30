@@ -25,52 +25,34 @@
 #include <memory>                             // for std::shared_ptr
 
 #include "ev/ev++.h"                          // for ev::io, ev::loop_ref
-#include "log.h"                              // for L_OBJ
 #include "tcp.h"                              // for TCP
 #include "worker.h"                           // for Worker
 
 
-template <typename ServerImpl>
 class BaseServer : public TCP, public Worker {
 	friend Worker;
 
 protected:
 	ev::io io;
 
-	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags) :
-		TCP(port, description, flags),
-		Worker(parent_, ev_loop_, ev_flags_),
-		io(*ev_loop) {
+	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags);
+
+	~BaseServer();
+
+	void shutdown_impl(long long asap, long long now) override;
+	void destroy_impl() override;
+	void stop_impl() override;
+
+public:
+	void operator()();
+};
+
+
+template <typename ServerImpl>
+class MetaBaseServer : public BaseServer {
+public:
+	MetaBaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags) :
+		BaseServer(parent_, ev_loop_, ev_flags_, port, description, flags) {
 		io.set<ServerImpl, &ServerImpl::io_accept_cb>(static_cast<ServerImpl*>(this));
-	}
-
-	~BaseServer() {
-		TCP::close();
-
-		Worker::deinit();
-	}
-
-	void shutdown_impl(long long asap, long long now) override {
-		Worker::shutdown_impl(asap, now);
-
-		stop(false);
-		destroy(false);
-
-		if (now != 0) {
-			detach();
-		}
-	}
-
-	void destroy_impl() override {
-		Worker::destroy_impl();
-
-		TCP::close();
-	}
-
-	void stop_impl() override {
-		Worker::stop_impl();
-
-		io.stop();
-		L_EV("Stop server accept event");
 	}
 };

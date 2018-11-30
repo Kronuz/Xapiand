@@ -77,7 +77,6 @@
 #include "server/http.h"                      // for Http
 #include "server/http_client.h"               // for HttpClient
 #include "server/http_server.h"               // for HttpServer
-#include "server/server.h"                    // for XapiandServer, XapiandServer::total_clients
 #include "storage.h"                          // for Storage
 #include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
 
@@ -127,12 +126,13 @@ XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
-	  wal_writer("W%02zu", opts.num_async_wal_writers),
-	  http_client_pool("H%02zu", opts.num_http_clients),
+	  wal_writer("WW%02zu", opts.num_async_wal_writers),
+	  http_client_pool("HC%02zu", opts.num_http_clients),
+	  http_server_pool("HS%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("B%02zu", opts.num_binary_clients),
+	  binary_client_pool("BC%02zu", opts.num_binary_clients),
+	  binary_server_pool("BS%02zu", opts.num_servers),
 #endif
-	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  state(State::RESET),
@@ -153,12 +153,13 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
-	  wal_writer("W%02zu", opts.num_async_wal_writers),
-	  http_client_pool("H%02zu", opts.num_http_clients),
+	  wal_writer("WW%02zu", opts.num_async_wal_writers),
+	  http_client_pool("HC%02zu", opts.num_http_clients),
+	  http_server_pool("HS%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("B%02zu", opts.num_binary_clients),
+	  binary_client_pool("BC%02zu", opts.num_binary_clients),
+	  binary_server_pool("BS%02zu", opts.num_servers),
 #endif
-	  server_pool("S%02zu", opts.num_servers),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  state(State::RESET),
@@ -574,7 +575,7 @@ XapiandManager::shutdown_sig(int sig)
 		shutdown_asap = now;
 	}
 
-	if (XapiandServer::total_clients <= 0) {
+	if (total_clients <= 0) {
 		shutdown_now = now;
 	}
 
@@ -650,18 +651,17 @@ XapiandManager::make_servers()
 	L_NOTICE(msg);
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
-
-		auto http_server = Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
+		auto http_server = Worker::make_shared<HttpServer>(XapiandManager::manager, nullptr, ev_flags, http);
 		http->add_server(http_server);
+		http_server_pool.enqueue(std::move(http_server));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto binary_server = Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary);
+			auto binary_server = Worker::make_shared<BinaryServer>(XapiandManager::manager, nullptr, ev_flags, binary);
 			binary->add_server(binary_server);
+			binary_server_pool.enqueue(std::move(binary_server));
 		}
 #endif
-		server_pool.enqueue(std::move(server));
 	}
 
 	// Make server protocols weak:
@@ -732,13 +732,16 @@ XapiandManager::finish()
 {
 	L_CALL("XapiandManager::finish()");
 
-	L_MANAGER("Finishing servers pool!");
-	server_pool.finish();
+	L_MANAGER("Finishing http servers pool!");
+	http_server_pool.finish();
 
 	L_MANAGER("Finishing http client threads pool!");
 	http_client_pool.finish();
 
 #ifdef XAPIAND_CLUSTERING
+	L_MANAGER("Finishing binary servers pool!");
+	binary_server_pool.finish();
+
 	L_MANAGER("Finishing binary client threads pool!");
 	binary_client_pool.finish();
 #endif
@@ -754,8 +757,8 @@ XapiandManager::join()
 
 	finish();
 
-	L_MANAGER("Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
-	while (!server_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu http server%s...", http_server_pool.running_size(), (http_server_pool.running_size() == 1) ? "" : "s");
+	while (!http_server_pool.join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -771,6 +774,14 @@ XapiandManager::join()
 	}
 
 #ifdef XAPIAND_CLUSTERING
+	L_MANAGER("Waiting for %zu binary server%s...", binary_server_pool.running_size(), (binary_server_pool.running_size() == 1) ? "" : "s");
+	while (!binary_server_pool.join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
+
 	L_MANAGER("Waiting for %zu binary client thread%s...", binary_client_pool.running_size(), (binary_client_pool.running_size() == 1) ? "" : "s");
 	while (!binary_client_pool.join(500ms)) {
 		int sig = atom_sig;
@@ -1036,10 +1047,10 @@ XapiandManager::server_metrics()
 #endif
 
 	// servers_threads:
-	metrics.xapiand_servers_running.Set(server_pool.running_size());
-	metrics.xapiand_servers_queue_size.Set(server_pool.size());
-	metrics.xapiand_servers_pool_size.Set(server_pool.threadpool_size());
-	metrics.xapiand_servers_capacity.Set(server_pool.threadpool_capacity());
+	metrics.xapiand_servers_running.Set(http_server_pool.running_size());
+	metrics.xapiand_servers_queue_size.Set(http_server_pool.size());
+	metrics.xapiand_servers_pool_size.Set(http_server_pool.threadpool_size());
+	metrics.xapiand_servers_capacity.Set(http_server_pool.threadpool_capacity());
 
 	// committers_threads:
 	metrics.xapiand_committers_running.Set(committer().running_size());
@@ -1053,10 +1064,10 @@ XapiandManager::server_metrics()
 	metrics.xapiand_fsync_pool_size.Set(fsyncher().threadpool_size());
 	metrics.xapiand_fsync_capacity.Set(fsyncher().threadpool_capacity());
 
+	metrics.xapiand_http_current_connections.Set(http_clients.load());
 #ifdef XAPIAND_CLUSTERING
 	// current connections:
-	metrics.xapiand_http_current_connections.Set(XapiandServer::http_clients.load());
-	metrics.xapiand_binary_current_connections.Set(XapiandServer::binary_clients.load());
+	metrics.xapiand_binary_current_connections.Set(binary_clients.load());
 #endif
 
 	// file_descriptors:

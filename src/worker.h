@@ -166,6 +166,10 @@ public:
 	void detach(int retries = 3, bool async = true);
 	void redetach(int retries = 3, bool async = true);
 
+	auto runner() {
+		return _runner.load(std::memory_order_relaxed);
+	}
+
 	auto detaching() {
 		return _detaching.load(std::memory_order_relaxed);
 	}

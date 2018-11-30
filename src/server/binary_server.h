@@ -35,7 +35,7 @@ struct TriggerReplicationArgs;
 
 
 // Binary Server
-class BinaryServer : public BaseServer<BinaryServer> {
+class BinaryServer : public MetaBaseServer<BinaryServer> {
 	std::shared_ptr<Binary> binary;
 
 	ev::async trigger_replication_async;

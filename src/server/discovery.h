@@ -95,6 +95,8 @@ private:
 	void start_impl() override;
 	void stop_impl() override;
 
+	void operator()();
+
 	// No copy constructor
 	Discovery(const Discovery&) = delete;
 	Discovery& operator=(const Discovery&) = delete;
@@ -115,7 +117,7 @@ public:
 void db_updater_send(std::string path);
 
 inline auto& db_updater() {
-	static auto db_updater = make_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("U--", "U%02zu", 3, db_updater_send);
+	static auto db_updater = make_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("DU--", "DU%02zu", 3, db_updater_send);
 	return db_updater;
 }
 

@@ -90,6 +90,8 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 
 Raft::~Raft()
 {
+	UDP::close();
+
 	Worker::deinit();
 }
 
@@ -106,6 +108,9 @@ Raft::shutdown_impl(long long asap, long long now)
 
 	if (now != 0) {
 		detach();
+		if (runner()) {
+			break_loop();
+		}
 	}
 }
 
@@ -159,6 +164,19 @@ Raft::stop_impl()
 	L_EV("Stop raft's server accept event");
 
 	L_RAFT("Raft was stopped!");
+}
+
+
+void
+Raft::operator()()
+{
+	L_CALL("Raft::operator()()");
+
+	L_EV("Starting raft server loop...");
+	run_loop();
+	L_EV("Raft server loop ended!");
+
+	detach();
 }
 
 

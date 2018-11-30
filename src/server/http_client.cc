@@ -65,7 +65,6 @@
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
-#include "server.h"                         // for XapiandServer::*
 #include "string.hh"                        // for string::from_delta
 
 
@@ -369,7 +368,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  new_request(this)
 {
-	++XapiandServer::http_clients;
+	++XapiandManager::manager->http_clients;
 
 	Metrics::metrics()
 		.xapiand_http_connections
@@ -378,13 +377,13 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	// Initialize new_request.begins as soon as possible (for correctly timing disconnecting clients)
 	new_request.begins = std::chrono::system_clock::now();
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandServer::http_clients.load(), XapiandServer::total_clients.load());
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::manager->http_clients.load(), XapiandManager::manager->total_clients.load());
 }
 
 
 HttpClient::~HttpClient()
 {
-	if (XapiandServer::http_clients.fetch_sub(1) == 0) {
+	if (XapiandManager::manager->http_clients.fetch_sub(1) == 0) {
 		L_CRIT("Inconsistency in number of http clients");
 		sig_exit(-EX_SOFTWARE);
 	}

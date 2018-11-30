@@ -31,7 +31,7 @@
 class Http;
 
 // Http Server
-class HttpServer : public BaseServer<HttpServer> {
+class HttpServer : public MetaBaseServer<HttpServer> {
 	std::shared_ptr<Http> http;
 
 	void start_impl() override;

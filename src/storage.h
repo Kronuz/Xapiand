@@ -132,7 +132,7 @@ public:
 
 
 inline auto& fsyncher() {
-	static auto fsyncher = make_debouncer<int, 500, 500, 3000, ThreadPolicyType::fsynchers>("F--", "F%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
+	static auto fsyncher = make_debouncer<int, 500, 500, 3000, ThreadPolicyType::fsynchers>("FS--", "FS%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
 		auto start = std::chrono::system_clock::now();
 
 		int err = full_fsync

@@ -37,7 +37,8 @@ enum class ThreadPolicyType {
 	committers,
 	fsynchers,
 	updaters,
-	servers,
+	http_servers,
+	binary_servers,
 	http_clients,
 	binary_clients,
 };
