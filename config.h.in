@@ -251,6 +251,9 @@
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
+/* Enable debugging asserts. */
+#cmakedefine XAPIAND_ASSERTS @XAPIAND_ASSERTS@
+
 /* Enable tracked memory allocator for memory usage. */
 #cmakedefine XAPIAND_TRACKED_MEM @XAPIAND_TRACKED_MEM@
 

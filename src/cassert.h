@@ -31,6 +31,21 @@ extern "C" {
 #endif // __cplusplus
 
 #ifndef ASSERT
+
+#include "config.h"           // for XAPIAND_ASSERTS
+
+#ifndef NDEBUG
+#ifndef XAPIAND_ASSERTS
+#define XAPIAND_ASSERTS 1
+#endif
+#endif
+
+#ifdef XAPIAND_ASSERTS
+
+#define	ASSERT(e)	((void)0)
+
+#else // XAPIAND_ASSERTS
+
 #include "likely.h"
 
 #if defined(__cplusplus)
@@ -42,9 +57,11 @@ extern "C" {
 #define ASSERT(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
 
+#endif // XAPIAND_ASSERTS
+
 #ifdef assert
 #undef assert
-#define assert ASSERT
 #endif // assert
+#define assert ASSERT
 
 #endif // ASSERT
