@@ -543,6 +543,8 @@ Worker::run_loop()
 
 	ASSERT(ev_loop->depth() == 0);
 
-	_runner = true;
-	ev_loop->run();
+	if (!_runner.exchange(true)) {
+		ev_loop->run();
+		_runner = false;
+	}
 }
