@@ -37,6 +37,12 @@ static inline int backtrace(void**, int) { return 0; }
 
 #include "likely.h"
 
+
+// #ifndef XAPIAND_TRACEBACKS
+// #define XAPIAND_TRACEBACKS 1
+// #endif
+
+
 #define BUFFER_SIZE 1024
 
 #ifdef __APPLE__
