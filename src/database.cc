@@ -535,6 +535,7 @@ Database::reopen()
 		throw;
 	}
 
+	ASSERT(_database);
 	L_DATABASE("Reopen: %s", __repr__());
 	return true;
 }
