@@ -107,7 +107,7 @@ public:
 
 	~DatabaseQueue();
 
-	void clear();
+	size_t clear();
 
 	size_t inc_count();
 	size_t dec_count();

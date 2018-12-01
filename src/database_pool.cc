@@ -82,7 +82,7 @@ DatabaseQueue::~DatabaseQueue()
 }
 
 
-void
+size_t
 DatabaseQueue::clear()
 {
 	size_t pops = 0;
@@ -97,7 +97,7 @@ DatabaseQueue::clear()
 		L_CRIT("Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
 	}
-	ASSERT(current_count == pops);
+	return current_count - pops;
 }
 
 
@@ -436,7 +436,9 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 						return false;
 					}
 					// clear queues of databases containing endpoints which are to be locked
-					endpoint_queue->clear();
+					auto count = endpoint_queue->clear();
+					ignore_unused(count);
+					ASSERT(count == 0);
 				}
 			}
 			return true;
