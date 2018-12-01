@@ -2799,9 +2799,9 @@ HttpClient::log_response(Response& response)
 		response_prefix = " 💫  ";
 	} else if ((int)response.status == 404) {
 		response_prefix = " 🕸  ";
-		priority = -LOG_INFO;
 	} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 		response_prefix = " 💥  ";
+		priority = -LOG_INFO;
 	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 		response_prefix = " 🔥  ";
 		priority = -LOG_NOTICE;
