@@ -85,15 +85,19 @@ DatabaseQueue::~DatabaseQueue()
 void
 DatabaseQueue::clear()
 {
+	size_t pops = 0;
 	std::shared_ptr<Database> database;
 	while (pop(database, 0)) {
 		database->weak_queue.reset();
 		database.reset();
+		++pops;
 	}
-	if (auto database_pool = weak_database_pool.lock()) {
-		database_pool->_drop_endpoints(endpoints);
+	auto current_count = count.fetch_sub(pops);
+	if (current_count < pops) {
+		L_CRIT("Inconsistency in the number of databases in queue");
+		sig_exit(-EX_SOFTWARE);
 	}
-	weak_database_pool.reset();
+	ASSERT(current_count == pops);
 }
 
 
@@ -245,6 +249,10 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 			if (queue->renew_time < now - 60s) {
 				L_DATABASE("Evict queue from full LRU: %s", repr(queue->endpoints.to_string()));
 				queue->clear();
+				if (auto database_pool = queue->weak_database_pool.lock()) {
+					database_pool->_drop_endpoints(queue->endpoints);
+				}
+				queue->weak_database_pool.reset();
 				return lru::DropAction::evict;
 			}
 			L_DATABASE("Leave recently used queue: %s", repr(queue->endpoints.to_string()));
@@ -253,6 +261,10 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 		if (queue->renew_time < now - 3600s) {
 			L_DATABASE("Evict queue: %s", repr(queue->endpoints.to_string()));
 			queue->clear();
+			if (auto database_pool = queue->weak_database_pool.lock()) {
+				database_pool->_drop_endpoints(queue->endpoints);
+			}
+			queue->weak_database_pool.reset();
 			return lru::DropAction::evict;
 		}
 		L_DATABASE("Stop at queue: %s", repr(queue->endpoints.to_string()));
@@ -278,6 +290,10 @@ DatabasesLRU::clear()
 {
 	for (auto& queue : *this) {
 		queue.second->clear();
+		if (auto database_pool = queue.second->weak_database_pool.lock()) {
+			database_pool->_drop_endpoints(queue.second->endpoints);
+		}
+		queue.second->weak_database_pool.reset();
 	}
 	lru::LRU<Endpoints, std::shared_ptr<DatabaseQueue>>::clear();
 }
@@ -705,6 +721,8 @@ DatabasePool::release_queue(const Endpoints& endpoints, int flags)
 				std::swap(callbacks, queue->callbacks);
 				if (queue->count == 0 && !queue->locked) {
 					queue->clear();
+					_drop_endpoints(endpoints);
+					queue->weak_database_pool.reset();
 					writable_databases.erase(endpoints);
 				}
 			} else {
@@ -717,6 +735,8 @@ DatabasePool::release_queue(const Endpoints& endpoints, int flags)
 				std::swap(callbacks, queue->callbacks);
 				if (queue->count == 0 && !queue->locked) {
 					queue->clear();
+					_drop_endpoints(endpoints);
+					queue->weak_database_pool.reset();
 					databases.erase(endpoints);
 				}
 			} else {
