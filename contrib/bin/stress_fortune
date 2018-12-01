@@ -104,12 +104,100 @@ def _task(args):
 
     indexed = []
 
+    class Check(object):
+        def __init__(self, err):
+            self.err = err
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if self.err:
+                if exc_type is None:
+                    sys.stderr.write(self.err['OK'])
+                else:
+                    if issubclass(exc_type, ValueError):
+                        sys.stderr.write(self.err['ValueError'])
+                    elif issubclass(exc_type, KeyError):
+                        sys.stderr.write(self.err['KeyError'])
+                    elif issubclass(exc_type, requests.exceptions.HTTPError):
+                        if exc_val.response is None:
+                            sys.stderr.write(self.err['BadResponse'])
+                        else:
+                            content = msgpack.loads(exc_val.response.content)
+                            message = content.get('#message', [content])[0]
+                            print('\n{}: {}'.format(exc_val, message))
+                    elif issubclass(exc_type, requests.exceptions.ConnectionError):
+                        # (RequestException)
+                        sys.stderr.write(self.err['ConnectionError'])
+                    elif issubclass(exc_type, requests.exceptions.ProxyError):
+                        # (ConnectionError)
+                        sys.stderr.write(self.err['ProxyError'])
+                    elif issubclass(exc_type, requests.exceptions.SSLError):
+                        # (ConnectionError)
+                        sys.stderr.write(self.err['SSLError'])
+                    elif issubclass(exc_type, requests.exceptions.Timeout):
+                        # (RequestException)
+                        sys.stderr.write(self.err['Timeout'])
+                    elif issubclass(exc_type, requests.exceptions.ConnectTimeout):
+                        # (ConnectionError, Timeout)
+                        sys.stderr.write(self.err['ConnectTimeout'])
+                    elif issubclass(exc_type, requests.exceptions.ReadTimeout):
+                        # (Timeout)
+                        sys.stderr.write(self.err['ReadTimeout'])
+                    elif issubclass(exc_type, requests.exceptions.URLRequired):
+                        # (RequestException)
+                        sys.stderr.write(self.err['URLRequired'])
+                    elif issubclass(exc_type, requests.exceptions.TooManyRedirects):
+                        # (RequestException)
+                        sys.stderr.write(self.err['TooManyRedirects'])
+                    elif issubclass(exc_type, requests.exceptions.MissingSchema):
+                        # (RequestException, ValueError)
+                        sys.stderr.write(self.err['MissingSchema'])
+                    elif issubclass(exc_type, requests.exceptions.InvalidSchema):
+                        # (RequestException, ValueError)
+                        sys.stderr.write(self.err['InvalidSchema'])
+                    elif issubclass(exc_type, requests.exceptions.InvalidURL):
+                        # (RequestException, ValueError)
+                        sys.stderr.write(self.err['InvalidURL'])
+                    elif issubclass(exc_type, requests.exceptions.InvalidHeader):
+                        # (RequestException, ValueError)
+                        sys.stderr.write(self.err['InvalidHeader'])
+                    elif issubclass(exc_type, requests.exceptions.ChunkedEncodingError):
+                        # (RequestException)
+                        sys.stderr.write(self.err['ChunkedEncodingError'])
+                    elif issubclass(exc_type, requests.exceptions.ContentDecodingError):
+                        # (RequestException, BaseHTTPError)
+                        sys.stderr.write(self.err['ContentDecodingError'])
+                    elif issubclass(exc_type, requests.exceptions.StreamConsumedError):
+                        # (RequestException, TypeError)
+                        sys.stderr.write(self.err['StreamConsumedError'])
+                    elif issubclass(exc_type, requests.exceptions.RetryError):
+                        # (RequestException)
+                        sys.stderr.write(self.err['RetryError'])
+                    elif issubclass(exc_type, requests.exceptions.UnrewindableBodyError):
+                        # (RequestException)
+                        sys.stderr.write(self.err['UnrewindableBodyError'])
+                    elif issubclass(exc_type, requests.exceptions.RequestsWarning):
+                        # (Warning)
+                        sys.stderr.write(self.err['RequestsWarning'])
+                    elif issubclass(exc_type, requests.exceptions.FileModeWarning):
+                        # (RequestsWarning, DeprecationWarning)
+                        sys.stderr.write(self.err['FileModeWarning'])
+                    elif issubclass(exc_type, requests.exceptions.RequestsDependencyWarning):
+                        # (RequestsWarning)
+                        sys.stderr.write(self.err['RequestsDependencyWarning'])
+                    elif issubclass(exc_type, client.DoesNotExist):
+                        sys.stderr.write(self.err['DoesNotExist'])
+                    else:
+                        sys.stderr.write(self.err['Exception'])
+                return True
+
     while offset < args.end:
         now = time.time()
         client = random.choice(args.clients)
         op = random.choice(args.ops)
-        try:
-            err = errors[op]
+        with Check(errors[op]) as check:
             if op == 'put':
                 fortune = args.fortune()
                 body = {
@@ -122,92 +210,18 @@ def _task(args):
                 indexed.append((db, fortune_id, fortune, now))
             elif op == 'get':
                 if not indexed:
+                    check.err = None
                     continue
                 db, fortune_id, fortune, epoch = random.choice(indexed)
-                if now < epoch + 20:
+                if now < epoch + 60:
+                    check.err = None
                     continue
                 body = client.get(db, fortune_id)
                 if body[FIELD] != fortune:
                     raise ValueError
             else:
+                check.err = None
                 continue
-        except ValueError:
-            sys.stderr.write(err['ValueError'])
-        except KeyError:
-            sys.stderr.write(err['KeyError'])
-        except requests.exceptions.HTTPError as e:
-            if e.response is None:
-                sys.stderr.write(err['BadResponse'])
-            else:
-                content = msgpack.loads(e.response.content)
-                message = content.get('#message', [content])[0]
-                print('\n{}: {}'.format(e, message))
-        except requests.exceptions.ConnectionError:
-            # (RequestException)
-            sys.stderr.write(err['ConnectionError'])
-        except requests.exceptions.ProxyError:
-            # (ConnectionError)
-            sys.stderr.write(err['ProxyError'])
-        except requests.exceptions.SSLError:
-            # (ConnectionError)
-            sys.stderr.write(err['SSLError'])
-        except requests.exceptions.Timeout:
-            # (RequestException)
-            sys.stderr.write(err['Timeout'])
-        except requests.exceptions.ConnectTimeout:
-            # (ConnectionError, Timeout)
-            sys.stderr.write(err['ConnectTimeout'])
-        except requests.exceptions.ReadTimeout:
-            # (Timeout)
-            sys.stderr.write(err['ReadTimeout'])
-        except requests.exceptions.URLRequired:
-            # (RequestException)
-            sys.stderr.write(err['URLRequired'])
-        except requests.exceptions.TooManyRedirects:
-            # (RequestException)
-            sys.stderr.write(err['TooManyRedirects'])
-        except requests.exceptions.MissingSchema:
-            # (RequestException, ValueError)
-            sys.stderr.write(err['MissingSchema'])
-        except requests.exceptions.InvalidSchema:
-            # (RequestException, ValueError)
-            sys.stderr.write(err['InvalidSchema'])
-        except requests.exceptions.InvalidURL:
-            # (RequestException, ValueError)
-            sys.stderr.write(err['InvalidURL'])
-        except requests.exceptions.InvalidHeader:
-            # (RequestException, ValueError)
-            sys.stderr.write(err['InvalidHeader'])
-        except requests.exceptions.ChunkedEncodingError:
-            # (RequestException)
-            sys.stderr.write(err['ChunkedEncodingError'])
-        except requests.exceptions.ContentDecodingError:
-            # (RequestException, BaseHTTPError)
-            sys.stderr.write(err['ContentDecodingError'])
-        except requests.exceptions.StreamConsumedError:
-            # (RequestException, TypeError)
-            sys.stderr.write(err['StreamConsumedError'])
-        except requests.exceptions.RetryError:
-            # (RequestException)
-            sys.stderr.write(err['RetryError'])
-        except requests.exceptions.UnrewindableBodyError:
-            # (RequestException)
-            sys.stderr.write(err['UnrewindableBodyError'])
-        except requests.exceptions.RequestsWarning:
-            # (Warning)
-            sys.stderr.write(err['RequestsWarning'])
-        except requests.exceptions.FileModeWarning:
-            # (RequestsWarning, DeprecationWarning)
-            sys.stderr.write(err['FileModeWarning'])
-        except requests.exceptions.RequestsDependencyWarning:
-            # (RequestsWarning)
-            sys.stderr.write(err['RequestsDependencyWarning'])
-        except client.DoesNotExist:
-            sys.stderr.write(err['DoesNotExist'])
-        except Exception:
-            sys.stderr.write(err['Exception'])
-        else:
-            sys.stderr.write(err['OK'])
 
 
 def task(args):
