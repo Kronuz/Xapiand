@@ -57,7 +57,8 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --enable-maintainer-mode \
   --program-suffix="" \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5' || echo '/usr/local')" \
-  CXXFLAGS="-DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS"
+  CXXFLAGS="-O3 -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O3 $LDFLAGS"
 ```
 
 #### Build, Test and Install
@@ -69,17 +70,48 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
 ```
 
 
-### Address Sanitizer (ASAN + UBSAN)
+### Debug mode
 
 ```sh
 ~/xapian/xapian-core $ ./configure \
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
+  --enable-assertions \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5' || echo '/usr/local')" \
+  CXXFLAGS="-O2 -g -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O2 -g $LDFLAGS"
+```
+
+
+### Address Sanitizer (ASAN)
+
+```sh
+~/xapian/xapian-core $ ./configure \
+  --disable-dependency-tracking \
+  --disable-documentation \
+  --enable-maintainer-mode \
+  --enable-assertions \
   --program-suffix="" \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-asan' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
-  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
+  CXXFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=address -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=address $LDFLAGS"
+```
+
+
+### UndefinedBehavior Sanitizer (ASAN + UBSAN)
+
+```sh
+~/xapian/xapian-core $ ./configure \
+  --disable-dependency-tracking \
+  --disable-documentation \
+  --enable-maintainer-mode \
+  --enable-assertions \
+  --program-suffix="" \
+  --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-ubsan' || echo '/usr/local')" \
+  CXXFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all $LDFLAGS"
 ```
 
 
@@ -90,10 +122,11 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
+  --enable-assertions \
   --program-suffix="" \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-msan' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
-  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
+  CXXFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins $LDFLAGS"
 ```
 
 
@@ -104,8 +137,9 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
+  --enable-assertions \
   --program-suffix="" \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5-tsan' || echo '/usr/local')" \
-  CXXFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
-  LDFLAGS="-fno-omit-frame-pointer -gline-tables-only -fsanitize=thread $LDFLAGS"
+  CXXFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=thread -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
+  LDFLAGS="-O2 -g -fno-omit-frame-pointer -fsanitize=thread $LDFLAGS"
 ```

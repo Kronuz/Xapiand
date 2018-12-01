@@ -78,7 +78,7 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 ~/Xapiand/build $ cmake -GNinja -DASAN=ON ..
 ```
 
-#### Address Sanitizer (ASAN + UBSAN)
+#### Address Sanitizer (ASAN)
 
 * For developing and debugging, generally you'd want to enable the
   *Address Sanitizer*, tracebacks in exceptions and debugging symbols,
@@ -86,7 +86,19 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 
     ```sh
 ~/Xapiand/build $ brew switch xapian 1.5-asan
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DASAN=ON -DUBSAN=ON ..
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON ..
+```
+
+#### UndefinedBehavior Sanitizer (ASAN + UBSAN)
+
+* For developing and debugging, generally you'd want to enable the
+  *Address Sanitizer* and *UndefinedBehavior Sanitizer*, tracebacks in
+  exceptions and debugging symbols, so you'll have to **Configure the Build**
+  using something like:
+
+    ```sh
+~/Xapiand/build $ brew switch xapian 1.5-asan
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON -DUBSAN=ON ..
 ```
 
 #### Memory Sanitizer (MSAN)
@@ -97,7 +109,7 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 
     ```sh
 ~/Xapiand/build $ brew switch xapian 1.5-msan
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMSAN=ON ..
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DMSAN=ON ..
 ```
 
 #### Thread Sanitizer (TSAN)
@@ -108,7 +120,7 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 
     ```sh
 ~/Xapiand/build $ brew switch xapian 1.5-tsan
-~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTSAN=ON ..
+~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DTSAN=ON ..
 ```
 
 #### macOS specifics
