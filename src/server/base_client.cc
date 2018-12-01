@@ -94,8 +94,6 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	io_write.set(sock, ev::WRITE);
 
 	++XapiandManager::manager->total_clients;
-
-	start();
 }
 
 

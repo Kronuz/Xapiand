@@ -152,9 +152,12 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		}
 	} else {
 		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+
 		if (!client->init_remote()) {
 			client->destroy();
 		}
+
+		client->start();
 	}
 }
 
@@ -211,6 +214,8 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		client->destroy();
 		return;
 	}
+
+	client->start();
 
 	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }

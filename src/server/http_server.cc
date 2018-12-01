@@ -119,6 +119,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 			L_ERR("ERROR: accept http error {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		}
 	} else {
-		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
+		auto client = Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
+		client->start();
 	}
 }

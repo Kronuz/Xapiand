@@ -137,7 +137,6 @@ BinaryClient::init_remote() noexcept
 		// And start a runner.
 		running = true;
 		XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
-
 		return true;
 	}
 
