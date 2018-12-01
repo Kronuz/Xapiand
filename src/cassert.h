@@ -42,10 +42,6 @@ extern "C" {
 
 #ifdef XAPIAND_ASSERTS
 
-#define	ASSERT(e)	((void)0)
-
-#else // XAPIAND_ASSERTS
-
 #include "likely.h"
 
 #if defined(__cplusplus)
@@ -56,6 +52,10 @@ extern "C" {
 
 #define ASSERT(e) \
 	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
+
+#else // XAPIAND_ASSERTS
+
+#define	ASSERT(e)	((void)0)
 
 #endif // XAPIAND_ASSERTS
 
