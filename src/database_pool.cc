@@ -484,6 +484,11 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	ASSERT(!database);
 
+	if (endpoints.empty()) {
+		L_DEBUG("ERROR: Expecting at least one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
+		THROW(CheckoutErrorBadEndpoint, "Cannot checkout empty database");
+	}
+
 	if (db_writable && endpoints.size() != 1) {
 		L_DEBUG("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout writable multi-database");
