@@ -431,8 +431,12 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 		auto is_ready_to_lock = [&] {
 			for (auto& used_endpoints : used_endpoints_map[database->endpoints[0]]) {
 				auto endpoint_queue = databases.get(used_endpoints);
-				if (endpoint_queue && endpoint_queue->size() < endpoint_queue->count) {
-					return false;
+				if (endpoint_queue) {
+					if (endpoint_queue->size() < endpoint_queue->count) {
+						return false;
+					}
+					// clear queues of databases containing endpoints which are to be locked
+					endpoint_queue->clear();
 				}
 			}
 			return true;
