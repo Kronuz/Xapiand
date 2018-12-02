@@ -45,7 +45,7 @@ def _task(args):
 
     errors = {
         'put': {
-            'DoesNotExist': "d",
+            'DoesNotExist': ".",
             'ValueError': "v",
             'KeyError': "y",
             'BadResponse': "x",
@@ -73,7 +73,7 @@ def _task(args):
             'OK': " ",
         },
         'get': {
-            'DoesNotExist': "D",
+            'DoesNotExist': ".",
             'ValueError': "V",
             'KeyError': "Y",
             'BadResponse': "X",
@@ -101,8 +101,6 @@ def _task(args):
             'OK': " ",
         }
     }
-
-    indexed = []
 
     class Check(object):
         def __init__(self, err):
@@ -193,6 +191,7 @@ def _task(args):
                         sys.stderr.write(self.err['Exception'])
                 return True
 
+    indexed = []
     while offset < args.end:
         now = time.time()
         client = random.choice(args.clients)
@@ -213,7 +212,7 @@ def _task(args):
                     check.err = None
                     continue
                 db, fortune_id, fortune, epoch = random.choice(indexed)
-                if now < epoch + 60:
+                if now < epoch + 120:
                     check.err = None
                     continue
                 body = client.get(db, fortune_id)
@@ -222,6 +221,21 @@ def _task(args):
             else:
                 check.err = None
                 continue
+
+    while indexed:
+        time.sleep(1)
+        new_indexed = []
+        for db, fortune_id, fortune, epoch in indexed:
+            now = time.time()
+            if now < epoch + 60:
+                new_indexed.append((db, fortune_id, fortune, epoch))
+            else:
+                client = random.choice(args.clients)
+                with Check(errors['get']) as check:
+                    body = client.get(db, fortune_id)
+                    if body[FIELD] != fortune:
+                        raise ValueError
+        indexed = new_indexed
 
 
 def task(args):
