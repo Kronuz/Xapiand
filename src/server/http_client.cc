@@ -2839,7 +2839,9 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 			static constexpr auto fmt_4xx = SADDLE_BROWN + "\"%s\" %d %s %s";
 			fmt = fmt_4xx.c_str();
-			priority = LOG_INFO;
+			if ((int)response.status != 404) {
+				priority = LOG_INFO;
+			}
 		} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"%s\" %d %s %s";
 			fmt = fmt_5xx.c_str();
