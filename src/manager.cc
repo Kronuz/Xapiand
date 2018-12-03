@@ -124,6 +124,9 @@ void sig_exit(int sig) {
 
 XapiandManager::XapiandManager()
 	: Worker(nullptr, loop_ref_nil, 0),
+	  total_clients(0),
+	  http_clients(0),
+	  binary_clients(0),
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("WW%02zu", opts.num_async_wal_writers),
@@ -137,7 +140,8 @@ XapiandManager::XapiandManager()
 	  shutdown_now(0),
 	  state(State::RESET),
 	  node_name(opts.node_name),
-	  atom_sig(0)
+	  atom_sig(0),
+	  process_start(std::chrono::system_clock::now())
 {
 	std::vector<std::string> values({
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
@@ -151,6 +155,9 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
 	: Worker(nullptr, ev_loop_, ev_flags_),
+	  total_clients(0),
+	  http_clients(0),
+	  binary_clients(0),
 	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
 	  wal_writer("WW%02zu", opts.num_async_wal_writers),
