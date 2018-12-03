@@ -238,20 +238,20 @@ def _task(args):
                 check.err = None
                 continue
 
-    while indexed:
-        time.sleep(1)
-        new_indexed = []
-        for db, fortune_id, fortune, epoch in indexed:
-            client = random.choice(args.clients)
-            with Check(errors['get']) as check:
-                check.ok = ""
-                try:
-                    body = client.get(db, fortune_id)
-                    if body[FIELD] != fortune:
-                        raise ValueError
-                except client.DoesNotExist:
-                    new_indexed.append((db, fortune_id, fortune, epoch))
-        indexed = new_indexed
+    # while indexed:
+    #     time.sleep(1)
+    #     new_indexed = []
+    #     for db, fortune_id, fortune, epoch in indexed:
+    #         client = random.choice(args.clients)
+    #         with Check(errors['get']) as check:
+    #             check.ok = ""
+    #             try:
+    #                 body = client.get(db, fortune_id)
+    #                 if body[FIELD] != fortune:
+    #                     raise ValueError
+    #             except client.DoesNotExist:
+    #                 new_indexed.append((db, fortune_id, fortune, epoch))
+    #     indexed = new_indexed
 
 
 def task(args):
