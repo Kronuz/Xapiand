@@ -45,7 +45,6 @@ def _task(args):
 
     errors = {
         'put': {
-            'DoesNotExist': ".",
             'ValueError': "v",
             'KeyError': "y",
             'BadResponse': "x",
@@ -70,10 +69,8 @@ def _task(args):
             'FileModeWarning': "f",
             'RequestsDependencyWarning': "d",
             'Exception': "e",
-            'OK': " ",
         },
         'get': {
-            'DoesNotExist': ".",
             'ValueError': "V",
             'KeyError': "Y",
             'BadResponse': "X",
@@ -98,13 +95,14 @@ def _task(args):
             'FileModeWarning': "F",
             'RequestsDependencyWarning': "W",
             'Exception': "E",
-            'OK': " ",
         }
     }
 
     class Check(object):
         def __init__(self, err):
             self.err = err
+            self.dne = "."
+            self.ok = " "
 
         def __enter__(self):
             return self
@@ -112,7 +110,8 @@ def _task(args):
         def __exit__(self, exc_type, exc_val, exc_tb):
             if self.err:
                 if exc_type is None:
-                    sys.stderr.write(self.err['OK'])
+                    if self.ok:
+                        sys.stderr.write(self.ok)
                 else:
                     if issubclass(exc_type, ValueError):
                         sys.stderr.write(self.err['ValueError'])
@@ -186,7 +185,8 @@ def _task(args):
                         # (RequestsWarning)
                         sys.stderr.write(self.err['RequestsDependencyWarning'])
                     elif issubclass(exc_type, client.DoesNotExist):
-                        sys.stderr.write(self.err['DoesNotExist'])
+                        if self.dne:
+                            sys.stderr.write(self.dne)
                     else:
                         sys.stderr.write(self.err['Exception'])
                 return True
@@ -212,9 +212,25 @@ def _task(args):
                     check.err = None
                     continue
                 db, fortune_id, fortune, epoch = random.choice(indexed)
-                if now < epoch + 120:
+                if now < epoch + 5:
                     check.err = None
                     continue
+                elif now < epoch + 25:
+                    check.dne = "⋅"
+                elif now < epoch + 50:
+                    check.dne = "･"
+                elif now < epoch + 75:
+                    check.dne = "∘"
+                elif now < epoch + 100:
+                    check.dne = "∙"
+                elif now < epoch + 125:
+                    check.dne = "●"
+                elif now < epoch + 150:
+                    check.dne = "⚈"
+                elif now < epoch + 175:
+                    check.dne = "⧳"
+                elif now < epoch + 200:
+                    check.dne = "▇"
                 body = client.get(db, fortune_id)
                 if body[FIELD] != fortune:
                     raise ValueError
@@ -226,15 +242,15 @@ def _task(args):
         time.sleep(1)
         new_indexed = []
         for db, fortune_id, fortune, epoch in indexed:
-            now = time.time()
-            if now < epoch + 60:
-                new_indexed.append((db, fortune_id, fortune, epoch))
-            else:
-                client = random.choice(args.clients)
-                with Check(errors['get']) as check:
+            client = random.choice(args.clients)
+            with Check(errors['get']) as check:
+                check.ok = ""
+                try:
                     body = client.get(db, fortune_id)
                     if body[FIELD] != fortune:
                         raise ValueError
+                except client.DoesNotExist:
+                    new_indexed.append((db, fortune_id, fortune, epoch))
         indexed = new_indexed
 
 
