@@ -140,8 +140,8 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
-	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid binary event {sock:%d}: %s", watcher.fd, error::name(errno), errno, error::description(errno));
+	if ((EV_ERROR & revents) != 0) {
+		L_EV("ERROR: got invalid binary event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
