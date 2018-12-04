@@ -701,10 +701,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		}
 
 		if (!database->closed) {
-			if (!queue->push(database)) {
-				cleanup(true, true, lk);
-				queue->push(database);
-			}
+			queue->push(database, 0);
 		}
 
 		std::swap(callbacks, queue->callbacks);
