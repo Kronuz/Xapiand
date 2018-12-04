@@ -115,11 +115,6 @@ BaseClient::~BaseClient()
 	io::close(sock);
 
 	Worker::deinit();
-
-	if (get_thread_name()[0] != 'S') {
-		L_CRIT("BaseClient destroyed from %s!" + TRACEBACK(), repr(get_thread_name()));
-		// sig_exit(-EX_SOFTWARE);
-	}
 }
 
 
