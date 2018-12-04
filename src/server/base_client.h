@@ -118,6 +118,7 @@ protected:
 			_io_cb_write(watcher, revents);
 		} catch (...) {
 			L_EXC("ERROR: Client died with an unhandled exception");
+			stop();
 			destroy();
 			detach();
 		}
@@ -180,12 +181,16 @@ protected:
 		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 		if (closed) {
+			stop();
+			destroy();
 			detach();
 			return;
 		}
 
 		if ((revents & EV_ERROR) != 0) {
 			L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+			stop();
+			destroy();
 			detach();
 			return;
 		}
@@ -315,6 +320,7 @@ protected:
 			_io_cb_read(watcher, revents);
 		} catch (...) {
 			L_EXC("ERROR: Client died with an unhandled exception");
+			stop();
 			destroy();
 			detach();
 		}

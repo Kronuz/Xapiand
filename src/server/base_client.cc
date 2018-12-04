@@ -322,12 +322,16 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if (closed) {
+		stop();
+		destroy();
 		detach();
 		return;
 	}
 
 	if ((revents & EV_ERROR) != 0) {
 		L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		stop();
+		destroy();
 		detach();
 		return;
 	}

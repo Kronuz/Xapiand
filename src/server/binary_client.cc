@@ -487,6 +487,7 @@ BinaryClient::operator()()
 				running = false;
 				lk.unlock();
 				L_ERR("Unexpected BinaryClient State!");
+				stop();
 				destroy();
 				detach();
 				return;
