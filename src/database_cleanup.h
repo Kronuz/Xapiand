@@ -47,7 +47,7 @@ public:
 	~DatabaseCleanup();
 
 	const char* name() const noexcept {
-		return "DCLN";
+		return "DBCL";
 	}
 
 	void operator()();
