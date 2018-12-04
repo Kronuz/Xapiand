@@ -840,7 +840,7 @@ DatabasePool::total_writable_databases()
 	size_t db_queues = writable_databases.size();
 	size_t db_enqueued = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
-	for (auto & writable_database : writable_databases) {
+	for (auto& writable_database : writable_databases) {
 		db_count += writable_database.second->count;
 		db_enqueued += writable_database.second->size();
 	}
@@ -861,7 +861,7 @@ DatabasePool::total_readable_databases()
 	size_t db_queues = databases.size();
 	size_t db_enqueued = 0;
 	std::lock_guard<std::mutex> lk(qmtx);
-	for (auto & database : databases) {
+	for (auto& database : databases) {
 		db_count += database.second->size();
 		db_enqueued += database.second->size();
 	}
