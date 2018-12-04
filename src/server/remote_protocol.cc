@@ -44,6 +44,10 @@
 // #define L_BINARY L_TEAL
 // #undef L_BINARY_PROTO
 // #define L_BINARY_PROTO L_TEAL
+// #undef L_OBJ_BEGIN
+// #define L_OBJ_BEGIN L_DELAYED_600
+// #undef L_OBJ_END
+// #define L_OBJ_END L_DELAYED_N_UNLOG
 
 
 /*  ____                      _       ____            _                  _
