@@ -107,7 +107,7 @@ public:
 
 	~DatabaseQueue();
 
-	size_t clear();
+	size_t clear(std::unique_lock<std::mutex>& lk);
 
 	size_t inc_count();
 	size_t dec_count();
@@ -141,11 +141,11 @@ public:
 	std::shared_ptr<DatabaseQueue> get(const Endpoints& endpoints);
 	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags);
 
-	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now);
+	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
 
 	void finish();
 
-	void clear();
+	void clear(std::unique_lock<std::mutex>& lk);
 };
 
 
@@ -177,7 +177,7 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 	std::condition_variable checkin_cond;
 
-	void _cleanup(bool writable, bool readable);
+	void cleanup(bool writable, bool readable, std::unique_lock<std::mutex>& lk);
 
 	std::shared_ptr<DatabaseQueue> _spawn_queue(const Endpoints& endpoints, int flags);
 

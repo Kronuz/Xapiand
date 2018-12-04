@@ -83,13 +83,20 @@ DatabaseQueue::~DatabaseQueue()
 
 
 size_t
-DatabaseQueue::clear()
+DatabaseQueue::clear(std::unique_lock<std::mutex>& lk)
 {
 	size_t pops = 0;
 	std::shared_ptr<Database> database;
 	while (pop(database, 0)) {
 		database->weak_queue.reset();
-		database.reset();
+		lk.unlock();
+		try {
+			database.reset();
+		} catch (...) {
+			lk.lock();
+			throw;
+		}
+		lk.lock();
 		++pops;
 	}
 	auto current_count = count.fetch_sub(pops);
@@ -232,7 +239,7 @@ DatabasesLRU::get(const std::shared_ptr<DatabasePool>& database_pool, const Endp
 
 
 void
-DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& now)
+DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("DatabasesLRU::cleanup()");
 
@@ -248,7 +255,7 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 		if (size > max_size) {
 			if (queue->renew_time < now - 60s) {
 				L_DATABASE("Evict queue from full LRU: %s", repr(queue->endpoints.to_string()));
-				queue->clear();
+				queue->clear(lk);
 				if (auto database_pool = queue->weak_database_pool.lock()) {
 					database_pool->_drop_endpoints(queue->endpoints);
 				}
@@ -260,7 +267,7 @@ DatabasesLRU::cleanup(const std::chrono::time_point<std::chrono::system_clock>& 
 		}
 		if (queue->renew_time < now - 3600s) {
 			L_DATABASE("Evict queue: %s", repr(queue->endpoints.to_string()));
-			queue->clear();
+			queue->clear(lk);
 			if (auto database_pool = queue->weak_database_pool.lock()) {
 				database_pool->_drop_endpoints(queue->endpoints);
 			}
@@ -286,10 +293,10 @@ DatabasesLRU::finish()
 
 
 void
-DatabasesLRU::clear()
+DatabasesLRU::clear(std::unique_lock<std::mutex>& lk)
 {
 	for (auto& queue : *this) {
-		queue.second->clear();
+		queue.second->clear(lk);
 		if (auto database_pool = queue.second->weak_database_pool.lock()) {
 			database_pool->_drop_endpoints(queue.second->endpoints);
 		}
@@ -436,7 +443,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 						return false;
 					}
 					// clear queues of databases containing endpoints which are to be locked
-					auto count = endpoint_queue->clear();
+					auto count = endpoint_queue->clear(lk);
 					ignore_unused(count);
 					ASSERT(count == 0);
 				}
@@ -481,7 +488,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
 
-	std::unique_lock<std::mutex> lk(qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 	if (!queue->locked) {
 		L_DEBUG("ERROR: Exclusive lock can be released only to locked databases");
 		THROW(Error, "Cannot grant exclusive lock database");
@@ -525,8 +532,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 			if (!queue->pop(database, 0)) {
 				// Increment so other threads don't delete the queue
 				auto count = queue->inc_count();
+				lk.unlock();
 				try {
-					lk.unlock();
 					if (
 						(db_writable && count > 1) ||
 						(!db_writable && count > 1000)
@@ -573,7 +580,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				}
 				auto wq = has_locked_endpoints();
 				if (wq) {
+					lk.unlock();
 					database.reset();
+					lk.lock();
 					if (--retries == 0 || !timeout) {
 						THROW(TimeOutError, "Locked database is not available");
 					}
@@ -679,19 +688,21 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	TaskQueue<void()> callbacks;
 
 	if (auto queue = database->weak_queue.lock()) {
-		std::lock_guard<std::mutex> lk(qmtx);
+		std::unique_lock<std::mutex> lk(qmtx);
 
 		if (db_writable) {
 			_unlocked_notify(queue);
 		} else if (locks) {
 			if (_lockable_notify(endpoints)) {
+				lk.unlock();
 				database->close();
+				lk.lock();
 			}
 		}
 
 		if (!database->closed) {
 			if (!queue->push(database)) {
-				_cleanup(true, true);
+				cleanup(true, true, lk);
 				queue->push(database);
 			}
 		}
@@ -720,13 +731,13 @@ DatabasePool::release_queue(const Endpoints& endpoints, int flags)
 	TaskQueue<void()> callbacks;
 
 	{
-		std::lock_guard<std::mutex> lk(qmtx);
+		std::unique_lock<std::mutex> lk(qmtx);
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
 			auto queue = writable_databases.get(endpoints);
 			if (queue) {
 				std::swap(callbacks, queue->callbacks);
 				if (queue->count == 0 && !queue->locked) {
-					queue->clear();
+					queue->clear(lk);
 					_drop_endpoints(endpoints);
 					queue->weak_database_pool.reset();
 					writable_databases.erase(endpoints);
@@ -740,7 +751,7 @@ DatabasePool::release_queue(const Endpoints& endpoints, int flags)
 			if (queue) {
 				std::swap(callbacks, queue->callbacks);
 				if (queue->count == 0 && !queue->locked) {
-					queue->clear();
+					queue->clear(lk);
 					_drop_endpoints(endpoints);
 					queue->weak_database_pool.reset();
 					databases.erase(endpoints);
@@ -771,16 +782,16 @@ DatabasePool::finish()
 
 
 void
-DatabasePool::_cleanup(bool writable, bool readable)
+DatabasePool::cleanup(bool writable, bool readable, std::unique_lock<std::mutex>& lk)
 {
-	L_CALL("DatabasePool::_cleanup(%s, %s)", writable ? "true" : "false", readable ? "true" : "false");
+	L_CALL("DatabasePool::cleanup(%s, %s, <lk>)", writable ? "true" : "false", readable ? "true" : "false");
 
 	const auto now = std::chrono::system_clock::now();
 
 	if (writable) {
 		if (cleanup_writable_time < now - 60s) {
 			L_DATABASE("Cleanup writable databases...");
-			writable_databases.cleanup(now);
+			writable_databases.cleanup(now, lk);
 			cleanup_writable_time = now;
 		}
 	}
@@ -788,7 +799,7 @@ DatabasePool::_cleanup(bool writable, bool readable)
 	if (readable) {
 		if (cleanup_readable_time < now - 60s) {
 			L_DATABASE("Cleanup readable databases...");
-			databases.cleanup(now);
+			databases.cleanup(now, lk);
 			cleanup_readable_time = now;
 		}
 	}
@@ -801,7 +812,7 @@ DatabasePool::cleanup()
 	L_CALL("DatabasePool::cleanup()");
 
 	std::unique_lock<std::mutex> lk(qmtx);
-	_cleanup(true, true);
+	cleanup(true, true, lk);
 }
 
 
@@ -810,10 +821,10 @@ DatabasePool::clear()
 {
 	L_CALL("DatabasePool::clear()");
 
-	std::lock_guard<std::mutex> lk(qmtx);
+	std::unique_lock<std::mutex> lk(qmtx);
 
-	writable_databases.clear();
-	databases.clear();
+	writable_databases.clear(lk);
+	databases.clear(lk);
 
 	used_endpoints_map.clear();
 }
