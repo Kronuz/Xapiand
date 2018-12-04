@@ -186,14 +186,14 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	void _unlocked_notify(const std::shared_ptr<DatabaseQueue>& queue);
 	bool _lockable_notify(const Endpoints& endpoints);
 
+	void release_queue(const Endpoints& endpoints, int flags);
+
 public:
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
 
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
 	void checkin(std::shared_ptr<Database>& database);
-
-	void release_queue(const Endpoints& endpoints, int flags);
 
 	template <typename Func>
 	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout, Func callback) {
@@ -213,11 +213,12 @@ public:
 	}
 
 	DatabasePool(size_t dbpool_size, size_t max_databases);
+	~DatabasePool();
+
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;
 	DatabasePool& operator=(const DatabasePool&) = delete;
 	DatabasePool& operator=(DatabasePool&&) = delete;
-	~DatabasePool();
 
 	void finish();
 	void cleanup();
