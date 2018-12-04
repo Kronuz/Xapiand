@@ -46,11 +46,6 @@
 #include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 
 
-constexpr int RECOVER_REMOVE_WRITABLE         = 0x01; // Remove endpoint from writable database
-constexpr int RECOVER_REMOVE_DATABASE         = 0x02; // Remove endpoint from database
-constexpr int RECOVER_REMOVE_ALL              = 0x04; // Remove endpoint from writable database and database
-constexpr int RECOVER_DECREMENT_COUNT         = 0x08; // Decrement count queue
-
 constexpr double DB_TIMEOUT = 60.0;
 
 struct DatabaseCount {
