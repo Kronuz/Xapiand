@@ -29,13 +29,14 @@
 #include "cassert.h"                  // for ASSERT
 #include "database.h"                 // for Database
 #include "database_wal.h"             // for DatabaseWAL
-#include "fs.hh"                      // for move_files, delete_files, build_path_index
 #include "error.hh"                   // for error:name, error::description
+#include "fs.hh"                      // for move_files, delete_files, build_path_index
 #include "io.hh"                      // for io::*
 #include "length.h"                   // for serialise_string, unserialise_string
 #include "manager.h"                  // for XapiandManager::manager
 #include "random.hh"                  // for random_int
 #include "server/binary_client.h"     // for BinaryClient
+#include "tcp.h"                      // for TCP::connect
 
 
 // #undef L_DEBUG
@@ -128,6 +129,25 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 		return false;
 	}
 	return true;
+}
+
+
+void
+ReplicationProtocol::connect()
+{
+	L_CALL("ReplicationProtocol::connect()");
+
+	ASSERT(src_endpoints.size() == 1);
+
+	auto& src_endpoint = src_endpoints[0];
+	auto& node = src_endpoint.node;
+	int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
+	auto& host = node.host();
+	if ((client.sock = TCP::connect(client.sock, host, std::to_string(port))) == -1) {
+		L_ERR("Cannot connect to %s:%d", host, port);
+		client.detach();
+	}
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);
 }
 
 

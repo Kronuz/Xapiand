@@ -121,6 +121,8 @@ public:
 
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
+	void connect();
+
 	void send_message(ReplicationReplyType type, const std::string& message);
 	void send_file(ReplicationReplyType type, int fd);
 

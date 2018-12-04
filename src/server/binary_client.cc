@@ -31,7 +31,6 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include "tcp.h"                              // for TCP::connect
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
@@ -64,7 +63,7 @@
 
 BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: MetaBaseClient<BinaryClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  state(State::INIT),
+	  state(State::INIT_REMOTE),
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
@@ -131,16 +130,15 @@ BinaryClient::init_remote() noexcept
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	if (!running) {
-		// Setup state...
-		state = State::INIT;
-		// And start a runner.
-		running = true;
-		XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
-		return true;
-	}
+	ASSERT(!running);
 
-	return false;
+	// Setup state...
+	state = State::INIT_REMOTE;
+
+	// And start a runner.
+	running = true;
+	XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
+	return true;
 }
 
 
@@ -151,18 +149,17 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	state = State::REPLICATIONPROTOCOL_CLIENT;
+	ASSERT(!running);
+
+	// Setup state...
+	state = State::INIT_REPLICATION;
 
 	if (replication_protocol.init_replication(src_endpoint, dst_endpoint)) {
-		int port = (src_endpoint.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.node.binary_port;
-		if ((sock = TCP::connect(sock, src_endpoint.node.host(), std::to_string(port))) == -1) {
-			L_ERR("Cannot connect to %s", src_endpoint.node.host(), std::to_string(port));
-			return false;
-		}
-		L_CONN("Connected to %s! (in socket %d)", repr(src_endpoint.to_string()), sock);
+		// And start a runner.
+		running = true;
+		XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
 		return true;
 	}
-
 	return false;
 }
 
@@ -357,20 +354,38 @@ BinaryClient::operator()()
 
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
-	if (state == State::INIT) {
-		state = State::REMOTEPROTOCOL_SERVER;
-		lk.unlock();
-		try {
-			remote_protocol.msg_update(std::string());
-		} catch (...) {
-			lk.lock();
-			running = false;
+	switch (state) {
+		case State::INIT_REMOTE:
+			state = State::REMOTEPROTOCOL_SERVER;
 			lk.unlock();
-			L_CONN("Running in worker ended with an exception.");
-			detach();
-			throw;
-		}
-		lk.lock();
+			try {
+				remote_protocol.msg_update(std::string());
+			} catch (...) {
+				lk.lock();
+				running = false;
+				lk.unlock();
+				L_CONN("Running in worker ended with an exception.");
+				detach();
+				throw;
+			}
+			lk.lock();
+			break;
+		case State::INIT_REPLICATION:
+			state = State::REPLICATIONPROTOCOL_CLIENT;
+			lk.unlock();
+			try {
+				replication_protocol.connect();
+			} catch (...) {
+				lk.lock();
+				running = false;
+				lk.unlock();
+				L_CONN("Running in worker ended with an exception.");
+				detach();
+				throw;
+			}
+			lk.lock();
+		default:
+			break;
 	}
 
 	while (!messages.empty() && !closed) {
@@ -467,14 +482,6 @@ BinaryClient::operator()()
 				lk.lock();
 				break;
 			}
-
-			case State::INIT:
-				running = false;
-				lk.unlock();
-				L_ERR("Unexpected BinaryClient State::INIT!");
-				destroy();
-				detach();
-				return;
 
 			default:
 				running = false;
