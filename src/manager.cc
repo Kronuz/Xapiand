@@ -53,7 +53,9 @@
 #include "allocator.h"                        // for allocator::total_allocated
 #include "cassert.h"                          // for ASSERT
 #include "color_tools.hh"                     // for color
+#include "database_cleanup.h"                 // for DatabaseCleanup
 #include "database_handler.h"                 // for DatabaseHandler, committer
+#include "database_pool.h"                    // for DatabasePool
 #include "database_utils.h"                   // for RESERVED_TYPE
 #include "epoch.hh"                           // for epoch::now
 #include "error.hh"                           // for error:name, error::description
@@ -175,8 +177,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  signal_sig_async(*ev_loop),
 	  setup_node_async(*ev_loop),
 	  cluster_database_ready_async(*ev_loop),
-	  process_start(process_start_),
-	  cleanup(*ev_loop)
+	  process_start(process_start_)
 {
 	// Set the id in local node.
 	auto local_node = Node::local_node();
@@ -216,10 +217,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 
 	cluster_database_ready_async.set<XapiandManager, &XapiandManager::cluster_database_ready_async_cb>(this);
 	cluster_database_ready_async.start();
-
-	cleanup.set<XapiandManager, &XapiandManager::cleanup_cb>(this);
-	cleanup.repeat = 60.0;
-	cleanup.again();
 }
 
 
@@ -460,17 +457,6 @@ XapiandManager::host_address()
 
 
 void
-XapiandManager::cleanup_cb(ev::timer& /*unused*/, int revents)
-{
-	L_CALL("XapiandManager::cleanup_cb(<timer>, 0x%x (%s))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
-
-	database_pool->cleanup();
-}
-
-
-void
 XapiandManager::signal_sig(int sig)
 {
 	atom_sig = sig;
@@ -674,6 +660,10 @@ XapiandManager::make_servers()
 		}
 #endif
 	}
+
+	auto database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
+	database_cleanup->run();
+	database_cleanup->start();
 
 	// Make server protocols weak:
 	weak_http = std::move(http);

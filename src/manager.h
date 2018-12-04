@@ -31,7 +31,6 @@
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"                          // for Base62
-#include "database_pool.h"                    // for DatabasePool
 #include "database_wal.h"                     // for DatabaseWALWriter
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
@@ -55,6 +54,7 @@ class BinaryServer;
 
 class HttpClient;
 class HttpServer;
+class DatabasePool;
 
 extern void sig_exit(int sig);
 
@@ -159,9 +159,6 @@ public:
 	ev::async cluster_database_ready_async;
 	ev::async shutdown_sig_async;
 	std::chrono::time_point<std::chrono::system_clock> process_start;
-
-	ev::timer cleanup;
-	void cleanup_cb(ev::timer& watcher, int revents);
 
 	void signal_sig(int sig);
 	void signal_sig_async_cb(ev::async&, int);
