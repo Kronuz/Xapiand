@@ -287,7 +287,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 {
 	L_CALL("Worker::_detach_impl(<weak_child>, %d) %s", retries, __repr__());
 
-	std::lock_guard<std::recursive_mutex> lk(_mtx);
+	std::unique_lock<std::recursive_mutex> lk(_mtx);
 
 #ifdef LOG_WORKER
 	std::string child_repr;
@@ -310,6 +310,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 		child_repr = child->__repr__();
 		child_use_count = child.use_count();
 #endif
+		lk.unlock();
+		child.reset();
+		lk.lock();
 	} else {
 		return;  // It was already detached
 	}
