@@ -52,7 +52,7 @@ enum class GetAction : uint8_t {
 template<typename Key, typename T>
 class LRU {
 protected:
-	using list_t = std::list<std::pair<const Key, T>>;
+	using list_t = std::list<std::pair<Key, T>>;
 	using map_t = std::unordered_map<Key, typename list_t::iterator>;
 
 	list_t _items_list;
