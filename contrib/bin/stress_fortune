@@ -266,17 +266,25 @@ def task(args):
 def main():
     hosts = []
     databases = []
+    start = 0
     tasks = TASKS
     workers = WORKERS
     try:
-        # "10000/200" "127.0.0.1:8880" ":8881" ":8882-8883" "fortune.0-20"
+        # "10000-20000/200"  "10000/200" "127.0.0.1:8880" ":8881" ":8882-8883" "fortune.0-20"
         for arg in sys.argv[1:]:
             if arg in ("-h", "--help"):
                 raise ValueError("Help!")
-            m = re.match(r'^(\d+)?(?:/(\d+))?$', arg)
+            m = re.match(r'^(\d+)?(?:-(\d+)?)(?:/(\d+))?$', arg)
             if m and any(m.groups()):
-                tasks = int(m.group(1) or tasks)
-                workers = int(m.group(2) or workers)
+                if m.group(2):
+                    start = int(m.group(1) or start)
+                    tasks = int(m.group(2) or tasks) - start
+                    if tasks < 0:
+                        print("ERROR: When using a range for tasks the start value must be smaller!", file=sys.stderr)
+                        raise ValueError("Invalid!")
+                else:
+                    tasks = int(m.group(1) or tasks)
+                workers = int(m.group(3) or workers)
                 continue
             m = re.match(r'^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))?(?::(\d+)(?:-(\d+))?)?$', arg)
             if m and any(m.groups()):
@@ -345,8 +353,8 @@ def main():
             jobs = []
             for i in range(workers):
                 jobs.append(Args(
-                    start=i * tpw,
-                    end=i * tpw + tpw,
+                    start=start + i * tpw,
+                    end=start + i * tpw + tpw,
                     ops=ops,
                     clients=clients,
                     databases=databases,
@@ -356,7 +364,7 @@ def main():
             pool.map_async(task, jobs).wait(1000000)
         else:
             task(Args(
-                start=0,
+                start=start,
                 end=tasks,
                 ops=ops,
                 clients=clients,
