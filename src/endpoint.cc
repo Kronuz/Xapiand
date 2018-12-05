@@ -343,8 +343,8 @@ std::string
 Endpoints::to_string() const
 {
 	std::string ret;
-	auto j = endpoints.cbegin();
-	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
+	auto j = cbegin();
+	for (int i = 0; j != cend(); ++j, ++i) {
 		if (i != 0) {
 			ret += ";";
 		}
@@ -359,8 +359,8 @@ Endpoints::hash() const
 {
 	size_t hash = 0;
 	std::hash<Endpoint> hash_fn;
-	auto j = endpoints.cbegin();
-	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
+	auto j = cbegin();
+	for (int i = 0; j != cend(); ++j, ++i) {
 		hash ^= hash_fn(*j);
 	}
 	return hash;

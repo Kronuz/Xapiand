@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include <unordered_set>        // for unordered_set
-#include <vector>               // for vector
+#include <algorithm>            // for std::find, std::sort
+#include <vector>               // for std::vector
 
 #include "node.h"
 
@@ -85,9 +85,7 @@ public:
 };
 
 
-class Endpoints : private std::vector<Endpoint> {
-	std::unordered_set<Endpoint> endpoints;
-
+class Endpoints : public std::vector<Endpoint> {
 public:
 	using std::vector<Endpoint>::empty;
 	using std::vector<Endpoint>::size;
@@ -103,25 +101,16 @@ public:
 
 	template <typename T, typename = std::enable_if_t<std::is_same<Endpoint, std::decay_t<T>>::value>>
 	explicit Endpoints(T&& endpoint) {
-		add(std::forward<T>(endpoint));
+		push_back(std::forward<T>(endpoint));
 	}
 
 	size_t hash() const;
 	std::string to_string() const;
 
-	void clear() noexcept {
-		endpoints.clear();
-		std::vector<Endpoint>::clear();
-	}
-
-	bool empty() const noexcept {
-		return endpoints.empty();
-	}
-
 	void add(const Endpoint& endpoint) {
-		auto p = endpoints.insert(endpoint);
-		if (p.second) {
+		if (std::find(begin(), end(), endpoint) == end()) {
 			push_back(endpoint);
+			std::sort(begin(), end());
 		}
 	}
 };
