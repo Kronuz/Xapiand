@@ -507,7 +507,7 @@ ReplicationProtocol::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_database) {
-				XapiandManager::manager->database_pool->checkout(switch_database, Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
+				switch_database = XapiandManager::manager->database_pool->checkout(Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
 			}
 			switch_database->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_database.get());

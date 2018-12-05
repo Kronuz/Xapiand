@@ -27,7 +27,7 @@
 
 #include "cassert.h"              // for ASSERT
 #include "database_flags.h"       // DB_*
-#include "database_pool.h"        // for DatabaseQueue
+#include "database_pool.h"        // for DatabaseEndpoint
 #include "database_handler.h"     // for committer
 #include "database_wal.h"         // for DatabaseWAL, DatabaseWALWriter
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -213,10 +213,10 @@ DataStorage::open(std::string_view relative_path)
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_)
-	: weak_queue(queue_),
-	  endpoints(queue_->endpoints),
-	  flags(queue_->flags),
+Database::Database(DatabaseEndpoint& endpoints_, int flags_)
+	: endpoints(endpoints_),
+	  flags(flags_),
+	  busy(false),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
 	  modified(false),
@@ -228,8 +228,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_)
 	  transaction(Transaction::none)
 {
 	reopen();
-
-	queue_->inc_count();
 }
 
 
@@ -238,10 +236,6 @@ Database::~Database()
 	try {
 		do_close(true, true, Database::Transaction::none);
 	} catch (...) {
-	}
-
-	if (auto queue = weak_queue.lock()) {
-		queue->dec_count();
 	}
 
 	if (log) {
@@ -359,9 +353,7 @@ Database::reopen_writable()
 		// WAL required on a local writable database, open it.
 		DatabaseWAL wal(this);
 		if (wal.execute(true)) {
-			if (auto queue = weak_queue.lock()) {
-				modified = true;
-			}
+			modified = true;
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
@@ -715,9 +707,7 @@ Database::commit(bool wal_, bool send_update)
 			}
 			modified = false;
 			if (is_writable_and_local) {
-				if (auto queue = weak_queue.lock()) {
-					queue->local_revision = wdb->get_revision();
-				}
+				endpoints.local_revision = wdb->get_revision();
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -1774,11 +1764,19 @@ Database::dump_documents()
 
 
 std::string
+Database::to_string() const
+{
+	return endpoints.to_string();
+}
+
+
+std::string
 Database::__repr__() const
 {
-	return string::format("<%s at %p {endpoint:%s, flags:(%s)}>",
+	return string::format("<%s at %p {endpoint:%s, flags:(%s)}%s>",
 		_database ? is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database" : "InvalidDatabase",
 		static_cast<const void*>(this),
 		repr(endpoints.to_string()),
-		readable_flags(flags));
+		readable_flags(flags),
+		busy ? " (busy)" : "");
 }

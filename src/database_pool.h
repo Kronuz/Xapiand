@@ -27,120 +27,83 @@
 #include <atomic>               // for std::atomic_bool
 #include <chrono>               // for std::chrono, std::chrono::system_clock
 #include <cstring>              // for size_t
-#include <memory>               // for std::shared_ptr, std::enable_shared_from_this, std::make_shared
+#include <memory>               // for std::shared_ptr
 #include <mutex>                // for std::mutex, std::condition_variable, std::unique_lock
+#include <set>                  // for std::set
 #include <string>               // for std::string
-#include <sys/types.h>          // for uint32_t, uint8_t, ssize_t
-#include <type_traits>          // for std::forward
-#include <unordered_map>        // for std::unordered_map
-#include <unordered_set>        // for std::unordered_set
-#include <utility>              // for std::pair, std::make_pair
+#include <utility>              // for std::pair
 #include <vector>               // for std::vector
-#include <xapian.h>             // for Xapian::docid, Xapian::termcount, Xapian::Document, Xapian::ExpandDecider
+#include <xapian.h>             // for Xapian::rev
 
-#include "cuuid/uuid.h"         // for UUID, UUID_LENGTH
-#include "database_flags.h"     // for DB_WRITABLE
+#include "threadpool.hh"        // for TaskQueue
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
-#include "queue.h"              // for Queue, QueueSet
-#include "storage.h"            // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 
 
 constexpr double DB_TIMEOUT = 60.0;
 
-struct DatabaseCount {
-	size_t count;
-	size_t queues;
-	size_t enqueued;
-};
-
 class Database;
 class DatabasePool;
-class DatabasesLRU;
+class BusyDatabaseEndpoint;
 
 
-//  ____        _        _                     ___
-// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___ / _ \ _   _  ___ _   _  ___
-// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ | | | | | |/ _ \ | | |/ _ \
-// | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |_| | |_| |  __/ |_| |  __/
-// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|\__\_\\__,_|\___|\__,_|\___|
-//
-class DatabaseQueue :
-	public queue::Queue<std::shared_ptr<Database>>,
-	public std::enable_shared_from_this<DatabaseQueue> {
-
+//  ____        _        _                    _____           _             _       _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| ____|_ __   __| |_ __   ___ (_)_ __ | |_ ___
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \  _| | '_ \ / _` | '_ \ / _ \| | '_ \| __/ __|
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_\__ \
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
+//                                                             |_|
+class DatabaseEndpoint : public Endpoints
+{
 	friend Database;
 	friend DatabasePool;
-	friend DatabasesLRU;
+	friend BusyDatabaseEndpoint;
 
-	bool locked;
+	std::mutex mtx;
+
+	DatabasePool& database_pool;
+
+	std::atomic_int busy;
+
+	std::atomic_bool finished;
+
+	std::atomic_bool locked;
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 
-	std::atomic<size_t> count;
+	std::shared_ptr<Database> writable;
+	std::vector<std::shared_ptr<Database>> readables;
 
-	std::condition_variable unlocked_cond;
+	std::atomic_size_t readables_available;
+	std::condition_variable writable_cond;
+	std::condition_variable readables_cond;
+
 	std::condition_variable lockable_cond;
-
-	const Endpoints endpoints;
-	const int flags;
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
-public:
-	std::weak_ptr<DatabasePool> weak_database_pool;
-
-protected:
-	template <typename... Args>
-	DatabaseQueue(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags, Args&&... args);
+	std::shared_ptr<Database> writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback);
+	std::shared_ptr<Database> readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
 public:
-	DatabaseQueue(const DatabaseQueue&) = delete;
-	DatabaseQueue(DatabaseQueue&&) = delete;
-	DatabaseQueue& operator=(const DatabaseQueue&) = delete;
-	DatabaseQueue& operator=(DatabaseQueue&&) = delete;
+	DatabaseEndpoint(DatabasePool& database_pool, const Endpoints& endpoints);
 
-	~DatabaseQueue();
+	std::shared_ptr<Database> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
-	size_t clear(std::unique_lock<std::mutex>& lk);
-
-	size_t inc_count();
-	size_t dec_count();
-
-	template <typename... Args>
-	static std::shared_ptr<DatabaseQueue> make_shared(Args&&... args) {
-		// std::make_shared only can call a public constructor, for this reason
-		// it is neccesary wrap the constructor in a struct.
-		struct enable_make_shared : DatabaseQueue {
-			enable_make_shared(Args&&... args_) : DatabaseQueue(std::forward<Args>(args_)...) { }
-		};
-
-		return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
-	}
-
-	std::string __repr__() const;
-	std::string dump_databases(int level = 1) const;
-};
-
-
-//  ____        _        _                    _     ____  _   _
-// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| |   |  _ \| | | |
-// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |   | |_) | | | |
-// | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___|  _ <| |_| |
-// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| \_\\___/
-//
-class DatabasesLRU : public lru::LRU<Endpoints, std::shared_ptr<DatabaseQueue>> {
-public:
-	DatabasesLRU(size_t dbpool_size);
-
-	std::shared_ptr<DatabaseQueue> get(const Endpoints& endpoints);
-	std::pair<std::shared_ptr<DatabaseQueue>, bool> get(const std::shared_ptr<DatabasePool>& database_pool, const Endpoints& endpoints, int flags);
-
-	void cleanup(const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
+	void checkin(std::shared_ptr<Database>& database);
 
 	void finish();
 
-	void clear(std::unique_lock<std::mutex>& lk);
+	std::pair<size_t, size_t> clear();
+
+	std::pair<size_t, size_t> count();
+
+	bool is_busy();
+
+	bool empty();
+
+	std::string __repr__() const;
+	std::string dump_databases(int level);
 };
 
 
@@ -150,78 +113,57 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
-class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
-	// FIXME: Add maximum number of databases available for the queue
-	// FIXME: Add cleanup for removing old database queues
-	friend DatabaseQueue;
-	friend DatabasesLRU;
+class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
+	friend DatabaseEndpoint;
 
-	std::mutex qmtx;
-	bool finished;
-	size_t locks;
+	std::mutex mtx;
 
-	const std::shared_ptr<queue::QueueState> queue_state;
+	std::unordered_map<Endpoint, std::set<Endpoints>> endpoints_map;
 
-	std::unordered_map<Endpoint, std::unordered_set<Endpoints>> used_endpoints_map;
+	size_t max_databases;
 
-	DatabasesLRU databases;
-	DatabasesLRU writable_databases;
-
-	std::chrono::time_point<std::chrono::system_clock> cleanup_readable_time;
-	std::chrono::time_point<std::chrono::system_clock> cleanup_writable_time;
-
-	std::condition_variable checkin_cond;
-
-	void cleanup(bool writable, bool readable, std::unique_lock<std::mutex>& lk);
-
-	std::shared_ptr<DatabaseQueue> _spawn_queue(const Endpoints& endpoints, int flags);
-
+	void _lot_endpoints(const Endpoints& endpoints);
 	void _drop_endpoints(const Endpoints& endpoints);
 
-	void _unlocked_notify(const std::shared_ptr<DatabaseQueue>& queue);
-	bool _lockable_notify(const Endpoints& endpoints);
+	BusyDatabaseEndpoint _spawn(const Endpoints& endpoints);
+	BusyDatabaseEndpoint spawn(const Endpoints& endpoints);
 
-	void release_queue(const Endpoints& endpoints, int flags);
+	BusyDatabaseEndpoint _get(const Endpoints& endpoints);
+	BusyDatabaseEndpoint get(const Endpoints& endpoints);
 
 public:
-	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
-	void unlock(const std::shared_ptr<Database>& database);
-
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
-	void checkin(std::shared_ptr<Database>& database);
-
-	template <typename Func>
-	void checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, double timeout, Func callback) {
-		try {
-			checkout(database, endpoints, flags, timeout);
-		} catch (const TimeOutError&) {
-			bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
-			std::lock_guard<std::mutex> lk(qmtx);
-			auto queue = db_writable
-					? writable_databases.get(endpoints)
-					: databases.get(endpoints);
-			if (queue) {
-				queue->callbacks.enqueue(callback);
-			}
-			throw;
-		}
-	}
-
 	DatabasePool(size_t dbpool_size, size_t max_databases);
-	~DatabasePool();
 
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;
 	DatabasePool& operator=(const DatabasePool&) = delete;
 	DatabasePool& operator=(DatabasePool&&) = delete;
 
+	std::vector<BusyDatabaseEndpoint> endpoints();
+	std::vector<BusyDatabaseEndpoint> endpoints(const Endpoint& endpoint);
+
+	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
+	void unlock(const std::shared_ptr<Database>& database);
+
+	bool is_locked(const Endpoints& endpoints);
+
+	template <typename Func>
+	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout, Func&& func) {
+		std::packaged_task<void()> callback(std::forward<Func>(func));
+		return checkout(endpoints, flags, timeout, &callback);
+	}
+
+	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
+
+	void checkin(std::shared_ptr<Database>& database);
+
 	void finish();
+
 	void cleanup();
 
 	void clear();
 
-	DatabaseCount total_writable_databases();
-	DatabaseCount total_readable_databases();
+	std::pair<size_t, size_t> count();
 
 	std::string dump_databases(int level = 1);
 };

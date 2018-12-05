@@ -376,45 +376,17 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
-	xapiand_readable_db_queues{
+	xapiand_endpoints{
 		registry.AddGauge(
-			"xapiand_readable_db_queues",
-			"Readable database queues",
+			"xapiand_endpoints",
+			"Total open endpoints",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_readable_db{
+	xapiand_databases{
 		registry.AddGauge(
-			"xapiand_readable_db",
-			"Open databases",
-			constant_labels)
-		.Add({})
-	},
-	xapiand_writable_db_queues{
-		registry.AddGauge(
-			"xapiand_writable_db_queues",
-			"Writable database queues",
-			constant_labels)
-		.Add({})
-	},
-	xapiand_writable_db{
-		registry.AddGauge(
-			"xapiand_writable_db",
-			"Open writable databases",
-			constant_labels)
-		.Add({})
-	},
-	xapiand_db_queues{
-		registry.AddGauge(
-			"xapiand_db_queues",
-			"Total database queues",
-			constant_labels)
-		.Add({})
-	},
-	xapiand_db{
-		registry.AddGauge(
-			"xapiand_db",
-			"Open databases",
+			"xapiand_databases",
+			"Total open databases",
 			constant_labels)
 		.Add({})
 	}

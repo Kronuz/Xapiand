@@ -24,9 +24,10 @@
 
 #include "config.h"               // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
 
+#include <atomic>                 // for std::atomic_bool
 #include <chrono>                 // for system_clock, system_clock::time_point
 #include <cstring>                // for size_t
-#include <memory>                 // for std::shared_ptr, std::enable_shared_from_this
+#include <memory>                 // for std::shared_ptr
 #include <string>                 // for std::string
 #include <utility>                // for std::pair
 #include <vector>                 // for std::vector
@@ -35,14 +36,12 @@
 #include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
 #include "database_flags.h"       // for Data::Locator
 #include "database_data.h"        // for Data::Locator
-#include "endpoint.h"             // for Endpoints, Endpoint
 
 
 class Logging;
-class DatabaseWAL;
-class DatabaseQueue;
 class MsgPack;
 class DataStorage;
+class DatabaseEndpoint;
 
 namespace moodycamel {
 	struct ProducerToken;
@@ -85,10 +84,10 @@ private:
 	void reopen_readable();
 
 public:
-	std::weak_ptr<DatabaseQueue> weak_queue;
+	DatabaseEndpoint& endpoints;
+	int flags;
 
-	const Endpoints endpoints;
-	const int flags;
+	std::atomic_bool busy;
 
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
@@ -116,7 +115,7 @@ public:
 
 	std::shared_ptr<Logging> log;
 
-	Database(std::shared_ptr<DatabaseQueue>& queue_);
+	Database(DatabaseEndpoint& endpoints_, int flags);
 	~Database();
 
 	bool reopen();
@@ -163,9 +162,7 @@ public:
 	void dump_documents(int fd, XXH32_state_t* xxh_state);
 	MsgPack dump_documents();
 
-	std::string to_string() const {
-		return endpoints.to_string();
-	}
+	std::string to_string() const;
 
 	std::string __repr__() const;
 };

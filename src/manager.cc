@@ -1091,14 +1091,9 @@ XapiandManager::server_metrics()
 	metrics.xapiand_free_disk_bytes.Set(get_free_disk_size());
 
 	// databases:
-	auto wdb = database_pool->total_writable_databases();
-	auto rdb = database_pool->total_readable_databases();
-	metrics.xapiand_readable_db_queues.Set(rdb.queues);
-	metrics.xapiand_readable_db.Set(rdb.count);
-	metrics.xapiand_writable_db_queues.Set(wdb.queues);
-	metrics.xapiand_writable_db.Set(wdb.count);
-	metrics.xapiand_db_queues.Set(rdb.queues + wdb.queues);
-	metrics.xapiand_db.Set(rdb.count + wdb.count);
+	auto count = database_pool->count();
+	metrics.xapiand_endpoints.Set(count.first);
+	metrics.xapiand_databases.Set(count.second);
 
 	return metrics.serialise();
 }

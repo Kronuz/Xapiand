@@ -120,10 +120,6 @@ public:
 	prometheus::Gauge& xapiand_free_disk_bytes;
 
 	// databases:
-	prometheus::Gauge& xapiand_readable_db_queues;
-	prometheus::Gauge& xapiand_readable_db;
-	prometheus::Gauge& xapiand_writable_db_queues;
-	prometheus::Gauge& xapiand_writable_db;
-	prometheus::Gauge& xapiand_db_queues;
-	prometheus::Gauge& xapiand_db;
+	prometheus::Gauge& xapiand_endpoints;
+	prometheus::Gauge& xapiand_databases;
 };
