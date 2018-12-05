@@ -51,4 +51,8 @@ public:
 	}
 
 	void operator()();
+
+	std::string __repr__() const override {
+		return Worker::__repr__("DatabaseCleanup");
+	}
 };
