@@ -150,6 +150,7 @@ ReplicationProtocol::connect()
 		client.detach();
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);
+	client.start();
 }
 
 

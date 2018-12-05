@@ -215,8 +215,6 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		return;
 	}
 
-	client->start();
-
 	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
