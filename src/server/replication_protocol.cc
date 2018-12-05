@@ -143,8 +143,10 @@ ReplicationProtocol::connect()
 	auto& node = src_endpoint.node;
 	int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
 	auto& host = node.host();
-	if ((client.sock = TCP::connect(client.sock, host, std::to_string(port))) == -1) {
+	if (TCP::connect(client.sock, host, std::to_string(port)) == -1) {
 		L_ERR("Cannot connect to %s:%d", host, port);
+		client.close();
+		client.destroy();
 		client.detach();
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);

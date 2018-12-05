@@ -297,7 +297,6 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 	struct addrinfo *result;
 	if (getaddrinfo(hostname.c_str(), servname.c_str(), &hints, &result) != 0) {
 		L_ERR("Couldn't resolve host %s:%s", hostname, servname);
-		io::close(sock_);
 		return -1;
 	}
 
@@ -305,7 +304,6 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: connect error to %s:%s (sock=%d): %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
 			freeaddrinfo(result);
-			io::close(sock_);
 			return -1;
 		}
 	}
@@ -316,7 +314,7 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 		L_ERR("ERROR: fcntl O_NONBLOCK (sock=%d): %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 	}
 
-	return sock_;
+	return 0;
 }
 
 
