@@ -303,6 +303,8 @@ DatabaseEndpoint::clear()
 					--readables_available;
 					it = readables.erase(it);
 				}
+			} else {
+				++it;
 			}
 		}
 	}
