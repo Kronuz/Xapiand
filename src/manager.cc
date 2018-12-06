@@ -808,8 +808,13 @@ XapiandManager::join()
 		}
 	}
 
-	L_MANAGER("Clearing database pool!");
-	database_pool->clear();
+	L_MANAGER("Clearing and waiting for database pool!");
+	while (!database_pool->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_writer.running_size()) {
