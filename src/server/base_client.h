@@ -131,8 +131,20 @@ protected:
 
 	void close();
 
+	bool is_waiting() const {
+		return waiting.load(std::memory_order_relaxed);
+	}
+
+	bool is_running() const {
+		return running.load(std::memory_order_relaxed);
+	}
+
+	bool is_shutting_down() const {
+		return shutting_down.load(std::memory_order_relaxed);
+	}
+
 	bool is_closed() const {
-		return closed.load();
+		return closed.load(std::memory_order_relaxed);
 	}
 };
 

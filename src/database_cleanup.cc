@@ -53,7 +53,7 @@ DatabaseCleanup::shutdown_impl(long long asap, long long now)
 
 	if (now != 0) {
 		detach();
-		if (runner()) {
+		if (is_runner()) {
 			break_loop();
 		}
 	}

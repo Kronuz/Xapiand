@@ -998,7 +998,7 @@ DatabaseHandler::restore(int fd)
 			lk_db.unlock();
 			bool _ready = false;
 			while (true) {
-				if (XapiandManager::manager->detaching()) {
+				if (XapiandManager::manager->is_detaching()) {
 					thread_pool.finish();
 					break;
 				}
@@ -1044,7 +1044,7 @@ DatabaseHandler::restore(int fd)
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
 		while (true) {
-			if (XapiandManager::manager->detaching()) {
+			if (XapiandManager::manager->is_detaching()) {
 				thread_pool.finish();
 				break;
 			}
@@ -1216,7 +1216,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 		DatabaseHandler db_handler(endpoints, flags, method);
 		bool _ready = false;
 		while (true) {
-			if (XapiandManager::manager->detaching()) {
+			if (XapiandManager::manager->is_detaching()) {
 				thread_pool.finish();
 				break;
 			}
@@ -1255,7 +1255,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		if (XapiandManager::manager->detaching()) {
+		if (XapiandManager::manager->is_detaching()) {
 			thread_pool.finish();
 			break;
 		}

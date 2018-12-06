@@ -166,12 +166,20 @@ public:
 	void detach(int retries = 3, bool async = true);
 	void redetach(int retries = 3, bool async = true);
 
-	auto runner() {
+	auto is_runner() const {
 		return _runner.load(std::memory_order_relaxed);
 	}
 
-	auto detaching() {
+	auto is_detaching() const {
 		return _detaching.load(std::memory_order_relaxed);
+	}
+
+	auto is_running() const {
+		return ev_loop->depth() != 0u;
+	}
+
+	auto use_count() const {
+		return shared_from_this().use_count() - 1;
 	}
 
 	void run_loop();

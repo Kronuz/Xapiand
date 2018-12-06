@@ -297,7 +297,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 	std::this_thread::yield();
 
 	if (auto child = weak_child.lock()) {
-		if (child->_runner && (child->ev_loop->depth() != 0u)) {
+		if (child->is_runner() && child->is_running()) {
 			if (retries == 0) {
 				L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
 			} else if (retries > 0) {
@@ -351,10 +351,10 @@ Worker::__repr__(const std::string& name) const
 {
 	return string::format("<%s%s%s%s {cnt:%ld}>",
 		name,
-		_runner ? " (runner)" : " (worker)",
-		ev_loop->depth() != 0u ? " (running loop)" : " (stopped loop)",
-		_detaching ? " (deteaching)" : "",
-		shared_from_this().use_count() - 1);
+		is_runner() ? " (runner)" : " (worker)",
+		is_running() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "",
+		use_count());
 }
 
 
@@ -438,7 +438,7 @@ Worker::shutdown(long long asap, long long now, bool async)
 {
 	L_CALL("Worker::shutdown(%d, %d) %s", asap, now, __repr__());
 
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_asap = asap;
 		_now = now;
 		_shutdown_async.send();
@@ -453,7 +453,7 @@ Worker::break_loop(bool async)
 {
 	L_CALL("Worker::break_loop() %s", __repr__());
 
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_break_loop_async.send();
 	} else {
 		break_loop_impl();
@@ -466,7 +466,7 @@ Worker::destroy(bool async)
 {
 	L_CALL("Worker::destroy() %s", __repr__());
 
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_destroy_async.send();
 	} else {
 		_destroyer();
@@ -479,7 +479,7 @@ Worker::start(bool async)
 {
 	L_CALL("Worker::start() %s", __repr__());
 
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_start_async.send();
 	} else {
 		_starter();
@@ -492,7 +492,7 @@ Worker::stop(bool async)
 {
 	L_CALL("Worker::stop() %s", __repr__());
 
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_stop_async.send();
 	} else {
 		_stopper();
@@ -503,7 +503,7 @@ Worker::stop(bool async)
 void
 Worker::_detach_children(bool async)
 {
-	if (async && ev_loop->depth() != 0u) {
+	if (async && is_running()) {
 		_detach_children_async.send();
 	} else {
 		detach_children_impl();

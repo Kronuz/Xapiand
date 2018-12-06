@@ -107,7 +107,7 @@ Raft::shutdown_impl(long long asap, long long now)
 	destroy(false);
 
 	detach();
-	if (runner()) {
+	if (is_runner()) {
 		break_loop();
 	}
 }
