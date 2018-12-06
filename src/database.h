@@ -91,14 +91,36 @@ public:
 
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
+
+	bool local;
+	bool closed;
 	bool modified;
 	bool incomplete;
 
-	bool is_writable;
-	bool is_writable_and_local;
-	bool is_writable_and_local_with_wal;
+	bool is_local() const {
+		return local;
+	}
 
-	bool closed;
+	bool is_closed() const {
+		return closed;
+	}
+
+	bool is_modified() const {
+		return modified;
+	}
+
+	bool is_incomplete() const {
+		return incomplete;
+	}
+
+	bool is_writable() const {
+		return (flags & DB_WRITABLE) == DB_WRITABLE;
+	}
+
+	bool is_wal_active() const {
+		return (flags & DB_NO_WAL) != DB_NO_WAL;
+	}
+
 	Transaction transaction;
 
 	std::unique_ptr<Xapian::Database> _database;

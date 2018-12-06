@@ -126,7 +126,7 @@ DatabaseWAL::DatabaseWAL(Database* database_)
 	  _revision(0),
 	  _database(database_)
 {
-	if (!_database->is_writable_and_local_with_wal) {
+	if (!_database->is_writable() || !_database->is_local() || !_database->is_wal_active()) {
 		THROW(Error, "Database is not suitable");
 	}
 

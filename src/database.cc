@@ -219,12 +219,10 @@ Database::Database(DatabaseEndpoint& endpoints_, int flags_)
 	  busy(false),
 	  reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
+	  local(false),
+	  closed(false),
 	  modified(false),
 	  incomplete(false),
-	  is_writable(false),
-	  is_writable_and_local(false),
-	  is_writable_and_local_with_wal(false),
-	  closed(false),
 	  transaction(Transaction::none)
 {
 	reopen();
@@ -269,13 +267,15 @@ Database::reopen_writable()
 
 	auto database = std::make_unique<Xapian::WritableDatabase>();
 
+	local = true;
+
 	const auto& endpoint = endpoints[0];
 	if (endpoint.empty()) {
 		THROW(Error, "Database must not have empty endpoints");
 	}
 
 	Xapian::WritableDatabase wsdb;
-	bool local = false;
+	bool localdb = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
@@ -305,14 +305,17 @@ Database::reopen_writable()
 			}
 			throw;
 		}
-		local = true;
+		localdb = true;
 	}
 
 	database->add_database(wsdb);
-	_databases.emplace_back(wsdb, local);
+	_databases.emplace_back(wsdb, localdb);
 
-	if (local) {
+
+	if (localdb) {
 		reopen_revision = database->get_revision();
+	} else {
+		local = false;
 	}
 
 	if (transaction != Transaction::none) {
@@ -321,7 +324,7 @@ Database::reopen_writable()
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
-	if (local) {
+	if (localdb) {
 		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) {
 			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
 			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
@@ -336,16 +339,12 @@ Database::reopen_writable()
 #endif  // XAPIAND_DATA_STORAGE
 	ASSERT(_databases.size() == endpoints_size);
 
-	is_writable = true;
-	is_writable_and_local = local;
-	is_writable_and_local_with_wal = is_writable_and_local && ((flags & DB_NO_WAL) != DB_NO_WAL);
-
 	_database = std::move(database);
 	reopen_time = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
-	if (is_writable_and_local_with_wal) {
+	if (is_writable() && is_local() && is_wal_active()) {
 
 		// Create a new ConcurrentQueue producer token for this database
 		producer_token = XapiandManager::manager->wal_writer.new_producer_token(endpoint.path);
@@ -389,13 +388,15 @@ Database::reopen_readable()
 
 	size_t failures = 0;
 
+	local = true;
+
 	for (const auto& endpoint : endpoints) {
 		if (endpoint.empty()) {
 			THROW(Error, "Database must not have empty endpoints");
 		}
 
 		Xapian::Database rsdb;
-		bool local = false;
+		bool localdb = false;
 #ifdef XAPIAND_CLUSTERING
 		int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 			? Xapian::DB_CREATE_OR_OPEN
@@ -413,7 +414,7 @@ Database::reopen_readable()
 					// Handle remote endpoints and figure out if the endpoint is a local database
 					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 					rsdb = Xapian::Database(endpoint.path, _flags);
-					local = true;
+					localdb = true;
 				} else {
 					try {
 						// If remote is master (it should be), try triggering replication
@@ -438,7 +439,7 @@ Database::reopen_readable()
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				local = true;
+				localdb = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				if (!exists(endpoint.path + "/iamglass")) {
 					++failures;
@@ -455,7 +456,7 @@ Database::reopen_readable()
 						}
 						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 						rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-						local = true;
+						localdb = true;
 					}
 				}
 				throw;
@@ -463,10 +464,14 @@ Database::reopen_readable()
 		}
 
 		database->add_database(rsdb);
-		_databases.emplace_back(rsdb, local);
+		_databases.emplace_back(rsdb, localdb);
+
+		if (!localdb) {
+			local = false;
+		}
 
 #ifdef XAPIAND_DATA_STORAGE
-		if (local) {
+		if (localdb) {
 			// WAL required on a local database, open it.
 			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		} else {
@@ -475,10 +480,6 @@ Database::reopen_readable()
 #endif  // XAPIAND_DATA_STORAGE
 	}
 	ASSERT(_databases.size() == endpoints_size);
-
-	is_writable = false;
-	is_writable_and_local = false;
-	is_writable_and_local_with_wal = false;
 
 	_database = std::move(database);
 	reopen_time = std::chrono::system_clock::now();
@@ -593,6 +594,8 @@ Database::reset()
 	_database.reset();
 	_databases.clear();
 	reopen_revision = 0;
+	local = false;
+	closed = false;
 	modified = false;
 	incomplete = false;
 #ifdef XAPIAND_DATA_STORAGE
@@ -613,7 +616,8 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		modified &&
 		transaction == Database::Transaction::none &&
 		!closed &&
-		is_writable_and_local
+		is_writable() &&
+		is_local()
 
 	) {
 		// Commit only local writable databases
@@ -661,7 +665,8 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 		database->modified &&
 		database->transaction == Database::Transaction::none &&
 		!database->closed &&
-		database->is_writable_and_local
+		database->is_writable() &&
+		database->is_local()
 	) {
 		committer().debounce(database->endpoints, std::weak_ptr<Database>(database));
 	}
@@ -673,7 +678,7 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit(%s)", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -706,7 +711,7 @@ Database::commit(bool wal_, bool send_update)
 				wdb->commit();
 			}
 			modified = false;
-			if (is_writable_and_local) {
+			if (is_local()) {
 				endpoints.local_revision = wdb->get_revision();
 			}
 			break;
@@ -728,7 +733,7 @@ Database::commit(bool wal_, bool send_update)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_commit(*this, send_update); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_commit(*this, send_update); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -742,7 +747,7 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction(%s)", flushed ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -761,7 +766,7 @@ Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -780,7 +785,7 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -799,7 +804,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document(%d, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -836,7 +841,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_delete_document(*this, did); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document(*this, did); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -852,7 +857,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document_term(%s, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -889,7 +894,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_delete_document_term(*this, term); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document_term(*this, term); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -954,7 +959,7 @@ Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
-	ASSERT(is_writable);
+	ASSERT(is_writable());
 
 	// Writable databases have only one subdatabase,
 	// simply get the single storage:
@@ -1010,7 +1015,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::add_document(<doc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1050,7 +1055,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_add_document(*this, std::move(doc)); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_document(*this, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1068,7 +1073,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 {
 	L_CALL("Database::replace_document(%d, <doc>, %s, %s)", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1107,7 +1112,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_replace_document(*this, did, std::move(doc)); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document(*this, did, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1125,7 +1130,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 {
 	L_CALL("Database::replace_document_term(%s, <doc>, %s, %s)", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1165,7 +1170,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_replace_document_term(*this, term, std::move(doc)); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document_term(*this, term, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1183,7 +1188,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 {
 	L_CALL("Database::add_spelling(<word, <freqinc>, %s, %s)", commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1217,7 +1222,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_add_spelling(*this, word, freqinc); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_spelling(*this, word, freqinc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1235,7 +1240,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	Xapian::termcount result = 0;
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1273,7 +1278,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_remove_spelling(*this, word, freqdec); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_remove_spelling(*this, word, freqdec); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1493,7 +1498,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 {
 	L_CALL("Database::set_metadata(%s, %s, %s, %s)", repr(key), repr(value), commit_ ? "true" : "false", wal_ ? "true" : "false");
 
-	if (!is_writable) {
+	if (!is_writable()) {
 		THROW(Error, "database is read-only");
 	}
 
@@ -1527,7 +1532,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable_and_local_with_wal) { XapiandManager::manager->wal_writer.write_set_metadata(*this, key, value); }
+	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_set_metadata(*this, key, value); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1773,11 +1778,15 @@ Database::to_string() const
 std::string
 Database::__repr__() const
 {
-	return string::format("<%s at %p {endpoint:%s, flags:(%s)}%s%s>",
-		is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database",
-		static_cast<const void*>(this),
+	return string::format("<Database %s (%s)%s%s%s%s%s>",
 		repr(endpoints.to_string()),
 		readable_flags(flags),
-		busy ? " (busy)" : "",
-		_database ? "" : " (invalid)");
+		is_writable() ? " (writable)" : "",
+		is_wal_active() ? " (active WAL)" : "",
+		is_local() ? " (local)" : "",
+		is_closed() ? " (closed)" : "",
+		is_modified() ? " (modified)" : "",
+		is_incomplete() ? " (incomplete)" : "",
+		_database ? "" : " (invalid)",
+		busy ? " (busy)" : "");
 }

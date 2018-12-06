@@ -349,14 +349,12 @@ Worker::_ancestor(int levels)
 std::string
 Worker::__repr__(const std::string& name) const
 {
-	return string::format("<%s at %p {cnt:%ld} (%s of %s %p)%s>",
+	return string::format("<%s%s%s%s {cnt:%ld}>",
 		name,
-		static_cast<const void *>(this),
-		shared_from_this().use_count(),
-		_runner ? "runner" : "worker",
-		ev_loop->depth() != 0u ? "running loop" : "stopped loop",
-		static_cast<const void *>(ev_loop->raw_loop),
-		_detaching ? " (deteaching)" : "");
+		_runner ? " (runner)" : " (worker)",
+		ev_loop->depth() != 0u ? " (running loop)" : " (stopped loop)",
+		_detaching ? " (deteaching)" : "",
+		shared_from_this().use_count() - 1);
 }
 
 

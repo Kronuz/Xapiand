@@ -358,8 +358,7 @@ DatabaseEndpoint::empty()
 std::string
 DatabaseEndpoint::__repr__() const
 {
-	return string::format("<DatabaseEndpoint at %p {endpoint:%s, refs:%d}%s%s>",
-		static_cast<const void*>(this),
+	return string::format("<DatabaseEndpoint {endpoint:%s, refs:%d}%s%s>",
 		repr(to_string()),
 		refs.load(),
 		locked ? " (locked)" : "",
@@ -491,7 +490,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 
 	ASSERT(database);
 
-	if (!database->is_writable_and_local) {
+	if (!database->is_writable() || !database->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
@@ -536,7 +535,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 
 	ASSERT(database);
 
-	if (!database->is_writable_and_local) {
+	if (!database->is_writable() || !database->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
@@ -717,10 +716,13 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 	}
 
 	L_TIMED_VAR(database->log, 200ms,
-		"%s checkout is taking too long: %s",
-		"%s checked out for too long: %s",
-		database->is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : database->is_writable_and_local ? "LocalWritableDatabase" : database->is_writable ? "WritableDatabase" : "Database",
-		repr(endpoints.to_string()));
+		"Database checkout is taking too long: %s (%s)%s%s%s",
+		"Database checked out for too long: %s (%s)%s%s%s",
+		repr(database->endpoints.to_string()),
+		readable_flags(database->flags),
+		database->is_writable() ? " (writable)" : "",
+		database->is_wal_active() ? " (active WAL)" : "",
+		database->is_local() ? " (local)" : "");
 
 	return database;
 }
