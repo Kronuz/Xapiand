@@ -41,7 +41,7 @@ namespace queue {
 		size_t _threshold;
 
 		// A mutex object to control access to the underlying queue object
-		std::mutex _mutex;
+		mutable std::mutex _mutex;
 
 		// A variable condition to make threads wait on specified condition values
 		std::condition_variable _pop_cond;
@@ -316,7 +316,7 @@ namespace queue {
 			return empty;
 		}
 
-		bool empty() {
+		bool empty() const {
 			std::lock_guard<std::mutex> lk(_state->_mutex);
 			return _items_queue.empty();
 		}
