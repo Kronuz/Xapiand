@@ -67,7 +67,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 			}
 			/* FALLTHROUGH */
 			default:
-				switch(c) {
+				switch (c) {
 					case '+':
 						buf.push_back(plus);
 						break;
@@ -145,11 +145,11 @@ QueryParser::next(const char *name, size_t name_len)
 						const char *v1 = v0 + 1;
 						while (true) {
 							char cv = (v1 == nf) ? '\0' : *v1;
-							switch(cv) {
+							switch (cv) {
 								case '\0':  // '\0' and '&'
 									off = v0 + 1;
 									len = v1 - v0 - 1;
-								return 0;
+									return 0;
 							}
 							++v1;
 						}
@@ -246,7 +246,7 @@ PathParser::init(std::string_view p)
 	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(GREEN + "1 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
-			switch(state) {
+			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
@@ -284,7 +284,7 @@ PathParser::init(std::string_view p)
 	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(BLUE + "2 <<- %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
-			switch(state) {
+			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
@@ -380,7 +380,7 @@ PathParser::init(std::string_view p)
 				break;
 
 			case '|':
-				switch(state) {
+				switch (state) {
 					case State::SLC:
 					case State::SLB:
 						length = n0 - n1;
@@ -398,7 +398,7 @@ PathParser::init(std::string_view p)
 				break;
 
 			case '{':
-				switch(state) {
+				switch (state) {
 					case State::SLC:
 						state = State::SLB;
 					default:
@@ -489,7 +489,7 @@ PathParser::next()
 	while (true) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(CYAN + "3 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
-			switch(state) {
+			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
