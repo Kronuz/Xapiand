@@ -53,7 +53,8 @@ enum class State {
 
 inline const std::string& StateNames(State type) {
 	static const std::string _[] = {
-		"INIT",
+		"INIT_REMOTE",
+		"INIT_REPLICATION",
 		"REMOTE_SERVER",
 		"REPLICATION_CLIENT",
 		"REPLICATION_SERVER",
