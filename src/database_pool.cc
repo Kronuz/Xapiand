@@ -762,7 +762,7 @@ DatabasePool::cleanup(bool immediate)
 			return lru::DropAction::leave;
 		}
 		if (size > max_size) {
-			if (database_endpoint->renew_time < now - (immediate ? 5s : 60s)) {
+			if (immediate || database_endpoint->renew_time < now - 60s) {
 				lk.unlock();
 				database_endpoint->clear();
 				lk.lock();
@@ -777,7 +777,7 @@ DatabasePool::cleanup(bool immediate)
 			L_DATABASE("Leave recently used endpoint: %s", repr(database_endpoint->to_string()));
 			return lru::DropAction::leave;
 		}
-		if (database_endpoint->renew_time < now - (immediate ? 5s : 3600s)) {
+		if (immediate || database_endpoint->renew_time < now - 3600s) {
 			lk.unlock();
 			database_endpoint->clear();
 			lk.lock();
