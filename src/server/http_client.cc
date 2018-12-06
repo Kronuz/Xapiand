@@ -1228,12 +1228,20 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			commit_view(request, response, method, cmd);
 			break;
 		case Command::CMD_DUMP:
-			request.path_parser.skip_id();  // Command has no ID
-			dump_view(request, response, method, cmd);
+			if (opts.admin_commands) {
+				request.path_parser.skip_id();  // Command has no ID
+				dump_view(request, response, method, cmd);
+			} else {
+				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
 		case Command::CMD_RESTORE:
-			request.path_parser.skip_id();  // Command has no ID
-			restore_view(request, response, method, cmd);
+			if (opts.admin_commands) {
+				request.path_parser.skip_id();  // Command has no ID
+				restore_view(request, response, method, cmd);
+			} else {
+				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
 		case Command::CMD_QUIT:
 			if (opts.admin_commands) {
