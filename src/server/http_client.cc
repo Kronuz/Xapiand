@@ -1244,6 +1244,7 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			break;
 		case Command::CMD_FLUSH:
 			XapiandManager::manager->database_pool->cleanup(true);
+			XapiandManager::manager->shutdown(0, 0);
 			write_http_response(request, response, HTTP_STATUS_OK);
 			destroy();
 			detach();
