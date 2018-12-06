@@ -46,7 +46,7 @@
 
 Worker::~Worker()
 {
-	L_CALL("Worker::~Worker() %s", __repr__());
+	L_CALL("Worker::~Worker()");
 
 	// Make sure to call Worker::deinit() as the last line in the
 	// destructor of any subclasses implementing either one of:
@@ -61,7 +61,7 @@ Worker::~Worker()
 void
 Worker::deinit()
 {
-	L_CALL("Worker::deinit() %s", __repr__());
+	L_CALL("Worker::deinit()");
 
 	_stopper();
 	_destroyer();
@@ -72,7 +72,7 @@ Worker::deinit()
 void
 Worker::_init()
 {
-	L_CALL("Worker::_init() %s", __repr__());
+	L_CALL("Worker::_init()");
 
 	if (_parent) {
 		_iterator = _parent->_children.end();
@@ -107,7 +107,7 @@ Worker::_init()
 void
 Worker::_deinit()
 {
-	L_CALL("Worker::_deinit() %s", __repr__());
+	L_CALL("Worker::_deinit()");
 
 	if (!_deinited) {
 		_detach_children_async.stop();
@@ -137,7 +137,7 @@ Worker::_deinit()
 void
 Worker::_destroyer()
 {
-	L_CALL("Worker::_destroyer() %s", __repr__());
+	L_CALL("Worker::_destroyer()");
 
 	L_EV_BEGIN("Worker::_destroyer:BEGIN");
 	L_EV_END("Worker::_destroyer:END");
@@ -153,7 +153,7 @@ Worker::_destroyer()
 inline void
 Worker::_starter()
 {
-	L_CALL("Worker::_starter() %s", __repr__());
+	L_CALL("Worker::_starter()");
 
 	L_EV_BEGIN("Worker::_starter:BEGIN");
 	L_EV_END("Worker::_starter:END");
@@ -168,7 +168,7 @@ Worker::_starter()
 void
 Worker::_stopper()
 {
-	L_CALL("Worker::_stopper() %s", __repr__());
+	L_CALL("Worker::_stopper()");
 
 	L_EV_BEGIN("Worker::_stopper:BEGIN");
 	L_EV_END("Worker::_stopper:END");
