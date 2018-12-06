@@ -616,11 +616,10 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		transaction == Database::Transaction::none &&
 		!is_closed() &&
 		is_modified() &&
-		is_writable() &&
-		is_local()
+		is_writable()
 
 	) {
-		// Commit only local writable databases
+		// Commit only on modified writable databases
 		try {
 			commit();
 		} catch (...) {
@@ -662,15 +661,14 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 {
 	L_CALL("Database::autocommit(<database>)");
 
-	// Auto commit only local writable databases
 	if (
 		database->_database &&
 		database->transaction == Database::Transaction::none &&
 		!database->is_closed() &&
 		database->is_modified() &&
-		database->is_writable() &&
-		database->is_local()
+		database->is_writable()
 	) {
+		// Auto commit only on modified writable databases
 		committer().debounce(database->endpoints, std::weak_ptr<Database>(database));
 	}
 }
