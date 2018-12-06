@@ -154,7 +154,7 @@ BaseClient::start_impl()
 	L_EV("Start client's async read start event");
 
 	io_read.start();
-	L_EV("Start client's read event (sock=%d)", sock);
+	L_EV("Start client's read event {sock:%d}", sock);
 }
 
 

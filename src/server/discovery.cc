@@ -119,7 +119,7 @@ Discovery::start_impl()
 	L_EV("Start discovery's discovery exploring event (%f)", discovery.repeat);
 
 	io.start(sock, ev::READ);
-	L_EV("Start discovery's server accept event (sock=%d)", sock);
+	L_EV("Start discovery's server accept event {sock:%d}", sock);
 
 	L_DISCOVERY("Discovery was started! (exploring)");
 }

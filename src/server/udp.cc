@@ -92,27 +92,27 @@ UDP::bind(int tries, const std::string& group)
 	}
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEADDR (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 
 	if ((flags & UDP_SO_REUSEPORT) != 0) {
 #ifdef SO_REUSEPORT_LB
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		}
 #else
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		}
 #endif
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
-		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	}
 
 	// use io::setsockopt() to request that the kernel join a multicast group
@@ -120,7 +120,7 @@ UDP::bind(int tries, const std::string& group)
 	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
-		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		close();
 		sig_exit(-EX_CONFIG);
 	}
@@ -135,13 +135,13 @@ UDP::bind(int tries, const std::string& group)
 		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 			if (!io::ignored_errno(errno, true, true, true)) {
 				if (i == tries - 1) { break; }
-				L_CONN("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 		}
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_CRIT("ERROR: fcntl O_NONBLOCK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_CRIT("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			sig_exit(-EX_CONFIG);
 		}
 
@@ -161,7 +161,7 @@ UDP::bind(int tries, const std::string& group)
 		return;
 	}
 
-	L_CRIT("ERROR: %s bind error (sock=%d): %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }
@@ -171,7 +171,7 @@ ssize_t
 UDP::send_message(const std::string& message)
 {
 	if (!closed) {
-		L_UDP_WIRE("(sock=%d) <<-- %s", sock, repr(message));
+		L_UDP_WIRE("{sock:%d} <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
 		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
@@ -181,7 +181,7 @@ UDP::send_message(const std::string& message)
 
 		if (written < 0) {
 			if (!io::ignored_errno(errno, true, false, false)) {
-				L_ERR("ERROR: sendto error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_ERR("ERROR: sendto error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 		return written;
@@ -213,20 +213,20 @@ UDP::get_message(std::string& result, char max_type)
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
 		if (!io::ignored_errno(errno, true, false, false)) {
-			L_ERR("ERROR: read error (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: read error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			THROW(NetworkError, error::description(errno));
 		}
-		L_CONN("Received ERROR (sock=%d)!", sock);
+		L_CONN("Received ERROR {sock:%d}!", sock);
 		return '\xff';
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
-		L_CONN("Received EOF (sock=%d)!", sock);
+		L_CONN("Received EOF {sock:%d}!", sock);
 		return '\xff';
 	} else if (received < 4) {
 		L_CONN("Badly formed message: Incomplete!");
 	}
 
-	L_UDP_WIRE("(sock=%d) -->> %s", sock, repr(buf, received));
+	L_UDP_WIRE("{sock:%d} -->> %s", sock, repr(buf, received));
 
 	const char *p = buf;
 	const char *p_end = p + received;

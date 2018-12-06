@@ -79,10 +79,10 @@ BinaryServer::start_impl()
 	binary->close(true);
 	bind(1);
 	io.start(sock, ev::READ);
-	L_EV("Start binary's server accept event (sock=%d)", sock);
+	L_EV("Start binary's server accept event {sock:%d}", sock);
 #else
 	io.start(binary->sock, ev::READ);
-	L_EV("Start binary's server accept event (sock=%d)", binary->sock);
+	L_EV("Start binary's server accept event {sock:%d}", binary->sock);
 #endif
 }
 

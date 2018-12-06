@@ -73,10 +73,10 @@ HttpServer::start_impl()
 	http->close(true);
 	bind(1);
 	io.start(sock, ev::READ);
-	L_EV("Start http's server accept event (sock=%d)", sock);
+	L_EV("Start http's server accept event {sock:%d}", sock);
 #else
 	io.start(http->sock, ev::READ);
-	L_EV("Start http's server accept event (sock=%d)", http->sock);
+	L_EV("Start http's server accept event {sock:%d}", http->sock);
 #endif
 }
 

@@ -50,13 +50,13 @@ inline void tcp_nopush(int sock) {
 
 #ifdef TCP_NOPUSH
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt TCP_NOPUSH {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt TCP_CORK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 }
@@ -67,13 +67,13 @@ inline void tcp_push(int sock) {
 
 #ifdef TCP_NOPUSH
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NOPUSH (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt TCP_NOPUSH {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 
 #ifdef TCP_CORK
 	if (io::setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_CORK (sock=%d): %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt TCP_CORK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 	}
 #endif
 }

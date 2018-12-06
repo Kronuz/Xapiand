@@ -139,7 +139,7 @@ Raft::start_impl()
 	_reset_leader_election_timeout();
 
 	io.start(sock, ev::READ);
-	L_EV("Start raft's server accept event (sock=%d)", sock);
+	L_EV("Start raft's server accept event {sock:%d}", sock);
 
 	L_RAFT("Raft was started!");
 }
