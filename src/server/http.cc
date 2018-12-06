@@ -81,3 +81,9 @@ Http::start()
 		}
 	}
 }
+
+std::string
+Http::__repr__() const
+{
+	return Worker::__repr__("Http");
+}

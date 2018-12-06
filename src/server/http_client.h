@@ -365,14 +365,12 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	friend Worker;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("HttpClient");
-	}
-
 	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 
 	~HttpClient();
 
 	void process(Request& request, Response& response);
 	void operator()();
+
+	std::string __repr__() const override;
 };

@@ -108,3 +108,10 @@ DatabaseCleanup::operator()()
 
 	detach();
 }
+
+
+std::string
+DatabaseCleanup::__repr__() const
+{
+	return Worker::__repr__("DatabaseCleanup");
+}

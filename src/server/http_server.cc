@@ -123,3 +123,9 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 		client->start();
 	}
 }
+
+std::string
+HttpServer::__repr__() const
+{
+	return Worker::__repr__("HttpServer");
+}

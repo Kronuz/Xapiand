@@ -3179,6 +3179,13 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 }
 
 
+std::string
+HttpClient::__repr__() const
+{
+	return Worker::__repr__("HttpClient");
+}
+
+
 Request::Request(HttpClient* client)
 	: indented{-1},
 	  expect_100{false},

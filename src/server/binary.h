@@ -57,18 +57,16 @@ class Binary : public BaseTCP {
 	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("Binary");
-	}
-
 	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
-
-	std::string getDescription() const;
 
 	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();
 
 	void trigger_replication(const TriggerReplicationArgs& args);
+
+	std::string __repr__() const override;
+
+	std::string getDescription() const;
 };
 
 

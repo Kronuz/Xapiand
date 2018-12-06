@@ -96,10 +96,6 @@ protected:
 	void make_servers();
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("XapiandManager");
-	}
-
 	enum class State {
 		BAD,
 		READY,
@@ -187,6 +183,8 @@ public:
 	Endpoint resolve_index_endpoint(std::string_view path, bool master);
 
 	std::string server_metrics();
+
+	std::string __repr__() const override;
 };
 
 #ifdef XAPIAND_CLUSTERING

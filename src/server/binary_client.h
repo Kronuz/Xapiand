@@ -106,10 +106,6 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 	friend ReplicationProtocol;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("BinaryClient");
-	}
-
 	~BinaryClient();
 
 	char get_message(std::string &result, char max_type);
@@ -120,6 +116,8 @@ public:
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
 	void operator()();
+
+	std::string __repr__() const override;
 };
 
 

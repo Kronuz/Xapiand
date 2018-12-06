@@ -1013,4 +1013,11 @@ Raft::getDescription() const
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_RAFT_PROTOCOL_MINOR_VERSION) + ")";
 }
 
+
+std::string
+Raft::__repr__() const
+{
+	return Worker::__repr__("Raft");
+}
+
 #endif

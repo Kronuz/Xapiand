@@ -168,9 +168,7 @@ public:
 	void add_command(const std::string& command);
 	void request_vote();
 
-	std::string __repr__() const override {
-		return Worker::__repr__("Raft");
-	}
+	std::string __repr__() const override;
 
 	std::string getDescription() const;
 };

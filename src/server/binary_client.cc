@@ -507,4 +507,11 @@ BinaryClient::operator()()
 	redetach();  // try re-detaching if already flagged as detaching
 }
 
+
+std::string
+BinaryClient::__repr__() const
+{
+	return Worker::__repr__("BinaryClient");
+}
+
 #endif  /* XAPIAND_CLUSTERING */

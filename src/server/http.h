@@ -46,14 +46,12 @@ class Http : public BaseTCP {
 	std::vector<std::weak_ptr<HttpServer>> servers_weak;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("Http");
-	}
-
 	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 
 	std::string getDescription() const;
 
 	void add_server(const std::shared_ptr<HttpServer>& server);
 	void start();
+
+	std::string __repr__() const override;
 };

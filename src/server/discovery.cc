@@ -536,6 +536,13 @@ Discovery::db_update_send(const std::string& path)
 
 
 std::string
+Discovery::__repr__() const
+{
+	return Worker::__repr__("Discovery");
+}
+
+
+std::string
 Discovery::getDescription() const
 {
 	L_CALL("Discovery::getDescription()");

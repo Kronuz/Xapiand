@@ -111,9 +111,7 @@ public:
 
 	void db_update_send(const std::string& path);
 
-	std::string __repr__() const override {
-		return Worker::__repr__("Discovery");
-	}
+	std::string __repr__() const override;
 
 	std::string getDescription() const;
 };

@@ -37,14 +37,12 @@ class HttpServer : public MetaBaseServer<HttpServer> {
 	void start_impl() override;
 
 public:
-	std::string __repr__() const override {
-		return Worker::__repr__("HttpServer");
-	}
-
 	HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http);
 	~HttpServer();
 
 	int accept();
 
 	void io_accept_cb(ev::io& watcher, int revents);
+
+	std::string __repr__() const override;
 };

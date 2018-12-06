@@ -1099,6 +1099,13 @@ XapiandManager::server_metrics()
 }
 
 
+std::string
+XapiandManager::__repr__() const
+{
+	return Worker::__repr__("XapiandManager");
+}
+
+
 #ifdef XAPIAND_CLUSTERING
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)

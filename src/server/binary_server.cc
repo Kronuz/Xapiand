@@ -218,4 +218,11 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
+
+std::string
+BinaryServer::__repr__() const
+{
+	return Worker::__repr__("BinaryServer");
+}
+
 #endif /* XAPIAND_CLUSTERING */
