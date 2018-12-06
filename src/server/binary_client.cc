@@ -64,6 +64,10 @@
 BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: MetaBaseClient<BinaryClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  state(State::INIT_REMOTE),
+#ifdef SAVE_LAST_MESSAGES
+	  last_message_received('\xff'),
+	  last_message_sent('\xff'),
+#endif
 	  file_descriptor(-1),
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
@@ -302,6 +306,10 @@ BinaryClient::get_message(std::string &result, char max_type)
 
 	char type = msg.type;
 
+#ifdef SAVE_LAST_MESSAGES
+	last_message_received.store(type, std::memory_order_relaxed);
+#endif
+
 	if (type >= max_type) {
 		std::string errmsg("Invalid message type ");
 		errmsg += std::to_string(int(type));
@@ -322,6 +330,10 @@ void
 BinaryClient::send_message(char type_as_char, const std::string &message)
 {
 	L_CALL("BinaryClient::send_message(<type_as_char>, <message>)");
+
+#ifdef SAVE_LAST_MESSAGES
+	last_message_sent.store(type_as_char, std::memory_order_relaxed);
+#endif
 
 	std::string buf;
 	buf += type_as_char;
@@ -511,8 +523,35 @@ BinaryClient::operator()()
 std::string
 BinaryClient::__repr__() const
 {
+#ifdef SAVE_LAST_MESSAGES
+	auto state_repr = ([this]() {
+		auto received = last_message_received.load(std::memory_order_relaxed);
+		auto sent = last_message_sent.load(std::memory_order_relaxed);
+		switch (state) {
+			case State::INIT_REMOTE:
+			case State::REMOTE_SERVER:
+				return string::format("%s) (%s<->%s",
+					StateNames(state),
+					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
+					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
+			case State::INIT_REPLICATION:
+			case State::REPLICATION_CLIENT:
+				return string::format("%s) (%s<->%s",
+					StateNames(state),
+					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(received)),
+					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(sent)));
+			case State::REPLICATION_SERVER:
+				return string::format("%s) (%s<->%s",
+					StateNames(state),
+					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(received)),
+					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(sent)));
+		}
+	})();
+#else
+	auto& state_repr = StateNames(state);
+#endif
 	return string::format("<BinaryClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s>",
-		StateNames(state),
+		state_repr,
 		use_count(),
 		sock,
 		is_runner() ? " (runner)" : " (worker)",

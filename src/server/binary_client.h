@@ -39,9 +39,12 @@
 #include "replication_protocol.h"             // for ReplicationProtocol
 #include "threadpool.hh"                      // for Task
 
-
-#define FILE_FOLLOWS '\xfd'
-
+// #define SAVE_LAST_MESSAGES
+#ifndef NDEBUG
+#ifndef SAVE_LAST_MESSAGES
+#define SAVE_LAST_MESSAGES 1
+#endif
+#endif
 
 enum class State {
 	INIT_REMOTE,
@@ -50,6 +53,8 @@ enum class State {
 	REPLICATION_CLIENT,
 	REPLICATION_SERVER,
 };
+
+#define FILE_FOLLOWS '\xfd'
 
 inline const std::string& StateNames(State type) {
 	static const std::string _[] = {
@@ -75,6 +80,11 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 	mutable std::mutex runner_mutex;
 
 	State state;
+
+#ifdef SAVE_LAST_MESSAGES
+	std::atomic_char last_message_received;
+	std::atomic_char last_message_sent;
+#endif
 
 	int file_descriptor;
 	char file_message_type;
