@@ -196,6 +196,7 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 	L_CALL("DatabaseEndpoint::checkin(%s)", database ? database->__repr__() : "null");
 
 	ASSERT(database);
+	ASSERT(database->busy);
 	ASSERT(&database->endpoints == this);
 
 	if (database->log) {
@@ -203,34 +204,33 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 		database->log.reset();
 	}
 
-	ASSERT(database->busy);
-	database->busy = false;
-
 	TaskQueue<void()> pending_callbacks;
 	{
 		std::lock_guard<std::mutex> lk(mtx);
 		std::swap(pending_callbacks, callbacks);
 	}
 
-	if (database->is_closed()) {
-		std::unique_lock<std::mutex> lk(mtx);
-		auto it = std::find(readables.begin(), readables.end(), database);
-		if (it != readables.end()) {
-			readables.erase(it);
-		}
-		if (database->is_writable()) {
-			writable_cond.notify_one();
+	if (database->is_writable()) {
+		if (database->is_closed()) {
+			std::lock_guard<std::mutex> lk(mtx);
+			writable = nullptr;
 		} else {
-			readables_cond.notify_one();
-		}
-	} else {
-		if (database->is_writable()) {
 			Database::autocommit(database);
-			writable_cond.notify_one();
+		}
+		database->busy = false;
+		writable_cond.notify_one();
+	} else {
+		if (database->is_closed()) {
+			std::lock_guard<std::mutex> lk(mtx);
+			auto it = std::find(readables.begin(), readables.end(), database);
+			if (it != readables.end()) {
+				readables.erase(it);
+			}
 		} else {
 			++readables_available;
-			readables_cond.notify_one();
 		}
+		database->busy = false;
+		readables_cond.notify_one();
 	}
 
 	database.reset();
