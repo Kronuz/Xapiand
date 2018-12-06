@@ -145,7 +145,7 @@ public:
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
 
-	bool is_locked(const Endpoints& endpoints);
+	bool is_locked(const Endpoints& endpoints) const;
 
 	template <typename Func>
 	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout, Func&& func) {

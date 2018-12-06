@@ -558,15 +558,21 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 
 
 bool
-DatabasePool::is_locked(const Endpoints& endpoints)
+DatabasePool::is_locked(const Endpoints& endpoints) const
 {
 	L_CALL("DatabasePool::is_locked(%s)", repr(endpoints.to_string()));
 
+	std::lock_guard<std::mutex> lk(mtx);
+
 	for (auto& endpoint : endpoints) {
-		if (get(Endpoints{endpoint})->locked) {
-			return true;
+		auto it = find(Endpoints{endpoint});
+		if (it != end()) {
+			if (it->second->locked) {
+				return true;
+			}
 		}
 	}
+
 	return false;
 }
 
