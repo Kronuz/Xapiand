@@ -254,7 +254,7 @@ Database::reopen_writable()
 	//
 	L_CALL("Database::reopen_writable()");
 
-	if (closed) {
+	if (is_closed()) {
 		THROW(Error, "database is closed");
 	}
 
@@ -373,7 +373,7 @@ Database::reopen_readable()
 	//
 	L_CALL("Database::reopen_readable()");
 
-	if (closed) {
+	if (is_closed()) {
 		THROW(Error, "database is closed");
 	}
 
@@ -539,7 +539,7 @@ Database::db()
 {
 	L_CALL("Database::db()");
 
-	if (closed) {
+	if (is_closed()) {
 		THROW(Error, "database is closed");
 	}
 
@@ -608,14 +608,14 @@ Database::reset()
 void
 Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 {
-	L_CALL("Database::do_close(%s, %s, %s) {endpoint:%s, database:%s, modified:%s, closed:%s}", commit_ ? "true" : "false", closed_ ? "true" : "false", repr(endpoints.to_string()), _database ? "<database>" : "null", modified ? "true" : "false", closed ? "true" : "false", transaction == Database::Transaction::none ? "<none>" : "<transaction>");
+	L_CALL("Database::do_close(%s, %s, %s) {endpoint:%s, database:%s, modified:%s, closed:%s}", commit_ ? "true" : "false", closed_ ? "true" : "false", repr(endpoints.to_string()), _database ? "<database>" : "null", is_modified() ? "true" : "false", is_closed() ? "true" : "false", transaction == Database::Transaction::none ? "<none>" : "<transaction>");
 
 	if (
 		commit_ &&
 		_database &&
-		modified &&
 		transaction == Database::Transaction::none &&
-		!closed &&
+		!is_closed() &&
+		is_modified() &&
 		is_writable() &&
 		is_local()
 
@@ -649,7 +649,7 @@ Database::close()
 {
 	L_CALL("Database::close()");
 
-	if (closed) {
+	if (is_closed()) {
 		return;
 	}
 
@@ -665,9 +665,9 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 	// Auto commit only local writable databases
 	if (
 		database->_database &&
-		database->modified &&
 		database->transaction == Database::Transaction::none &&
-		!database->closed &&
+		!database->is_closed() &&
+		database->is_modified() &&
 		database->is_writable() &&
 		database->is_local()
 	) {
@@ -685,7 +685,7 @@ Database::commit(bool wal_, bool send_update)
 		THROW(Error, "database is read-only");
 	}
 
-	if (!modified) {
+	if (!is_modified()) {
 		L_DATABASE("Do not commit, because there are not changes");
 		return false;
 	}

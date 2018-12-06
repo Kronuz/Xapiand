@@ -212,7 +212,7 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 		std::swap(pending_callbacks, callbacks);
 	}
 
-	if (database->closed) {
+	if (database->is_closed()) {
 		std::unique_lock<std::mutex> lk(mtx);
 		auto it = std::find(readables.begin(), readables.end(), database);
 		if (it != readables.end()) {
