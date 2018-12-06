@@ -159,7 +159,7 @@ public:
 
 	void finish();
 
-	void cleanup();
+	void cleanup(bool immediate = false);
 
 	void clear();
 

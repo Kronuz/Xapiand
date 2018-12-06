@@ -1243,6 +1243,12 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			destroy();
 			detach();
 			break;
+		case Command::CMD_FLUSH:
+			XapiandManager::manager->database_pool->cleanup(true);
+			write_http_response(request, response, HTTP_STATUS_OK);
+			destroy();
+			detach();
+			break;
 #endif
 		default:
 			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);

@@ -134,8 +134,10 @@ enum class Encoding {
 
 // Available commands
 
+constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
 constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
 constexpr const char COMMAND_DUMP[]        = COMMAND_PREFIX "dump";
+constexpr const char COMMAND_FLUSH[]       = COMMAND_PREFIX "flush";
 constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
 constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
 constexpr const char COMMAND_METRICS[]     = COMMAND_PREFIX "metrics";
@@ -144,14 +146,14 @@ constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
 constexpr const char COMMAND_RESTORE[]     = COMMAND_PREFIX "restore";
 constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
 constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
-constexpr const char COMMAND_STATS[]       = COMMAND_PREFIX "stats";
 constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
-constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
 
 #define COMMAND_OPTIONS() \
+	OPTION(CHECK) \
 	OPTION(COMMIT) \
 	OPTION(DUMP) \
+	OPTION(FLUSH) \
 	OPTION(INFO) \
 	OPTION(METADATA) \
 	OPTION(METRICS) \
@@ -160,10 +162,8 @@ constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
 	OPTION(RESTORE) \
 	OPTION(SCHEMA) \
 	OPTION(SEARCH) \
-	OPTION(STATS) \
 	OPTION(TOUCH) \
-	OPTION(WAL) \
-	OPTION(CHECK)
+	OPTION(WAL)
 
 constexpr static auto http_commands = phf::make_phf({
 	#define OPTION(name) hhl(COMMAND_##name),
