@@ -324,7 +324,7 @@ DatabaseEndpoint::count()
 
 
 bool
-DatabaseEndpoint::is_busy()
+DatabaseEndpoint::is_busy() const
 {
 	L_CALL("DatabaseEndpoint::is_busy()");
 
@@ -340,7 +340,7 @@ DatabaseEndpoint::is_busy()
 
 
 bool
-DatabaseEndpoint::empty()
+DatabaseEndpoint::empty() const
 {
 	L_CALL("DatabaseEndpoint::empty()");
 
@@ -358,16 +358,16 @@ DatabaseEndpoint::empty()
 std::string
 DatabaseEndpoint::__repr__() const
 {
-	return string::format("<DatabaseEndpoint {endpoint:%s, refs:%d}%s%s>",
+	return string::format("<DatabaseEndpoint %s%s%s {refs:%d}>",
 		repr(to_string()),
-		refs.load(),
 		locked ? " (locked)" : "",
-		finished ? " (finished)" : "");
+		finished ? " (finished)" : "",
+		refs.load());
 }
 
 
 std::string
-DatabaseEndpoint::dump_databases(int level)
+DatabaseEndpoint::dump_databases(int level) const
 {
 	std::string indent;
 	for (int l = 0; l < level; ++l) {
@@ -455,12 +455,12 @@ DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases) :
 
 
 std::vector<ReferencedDatabaseEndpoint>
-DatabasePool::endpoints()
+DatabasePool::endpoints() const
 {
 	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
 
 	std::lock_guard<std::mutex> lk(mtx);
-	for (const auto& database_endpoint : *this) {
+	for (auto& database_endpoint : *this) {
 		database_endpoints.emplace_back(database_endpoint.second.get());
 	}
 	return database_endpoints;
@@ -468,15 +468,18 @@ DatabasePool::endpoints()
 
 
 std::vector<ReferencedDatabaseEndpoint>
-DatabasePool::endpoints(const Endpoint& endpoint)
+DatabasePool::endpoints(const Endpoint& endpoint) const
 {
 	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
 
 	std::lock_guard<std::mutex> lk(mtx);
-	for (auto& endpoints : endpoints_map[endpoint]) {
-		auto database_endpoint = _get(endpoints);
-		if (database_endpoint) {
-			database_endpoints.push_back(std::move(database_endpoint));
+	auto it = endpoints_map.find(endpoint);
+	if (it != endpoints_map.end()) {
+		for (auto& endpoints : it->second) {
+			auto database_endpoint = _get(endpoints);
+			if (database_endpoint) {
+				database_endpoints.push_back(std::move(database_endpoint));
+			}
 		}
 	}
 	return database_endpoints;
@@ -631,15 +634,13 @@ DatabasePool::spawn(const Endpoints& endpoints)
 
 
 ReferencedDatabaseEndpoint
-DatabasePool::_get(const Endpoints& endpoints)
+DatabasePool::_get(const Endpoints& endpoints) const
 {
 	L_CALL("DatabasePool::_get(%s)", repr(endpoints.to_string()));
 
 	DatabaseEndpoint* database_endpoint = nullptr;
 
-	auto it = find_and([&](const std::unique_ptr<DatabaseEndpoint>&) {
-		return lru::GetAction::leave;
-	}, endpoints);
+	auto it = find(endpoints);
 	if (it != end()) {
 		database_endpoint = it->second.get();
 	}
@@ -650,7 +651,7 @@ DatabasePool::_get(const Endpoints& endpoints)
 
 
 ReferencedDatabaseEndpoint
-DatabasePool::get(const Endpoints& endpoints)
+DatabasePool::get(const Endpoints& endpoints) const
 {
 	L_CALL("DatabasePool::get(%s)", repr(endpoints.to_string()));
 
@@ -839,7 +840,7 @@ DatabasePool::count()
 
 
 std::string
-DatabasePool::dump_databases(int level)
+DatabasePool::dump_databases(int level) const
 {
 	std::string indent;
 	for (int l = 0; l < level; ++l) {

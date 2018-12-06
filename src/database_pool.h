@@ -59,7 +59,7 @@ class DatabaseEndpoint : public Endpoints
 	friend DatabasePool;
 	friend ReferencedDatabaseEndpoint;
 
-	std::mutex mtx;
+	mutable std::mutex mtx;
 
 	DatabasePool& database_pool;
 
@@ -98,12 +98,12 @@ public:
 
 	std::pair<size_t, size_t> count();
 
-	bool is_busy();
+	bool is_busy() const;
 
-	bool empty();
+	bool empty() const;
 
 	std::string __repr__() const;
-	std::string dump_databases(int level);
+	std::string dump_databases(int level) const;
 };
 
 
@@ -116,7 +116,7 @@ public:
 class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 	friend DatabaseEndpoint;
 
-	std::mutex mtx;
+	mutable std::mutex mtx;
 
 	std::unordered_map<Endpoint, std::set<Endpoints>> endpoints_map;
 
@@ -128,8 +128,8 @@ class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint
 	ReferencedDatabaseEndpoint _spawn(const Endpoints& endpoints);
 	ReferencedDatabaseEndpoint spawn(const Endpoints& endpoints);
 
-	ReferencedDatabaseEndpoint _get(const Endpoints& endpoints);
-	ReferencedDatabaseEndpoint get(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint _get(const Endpoints& endpoints) const;
+	ReferencedDatabaseEndpoint get(const Endpoints& endpoints) const;
 
 public:
 	DatabasePool(size_t dbpool_size, size_t max_databases);
@@ -139,8 +139,8 @@ public:
 	DatabasePool& operator=(const DatabasePool&) = delete;
 	DatabasePool& operator=(DatabasePool&&) = delete;
 
-	std::vector<ReferencedDatabaseEndpoint> endpoints();
-	std::vector<ReferencedDatabaseEndpoint> endpoints(const Endpoint& endpoint);
+	std::vector<ReferencedDatabaseEndpoint> endpoints() const;
+	std::vector<ReferencedDatabaseEndpoint> endpoints(const Endpoint& endpoint) const;
 
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
@@ -165,5 +165,5 @@ public:
 
 	std::pair<size_t, size_t> count();
 
-	std::string dump_databases(int level = 1);
+	std::string dump_databases(int level = 1) const;
 };
