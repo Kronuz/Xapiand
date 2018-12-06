@@ -403,10 +403,18 @@ public:
 		}
 	}
 
-	ReferencedDatabaseEndpoint(const ReferencedDatabaseEndpoint& ptr) = delete;
-	ReferencedDatabaseEndpoint(ReferencedDatabaseEndpoint&& ptr) = default;
-	ReferencedDatabaseEndpoint& operator=(const ReferencedDatabaseEndpoint& ptr) = delete;
-	ReferencedDatabaseEndpoint& operator=(ReferencedDatabaseEndpoint&& ptr) = default;
+	ReferencedDatabaseEndpoint(const ReferencedDatabaseEndpoint& other) = delete;
+	ReferencedDatabaseEndpoint& operator=(const ReferencedDatabaseEndpoint& other) = delete;
+
+	ReferencedDatabaseEndpoint(ReferencedDatabaseEndpoint&& other) : ptr(other.ptr) {
+		other.ptr = nullptr;
+	}
+
+	ReferencedDatabaseEndpoint& operator=(ReferencedDatabaseEndpoint&& other) {
+		ptr = other.ptr;
+		other.ptr = nullptr;
+		return *this;
+	}
 
 	~ReferencedDatabaseEndpoint() {
 		if (ptr) {
