@@ -1256,7 +1256,9 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 		case Command::CMD_FLUSH:
 			if (opts.admin_commands) {
 				// Flush both databases and clients by default (unless one is specified)
+				request.query_parser.rewind();
 				int flush_databases = request.query_parser.next("databases");
+				request.query_parser.rewind();
 				int flush_clients = request.query_parser.next("clients");
 				if (flush_databases != -1 || flush_clients == -1) {
 					XapiandManager::manager->database_pool->cleanup(true);
@@ -2024,6 +2026,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 
 	DatabaseHandler db_handler{endpoints};
 
+	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
 	auto repr = db_handler.repr_wal(0, std::numeric_limits<uint32_t>::max(), unserialised);
 
@@ -2512,6 +2515,7 @@ HttpClient::url_resolve(Request& request)
 			}
 		}
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("pretty") != -1) {
 			if (request.query_parser.len != 0u) {
 				try {
@@ -2521,7 +2525,6 @@ HttpClient::url_resolve(Request& request)
 				request.indented = 4;
 			}
 		}
-		request.query_parser.rewind();
 
 		if (request.path_parser.off_cmd != nullptr) {
 			return getCommand(request.path_parser.get_cmd());
@@ -2614,6 +2617,7 @@ HttpClient::query_field_maker(Request& request, int flags)
 	query_field_t query_field;
 
 	if ((flags & QUERY_FIELD_COMMIT) != 0) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("commit") != -1) {
 			query_field.commit = true;
 			if (request.query_parser.len != 0u) {
@@ -2622,10 +2626,10 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 	}
 
 	if ((flags & QUERY_FIELD_VOLATILE) != 0) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("volatile") != -1) {
 			query_field.as_volatile = true;
 			if (request.query_parser.len != 0u) {
@@ -2634,27 +2638,27 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 	}
 
 	if (((flags & QUERY_FIELD_ID) != 0) || ((flags & QUERY_FIELD_SEARCH) != 0)) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("offset") != -1) {
 			query_field.offset = strict_stou(nullptr, request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("check_at_least") != -1) {
 			query_field.check_at_least = strict_stou(nullptr, request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("limit") != -1) {
 			query_field.limit = strict_stou(nullptr, request.query_parser.get());
 		}
-		request.query_parser.rewind();
 	}
 
 	if ((flags & QUERY_FIELD_SEARCH) != 0) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("spelling") != -1) {
 			query_field.spelling = true;
 			if (request.query_parser.len != 0u) {
@@ -2663,8 +2667,8 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("synonyms") != -1) {
 			query_field.synonyms = true;
 			if (request.query_parser.len != 0u) {
@@ -2673,45 +2677,45 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		while (request.query_parser.next("query") != -1) {
 			L_SEARCH("query=%s", request.query_parser.get());
 			query_field.query.emplace_back(request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		while (request.query_parser.next("q") != -1) {
 			L_SEARCH("query=%s", request.query_parser.get());
 			query_field.query.emplace_back(request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		while (request.query_parser.next("sort") != -1) {
 			query_field.sort.emplace_back(request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("metric") != -1) {
 			query_field.metric = request.query_parser.get();
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("icase") != -1) {
 			query_field.icase = Serialise::boolean(request.query_parser.get()) == "t";
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("collapse_max") != -1) {
 			query_field.collapse_max = strict_stou(nullptr, request.query_parser.get());
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("collapse") != -1) {
 			query_field.collapse = request.query_parser.get();
 		}
-		request.query_parser.rewind();
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("fuzzy") != -1) {
 			query_field.is_fuzzy = true;
 			if (request.query_parser.len != 0u) {
@@ -2720,35 +2724,35 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 
 		if (query_field.is_fuzzy) {
+			request.query_parser.rewind();
 			if (request.query_parser.next("fuzzy.n_rset") != -1) {
 				query_field.fuzzy.n_rset = strict_stou(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			if (request.query_parser.next("fuzzy.n_eset") != -1) {
 				query_field.fuzzy.n_eset = strict_stou(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			if (request.query_parser.next("fuzzy.n_term") != -1) {
 				query_field.fuzzy.n_term = strict_stou(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			while (request.query_parser.next("fuzzy.field") != -1) {
 				query_field.fuzzy.field.emplace_back(request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			while (request.query_parser.next("fuzzy.type") != -1) {
 				query_field.fuzzy.type.emplace_back(request.query_parser.get());
 			}
-			request.query_parser.rewind();
 		}
 
+		request.query_parser.rewind();
 		if (request.query_parser.next("nearest") != -1) {
 			query_field.is_nearest = true;
 			if (request.query_parser.len != 0u) {
@@ -2757,53 +2761,52 @@ HttpClient::query_field_maker(Request& request, int flags)
 				} catch (const Exception&) { }
 			}
 		}
-		request.query_parser.rewind();
 
 		if (query_field.is_nearest) {
 			query_field.nearest.n_rset = 5;
+			request.query_parser.rewind();
 			if (request.query_parser.next("nearest.n_rset") != -1) {
 				query_field.nearest.n_rset = strict_stoul(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			if (request.query_parser.next("nearest.n_eset") != -1) {
 				query_field.nearest.n_eset = strict_stoul(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			if (request.query_parser.next("nearest.n_term") != -1) {
 				query_field.nearest.n_term = strict_stoul(nullptr, request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			while (request.query_parser.next("nearest.field") != -1) {
 				query_field.nearest.field.emplace_back(request.query_parser.get());
 			}
-			request.query_parser.rewind();
 
+			request.query_parser.rewind();
 			while (request.query_parser.next("nearest.type") != -1) {
 				query_field.nearest.type.emplace_back(request.query_parser.get());
 			}
-			request.query_parser.rewind();
 		}
 	}
 
 	if ((flags & QUERY_FIELD_TIME) != 0) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("time") != -1) {
 			query_field.time = request.query_parser.get();
 		} else {
 			query_field.time = "1h";
 		}
-		request.query_parser.rewind();
 	}
 
 	if ((flags & QUERY_FIELD_PERIOD) != 0) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("period") != -1) {
 			query_field.period = request.query_parser.get();
 		} else {
 			query_field.period = "1m";
 		}
-		request.query_parser.rewind();
 	}
 
 	return query_field;
