@@ -460,6 +460,7 @@ DatabasePool::endpoints() const
 	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
 
 	std::lock_guard<std::mutex> lk(mtx);
+	database_endpoints.reserve(size());
 	for (auto& database_endpoint : *this) {
 		database_endpoints.emplace_back(database_endpoint.second.get());
 	}
@@ -475,6 +476,7 @@ DatabasePool::endpoints(const Endpoint& endpoint) const
 	std::lock_guard<std::mutex> lk(mtx);
 	auto it = endpoints_map.find(endpoint);
 	if (it != endpoints_map.end()) {
+		database_endpoints.reserve(it->second.size());
 		for (auto& endpoints : it->second) {
 			auto database_endpoint = _get(endpoints);
 			if (database_endpoint) {
