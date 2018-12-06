@@ -274,7 +274,7 @@ def main():
         for arg in sys.argv[1:]:
             if arg in ("-h", "--help"):
                 raise ValueError("Help!")
-            m = re.match(r'^(\d+)?(?:-(\d+)?)(?:/(\d+))?$', arg)
+            m = re.match(r'^(\d+)?(?:-(\d+))?(?:/(\d+))?$', arg)
             if m and any(m.groups()):
                 if m.group(2):
                     start = int(m.group(1) or start)
