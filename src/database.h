@@ -118,7 +118,7 @@ public:
 	}
 
 	bool is_wal_active() const {
-		return (flags & DB_NO_WAL) != DB_NO_WAL;
+		return is_writable() && is_local() && (flags & DB_NO_WAL) != DB_NO_WAL;
 	}
 
 	Transaction transaction;

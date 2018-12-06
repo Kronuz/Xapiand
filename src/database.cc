@@ -344,7 +344,7 @@ Database::reopen_writable()
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
-	if (is_writable() && is_local() && is_wal_active()) {
+	if (is_wal_active()) {
 
 		// Create a new ConcurrentQueue producer token for this database
 		producer_token = XapiandManager::manager->wal_writer.new_producer_token(endpoint.path);
@@ -736,7 +736,7 @@ Database::commit(bool wal_, bool send_update)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_commit(*this, send_update); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_commit(*this, send_update); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -844,7 +844,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document(*this, did); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document(*this, did); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -897,7 +897,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document_term(*this, term); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_delete_document_term(*this, term); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1058,7 +1058,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_document(*this, std::move(doc)); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_document(*this, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1115,7 +1115,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document(*this, did, std::move(doc)); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document(*this, did, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1173,7 +1173,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document_term(*this, term, std::move(doc)); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_replace_document_term(*this, term, std::move(doc)); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1225,7 +1225,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_spelling(*this, word, freqinc); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_add_spelling(*this, word, freqinc); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1281,7 +1281,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_remove_spelling(*this, word, freqdec); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_remove_spelling(*this, word, freqdec); }
 #else
 	ignore_unused(wal_);
 #endif
@@ -1535,7 +1535,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_writable() && is_local() && is_wal_active()) { XapiandManager::manager->wal_writer.write_set_metadata(*this, key, value); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager->wal_writer.write_set_metadata(*this, key, value); }
 #else
 	ignore_unused(wal_);
 #endif
