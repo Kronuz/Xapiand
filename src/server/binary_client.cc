@@ -550,7 +550,7 @@ BinaryClient::__repr__() const
 #else
 	auto& state_repr = StateNames(state);
 #endif
-	return string::format("<BinaryClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s>",
+	return string::format("<BinaryClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
 		state_repr,
 		use_count(),
 		sock,

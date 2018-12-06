@@ -360,11 +360,11 @@ DatabaseEndpoint::empty() const
 std::string
 DatabaseEndpoint::__repr__() const
 {
-	return string::format("<DatabaseEndpoint %s%s%s {refs:%d}>",
+	return string::format("<DatabaseEndpoint {refs:%d} %s%s%s>",
+		refs.load(),
 		repr(to_string()),
 		is_locked() ? " (locked)" : "",
-		is_finished() ? " (finished)" : "",
-		refs.load());
+		is_finished() ? " (finished)" : "");
 }
 
 

@@ -1779,7 +1779,7 @@ Database::to_string() const
 std::string
 Database::__repr__() const
 {
-	return string::format("<Database %s (%s)%s%s%s%s%s>",
+	return string::format("<Database %s (%s)%s%s%s%s%s%s%s%s>",
 		repr(endpoints.to_string()),
 		readable_flags(flags),
 		is_writable() ? " (writable)" : "",
