@@ -414,19 +414,19 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 	if (received <= 0) {
 		if (received < 0) {
-			L_NOTICE("Connection unexpectedly closed after %s: %s (%d): %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
+			L_NOTICE("Client connection closed unexpectedly after %s: %s (%d): %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
 		} else if (init_state != 18) {
-			L_NOTICE("Client unexpectedly closed the other end after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
+			L_NOTICE("Client closed unexpectedly after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
 		} else if (waiting) {
-			L_NOTICE("Client unexpectedly closed the other end after %s: There was still a request in progress", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after %s: There was still a request in progress", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		// } else if (running) {
-		// 	L_NOTICE("Client unexpectedly closed the other end after %s: There was still a worker running", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+		// 	L_NOTICE("Client closed unexpectedly after %s: There was still a worker running", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		} else if (!write_queue.empty()) {
-			L_NOTICE("Client unexpectedly closed the other end after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (!requests.empty()) {
-				L_NOTICE("Client unexpectedly closed the other end after %s: There were still pending requests", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+				L_NOTICE("Client closed unexpectedly after %s: There were still pending requests", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
 			}
 		}
 		return received;
