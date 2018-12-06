@@ -180,5 +180,6 @@ public:
 
 	std::pair<size_t, size_t> count();
 
+	std::string __repr__() const;
 	std::string dump_databases(int level = 1) const;
 };

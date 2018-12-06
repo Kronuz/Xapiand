@@ -916,6 +916,14 @@ DatabasePool::count()
 
 
 std::string
+DatabasePool::__repr__() const
+{
+	return string::format("<DatabasePool {locks:%d}>",
+		locks.load());
+}
+
+
+std::string
 DatabasePool::dump_databases(int level) const
 {
 	std::string indent;
@@ -924,11 +932,15 @@ DatabasePool::dump_databases(int level) const
 	}
 
 	std::string ret;
+	ret += indent;
+	ret += __repr__();
+	ret.push_back('\n');
+
 	for (auto& database_endpoint : endpoints()) {
-		ret += indent;
+		ret += indent + indent;
 		ret += database_endpoint->__repr__();
 		ret.push_back('\n');
-		ret += database_endpoint->dump_databases(level + 1);
+		ret += database_endpoint->dump_databases(level + 2);
 		database_endpoint.reset();
 	}
 	return ret;
