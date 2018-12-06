@@ -634,8 +634,11 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		}
 	}
 
+	bool local_ = local;
+
 	reset();
 
+	local = local_;
 	closed = closed_;
 	transaction = transaction_;
 }
