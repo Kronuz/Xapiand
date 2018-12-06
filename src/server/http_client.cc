@@ -932,6 +932,7 @@ HttpClient::process(Request& request, Response& response)
 			constexpr static auto _ = phf::make_phf({
 				hhl("Connection refused"),
 				hhl("Connection reset by peer"),
+				hhl("Connection closed unexpectedly"),
 			});
 			switch (_.fhhl(error_string)) {
 				case _.fhhl("Connection refused"):
@@ -941,6 +942,10 @@ HttpClient::process(Request& request, Response& response)
 				case _.fhhl("Connection reset by peer"):
 					error_code = HTTP_STATUS_BAD_GATEWAY;
 					error.assign("Endpoint connection reset by peer!");
+					break;
+				case _.fhhl("Connection closed unexpectedly"):
+					error_code = HTTP_STATUS_BAD_GATEWAY;
+					error.assign("Endpoint connection closed unexpectedly!");
 					break;
 				default:
 					error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
