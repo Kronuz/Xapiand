@@ -511,9 +511,10 @@ BinaryClient::operator()()
 std::string
 BinaryClient::__repr__() const
 {
-	return string::format("<BinaryClient (%s) {cnt:%ld}%s%s%s%s%s>",
+	return string::format("<BinaryClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s>",
 		StateNames(state),
 		use_count(),
+		sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "",

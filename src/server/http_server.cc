@@ -127,8 +127,9 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 std::string
 HttpServer::__repr__() const
 {
-	return string::format("<HttpServer {cnt:%ld}%s%s%s>",
+	return string::format("<HttpServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
+		sock == -1 ? http->sock : sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");

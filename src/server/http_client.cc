@@ -3181,8 +3181,9 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 std::string
 HttpClient::__repr__() const
 {
-	return string::format("<HttpClient {cnt:%ld}%s%s%s%s%s>",
+	return string::format("<HttpClient {cnt:%ld, sock:%d}%s%s%s%s%s>",
 		use_count(),
+		sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "",

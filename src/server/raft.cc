@@ -1017,9 +1017,10 @@ Raft::getDescription() const
 std::string
 Raft::__repr__() const
 {
-	return string::format("<Raft (%s) {cnt:%ld}%s%s%s>",
+	return string::format("<Raft (%s) {cnt:%ld, sock:%d}%s%s%s>",
 		RoleNames(role),
 		use_count(),
+		sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");

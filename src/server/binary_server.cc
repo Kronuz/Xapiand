@@ -222,8 +222,9 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 std::string
 BinaryServer::__repr__() const
 {
-	return string::format("<BinaryServer {cnt:%ld}%s%s%s>",
+	return string::format("<BinaryServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
+		sock == -1 ? binary->sock : sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");
