@@ -133,6 +133,10 @@ QueryParser::next(const char *name, size_t name_len)
 		n0 = n1 = off + len;
 	}
 
+	if (n1 > nf) {
+		return -1;
+	}
+
 	while (true) {
 		char cn = (n1 == nf) ? '\0' : *n1;
 		switch (cn) {
