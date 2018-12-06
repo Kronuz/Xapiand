@@ -1773,10 +1773,11 @@ Database::to_string() const
 std::string
 Database::__repr__() const
 {
-	return string::format("<%s at %p {endpoint:%s, flags:(%s)}%s>",
-		_database ? is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database" : "InvalidDatabase",
+	return string::format("<%s at %p {endpoint:%s, flags:(%s)}%s%s>",
+		is_writable_and_local_with_wal ? "LocalWritableDatabaseWithWAL" : is_writable_and_local ? "LocalWritableDatabase" : is_writable ? "WritableDatabase" : "Database",
 		static_cast<const void*>(this),
 		repr(endpoints.to_string()),
 		readable_flags(flags),
-		busy ? " (busy)" : "");
+		busy ? " (busy)" : "",
+		_database ? "" : " (invalid)");
 }
