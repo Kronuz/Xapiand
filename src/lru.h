@@ -73,11 +73,19 @@ public:
 		return _items_list.begin();
 	}
 
+	const_iterator begin() const noexcept {
+		return _items_list.begin();
+	}
+
 	const_iterator cbegin() const noexcept {
 		return _items_list.cbegin();
 	}
 
 	iterator end() noexcept {
+		return _items_list.end();
+	}
+
+	const_iterator end() const noexcept {
 		return _items_list.end();
 	}
 
