@@ -87,12 +87,14 @@ Discovery::shutdown_impl(long long asap, long long now)
 
 	Worker::shutdown_impl(asap, now);
 
-	stop(false);
-	destroy(false);
+	if (asap) {
+		stop(false);
+		destroy(false);
 
-	detach();
-	if (is_runner()) {
-		break_loop();
+		detach();
+		if (is_runner()) {
+			break_loop();
+		}
 	}
 }
 

@@ -352,14 +352,21 @@ protected:
 	void shutdown_impl(long long asap, long long now) override {
 		L_CALL("HttpClient::shutdown_impl(%lld, %lld)", asap, now);
 
-		shutting_down = true;
-
 		Worker::shutdown_impl(asap, now);
 
-		if (now != 0 || is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
+		if (asap) {
+			shutting_down = true;
+			if (now != 0 || is_idle()) {
+				stop(false);
+				destroy(false);
+				detach();
+			}
+		} else {
+			if (is_idle()) {
+				stop(false);
+				destroy(false);
+				detach();
+			}
 		}
 	}
 };

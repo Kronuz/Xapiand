@@ -101,7 +101,7 @@ BinaryClient::~BinaryClient()
 		delete_files(temp_directory.c_str());
 	}
 
-	if (shutting_down && !is_idle()) {
+	if (is_shutting_down() && !is_idle()) {
 		L_INFO("Binary client killed!");
 	}
 
@@ -497,7 +497,7 @@ BinaryClient::operator()()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down && is_idle()) {
+	if (is_shutting_down() && is_idle()) {
 		L_CONN("Running in worker ended due shutdown.");
 		detach();
 		return;

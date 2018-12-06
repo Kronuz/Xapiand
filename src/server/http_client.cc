@@ -388,7 +388,7 @@ HttpClient::~HttpClient()
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	if (shutting_down && !is_idle()) {
+	if (is_shutting_down() && !is_idle()) {
 		L_INFO("HTTP client killed!");
 	}
 }
@@ -1041,7 +1041,7 @@ HttpClient::operator()()
 	running = false;
 	lk.unlock();
 
-	if (shutting_down && is_idle()) {
+	if (is_shutting_down() && is_idle()) {
 		L_CONN("Running in worker ended due shutdown.");
 		detach();
 		return;

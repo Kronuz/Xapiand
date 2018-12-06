@@ -377,13 +377,15 @@ BaseTCP::shutdown_impl(long long asap, long long now)
 
 	Worker::shutdown_impl(asap, now);
 
-	stop(false);
-	destroy(false);
+	if (asap) {
+		stop(false);
+		destroy(false);
 
-	if (now != 0) {
-		detach();
-		if (is_runner()) {
-			break_loop();
+		if (now != 0) {
+			detach();
+			if (is_runner()) {
+				break_loop();
+			}
 		}
 	}
 }
