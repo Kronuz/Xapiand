@@ -700,7 +700,6 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 		}
 		if (reopen) {
 			database->reopen();
-			L_DATABASE("== REOPEN DB {endpoint:%s, flags:(%s)}", repr(database->endpoints.to_string()), readable_flags(flags));
 		}
 	}
 
@@ -767,7 +766,7 @@ DatabasePool::cleanup(bool immediate)
 				database_endpoint->clear();
 				lk.lock();
 				if (!database_endpoint->empty()) {
-					L_DATABASE("Leave busy endpoint: %s", repr(database_endpoint->to_string()));
+					L_DATABASE("Leave used endpoint: %s", repr(database_endpoint->to_string()));
 					return lru::DropAction::leave;
 				}
 				_drop_endpoints(*database_endpoint);
@@ -782,7 +781,7 @@ DatabasePool::cleanup(bool immediate)
 			database_endpoint->clear();
 			lk.lock();
 			if (!database_endpoint->empty()) {
-				L_DATABASE("Leave busy endpoint: %s", repr(database_endpoint->to_string()));
+				L_DATABASE("Leave used endpoint: %s", repr(database_endpoint->to_string()));
 				return lru::DropAction::leave;
 			}
 			_drop_endpoints(*database_endpoint);
