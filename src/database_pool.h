@@ -40,6 +40,9 @@
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
 
 
+using namespace std::chrono_literals;
+
+
 constexpr double DB_TIMEOUT = 60.0;
 
 class Database;
@@ -118,6 +121,10 @@ class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint
 
 	mutable std::mutex mtx;
 
+	std::atomic_int locks;
+
+	std::condition_variable checkin_clears_cond;
+
 	std::unordered_map<Endpoint, std::set<Endpoints>> endpoints_map;
 
 	size_t max_databases;
@@ -130,6 +137,8 @@ class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint
 
 	ReferencedDatabaseEndpoint _get(const Endpoints& endpoints) const;
 	ReferencedDatabaseEndpoint get(const Endpoints& endpoints) const;
+
+	bool notify_lockable(const Endpoints& endpoints);
 
 public:
 	DatabasePool(size_t dbpool_size, size_t max_databases);
@@ -159,9 +168,15 @@ public:
 
 	void finish();
 
+	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
+
+	bool join(std::chrono::milliseconds timeout = 60s) {
+		return join(std::chrono::system_clock::now() + timeout);
+	}
+
 	void cleanup(bool immediate = false);
 
-	void clear();
+	bool clear();
 
 	std::pair<size_t, size_t> count();
 

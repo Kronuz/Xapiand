@@ -88,7 +88,7 @@ DatabaseEndpoint::writable_checkout(int flags, double timeout, std::packaged_tas
 			return writable;
 		}
 		auto wait_pred = [&]() {
-			return finished || (!locked && !writable->busy && !database_pool.is_locked(*this));
+			return finished || (!writable->busy && !locked && !database_pool.is_locked(*this));
 		};
 		if (timeout) {
 			if (timeout > 0.0) {
@@ -151,7 +151,7 @@ DatabaseEndpoint::readable_checkout(int flags, double timeout, std::packaged_tas
 			}
 		}
 		auto wait_pred = [&]() {
-			return finished || (!locked && (readables_available > 0 || readables.size() < database_pool.max_databases) && !database_pool.is_locked(*this));
+			return finished || ((readables_available > 0 || readables.size() < database_pool.max_databases) && !locked && !database_pool.is_locked(*this));
 		};
 		if (timeout) {
 			if (timeout > 0.0) {
@@ -211,20 +211,22 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 	}
 
 	if (database->is_writable()) {
-		if (locked || database->is_closed() || database_pool.is_locked(*this)) {
+		if (finished || database_pool.notify_lockable(*this) || database->is_closed()) {
 			std::lock_guard<std::mutex> lk(mtx);
 			writable = nullptr;
+			database_pool.checkin_clears_cond.notify_all();
 		} else {
 			Database::autocommit(database);
 		}
 		database->busy = false;
 		writable_cond.notify_one();
 	} else {
-		if (locked || database->is_closed() || database_pool.is_locked(*this)) {
+		if (finished || database_pool.notify_lockable(*this) || database->is_closed()) {
 			std::lock_guard<std::mutex> lk(mtx);
 			auto it = std::find(readables.begin(), readables.end(), database);
 			if (it != readables.end()) {
 				readables.erase(it);
+				database_pool.checkin_clears_cond.notify_all();
 			}
 		} else {
 			++readables_available;
@@ -449,6 +451,7 @@ public:
 
 DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases) :
 	LRU(dbpool_size),
+	locks(0),
 	max_databases(max_databases)
 {
 }
@@ -500,7 +503,10 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
 
+	++locks;  // This needs to be done before locking
 	if (database->endpoints.locked.exchange(true)) {
+		ASSERT(locks > 0);
+		--locks;  // revert if failed.
 		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
@@ -550,6 +556,9 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 		THROW(Error, "Cannot release exclusive lock database");
 	}
 
+	ASSERT(locks > 0);
+	--locks;
+
 	for (auto& database_endpoint : endpoints(database->endpoints[0])) {
 		database_endpoint->readables_cond.notify_all();
 		database_endpoint.reset();
@@ -558,17 +567,45 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 
 
 bool
+DatabasePool::notify_lockable(const Endpoints& endpoints)
+{
+	L_CALL("DatabasePool::notify_lockable(%s)", repr(endpoints.to_string()));
+
+	bool locked = false;
+
+	if (locks) {
+		std::lock_guard<std::mutex> lk(mtx);
+
+		for (auto& endpoint : endpoints) {
+			auto it = find(Endpoints{endpoint});
+			if (it != end()) {
+				auto& database_endpoint = it->second;
+				if (database_endpoint->locked) {
+					database_endpoint->lockable_cond.notify_one();
+					locked = true;
+				}
+			}
+		}
+	}
+
+	return locked;
+}
+
+
+bool
 DatabasePool::is_locked(const Endpoints& endpoints) const
 {
 	L_CALL("DatabasePool::is_locked(%s)", repr(endpoints.to_string()));
 
-	std::lock_guard<std::mutex> lk(mtx);
+	if (locks) {
+		std::lock_guard<std::mutex> lk(mtx);
 
-	for (auto& endpoint : endpoints) {
-		auto it = find(Endpoints{endpoint});
-		if (it != end()) {
-			if (it->second->locked) {
-				return true;
+		for (auto& endpoint : endpoints) {
+			auto it = find(Endpoints{endpoint});
+			if (it != end()) {
+				if (it->second->locked) {
+					return true;
+				}
 			}
 		}
 	}
@@ -742,17 +779,6 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL("DatabasePool::checkin(%s)", database ? database->__repr__() : "null");
 
-	ASSERT(database);
-	for (auto& endpoint : database->endpoints) {
-		auto database_endpoint = get(Endpoints{endpoint});
-		if (database_endpoint) {
-			if (database_endpoint->locked) {
-				database->close();
-				database_endpoint->lockable_cond.notify_one();
-			}
-		}
-	}
-
 	return database->endpoints.checkin(database);
 }
 
@@ -767,6 +793,28 @@ DatabasePool::finish()
 	for (auto& database_endpoint : *this) {
 		database_endpoint.second->finish();
 	}
+}
+
+
+bool
+DatabasePool::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
+{
+	L_CALL("DatabasePool::join(<timeout>)");
+
+	std::unique_lock<std::mutex> lk(mtx);
+
+	auto is_cleared = [&] {
+		lk.unlock();
+		auto cleared = clear();
+		lk.lock();
+		return cleared;
+	};
+
+	if (!checkin_clears_cond.wait_until(lk, wakeup, is_cleared)) {
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -819,15 +867,35 @@ DatabasePool::cleanup(bool immediate)
 }
 
 
-void
+bool
 DatabasePool::clear()
 {
 	L_CALL("DatabasePool::clear()");
 
+	bool cleared = true;
+
 	for (auto& database_endpoint : endpoints()) {
-		database_endpoint->clear();
+		auto count = database_endpoint->clear();
 		database_endpoint.reset();
+		if (count.first || count.second) {
+			cleared = false;
+		}
 	}
+
+	if (!cleared) {
+		return false;
+	}
+
+	// Now lock to double-check and really clear the LRU:
+	std::lock_guard<std::mutex> lk(mtx);
+	for (auto& database_endpoint : *this) {
+		auto count = database_endpoint.second->count();
+		if (count.first || count.second) {
+			return false;
+		}
+	}
+	LRU::clear();
+	return true;
 }
 
 
