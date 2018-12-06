@@ -55,7 +55,7 @@
 DatabaseEndpoint::DatabaseEndpoint(DatabasePool& database_pool, const Endpoints& endpoints) :
 	Endpoints(endpoints),
 	database_pool(database_pool),
-	busy(0),
+	refs(0),
 	finished(false),
 	locked(false),
 	local_revision(0),
@@ -331,7 +331,7 @@ DatabaseEndpoint::is_busy()
 	std::lock_guard<std::mutex> lk(mtx);
 
 	return (
-		busy != 0 ||
+		refs != 0 ||
 		locked ||
 		(writable && writable->busy) ||
 		(readables_available != readables.size())
@@ -347,7 +347,7 @@ DatabaseEndpoint::empty()
 	std::lock_guard<std::mutex> lk(mtx);
 
 	return (
-		busy == 0 &&
+		refs == 0 &&
 		!locked &&
 		!writable &&
 		readables.empty()
@@ -358,9 +358,12 @@ DatabaseEndpoint::empty()
 std::string
 DatabaseEndpoint::__repr__() const
 {
-	return string::format("<DatabaseEndpoint at %p {endpoint:%s}>",
+	return string::format("<DatabaseEndpoint at %p {endpoint:%s, refs:%d}%s%s>",
 		static_cast<const void*>(this),
-		repr(to_string()));
+		repr(to_string()),
+		refs.load(),
+		locked ? " (locked)" : "",
+		finished ? " (finished)" : "");
 }
 
 
@@ -390,30 +393,30 @@ DatabaseEndpoint::dump_databases(int level)
 }
 
 
-class BusyDatabaseEndpoint {
+class ReferencedDatabaseEndpoint {
 	DatabaseEndpoint* ptr;
 
 public:
-	BusyDatabaseEndpoint(DatabaseEndpoint* ptr) : ptr(ptr) {
+	ReferencedDatabaseEndpoint(DatabaseEndpoint* ptr) : ptr(ptr) {
 		if (ptr) {
-			++ptr->busy;
+			++ptr->refs;
 		}
 	}
 
-	BusyDatabaseEndpoint(const BusyDatabaseEndpoint& ptr) = delete;
-	BusyDatabaseEndpoint(BusyDatabaseEndpoint&& ptr) = default;
-	BusyDatabaseEndpoint& operator=(const BusyDatabaseEndpoint& ptr) = delete;
-	BusyDatabaseEndpoint& operator=(BusyDatabaseEndpoint&& ptr) = default;
+	ReferencedDatabaseEndpoint(const ReferencedDatabaseEndpoint& ptr) = delete;
+	ReferencedDatabaseEndpoint(ReferencedDatabaseEndpoint&& ptr) = default;
+	ReferencedDatabaseEndpoint& operator=(const ReferencedDatabaseEndpoint& ptr) = delete;
+	ReferencedDatabaseEndpoint& operator=(ReferencedDatabaseEndpoint&& ptr) = default;
 
-	~BusyDatabaseEndpoint() {
+	~ReferencedDatabaseEndpoint() {
 		if (ptr) {
-			--ptr->busy;
+			--ptr->refs;
 		}
 	}
 
 	void reset() {
 		if (ptr) {
-			--ptr->busy;
+			--ptr->refs;
 			ptr = nullptr;
 		}
 	}
@@ -442,10 +445,10 @@ DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases) :
 }
 
 
-std::vector<BusyDatabaseEndpoint>
+std::vector<ReferencedDatabaseEndpoint>
 DatabasePool::endpoints()
 {
-	std::vector<BusyDatabaseEndpoint> database_endpoints;
+	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
 
 	std::lock_guard<std::mutex> lk(mtx);
 	for (const auto& database_endpoint : *this) {
@@ -455,10 +458,10 @@ DatabasePool::endpoints()
 }
 
 
-std::vector<BusyDatabaseEndpoint>
+std::vector<ReferencedDatabaseEndpoint>
 DatabasePool::endpoints(const Endpoint& endpoint)
 {
-	std::vector<BusyDatabaseEndpoint> database_endpoints;
+	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
 
 	std::lock_guard<std::mutex> lk(mtx);
 	for (auto& endpoints : endpoints_map[endpoint]) {
@@ -581,7 +584,7 @@ DatabasePool::_drop_endpoints(const Endpoints& endpoints)
 }
 
 
-BusyDatabaseEndpoint
+ReferencedDatabaseEndpoint
 DatabasePool::_spawn(const Endpoints& endpoints)
 {
 	L_CALL("DatabasePool::_spawn(%s)", repr(endpoints.to_string()));
@@ -604,11 +607,11 @@ DatabasePool::_spawn(const Endpoints& endpoints)
 	}
 
 	// Return a busy database endpoint so it cannot get deleted while the object exists
-	return BusyDatabaseEndpoint(database_endpoint);
+	return ReferencedDatabaseEndpoint(database_endpoint);
 }
 
 
-BusyDatabaseEndpoint
+ReferencedDatabaseEndpoint
 DatabasePool::spawn(const Endpoints& endpoints)
 {
 	L_CALL("DatabasePool::spawn(%s)", repr(endpoints.to_string()));
@@ -618,7 +621,7 @@ DatabasePool::spawn(const Endpoints& endpoints)
 }
 
 
-BusyDatabaseEndpoint
+ReferencedDatabaseEndpoint
 DatabasePool::_get(const Endpoints& endpoints)
 {
 	L_CALL("DatabasePool::_get(%s)", repr(endpoints.to_string()));
@@ -633,11 +636,11 @@ DatabasePool::_get(const Endpoints& endpoints)
 	}
 
 	// Return a busy database endpoint so it cannot get deleted while the object exists
-	return BusyDatabaseEndpoint(database_endpoint);
+	return ReferencedDatabaseEndpoint(database_endpoint);
 }
 
 
-BusyDatabaseEndpoint
+ReferencedDatabaseEndpoint
 DatabasePool::get(const Endpoints& endpoints)
 {
 	L_CALL("DatabasePool::get(%s)", repr(endpoints.to_string()));

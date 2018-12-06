@@ -44,7 +44,7 @@ constexpr double DB_TIMEOUT = 60.0;
 
 class Database;
 class DatabasePool;
-class BusyDatabaseEndpoint;
+class ReferencedDatabaseEndpoint;
 
 
 //  ____        _        _                    _____           _             _       _
@@ -57,13 +57,13 @@ class DatabaseEndpoint : public Endpoints
 {
 	friend Database;
 	friend DatabasePool;
-	friend BusyDatabaseEndpoint;
+	friend ReferencedDatabaseEndpoint;
 
 	std::mutex mtx;
 
 	DatabasePool& database_pool;
 
-	std::atomic_int busy;
+	std::atomic_int refs;
 
 	std::atomic_bool finished;
 
@@ -125,11 +125,11 @@ class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint
 	void _lot_endpoints(const Endpoints& endpoints);
 	void _drop_endpoints(const Endpoints& endpoints);
 
-	BusyDatabaseEndpoint _spawn(const Endpoints& endpoints);
-	BusyDatabaseEndpoint spawn(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint _spawn(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint spawn(const Endpoints& endpoints);
 
-	BusyDatabaseEndpoint _get(const Endpoints& endpoints);
-	BusyDatabaseEndpoint get(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint _get(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint get(const Endpoints& endpoints);
 
 public:
 	DatabasePool(size_t dbpool_size, size_t max_databases);
@@ -139,8 +139,8 @@ public:
 	DatabasePool& operator=(const DatabasePool&) = delete;
 	DatabasePool& operator=(DatabasePool&&) = delete;
 
-	std::vector<BusyDatabaseEndpoint> endpoints();
-	std::vector<BusyDatabaseEndpoint> endpoints(const Endpoint& endpoint);
+	std::vector<ReferencedDatabaseEndpoint> endpoints();
+	std::vector<ReferencedDatabaseEndpoint> endpoints(const Endpoint& endpoint);
 
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
