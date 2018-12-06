@@ -1176,7 +1176,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1202,7 +1202,7 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 void
 DatabaseWALWriter::write_delete_document_term(Database& database, const std::string& term)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1228,7 +1228,7 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 void
 DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1255,7 +1255,7 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 void
 DatabaseWALWriter::write_commit(Database& database, bool send_update)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1281,7 +1281,7 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 void
 DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1308,7 +1308,7 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 void
 DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1335,7 +1335,7 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 void
 DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1361,7 +1361,7 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 void
 DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key, const std::string& val)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;
@@ -1388,7 +1388,7 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 void
 DatabaseWALWriter::write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc)
 {
-	ASSERT((database.flags & DB_WRITABLE) == DB_WRITABLE);
+	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
 	auto path = endpoint.path;

@@ -218,13 +218,13 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 		if (it != readables.end()) {
 			readables.erase(it);
 		}
-		if ((database->flags & DB_WRITABLE) == DB_WRITABLE) {
+		if (database->is_writable()) {
 			writable_cond.notify_one();
 		} else {
 			readables_cond.notify_one();
 		}
 	} else {
-		if ((database->flags & DB_WRITABLE) == DB_WRITABLE) {
+		if (database->is_writable()) {
 			Database::autocommit(database);
 			writable_cond.notify_one();
 		} else {
@@ -672,9 +672,9 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout empty database");
 	}
 
-	bool db_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
+	bool is_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
-	if (db_writable && endpoints.size() != 1) {
+	if (is_writable && endpoints.size() != 1) {
 		L_DEBUG("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout writable multi-database");
 	}
@@ -682,7 +682,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 	auto database = spawn(endpoints)->checkout(flags, timeout, callback);
 	ASSERT(database);
 
-	if (!db_writable) {
+	if (!is_writable) {
 		// Reopening of old/outdated (readable) databases:
 		bool reopen = false;
 		auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();

@@ -496,7 +496,7 @@ Database::reopen()
 	L_DATABASE_WRAP_END("Database::reopen:END {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));
 
 	if (_database) {
-		if (!incomplete) {
+		if (!is_incomplete()) {
 			// Try to reopen
 			for (int t = DB_RETRIES; t; --t) {
 				try {
@@ -518,7 +518,7 @@ Database::reopen()
 	}
 
 	try {
-		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
+		if (is_writable()) {
 			reopen_writable();
 		} else {
 			reopen_readable();
