@@ -410,12 +410,14 @@ public:
 
 	~ReferencedDatabaseEndpoint() {
 		if (ptr) {
+			ASSERT(ptr->refs > 0);
 			--ptr->refs;
 		}
 	}
 
 	void reset() {
 		if (ptr) {
+			ASSERT(ptr->refs > 0);
 			--ptr->refs;
 			ptr = nullptr;
 		}
