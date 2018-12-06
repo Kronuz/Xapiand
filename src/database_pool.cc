@@ -211,7 +211,7 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 	}
 
 	if (database->is_writable()) {
-		if (database->is_closed()) {
+		if (locked || database->is_closed() || database_pool.is_locked(*this)) {
 			std::lock_guard<std::mutex> lk(mtx);
 			writable = nullptr;
 		} else {
@@ -220,7 +220,7 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
 		database->busy = false;
 		writable_cond.notify_one();
 	} else {
-		if (database->is_closed()) {
+		if (locked || database->is_closed() || database_pool.is_locked(*this)) {
 			std::lock_guard<std::mutex> lk(mtx);
 			auto it = std::find(readables.begin(), readables.end(), database);
 			if (it != readables.end()) {
