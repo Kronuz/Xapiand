@@ -538,7 +538,11 @@ Discovery::db_update_send(const std::string& path)
 std::string
 Discovery::__repr__() const
 {
-	return Worker::__repr__("Discovery");
+	return string::format("<Discovery {cnt:%ld}%s%s%s>",
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
 }
 
 

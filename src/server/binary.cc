@@ -101,7 +101,11 @@ Binary::trigger_replication(const TriggerReplicationArgs& args)
 std::string
 Binary::__repr__() const
 {
-	return Worker::__repr__("Binary");
+	return string::format("<Binary {cnt:%ld}%s%s%s>",
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
 }
 
 

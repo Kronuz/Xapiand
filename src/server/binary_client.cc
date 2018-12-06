@@ -511,10 +511,17 @@ BinaryClient::operator()()
 std::string
 BinaryClient::__repr__() const
 {
-	return Worker::__repr__(string::format("BinaryClient (%s)%s%s",
+	return string::format("<BinaryClient (%s) {cnt:%ld}%s%s%s%s%s>",
 		StateNames(state),
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "",
 		is_idle() ? " (idle)" : "",
-		is_closed() ? " (closed)" : ""));
+		is_waiting() ? " (waiting)" : "",
+		is_running() ? " (running)" : "",
+		is_shutting_down() ? " (shutting down)" : "",
+		is_closed() ? " (closed)" : "");
 }
 
 #endif  /* XAPIAND_CLUSTERING */

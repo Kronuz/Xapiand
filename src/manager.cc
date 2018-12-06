@@ -519,7 +519,7 @@ XapiandManager::shutdown_sig(int sig)
 
 	if (sig < 0) {
 		atom_sig = sig;
-		if (is_runner() && is_running()) {
+		if (is_runner() && is_running_loop()) {
 			break_loop();
 		} else {
 			throw SystemExit(-sig);
@@ -531,7 +531,7 @@ XapiandManager::shutdown_sig(int sig)
 			if (now <= shutdown_now + 3000) {
 				io::ignore_eintr().store(false);
 				atom_sig = sig = -EX_SOFTWARE;
-				if (is_runner() && is_running()) {
+				if (is_runner() && is_running_loop()) {
 					L_WARNING("Trying breaking the loop.");
 					break_loop();
 				} else {
@@ -1102,7 +1102,12 @@ XapiandManager::server_metrics()
 std::string
 XapiandManager::__repr__() const
 {
-	return Worker::__repr__("XapiandManager");
+	return string::format("<XapiandManager (%s) {cnt:%ld}%s%s%s>",
+		StateNames(state),
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
 }
 
 

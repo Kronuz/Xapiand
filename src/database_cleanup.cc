@@ -113,5 +113,9 @@ DatabaseCleanup::operator()()
 std::string
 DatabaseCleanup::__repr__() const
 {
-	return Worker::__repr__("DatabaseCleanup");
+	return string::format("<DatabaseCleanup {cnt:%ld}%s%s%s>",
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
 }

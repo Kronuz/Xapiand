@@ -139,11 +139,7 @@ private:
 public:
 	std::string dump_tree(int level=1);
 
-	std::string __repr__(const std::string& name) const;
-
-	virtual std::string __repr__() const {
-		return __repr__("Worker");
-	}
+	virtual std::string __repr__() const;
 
 	virtual ~Worker();
 
@@ -174,7 +170,7 @@ public:
 		return _detaching.load(std::memory_order_relaxed);
 	}
 
-	auto is_running() const {
+	auto is_running_loop() const {
 		return ev_loop->depth() != 0u;
 	}
 

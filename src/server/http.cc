@@ -85,5 +85,9 @@ Http::start()
 std::string
 Http::__repr__() const
 {
-	return Worker::__repr__("Http");
+	return string::format("<Http {cnt:%ld}%s%s%s>",
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
 }
