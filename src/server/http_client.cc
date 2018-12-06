@@ -395,7 +395,7 @@ HttpClient::~HttpClient()
 
 
 bool
-HttpClient::is_idle()
+HttpClient::is_idle() const
 {
 	if (!waiting && !running && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
@@ -3182,7 +3182,9 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 std::string
 HttpClient::__repr__() const
 {
-	return Worker::__repr__("HttpClient");
+	return Worker::__repr__(string::format("HttpClient%s%s",
+		is_idle() ? " (idle)" : "",
+		is_closed() ? " (closed)" : ""));
 }
 
 

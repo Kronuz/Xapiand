@@ -130,6 +130,10 @@ protected:
 	void read_file();
 
 	void close();
+
+	bool is_closed() const {
+		return closed.load();
+	}
 };
 
 

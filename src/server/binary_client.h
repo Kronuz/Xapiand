@@ -46,17 +46,17 @@
 enum class State {
 	INIT_REMOTE,
 	INIT_REPLICATION,
-	REMOTEPROTOCOL_SERVER,
-	REPLICATIONPROTOCOL_CLIENT,
-	REPLICATIONPROTOCOL_SERVER,
+	REMOTE_SERVER,
+	REPLICATION_CLIENT,
+	REPLICATION_SERVER,
 };
 
 inline const std::string& StateNames(State type) {
 	static const std::string _[] = {
 		"INIT",
-		"REMOTEPROTOCOL_SERVER",
-		"REPLICATIONPROTOCOL_CLIENT",
-		"REPLICATIONPROTOCOL_SERVER",
+		"REMOTE_SERVER",
+		"REPLICATION_CLIENT",
+		"REPLICATION_SERVER",
 	};
 	auto type_int = static_cast<size_t>(type);
 	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
@@ -71,7 +71,7 @@ inline const std::string& StateNames(State type) {
 class BinaryClient : public MetaBaseClient<BinaryClient> {
 	friend MetaBaseClient<BinaryClient>;
 
-	std::mutex runner_mutex;
+	mutable std::mutex runner_mutex;
 
 	State state;
 
@@ -89,7 +89,7 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 
 	BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
-	bool is_idle();
+	bool is_idle() const;
 
 	ssize_t on_read(const char *buf, ssize_t received);
 	void on_read_file(const char *buf, ssize_t received);

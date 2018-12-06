@@ -267,7 +267,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 		BAD_QUERY,
 	};
 
-	bool is_idle();
+	bool is_idle() const;
 
 	Command getCommand(std::string_view command_name);
 
@@ -278,7 +278,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	static const http_parser_settings settings;
 
 	Request new_request;
-	std::mutex runner_mutex;
+	mutable std::mutex runner_mutex;
 	std::deque<Request> requests;
 	Endpoints endpoints;
 

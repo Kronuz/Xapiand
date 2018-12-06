@@ -113,7 +113,7 @@ BinaryClient::~BinaryClient()
 
 
 bool
-BinaryClient::is_idle()
+BinaryClient::is_idle() const
 {
 	if (!waiting && !running && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
@@ -186,7 +186,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		switch (type) {
 			case SWITCH_TO_REPL: {
 				std::lock_guard<std::mutex> lk(runner_mutex);
-				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
+				state = State::REPLICATION_SERVER;  // Switch to replication protocol
 				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY("Switched to replication protocol");
 				break;
@@ -356,7 +356,7 @@ BinaryClient::operator()()
 
 	switch (state) {
 		case State::INIT_REMOTE:
-			state = State::REMOTEPROTOCOL_SERVER;
+			state = State::REMOTE_SERVER;
 			lk.unlock();
 			try {
 				remote_protocol.msg_update(std::string());
@@ -371,7 +371,7 @@ BinaryClient::operator()()
 			lk.lock();
 			break;
 		case State::INIT_REPLICATION:
-			state = State::REPLICATIONPROTOCOL_CLIENT;
+			state = State::REPLICATION_CLIENT;
 			lk.unlock();
 			try {
 				replication_protocol.connect();
@@ -390,13 +390,13 @@ BinaryClient::operator()()
 
 	while (!messages.empty() && !closed) {
 		switch (state) {
-			case State::REMOTEPROTOCOL_SERVER: {
+			case State::REMOTE_SERVER: {
 				std::string message;
 				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REMOTEPROTOCOL_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
 					remote_protocol.remote_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -421,13 +421,13 @@ BinaryClient::operator()()
 				break;
 			}
 
-			case State::REPLICATIONPROTOCOL_SERVER: {
+			case State::REPLICATION_SERVER: {
 				std::string message;
 				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REPLICATION_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
 					replication_protocol.replication_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -452,13 +452,13 @@ BinaryClient::operator()()
 				break;
 			}
 
-			case State::REPLICATIONPROTOCOL_CLIENT: {
+			case State::REPLICATION_CLIENT: {
 				std::string message;
 				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REPLICATIONPROTOCOL_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REPLICATION_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 					replication_protocol.replication_client(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -511,7 +511,10 @@ BinaryClient::operator()()
 std::string
 BinaryClient::__repr__() const
 {
-	return Worker::__repr__("BinaryClient");
+	return Worker::__repr__(string::format("BinaryClient (%s)%s%s",
+		StateNames(state),
+		is_idle() ? " (idle)" : "",
+		is_closed() ? " (closed)" : ""));
 }
 
 #endif  /* XAPIAND_CLUSTERING */
