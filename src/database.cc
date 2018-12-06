@@ -1789,5 +1789,5 @@ Database::__repr__() const
 		is_modified() ? " (modified)" : "",
 		is_incomplete() ? " (incomplete)" : "",
 		_database ? "" : " (invalid)",
-		busy ? " (busy)" : "");
+		is_busy() ? " (busy)" : "");
 }

@@ -103,6 +103,14 @@ public:
 
 	bool is_busy() const;
 
+	bool is_locked() const {
+		return locked.load(std::memory_order_relaxed);
+	}
+
+	bool is_finished() const {
+		return finished.load(std::memory_order_relaxed);
+	}
+
 	bool empty() const;
 
 	std::string __repr__() const;

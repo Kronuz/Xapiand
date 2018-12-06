@@ -121,6 +121,10 @@ public:
 		return is_writable() && is_local() && (flags & DB_NO_WAL) != DB_NO_WAL;
 	}
 
+	bool is_busy() const {
+		return busy.load(std::memory_order_relaxed);
+	}
+
 	Transaction transaction;
 
 	std::unique_ptr<Xapian::Database> _database;
