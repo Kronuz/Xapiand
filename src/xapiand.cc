@@ -447,6 +447,8 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
 		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
 
+		SwitchArg admin_commands("", "admin-commands", "Enables administrative HTTP commands.", cmd, false);
+
 		SwitchArg no_colors("", "no-colors", "Disables colors on the console.", cmd, false);
 		SwitchArg colors("", "colors", "Enables colors on the console.", cmd, false);
 
@@ -522,6 +524,8 @@ void parseOptions(int argc, char** argv) {
 
 		opts.colors = colors.getValue();
 		opts.no_colors = no_colors.getValue();
+
+		opts.admin_commands = admin_commands.getValue();
 
 		opts.log_epoch = log_epoch.getValue();
 		opts.log_iso8601 = log_iso8601.getValue();

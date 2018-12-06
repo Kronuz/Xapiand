@@ -1235,21 +1235,32 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			request.path_parser.skip_id();  // Command has no ID
 			restore_view(request, response, method, cmd);
 			break;
-#ifndef NDEBUG
 		case Command::CMD_QUIT:
-			XapiandManager::manager->shutdown_sig(0);
-			write_http_response(request, response, HTTP_STATUS_OK);
-			destroy();
-			detach();
+			if (opts.admin_commands) {
+				XapiandManager::manager->shutdown_sig(0);
+				write_http_response(request, response, HTTP_STATUS_OK);
+				destroy();
+				detach();
+			} else {
+				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
 		case Command::CMD_FLUSH:
-			XapiandManager::manager->database_pool->cleanup(true);
-			XapiandManager::manager->shutdown(0, 0);
-			write_http_response(request, response, HTTP_STATUS_OK);
-			destroy();
-			detach();
+			if (opts.admin_commands) {
+				// Flush both databases and clients by default (unless one is specified)
+				int flush_databases = request.query_parser.next("databases");
+				int flush_clients = request.query_parser.next("clients");
+				if (flush_databases != -1 || flush_clients == -1) {
+					XapiandManager::manager->database_pool->cleanup(true);
+				}
+				if (flush_clients != -1 || flush_databases == -1) {
+					XapiandManager::manager->shutdown(0, 0);
+				}
+				write_http_response(request, response, HTTP_STATUS_OK);
+			} else {
+				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
-#endif
 		default:
 			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			break;

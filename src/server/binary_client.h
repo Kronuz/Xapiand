@@ -40,7 +40,7 @@
 #include "threadpool.hh"                      // for Task
 
 // #define SAVE_LAST_MESSAGES
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(XAPIAND_TRACEBACKS)
 #ifndef SAVE_LAST_MESSAGES
 #define SAVE_LAST_MESSAGES 1
 #endif
