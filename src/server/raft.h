@@ -65,7 +65,7 @@ public:
 
 	static const std::string& RoleNames(Role type) {
 		static const std::string _[] = {
-			"LEADER", "FOLLOWER", "CANDIDATE",
+			"FOLLOWER", "CANDIDATE", "LEADER",
 		};
 		auto type_int = static_cast<size_t>(type);
 		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
