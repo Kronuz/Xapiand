@@ -46,6 +46,7 @@ public:
 
 template <typename T>
 class ConcurrentQueue {
+protected:
 	std::unique_ptr<std::mutex> mtx;
 	std::deque<T> queue;
 

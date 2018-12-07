@@ -26,28 +26,27 @@
 #include "moodycamel/blockingconcurrentqueue.h"
 #else
 
+#include <condition_variable>
+
 #include "concurrent_queue.h"
-#include "lightweight_semaphore.h"
 #include "likely.h"
 
 namespace moodycamel {
 
 template <typename T>
 class BlockingConcurrentQueue : public ConcurrentQueue<T> {
-	std::unique_ptr<LightweightSemaphore> sema;
+	std::condition_variable cond;
 
 public:
 	BlockingConcurrentQueue() :
-		ConcurrentQueue<T>(),
-		sema(std::make_unique<LightweightSemaphore>()) {}
+		ConcurrentQueue<T>() {}
 
 	BlockingConcurrentQueue(size_t) :
-		ConcurrentQueue<T>(),
-		sema(std::make_unique<LightweightSemaphore>()) {}
+		ConcurrentQueue<T>() {}
 
 	bool enqueue(const T& item) {
 		if likely(ConcurrentQueue<T>::enqueue(item)) {
-			sema->signal();
+			cond.notify_one();
 			return true;
 		}
 		return false;
@@ -55,7 +54,7 @@ public:
 
 	bool enqueue(T&& item) {
 		if likely(ConcurrentQueue<T>::enqueue(std::forward<T>(item))) {
-			sema->signal();
+			cond.notify_one();
 			return true;
 		}
 		return false;
@@ -68,7 +67,7 @@ public:
 	template<typename It>
 	bool enqueue_bulk(It itemFirst, size_t count) {
 		if likely(ConcurrentQueue<T>::enqueue_bulk(itemFirst, count)) {
-			sema->signal(count);
+			cond.notify_all();
 			return true;
 		}
 		return false;
@@ -76,10 +75,12 @@ public:
 
 	template<typename U>
 	void wait_dequeue(U& item) {
-		sema->wait();
-		while (!ConcurrentQueue<T>::try_dequeue(item)) {
-			continue;
-		}
+		std::unique_lock<std::mutex> lk(*ConcurrentQueue<T>::mtx);
+		cond.wait(lk, [&]{
+			return !ConcurrentQueue<T>::queue.empty();
+		});
+		item = std::move(ConcurrentQueue<T>::queue.front());
+		ConcurrentQueue<T>::queue.pop_front();
 	}
 };
 
