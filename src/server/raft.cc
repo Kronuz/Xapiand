@@ -68,6 +68,7 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  leader_election_timeout(*ev_loop),
 	  leader_heartbeat(*ev_loop),
 	  request_vote_async(*ev_loop),
+	  add_command_async(*ev_loop),
 	  role(Role::FOLLOWER),
 	  votes_granted(0),
 	  votes_denied(0),
@@ -85,6 +86,10 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	request_vote_async.set<Raft, &Raft::request_vote_async_cb>(this);
 	request_vote_async.start();
 	L_EV("Start raft's async request_vote signal event");
+
+	add_command_async.set<Raft, &Raft::add_command_async_cb>(this);
+	add_command_async.start();
+	L_EV("Start discovery's async add_command signal event");
 }
 
 
@@ -920,33 +925,6 @@ Raft::_commit_log()
 
 
 void
-Raft::add_command(const std::string& command)
-{
-	L_CALL("Raft::add_command(%s)", repr(command));
-
-	if (role == Role::LEADER) {
-		log.push_back({
-			current_term,
-			command,
-		});
-
-		_commit_log();
-
-#ifdef L_RAFT_LOG
-		for (size_t i = 0; i < log.size(); ++i) {
-			L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
-		}
-#endif
-	} else {
-		auto local_node = Node::local_node();
-		send_message(Message::ADD_COMMAND,
-			local_node->serialise() +
-			serialise_string(command));
-	}
-}
-
-
-void
 Raft::_request_vote(bool immediate)
 {
 	L_CALL("Raft::_request_vote(%s)", immediate ? "true" : "false");
@@ -1004,6 +982,61 @@ Raft::request_vote_async_cb(ev::async&, int revents)
 	ignore_unused(revents);
 
 	_request_vote(false);
+}
+
+
+void
+Raft::_add_command(const std::string& command)
+{
+	L_CALL("Raft::_add_command(%s)", repr(command));
+
+	if (role == Role::LEADER) {
+		log.push_back({
+			current_term,
+			command,
+		});
+
+		_commit_log();
+
+#ifdef L_RAFT_LOG
+		for (size_t i = 0; i < log.size(); ++i) {
+			L_RAFT_LOG("%s log[%zu] -> {term:%llu, command:%s}", i + 1 <= commit_index ? "*" : i + 1 <= last_applied ? "+" : " ", i + 1, log[i].term, repr(log[i].command));
+		}
+#endif
+	} else {
+		auto local_node = Node::local_node();
+		send_message(Message::ADD_COMMAND,
+			local_node->serialise() +
+			serialise_string(command));
+	}
+}
+
+
+void
+Raft::add_command_async_cb(ev::async&, int revents)
+{
+	L_CALL("Raft::add_command_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("Raft::add_command_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_END("Raft::add_command_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+
+	ignore_unused(revents);
+
+	std::string command;
+	while (add_command_args.try_dequeue(command)) {
+		_add_command(command);
+	}
+}
+
+
+void
+Raft::add_command(const std::string& command)
+{
+	L_CALL("Raft::add_command(%s)", repr(command));
+
+	add_command_args.enqueue(command);
+
+	add_command_async.send();
 }
 
 

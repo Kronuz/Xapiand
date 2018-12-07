@@ -31,6 +31,7 @@
 #include <unordered_map>                    // for std::unordered_map
 #include <vector>                           // for std::vector
 
+#include "concurrent_queue.h"               // for ConcurrentQueue
 #include "udp.h"                            // for UDP
 #include "node.h"                           // for Node
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
@@ -108,6 +109,9 @@ private:
 
 	ev::async request_vote_async;
 
+	ev::async add_command_async;
+	ConcurrentQueue<std::string> add_command_args;
+
 	Role role;
 	size_t votes_granted;
 	size_t votes_denied;
@@ -145,6 +149,9 @@ private:
 	void _request_vote(bool immediate);
 
 	void request_vote_async_cb(ev::async& watcher, int revents);
+
+	void _add_command(const std::string& command);
+	void add_command_async_cb(ev::async& watcher, int revents);
 
 	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
