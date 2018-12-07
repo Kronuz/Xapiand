@@ -28,6 +28,7 @@
 
 #include "concurrent_queue.h"
 #include "lightweight_semaphore.h"
+#include "likely.h"
 
 namespace moodycamel {
 

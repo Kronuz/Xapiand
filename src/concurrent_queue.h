@@ -30,8 +30,6 @@
 #include <memory>
 #include <mutex>
 
-#include "likely.h"              // for likely, unlikely
-
 namespace moodycamel {
 
 struct ConcurrentQueueDefaultTraits {
