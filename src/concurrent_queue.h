@@ -22,6 +22,8 @@
 
 #pragma once
 
+#define MOODYCAMEL
+
 #ifdef MOODYCAMEL
 #include "moodycamel/concurrentqueue.h"
 #else
