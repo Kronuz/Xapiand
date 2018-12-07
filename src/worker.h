@@ -59,6 +59,13 @@ private:
 	std::atomic_bool _detaching;
 	std::atomic_int _detaching_retries;
 
+	std::atomic_bool _shutdown_op;
+	std::atomic_bool _break_loop_op;
+	std::atomic_bool _destroy_op;
+	std::atomic_bool _start_op;
+	std::atomic_bool _stop_op;
+	std::atomic_bool _detach_children_op;
+
 	bool _started;
 	bool _destroyed;
 	bool _deinited;
@@ -87,6 +94,12 @@ protected:
 		  _runner(false),
 		  _detaching(false),
 		  _detaching_retries(0),
+		  _shutdown_op(false),
+		  _break_loop_op(false),
+		  _destroy_op(false),
+		  _start_op(false),
+		  _stop_op(false),
+		  _detach_children_op(false),
 		  _started(false),
 		  _destroyed(false),
 		  _deinited(false),
@@ -121,19 +134,23 @@ private:
 	void _init();
 	void _deinit();
 
-	void _destroyer();
-	void _starter();
-	void _stopper();
-
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
 	void _start_async_cb(ev::async&, int revents);
 	void _stop_async_cb(ev::async&, int revents);
 	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
+
 	std::vector<std::weak_ptr<Worker>> _gather_children();
-	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
 	auto _ancestor(int levels=-1);
+
+	void _break_loop_impl();
+	void _start_impl();
+	void _stop_impl();
+	void _destroy_impl();
+	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
+	void _detach_children_impl();
+
 	void _detach_children(bool async);
 
 public:
@@ -148,14 +165,10 @@ public:
 	virtual void stop_impl() {}
 	virtual void destroy_impl() {}
 
-	void break_loop_impl();
-	void detach_children_impl();
-
 	void shutdown(bool async = true);
 	void shutdown(long long asap, long long now, bool async = true);
 
 	void break_loop(bool async = true);
-
 	void start(bool async = true);
 	void stop(bool async = true);
 	void destroy(bool async = true);

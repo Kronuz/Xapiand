@@ -63,8 +63,8 @@ Worker::deinit()
 {
 	L_CALL("Worker::deinit()");
 
-	_stopper();
-	_destroyer();
+	_stop_impl();
+	_destroy_impl();
 	_deinit();
 }
 
@@ -135,52 +135,6 @@ Worker::_deinit()
 
 
 void
-Worker::_destroyer()
-{
-	L_CALL("Worker::_destroyer()");
-
-	L_EV_BEGIN("Worker::_destroyer:BEGIN");
-	L_EV_END("Worker::_destroyer:END");
-
-	if (!_destroyed) {
-		destroy_impl();
-		_destroyed = true;
-	}
-
-}
-
-
-inline void
-Worker::_starter()
-{
-	L_CALL("Worker::_starter()");
-
-	L_EV_BEGIN("Worker::_starter:BEGIN");
-	L_EV_END("Worker::_starter:END");
-
-	if (!_started) {
-		start_impl();
-		_started = true;
-	}
-}
-
-
-void
-Worker::_stopper()
-{
-	L_CALL("Worker::_stopper()");
-
-	L_EV_BEGIN("Worker::_stopper:BEGIN");
-	L_EV_END("Worker::_stopper:END");
-
-	if (_started) {
-		stop_impl();
-		_started = false;
-	}
-}
-
-
-void
 Worker::_shutdown_async_cb()
 {
 	L_CALL("Worker::_shutdown_async_cb() %s", __repr__());
@@ -202,18 +156,7 @@ Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	break_loop_impl();
-}
-
-
-void
-Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
-{
-	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
-
-	_destroyer();
+	_break_loop_impl();
 }
 
 
@@ -224,7 +167,7 @@ Worker::_start_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	_starter();
+	_start_impl();
 }
 
 
@@ -235,7 +178,18 @@ Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	_stopper();
+	_stop_impl();
+}
+
+
+void
+Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
+{
+	L_CALL("Worker::_destroy_async_cb(<watcher>, 0x%x (%s)) %s", revents, readable_revents(revents), __repr__());
+
+	ignore_unused(revents);
+
+	_destroy_impl();
 }
 
 
@@ -249,7 +203,7 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	detach_children_impl();
+	_detach_children_impl();
 }
 
 
@@ -276,11 +230,137 @@ Worker::_gather_children()
 }
 
 
+auto
+Worker::_ancestor(int levels)
+{
+	L_CALL("Worker::_ancestor(%d) %s", levels, __repr__());
+
+	std::lock_guard<std::recursive_mutex> lk(_mtx);
+
+	auto ancestor = shared_from_this();
+	while (ancestor->_parent && levels-- != 0) {
+		ancestor = ancestor->_parent;
+	}
+	return ancestor;
+}
+
+
 #ifdef L_WORKER
 #define LOG_WORKER
 #else
 #define L_WORKER L_NOTHING
 #endif
+
+
+std::string
+Worker::__repr__() const
+{
+	return string::format("<Worker {cnt:%ld}%s%s%s>",
+		use_count(),
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "");
+}
+
+
+std::string
+Worker::dump_tree(int level)
+{
+	std::string ret;
+	for (int l = 0; l < level; ++l) {
+		ret += "    ";
+	}
+	ret += __repr__();
+	ret.push_back('\n');
+
+	auto weak_children = _gather_children();
+	for (auto& weak_child : weak_children) {
+		if (auto child = weak_child.lock()) {
+			ret += child->dump_tree(level + 1);
+		}
+	}
+
+	return ret;
+}
+
+
+void
+Worker::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("Worker::shutdown_impl(%lld, %lld) %s", asap, now, __repr__());
+
+	if (_shutdown_op.exchange(false)) {
+		auto weak_children = _gather_children();
+		for (auto& weak_child : weak_children) {
+			if (auto child = weak_child.lock()) {
+				auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
+				child->shutdown(asap, now, async);
+			}
+		}
+	}
+}
+
+
+void
+Worker::_break_loop_impl()
+{
+	L_CALL("Worker::_break_loop_impl() %s", __repr__());
+
+	if (_break_loop_op.exchange(false)) {
+		ev_loop->break_loop();
+	}
+}
+
+
+inline void
+Worker::_start_impl()
+{
+	L_CALL("Worker::_start_impl()");
+
+	L_EV_BEGIN("Worker::_start_impl:BEGIN");
+	L_EV_END("Worker::_start_impl:END");
+
+	if (_start_op.exchange(false)) {
+		if (!_started) {
+			start_impl();
+			_started = true;
+		}
+	}
+}
+
+
+void
+Worker::_stop_impl()
+{
+	L_CALL("Worker::_stop_impl()");
+
+	L_EV_BEGIN("Worker::_stop_impl:BEGIN");
+	L_EV_END("Worker::_stop_impl:END");
+
+	if (_stop_op.exchange(false)) {
+		if (_started) {
+			stop_impl();
+			_started = false;
+		}
+	}
+}
+
+void
+Worker::_destroy_impl()
+{
+	L_CALL("Worker::_destroy_impl()");
+
+	L_EV_BEGIN("Worker::_destroy_impl:BEGIN");
+	L_EV_END("Worker::_destroy_impl:END");
+
+	if (_destroy_op.exchange(false)) {
+		if (!_destroyed) {
+			destroy_impl();
+			_destroyed = true;
+		}
+	}
+}
+
 
 void
 Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
@@ -331,93 +411,24 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 }
 
 
-auto
-Worker::_ancestor(int levels)
-{
-	L_CALL("Worker::_ancestor(%d) %s", levels, __repr__());
-
-	std::lock_guard<std::recursive_mutex> lk(_mtx);
-
-	auto ancestor = shared_from_this();
-	while (ancestor->_parent && levels-- != 0) {
-		ancestor = ancestor->_parent;
-	}
-	return ancestor;
-}
-
-
-std::string
-Worker::__repr__() const
-{
-	return string::format("<Worker {cnt:%ld}%s%s%s>",
-		use_count(),
-		is_runner() ? " (runner)" : " (worker)",
-		is_running_loop() ? " (running loop)" : " (stopped loop)",
-		is_detaching() ? " (deteaching)" : "");
-}
-
-
-std::string
-Worker::dump_tree(int level)
-{
-	std::string ret;
-	for (int l = 0; l < level; ++l) {
-		ret += "    ";
-	}
-	ret += __repr__();
-	ret.push_back('\n');
-
-	auto weak_children = _gather_children();
-	for (auto& weak_child : weak_children) {
-		if (auto child = weak_child.lock()) {
-			ret += child->dump_tree(level + 1);
-		}
-	}
-
-	return ret;
-}
-
-
 void
-Worker::shutdown_impl(long long asap, long long now)
+Worker::_detach_children_impl()
 {
-	L_CALL("Worker::shutdown_impl(%lld, %lld) %s", asap, now, __repr__());
+	L_CALL("Worker::_detach_children_impl() %s", __repr__());
 
-	auto weak_children = _gather_children();
-	for (auto& weak_child : weak_children) {
-		if (auto child = weak_child.lock()) {
-			auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
-			child->shutdown(asap, now, async);
-		}
-	}
-}
-
-
-void
-Worker::break_loop_impl()
-{
-	L_CALL("Worker::break_loop_impl() %s", __repr__());
-
-	ev_loop->break_loop();
-}
-
-
-void
-Worker::detach_children_impl()
-{
-	L_CALL("Worker::detach_children_impl() %s", __repr__());
-
-	auto weak_children = _gather_children();
-	for (auto& weak_child : weak_children) {
-		int retries = 0;
-		if (auto child = weak_child.lock()) {
-			child->_detach_children(true);
-			if (!child->_detaching) {
-				continue;
+	if (_detach_children_op.exchange(false)) {
+		auto weak_children = _gather_children();
+		for (auto& weak_child : weak_children) {
+			int retries = 0;
+			if (auto child = weak_child.lock()) {
+				child->_detach_children(true);
+				if (!child->_detaching) {
+					continue;
+				}
+				retries = child->_detaching_retries;
 			}
-			retries = child->_detaching_retries;
+			_detach_impl(weak_child, retries);
 		}
-		_detach_impl(weak_child, retries);
 	}
 }
 
@@ -437,12 +448,14 @@ Worker::shutdown(long long asap, long long now, bool async)
 {
 	L_CALL("Worker::shutdown(%d, %d) %s", asap, now, __repr__());
 
-	if (async && is_running_loop()) {
-		_asap = asap;
-		_now = now;
-		_shutdown_async.send();
-	} else {
-		shutdown_impl(asap, now);
+	if (!_shutdown_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_asap = asap;
+			_now = now;
+			_shutdown_async.send();
+		} else {
+			shutdown_impl(asap, now);
+		}
 	}
 }
 
@@ -452,10 +465,12 @@ Worker::break_loop(bool async)
 {
 	L_CALL("Worker::break_loop() %s", __repr__());
 
-	if (async && is_running_loop()) {
-		_break_loop_async.send();
-	} else {
-		break_loop_impl();
+	if (!_break_loop_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_break_loop_async.send();
+		} else {
+			_break_loop_impl();
+		}
 	}
 }
 
@@ -465,10 +480,12 @@ Worker::destroy(bool async)
 {
 	L_CALL("Worker::destroy() %s", __repr__());
 
-	if (async && is_running_loop()) {
-		_destroy_async.send();
-	} else {
-		_destroyer();
+	if (!_destroy_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_destroy_async.send();
+		} else {
+			_destroy_impl();
+		}
 	}
 }
 
@@ -478,10 +495,12 @@ Worker::start(bool async)
 {
 	L_CALL("Worker::start() %s", __repr__());
 
-	if (async && is_running_loop()) {
-		_start_async.send();
-	} else {
-		_starter();
+	if (!_start_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_start_async.send();
+		} else {
+			_start_impl();
+		}
 	}
 }
 
@@ -491,10 +510,12 @@ Worker::stop(bool async)
 {
 	L_CALL("Worker::stop() %s", __repr__());
 
-	if (async && is_running_loop()) {
-		_stop_async.send();
-	} else {
-		_stopper();
+	if (!_stop_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_stop_async.send();
+		} else {
+			_stop_impl();
+		}
 	}
 }
 
@@ -502,10 +523,14 @@ Worker::stop(bool async)
 void
 Worker::_detach_children(bool async)
 {
-	if (async && is_running_loop()) {
-		_detach_children_async.send();
-	} else {
-		detach_children_impl();
+	L_CALL("Worker::_detach_children() %s", __repr__());
+
+	if (!_detach_children_op.exchange(true)) {
+		if (async && is_running_loop()) {
+			_detach_children_async.send();
+		} else {
+			_detach_children_impl();
+		}
 	}
 }
 
