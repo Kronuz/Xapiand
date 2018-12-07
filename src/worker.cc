@@ -448,14 +448,15 @@ Worker::shutdown(long long asap, long long now, bool async)
 {
 	L_CALL("Worker::shutdown(%d, %d) %s", asap, now, __repr__());
 
-	if (!_shutdown_op.exchange(true)) {
-		if (async && is_running_loop()) {
-			_asap = asap;
-			_now = now;
+	if (async && is_running_loop()) {
+		_asap = asap;
+		_now = now;
+		if (!_shutdown_op.exchange(true)) {
 			_shutdown_async.send();
-		} else {
-			shutdown_impl(asap, now);
 		}
+	} else {
+		_shutdown_op = true;
+		shutdown_impl(asap, now);
 	}
 }
 
@@ -465,12 +466,13 @@ Worker::break_loop(bool async)
 {
 	L_CALL("Worker::break_loop() %s", __repr__());
 
-	if (!_break_loop_op.exchange(true)) {
-		if (async && is_running_loop()) {
+	if (async && is_running_loop()) {
+		if (!_break_loop_op.exchange(true)) {
 			_break_loop_async.send();
-		} else {
-			_break_loop_impl();
-		}
+	}
+	} else {
+		_break_loop_op = true;
+		_break_loop_impl();
 	}
 }
 
@@ -480,12 +482,13 @@ Worker::destroy(bool async)
 {
 	L_CALL("Worker::destroy() %s", __repr__());
 
-	if (!_destroy_op.exchange(true)) {
-		if (async && is_running_loop()) {
+	if (async && is_running_loop()) {
+		if (!_destroy_op.exchange(true)) {
 			_destroy_async.send();
-		} else {
-			_destroy_impl();
 		}
+	} else {
+		_destroy_op = true;
+		_destroy_impl();
 	}
 }
 
@@ -495,12 +498,13 @@ Worker::start(bool async)
 {
 	L_CALL("Worker::start() %s", __repr__());
 
-	if (!_start_op.exchange(true)) {
-		if (async && is_running_loop()) {
+	if (async && is_running_loop()) {
+		if (!_start_op.exchange(true)) {
 			_start_async.send();
-		} else {
-			_start_impl();
 		}
+	} else {
+		_start_op = true;
+		_start_impl();
 	}
 }
 
@@ -510,12 +514,13 @@ Worker::stop(bool async)
 {
 	L_CALL("Worker::stop() %s", __repr__());
 
-	if (!_stop_op.exchange(true)) {
-		if (async && is_running_loop()) {
+	if (async && is_running_loop()) {
+		if (!_stop_op.exchange(true)) {
 			_stop_async.send();
-		} else {
-			_stop_impl();
 		}
+	} else {
+		_stop_op = true;
+		_stop_impl();
 	}
 }
 
@@ -525,12 +530,13 @@ Worker::_detach_children(bool async)
 {
 	L_CALL("Worker::_detach_children() %s", __repr__());
 
-	if (!_detach_children_op.exchange(true)) {
-		if (async && is_running_loop()) {
+	if (async && is_running_loop()) {
+		if (!_detach_children_op.exchange(true)) {
 			_detach_children_async.send();
-		} else {
-			_detach_children_impl();
 		}
+	} else {
+		_detach_children_op = true;
+		_detach_children_impl();
 	}
 }
 
