@@ -50,7 +50,7 @@ class BlockingConcurrentQueue
 {
 private:
 	typedef ::moodycamel::ConcurrentQueue<T, Traits> ConcurrentQueue;
-	typedef ::moodycamel::LightweightSemaphore LightweightSemaphore;
+	typedef ::LightweightSemaphore LightweightSemaphore;
 
 public:
 	typedef typename ConcurrentQueue::producer_token_t producer_token_t;
