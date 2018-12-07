@@ -29,7 +29,17 @@
 #include <atomic>
 #include <type_traits> // For std::make_signed<T>
 
-#include "cassert.h"             // for ASSERT
+#include "cassert.h" // for ASSERT
+
+// VS2012 doesn't support deleted functions.
+// In this case, we declare the function normally but don't define it. A link error will be generated if the function is called.
+#ifndef DELETE_FUNCTION
+#if defined(_MSC_VER) && _MSC_VER < 1800
+#define DELETE_FUNCTION
+#else
+#define DELETE_FUNCTION = delete
+#endif
+#endif
 
 #if defined(_WIN32)
 // Avoid including windows.h in a header; we only need a handful of
@@ -50,9 +60,7 @@ extern "C" {
 #include <semaphore.h>
 #endif
 
-namespace moodycamel
-{
-namespace details
+namespace detail
 {
 
 #if defined(_WIN32)
@@ -110,8 +118,8 @@ class Semaphore
 private:
 	semaphore_t m_sema;
 
-	Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
-	Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+	Semaphore(const Semaphore& other) DELETE_FUNCTION;
+	Semaphore& operator=(const Semaphore& other) DELETE_FUNCTION;
 
 public:
 	Semaphore(int initialCount = 0)
@@ -169,8 +177,8 @@ class Semaphore
 private:
 	sem_t m_sema;
 
-	Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
-	Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+	Semaphore(const Semaphore& other) DELETE_FUNCTION;
+	Semaphore& operator=(const Semaphore& other) DELETE_FUNCTION;
 
 public:
 	Semaphore(int initialCount = 0)
@@ -241,7 +249,7 @@ public:
 #error Unsupported platform! (No semaphore wrapper available)
 #endif
 
-}   // end namespace details
+}   // end namespace detail
 
 
 //---------------------------------------------------------
@@ -254,7 +262,7 @@ public:
 
 private:
 	std::atomic <ssize_t> m_count;
-	details::Semaphore m_sema;
+	detail::Semaphore m_sema;
 
 	bool waitWithPartialSpinning(std::int64_t timeout_usecs = -1)
 	{
@@ -424,7 +432,3 @@ public:
 		return count > 0 ? count : 0;
 	}
 };
-
-}   // end namespace moodycamel
-
-using namespace moodycamel;
