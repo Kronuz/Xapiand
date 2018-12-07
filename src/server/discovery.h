@@ -75,6 +75,7 @@ private:
 
 	ConcurrentQueue<std::string> db_update_send_args;
 
+	void _db_update_send(const std::string& path);
 	void db_update_send_async_cb(ev::async& watcher, int revents);
 
 	void send_message(Message type, const std::string& message);

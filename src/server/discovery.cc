@@ -505,6 +505,18 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 
 void
+Discovery::_db_update_send(const std::string& path)
+{
+	auto local_node = Node::local_node();
+	send_message(Message::DB_UPDATED,
+		local_node->serialise() +   // The node where the index is at
+		path);  // The path of the index
+
+	L_DEBUG("Sending database updated signal for %s", repr(path));
+}
+
+
+void
 Discovery::db_update_send_async_cb(ev::async&, int revents)
 {
 	L_CALL("Discovery::db_update_send_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
@@ -516,12 +528,7 @@ Discovery::db_update_send_async_cb(ev::async&, int revents)
 
 	std::string path;
 	while (db_update_send_args.try_dequeue(path)) {
-		auto local_node = Node::local_node();
-		send_message(Message::DB_UPDATED,
-			local_node->serialise() +   // The node where the index is at
-			path);  // The path of the index
-
-		L_DEBUG("Sending database updated signal for %s", repr(path));
+		_db_update_send(path);
 	}
 }
 
