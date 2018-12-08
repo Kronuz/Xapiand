@@ -158,7 +158,7 @@ public:
 
 	virtual std::string __repr__() const;
 
-	virtual ~Worker();
+	virtual ~Worker() noexcept;
 
 	virtual void shutdown_impl(long long asap, long long now);
 	virtual void start_impl() {}

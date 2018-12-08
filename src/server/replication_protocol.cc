@@ -75,9 +75,13 @@ ReplicationProtocol::ReplicationProtocol(BinaryClient& client_)
 }
 
 
-ReplicationProtocol::~ReplicationProtocol()
+ReplicationProtocol::~ReplicationProtocol() noexcept
 {
-	reset();
+	try {
+		reset();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

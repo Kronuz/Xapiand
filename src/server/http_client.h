@@ -236,7 +236,7 @@ public:
 
 	Request() = default;
 	Request(class HttpClient* client);
-	~Request();
+	~Request() noexcept;
 
 	Request(const Request&) = delete;
 	Request(Request&&) = default;
@@ -367,7 +367,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 public:
 	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 
-	~HttpClient();
+	~HttpClient() noexcept;
 
 	void process(Request& request, Response& response);
 	void operator()();

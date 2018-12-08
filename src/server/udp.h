@@ -55,7 +55,7 @@ protected:
 
 public:
 	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags);
-	~UDP();
+	~UDP() noexcept;
 
 	ssize_t send_message(const std::string& message);
 	ssize_t send_message(char type, const std::string& content);

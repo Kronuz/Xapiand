@@ -37,7 +37,7 @@ protected:
 
 	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags);
 
-	~BaseServer();
+	~BaseServer() noexcept;
 
 	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;

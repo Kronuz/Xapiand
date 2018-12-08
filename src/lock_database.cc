@@ -66,7 +66,7 @@ lock_database::lock_database(LockableDatabase* lockable) :
 }
 
 
-lock_database::~lock_database()
+lock_database::~lock_database() noexcept
 {
 	while (locks) {
 		unlock();

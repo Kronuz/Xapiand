@@ -38,7 +38,7 @@ class HttpServer : public MetaBaseServer<HttpServer> {
 
 public:
 	HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http);
-	~HttpServer();
+	~HttpServer() noexcept;
 
 	int accept();
 

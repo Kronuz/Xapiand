@@ -984,8 +984,6 @@ public:
 	Schema& operator=(Schema&& schema) = delete;
 	Schema& operator=(const Schema& schema) = delete;
 
-	~Schema() = default;
-
 	static std::shared_ptr<const MsgPack> get_initial_schema();
 
 	std::shared_ptr<const MsgPack> get_modified_schema();

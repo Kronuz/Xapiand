@@ -58,7 +58,7 @@ protected:
 
 public:
 	TCP(int port, const char* description, int flags);
-	~TCP();
+	~TCP() noexcept;
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
 	static int socket();
@@ -75,5 +75,5 @@ protected:
 
 public:
 	BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int falgs);
-	~BaseTCP();
+	~BaseTCP() noexcept;
 };

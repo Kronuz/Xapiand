@@ -44,17 +44,19 @@
 // #define L_EV_END L_DELAYED_N_UNLOG
 
 
-Worker::~Worker()
+Worker::~Worker() noexcept
 {
-	L_CALL("Worker::~Worker()");
+	try {
+		// Make sure to call Worker::deinit() as the last line in the
+		// destructor of any subclasses implementing either one of:
+		// shutdown_impl(), destroy_impl(), start_impl() or stop_impl().
+		// Otherwise the assert bellow will fire!
+		ASSERT(_deinited);  // Beware of the note above
 
-	// Make sure to call Worker::deinit() as the last line in the
-	// destructor of any subclasses implementing either one of:
-	// shutdown_impl(), destroy_impl(), start_impl() or stop_impl().
-	// Otherwise the assert bellow will fire!
-	ASSERT(_deinited);  // Beware of the note above
-
-	deinit();
+		deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

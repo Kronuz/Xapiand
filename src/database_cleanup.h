@@ -44,7 +44,7 @@ protected:
 public:
 	DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
-	~DatabaseCleanup();
+	~DatabaseCleanup() noexcept;
 
 	const char* name() const noexcept {
 		return "DBCL";

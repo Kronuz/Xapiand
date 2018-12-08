@@ -50,10 +50,14 @@ UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor
 {}
 
 
-UDP::~UDP()
+UDP::~UDP() noexcept
 {
-	if (sock != -1) {
-		io::close(sock);
+	try {
+		if (sock != -1) {
+			io::close(sock);
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 

@@ -350,9 +350,13 @@ public:
 		}
 	}
 
-	~Storage() {
-		close();
-		XXH32_freeState(xxh_state);
+	~Storage() noexcept {
+		try {
+			close();
+			XXH32_freeState(xxh_state);
+		} catch (...) {
+			L_EXC("Unhandled exception in destructor");
+		}
 	}
 
 	void initialize_file(void* args) {

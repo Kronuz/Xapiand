@@ -105,7 +105,7 @@ protected:
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
 	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
-	~BaseClient();
+	~BaseClient() noexcept;
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);

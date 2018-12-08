@@ -193,8 +193,6 @@ public:
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<size_t>> context_=nullptr);
 
-	~DatabaseHandler() = default;
-
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr);
 

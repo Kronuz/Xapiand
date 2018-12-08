@@ -95,7 +95,7 @@ public:
 		  type(type)
 	{ }
 
-	~Buffer() {
+	~Buffer() noexcept {
 		if (_fd != -1) {
 			io::close(_fd);
 			if (!_path.empty() && _unlink) {

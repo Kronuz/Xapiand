@@ -102,7 +102,7 @@ private:
 
 public:
 	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group);
-	~Discovery();
+	~Discovery() noexcept;
 
 	const char* name() const noexcept {
 		return "DISC";

@@ -117,7 +117,7 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 	friend ReplicationProtocol;
 
 public:
-	~BinaryClient();
+	~BinaryClient() noexcept;
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);

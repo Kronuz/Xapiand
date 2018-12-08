@@ -97,24 +97,28 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 }
 
 
-BaseClient::~BaseClient()
+BaseClient::~BaseClient() noexcept
 {
-	if (XapiandManager::manager->total_clients.fetch_sub(1) == 0) {
-		L_CRIT("Inconsistency in number of binary clients");
-		sig_exit(-EX_SOFTWARE);
-	}
-
-	// If shutting down and there are no more clients connected,
-	// continue shutdown.
-	if (XapiandManager::manager->shutdown_asap.load() != 0) {
-		if (XapiandManager::manager->total_clients == 0) {
-			XapiandManager::manager->shutdown_sig(0);
+	try {
+		if (XapiandManager::manager->total_clients.fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of binary clients");
+			sig_exit(-EX_SOFTWARE);
 		}
+
+		// If shutting down and there are no more clients connected,
+		// continue shutdown.
+		if (XapiandManager::manager->shutdown_asap.load() != 0) {
+			if (XapiandManager::manager->total_clients == 0) {
+				XapiandManager::manager->shutdown_sig(0);
+			}
+		}
+
+		io::close(sock);
+
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
-
-	io::close(sock);
-
-	Worker::deinit();
 }
 
 

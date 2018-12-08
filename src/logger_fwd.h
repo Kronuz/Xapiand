@@ -57,7 +57,7 @@ public:
 	Log& operator=(Log&& o);
 
 	explicit Log(LogType log);
-	~Log();
+	~Log() noexcept;
 
 	template <typename... Args>
 	void unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {

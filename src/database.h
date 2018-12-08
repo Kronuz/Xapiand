@@ -142,7 +142,7 @@ public:
 	std::shared_ptr<Logging> log;
 
 	Database(DatabaseEndpoint& endpoints_, int flags);
-	~Database();
+	~Database() noexcept;
 
 	bool reopen();
 

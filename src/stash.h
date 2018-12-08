@@ -143,23 +143,27 @@ protected:
 			: atom_chunk(o.atom_chunk.load()),
 			  atom_next(o.atom_next.load()) { }
 
-		~Data() {
-			auto next = atom_next.exchange(nullptr);
-			while (next) {
-				auto next_next = next->atom_next.exchange(nullptr);
-				delete next;
-				next = next_next;
-			}
-
-			auto chunk = atom_chunk.exchange(nullptr);
-			if (chunk) {
-				for (auto& atom_ptr : *chunk) {
-					auto ptr = atom_ptr.exchange(nullptr);
-					if (ptr) {
-						delete ptr;
-					}
+		~Data() noexcept {
+			try {
+				auto next = atom_next.exchange(nullptr);
+				while (next) {
+					auto next_next = next->atom_next.exchange(nullptr);
+					delete next;
+					next = next_next;
 				}
-				delete chunk;
+
+				auto chunk = atom_chunk.exchange(nullptr);
+				if (chunk) {
+					for (auto& atom_ptr : *chunk) {
+						auto ptr = atom_ptr.exchange(nullptr);
+						if (ptr) {
+							delete ptr;
+						}
+					}
+					delete chunk;
+				}
+			} catch (...) {
+				L_EXC("Unhandled exception in destructor");
 			}
 		}
 

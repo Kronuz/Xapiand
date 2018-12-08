@@ -53,7 +53,7 @@ public:
 		offset(offset),
 		fd(fd) {}
 
-	~ClientNoCompressor() {
+	~ClientNoCompressor() noexcept {
 		XXH32_freeState(xxh_state);
 	}
 
@@ -153,7 +153,7 @@ public:
 		XXH32_reset(xxh_state, COMPRESSION_SEED);
 	}
 
-	~ClientNoDecompressor() {
+	~ClientNoDecompressor() noexcept {
 		XXH32_freeState(xxh_state);
 	}
 

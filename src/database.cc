@@ -229,15 +229,15 @@ Database::Database(DatabaseEndpoint& endpoints_, int flags_)
 }
 
 
-Database::~Database()
+Database::~Database() noexcept
 {
 	try {
 		do_close(true, true, Database::Transaction::none);
+		if (log) {
+			log->clear();
+		}
 	} catch (...) {
-	}
-
-	if (log) {
-		log->clear();
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 

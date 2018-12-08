@@ -115,7 +115,7 @@ public:
 
 public:
 	ReplicationProtocol(BinaryClient& client_);
-	~ReplicationProtocol();
+	~ReplicationProtocol() noexcept;
 
 	void reset();
 

@@ -85,33 +85,37 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 }
 
 
-BinaryClient::~BinaryClient()
+BinaryClient::~BinaryClient() noexcept
 {
-	if (XapiandManager::manager->binary_clients.fetch_sub(1) == 0) {
-		L_CRIT("Inconsistency in number of binary clients");
-		sig_exit(-EX_SOFTWARE);
-	}
+	try {
+		if (XapiandManager::manager->binary_clients.fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of binary clients");
+			sig_exit(-EX_SOFTWARE);
+		}
 
-	if (file_descriptor != -1) {
-		io::close(file_descriptor);
-		file_descriptor = -1;
-	}
+		if (file_descriptor != -1) {
+			io::close(file_descriptor);
+			file_descriptor = -1;
+		}
 
-	for (const auto& filename : temp_files) {
-		io::unlink(filename.c_str());
-	}
+		for (const auto& filename : temp_files) {
+			io::unlink(filename.c_str());
+		}
 
-	if (!temp_directory.empty()) {
-		delete_files(temp_directory.c_str());
-	}
+		if (!temp_directory.empty()) {
+			delete_files(temp_directory.c_str());
+		}
 
-	if (is_shutting_down() && !is_idle()) {
-		L_INFO("Binary client killed!");
-	}
+		if (is_shutting_down() && !is_idle()) {
+			L_INFO("Binary client killed!");
+		}
 
-	if (cluster_database) {
-		L_CRIT("Cannot synchronize cluster database!");
-		sig_exit(-EX_CANTCREAT);
+		if (cluster_database) {
+			L_CRIT("Cannot synchronize cluster database!");
+			sig_exit(-EX_CANTCREAT);
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 

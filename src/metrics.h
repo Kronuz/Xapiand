@@ -37,7 +37,6 @@ class Metrics {
 
 public:
 	Metrics(const std::map<std::string, std::string>& constant_labels_);
-	~Metrics() = default;
 
 	static Metrics& metrics(const std::map<std::string, std::string>& constant_labels_ = {});
 

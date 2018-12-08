@@ -167,9 +167,13 @@ Log::Log(LogType log)
 }
 
 
-Log::~Log()
+Log::~Log() noexcept
 {
-	if (log) { log->clean(); }
+	try {
+		if (log) { log->clean(); }
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 
@@ -266,7 +270,7 @@ SysLog::SysLog(const char* ident, int option, int facility)
 }
 
 
-SysLog::~SysLog()
+SysLog::~SysLog() noexcept
 {
 	closelog();
 }
@@ -330,9 +334,13 @@ Logging::Logging(
 }
 
 
-Logging::~Logging()
+Logging::~Logging() noexcept
 {
-	clean();
+	try {
+		clean();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

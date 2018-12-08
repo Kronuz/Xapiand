@@ -417,7 +417,7 @@ public:
 		return *this;
 	}
 
-	~ReferencedDatabaseEndpoint() {
+	~ReferencedDatabaseEndpoint() noexcept {
 		if (ptr) {
 			ASSERT(ptr->refs > 0);
 			--ptr->refs;

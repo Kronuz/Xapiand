@@ -59,10 +59,14 @@ TCP::TCP(int port, const char* description, int flags)
 {}
 
 
-TCP::~TCP()
+TCP::~TCP() noexcept
 {
-	if (sock != -1) {
-		io::close(sock);
+	try {
+		if (sock != -1) {
+			io::close(sock);
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 
@@ -362,11 +366,15 @@ BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 }
 
 
-BaseTCP::~BaseTCP()
+BaseTCP::~BaseTCP() noexcept
 {
-	TCP::close();
+	try {
+		TCP::close();
 
-	Worker::deinit();
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

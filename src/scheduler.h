@@ -307,8 +307,12 @@ public:
 	Scheduler(std::string name_) :
 		BaseScheduler<Scheduler<ScheduledTaskImpl, thread_policy>, ScheduledTaskImpl, thread_policy>(name_) {}
 
-	~Scheduler() {
-		finish(1);
+	~Scheduler() noexcept {
+		try {
+			finish(1);
+		} catch (...) {
+			L_EXC("Unhandled exception in destructor");
+		}
 	}
 
 	bool finish(int wait = 10) {
@@ -351,8 +355,12 @@ public:
 		BaseScheduler<ThreadedScheduler<ScheduledTaskImpl, thread_policy>, ScheduledTaskImpl, thread_policy>(name_),
 		thread_pool(format, num_threads) {}
 
-	~ThreadedScheduler() {
-		finish(1);
+	~ThreadedScheduler() noexcept {
+		try {
+			finish(1);
+		} catch (...) {
+			L_EXC("Unhandled exception in destructor");
+		}
 	}
 
 	size_t threadpool_capacity() {

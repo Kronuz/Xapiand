@@ -53,9 +53,13 @@ HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 }
 
 
-HttpServer::~HttpServer()
+HttpServer::~HttpServer() noexcept
 {
-	Worker::deinit();
+	try {
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

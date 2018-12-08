@@ -43,7 +43,7 @@ class lock_database {
 
 public:
 	lock_database(LockableDatabase* lockable);
-	~lock_database();
+	~lock_database() noexcept;
 
 	void unlock() noexcept;
 

@@ -59,9 +59,13 @@ BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 }
 
 
-BinaryServer::~BinaryServer()
+BinaryServer::~BinaryServer() noexcept
 {
-	Worker::deinit();
+	try {
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

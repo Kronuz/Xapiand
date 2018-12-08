@@ -93,11 +93,15 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 }
 
 
-Raft::~Raft()
+Raft::~Raft() noexcept
 {
-	UDP::close();
+	try {
+		UDP::close();
 
-	Worker::deinit();
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

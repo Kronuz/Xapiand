@@ -35,9 +35,13 @@ DatabaseCleanup::DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loo
 }
 
 
-DatabaseCleanup::~DatabaseCleanup()
+DatabaseCleanup::~DatabaseCleanup() noexcept
 {
-	Worker::deinit();
+	try {
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 

@@ -49,7 +49,7 @@ class Logger {
 public:
 	virtual void log(int priority, std::string_view str, bool with_priority, bool with_endl) = 0;
 
-	virtual ~Logger() = default;
+	virtual ~Logger() noexcept = default;
 };
 
 
@@ -72,7 +72,7 @@ public:
 class SysLog : public Logger {
 public:
 	SysLog(const char* ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
-	~SysLog();
+	~SysLog() noexcept;
 
 	void log(int priority, std::string_view str, bool with_priority, bool with_endl) override;
 };
@@ -158,7 +158,7 @@ public:
 		int priority,
 		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
 	);
-	~Logging();
+	~Logging() noexcept;
 
 	static std::string colorized(std::string_view str, bool try_coloring);
 	static bool finish(int wait = 10);

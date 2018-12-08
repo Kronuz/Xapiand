@@ -381,15 +381,19 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 }
 
 
-HttpClient::~HttpClient()
+HttpClient::~HttpClient() noexcept
 {
-	if (XapiandManager::manager->http_clients.fetch_sub(1) == 0) {
-		L_CRIT("Inconsistency in number of http clients");
-		sig_exit(-EX_SOFTWARE);
-	}
+	try {
+		if (XapiandManager::manager->http_clients.fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of http clients");
+			sig_exit(-EX_SOFTWARE);
+		}
 
-	if (is_shutting_down() && !is_idle()) {
-		L_INFO("HTTP client killed!");
+		if (is_shutting_down() && !is_idle()) {
+			L_INFO("HTTP client killed!");
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 
@@ -3229,10 +3233,14 @@ Request::Request(HttpClient* client)
 }
 
 
-Request::~Request()
+Request::~Request() noexcept
 {
-	if (log) {
-		log->clear();
+	try {
+		if (log) {
+			log->clear();
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
 	}
 }
 

@@ -192,9 +192,13 @@ public:
 		}
 	}
 
-	~ThreadPool() {
-		finish();
-		join();
+	~ThreadPool() noexcept {
+		try {
+			finish();
+			join();
+		} catch (...) {
+			L_EXC("Unhandled exception in destructor");
+		}
 	}
 
 
@@ -255,7 +259,7 @@ public:
 	}
 
 	// Tell the tasks to finish so all threads exit as soon as possible
-	void finish() {
+	void finish() noexcept {
 		if (!_finished.exchange(true, std::memory_order_release)) {
 			for (std::size_t idx = 0; idx < _threads.size(); ++idx) {
 				_queue.enqueue(nullptr);

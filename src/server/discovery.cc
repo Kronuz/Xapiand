@@ -72,11 +72,15 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 }
 
 
-Discovery::~Discovery()
+Discovery::~Discovery() noexcept
 {
-	UDP::close();
+	try {
+		UDP::close();
 
-	Worker::deinit();
+		Worker::deinit();
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 
