@@ -75,7 +75,7 @@ lock_database::~lock_database()
 
 
 void
-lock_database::unlock()
+lock_database::unlock() noexcept
 {
 	if (lockable != nullptr) {
 		if (locks > 0 && --locks == 0) {

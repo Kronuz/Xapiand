@@ -45,7 +45,7 @@ public:
 	lock_database(LockableDatabase* lockable);
 	~lock_database();
 
-	void unlock();
+	void unlock() noexcept;
 
 	template <typename... Args>
 	void lock(Args&&... args);

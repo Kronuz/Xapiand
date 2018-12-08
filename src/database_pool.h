@@ -93,7 +93,7 @@ public:
 
 	std::shared_ptr<Database> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
-	void checkin(std::shared_ptr<Database>& database);
+	void checkin(std::shared_ptr<Database>& database) noexcept;
 
 	void finish();
 

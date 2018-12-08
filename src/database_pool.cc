@@ -191,7 +191,7 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 
 
 void
-DatabaseEndpoint::checkin(std::shared_ptr<Database>& database)
+DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
 {
 	L_CALL("DatabaseEndpoint::checkin(%s)", database ? database->__repr__() : "null");
 
