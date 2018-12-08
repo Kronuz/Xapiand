@@ -544,7 +544,7 @@ Worker::run_loop()
 {
 	L_CALL("Worker::run_loop() %s", __repr__());
 
-	ASSERT(ev_loop->depth() == 0);
+	ASSERT(!is_running_loop());
 
 	if (!_runner.exchange(true)) {
 		ev_loop->run();

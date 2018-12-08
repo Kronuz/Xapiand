@@ -464,7 +464,7 @@ void
 XapiandManager::signal_sig(int sig)
 {
 	atom_sig = sig;
-	if (ev_loop->depth()) {
+	if (is_running_loop()) {
 		signal_sig_async.send();
 	} else {
 		signal_sig_impl();
