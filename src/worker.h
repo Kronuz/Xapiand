@@ -59,13 +59,6 @@ private:
 	std::atomic_bool _detaching;
 	std::atomic_int _detaching_retries;
 
-	std::atomic_bool _shutdown_op;
-	std::atomic_bool _break_loop_op;
-	std::atomic_bool _destroy_op;
-	std::atomic_bool _start_op;
-	std::atomic_bool _stop_op;
-	std::atomic_bool _detach_children_op;
-
 	bool _started;
 	bool _destroyed;
 	bool _deinited;
@@ -94,12 +87,6 @@ protected:
 		  _runner(false),
 		  _detaching(false),
 		  _detaching_retries(0),
-		  _shutdown_op(false),
-		  _break_loop_op(false),
-		  _destroy_op(false),
-		  _start_op(false),
-		  _stop_op(false),
-		  _detach_children_op(false),
 		  _started(false),
 		  _destroyed(false),
 		  _deinited(false),
