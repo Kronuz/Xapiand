@@ -156,9 +156,9 @@ public:
 	std::string get_uuid_string();
 	Xapian::rev get_revision();
 
-	void reset();
+	void reset() noexcept;
 
-	void do_close(bool commit_, bool closed_, Transaction transaction_);
+	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
 	void close();
 
 	static void autocommit(const std::shared_ptr<Database>& database);
