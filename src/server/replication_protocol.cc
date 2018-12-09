@@ -155,6 +155,7 @@ ReplicationProtocol::connect()
 		return;
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);
+	ASSERT(client.is_running_loop());
 	client.start();
 }
 
