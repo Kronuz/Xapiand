@@ -265,9 +265,11 @@ DatabaseEndpoint::clear()
 			std::weak_ptr<Database> weak_writable = shared_writable;
 			writable.reset();
 			lk.unlock();
-			// If it's the last one,
-			// reset() will close and delete the database object:
-			shared_writable.reset();
+			try {
+				// If it's the last one,
+				// reset() will close and delete the database object:
+				shared_writable.reset();
+			} catch (...) {}
 			lk.lock();
 			if ((shared_writable = weak_writable.lock())) {
 				// It wasn't the last one,
@@ -289,9 +291,11 @@ DatabaseEndpoint::clear()
 				std::weak_ptr<Database> weak_readable = shared_readable;
 				readable.reset();
 				lk.unlock();
-				// If it's the last one,
-				// reset() will close and delete the database object:
-				shared_readable.reset();
+				try {
+					// If it's the last one,
+					// reset() will close and delete the database object:
+					shared_readable.reset();
+				} catch (...) {}
 				lk.lock();
 				if ((shared_readable = weak_readable.lock())) {
 					// It wasn't the last one,
