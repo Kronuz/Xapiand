@@ -528,7 +528,7 @@ std::string
 BinaryClient::__repr__() const
 {
 #ifdef SAVE_LAST_MESSAGES
-	auto state_repr = ([this]() {
+	auto state_repr = ([this]() -> std::string {
 		auto received = last_message_received.load(std::memory_order_relaxed);
 		auto sent = last_message_sent.load(std::memory_order_relaxed);
 		switch (state) {
@@ -549,6 +549,8 @@ BinaryClient::__repr__() const
 					StateNames(state),
 					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(received)),
 					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(sent)));
+			default:
+				return "";
 		}
 	})();
 #else
