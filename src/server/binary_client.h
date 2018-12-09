@@ -64,9 +64,9 @@ inline const std::string& StateNames(State type) {
 		"REPLICATION_CLIENT",
 		"REPLICATION_SERVER",
 	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-		return _[type_int];
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;

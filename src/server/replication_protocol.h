@@ -47,9 +47,9 @@ inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType typ
 	static const std::string _[] = {
 		"MSG_GET_CHANGESETS",
 	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-		return _[type_int];
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
@@ -76,12 +76,12 @@ inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
 	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int == static_cast<size_t>(SWITCH_TO_REPL)) {
+	auto idx = static_cast<size_t>(type);
+	if (idx == static_cast<size_t>(SWITCH_TO_REPL)) {
 		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
 		return SWITCH_TO_REPL_NAME;
-	} else if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-		return _[type_int];
+	} else if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;

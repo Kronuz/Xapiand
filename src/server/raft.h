@@ -67,9 +67,9 @@ public:
 		static const std::string _[] = {
 			"FOLLOWER", "CANDIDATE", "LEADER",
 		};
-		auto type_int = static_cast<size_t>(type);
-		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-			return _[type_int];
+		auto idx = static_cast<size_t>(type);
+		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+			return _[idx];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;
@@ -93,9 +93,9 @@ public:
 			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
 			"ADD_COMMAND",
 		};
-		auto type_int = static_cast<size_t>(type);
-		if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-			return _[type_int];
+		auto idx = static_cast<size_t>(type);
+		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+			return _[idx];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
 		return UNKNOWN;

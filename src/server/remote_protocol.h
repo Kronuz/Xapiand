@@ -94,9 +94,9 @@ inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
 		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS",
 		"MSG_POSITIONLISTCOUNT", "MSG_READACCESS",
 	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-		return _[type_int];
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
@@ -143,9 +143,9 @@ inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
 		"REPLY_POSITIONLISTCOUNT", "REPLY_REMOVESPELLING",
 	};
-	auto type_int = static_cast<size_t>(type);
-	if (type_int >= 0 || type_int < sizeof(_) / sizeof(_[0])) {
-		return _[type_int];
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
