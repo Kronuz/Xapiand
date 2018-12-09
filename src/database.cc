@@ -616,7 +616,8 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_)
 		transaction == Database::Transaction::none &&
 		!is_closed() &&
 		is_modified() &&
-		is_writable()
+		is_writable() &&
+		is_local()
 
 	) {
 		// Commit only on modified writable databases
@@ -666,7 +667,8 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 		database->transaction == Database::Transaction::none &&
 		!database->is_closed() &&
 		database->is_modified() &&
-		database->is_writable()
+		database->is_writable() &&
+		database->is_local()
 	) {
 		// Auto commit only on modified writable databases
 		committer().debounce(database->endpoints, std::weak_ptr<Database>(database));
@@ -820,7 +822,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		// L_DATABASE("Deleting document: %d  t: %d", did, t);
 		try {
 			wdb->delete_document(did);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -873,7 +875,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		// L_DATABASE("Deleting document: '%s'  t: %d", term, t);
 		try {
 			wdb->delete_document(term);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1036,7 +1038,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 		// L_DATABASE("Adding new document.  t: %d", t);
 		try {
 			did = wdb->add_document(doc);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1093,7 +1095,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		// L_DATABASE("Replacing: %d  t: %d", did, t);
 		try {
 			wdb->replace_document(did, doc);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1151,7 +1153,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		// L_DATABASE("Replacing: '%s'  t: %d", term, t);
 		try {
 			did = wdb->replace_document(term, doc);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1203,7 +1205,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
 			wdb->add_spelling(word, freqinc);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1259,7 +1261,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 #else
 			wdb->remove_spelling(word, freqdec);
 #endif
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
@@ -1513,7 +1515,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	for (int t = DB_RETRIES; t; --t) {
 		try {
 			wdb->set_metadata(key, value);
-			modified = true;
+			modified = commit_ || is_local();
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { close(); throw; }
