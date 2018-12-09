@@ -101,8 +101,6 @@ public:
 
 	std::pair<size_t, size_t> count();
 
-	bool is_busy() const;
-
 	bool is_locked() const {
 		return locked.load(std::memory_order_relaxed);
 	}

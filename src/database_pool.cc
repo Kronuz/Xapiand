@@ -326,22 +326,6 @@ DatabaseEndpoint::count()
 
 
 bool
-DatabaseEndpoint::is_busy() const
-{
-	L_CALL("DatabaseEndpoint::is_busy()");
-
-	std::lock_guard<std::mutex> lk(mtx);
-
-	return (
-		refs != 0 ||
-		is_locked() ||
-		(writable && writable->is_busy()) ||
-		(readables_available != readables.size())
-	);
-}
-
-
-bool
 DatabaseEndpoint::empty() const
 {
 	L_CALL("DatabaseEndpoint::empty()");
@@ -828,10 +812,6 @@ DatabasePool::cleanup(bool immediate)
 	std::unique_lock<std::mutex> lk(mtx);
 
 	const auto on_drop = [&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
-		if (database_endpoint->is_busy()) {
-			L_DATABASE("Leave busy endpoint: %s", repr(database_endpoint->to_string()));
-			return lru::DropAction::leave;
-		}
 		if (size > max_size) {
 			if (database_endpoint->renew_time < now - (immediate ? 10s : 60s)) {
 				lk.unlock();
