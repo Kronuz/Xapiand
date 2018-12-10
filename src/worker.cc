@@ -219,13 +219,10 @@ Worker::_gather_children()
 	// Collect active children
 	std::vector<std::weak_ptr<Worker>> weak_children;
 	weak_children.reserve(_children.size());
-	for (auto it = _children.begin(); it != _children.end();) {
-		auto child = *it;
+	for (auto it = _children.begin(); it != _children.end(); ++it) {
+		auto& child = *it;
 		if (child) {
 			weak_children.push_back(child);
-			++it;
-		} else {
-			it = _children.erase(it);
 		}
 	}
 	return weak_children;
