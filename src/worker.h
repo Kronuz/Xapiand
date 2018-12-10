@@ -159,8 +159,8 @@ public:
 	void start(bool async = true);
 	void stop(bool async = true);
 	void destroy(bool async = true);
-	void detach(int retries = 3, bool async = true);
-	void redetach(int retries = 3, bool async = true);
+	void detach(bool async = true);
+	void redetach(bool async = true);
 
 	auto is_runner() const {
 		return _runner.load(std::memory_order_relaxed);

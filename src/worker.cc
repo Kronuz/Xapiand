@@ -373,7 +373,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 			if (retries == 0) {
 				L_WORKER(LIGHT_RED + "Worker child (in a running loop) %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child->__repr__(), child.use_count() - 1, __repr__(), shared_from_this().use_count() - 1);
 			} else if (retries > 0) {
-				child->redetach(retries - 1);
+				if (child->_detaching_retries.compare_exchange_strong(retries, retries - 1)) {
+					_detach_children(true);
+				}
 			}
 			return;
 		}
@@ -394,7 +396,9 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child, int retries)
 		if (retries == 0) {
 			L_WORKER(BROWN + "Worker child %s (cnt: %ld) cannot be detached from %s (cnt: %ld)", child_repr, child_use_count - 1, __repr__(), shared_from_this().use_count() - 1);
 		} else if (retries > 0) {
-			child->redetach(retries - 1);
+			if (child->_detaching_retries.compare_exchange_strong(retries, retries - 1)) {
+				_detach_children(true);
+			}
 		}
 		return;
 	}
@@ -514,26 +518,25 @@ Worker::_detach_children(bool async)
 
 
 void
-Worker::detach(int retries, bool async)
+Worker::detach(bool async)
 {
 	L_CALL("Worker::detach() %s", __repr__());
 
+	_detaching_retries = 1;
 	_detaching = true;
-	_detaching_retries = retries;
-
 	_ancestor(1)->_detach_children(async);
 }
 
 
 void
-Worker::redetach(int retries, bool async)
+Worker::redetach(bool async)
 {
 	L_CALL("Worker::redetach() %s", __repr__());
 
 	// Needs to be run at the end of Workers's run(), to try re-detaching
 
 	if (_detaching) {
-		_detaching_retries = retries;
+		_detaching_retries = 1;
 		_ancestor(1)->_detach_children(async);
 	}
 }
