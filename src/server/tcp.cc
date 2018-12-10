@@ -390,10 +390,10 @@ BaseTCP::shutdown_impl(long long asap, long long now)
 		destroy(false);
 
 		if (now != 0) {
-			detach();
 			if (is_runner()) {
-				break_loop();
+				break_loop(false);
 			}
+			detach(false);
 		}
 	}
 }
