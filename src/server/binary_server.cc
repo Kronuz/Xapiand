@@ -48,9 +48,9 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary)
-	: MetaBaseServer<BinaryServer>(parent_, ev_loop_, ev_flags_, binary->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
-	  binary(binary),
+BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, binary_->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+	  binary(*binary_),
 	  trigger_replication_async(*ev_loop)
 {
 	trigger_replication_async.set<BinaryServer, &BinaryServer::trigger_replication_async_cb>(this);
@@ -80,13 +80,13 @@ BinaryServer::start_impl()
 	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
 	// of the incoming clients. It's not the case in other systems; FreeBSD is
 	// adding SO_REUSEPORT_LB for that.
-	binary->close(true);
+	binary.close(true);
 	bind(1);
 	io.start(sock, ev::READ);
 	L_EV("Start binary's server accept event {sock:%d}", sock);
 #else
-	io.start(binary->sock, ev::READ);
-	L_EV("Start binary's server accept event {sock:%d}", binary->sock);
+	io.start(binary.sock, ev::READ);
+	L_EV("Start binary's server accept event {sock:%d}", binary.sock);
 #endif
 }
 
@@ -111,7 +111,7 @@ BinaryServer::trigger_replication_async_cb(ev::async&, int revents)
 	ignore_unused(revents);
 
 	TriggerReplicationArgs args;
-	while (binary->trigger_replication_args.try_dequeue(args)) {
+	while (binary.trigger_replication_args.try_dequeue(args)) {
 		trigger_replication(args);
 	}
 }
@@ -124,10 +124,10 @@ BinaryServer::accept()
 
 	if (sock != -1) {
 		// If using SO_REUSEPORT for load balancing, this->sock
-		// will be opened and binary->sock will not.
+		// will be opened and binary.sock will not.
 		return TCP::accept();
 	}
-	return binary->accept();
+	return binary.accept();
 }
 
 
@@ -230,7 +230,7 @@ BinaryServer::__repr__() const
 {
 	return string::format("<BinaryServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
-		sock == -1 ? binary->sock : sock,
+		sock == -1 ? binary.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");

@@ -46,9 +46,9 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-HttpServer::HttpServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http)
-	: MetaBaseServer<HttpServer>(parent_, ev_loop_, ev_flags_, http->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
-	  http(http)
+HttpServer::HttpServer(const std::shared_ptr<Http>& http_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: MetaBaseServer<HttpServer>(http_, ev_loop_, ev_flags_, http_->port, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
+	  http(*http_)
 {
 }
 
@@ -74,13 +74,13 @@ HttpServer::start_impl()
 	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
 	// of the incoming clients. It's not the case in other systems; FreeBSD is
 	// adding SO_REUSEPORT_LB for that.
-	http->close(true);
+	http.close(true);
 	bind(1);
 	io.start(sock, ev::READ);
 	L_EV("Start http's server accept event {sock:%d}", sock);
 #else
-	io.start(http->sock, ev::READ);
-	L_EV("Start http's server accept event {sock:%d}", http->sock);
+	io.start(http.sock, ev::READ);
+	L_EV("Start http's server accept event {sock:%d}", http.sock);
 #endif
 }
 
@@ -95,7 +95,7 @@ HttpServer::accept()
 		// will be opened and binary->sock will not.
 		return TCP::accept();
 	}
-	return http->accept();
+	return http.accept();
 }
 
 
@@ -133,7 +133,7 @@ HttpServer::__repr__() const
 {
 	return string::format("<HttpServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
-		sock == -1 ? http->sock : sock,
+		sock == -1 ? http.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");
