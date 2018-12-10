@@ -124,6 +124,15 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 
 		client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
+		auto& node = src_endpoint.node;
+		int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
+		auto& host = node.host();
+		if (TCP::connect(client.sock, host, std::to_string(port)) == -1) {
+			L_ERR("Cannot connect to %s:%d", host, port);
+			return false;
+		}
+		L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);
+
 		L_REPLICATION("init_replication initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	} catch (const TimeOutError&) {
 		L_REPLICATION("init_replication deferred: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
@@ -133,30 +142,6 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 		return false;
 	}
 	return true;
-}
-
-
-void
-ReplicationProtocol::connect()
-{
-	L_CALL("ReplicationProtocol::connect()");
-
-	ASSERT(src_endpoints.size() == 1);
-
-	auto& src_endpoint = src_endpoints[0];
-	auto& node = src_endpoint.node;
-	int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
-	auto& host = node.host();
-	if (TCP::connect(client.sock, host, std::to_string(port)) == -1) {
-		L_ERR("Cannot connect to %s:%d", host, port);
-		client.close();
-		client.destroy();
-		client.detach();
-		return;
-	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);
-	ASSERT(client.is_running_loop());
-	client.start();
 }
 
 

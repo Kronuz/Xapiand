@@ -159,6 +159,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 		if (!client->init_remote()) {
 			client->destroy();
+			return;
 		}
 
 		client->start();
@@ -204,7 +205,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 	}
 
 	int client_sock = TCP::socket();
-	if (client_sock < 0) {
+	if (client_sock == -1) {
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
 			sig_exit(-EX_SOFTWARE);
@@ -219,6 +220,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		return;
 	}
 
+	client->start();
 	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 

@@ -388,18 +388,7 @@ BinaryClient::operator()()
 			break;
 		case State::INIT_REPLICATION:
 			state = State::REPLICATION_CLIENT;
-			lk.unlock();
-			try {
-				replication_protocol.connect();
-			} catch (...) {
-				lk.lock();
-				running = false;
-				lk.unlock();
-				L_CONN("Running in worker ended with an exception.");
-				detach();
-				throw;
-			}
-			lk.lock();
+			break;
 		default:
 			break;
 	}
