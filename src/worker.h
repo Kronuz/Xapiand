@@ -57,7 +57,6 @@ private:
 	std::recursive_mutex _mtx;
 	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
-	std::atomic_int _detaching_retries;
 
 	bool _started;
 	bool _destroyed;
@@ -86,7 +85,6 @@ protected:
 		  _detach_children_async(*ev_loop),
 		  _runner(false),
 		  _detaching(false),
-		  _detaching_retries(0),
 		  _started(false),
 		  _destroyed(false),
 		  _deinited(false),
@@ -135,7 +133,7 @@ private:
 	void _start_impl();
 	void _stop_impl();
 	void _destroy_impl();
-	void _detach_impl(const std::weak_ptr<Worker>& weak_child, int retries);
+	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	void _detach_children_impl();
 
 	void _detach_children(bool async);
