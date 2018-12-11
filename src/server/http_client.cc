@@ -923,16 +923,16 @@ HttpClient::process(Request& request, Response& response)
 		error_code = HTTP_STATUS_BAD_REQUEST;
 		error.assign(exc.what());
 	} catch (const TimeOutError& exc) {
-		error_code = HTTP_STATUS_REQUEST_TIMEOUT;
+		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 	} catch (const Xapian::NetworkTimeoutError& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
 		error.assign(exc.get_description());
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
 		error.assign(exc.get_description());
 	} catch (const Xapian::NetworkError& exc) {
 		std::string msg;
