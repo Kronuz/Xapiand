@@ -34,9 +34,6 @@
 
 
 class Worker : public std::enable_shared_from_this<Worker> {
-	using WorkerShared = std::shared_ptr<Worker>;
-	using WorkerList = std::list<WorkerShared>;
-
 	ev::dynamic_loop _dynamic_ev_loop;
 
 protected:
@@ -62,12 +59,12 @@ private:
 	bool _destroyed;
 	bool _deinited;
 
-	const WorkerShared _parent;
-	WorkerList _children;
+	const std::shared_ptr<Worker> _parent;
+	std::list<std::shared_ptr<Worker>> _children;
 
 	// _iterator should be const_iterator but in linux, std::list member functions
 	// use a standard iterator and not const_iterator.
-	WorkerList::iterator _iterator;
+	std::list<std::shared_ptr<Worker>>::iterator _iterator;
 
 protected:
 	template<typename T, typename L>
