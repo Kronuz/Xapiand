@@ -59,7 +59,7 @@ private:
 	bool _destroyed;
 	bool _deinited;
 
-	const std::shared_ptr<Worker> _parent;
+	std::shared_ptr<Worker> _parent;
 	std::list<std::shared_ptr<Worker>> _children;
 
 	// _iterator should be const_iterator but in linux, std::list member functions
@@ -96,8 +96,11 @@ private:
 	template<typename T>
 	auto __detach(T&& child) {
 		ASSERT(child);
+		std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 		if (child->_iterator != _children.end()) {
+			ASSERT(child->_parent);
 			ASSERT(child->_parent.get() == this);
+			child->_parent.reset();
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
 			return it;
@@ -108,9 +111,15 @@ private:
 	template<typename T>
 	auto __attach(T&& child) {
 		ASSERT(child);
-		auto it = _children.insert(_children.begin(), std::forward<T>(child));
-		(*it)->_iterator = it;
-		return it;
+		std::lock_guard<std::recursive_mutex> lk(child->_mtx);
+		if (child->_iterator == _children.end()) {
+			ASSERT(std::find(_children.begin(), _children.end(), child) == _children.end());
+			child->_parent = shared_from_this();
+			auto it = _children.insert(_children.begin(), std::forward<T>(child));
+			(*it)->_iterator = it;
+			return it;
+		}
+		return _children.end();
 	}
 
 	void _init();
@@ -122,9 +131,6 @@ private:
 	void _stop_async_cb(ev::async&, int revents);
 	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
-
-	std::vector<std::weak_ptr<Worker>> _gather_children() const;
-	auto _ancestor(int levels=-1);
 
 	void _break_loop_impl();
 	void _start_impl();
@@ -175,6 +181,9 @@ public:
 
 	void run_loop();
 
+	std::vector<std::weak_ptr<Worker>> gather_children() const;
+	std::shared_ptr<Worker> parent() const;
+
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
 	static auto make_shared(Args&&... args) {
 		/*
@@ -185,8 +194,9 @@ public:
 			enable_make_shared(Args&&... _args) : T(std::forward<Args>(_args)...) { }
 		};
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+		std::lock_guard<std::recursive_mutex> child_lk(child->_mtx);
 		if (child->_parent) {
-			std::lock_guard<std::recursive_mutex> lk(child->_parent->_mtx);
+			std::lock_guard<std::recursive_mutex> parent_lk(child->_parent->_mtx);
 			child->_parent->__attach(child);
 		}
 

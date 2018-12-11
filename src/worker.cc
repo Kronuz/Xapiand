@@ -210,9 +210,9 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 
 
 std::vector<std::weak_ptr<Worker>>
-Worker::_gather_children() const
+Worker::gather_children() const
 {
-	L_CALL("Worker::_gather_children() %s", __repr__());
+	L_CALL("Worker::gather_children() %s", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
@@ -229,18 +229,14 @@ Worker::_gather_children() const
 }
 
 
-auto
-Worker::_ancestor(int levels)
+std::shared_ptr<Worker>
+Worker::parent() const
 {
-	L_CALL("Worker::_ancestor(%d) %s", levels, __repr__());
+	L_CALL("Worker::parent() %s", __repr__());
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
-	auto ancestor = shared_from_this();
-	while (ancestor->_parent && levels-- != 0) {
-		ancestor = ancestor->_parent;
-	}
-	return ancestor;
+	return _parent;
 }
 
 
@@ -272,7 +268,7 @@ Worker::dump_tree(int level)
 	ret += __repr__();
 	ret.push_back('\n');
 
-	auto weak_children = _gather_children();
+	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			ret += child->dump_tree(level + 1);
@@ -288,7 +284,7 @@ Worker::shutdown_impl(long long asap, long long now)
 {
 	L_CALL("Worker::shutdown_impl(%lld, %lld) %s", asap, now, __repr__());
 
-	auto weak_children = _gather_children();
+	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
@@ -369,11 +365,11 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 		if (child->is_runner() && child->is_running_loop()) {
 			return;
 		}
-		__detach(child);
 #ifdef LOG_WORKER
 		child_repr = child->__repr__();
 		child_use_count = child.use_count();
 #endif
+		__detach(child);
 		lk.unlock();
 		child.reset();
 		lk.lock();
@@ -382,6 +378,7 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 	}
 
 	if (auto child = weak_child.lock()) {
+		// Object still lives, re-attach
 		__attach(child);
 		return;
 	}
@@ -395,7 +392,7 @@ Worker::_detach_children_impl()
 {
 	L_CALL("Worker::_detach_children_impl() %s", __repr__());
 
-	auto weak_children = _gather_children();
+	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			child->_detach_children(true);
@@ -504,7 +501,10 @@ Worker::detach(bool async)
 	L_CALL("Worker::detach() %s", __repr__());
 
 	_detaching = true;
-	_ancestor(1)->_detach_children(async);
+	auto p = parent();
+	if (p) {
+		p->_detach_children(async);
+	}
 }
 
 
@@ -516,7 +516,10 @@ Worker::redetach(bool async)
 	// Needs to be run at the end of Workers's run(), to try re-detaching
 
 	if (_detaching) {
-		_ancestor(1)->_detach_children(async);
+		auto p = parent();
+		if (p) {
+			p->_detach_children(async);
+		}
 	}
 }
 
