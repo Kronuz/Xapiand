@@ -97,30 +97,46 @@ UDP::bind(int tries, const std::string& group)
 	if ((sock = io::socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
 		L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	if ((flags & UDP_SO_REUSEPORT) != 0) {
 #ifdef SO_REUSEPORT_LB
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #else
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #endif
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
 		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	// use io::setsockopt() to request that the kernel join a multicast group
@@ -131,6 +147,7 @@ UDP::bind(int tries, const std::string& group)
 		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		close();
 		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -150,7 +167,9 @@ UDP::bind(int tries, const std::string& group)
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 			L_CRIT("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			close();
 			sig_exit(-EX_CONFIG);
+			return;
 		}
 
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)

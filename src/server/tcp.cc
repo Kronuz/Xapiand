@@ -110,37 +110,56 @@ TCP::bind(int tries)
 	if ((sock = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 		sig_exit(-EX_IOERR);
+		return;
 	}
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	if ((flags & TCP_SO_REUSEPORT) != 0) {
 #ifdef SO_REUSEPORT_LB
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #else
 		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #endif
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_CRIT("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 #endif
 
 	if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		L_CRIT("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
 	}
 
 	// struct linger ling = {0, 0};
 	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	// 	L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	// 	close();
+	// 	sig_exit(-EX_CONFIG);
+	// 	return;
 	// }
 
 	if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
@@ -153,13 +172,19 @@ TCP::bind(int tries)
 		struct accept_filter_arg af = {"dataready", ""};
 
 		if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
-			L_ERR("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
 		if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			close();
+			sig_exit(-EX_CONFIG);
+			return;
 		}
 #endif
 	}
@@ -181,7 +206,9 @@ TCP::bind(int tries)
 
 		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 			L_CRIT("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			close();
 			sig_exit(-EX_CONFIG);
+			return;
 		}
 
 		_check_backlog(tcp_backlog);
@@ -217,11 +244,15 @@ TCP::accept()
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt SO_NOSIGPIPE {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		io::close(client_sock);
+		return -1;
 	}
 #endif
 
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt SO_KEEPALIVE {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		io::close(client_sock);
+		return -1;
 	}
 
 	// struct linger ling = {0, 0};
@@ -232,11 +263,15 @@ TCP::accept()
 	if ((flags & TCP_TCP_NODELAY) != 0) {
 		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
 			L_ERR("ERROR: setsockopt TCP_NODELAY {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+			io::close(client_sock);
+			return -1;
 		}
 	}
 
 	if (io::fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		L_ERR("ERROR: fcntl O_NONBLOCK {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		io::close(client_sock);
+		return -1;
 	}
 
 	return client_sock;
@@ -310,6 +345,7 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 
 	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		return -1;
 	}
 
 	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
@@ -341,20 +377,28 @@ TCP::socket()
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(sock_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		io::close(sock_);
+		return -1;
 	}
 #endif
 
 	if (io::setsockopt(sock_, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		io::close(sock_);
+		return -1;
 	}
 
 	// struct linger ling = {0, 0};
 	// if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
 	// 	L_ERR("ERROR: setsockopt SO_LINGER {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-	// }
+	// 	io::close(sock_);
+	// 	return -1;
+	// // }
 
 	if (io::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt TCP_NODELAY {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		io::close(sock_);
+		return -1;
 	}
 
 	return sock_;
