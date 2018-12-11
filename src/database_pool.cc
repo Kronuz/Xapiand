@@ -45,6 +45,54 @@
 #define LOCAL_DATABASE_UPDATE_TIME 10
 
 
+class ReferencedDatabaseEndpoint {
+	DatabaseEndpoint* ptr;
+
+public:
+	ReferencedDatabaseEndpoint(DatabaseEndpoint* ptr) : ptr(ptr) {
+		if (ptr) {
+			++ptr->refs;
+		}
+	}
+
+	ReferencedDatabaseEndpoint(const ReferencedDatabaseEndpoint& other) = delete;
+	ReferencedDatabaseEndpoint& operator=(const ReferencedDatabaseEndpoint& other) = delete;
+
+	ReferencedDatabaseEndpoint(ReferencedDatabaseEndpoint&& other) : ptr(other.ptr) {
+		other.ptr = nullptr;
+	}
+
+	ReferencedDatabaseEndpoint& operator=(ReferencedDatabaseEndpoint&& other) {
+		ptr = other.ptr;
+		other.ptr = nullptr;
+		return *this;
+	}
+
+	~ReferencedDatabaseEndpoint() noexcept {
+		if (ptr) {
+			ASSERT(ptr->refs > 0);
+			--ptr->refs;
+		}
+	}
+
+	void reset() {
+		if (ptr) {
+			ASSERT(ptr->refs > 0);
+			--ptr->refs;
+			ptr = nullptr;
+		}
+	}
+
+	operator bool() const {
+		return !!ptr;
+	}
+
+	DatabaseEndpoint* operator->() const {
+		return ptr;
+	}
+};
+
+
 //  ____        _        _                    _____           _             _       _
 // |  _ \  __ _| |_ __ _| |__   __ _ ___  ___| ____|_ __   __| |_ __   ___ (_)_ __ | |_
 // | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \  _| | '_ \ / _` | '_ \ / _ \| | '_ \| __|
@@ -65,14 +113,10 @@ DatabaseEndpoint::DatabaseEndpoint(DatabasePool& database_pool, const Endpoints&
 }
 
 
-std::shared_ptr<Database>
-DatabaseEndpoint::writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback)
+std::shared_ptr<Database>&
+DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("DatabaseEndpoint::writable_checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
-
-	auto now = std::chrono::system_clock::now();
-
-	std::unique_lock<std::mutex> lk(mtx);
 
 	do {
 		if (is_finished()) {
@@ -114,14 +158,10 @@ DatabaseEndpoint::writable_checkout(int flags, double timeout, std::packaged_tas
 }
 
 
-std::shared_ptr<Database>
-DatabaseEndpoint::readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback)
+std::shared_ptr<Database>&
+DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("DatabaseEndpoint::readable_checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
-
-	auto now = std::chrono::system_clock::now();
-
-	std::unique_lock<std::mutex> lk(mtx);
 
 	do {
 		if (is_finished()) {
@@ -142,8 +182,8 @@ DatabaseEndpoint::readable_checkout(int flags, double timeout, std::packaged_tas
 			}
 		}
 		if (readables.size() < database_pool.max_databases) {
-			auto readable = std::make_shared<Database>(*this, flags);
-			readables.push_back(readable);
+			auto new_database = std::make_shared<Database>(*this, flags);
+			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
 			if (!is_locked() && !readable->busy.exchange(true)) {
 				--readables_available;
@@ -182,10 +222,53 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 {
 	L_CALL("DatabaseEndpoint::checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
+	auto now = std::chrono::system_clock::now();
+
+	std::unique_lock<std::mutex> lk(mtx);
+
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
-		return writable_checkout(flags, timeout, callback);
+		return _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
-		return readable_checkout(flags, timeout, callback);
+		auto& database = _readable_checkout(flags, timeout, callback, now, lk);
+		try {
+			// Reopening of old/outdated (readable) databases:
+			bool reopen = false;
+			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();
+			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
+				// Database is just too old, reopen
+				reopen = true;
+			} else {
+				for (size_t i = 0; i < database->_databases.size(); ++i) {
+					const auto& db_pair = database->_databases[i];
+					bool local = db_pair.second;
+					if (local) {
+						auto database_endpoint = database_pool.get(Endpoints{(*this)[i]});
+						if (database_endpoint) {
+							auto revision = database_endpoint->local_revision.load();
+							database_endpoint.reset();
+							if (revision != db_pair.first.get_revision()) {
+								// Local writable database has changed revision.
+								reopen = true;
+								break;
+							}
+						}
+					} else {
+						if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
+							// Remote database is too old, reopen.
+							reopen = true;
+							break;
+						}
+					}
+				}
+			}
+			if (reopen) {
+				// Discard old database and create a new one
+				auto new_database = std::make_shared<Database>(*this, flags);
+				new_database->busy = true;
+				database = new_database;
+			}
+		} catch (...) {}
+		return database;
 	}
 }
 
@@ -380,54 +463,6 @@ DatabaseEndpoint::dump_databases(int level) const
 	}
 	return ret;
 }
-
-
-class ReferencedDatabaseEndpoint {
-	DatabaseEndpoint* ptr;
-
-public:
-	ReferencedDatabaseEndpoint(DatabaseEndpoint* ptr) : ptr(ptr) {
-		if (ptr) {
-			++ptr->refs;
-		}
-	}
-
-	ReferencedDatabaseEndpoint(const ReferencedDatabaseEndpoint& other) = delete;
-	ReferencedDatabaseEndpoint& operator=(const ReferencedDatabaseEndpoint& other) = delete;
-
-	ReferencedDatabaseEndpoint(ReferencedDatabaseEndpoint&& other) : ptr(other.ptr) {
-		other.ptr = nullptr;
-	}
-
-	ReferencedDatabaseEndpoint& operator=(ReferencedDatabaseEndpoint&& other) {
-		ptr = other.ptr;
-		other.ptr = nullptr;
-		return *this;
-	}
-
-	~ReferencedDatabaseEndpoint() noexcept {
-		if (ptr) {
-			ASSERT(ptr->refs > 0);
-			--ptr->refs;
-		}
-	}
-
-	void reset() {
-		if (ptr) {
-			ASSERT(ptr->refs > 0);
-			--ptr->refs;
-			ptr = nullptr;
-		}
-	}
-
-	operator bool() const {
-		return !!ptr;
-	}
-
-	DatabaseEndpoint* operator->() const {
-		return ptr;
-	}
-};
 
 
 //  ____        _        _                    ____             _
@@ -712,42 +747,6 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 
 	auto database = spawn(endpoints)->checkout(flags, timeout, callback);
 	ASSERT(database);
-
-	if (!is_writable) {
-		// Reopening of old/outdated (readable) databases:
-		bool reopen = false;
-		auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();
-		if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
-			// Database is just too old, reopen
-			reopen = true;
-		} else {
-			for (size_t i = 0; i < database->_databases.size(); ++i) {
-				const auto& db_pair = database->_databases[i];
-				bool local = db_pair.second;
-				if (local) {
-					auto database_endpoint = get(Endpoints{endpoints[i]});
-					if (database_endpoint) {
-						auto revision = database_endpoint->local_revision.load();
-						database_endpoint.reset();
-						if (revision != db_pair.first.get_revision()) {
-							// Local writable database has changed revision.
-							reopen = true;
-							break;
-						}
-					}
-				} else {
-					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
-						// Remote database is too old, reopen.
-						reopen = true;
-						break;
-					}
-				}
-			}
-		}
-		if (reopen) {
-			database->reopen();
-		}
-	}
 
 	L_TIMED_VAR(database->log, 200ms,
 		"Database checkout is taking too long: %s (%s)%s%s%s",

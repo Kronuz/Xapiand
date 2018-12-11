@@ -85,8 +85,8 @@ class DatabaseEndpoint : public Endpoints
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
-	std::shared_ptr<Database> writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback);
-	std::shared_ptr<Database> readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback);
+	std::shared_ptr<Database>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Database>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
 
 public:
 	DatabaseEndpoint(DatabasePool& database_pool, const Endpoints& endpoints);
