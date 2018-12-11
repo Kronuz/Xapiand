@@ -931,10 +931,9 @@ HttpClient::process(Request& request, Response& response)
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(exc.get_description());
-	} catch (const BaseException& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
-		L_EXC("ERROR: Dispatching HTTP request");
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error.assign(exc.get_description());
 	} catch (const Xapian::NetworkError& exc) {
 		std::string msg;
 		const char* error_string = exc.get_error_string();
@@ -965,6 +964,10 @@ HttpClient::process(Request& request, Response& response)
 				error.assign(exc.get_description());
 				L_EXC("ERROR: Dispatching HTTP request");
 		}
+	} catch (const BaseException& exc) {
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
+		L_EXC("ERROR: Dispatching HTTP request");
 	} catch (const Xapian::Error& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(exc.get_description());
