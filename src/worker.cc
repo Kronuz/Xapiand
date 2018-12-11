@@ -138,6 +138,8 @@ Worker::_deinit()
 std::list<std::shared_ptr<Worker>>::iterator
 Worker::__detach(const std::shared_ptr<Worker>& child)
 {
+	L_CALL("Worker::__detach(<child>)", __repr__());
+
 	ASSERT(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator != _children.end()) {
@@ -153,6 +155,8 @@ Worker::__detach(const std::shared_ptr<Worker>& child)
 std::list<std::shared_ptr<Worker>>::iterator
 Worker::__attach(const std::shared_ptr<Worker>& child)
 {
+	L_CALL("Worker::__attach(<child>)", __repr__());
+
 	ASSERT(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator == _children.end()) {
