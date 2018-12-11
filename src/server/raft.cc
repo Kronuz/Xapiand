@@ -118,8 +118,9 @@ Raft::shutdown_impl(long long asap, long long now)
 
 		if (is_runner()) {
 			break_loop(false);
+		} else {
+			detach(false);
 		}
-		detach(false);
 	}
 }
 

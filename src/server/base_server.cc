@@ -59,8 +59,9 @@ BaseServer::shutdown_impl(long long asap, long long now)
 		if (now != 0) {
 			if (is_runner()) {
 				break_loop(false);
+			} else {
+				detach(false);
 			}
-			detach(false);
 		}
 	}
 }
