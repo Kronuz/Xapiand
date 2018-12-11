@@ -51,7 +51,7 @@ private:
 	ev::async _destroy_async;
 	ev::async _detach_children_async;
 
-	std::recursive_mutex _mtx;
+	mutable std::recursive_mutex _mtx;
 	std::atomic_bool _runner;
 	std::atomic_bool _detaching;
 
@@ -123,7 +123,7 @@ private:
 	void _destroy_async_cb(ev::async&, int revents);
 	void _detach_children_async_cb(ev::async&, int revents);
 
-	std::vector<std::weak_ptr<Worker>> _gather_children();
+	std::vector<std::weak_ptr<Worker>> _gather_children() const;
 	auto _ancestor(int levels=-1);
 
 	void _break_loop_impl();

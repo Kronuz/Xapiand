@@ -210,7 +210,7 @@ Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
 
 
 std::vector<std::weak_ptr<Worker>>
-Worker::_gather_children()
+Worker::_gather_children() const
 {
 	L_CALL("Worker::_gather_children() %s", __repr__());
 
