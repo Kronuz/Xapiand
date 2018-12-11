@@ -56,28 +56,14 @@ Http::getDescription() const
 
 
 void
-Http::add_server(const std::shared_ptr<HttpServer>& server)
-{
-	L_CALL("Http::add_server(<server>)");
-
-	std::lock_guard<std::mutex> lk(bsmtx);
-	servers_weak.push_back(server);
-}
-
-
-void
 Http::start()
 {
 	L_CALL("Http::start()");
 
-	std::lock_guard<std::mutex> lk(bsmtx);
-	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
-		auto server = it->lock();
-		if (server) {
-			server->start();
-			++it;
-		} else {
-			it = servers_weak.erase(it);
+	auto weak_children = gather_children();
+	for (auto& weak_child : weak_children) {
+		if (auto child = weak_child.lock()) {
+			std::static_pointer_cast<HttpServer>(child)->start();
 		}
 	}
 }

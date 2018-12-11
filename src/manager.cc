@@ -655,13 +655,11 @@ XapiandManager::make_servers()
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		auto http_server = Worker::make_shared<HttpServer>(http, nullptr, ev_flags);
-		http->add_server(http_server);
 		http_server_pool.enqueue(std::move(http_server));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			auto binary_server = Worker::make_shared<BinaryServer>(binary, nullptr, ev_flags);
-			binary->add_server(binary_server);
 			binary_server_pool.enqueue(std::move(binary_server));
 		}
 #endif

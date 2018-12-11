@@ -51,15 +51,11 @@ struct TriggerReplicationArgs {
 class Binary : public BaseTCP {
 	friend BinaryServer;
 
-	std::mutex bsmtx;
-	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
-
 	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 
 public:
 	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 
-	void add_server(const std::shared_ptr<BinaryServer>& server);
 	void start();
 
 	void trigger_replication(const TriggerReplicationArgs& args);

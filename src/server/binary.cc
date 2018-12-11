@@ -51,28 +51,14 @@ Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, u
 
 
 void
-Binary::add_server(const std::shared_ptr<BinaryServer>& server)
-{
-	L_CALL("Binary::add_server(<server>)");
-
-	std::lock_guard<std::mutex> lk(bsmtx);
-	servers_weak.push_back(server);
-}
-
-
-void
 Binary::start()
 {
 	L_CALL("Binary::start()");
 
-	std::lock_guard<std::mutex> lk(bsmtx);
-	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
-		auto server = it->lock();
-		if (server) {
-			server->start();
-			++it;
-		} else {
-			it = servers_weak.erase(it);
+	auto weak_children = gather_children();
+	for (auto& weak_child : weak_children) {
+		if (auto child = weak_child.lock()) {
+			std::static_pointer_cast<BinaryServer>(child)->start();
 		}
 	}
 }
@@ -85,14 +71,10 @@ Binary::trigger_replication(const TriggerReplicationArgs& args)
 
 	trigger_replication_args.enqueue(args);
 
-	std::lock_guard<std::mutex> lk(bsmtx);
-	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
-		auto server = it->lock();
-		if (server) {
-			server->trigger_replication();
-			++it;
-		} else {
-			it = servers_weak.erase(it);
+	auto weak_children = gather_children();
+	for (auto& weak_child : weak_children) {
+		if (auto child = weak_child.lock()) {
+			std::static_pointer_cast<BinaryServer>(child)->trigger_replication();
 		}
 	}
 }
