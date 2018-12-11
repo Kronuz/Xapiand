@@ -132,7 +132,39 @@ Worker::_deinit()
 
 		_deinited = true;
 	}
+}
 
+
+std::list<std::weak_ptr<Worker>>::iterator
+Worker::__detach(const std::shared_ptr<Worker>& child)
+{
+	ASSERT(child);
+	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
+	if (child->_iterator != _children.end()) {
+		ASSERT(child->_parent);
+		ASSERT(child->_parent.get() == this);
+		child->_parent.reset();
+		auto it = _children.erase(child->_iterator);
+		child->_iterator = _children.end();
+		return it;
+	}
+	return _children.end();
+}
+
+
+std::list<std::weak_ptr<Worker>>::iterator
+Worker::__attach(const std::shared_ptr<Worker>& child)
+{
+	ASSERT(child);
+	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
+	if (child->_iterator == _children.end()) {
+		ASSERT(std::find_if(_children.begin(), _children.end(), [&](const std::weak_ptr<Worker>& weak_child){ return weak_child.lock() == child; }) == _children.end());
+		child->_parent = shared_from_this();
+		auto it = _children.insert(_children.begin(), child);
+		child->_iterator = it;
+		return it;
+	}
+	return _children.end();
 }
 
 
@@ -219,11 +251,8 @@ Worker::gather_children() const
 	// Collect active children
 	std::vector<std::weak_ptr<Worker>> weak_children;
 	weak_children.reserve(_children.size());
-	for (auto it = _children.begin(); it != _children.end(); ++it) {
-		auto& child = *it;
-		if (child) {
-			weak_children.push_back(child);
-		}
+	for (auto& weak_child : _children) {
+		weak_children.push_back(weak_child);
 	}
 	return weak_children;
 }

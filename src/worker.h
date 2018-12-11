@@ -60,11 +60,8 @@ private:
 	bool _deinited;
 
 	std::shared_ptr<Worker> _parent;
-	std::list<std::shared_ptr<Worker>> _children;
-
-	// _iterator should be const_iterator but in linux, std::list member functions
-	// use a standard iterator and not const_iterator.
-	std::list<std::shared_ptr<Worker>>::iterator _iterator;
+	std::list<std::weak_ptr<Worker>> _children;
+	std::list<std::weak_ptr<Worker>>::iterator _iterator;
 
 protected:
 	template<typename T, typename L>
@@ -93,37 +90,11 @@ protected:
 	void deinit();
 
 private:
-	template<typename T>
-	auto __detach(T&& child) {
-		ASSERT(child);
-		std::lock_guard<std::recursive_mutex> lk(child->_mtx);
-		if (child->_iterator != _children.end()) {
-			ASSERT(child->_parent);
-			ASSERT(child->_parent.get() == this);
-			child->_parent.reset();
-			auto it = _children.erase(child->_iterator);
-			child->_iterator = _children.end();
-			return it;
-		}
-		return _children.end();
-	}
-
-	template<typename T>
-	auto __attach(T&& child) {
-		ASSERT(child);
-		std::lock_guard<std::recursive_mutex> lk(child->_mtx);
-		if (child->_iterator == _children.end()) {
-			ASSERT(std::find(_children.begin(), _children.end(), child) == _children.end());
-			child->_parent = shared_from_this();
-			auto it = _children.insert(_children.begin(), std::forward<T>(child));
-			(*it)->_iterator = it;
-			return it;
-		}
-		return _children.end();
-	}
-
 	void _init();
 	void _deinit();
+
+	std::list<std::weak_ptr<Worker>>::iterator __attach(const std::shared_ptr<Worker>& child);
+	std::list<std::weak_ptr<Worker>>::iterator __detach(const std::shared_ptr<Worker>& child);
 
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
