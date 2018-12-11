@@ -31,7 +31,6 @@
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"                          // for Base62
-#include "database_wal.h"                     // for DatabaseWALWriter
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"                          // for ev::loop_ref
@@ -55,6 +54,7 @@ class BinaryServer;
 class HttpClient;
 class HttpServer;
 class DatabasePool;
+class DatabaseWALWriter;
 
 extern void sig_exit(int sig);
 
@@ -130,10 +130,9 @@ public:
 	std::shared_ptr<Raft> raft;
 #endif
 
-	std::shared_ptr<DatabasePool> database_pool;
 	SchemasLRU schemas;
-
-	DatabaseWALWriter wal_writer;
+	std::shared_ptr<DatabasePool> database_pool;
+	std::shared_ptr<DatabaseWALWriter> wal_writer;
 
 	ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients> http_client_pool;
 	ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers> http_server_pool;

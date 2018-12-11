@@ -57,6 +57,7 @@
 #include "database_handler.h"                 // for DatabaseHandler, committer
 #include "database_pool.h"                    // for DatabasePool
 #include "database_utils.h"                   // for RESERVED_TYPE
+#include "database_wal.h"                     // for DatabaseWALWriter
 #include "epoch.hh"                           // for epoch::now
 #include "error.hh"                           // for error:name, error::description
 #include "ev/ev++.h"                          // for ev::async, ev::loop_ref
@@ -129,9 +130,9 @@ XapiandManager::XapiandManager()
 	  total_clients(0),
 	  http_clients(0),
 	  binary_clients(0),
-	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
-	  wal_writer("WW%02zu", opts.num_async_wal_writers),
+	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  wal_writer(std::make_shared<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
 	  http_client_pool("CH%02zu", opts.num_http_clients),
 	  http_server_pool("SH%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
@@ -160,9 +161,9 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  total_clients(0),
 	  http_clients(0),
 	  binary_clients(0),
-	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  schemas(opts.dbpool_size * 3),
-	  wal_writer("WW%02zu", opts.num_async_wal_writers),
+	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  wal_writer(std::make_shared<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
 	  http_client_pool("CH%02zu", opts.num_http_clients),
 	  http_server_pool("SH%02zu", opts.num_servers),
 #ifdef XAPIAND_CLUSTERING
@@ -712,6 +713,8 @@ XapiandManager::run()
 	raft.reset();
 #endif
 
+	wal_writer.reset();
+
 	detach();
 }
 
@@ -803,12 +806,12 @@ XapiandManager::join()
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_writer.running_size()) {
+	if (wal_writer->running_size()) {
 		L_MANAGER("Finishing WAL writers!");
-		wal_writer.finish();
+		wal_writer->finish();
 
-		L_MANAGER("Waiting for %zu WAL writer%s...", wal_writer.running_size(), (wal_writer.running_size() == 1) ? "" : "s");
-		while (!wal_writer.join(500ms)) {
+		L_MANAGER("Waiting for %zu WAL writer%s...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
+		while (!wal_writer->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);

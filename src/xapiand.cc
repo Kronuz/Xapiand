@@ -72,7 +72,8 @@
 #include "hashes.hh"                // for fnv1ah32
 #include "ignore_unused.h"          // for ignore_unused
 #include "io.hh"                    // for io::close, io::open, io::write
-#include "log.h"                    // for Logging, L_INFO, L_CRIT, L_NOTICE
+#include "log.h"                    // for L_INFO, L_CRIT, L_NOTICE
+#include "logger.h"                 // for Logging
 #include "manager.h"                // for XapiandManager, XapiandM...
 #include "opts.h"                   // for opts_t
 #include "schema.h"                 // for default_spc

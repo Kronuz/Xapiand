@@ -51,9 +51,11 @@
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
+#include "fs.hh"                            // for normalize_path
 #include "ignore_unused.h"                  // for ignore_unused
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
+#include "logger.h"                         // for Logging
 #include "manager.h"                        // for XapiandManager::manager
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
