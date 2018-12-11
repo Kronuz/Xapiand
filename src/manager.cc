@@ -125,7 +125,7 @@ void sig_exit(int sig) {
 
 
 XapiandManager::XapiandManager()
-	: Worker(nullptr, loop_ref_nil, 0),
+	: Worker(std::weak_ptr<Worker>{}, loop_ref_nil, 0),
 	  total_clients(0),
 	  http_clients(0),
 	  binary_clients(0),
@@ -156,7 +156,7 @@ XapiandManager::XapiandManager()
 
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
-	: Worker(nullptr, ev_loop_, ev_flags_),
+	: Worker(std::weak_ptr<Worker>{}, ev_loop_, ev_flags_),
 	  total_clients(0),
 	  http_clients(0),
 	  binary_clients(0),
@@ -645,7 +645,7 @@ XapiandManager::make_servers()
 #endif
 	}
 
-	database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
+	auto database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
 	database_cleanup->run();
 	database_cleanup->start();
 
@@ -704,7 +704,6 @@ XapiandManager::run()
 
 	join();
 
-	database_cleanup.reset();
 	http.reset();
 #ifdef XAPIAND_CLUSTERING
 	binary.reset();

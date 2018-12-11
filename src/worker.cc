@@ -76,8 +76,8 @@ Worker::_init()
 {
 	L_CALL("Worker::_init()");
 
-	if (_parent) {
-		_iterator = _parent->_children.end();
+	if (auto parent = _parent.lock()) {
+		_iterator = parent->_children.end();
 	}
 
 	_shutdown_async.set<Worker, &Worker::_shutdown_async_cb>(this);
@@ -135,14 +135,12 @@ Worker::_deinit()
 }
 
 
-std::list<std::weak_ptr<Worker>>::iterator
+std::list<std::shared_ptr<Worker>>::iterator
 Worker::__detach(const std::shared_ptr<Worker>& child)
 {
 	ASSERT(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator != _children.end()) {
-		ASSERT(child->_parent);
-		ASSERT(child->_parent.get() == this);
 		child->_parent.reset();
 		auto it = _children.erase(child->_iterator);
 		child->_iterator = _children.end();
@@ -152,13 +150,13 @@ Worker::__detach(const std::shared_ptr<Worker>& child)
 }
 
 
-std::list<std::weak_ptr<Worker>>::iterator
+std::list<std::shared_ptr<Worker>>::iterator
 Worker::__attach(const std::shared_ptr<Worker>& child)
 {
 	ASSERT(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator == _children.end()) {
-		ASSERT(std::find_if(_children.begin(), _children.end(), [&](const std::weak_ptr<Worker>& weak_child){ return weak_child.lock() == child; }) == _children.end());
+		ASSERT(std::find(_children.begin(), _children.end(), child) == _children.end());
 		child->_parent = shared_from_this();
 		auto it = _children.insert(_children.begin(), child);
 		child->_iterator = it;
@@ -251,8 +249,10 @@ Worker::gather_children() const
 	// Collect active children
 	std::vector<std::weak_ptr<Worker>> weak_children;
 	weak_children.reserve(_children.size());
-	for (auto& weak_child : _children) {
-		weak_children.push_back(weak_child);
+	for (auto& child : _children) {
+		if (child) {
+			weak_children.push_back(child);
+		}
 	}
 	return weak_children;
 }
@@ -265,7 +265,7 @@ Worker::parent() const
 
 	std::lock_guard<std::recursive_mutex> lk(_mtx);
 
-	return _parent;
+	return _parent.lock();
 }
 
 

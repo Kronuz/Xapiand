@@ -59,9 +59,9 @@ private:
 	bool _destroyed;
 	bool _deinited;
 
-	std::shared_ptr<Worker> _parent;
-	std::list<std::weak_ptr<Worker>> _children;
-	std::list<std::weak_ptr<Worker>>::iterator _iterator;
+	std::weak_ptr<Worker> _parent;
+	std::list<std::shared_ptr<Worker>> _children;
+	std::list<std::shared_ptr<Worker>>::iterator _iterator;
 
 protected:
 	template<typename T, typename L>
@@ -93,8 +93,8 @@ private:
 	void _init();
 	void _deinit();
 
-	std::list<std::weak_ptr<Worker>>::iterator __attach(const std::shared_ptr<Worker>& child);
-	std::list<std::weak_ptr<Worker>>::iterator __detach(const std::shared_ptr<Worker>& child);
+	std::list<std::shared_ptr<Worker>>::iterator __attach(const std::shared_ptr<Worker>& child);
+	std::list<std::shared_ptr<Worker>>::iterator __detach(const std::shared_ptr<Worker>& child);
 
 	void _shutdown_async_cb();
 	void _break_loop_async_cb(ev::async&, int revents);
@@ -166,17 +166,16 @@ public:
 		};
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		std::lock_guard<std::recursive_mutex> child_lk(child->_mtx);
-		if (child->_parent) {
-			std::lock_guard<std::recursive_mutex> parent_lk(child->_parent->_mtx);
-			child->_parent->__attach(child);
+		if (auto parent = child->_parent.lock()) {
+			std::lock_guard<std::recursive_mutex> parent_lk(parent->_mtx);
+			parent->__attach(child);
 		}
-
 		return child;
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
 	auto share_parent() noexcept {
-		return std::static_pointer_cast<T>(_parent);
+		return std::static_pointer_cast<T>(parent());
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>

@@ -55,7 +55,6 @@ class BinaryServer;
 class HttpClient;
 class HttpServer;
 class DatabasePool;
-class DatabaseCleanup;
 
 extern void sig_exit(int sig);
 
@@ -123,8 +122,6 @@ public:
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
 	std::atomic_int binary_clients;
-
-	std::shared_ptr<DatabaseCleanup> database_cleanup;
 
 	std::shared_ptr<Http> http;
 #ifdef XAPIAND_CLUSTERING
