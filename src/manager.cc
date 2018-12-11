@@ -654,13 +654,11 @@ XapiandManager::make_servers()
 	L_NOTICE(msg);
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		auto http_server = Worker::make_shared<HttpServer>(http, nullptr, ev_flags);
-		http_server_pool.enqueue(std::move(http_server));
+		http_server_pool.enqueue(Worker::make_shared<HttpServer>(http, nullptr, ev_flags));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto binary_server = Worker::make_shared<BinaryServer>(binary, nullptr, ev_flags);
-			binary_server_pool.enqueue(std::move(binary_server));
+			binary_server_pool.enqueue(Worker::make_shared<BinaryServer>(binary, nullptr, ev_flags));
 		}
 #endif
 	}
@@ -670,15 +668,15 @@ XapiandManager::make_servers()
 	database_cleanup->start();
 
 	// Make server protocols weak:
-	weak_http = std::move(http);
+	weak_http = http;
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		L_INFO("Discovering cluster %s...", opts.cluster_name);
 		discovery->start();
 
-		weak_binary = std::move(binary);
-		weak_discovery = std::move(discovery);
-		weak_raft = std::move(raft);
+		weak_binary = binary;
+		weak_discovery = discovery;
+		weak_raft = raft;
 	}
 #endif
 }
