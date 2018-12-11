@@ -264,7 +264,7 @@ public:
 	}
 
 	void add(const TaskType& task) {
-		if (ending != 0) {
+		if (ending < 0) {
 			unsigned long long wakeup_time = task->wakeup_time;
 			ASSERT(wakeup_time != 0);
 
