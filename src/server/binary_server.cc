@@ -150,11 +150,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 	}
 
 	int client_sock = accept();
-	if (client_sock == -1) {
-		if (!io::ignored_errno(errno, true, true, false)) {
-			L_ERR("ERROR: accept binary error {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
-		}
-	} else {
+	if (client_sock != -1) {
 		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
 
 		if (!client->init_remote()) {
