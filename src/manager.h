@@ -55,6 +55,7 @@ class BinaryServer;
 class HttpClient;
 class HttpServer;
 class DatabasePool;
+class DatabaseCleanup;
 
 extern void sig_exit(int sig);
 
@@ -123,11 +124,13 @@ public:
 	std::atomic_int http_clients;
 	std::atomic_int binary_clients;
 
-	std::weak_ptr<Http> weak_http;
+	std::shared_ptr<DatabaseCleanup> database_cleanup;
+
+	std::shared_ptr<Http> http;
 #ifdef XAPIAND_CLUSTERING
-	std::weak_ptr<Binary> weak_binary;
-	std::weak_ptr<Discovery> weak_discovery;
-	std::weak_ptr<Raft> weak_raft;
+	std::shared_ptr<Binary> binary;
+	std::shared_ptr<Discovery> discovery;
+	std::shared_ptr<Raft> raft;
 #endif
 
 	std::shared_ptr<DatabasePool> database_pool;

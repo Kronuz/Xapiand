@@ -572,9 +572,7 @@ Discovery::getDescription() const
 void
 db_updater_send(std::string path)
 {
-	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
-		discovery->db_update_send(path);
-	}
+	XapiandManager::manager->discovery->db_update_send(path);
 }
 
 #endif

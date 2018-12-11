@@ -320,9 +320,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 				#ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					if (auto raft = weak_raft.lock()) {
-						raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
-					}
+					raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
 				#endif
 			}
@@ -346,9 +344,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			if (auto raft = weak_raft.lock()) {
-				raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
-			}
+			raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
 		}
 		#else
 			ignore_unused(did);
@@ -373,9 +369,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			Endpoint local_endpoint(".");
 			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			new_cluster = 2;
-			if (auto binary = weak_binary.lock()) {
-				binary->trigger_replication({cluster_endpoint, local_endpoint, true});
-			}
+			binary->trigger_replication({cluster_endpoint, local_endpoint, true});
 		} else {
 			cluster_database_ready();
 		}
@@ -401,14 +395,10 @@ XapiandManager::cluster_database_ready_async_cb(ev::async&, int)
 
 	state = State::READY;
 
-	if (auto http = weak_http.lock()) {
-		http->start();
-	}
+	http->start();
 
 #ifdef XAPIAND_CLUSTERING
-	if (auto binary = weak_binary.lock()) {
-		binary->start();
-	}
+	binary->start();
 #endif
 
 	auto local_node = Node::local_node();
@@ -609,12 +599,8 @@ XapiandManager::stop_impl()
 	Worker::stop_impl();
 
 #ifdef XAPIAND_CLUSTERING
-	if (auto raft = weak_raft.lock()) {
-		raft->stop();
-	}
-	if (auto discovery = weak_discovery.lock()) {
-		discovery->stop();
-	}
+	raft->stop();
+	discovery->stop();
 #endif
 
 	finish();
@@ -628,14 +614,10 @@ XapiandManager::make_servers()
 
 	std::string msg("Listening on ");
 
-	auto http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, opts.http_port);
+	http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, opts.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<Binary> binary;
-	std::shared_ptr<Discovery> discovery;
-	std::shared_ptr<Raft> raft;
-
 	if (!opts.solo) {
 		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, opts.binary_port);
 		msg += binary->getDescription() + ", ";
@@ -663,20 +645,14 @@ XapiandManager::make_servers()
 #endif
 	}
 
-	auto database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
+	database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
 	database_cleanup->run();
 	database_cleanup->start();
 
-	// Make server protocols weak:
-	weak_http = http;
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		L_INFO("Discovering cluster %s...", opts.cluster_name);
 		discovery->start();
-
-		weak_binary = binary;
-		weak_discovery = discovery;
-		weak_raft = raft;
 	}
 #endif
 }
@@ -725,7 +701,17 @@ XapiandManager::run()
 	}
 
 	stop();
+
 	join();
+
+	database_cleanup.reset();
+	http.reset();
+#ifdef XAPIAND_CLUSTERING
+	binary.reset();
+	discovery.reset();
+	raft.reset();
+#endif
+
 	detach();
 }
 
@@ -854,11 +840,9 @@ XapiandManager::reset_state()
 	L_CALL("XapiandManager::reset_state()");
 
 	if (state != State::RESET) {
-		if (auto discovery = weak_discovery.lock()) {
-			state = State::RESET;
-			Node::reset();
-			discovery->start();
-		}
+		state = State::RESET;
+		Node::reset();
+		discovery->start();
 	}
 }
 
@@ -869,9 +853,7 @@ XapiandManager::join_cluster()
 	L_CALL("XapiandManager::join_cluster()");
 
 	L_INFO("Joining cluster %s...", opts.cluster_name);
-	if (auto raft = weak_raft.lock()) {
-		raft->start();
-	}
+	raft->start();
 }
 
 
@@ -880,9 +862,7 @@ XapiandManager::renew_leader()
 {
 	L_CALL("XapiandManager::renew_leader()");
 
-	if (auto raft = weak_raft.lock()) {
-		raft->request_vote();
-	}
+	raft->request_vote();
 }
 
 
@@ -1122,8 +1102,6 @@ XapiandManager::__repr__() const
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
-	if (auto binary = XapiandManager::manager->weak_binary.lock()) {
-		binary->trigger_replication({src_endpoint, dst_endpoint, false});
-	}
+	XapiandManager::manager->binary->trigger_replication({src_endpoint, dst_endpoint, false});
 }
 #endif
