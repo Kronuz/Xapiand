@@ -49,7 +49,11 @@ static inline int backtrace(void**, int) { return 0; }
 #include <util.h>             // for forkpty
 #include <unistd.h>           // for execlp
 #include <termios.h>          // for termios, cfmakeraw
+#ifdef HAVE_POLL
+#include <poll.h>             // for poll
+#else
 #include <sys/select.h>       // for select
+#endif
 /* Use `atos` to do symbol lookup, can lookup non-dynamic symbols and also line
  * numbers. This function is more complicated than you'd expect because `atos`
  * doesn't flush after each line, so plain pipe() or socketpair() won't work
@@ -95,11 +99,22 @@ atos(const void* address)
 
 		// atos can take a while to parse symbol table on first request, which
 		// is why we leave it running if we see a delay, explain what's going on...
-		fd_set fds;
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		struct timeval tv = {3, 0};
-		int err = select(fd + 1, &fds, nullptr, nullptr, &tv);
+		int err = 0;
+
+#ifdef HAVE_POLL
+		struct pollfd fds;
+		fds.fd = fd;
+		fds.events = POLLIN;
+		err = poll(&fds, 1, 3000);
+#else
+		if (fdin < FD_SETSIZE) {
+			fd_set fds;
+			FD_ZERO(&fds);
+			FD_SET(fd, &fds);
+			struct timeval tv = {3, 0};
+			err = select(fd + 1, &fds, nullptr, nullptr, &tv);
+		}
+#endif
 		if unlikely(err < 0) {
 			perror("Generating... first call takes some time for `atos` to cache the symbol table.");
 		} else if (err == 0) {  // timeout
