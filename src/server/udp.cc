@@ -54,7 +54,9 @@ UDP::~UDP() noexcept
 {
 	try {
 		if (sock != -1) {
-			io::close(sock);
+			if (io::close(sock) == -1) {
+				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			}
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
@@ -69,7 +71,9 @@ UDP::close(bool close) {
 		if (close) {
 			// Dangerously close socket!
 			// (make sure no threads are using the file descriptor)
-			io::close(sock);
+			if (io::close(sock) == -1) {
+				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			}
 			sock = -1;
 		} else {
 			io::shutdown(sock, SHUT_RDWR);

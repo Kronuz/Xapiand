@@ -100,6 +100,12 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 BaseClient::~BaseClient() noexcept
 {
 	try {
+		if (sock != -1) {
+			if (io::close(sock) == -1) {
+				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			}
+		}
+
 		if (XapiandManager::manager->total_clients.fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of binary clients");
 			sig_exit(-EX_SOFTWARE);
@@ -112,8 +118,6 @@ BaseClient::~BaseClient() noexcept
 				XapiandManager::manager->shutdown_sig(0);
 			}
 		}
-
-		io::close(sock);
 
 		Worker::deinit();
 	} catch (...) {
