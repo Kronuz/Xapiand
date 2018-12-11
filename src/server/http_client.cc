@@ -928,6 +928,9 @@ HttpClient::process(Request& request, Response& response)
 	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const Xapian::NetworkTimeoutError& exc) {
+		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error.assign(exc.get_description());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
