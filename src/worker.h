@@ -94,14 +94,6 @@ protected:
 
 private:
 	template<typename T>
-	auto __attach(T&& child) {
-		ASSERT(child);
-		auto it = _children.insert(_children.end(), std::forward<T>(child));
-		(*it)->_iterator = it;
-		return it;
-	}
-
-	template<typename T>
 	auto __detach(T&& child) {
 		ASSERT(child);
 		if (child->_iterator != _children.end()) {
@@ -111,6 +103,14 @@ private:
 			return it;
 		}
 		return _children.end();
+	}
+
+	template<typename T>
+	auto __attach(T&& child) {
+		ASSERT(child);
+		auto it = _children.insert(_children.begin(), std::forward<T>(child));
+		(*it)->_iterator = it;
+		return it;
 	}
 
 	void _init();
