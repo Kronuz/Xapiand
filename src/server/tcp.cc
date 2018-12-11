@@ -308,6 +308,10 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 		return -1;
 	}
 
+	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
+		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+	}
+
 	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
 		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
@@ -317,11 +321,6 @@ TCP::connect(int sock_, const std::string& hostname, const std::string& servname
 	}
 
 	freeaddrinfo(result);
-
-	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-	}
-
 	return 0;
 }
 
