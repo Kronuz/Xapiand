@@ -432,6 +432,9 @@ Worker::_detach_children_impl()
 			if (!child->_detaching) {
 				continue;
 			}
+			if (child->ev_loop->raw_loop != ev_loop->raw_loop) {
+				continue;
+			}
 		}
 		_detach_impl(weak_child);
 	}
