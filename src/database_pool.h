@@ -122,7 +122,7 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
-class DatabasePool : public lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
+class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 	friend DatabaseEndpoint;
 
 	mutable std::mutex mtx;
