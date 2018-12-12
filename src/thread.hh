@@ -67,7 +67,6 @@ class Thread {
 	std::future<void> _future;
 
 	std::atomic_bool _running;
-	std::atomic_bool _joined;
 
 	static void* _runner(void* arg) {
 		setup_thread(static_cast<ThreadImpl*>(arg)->name(), thread_policy);
@@ -80,27 +79,26 @@ class Thread {
 				static_cast<Thread*>(arg)->_promise.set_exception(std::current_exception());
 			} catch(...) {} // set_exception() may throw too
 		}
+		static_cast<Thread*>(arg)->_running = false;
 		return nullptr;
 	}
 
 public:
 	Thread() :
 		_future{_promise.get_future()},
-		_running{false},
-		_joined{false} {};
+		_running{false}
+	{}
 
 	Thread(Thread&& other) :
-		_promise(std::move(other._promise)),
-		_future(std::move(other._future)),
-		_running(other._running.load()),
-		_joined(other._joined.load())
+		_promise{std::move(other._promise)},
+		_future{std::move(other._future)},
+		_running{other._running.load()}
 	{}
 
 	Thread& operator=(Thread&& other) {
 		_promise = std::move(other._promise);
 		_future = std::move(other._future);
 		_running = other._running.load();
-		_joined = other._joined.load();
 		return *this;
 	}
 
@@ -111,17 +109,15 @@ public:
 	}
 
 	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
-		if (_running && !_joined) {
+		if (_running) {
 			std::future_status status;
 			do {
 				status = _future.wait_until(wakeup);
 				if (status == std::future_status::timeout) {
-					return false;
+					return !_running;
 				}
 			} while (status != std::future_status::ready);
-			if (!_joined.exchange(true)) {
-				_future.get(); // rethrow any exceptions
-			}
+			_future.get(); // rethrow any exceptions
 		}
 		return true;
 	}
