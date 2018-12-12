@@ -154,13 +154,13 @@ TCP::bind(int tries)
 		return;
 	}
 
-	// struct linger ling = {0, 0};
-	// if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-	// 	close();
-	// 	sig_exit(-EX_CONFIG);
-	// 	return;
-	// }
+	struct linger ling = {0, 0};
+	if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+		L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		close();
+		sig_exit(-EX_CONFIG);
+		return;
+	}
 
 	if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
 		// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
@@ -255,10 +255,10 @@ TCP::accept()
 		return -1;
 	}
 
-	// struct linger ling = {0, 0};
-	// if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_LINGER {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
-	// }
+	struct linger ling = {0, 0};
+	if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+		L_ERR("ERROR: setsockopt SO_LINGER {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+	}
 
 	if ((flags & TCP_TCP_NODELAY) != 0) {
 		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
@@ -388,12 +388,12 @@ TCP::socket()
 		return -1;
 	}
 
-	// struct linger ling = {0, 0};
-	// if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
-	// 	L_ERR("ERROR: setsockopt SO_LINGER {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-	// 	io::close(sock_);
-	// 	return -1;
-	// // }
+	struct linger ling = {0, 0};
+	if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+		L_ERR("ERROR: setsockopt SO_LINGER {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		io::close(sock_);
+		return -1;
+	}
 
 	if (io::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
 		L_ERR("ERROR: setsockopt TCP_NODELAY {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
