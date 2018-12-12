@@ -242,10 +242,10 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 					const auto& db_pair = database->_databases[i];
 					bool local = db_pair.second;
 					if (local) {
-						auto database_endpoint = database_pool.get(Endpoints{(*this)[i]});
-						if (database_endpoint) {
-							auto revision = database_endpoint->local_revision.load();
-							database_endpoint.reset();
+						auto referenced_database_endpoint = database_pool.get(Endpoints{(*this)[i]});
+						if (referenced_database_endpoint) {
+							auto revision = referenced_database_endpoint->local_revision.load();
+							referenced_database_endpoint.reset();
 							if (revision != db_pair.first.get_revision()) {
 								// Local writable database has changed revision.
 								reopen = true;
@@ -504,9 +504,9 @@ DatabasePool::endpoints(const Endpoint& endpoint) const
 	if (it != endpoints_map.end()) {
 		database_endpoints.reserve(it->second.size());
 		for (auto& endpoints : it->second) {
-			auto database_endpoint = _get(endpoints);
-			if (database_endpoint) {
-				database_endpoints.push_back(std::move(database_endpoint));
+			auto referenced_database_endpoint = _get(endpoints);
+			if (referenced_database_endpoint) {
+				database_endpoints.push_back(std::move(referenced_database_endpoint));
 			}
 		}
 	}
@@ -539,8 +539,8 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	auto is_ready_to_lock = [&] {
 		bool is_ready = true;
 		lk.unlock();
-		for (auto& database_endpoint : endpoints(database->endpoints[0])) {
-			if (database_endpoint->clear().second) {
+		for (auto& referenced_database_endpoint : endpoints(database->endpoints[0])) {
+			if (referenced_database_endpoint->clear().second) {
 				is_ready = false;
 			}
 		}
@@ -582,9 +582,9 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 	ASSERT(locks > 0);
 	--locks;
 
-	for (auto& database_endpoint : endpoints(database->endpoints[0])) {
-		database_endpoint->readables_cond.notify_all();
-		database_endpoint.reset();
+	for (auto& referenced_database_endpoint : endpoints(database->endpoints[0])) {
+		referenced_database_endpoint->readables_cond.notify_all();
+		referenced_database_endpoint.reset();
 	}
 }
 
@@ -857,9 +857,9 @@ DatabasePool::clear()
 
 	bool cleared = true;
 
-	for (auto& database_endpoint : endpoints()) {
-		auto count = database_endpoint->clear();
-		database_endpoint.reset();
+	for (auto& referenced_database_endpoint : endpoints()) {
+		auto count = referenced_database_endpoint->clear();
+		referenced_database_endpoint.reset();
 		if (count.first || count.second) {
 			cleared = false;
 		}
@@ -889,9 +889,9 @@ DatabasePool::count()
 
 	size_t endpoints_count = 0;
 	size_t databases_count = 0;
-	for (auto& database_endpoint : endpoints()) {
+	for (auto& referenced_database_endpoint : endpoints()) {
 		++endpoints_count;
-		auto count = database_endpoint->count();
+		auto count = referenced_database_endpoint->count();
 		databases_count += count.first + count.second;
 	}
 	return std::make_pair(endpoints_count, databases_count);
@@ -919,12 +919,12 @@ DatabasePool::dump_databases(int level) const
 	ret += __repr__();
 	ret.push_back('\n');
 
-	for (auto& database_endpoint : endpoints()) {
+	for (auto& referenced_database_endpoint : endpoints()) {
 		ret += indent + indent;
-		ret += database_endpoint->__repr__();
+		ret += referenced_database_endpoint->__repr__();
 		ret.push_back('\n');
-		ret += database_endpoint->dump_databases(level + 2);
-		database_endpoint.reset();
+		ret += referenced_database_endpoint->dump_databases(level + 2);
+		referenced_database_endpoint.reset();
 	}
 	return ret;
 }
