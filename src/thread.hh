@@ -75,14 +75,18 @@ class Thread {
 		setup_thread(thread_impl->name(), thread_policy);
 		try {
 			thread_impl->operator()();
-			thread->_promise.set_value();
+			thread->_running = false;
+			try {
+				// fulfill the promise
+				thread->_promise.set_value();
+			} catch(...) {} // set_value() may throw
 		} catch (...) {
+			thread->_running = false;
 			try {
 				// store anything thrown in the promise
 				thread->_promise.set_exception(std::current_exception());
 			} catch(...) {} // set_exception() may throw too
 		}
-		thread->_running = false;
 		return nullptr;
 	}
 
