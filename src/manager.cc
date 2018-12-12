@@ -806,16 +806,14 @@ XapiandManager::join()
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_writer->running_size()) {
-		L_MANAGER("Finishing WAL writers!");
-		wal_writer->finish();
+	L_MANAGER("Finishing WAL writers!");
+	wal_writer->finish();
 
-		L_MANAGER("Waiting for %zu WAL writer%s...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
-		while (!wal_writer->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
+	L_MANAGER("Waiting for %zu WAL writer%s...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
+	while (!wal_writer->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
 		}
 	}
 #endif
