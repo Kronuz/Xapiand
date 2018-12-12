@@ -821,7 +821,7 @@ HttpClient::on_message_complete(http_parser* parser)
 				requests.push_back(std::move(new_request));
 				// And start a runner.
 				running = true;
-				XapiandManager::manager->http_client_pool.enqueue(share_this<HttpClient>());
+				XapiandManager::manager->http_client_pool->enqueue(share_this<HttpClient>());
 			} else {
 				// There should be a runner, just enqueue request.
 				requests.push_back(std::move(new_request));

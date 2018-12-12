@@ -131,13 +131,13 @@ XapiandManager::XapiandManager()
 	  http_clients(0),
 	  binary_clients(0),
 	  schemas(opts.dbpool_size * 3),
-	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
-	  wal_writer(std::make_shared<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
-	  http_client_pool("CH%02zu", opts.num_http_clients),
-	  http_server_pool("SH%02zu", opts.num_servers),
+	  database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
+	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
+	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("CB%02zu", opts.num_binary_clients),
-	  binary_server_pool("SB%02zu", opts.num_servers),
+	  binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -162,13 +162,13 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  http_clients(0),
 	  binary_clients(0),
 	  schemas(opts.dbpool_size * 3),
-	  database_pool(std::make_shared<DatabasePool>(opts.dbpool_size, opts.max_databases)),
-	  wal_writer(std::make_shared<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
-	  http_client_pool("CH%02zu", opts.num_http_clients),
-	  http_server_pool("SH%02zu", opts.num_servers),
+	  database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
+	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
+	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  binary_client_pool("CB%02zu", opts.num_binary_clients),
-	  binary_server_pool("SB%02zu", opts.num_servers),
+	  binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
 #endif
 	  shutdown_asap(0),
 	  shutdown_now(0),
@@ -638,11 +638,11 @@ XapiandManager::make_servers()
 	L_NOTICE(msg);
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		http_server_pool.enqueue(Worker::make_shared<HttpServer>(http, nullptr, ev_flags));
+		http_server_pool->enqueue(Worker::make_shared<HttpServer>(http, nullptr, ev_flags));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			binary_server_pool.enqueue(Worker::make_shared<BinaryServer>(binary, nullptr, ev_flags));
+			binary_server_pool->enqueue(Worker::make_shared<BinaryServer>(binary, nullptr, ev_flags));
 		}
 #endif
 	}
@@ -713,7 +713,16 @@ XapiandManager::run()
 	raft.reset();
 #endif
 
+	database_pool.reset();
+
 	wal_writer.reset();
+
+	http_client_pool.reset();
+	http_server_pool.reset();
+#ifdef XAPIAND_CLUSTERING
+	binary_client_pool.reset();
+	binary_server_pool.reset();
+#endif
 
 	detach();
 }
@@ -725,17 +734,17 @@ XapiandManager::finish()
 	L_CALL("XapiandManager::finish()");
 
 	L_MANAGER("Finishing http servers pool!");
-	http_server_pool.finish();
+	http_server_pool->finish();
 
 	L_MANAGER("Finishing http client threads pool!");
-	http_client_pool.finish();
+	http_client_pool->finish();
 
 #ifdef XAPIAND_CLUSTERING
 	L_MANAGER("Finishing binary servers pool!");
-	binary_server_pool.finish();
+	binary_server_pool->finish();
 
 	L_MANAGER("Finishing binary client threads pool!");
-	binary_client_pool.finish();
+	binary_client_pool->finish();
 #endif
 }
 
@@ -749,16 +758,16 @@ XapiandManager::join()
 
 	finish();
 
-	L_MANAGER("Waiting for %zu http server%s...", http_server_pool.running_size(), (http_server_pool.running_size() == 1) ? "" : "s");
-	while (!http_server_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu http server%s...", http_server_pool->running_size(), (http_server_pool->running_size() == 1) ? "" : "s");
+	while (!http_server_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
 		}
 	}
 
-	L_MANAGER("Waiting for %zu http client thread%s...", http_client_pool.running_size(), (http_client_pool.running_size() == 1) ? "" : "s");
-	while (!http_client_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu http client thread%s...", http_client_pool->running_size(), (http_client_pool->running_size() == 1) ? "" : "s");
+	while (!http_client_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -766,16 +775,16 @@ XapiandManager::join()
 	}
 
 #ifdef XAPIAND_CLUSTERING
-	L_MANAGER("Waiting for %zu binary server%s...", binary_server_pool.running_size(), (binary_server_pool.running_size() == 1) ? "" : "s");
-	while (!binary_server_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu binary server%s...", binary_server_pool->running_size(), (binary_server_pool->running_size() == 1) ? "" : "s");
+	while (!binary_server_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
 		}
 	}
 
-	L_MANAGER("Waiting for %zu binary client thread%s...", binary_client_pool.running_size(), (binary_client_pool.running_size() == 1) ? "" : "s");
-	while (!binary_client_pool.join(500ms)) {
+	L_MANAGER("Waiting for %zu binary client thread%s...", binary_client_pool->running_size(), (binary_client_pool->running_size() == 1) ? "" : "s");
+	while (!binary_client_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -1040,24 +1049,24 @@ XapiandManager::server_metrics()
 	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - process_start).count());
 
 	// http client tasks:
-	metrics.xapiand_http_clients_running.Set(http_client_pool.running_size());
-	metrics.xapiand_http_clients_queue_size.Set(http_client_pool.size());
-	metrics.xapiand_http_clients_pool_size.Set(http_client_pool.threadpool_size());
-	metrics.xapiand_http_clients_capacity.Set(http_client_pool.threadpool_capacity());
+	metrics.xapiand_http_clients_running.Set(http_client_pool->running_size());
+	metrics.xapiand_http_clients_queue_size.Set(http_client_pool->size());
+	metrics.xapiand_http_clients_pool_size.Set(http_client_pool->threadpool_size());
+	metrics.xapiand_http_clients_capacity.Set(http_client_pool->threadpool_capacity());
 
 #ifdef XAPIAND_CLUSTERING
 	// binary client tasks:
-	metrics.xapiand_binary_clients_running.Set(binary_client_pool.running_size());
-	metrics.xapiand_binary_clients_queue_size.Set(binary_client_pool.size());
-	metrics.xapiand_binary_clients_pool_size.Set(binary_client_pool.threadpool_size());
-	metrics.xapiand_binary_clients_capacity.Set(binary_client_pool.threadpool_capacity());
+	metrics.xapiand_binary_clients_running.Set(binary_client_pool->running_size());
+	metrics.xapiand_binary_clients_queue_size.Set(binary_client_pool->size());
+	metrics.xapiand_binary_clients_pool_size.Set(binary_client_pool->threadpool_size());
+	metrics.xapiand_binary_clients_capacity.Set(binary_client_pool->threadpool_capacity());
 #endif
 
 	// servers_threads:
-	metrics.xapiand_servers_running.Set(http_server_pool.running_size());
-	metrics.xapiand_servers_queue_size.Set(http_server_pool.size());
-	metrics.xapiand_servers_pool_size.Set(http_server_pool.threadpool_size());
-	metrics.xapiand_servers_capacity.Set(http_server_pool.threadpool_capacity());
+	metrics.xapiand_servers_running.Set(http_server_pool->running_size());
+	metrics.xapiand_servers_queue_size.Set(http_server_pool->size());
+	metrics.xapiand_servers_pool_size.Set(http_server_pool->threadpool_size());
+	metrics.xapiand_servers_capacity.Set(http_server_pool->threadpool_capacity());
 
 	// committers_threads:
 	metrics.xapiand_committers_running.Set(committer().running_size());

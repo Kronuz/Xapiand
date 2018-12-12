@@ -131,14 +131,14 @@ public:
 #endif
 
 	SchemasLRU schemas;
-	std::shared_ptr<DatabasePool> database_pool;
-	std::shared_ptr<DatabaseWALWriter> wal_writer;
+	std::unique_ptr<DatabasePool> database_pool;
+	std::unique_ptr<DatabaseWALWriter> wal_writer;
 
-	ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients> http_client_pool;
-	ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers> http_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>> http_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>> http_server_pool;
 #ifdef XAPIAND_CLUSTERING
-	ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients> binary_client_pool;
-	ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers> binary_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>> binary_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>> binary_server_pool;
 #endif
 
 	std::atomic_llong shutdown_asap;

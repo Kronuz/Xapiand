@@ -145,7 +145,7 @@ BinaryClient::init_remote() noexcept
 
 	// And start a runner.
 	running = true;
-	XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
+	XapiandManager::manager->binary_client_pool->enqueue(share_this<BinaryClient>());
 	return true;
 }
 
@@ -165,7 +165,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	if (replication_protocol.init_replication(src_endpoint, dst_endpoint)) {
 		// And start a runner.
 		running = true;
-		XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
+		XapiandManager::manager->binary_client_pool->enqueue(share_this<BinaryClient>());
 		return true;
 	}
 	return false;
@@ -247,7 +247,7 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
+				XapiandManager::manager->binary_client_pool->enqueue(share_this<BinaryClient>());
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -292,7 +292,7 @@ BinaryClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::manager->binary_client_pool.enqueue(share_this<BinaryClient>());
+			XapiandManager::manager->binary_client_pool->enqueue(share_this<BinaryClient>());
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
