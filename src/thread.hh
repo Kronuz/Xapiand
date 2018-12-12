@@ -94,15 +94,19 @@ public:
 	Thread() :
 		_future{_promise.get_future()},
 		_running{false},
-		_joined{false}
-	{}
+		_joined{false} {}
+
+	~Thread() noexcept {
+		try {
+			join();
+		} catch (...) {}
+	}
 
 	Thread(Thread&& other) :
 		_promise{std::move(other._promise)},
 		_future{std::move(other._future)},
 		_running{other._running.load()},
-		_joined{other._joined.load()}
-	{}
+		_joined{other._joined.load()} {}
 
 	Thread& operator=(Thread&& other) {
 		_promise = std::move(other._promise);
