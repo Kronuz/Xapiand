@@ -35,7 +35,7 @@ class Humanize {
 	std::vector<long double> scaling;
 	std::vector<std::string> units;
 	std::vector<std::string> colors;
-	int needle;
+	size_t needle;
 
 public:
 	Humanize(
@@ -53,6 +53,7 @@ public:
 	{
 		ASSERT(scaling.size() == units.size());
 		ASSERT(colors.size() == units.size() + 1);
+		ASSERT(needle >= 0 && needle < units.size());
 		std::transform(scaling.begin(), scaling.end(), scaling.begin(), [&](long double s) {
 			return std::pow(base, s);
 		});
@@ -65,29 +66,25 @@ public:
 		if (delta < 0) {
 			delta = -delta;
 		}
-		size_t order = (delta == 0) ? last : -std::floor(std::log(delta) / div);
+		size_t order = (delta == 0) ? last - 1 : -std::floor(std::log(delta) / div);
 		order += needle;
 		if (order < 0) {
 			order = 0;
-		} else if (order > last) {
-			order = last;
+		} else if (order >= last) {
+			order = last - 1;
 		}
 
 		num = std::round(rounding * num / scaling[order]) / rounding;
-		ASSERT(order >= 0 && order < units.size());
 		auto& unit = units[order];
 
 		if (colored) {
-			ASSERT(order >= 0 && order < colors.size());
 			auto& color = colors[order];
-			ASSERT(last >= 0 && last < colors.size());
 			auto& reset = colors[last];
 			return string::format("%s%s%s%s%s", color, prefix, string::Number(static_cast<double>(num)), unit, reset);
 		}
 
 		return string::format("%s%s%s", prefix, string::Number(static_cast<double>(num)), unit);
 	}
-
 };
 
 // MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
