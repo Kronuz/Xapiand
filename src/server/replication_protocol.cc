@@ -205,7 +205,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_uuid = unserialise_string(&p, p_end);
-	auto from_revision = unserialise_length(&p, p_end);
+	auto remote_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
 
 	flags = DB_WRITABLE;
@@ -219,6 +219,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	auto revision = db()->get_revision();
 	lk_db.unlock();
 
+	auto from_revision = remote_revision;
 	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
@@ -274,7 +275,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 					auto ends = std::chrono::system_clock::now();
 					auto fmt = fmt_error.c_str();
 					total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-					L(priority, NO_COLOR, fmt, remote_uuid, from_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+					L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
@@ -309,7 +310,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	auto ends = std::chrono::system_clock::now();
 	auto fmt = fmt_ok.c_str();
 	total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-	L(priority, NO_COLOR, fmt, remote_uuid, from_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+	L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 }
 
 
