@@ -942,15 +942,15 @@ HttpClient::process(Request& request, Response& response)
 			error_string = msg.c_str();
 		}
 		constexpr static auto _ = phf::make_phf({
-			hhl("Couldn't connect"),
+			hhl("Can't assign requested address"),
 			hhl("Connection refused"),
 			hhl("Connection reset by peer"),
 			hhl("Connection closed unexpectedly"),
 		});
 		switch (_.fhhl(error_string)) {
-			case _.fhhl("Couldn't connect"):
+			case _.fhhl("Can't assign requested address"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint cannot connect!");
+				error.assign("Endpoint can't assign requested address!");
 				break;
 			case _.fhhl("Connection refused"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
