@@ -69,17 +69,19 @@ class Thread {
 	std::atomic_bool _running;
 
 	static void* _runner(void* arg) {
-		setup_thread(static_cast<ThreadImpl*>(arg)->name(), thread_policy);
+		auto thread_impl = static_cast<ThreadImpl*>(arg);
+		auto thread = static_cast<Thread*>(thread_impl);
+		setup_thread(thread_impl->name(), thread_policy);
 		try {
-			static_cast<ThreadImpl*>(arg)->operator()();
-			static_cast<Thread*>(arg)->_promise.set_value();
+			thread_impl->operator()();
+			thread->_promise.set_value();
 		} catch (...) {
 			try {
 				// store anything thrown in the promise
-				static_cast<Thread*>(arg)->_promise.set_exception(std::current_exception());
+				thread->_promise.set_exception(std::current_exception());
 			} catch(...) {} // set_exception() may throw too
 		}
-		static_cast<Thread*>(arg)->_running = false;
+		thread->_running = false;
 		return nullptr;
 	}
 
