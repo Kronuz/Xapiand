@@ -154,8 +154,10 @@ TCP::bind(int tries)
 		return;
 	}
 
-	struct linger ling = {0, 0};
-	if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+	struct linger linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 0;
+	if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
 		L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 		close();
 		sig_exit(-EX_CONFIG);
@@ -255,9 +257,13 @@ TCP::accept()
 		return -1;
 	}
 
-	struct linger ling = {0, 0};
-	if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+	struct linger linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 0;
+	if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
 		L_ERR("ERROR: setsockopt SO_LINGER {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		io::close(client_sock);
+		return -1;
 	}
 
 	if ((flags & TCP_TCP_NODELAY) != 0) {
@@ -388,8 +394,10 @@ TCP::socket()
 		return -1;
 	}
 
-	struct linger ling = {0, 0};
-	if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) == -1) {
+	struct linger linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 0;
+	if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
 		L_ERR("ERROR: setsockopt SO_LINGER {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 		io::close(sock_);
 		return -1;
