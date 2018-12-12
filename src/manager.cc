@@ -647,7 +647,7 @@ XapiandManager::make_servers()
 #endif
 	}
 
-	auto database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
+	database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
 	database_cleanup->run();
 	database_cleanup->start();
 
@@ -723,6 +723,8 @@ XapiandManager::run()
 	binary_client_pool.reset();
 	binary_server_pool.reset();
 #endif
+
+	database_cleanup.reset();
 
 	detach();
 }
@@ -855,6 +857,14 @@ XapiandManager::join()
 		}
 	}
 #endif
+
+	L_MANAGER("Waiting for Database Cleanup...");
+	while (!database_cleanup->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
 
 	L_MANAGER("Server ended!");
 }

@@ -55,6 +55,7 @@ class HttpClient;
 class HttpServer;
 class DatabasePool;
 class DatabaseWALWriter;
+class DatabaseCleanup;
 
 extern void sig_exit(int sig);
 
@@ -129,6 +130,8 @@ public:
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
 #endif
+
+	std::shared_ptr<DatabaseCleanup> database_cleanup;
 
 	SchemasLRU schemas;
 	std::unique_ptr<DatabasePool> database_pool;
