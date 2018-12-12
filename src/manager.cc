@@ -831,6 +831,24 @@ XapiandManager::join()
 		}
 	}
 
+#if XAPIAND_CLUSTERING
+	L_MANAGER("Waiting for Discovery...");
+	while (!discovery->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
+
+	L_MANAGER("Waiting for Raft...");
+	while (!raft->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
+#endif
+
 	L_MANAGER("Server ended!");
 }
 
