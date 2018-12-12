@@ -428,11 +428,9 @@ Worker::_detach_children_impl()
 	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			child->_detach_children(true);
-			if (!child->_detaching) {
-				continue;
-			}
-			if (child->ev_loop->raw_loop != ev_loop->raw_loop) {
+			auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
+			child->_detach_children(async);
+			if (!child->_detaching || async) {
 				continue;
 			}
 		}
