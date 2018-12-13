@@ -194,8 +194,8 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 
 	L_REPLICATION("ReplicationProtocol::msg_get_changesets");
 
-	static constexpr auto fmt_ok = WHITE + "\"GET_CHANGESETS {%s} [%llu...%llu] %s\" OK %s %s";
-	static constexpr auto fmt_error = RED + "\"GET_CHANGESETS {%s} [%llu...%llu] %s\" ERROR %s %s";
+	static constexpr auto fmt_ok = WHITE + "\"GET_CHANGESETS {%s} %llu %s\" OK [%llu...%llu] %s %s";
+	static constexpr auto fmt_error = RED + "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s";
 	int priority = LOG_DEBUG;
 
 	size_t total_sent_bytes = client.total_sent_bytes;
@@ -228,6 +228,8 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
 		from_revision = 0;
 	}
+
+	auto to_revision = from_revision;
 
 	if (from_revision < revision) {
 		if (from_revision == 0) {
@@ -265,7 +267,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
 
 				if (revision == final_revision) {
-					from_revision = revision;
+					to_revision = revision;
 					break;
 				}
 
@@ -275,7 +277,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 					auto ends = std::chrono::system_clock::now();
 					auto fmt = fmt_error.c_str();
 					total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-					L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, from_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+					L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
@@ -294,15 +296,15 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 		int wal_iterations = 5;
 		do {
 			// Send WAL operations.
-			auto wal_it = wal->find(from_revision);
+			auto wal_it = wal->find(to_revision);
 			for (; wal_it != wal->end(); ++wal_it) {
-				from_revision = wal_it->first + 1;
+				to_revision = wal_it->first + 1;
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			lk_db.lock();
 			revision = db()->get_revision();
 			lk_db.unlock();
-		} while (from_revision < revision && --wal_iterations != 0);
+		} while (to_revision < revision && --wal_iterations != 0);
 	}
 
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
@@ -310,7 +312,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	auto ends = std::chrono::system_clock::now();
 	auto fmt = fmt_ok.c_str();
 	total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-	L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, from_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+	L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), from_revision, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 }
 
 
