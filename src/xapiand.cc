@@ -1295,11 +1295,6 @@ int main(int argc, char **argv) {
 	pthread_setattr_default_np(&a);
 #endif
 
-	sigset_t signal_mask;
-	sigemptyset(&signal_mask);
-	sigaddset(&signal_mask, SIGPIPE);
-	pthread_sigmask(SIG_BLOCK, &signal_mask, NULL);
-
 	try {
 
 		parseOptions(argc, argv);
