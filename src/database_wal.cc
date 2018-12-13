@@ -183,22 +183,25 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 				open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
 				if (header.head.revision != end_rev) {
 					if (!unsafe) {
+						L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), end_rev);
 						THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 					}
-					L_WARNING("Mismatch in WAL revision");
+					L_WARNING("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), end_rev);
 					header.head.revision = end_rev;
 				}
 			} catch (const StorageIOError& exc) {
 				if (!unsafe) {
+					L_DEBUG("Cannot open WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 					throw;
 				}
-				L_WARNING("Cannot open WAL volume: %s", exc.get_context());
+				L_WARNING("Cannot open WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 				continue;
 			} catch (const StorageCorruptVolume& exc) {
 				if (!unsafe) {
+					L_DEBUG("Corrupt WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 					throw;
 				}
-				L_WARNING("Corrupt WAL volume: %s", exc.get_context());
+				L_WARNING("Corrupt WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 				continue;
 			}
 
@@ -209,9 +212,10 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 			if (high_slot == DatabaseWAL::max_slot) {
 				if (revision != file_rev) {
 					if (!unsafe) {
-						THROW(StorageCorruptVolume, "No WAL slots");
+						L_DEBUG("No WAL slots in the volume %llu while trying to reach revision %llu: %s volume %llu", file_rev, revision, ::repr(base_path), file_rev);
+						THROW(StorageCorruptVolume, "No WAL slots in the volume");
 					}
-					L_WARNING("No WAL slots");
+					L_WARNING("No WAL slots in the volume %llu while trying to reach revision %llu: %s volume %llu", file_rev, revision, ::repr(base_path), file_rev);
 					continue;
 				}
 				continue;
@@ -239,28 +243,36 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 			uint32_t start_off;
 			if (file_rev == volumes.first) {
 				if (revision == file_rev) {
+					// First volume found is the same as the current revision.
 					// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 					// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 					begin_rev = file_rev;
 					start_off = STORAGE_START_BLOCK_OFFSET;
 				} else if (revision > file_rev) {
+					// First volume found is older than current revision,
+					// we advance the cursor to the proper slot.
 					auto slot = revision - file_rev - 1;
 					begin_rev = file_rev + slot;
 					start_off = header.slot[slot];
 				} else {
+					// First volume found is beyond the current revision,
+					// this could mean there are missing volumes between the
+					// current revision and the revisions in existing volumes.
 					if (!unsafe) {
-						THROW(StorageCorruptVolume, "Incorrect WAL revision");
+						L_DEBUG("Missing WAL volumes; the first one found is beyond current revision %llu: %s volume %llu", revision, ::repr(base_path), file_rev);
+						THROW(StorageCorruptVolume, "Missing WAL volumes");
 					}
-					L_WARNING("Incorrect WAL revision");
+					L_WARNING("Missing WAL volumes; the first one found is beyond current revision %llu: %s volume %llu", revision, ::repr(base_path), file_rev);
 					continue;
 				}
 			} else {
+				// Always start at STORAGE_START_BLOCK_OFFSET for other volumes.
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			}
 
 			auto end_off = header.slot[high_slot];
 			if (start_off < end_off) {
-				L_INFO("Read and execute operations WAL file (wal.%llu) from [%llu..%llu] revision", file_rev, begin_rev, end_rev);
+				L_INFO("Read and execute operations WAL file (%s volume %llu) from [%llu..%llu] revision", ::repr(base_path), file_rev, begin_rev, end_rev);
 			}
 
 			seek(start_off);
@@ -275,9 +287,10 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 		if (volumes.first <= volumes.second) {
 			if (end_rev < revision) {
 				if (!unsafe) {
-					THROW(StorageCorruptVolume, "WAL revision not reached");
+					L_DEBUG("WAL did not reach the current revision %llu, WAL ends at %llu: %s volume %llu", revision, end_rev, ::repr(base_path), volumes.second);
+					THROW(StorageCorruptVolume, "WAL did not reach the current revision");
 				}
-				L_WARNING("WAL revision not reached");
+				L_WARNING("WAL did not reach the current revision %llu, WAL ends at %llu: %s volume %llu", revision, end_rev, ::repr(base_path), volumes.second);
 			}
 		}
 	} catch (const StorageException& exc) {
@@ -438,14 +451,14 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 		try {
 			open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
 			if (header.head.revision != end_rev) {
-				L_WARNING("wal.%llu has mismatch in WAL revision!", end_rev);
+				L_WARNING("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), end_rev);
 				header.head.revision = end_rev;
 			}
 		} catch (const StorageIOError& exc) {
-			L_WARNING("wal.%llu cannot be opened: %s", end_rev, exc.get_context());
+			L_WARNING("Cannot open WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 			continue;
 		} catch (const StorageCorruptVolume& exc) {
-			L_WARNING("wal.%llu is corrupt: %s", end_rev, exc.get_context());
+			L_WARNING("Corrupt WAL %s volume %llu: %s", ::repr(base_path), end_rev, exc.get_context());
 			continue;
 		}
 
@@ -455,7 +468,7 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 		auto high_slot = highest_valid_slot();
 		if (high_slot == DatabaseWAL::max_slot) {
 			if (start_revision != file_rev) {
-				L_WARNING("wal.%llu has no valid slots!", file_rev);
+				L_WARNING("No WAL slots in the volume %llu while trying to reach revision %llu: %s volume %llu", file_rev, start_revision, ::repr(base_path), file_rev);
 			}
 			continue;
 		}
@@ -472,25 +485,32 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 		uint32_t start_off;
 		if (file_rev == volumes.first) {
 			if (start_revision == file_rev) {
+				// First volume found is the same as the current revision.
 				// The offset saved in slot 0 is the beginning of the revision 1 to reach 2
 				// for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 				begin_rev = file_rev;
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			} else if (start_revision > file_rev) {
+				// First volume found is older than current revision,
+				// we advance the cursor to the proper slot.
 				auto slot = start_revision - file_rev - 1;
 				begin_rev = file_rev + slot;
 				start_off = header.slot[slot];
 			} else {
-				L_WARNING("wal.%llu has incorrect WAL revision!", file_rev);
+				// First volume found is beyond the current revision,
+				// this could mean there are missing volumes between the
+				// current revision and the revisions in existing volumes.
+				L_WARNING("Missing WAL volumes; the first one found is beyond start revision %llu: %s volume %llu", start_revision, ::repr(base_path), file_rev);
 				continue;
 			}
 		} else {
+			// Always start at STORAGE_START_BLOCK_OFFSET for other volumes.
 			start_off = STORAGE_START_BLOCK_OFFSET;
 		}
 
 		auto end_off = header.slot[high_slot];
 		if (start_off < end_off) {
-			L_INFO("Read and repr operations WAL file (wal.%llu) from [%llu..%llu] revision", file_rev, begin_rev, end_rev);
+			L_INFO("Read and repr operations WAL file (%s volume %llu) from [%llu..%llu] revision", ::repr(base_path), file_rev, begin_rev, end_rev);
 		}
 
 		seek(start_off);
@@ -500,6 +520,12 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 				repr.push_back(repr_line(line, unserialised));
 			}
 		} catch (const StorageEOF& exc) { }
+	}
+
+	if (volumes.first <= volumes.second) {
+		if (end_rev < end_revision) {
+			L_WARNING("WAL did not reach the end revision %llu, WAL ends at %llu: %s volume %llu", end_revision, end_rev, ::repr(base_path), volumes.second);
+		}
 	}
 
 	return repr;
