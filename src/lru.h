@@ -332,6 +332,34 @@ public:
 		return it;
 	}
 
+	iterator find_and_leave(const Key& key) {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			return _items_list.end();
+		}
+		auto it = m_it->second;
+		return it;
+	}
+
+	const_iterator find_and_leave(const Key& key) const {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			return _items_list.end();
+		}
+		auto it = m_it->second;
+		return it;
+	}
+
+	iterator find_and_renew(const Key& key) {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			return _items_list.end();
+		}
+		auto it = m_it->second;
+		_items_list.splice(_items_list.begin(), _items_list, it);
+		return it;
+	}
+
 	template<typename OnGet>
 	T& at_and(const OnGet& on_get, iterator it) {
 		T& ref = it->second;
@@ -345,6 +373,22 @@ public:
 		return ref;
 	}
 
+	T& at_and_leave(iterator it) {
+		T& ref = it->second;
+		return ref;
+	}
+
+	const T& at_and_leave(iterator it) const {
+		T& ref = it->second;
+		return ref;
+	}
+
+	T& at_and_renew(iterator it) {
+		T& ref = it->second;
+		_items_list.splice(_items_list.begin(), _items_list, it);
+		return ref;
+	}
+
 	template<typename OnGet>
 	T& at_and(const OnGet& on_get, const Key& key) {
 		auto m_it = _items_map.find(key);
@@ -352,6 +396,30 @@ public:
 			throw std::out_of_range("There is no such key in cache");
 		}
 		return at_and(on_get, m_it->second);
+	}
+
+	T& at_and_leave(const Key& key) {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			throw std::out_of_range("There is no such key in cache");
+		}
+		return at_and_leave(m_it->second);
+	}
+
+	const T& at_and_leave(const Key& key) const {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			throw std::out_of_range("There is no such key in cache");
+		}
+		return at_and_leave(m_it->second);
+	}
+
+	T& at_and_renew(const Key& key) {
+		auto m_it = _items_map.find(key);
+		if (m_it == _items_map.end()) {
+			throw std::out_of_range("There is no such key in cache");
+		}
+		return at_and_renew(m_it->second);
 	}
 
 	template<typename OnGet, typename OnDrop>
