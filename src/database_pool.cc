@@ -236,6 +236,7 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 		return _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
 		auto& database = _readable_checkout(flags, timeout, callback, now, lk);
+		lk.unlock();
 		try {
 			// Reopening of old/outdated (readable) databases:
 			bool reopen = false;
@@ -271,6 +272,7 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 				// Discard old database and create a new one
 				auto new_database = std::make_shared<Database>(*this, flags);
 				new_database->busy = true;
+				lk.lock();
 				database = new_database;
 			}
 		} catch (...) {}
