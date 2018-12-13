@@ -765,8 +765,8 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		ASSERT(slot >= 0 && slot < WAL_SLOTS);
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
-				L_DEBUG("Invalid WAL revision %llu (slot %lu): not latest in %s volume %llu", revision, slot, ::repr(base_path), header.head.revision);
-				THROW(Error, "Invalid WAL revision", revision, slot, header.head.revision);
+				L_DEBUG("Slot already occupied for revision %llu (%llu): %s volume %llu", revision, slot, ::repr(base_path), header.head.revision);
+				THROW(Error, "Slot already occupied for revision");
 			}
 		}
 
