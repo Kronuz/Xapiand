@@ -822,7 +822,7 @@ DatabasePool::cleanup(bool immediate)
 
 	const auto on_drop = [&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
 		if (size > max_size) {
-			if (database_endpoint->renew_time < now - (immediate ? 10s : 60s)) {
+			if (immediate || database_endpoint->renew_time < now - 60s) {
 				ReferencedDatabaseEndpoint referenced_database_endpoint(database_endpoint.get());
 				lk.unlock();
 				referenced_database_endpoint->clear();
@@ -839,7 +839,7 @@ DatabasePool::cleanup(bool immediate)
 			L_DATABASE("Leave recently used endpoint: %s", repr(database_endpoint->to_string()));
 			return lru::DropAction::leave;
 		}
-		if (database_endpoint->renew_time < now - (immediate ? 10s : 3600s)) {
+		if (immediate || database_endpoint->renew_time < now - 3600s) {
 			ReferencedDatabaseEndpoint referenced_database_endpoint(database_endpoint.get());
 			lk.unlock();
 			referenced_database_endpoint->clear();
