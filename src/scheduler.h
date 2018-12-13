@@ -148,7 +148,7 @@ public:
 	void clean() {
 		cctx.op = StashContext::Operation::clean;
 		cctx.begin_key = cctx.atom_first_valid_key.load();
-		cctx.end_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
+		cctx.end_key = time_point_to_ullong(std::chrono::system_clock::now() - 1min);
 		TaskType task;
 		queue.next(cctx, &task);
 	}
