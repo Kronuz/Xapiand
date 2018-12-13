@@ -635,6 +635,7 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool th
 			if (throw_exceptions) {
 				throw;
 			}
+			L_WARNING("WARNING: Commit during close failed!");
 		}
 	}
 
@@ -645,6 +646,7 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool th
 			if (throw_exceptions) {
 				throw;
 			}
+			L_WARNING("WARNING: Internal database close failed!");
 		}
 	}
 

@@ -352,7 +352,9 @@ DatabaseEndpoint::clear()
 				// If it's the last one,
 				// reset() will close and delete the database object:
 				shared_writable.reset();
-			} catch (...) {}
+			} catch (...) {
+				L_WARNING("WARNING: Writable database deletion failed!");
+			}
 			lk.lock();
 			if ((shared_writable = weak_writable.lock())) {
 				// It wasn't the last one,
@@ -378,7 +380,9 @@ DatabaseEndpoint::clear()
 					// If it's the last one,
 					// reset() will close and delete the database object:
 					shared_readable.reset();
-				} catch (...) {}
+				} catch (...) {
+					L_WARNING("WARNING: Readable database deletion failed!");
+				}
 				lk.lock();
 				if ((shared_readable = weak_readable.lock())) {
 					// It wasn't the last one,
