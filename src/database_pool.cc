@@ -677,6 +677,7 @@ DatabasePool::_spawn(const Endpoints& endpoints)
 
 	// Find or spawn the database endpoint
 	auto it = find_and([&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint) {
+		ASSERT(database_endpoint);
 		database_endpoint->renew_time = std::chrono::system_clock::now();
 		return lru::GetAction::renew;
 	}, endpoints);
@@ -821,6 +822,7 @@ DatabasePool::cleanup(bool immediate)
 	std::unique_lock<std::mutex> lk(mtx);
 
 	const auto on_drop = [&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
+		ASSERT(database_endpoint);
 		if (size > max_size) {
 			if (immediate || database_endpoint->renew_time < now - 60s) {
 				ReferencedDatabaseEndpoint referenced_database_endpoint(database_endpoint.get());
