@@ -91,6 +91,8 @@ class DatabaseEndpoint : public Endpoints
 public:
 	DatabaseEndpoint(DatabasePool& database_pool, const Endpoints& endpoints);
 
+	~DatabaseEndpoint();
+
 	std::shared_ptr<Database> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
 	void checkin(std::shared_ptr<Database>& database) noexcept;

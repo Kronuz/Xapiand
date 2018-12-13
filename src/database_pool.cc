@@ -113,6 +113,12 @@ DatabaseEndpoint::DatabaseEndpoint(DatabasePool& database_pool, const Endpoints&
 }
 
 
+DatabaseEndpoint::~DatabaseEndpoint()
+{
+	ASSERT(refs == 0);
+}
+
+
 std::shared_ptr<Database>&
 DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
