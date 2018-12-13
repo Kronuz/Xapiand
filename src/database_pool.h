@@ -128,7 +128,6 @@ public:
 class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 	friend DatabaseEndpoint;
 
-	std::mutex cleanup_mtx;
 	mutable std::mutex mtx;
 
 	std::atomic_int locks;

@@ -825,8 +825,6 @@ DatabasePool::cleanup(bool immediate)
 
 	auto now = std::chrono::system_clock::now();
 
-	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
-
 	std::unique_lock<std::mutex> lk(mtx);
 
 	const auto on_drop = [&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
