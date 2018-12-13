@@ -610,7 +610,7 @@ DatabasePool::notify_lockable(const Endpoints& endpoints)
 		std::lock_guard<std::mutex> lk(mtx);
 
 		for (auto& endpoint : endpoints) {
-			auto it = find(Endpoints{endpoint});
+			auto it = find_and_leave(Endpoints{endpoint});
 			if (it != end()) {
 				auto& database_endpoint = it->second;
 				if (database_endpoint->is_locked()) {
@@ -634,7 +634,7 @@ DatabasePool::is_locked(const Endpoints& endpoints) const
 		std::lock_guard<std::mutex> lk(mtx);
 
 		for (auto& endpoint : endpoints) {
-			auto it = find(Endpoints{endpoint});
+			auto it = find_and_leave(Endpoints{endpoint});
 			if (it != end()) {
 				if (it->second->is_locked()) {
 					return true;
@@ -719,7 +719,7 @@ DatabasePool::_get(const Endpoints& endpoints) const
 
 	DatabaseEndpoint* database_endpoint = nullptr;
 
-	auto it = find(endpoints);
+	auto it = find_and_leave(endpoints);
 	if (it != end()) {
 		database_endpoint = it->second.get();
 	}
