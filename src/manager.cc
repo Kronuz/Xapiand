@@ -132,7 +132,7 @@ XapiandManager::XapiandManager()
 	  binary_clients(0),
 	  schemas(opts.dbpool_size * 3),
 	  database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
-	  wal_writer(std::make_unique<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WL%02zu", opts.num_async_wal_writers)),
 	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
@@ -163,7 +163,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  binary_clients(0),
 	  schemas(opts.dbpool_size * 3),
 	  database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
-	  wal_writer(std::make_unique<DatabaseWALWriter>("WW%02zu", opts.num_async_wal_writers)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WL%02zu", opts.num_async_wal_writers)),
 	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
