@@ -223,6 +223,9 @@ Database::Database(DatabaseEndpoint& endpoints_, int flags_)
 	  closed(false),
 	  modified(false),
 	  incomplete(false),
+#ifdef XAPIAND_DATABASE_WAL
+	  producer_token(nullptr),
+#endif
 	  transaction(Transaction::none)
 {
 	reopen();
@@ -236,6 +239,11 @@ Database::~Database() noexcept
 		if (log) {
 			log->clear();
 		}
+#ifdef XAPIAND_DATABASE_WAL
+		if (producer_token) {
+			XapiandManager::manager->wal_writer->dec_producer_token(endpoints[0].path);
+		}
+#endif
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
@@ -345,14 +353,13 @@ Database::reopen_writable()
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_wal_active()) {
-
-		// Create a new ConcurrentQueue producer token for this database
-		producer_token = XapiandManager::manager->wal_writer->new_producer_token(endpoint.path);
-
-		// WAL required on a local writable database, open it.
-		DatabaseWAL wal(this);
-		if (wal.execute(true)) {
-			modified = true;
+		// Create or get a producer token for this database
+		if (XapiandManager::manager->wal_writer->inc_producer_token(endpoint.path, &producer_token) == 1) {
+			// WAL wasn't already active for the requested endpoint.
+			DatabaseWAL wal(this);
+			if (wal.execute(true)) {
+				modified = true;
+			}
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL

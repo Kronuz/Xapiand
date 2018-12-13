@@ -31,6 +31,7 @@
 #include <memory>                           // for std::unique_ptr
 #include <string>                           // for std::string
 #include <sys/types.h>                      // for uint32_t, uint8_t, ssize_t
+#include <unordered_map>                    // for std::unordered_map
 #include <utility>                          // for pair, make_pair
 #include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
@@ -259,6 +260,7 @@ class DatabaseWALWriterThread;
 
 class DatabaseWALWriterTask {
 	friend DatabaseWALWriter;
+	friend DatabaseWALWriterThread;
 
 	using dispatch_func = void (DatabaseWALWriterTask::*)(DatabaseWALWriterThread&);
 	dispatch_func dispatcher;
@@ -311,6 +313,12 @@ class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPol
 
 	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
 
+	std::mutex producers_mtx;
+	std::unordered_map<std::string, std::pair<ProducerToken, size_t>> producers;
+
+	size_t inc_producer_token(const std::string& path, ProducerToken** producer_token = nullptr);
+	size_t dec_producer_token(const std::string& path);
+
 public:
 	DatabaseWALWriterThread() noexcept;
 	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* wal_writer) noexcept;
@@ -335,7 +343,7 @@ class DatabaseWALWriter {
 	std::atomic_size_t _workers;
 
 	void execute(DatabaseWALWriterTask&& task);
-	bool enqueue(const ProducerToken& token, const std::string& path, DatabaseWALWriterTask&& task);
+	bool enqueue(const ProducerToken& token, DatabaseWALWriterTask&& task);
 
 public:
 	DatabaseWALWriter(const char* format, std::size_t size);
@@ -352,7 +360,8 @@ public:
 
 	std::size_t running_size();
 
-	std::unique_ptr<ProducerToken> new_producer_token(const std::string& path);
+	size_t inc_producer_token(const std::string& path, ProducerToken** producer_token = nullptr);
+	size_t dec_producer_token(const std::string& path);
 
 	void write_add_document(Database& database, Xapian::Document&& doc);
 	void write_delete_document_term(Database& database, const std::string& term);

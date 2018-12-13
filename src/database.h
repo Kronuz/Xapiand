@@ -125,8 +125,6 @@ public:
 		return busy.load(std::memory_order_relaxed);
 	}
 
-	Transaction transaction;
-
 	std::unique_ptr<Xapian::Database> _database;
 	std::vector<std::pair<Xapian::Database, bool>> _databases;
 
@@ -136,10 +134,12 @@ public:
 #endif /* XAPIAND_DATA_STORAGE */
 
 #ifdef XAPIAND_DATABASE_WAL
-	std::unique_ptr<ProducerToken> producer_token;
+	ProducerToken* producer_token;
 #endif
 
 	std::shared_ptr<Logging> log;
+
+	Transaction transaction;
 
 	Database(DatabaseEndpoint& endpoints_, int flags);
 	~Database() noexcept;

@@ -903,6 +903,38 @@ DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 }
 
 
+size_t
+DatabaseWALWriterThread::inc_producer_token(const std::string& path, ProducerToken** producer_token)
+{
+	std::lock_guard<std::mutex> lk(producers_mtx);
+	auto it = producers.find(path);
+	if (it == producers.end()) {
+		it = producers.emplace(path, std::make_pair(ProducerToken{_queue}, 0)).first;
+	}
+	if (producer_token) {
+		*producer_token = &it->second.first;
+	}
+	return ++it->second.second;
+}
+
+
+size_t
+DatabaseWALWriterThread::dec_producer_token(const std::string& path)
+{
+	std::lock_guard<std::mutex> lk(producers_mtx);
+	auto it = producers.find(path);
+	if (it == producers.end()) {
+		return 0;
+	}
+	ASSERT(it->second.second > 0);
+	auto cnt = --it->second.second;
+	if (cnt == 0) {
+		producers.erase(it);
+	}
+	return cnt;
+}
+
+
 const std::string&
 DatabaseWALWriterThread::name() const noexcept
 {
@@ -923,6 +955,7 @@ DatabaseWALWriterThread::operator()()
 			} catch (...) {
 				L_EXC("ERROR: Task died with an unhandled exception");
 			}
+			dec_producer_token(task.path);
 		} else if (_wal_writer->_ending.load(std::memory_order_acquire)) {
 			break;
 		}
@@ -968,16 +1001,18 @@ void
 DatabaseWALWriter::execute(DatabaseWALWriterTask&& task)
 {
 	static thread_local DatabaseWALWriterThread thread(0, this);
+	inc_producer_token(task.path);
 	task(thread);
 }
 
 
 bool
-DatabaseWALWriter::enqueue(const ProducerToken& token, const std::string& path, DatabaseWALWriterTask&& task)
+DatabaseWALWriter::enqueue(const ProducerToken& token, DatabaseWALWriterTask&& task)
 {
 	static const std::hash<std::string> hasher;
-	auto hash = hasher(path);
+	auto hash = hasher(task.path);
 	auto& thread = _threads[hash % _threads.size()];
+	inc_producer_token(task.path);
 	return thread._queue.enqueue(token, std::move(task));
 }
 
@@ -1041,13 +1076,23 @@ DatabaseWALWriter::running_size()
 }
 
 
-std::unique_ptr<ProducerToken>
-DatabaseWALWriter::new_producer_token(const std::string& path)
+size_t
+DatabaseWALWriter::inc_producer_token(const std::string& path, ProducerToken** producer_token)
 {
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
 	auto& thread = _threads[hash % _threads.size()];
-	return std::make_unique<ProducerToken>(thread._queue);
+	return thread.inc_producer_token(path, producer_token);
+}
+
+
+size_t
+DatabaseWALWriter::dec_producer_token(const std::string& path)
+{
+	static const std::hash<std::string> hasher;
+	auto hash = hasher(path);
+	auto& thread = _threads[hash % _threads.size()];
+	return thread.dec_producer_token(path);
 }
 
 
@@ -1220,7 +1265,8 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1246,7 +1292,8 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1273,7 +1320,8 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1299,7 +1347,8 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1326,7 +1375,8 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1353,7 +1403,8 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1379,7 +1430,8 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1406,7 +1458,8 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
@@ -1433,7 +1486,8 @@ DatabaseWALWriter::write_add_spelling(Database& database, const std::string& wor
 	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		enqueue(*database.producer_token, path, std::move(task));
+		ASSERT(database.producer_token);
+		enqueue(*database.producer_token, std::move(task));
 	}
 }
 
