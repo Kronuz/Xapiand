@@ -194,10 +194,6 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 
 	L_REPLICATION("ReplicationProtocol::msg_get_changesets");
 
-	static constexpr auto fmt_ok = WHITE + "\"GET_CHANGESETS {%s} %llu %s\" OK [%llu...%llu] %s %s";
-	static constexpr auto fmt_error = RED + "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s";
-	int priority = LOG_DEBUG;
-
 	size_t total_sent_bytes = client.total_sent_bytes;
 	auto begins = std::chrono::system_clock::now();
 
@@ -275,9 +271,8 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
 
 					auto ends = std::chrono::system_clock::now();
-					auto fmt = fmt_error.c_str();
 					total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-					L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
@@ -310,9 +305,12 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
 
 	auto ends = std::chrono::system_clock::now();
-	auto fmt = fmt_ok.c_str();
 	total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-	L(priority, NO_COLOR, fmt, remote_uuid, remote_revision, repr(endpoint_path), from_revision, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+	if (from_revision == to_revision) {
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {%s} %llu %s\" OK EMPTY %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+	} else {
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {%s} %llu %s\" OK [%llu..%llu] %s %s", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+	}
 }
 
 
