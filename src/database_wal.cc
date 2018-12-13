@@ -565,10 +565,10 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 
 	if (revision != db_revision) {
 		if (!unsafe) {
-			L_DEBUG("WAL revision mismatch for %s at %llu: %llu", ::repr(base_path), db_revision, revision);
+			L_DEBUG("WAL revision mismatch for %s: expected %llu, got %llu", ::repr(base_path), db_revision, revision);
 			THROW(StorageCorruptVolume, "WAL revision mismatch!");
 		}
-		// L_WARNING("WAL revision mismatch!");
+		// L_WARNING("WAL revision mismatch for %s: expected %llu, got %llu", ::repr(base_path), db_revision, revision);
 	}
 
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
