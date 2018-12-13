@@ -812,6 +812,8 @@ DatabasePool::cleanup(bool immediate)
 
 	auto now = std::chrono::system_clock::now();
 
+	std::lock_guard<std::mutex> cleanup_lk(cleanup_mtx);
+
 	std::unique_lock<std::mutex> lk(mtx);
 
 	const auto on_drop = [&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
@@ -875,12 +877,14 @@ DatabasePool::clear()
 
 	// Now lock to double-check and really clear the LRU:
 	std::lock_guard<std::mutex> lk(mtx);
+
 	for (auto& database_endpoint : *this) {
 		auto count = database_endpoint.second->count();
 		if (count.first || count.second) {
 			return false;
 		}
 	}
+
 	LRU::clear();
 	return true;
 }
