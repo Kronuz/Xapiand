@@ -119,10 +119,10 @@ public:
 		ctx(now()),
 		cctx(now()) {}
 
-	TaskType peep(unsigned long long current_key) {
+	TaskType peep(unsigned long long end_key) {
 		ctx.op = StashContext::Operation::peep;
-		ctx.cur_key = ctx.atom_first_key.load();
-		ctx.current_key = current_key;
+		ctx.begin_key = ctx.atom_first_valid_key.load();
+		ctx.end_key = end_key;
 		TaskType task;
 		queue.next(ctx, &task);
 		return task;
@@ -130,25 +130,25 @@ public:
 
 	TaskType walk() {
 		ctx.op = StashContext::Operation::walk;
-		ctx.cur_key = ctx.atom_first_key.load();
-		ctx.current_key = time_point_to_ullong(std::chrono::system_clock::now());
+		ctx.begin_key = ctx.atom_first_valid_key.load();
+		ctx.end_key = time_point_to_ullong(std::chrono::system_clock::now());
 		TaskType task;
 		queue.next(ctx, &task);
 		return task;
 	}
 
 	void clean_checkpoint() {
-		auto cur_key = ctx.atom_first_key.load();
-		if (cur_key < cctx.atom_first_key.load()) {
-			cctx.atom_first_key = cur_key;
+		auto begin_key = ctx.atom_first_valid_key.load();
+		if (begin_key < cctx.atom_first_valid_key.load()) {
+			cctx.atom_first_valid_key = begin_key;
 		}
-		cctx.atom_last_key = ctx.atom_last_key.load();
+		cctx.atom_last_valid_key = ctx.atom_last_valid_key.load();
 	}
 
 	void clean() {
 		cctx.op = StashContext::Operation::clean;
-		cctx.cur_key = cctx.atom_first_key.load();
-		cctx.current_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
+		cctx.begin_key = cctx.atom_first_valid_key.load();
+		cctx.end_key = time_point_to_ullong(std::chrono::system_clock::now() - 1s);
 		TaskType task;
 		queue.next(cctx, &task);
 	}
