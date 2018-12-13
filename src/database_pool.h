@@ -27,6 +27,7 @@
 #include <atomic>               // for std::atomic_bool
 #include <chrono>               // for std::chrono, std::chrono::system_clock
 #include <cstring>              // for size_t
+#include <list>                 // for std::list
 #include <memory>               // for std::shared_ptr
 #include <mutex>                // for std::mutex, std::condition_variable, std::unique_lock
 #include <set>                  // for std::set
@@ -75,7 +76,7 @@ class DatabaseEndpoint : public Endpoints
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 
 	std::shared_ptr<Database> writable;
-	std::vector<std::shared_ptr<Database>> readables;
+	std::list<std::shared_ptr<Database>> readables;
 
 	std::atomic_size_t readables_available;
 	std::condition_variable writable_cond;
