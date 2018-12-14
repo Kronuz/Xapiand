@@ -30,7 +30,7 @@ opts_t opts;
 
 Initializer::Initializer()
 {
-	if (!XapiandManager::manager) {
+	if (!XapiandManager::manager()) {
 
 		// And some defaults for testing:
 		opts.verbosity = 3;
@@ -43,14 +43,14 @@ Initializer::Initializer()
 		opts.log_threads = true;
 
 		static ev::default_loop default_loop(opts.ev_flags);
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags);
+		XapiandManager::make(&default_loop, opts.ev_flags);
 	}
 }
 
 
 void Initializer::destroy()
 {
-	XapiandManager::manager.reset();
+	XapiandManager::reset();
 }
 
 

@@ -259,7 +259,7 @@ std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
-	auto s = XapiandManager::manager->schemas.get(this, obj, (obj != nullptr) && ((flags & DB_WRITABLE) != 0));
+	auto s = XapiandManager::schemas()->get(this, obj, (obj != nullptr) && ((flags & DB_WRITABLE) != 0));
 	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
@@ -763,7 +763,7 @@ DatabaseHandler::delete_schema()
 	do {
 		schema = get_schema();
 		auto old_schema = schema->get_const_schema();
-		done = XapiandManager::manager->schemas.drop(this, old_schema);
+		done = XapiandManager::schemas()->drop(this, old_schema);
 		L_INDEX("Schema to delete: %s", repr(schema->to_string()));
 	} while (!done);
 	auto schema_ends = std::chrono::system_clock::now();
@@ -998,7 +998,7 @@ DatabaseHandler::restore(int fd)
 			lk_db.unlock();
 			bool _ready = false;
 			while (true) {
-				if (XapiandManager::manager->is_detaching()) {
+				if (XapiandManager::manager()->is_detaching()) {
 					thread_pool.finish();
 					break;
 				}
@@ -1044,7 +1044,7 @@ DatabaseHandler::restore(int fd)
 		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 		size_t bulk_cnt = 0;
 		while (true) {
-			if (XapiandManager::manager->is_detaching()) {
+			if (XapiandManager::manager()->is_detaching()) {
 				thread_pool.finish();
 				break;
 			}
@@ -1216,7 +1216,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 		DatabaseHandler db_handler(endpoints, flags, method);
 		bool _ready = false;
 		while (true) {
-			if (XapiandManager::manager->is_detaching()) {
+			if (XapiandManager::manager()->is_detaching()) {
 				thread_pool.finish();
 				break;
 			}
@@ -1255,7 +1255,7 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 	std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt = 0;
 	for (auto& obj : docs) {
-		if (XapiandManager::manager->is_detaching()) {
+		if (XapiandManager::manager()->is_detaching()) {
 			thread_pool.finish();
 			break;
 		}
@@ -1513,7 +1513,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 	if (mod_schema) {
 		updated = true;
 		auto old_schema = schema->get_const_schema();
-		done = XapiandManager::manager->schemas.set(this, old_schema, mod_schema);
+		done = XapiandManager::schemas()->set(this, old_schema, mod_schema);
 		if (done) {
 			created = old_schema->at("schema").empty();
 		}

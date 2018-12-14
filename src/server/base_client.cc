@@ -93,7 +93,7 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
 
-	++XapiandManager::manager->total_clients;
+	++XapiandManager::total_clients();
 }
 
 
@@ -106,18 +106,13 @@ BaseClient::~BaseClient() noexcept
 			}
 		}
 
-		if (XapiandManager::manager->total_clients.fetch_sub(1) == 0) {
+		if (XapiandManager::total_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of binary clients");
 			sig_exit(-EX_SOFTWARE);
 		}
 
-		// If shutting down and there are no more clients connected,
-		// continue shutdown.
-		if (XapiandManager::manager->shutdown_asap.load() != 0) {
-			if (XapiandManager::manager->total_clients == 0) {
-				XapiandManager::manager->shutdown_sig(0);
-			}
-		}
+		// If there are no more clients connected, try continue shutdown.
+		XapiandManager::try_shutdown();
 
 		Worker::deinit();
 	} catch (...) {

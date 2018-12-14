@@ -231,7 +231,7 @@ void sig_handler(int sig) {
 //  }
 // #endif
 
-	auto manager = XapiandManager::manager;
+	auto manager = XapiandManager::manager();
 	if (manager) {
 		try {
 			manager->signal_sig(sig);
@@ -1145,16 +1145,16 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	ev::default_loop default_loop(opts.ev_flags);
 	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
 
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, process_start);
-	XapiandManager::manager->run();
+	auto& manager = XapiandManager::make(&default_loop, opts.ev_flags, process_start);
+	manager->run();
 
-	long managers = XapiandManager::manager.use_count() - 1;
+	long managers = manager.use_count() - 1;
 	if (managers == 0) {
 		L_NOTICE("Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, XapiandManager::manager->dump_tree());
+		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, manager->dump_tree());
 	}
-	XapiandManager::manager.reset();
+	manager.reset();
 }
 
 
@@ -1163,15 +1163,15 @@ void dump_metadata() {
 	if (fd != -1) {
 		try {
 			setup();
-			XapiandManager::manager = Worker::make_shared<XapiandManager>();
+			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
 			L_NOTICE("Dumping metadata database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_metadata(fd);
 			L_NOTICE("Dump finished!");
-			XapiandManager::manager->join();
-			XapiandManager::manager.reset();
+			manager->join();
+			manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1193,15 +1193,15 @@ void dump_schema() {
 	if (fd != -1) {
 		try {
 			setup();
-			XapiandManager::manager = Worker::make_shared<XapiandManager>();
+			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
 			L_NOTICE("Dumping schema database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_schema(fd);
 			L_NOTICE("Dump finished!");
-			XapiandManager::manager->join();
-			XapiandManager::manager.reset();
+			manager->join();
+			manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1223,15 +1223,15 @@ void dump_documents() {
 	if (fd != -1) {
 		try {
 			setup();
-			XapiandManager::manager = Worker::make_shared<XapiandManager>();
+			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
 			L_NOTICE("Dumping database: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_documents(fd);
 			L_NOTICE("Dump finished!");
-			XapiandManager::manager->join();
-			XapiandManager::manager.reset();
+			manager->join();
+			manager.reset();
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
@@ -1253,15 +1253,15 @@ void restore() {
 	if (fd != -1) {
 		try {
 			setup();
-			XapiandManager::manager = Worker::make_shared<XapiandManager>();
+			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
 			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
-			XapiandManager::manager->join();
-			XapiandManager::manager.reset();
+			manager->join();
+			manager.reset();
 		} catch (...) {
 			if (fd != STDIN_FILENO) {
 				io::close(fd);

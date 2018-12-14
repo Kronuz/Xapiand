@@ -34,7 +34,7 @@
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
 #include "ignore_unused.h"                  // for ignore_unused
-#include "manager.h"                        // for XapiandManager::manager
+#include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
 #include "repr.hh"                          // for repr
 #include "tcp.h"                            // for TCP::socket
@@ -186,7 +186,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::local_node();
-		auto nodes = XapiandManager::manager->resolve_index_nodes(args.src_endpoint.path);
+		auto nodes = XapiandManager::resolve_index_nodes(args.src_endpoint.path);
 		for (const auto& node : nodes) {
 			if (Node::is_equal(node, local_node)) {
 				replicated = true;

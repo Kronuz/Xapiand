@@ -33,7 +33,7 @@
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
 #include "ignore_unused.h"                  // for ignore_unused
-#include "manager.h"                        // for XapiandManager::manager, XapiandManager::StateNames, XapiandManager::State
+#include "manager.h"                        // for XapiandManager, XapiandManager::StateNames, XapiandManager::State
 #include "namegen.h"                        // for name_generator
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
@@ -181,8 +181,8 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 {
 	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
-	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
@@ -223,8 +223,8 @@ Discovery::discovery_server(Message type, const std::string& message)
 {
 	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
 
-	L_EV_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
+	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
 
 	switch (type) {
 		case Message::HELLO:
@@ -257,7 +257,7 @@ Discovery::discovery_server(Message type, const std::string& message)
 void
 Discovery::hello(Message type, const std::string& message)
 {
-	L_CALL("Discovery::hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -285,7 +285,7 @@ Discovery::hello(Message type, const std::string& message)
 void
 Discovery::wave(Message type, const std::string& message)
 {
-	L_CALL("Discovery::wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -303,8 +303,8 @@ Discovery::wave(Message type, const std::string& message)
 	// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
 	// (prevent it from switching to slow waiting)
 	auto waiting = XapiandManager::State::WAITING;
-	if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
-		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 	}
 }
 
@@ -312,13 +312,13 @@ Discovery::wave(Message type, const std::string& message)
 void
 Discovery::sneer(Message type, const std::string& message)
 {
-	L_CALL("Discovery::sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::RESET &&
-		XapiandManager::manager->state != XapiandManager::State::WAITING &&
-		XapiandManager::manager->state != XapiandManager::State::WAITING_MORE &&
-		XapiandManager::manager->state != XapiandManager::State::JOINING) {
+	if (XapiandManager::state() != XapiandManager::State::RESET &&
+		XapiandManager::state() != XapiandManager::State::WAITING &&
+		XapiandManager::state() != XapiandManager::State::WAITING_MORE &&
+		XapiandManager::state() != XapiandManager::State::JOINING) {
 		return;
 	}
 
@@ -330,11 +330,11 @@ Discovery::sneer(Message type, const std::string& message)
 
 	auto local_node = Node::local_node();
 	if (remote_node == *local_node) {
-		if (XapiandManager::manager->node_name.empty()) {
+		if (XapiandManager::node_name().empty()) {
 			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node->name());
-			XapiandManager::manager->reset_state();
+			XapiandManager::reset_state();
 		} else {
-			XapiandManager::manager->state.store(XapiandManager::State::BAD);
+			XapiandManager::state().store(XapiandManager::State::BAD);
 			Node::local_node(std::make_shared<const Node>());
 			L_CRIT("Cannot join the party. Node name %s already taken!", local_node->name());
 			sig_exit(-EX_SOFTWARE);
@@ -346,7 +346,7 @@ Discovery::sneer(Message type, const std::string& message)
 void
 Discovery::enter(Message type, const std::string& message)
 {
-	L_CALL("Discovery::enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -366,12 +366,12 @@ Discovery::enter(Message type, const std::string& message)
 void
 Discovery::bye(Message type, const std::string& message)
 {
-	L_CALL("Discovery::bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -388,7 +388,7 @@ Discovery::bye(Message type, const std::string& message)
 		L_INFO("Leader node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 
 		Node::leader_node(std::make_shared<const Node>());
-		XapiandManager::manager->renew_leader();
+		XapiandManager::renew_leader();
 	} else {
 		L_INFO("Node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 	}
@@ -400,10 +400,10 @@ Discovery::bye(Message type, const std::string& message)
 void
 Discovery::db_updated(Message type, const std::string& message)
 {
-	L_CALL("Discovery::db_updated(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Discovery::db_updated(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -438,7 +438,7 @@ Discovery::db_updated(Message type, const std::string& message)
 void
 Discovery::discovery_cb(ev::timer&, int revents)
 {
-	auto state = XapiandManager::manager->state.load();
+	auto state = XapiandManager::state().load();
 
 	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
 
@@ -453,10 +453,10 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			auto node_copy = std::make_unique<Node>(*local_node);
 			std::string drop = node_copy->name();
 
-			if (XapiandManager::manager->node_name.empty()) {
+			if (XapiandManager::node_name().empty()) {
 				node_copy->name(name_generator());
 			} else {
-				node_copy->name(XapiandManager::manager->node_name);
+				node_copy->name(XapiandManager::node_name());
 			}
 			Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
 
@@ -466,8 +466,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 
 			local_node = Node::local_node();
 			auto reset = XapiandManager::State::RESET;
-			if (XapiandManager::manager->state.compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			if (XapiandManager::state().compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 			L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
 			send_message(Message::HELLO, local_node->serialise());
@@ -482,8 +482,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			L_EV("Reset discovery's discovery event (%f)", discovery.repeat);
 
 			auto waiting = XapiandManager::State::WAITING;
-			if (XapiandManager::manager->state.compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 			break;
 		}
@@ -492,14 +492,14 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			L_EV("Stop discovery's discovery event");
 
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
-			if (XapiandManager::manager->state.compare_exchange_strong(waiting_more, XapiandManager::State::JOINING)) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+			if (XapiandManager::state().compare_exchange_strong(waiting_more, XapiandManager::State::JOINING)) {
+				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 
 			auto local_node = Node::local_node();
 			send_message(Message::ENTER, local_node->serialise());
 
-			XapiandManager::manager->join_cluster();
+			XapiandManager::join_cluster();
 			break;
 		}
 		default: {
@@ -526,8 +526,8 @@ Discovery::db_update_send_async_cb(ev::async&, int revents)
 {
 	L_CALL("Discovery::db_update_send_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -573,7 +573,7 @@ Discovery::getDescription() const
 void
 db_updater_send(std::string path)
 {
-	XapiandManager::manager->discovery->db_update_send(path);
+	XapiandManager::discovery()->db_update_send(path);
 }
 
 #endif

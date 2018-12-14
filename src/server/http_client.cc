@@ -56,7 +56,7 @@
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
 #include "logger.h"                         // for Logging
-#include "manager.h"                        // for XapiandManager::manager
+#include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
@@ -370,7 +370,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
 	  new_request(this)
 {
-	++XapiandManager::manager->http_clients;
+	++XapiandManager::http_clients();
 
 	Metrics::metrics()
 		.xapiand_http_connections
@@ -379,14 +379,14 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	// Initialize new_request.begins as soon as possible (for correctly timing disconnecting clients)
 	new_request.begins = std::chrono::system_clock::now();
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::manager->http_clients.load(), XapiandManager::manager->total_clients.load());
+	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
 }
 
 
 HttpClient::~HttpClient() noexcept
 {
 	try {
-		if (XapiandManager::manager->http_clients.fetch_sub(1) == 0) {
+		if (XapiandManager::http_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of http clients");
 			sig_exit(-EX_SOFTWARE);
 		}
@@ -821,7 +821,7 @@ HttpClient::on_message_complete(http_parser* parser)
 				requests.push_back(std::move(new_request));
 				// And start a runner.
 				running = true;
-				XapiandManager::manager->http_client_pool->enqueue(share_this<HttpClient>());
+				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
 			} else {
 				// There should be a runner, just enqueue request.
 				requests.push_back(std::move(new_request));
@@ -1262,7 +1262,7 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			break;
 		case Command::CMD_QUIT:
 			if (opts.admin_commands) {
-				XapiandManager::manager->shutdown_sig(0);
+				XapiandManager::try_shutdown(true);
 				write_http_response(request, response, HTTP_STATUS_OK);
 				destroy();
 				detach();
@@ -1278,10 +1278,10 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 				request.query_parser.rewind();
 				int flush_clients = request.query_parser.next("clients");
 				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::manager->database_pool->cleanup(true);
+					XapiandManager::database_pool()->cleanup(true);
 				}
 				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager->shutdown(0, 0);
+					XapiandManager::manager()->shutdown(0, 0);
 				}
 				write_http_response(request, response, HTTP_STATUS_OK);
 			} else {
@@ -1389,7 +1389,7 @@ HttpClient::metrics_view(Request& request, Response& response, enum http_method 
 
 	request.processing = std::chrono::system_clock::now();
 
-	auto server_info =  XapiandManager::manager->server_metrics();
+	auto server_info =  XapiandManager::server_metrics();
 	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, server_info, "text/plain", "", server_info.size()));
 }
 
@@ -2622,7 +2622,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 #endif
 		endpoints.add(endpoint);
 	} else {
-		endpoints.add(XapiandManager::manager->resolve_index_endpoint(index_path, master));
+		endpoints.add(XapiandManager::resolve_index_endpoint(index_path, master));
 	}
 	L_HTTP("Endpoint: -> %s", endpoints.to_string());
 }

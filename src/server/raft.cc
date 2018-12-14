@@ -32,7 +32,7 @@
 #include "ignore_unused.h"                  // for ignore_unused
 #include "length.h"                         // for serialise_length, unserialise_length
 #include "log.h"                            // for L_CALL, L_EV
-#include "manager.h"                        // for XapiandManager::manager
+#include "manager.h"                        // for XapiandManager
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "random.hh"                        // for random_real
@@ -204,10 +204,10 @@ Raft::send_message(Message type, const std::string& message)
 void
 Raft::io_accept_cb(ev::io& watcher, int revents)
 {
-	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), watcher.fd, XapiandManager::StateNames(XapiandManager::manager->state));
+	// L_CALL("Raft::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d, state:%s}", revents, readable_revents(revents), watcher.fd, XapiandManager::StateNames(XapiandManager::state()));
 
-	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_END("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_BEGIN("Raft::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Raft::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
@@ -225,9 +225,9 @@ Raft::io_accept_cb(ev::io& watcher, int revents)
 
 	if (revents & EV_READ) {
 		while (
-			XapiandManager::manager->state == XapiandManager::State::JOINING ||
-			XapiandManager::manager->state == XapiandManager::State::SETUP ||
-			XapiandManager::manager->state == XapiandManager::State::READY
+			XapiandManager::state() == XapiandManager::State::JOINING ||
+			XapiandManager::state() == XapiandManager::State::SETUP ||
+			XapiandManager::state() == XapiandManager::State::READY
 		) {
 			try {
 				std::string message;
@@ -252,8 +252,8 @@ Raft::raft_server(Message type, const std::string& message)
 {
 	L_CALL("Raft::raft_server(%s, <message>)", MessageNames(type));
 
-	L_EV_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
-	L_EV_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::manager->state), MessageNames(type));
+	L_EV_BEGIN("Raft::raft_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
+	L_EV_END("Raft::raft_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
 
 	switch (type) {
 		case Message::HEARTBEAT:
@@ -285,13 +285,13 @@ Raft::raft_server(Message type, const std::string& message)
 void
 Raft::request_vote(Message type, const std::string& message)
 {
-	L_CALL("Raft::request_vote(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::request_vote(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -367,17 +367,17 @@ Raft::request_vote(Message type, const std::string& message)
 void
 Raft::request_vote_response(Message type, const std::string& message)
 {
-	L_CALL("Raft::request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (role != Role::CANDIDATE) {
 		return;
 	}
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -441,9 +441,9 @@ Raft::request_vote_response(Message type, const std::string& message)
 
 					// First time we elect a leader's, we setup node
 					auto joining = XapiandManager::State::JOINING;
-					if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
-						// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-						XapiandManager::manager->setup_node();
+					if (XapiandManager::state().compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+						// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+						XapiandManager::setup_node();
 					}
 				}
 			}
@@ -455,12 +455,12 @@ Raft::request_vote_response(Message type, const std::string& message)
 void
 Raft::append_entries(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -577,9 +577,9 @@ Raft::append_entries(Message type, const std::string& message)
 			if (leader_commit == commit_index) {
 				// First time we reach leader's commit, we setup node
 				auto joining = XapiandManager::State::JOINING;
-				if (XapiandManager::manager->state.compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
-					// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::manager->state.load()));
-					XapiandManager::manager->setup_node();
+				if (XapiandManager::state().compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+					// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+					XapiandManager::setup_node();
 				}
 			}
 
@@ -618,13 +618,13 @@ Raft::append_entries(Message type, const std::string& message)
 void
 Raft::append_entries_response(Message type, const std::string& message)
 {
-	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -693,13 +693,13 @@ Raft::append_entries_response(Message type, const std::string& message)
 void
 Raft::add_command(Message type, const std::string& message)
 {
-	L_CALL("Raft::add_command(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::add_command(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -725,17 +725,17 @@ Raft::add_command(Message type, const std::string& message)
 void
 Raft::leader_election_timeout_cb(ev::timer&, int revents)
 {
-	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	L_CALL("Raft::leader_election_timeout_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Raft::leader_election_timeout_cb:BEGIN");
 	L_EV_END("Raft::leader_election_timeout_cb:END");
 
 	ignore_unused(revents);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT("   << LEADER_ELECTION (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT("   << LEADER_ELECTION (invalid state: %s)", XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -754,17 +754,17 @@ Raft::leader_election_timeout_cb(ev::timer&, int revents)
 void
 Raft::leader_heartbeat_cb(ev::timer&, int revents)
 {
-	// L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	// L_CALL("Raft::leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Raft::leader_heartbeat_cb:BEGIN");
 	L_EV_END("Raft::leader_heartbeat_cb:END");
 
 	ignore_unused(revents);
 
-	if (XapiandManager::manager->state != XapiandManager::State::JOINING &&
-		XapiandManager::manager->state != XapiandManager::State::SETUP &&
-		XapiandManager::manager->state != XapiandManager::State::READY) {
-		L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::manager->state.load()));
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -851,7 +851,7 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 	auto leader_node = Node::leader_node();
 	L_CALL("leader_node -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node->idx, leader_node->name(), leader_node->http_port, leader_node->binary_port, leader_node->touched);
 	if (!Node::is_equal(node, leader_node)) {
-		XapiandManager::manager->new_leader(Node::leader_node(node));
+		XapiandManager::new_leader(Node::leader_node(node));
 	}
 }
 
@@ -981,8 +981,8 @@ Raft::request_vote_async_cb(ev::async&, int revents)
 {
 	L_CALL("Raft::request_vote_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Raft::request_vote_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_END("Raft::request_vote_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_BEGIN("Raft::request_vote_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Raft::request_vote_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -1022,8 +1022,8 @@ Raft::add_command_async_cb(ev::async&, int revents)
 {
 	L_CALL("Raft::add_command_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Raft::add_command_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
-	L_EV_END("Raft::add_command_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::manager->state));
+	L_EV_BEGIN("Raft::add_command_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Raft::add_command_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 

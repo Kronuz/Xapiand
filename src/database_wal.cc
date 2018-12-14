@@ -49,7 +49,7 @@
 #include "ignore_unused.h"          // for ignore_unused
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
-#include "manager.h"                // for XapiandManager::manager
+#include "manager.h"                // for XapiandManager
 #include "metrics.h"                // for Metrics::metrics
 #include "msgpack.h"                // for MsgPack
 #include "opts.h"                   // for opts::*

@@ -99,8 +99,7 @@ DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, int revents)
 
 	ignore_unused(revents);
 
-	ASSERT(XapiandManager::manager);
-	XapiandManager::manager->database_pool->cleanup();
+	XapiandManager::database_pool()->cleanup();
 }
 
 

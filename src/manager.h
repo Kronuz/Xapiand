@@ -36,7 +36,6 @@
 #include "ev/ev++.h"                          // for ev::loop_ref
 #include "length.h"                           // for serialise_length
 #include "node.h"                             // for Node, local_node
-#include "schemas_lru.h"                      // for SchemasLRU
 #include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
 #include "worker.h"                           // for Worker
@@ -51,11 +50,13 @@ class BinaryClient;
 class BinaryServer;
 #endif
 
+class MsgPack;
 class HttpClient;
 class HttpServer;
 class DatabasePool;
 class DatabaseWALWriter;
 class DatabaseCleanup;
+class SchemasLRU;
 
 extern void sig_exit(int sig);
 
@@ -89,10 +90,9 @@ class XapiandManager : public Worker  {
 
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
-protected:
 	std::string load_node_name();
-	void save_node_name(std::string_view _node_name);
-	std::string set_node_name(std::string_view node_name_);
+	void save_node_name(std::string_view node_name);
+	std::string set_node_name(std::string_view node_name);
 
 	void make_servers();
 
@@ -119,74 +119,218 @@ public:
 		return UNKNOWN;
 	}
 
-	static std::shared_ptr<XapiandManager> manager;
-	std::atomic_int total_clients;
-	std::atomic_int http_clients;
-	std::atomic_int binary_clients;
+private:
+	static std::shared_ptr<XapiandManager> _manager;
 
-	std::shared_ptr<Http> http;
+	std::atomic_int _total_clients;
+	std::atomic_int _http_clients;
+	std::atomic_int _binary_clients;
+
+	std::shared_ptr<Http> _http;
 #ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<Binary> binary;
-	std::shared_ptr<Discovery> discovery;
-	std::shared_ptr<Raft> raft;
+	std::shared_ptr<Binary> _binary;
+	std::shared_ptr<Discovery> _discovery;
+	std::shared_ptr<Raft> _raft;
 #endif
 
-	std::shared_ptr<DatabaseCleanup> database_cleanup;
+	std::shared_ptr<DatabaseCleanup> _database_cleanup;
 
-	SchemasLRU schemas;
-	std::unique_ptr<DatabasePool> database_pool;
-	std::unique_ptr<DatabaseWALWriter> wal_writer;
+	std::unique_ptr<SchemasLRU> _schemas;
+	std::unique_ptr<DatabasePool> _database_pool;
+	std::unique_ptr<DatabaseWALWriter> _wal_writer;
 
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>> http_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>> http_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>> _http_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>> _http_server_pool;
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>> binary_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>> binary_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>> _binary_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>> _binary_server_pool;
 #endif
 
-	std::atomic_llong shutdown_asap;
-	std::atomic_llong shutdown_now;
+	std::atomic_llong _shutdown_asap;
+	std::atomic_llong _shutdown_now;
 
-	std::atomic<State> state;
-	std::string node_name;
-	int new_cluster;
+	std::atomic<State> _state;
+	std::string _node_name;
+	int _new_cluster;
+	std::chrono::time_point<std::chrono::system_clock> _process_start;
 
-	std::atomic_int atom_sig;
 	ev::async signal_sig_async;
 	ev::async setup_node_async;
-	ev::async cluster_database_ready_async;
+	ev::async set_cluster_database_ready_async;
 	ev::async shutdown_sig_async;
-	std::chrono::time_point<std::chrono::system_clock> process_start;
 
-	void signal_sig(int sig);
 	void signal_sig_async_cb(ev::async&, int);
 	void signal_sig_impl();
 
 	void shutdown_sig(int sig);
 
-	void setup_node();
 	void setup_node_async_cb(ev::async&, int);
+	void setup_node_impl();
 
-	void cluster_database_ready();
-	void cluster_database_ready_async_cb(ev::async&, int);
+	void set_cluster_database_ready_async_cb(ev::async&, int);
+	void set_cluster_database_ready_impl();
+
+#ifdef XAPIAND_CLUSTERING
+	void new_leader_impl(std::shared_ptr<const Node>&& leader_node);
+	void renew_leader_impl();
+	void reset_state_impl();
+	void join_cluster_impl();
+#endif
+
+	std::vector<std::shared_ptr<const Node>> resolve_index_nodes_impl(std::string_view path);
+	Endpoint resolve_index_endpoint_impl(std::string_view path, bool master);
+
+	std::string server_metrics_impl();
+
+	void try_shutdown_impl(bool always) {
+		if (always || (_shutdown_asap != 0 && _total_clients == 0)) {
+			shutdown_sig(0);
+		}
+	}
+
+public:
+	std::atomic_int atom_sig;
+
+	void signal_sig(int sig);
 
 	void run();
 	void join();
 
-#ifdef XAPIAND_CLUSTERING
-	void reset_state();
-	void join_cluster();
+	std::string __repr__() const override;
 
-	void renew_leader();
-	void new_leader(std::shared_ptr<const Node>&& leader_node);
+	template<typename... Args>
+	static auto& make(Args&&... args) {
+		_manager = Worker::make_shared<XapiandManager>(std::forward<Args>(args)...);
+		return _manager;
+	}
+
+	static const auto& manager() {
+		ASSERT(_manager);
+		return _manager;
+	}
+
+	static void reset() {
+		ASSERT(_manager);
+		_manager.reset();
+	}
+
+	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path) {
+		ASSERT(_manager);
+		return _manager->resolve_index_nodes_impl(path);
+	}
+
+	static Endpoint resolve_index_endpoint(std::string_view path, bool master) {
+		ASSERT(_manager);
+		return _manager->resolve_index_endpoint_impl(path, master);
+	}
+
+	static void setup_node() {
+		ASSERT(_manager);
+		_manager->setup_node_impl();
+	}
+
+	static void new_leader(std::shared_ptr<const Node>&& leader_node) {
+		ASSERT(_manager);
+		_manager->new_leader_impl(std::move(leader_node));
+	}
+
+	static void renew_leader() {
+		ASSERT(_manager);
+		_manager->renew_leader_impl();
+	}
+
+	static void reset_state() {
+		ASSERT(_manager);
+		_manager->reset_state_impl();
+	}
+
+	static void join_cluster() {
+		ASSERT(_manager);
+		_manager->join_cluster_impl();
+	}
+
+	static std::string server_metrics() {
+		ASSERT(_manager);
+		return _manager->server_metrics_impl();
+	}
+
+	static void try_shutdown(bool always = false) {
+		ASSERT(_manager);
+		_manager->try_shutdown_impl(always);
+	}
+
+	static void set_cluster_database_ready() {
+		ASSERT(_manager);
+		_manager->set_cluster_database_ready_impl();
+	}
+
+	static auto& node_name() {
+		ASSERT(_manager);
+		return _manager->_node_name;
+	}
+
+	static auto& state() {
+		ASSERT(_manager);
+		return _manager->_state;
+	}
+
+	static auto& total_clients() {
+		ASSERT(_manager);
+		return _manager->_total_clients;
+	}
+	static auto& http_clients() {
+		ASSERT(_manager);
+		return _manager->_http_clients;
+	}
+	static auto& binary_clients() {
+		ASSERT(_manager);
+		return _manager->_binary_clients;
+	}
+
+	static auto& database_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_database_pool);
+		return _manager->_database_pool;
+	}
+	static auto& http_client_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_http_client_pool);
+		return _manager->_http_client_pool;
+	}
+#ifdef XAPIAND_CLUSTERING
+	static auto& binary_client_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_binary_client_pool);
+		return _manager->_binary_client_pool;
+	}
+	static auto& discovery() {
+		ASSERT(_manager);
+		ASSERT(_manager->_discovery);
+		return _manager->_discovery;
+	}
+	static auto& binary() {
+		ASSERT(_manager);
+		ASSERT(_manager->_binary);
+		return _manager->_binary;
+	}
 #endif
 
-	std::vector<std::shared_ptr<const Node>> resolve_index_nodes(std::string_view path);
-	Endpoint resolve_index_endpoint(std::string_view path, bool master);
+	static auto& http() {
+		ASSERT(_manager);
+		ASSERT(_manager->_http);
+		return _manager->_http;
+	}
 
-	std::string server_metrics();
-
-	std::string __repr__() const override;
+	static auto& wal_writer() {
+		ASSERT(_manager);
+		ASSERT(_manager->_wal_writer);
+		return _manager->_wal_writer;
+	}
+	static auto& schemas() {
+		ASSERT(_manager);
+		ASSERT(_manager->_schemas);
+		return _manager->_schemas;
+	}
 };
 
 #ifdef XAPIAND_CLUSTERING

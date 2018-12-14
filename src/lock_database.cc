@@ -81,8 +81,7 @@ lock_database::unlock() noexcept
 		if (locks > 0 && --locks == 0) {
 			if (lockable->_database_locks > 0 && --lockable->_database_locks == 0) {
 				ASSERT(lockable->_locked_database);
-				ASSERT(XapiandManager::manager);
-				XapiandManager::manager->database_pool->checkin(lockable->_locked_database);
+				XapiandManager::database_pool()->checkin(lockable->_locked_database);
 			}
 		}
 	}

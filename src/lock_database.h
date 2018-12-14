@@ -27,7 +27,7 @@
 #include "cassert.h"            // for ASSERT
 #include "database_pool.h"      // for DatabasePool (database_pool)
 #include "endpoint.h"           // for Endpoints
-#include "manager.h"            // for XapiandManager::manager
+#include "manager.h"            // for XapiandManager
 
 
 class Database;
@@ -81,8 +81,7 @@ lock_database::lock(Args&&... args)
 		}
 		if (!lockable->_locked_database) {
 			ASSERT(locks == 0 && lockable->_database_locks == 0);
-			ASSERT(XapiandManager::manager);
-			lockable->_locked_database = XapiandManager::manager->database_pool->checkout(lockable->endpoints, lockable->flags, std::forward<Args>(args)...);
+			lockable->_locked_database = XapiandManager::database_pool()->checkout(lockable->endpoints, lockable->flags, std::forward<Args>(args)...);
 		}
 		if (locks++ == 0) {
 			++lockable->_database_locks;
