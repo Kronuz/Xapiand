@@ -1804,7 +1804,7 @@ Database::to_string() const
 std::string
 Database::__repr__() const
 {
-	return string::format("<Database %s (%s)%s%s%s%s%s%s%s%s>",
+	return string::format("<Database %s (%s)%s%s%s%s%s%s%s>",
 		repr(endpoints.to_string()),
 		readable_flags(flags),
 		is_writable() ? " (writable)" : "",
@@ -1813,6 +1813,5 @@ Database::__repr__() const
 		is_closed() ? " (closed)" : "",
 		is_modified() ? " (modified)" : "",
 		is_incomplete() ? " (incomplete)" : "",
-		_database ? "" : " (invalid)",
 		is_busy() ? " (busy)" : "");
 }
