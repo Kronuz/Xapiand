@@ -738,6 +738,16 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
+	std::shared_ptr<Logging> log;
+	#define L_MANAGER_TIMED(delay, format_timeout, format_done, ...) { \
+		if (log) { \
+			log->clear(); \
+		} \
+		auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
+		__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
+		log = __log_timed.release(); \
+	}
+
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
@@ -747,6 +757,7 @@ XapiandManager::join()
 	_http_server_pool->finish();
 
 	L_MANAGER("Waiting for %zu http server%s...", _http_server_pool->running_size(), (_http_server_pool->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP servers...", "HTTP servers finished!");
 	while (!_http_server_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -759,6 +770,7 @@ XapiandManager::join()
 	_http_client_pool->finish();
 
 	L_MANAGER("Waiting for %zu http client thread%s...", _http_client_pool->running_size(), (_http_client_pool->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP clients...", "HTTP clients finished!");
 	while (!_http_client_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -773,6 +785,7 @@ XapiandManager::join()
 	trigger_replication()->finish();
 
 	L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication()->running_size(), (trigger_replication()->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication schedulers finished!");
 	while (!trigger_replication()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -785,6 +798,7 @@ XapiandManager::join()
 	_binary_server_pool->finish();
 
 	L_MANAGER("Waiting for %zu binary server%s...", _binary_server_pool->running_size(), (_binary_server_pool->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Binary servers finished!");
 	while (!_binary_server_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -797,6 +811,7 @@ XapiandManager::join()
 	_binary_client_pool->finish();
 
 	L_MANAGER("Waiting for %zu binary client thread%s...", _binary_client_pool->running_size(), (_binary_client_pool->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
 	while (!_binary_client_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -811,6 +826,7 @@ XapiandManager::join()
 	_database_pool->finish();
 
 	L_MANAGER("Clearing and waiting for database pool!");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
 	while (!_database_pool->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -823,6 +839,7 @@ XapiandManager::join()
 	committer()->finish();
 
 	L_MANAGER("Waiting for %zu autocommitter%s...", committer()->running_size(), (committer()->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
 	while (!committer()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -835,6 +852,7 @@ XapiandManager::join()
 	db_updater()->finish();
 
 	L_MANAGER("Waiting for %zu database updater%s...", db_updater()->running_size(), (db_updater()->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
 	while (!db_updater()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -850,6 +868,7 @@ XapiandManager::join()
 	_wal_writer->finish();
 
 	L_MANAGER("Waiting for %zu WAL writer%s...", _wal_writer->running_size(), (_wal_writer->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
 	while (!_wal_writer->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -864,6 +883,7 @@ XapiandManager::join()
 	fsyncher()->finish();
 
 	L_MANAGER("Waiting for %zu async fsync%s...", fsyncher()->running_size(), (fsyncher()->running_size() == 1) ? "" : "s");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
 	while (!fsyncher()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -878,6 +898,7 @@ XapiandManager::join()
 	_discovery->finish();
 
 	L_MANAGER("Waiting for Discovery...");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the discovery protocol...", "Discovery protocol finished!");
 	while (!_discovery->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -890,6 +911,7 @@ XapiandManager::join()
 	_raft->finish();
 
 	L_MANAGER("Waiting for Raft...");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the raft protocol...", "Raft protocol finished!");
 	while (!_raft->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
@@ -904,6 +926,7 @@ XapiandManager::join()
 	_database_cleanup->finish();
 
 	L_MANAGER("Waiting for Database Cleanup...");
+	L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
 	while (!_database_cleanup->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
