@@ -766,10 +766,10 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing replication scheduler!");
-	trigger_replication().finish();
+	trigger_replication()->finish();
 
-	L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication().running_size(), (trigger_replication().running_size() == 1) ? "" : "s");
-	while (!trigger_replication().join(500ms)) {
+	L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication()->running_size(), (trigger_replication()->running_size() == 1) ? "" : "s");
+	while (!trigger_replication()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -816,10 +816,10 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing autocommitter scheduler!");
-	committer().finish();
+	committer()->finish();
 
-	L_MANAGER("Waiting for %zu autocommitter%s...", committer().running_size(), (committer().running_size() == 1) ? "" : "s");
-	while (!committer().join(500ms)) {
+	L_MANAGER("Waiting for %zu autocommitter%s...", committer()->running_size(), (committer()->running_size() == 1) ? "" : "s");
+	while (!committer()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -828,10 +828,10 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing database updater!");
-	db_updater().finish();
+	db_updater()->finish();
 
-	L_MANAGER("Waiting for %zu database updater%s...", db_updater().running_size(), (db_updater().running_size() == 1) ? "" : "s");
-	while (!db_updater().join(500ms)) {
+	L_MANAGER("Waiting for %zu database updater%s...", db_updater()->running_size(), (db_updater()->running_size() == 1) ? "" : "s");
+	while (!db_updater()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -857,10 +857,10 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing async fsync threads pool!");
-	fsyncher().finish();
+	fsyncher()->finish();
 
-	L_MANAGER("Waiting for %zu async fsync%s...", fsyncher().running_size(), (fsyncher().running_size() == 1) ? "" : "s");
-	while (!fsyncher().join(500ms)) {
+	L_MANAGER("Waiting for %zu async fsync%s...", fsyncher()->running_size(), (fsyncher()->running_size() == 1) ? "" : "s");
+	while (!fsyncher()->join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
@@ -928,6 +928,11 @@ XapiandManager::join()
 #endif
 
 	database_cleanup.reset();
+
+	trigger_replication().reset();
+	committer().reset();
+	db_updater().reset();
+	fsyncher().reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
@@ -1143,16 +1148,16 @@ XapiandManager::server_metrics()
 	metrics.xapiand_servers_capacity.Set(http_server_pool->threadpool_capacity());
 
 	// committers_threads:
-	metrics.xapiand_committers_running.Set(committer().running_size());
-	metrics.xapiand_committers_queue_size.Set(committer().size());
-	metrics.xapiand_committers_pool_size.Set(committer().threadpool_size());
-	metrics.xapiand_committers_capacity.Set(committer().threadpool_capacity());
+	metrics.xapiand_committers_running.Set(committer()->running_size());
+	metrics.xapiand_committers_queue_size.Set(committer()->size());
+	metrics.xapiand_committers_pool_size.Set(committer()->threadpool_size());
+	metrics.xapiand_committers_capacity.Set(committer()->threadpool_capacity());
 
 	// fsync_threads:
-	metrics.xapiand_fsync_running.Set(fsyncher().running_size());
-	metrics.xapiand_fsync_queue_size.Set(fsyncher().size());
-	metrics.xapiand_fsync_pool_size.Set(fsyncher().threadpool_size());
-	metrics.xapiand_fsync_capacity.Set(fsyncher().threadpool_capacity());
+	metrics.xapiand_fsync_running.Set(fsyncher()->running_size());
+	metrics.xapiand_fsync_queue_size.Set(fsyncher()->size());
+	metrics.xapiand_fsync_pool_size.Set(fsyncher()->threadpool_size());
+	metrics.xapiand_fsync_capacity.Set(fsyncher()->threadpool_capacity());
 
 	metrics.xapiand_http_current_connections.Set(http_clients.load());
 #ifdef XAPIAND_CLUSTERING

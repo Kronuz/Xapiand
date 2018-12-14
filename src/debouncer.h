@@ -195,3 +195,19 @@ make_debouncer(std::string name, const char* format, size_t num_threads, Func fu
 {
 	return Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>(name, format, num_threads, func);
 }
+
+
+template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
+inline auto
+make_unique_debouncer(std::string name, const char* format, size_t num_threads, Func func)
+{
+	return std::make_unique<Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
+}
+
+
+template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
+inline auto
+make_shared_debouncer(std::string name, const char* format, size_t num_threads, Func func)
+{
+	return std::make_shared<Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
+}

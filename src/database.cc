@@ -425,7 +425,7 @@ Database::reopen_readable()
 				} else {
 					try {
 						// If remote is master (it should be), try triggering replication
-						trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
+						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}
@@ -433,7 +433,7 @@ Database::reopen_readable()
 				if (!exists(endpoint.path + "/iamglass")) {
 					try {
 						// If remote is master (it should be), try triggering replication
-						trigger_replication().delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
+						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
 						incomplete = true;
 					} catch (...) { }
 				}
@@ -694,7 +694,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 		database->is_local()
 	) {
 		// Auto commit only on modified writable databases
-		committer().debounce(database->endpoints, std::weak_ptr<Database>(database));
+		committer()->debounce(database->endpoints, std::weak_ptr<Database>(database));
 	}
 }
 
