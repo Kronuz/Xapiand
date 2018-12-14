@@ -354,11 +354,14 @@ DatabaseEndpoint::clear()
 		if (!writable->busy.exchange(true)) {
 			auto shared_writable = writable;
 			std::weak_ptr<Database> weak_writable = shared_writable;
+			lk.unlock();
+			// First try closing internal database:
+			shared_writable->do_close(true, shared_writable->is_closed(), shared_writable->transaction, false);
+			lk.lock();
 			writable.reset();
 			lk.unlock();
 			try {
-				// If it's the last one,
-				// reset() will close and delete the database object:
+				// If it's the last one, reset() will delete the database object:
 				shared_writable.reset();
 			} catch (...) {
 				L_WARNING("WARNING: Writable database deletion failed!");
@@ -382,11 +385,14 @@ DatabaseEndpoint::clear()
 			} else if (!readable->busy.exchange(true)) {
 				auto shared_readable = readable;
 				std::weak_ptr<Database> weak_readable = shared_readable;
+				lk.unlock();
+				// First try closing internal database:
+				shared_readable->do_close(true, shared_readable->is_closed(), shared_readable->transaction, false);
+				lk.lock();
 				readable.reset();
 				lk.unlock();
 				try {
-					// If it's the last one,
-					// reset() will close and delete the database object:
+					// If it's the last one, reset() will delete the database object:
 					shared_readable.reset();
 				} catch (...) {
 					L_WARNING("WARNING: Readable database deletion failed!");
