@@ -79,7 +79,7 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 
 	mutable std::mutex runner_mutex;
 
-	State state;
+	std::atomic<State> state;
 
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;

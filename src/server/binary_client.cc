@@ -123,7 +123,7 @@ BinaryClient::~BinaryClient() noexcept
 bool
 BinaryClient::is_idle() const
 {
-	if (!waiting && !running && write_queue.empty()) {
+	if (!is_waiting() && !is_running() && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
 		return messages.empty();
 	}
@@ -520,22 +520,23 @@ BinaryClient::__repr__() const
 	auto state_repr = ([this]() -> std::string {
 		auto received = last_message_received.load(std::memory_order_relaxed);
 		auto sent = last_message_sent.load(std::memory_order_relaxed);
-		switch (state) {
+		auto st = state.load(std::memory_order_relaxed);
+		switch (st) {
 			case State::INIT_REMOTE:
 			case State::REMOTE_SERVER:
 				return string::format("%s) (%s<->%s",
-					StateNames(state),
+					StateNames(st),
 					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
 					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
 			case State::INIT_REPLICATION:
 			case State::REPLICATION_CLIENT:
 				return string::format("%s) (%s<->%s",
-					StateNames(state),
+					StateNames(st),
 					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(received)),
 					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(sent)));
 			case State::REPLICATION_SERVER:
 				return string::format("%s) (%s<->%s",
-					StateNames(state),
+					StateNames(st),
 					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(received)),
 					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(sent)));
 			default:
@@ -543,7 +544,7 @@ BinaryClient::__repr__() const
 		}
 	})();
 #else
-	auto& state_repr = StateNames(state);
+	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
 #endif
 	return string::format("<BinaryClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
 		state_repr,
