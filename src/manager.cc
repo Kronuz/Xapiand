@@ -106,6 +106,14 @@
 #define NODE_LABEL "node"
 #define CLUSTER_LABEL "cluster"
 
+#define L_MANAGER_TIMED(delay, format_timeout, format_done, ...) { \
+	if (log) { \
+		log->clear(); \
+	} \
+	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
+	log = __log_timed.release(); \
+}
 
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
@@ -228,6 +236,9 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 XapiandManager::~XapiandManager() noexcept
 {
 	try {
+		if (log) {
+			log->clear();
+		}
 		Worker::deinit();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
@@ -583,6 +594,8 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
+		L_MANAGER_TIMED(3s, "Is taking too long to start shutting down, perhaps there are active clients still connected...", "Starting shutdown process!");
+
 		stop(false);
 		destroy(false);
 
@@ -737,16 +750,6 @@ void
 XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
-
-	std::shared_ptr<Logging> log;
-	#define L_MANAGER_TIMED(delay, format_timeout, format_done, ...) { \
-		if (log) { \
-			log->clear(); \
-		} \
-		auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
-		__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
-		log = __log_timed.release(); \
-	}
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!

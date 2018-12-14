@@ -122,6 +122,8 @@ public:
 private:
 	static std::shared_ptr<XapiandManager> _manager;
 
+	std::shared_ptr<Logging> log;
+
 	std::atomic_int _total_clients;
 	std::atomic_int _http_clients;
 	std::atomic_int _binary_clients;
