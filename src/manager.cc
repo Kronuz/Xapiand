@@ -871,7 +871,7 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing Discovery loop!");
-	discovery->break_loop();
+	discovery->finish();
 
 	L_MANAGER("Waiting for Discovery...");
 	while (!discovery->join(500ms)) {
@@ -883,7 +883,7 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing Raft loop!");
-	raft->break_loop();
+	raft->finish();
 
 	L_MANAGER("Waiting for Raft...");
 	while (!raft->join(500ms)) {
@@ -897,7 +897,7 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing Database Cleanup loop!");
-	database_cleanup->break_loop();
+	database_cleanup->finish();
 
 	L_MANAGER("Waiting for Database Cleanup...");
 	while (!database_cleanup->join(500ms)) {

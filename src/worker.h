@@ -152,6 +152,8 @@ public:
 
 	void run_loop();
 
+	void finish();
+
 	std::vector<std::weak_ptr<Worker>> gather_children() const;
 	std::shared_ptr<Worker> parent() const;
 

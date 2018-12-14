@@ -570,3 +570,17 @@ Worker::run_loop()
 		_runner = false;
 	}
 }
+
+void
+Worker::finish()
+{
+	L_CALL("Worker::finish() %s", __repr__());
+
+	stop();
+	destroy();
+	if (is_runner()) {
+		break_loop();
+	} else {
+		detach();
+	}
+}
