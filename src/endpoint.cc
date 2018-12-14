@@ -22,7 +22,7 @@
 
 #include "endpoint.h"
 
-#include "config.h"         // for XAPIAND_BINARY_SERVERPORT
+#include "config.h"         // for XAPIAND_*
 
 #include <xapian.h>         // for SerialisationError
 
@@ -213,9 +213,6 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	} else {
 		node.host(uri);
 		node.binary_port = strict_stoi(nullptr, _port);
-		if (!node.binary_port) {
-			node.binary_port = XAPIAND_BINARY_SERVERPORT;
-		}
 		search = _search;
 		password = _password;
 		user = _user;
@@ -318,7 +315,6 @@ Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
 	int binary_port = local_node->binary_port;
-	if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
 	return (node.host() == local_node->host() || node.host() == "127.0.0.1" || node.host() == "localhost") && node.binary_port == binary_port;
 }
 

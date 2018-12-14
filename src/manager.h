@@ -86,14 +86,13 @@ class XapiandManager : public Worker  {
 	void shutdown_impl(long long asap, long long now) override;
 	void stop_impl() override;
 
-	void finish();
-
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
 	std::string load_node_name();
 	void save_node_name(std::string_view node_name);
 	std::string set_node_name(std::string_view node_name);
 
+	void start_discovery();
 	void make_servers();
 
 public:

@@ -281,6 +281,9 @@ Database::reopen_writable()
 	if (endpoint.empty()) {
 		THROW(Error, "Database must not have empty endpoints");
 	}
+	if (endpoint.node.binary_port == 0) {
+		THROW(Error, "Endpoint must be configured with a proper node port");
+	}
 
 	Xapian::WritableDatabase wsdb;
 	bool localdb = false;
@@ -401,6 +404,9 @@ Database::reopen_readable()
 		if (endpoint.empty()) {
 			THROW(Error, "Database must not have empty endpoints");
 		}
+		if (endpoint.node.binary_port == 0) {
+			THROW(Error, "Endpoint must be configured with a proper node port");
+		}
 
 		Xapian::Database rsdb;
 		bool localdb = false;
@@ -497,7 +503,7 @@ Database::reopen_readable()
 bool
 Database::reopen()
 {
-	L_CALL("Database::reopen()");
+	L_CALL("Database::reopen() {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));
 
 	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Database::reopen:END {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));

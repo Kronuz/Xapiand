@@ -301,148 +301,6 @@ XapiandManager::set_node_name(std::string_view node_name)
 }
 
 
-void
-XapiandManager::setup_node_impl()
-{
-	setup_node_async.send();
-}
-
-
-void
-XapiandManager::setup_node_async_cb(ev::async&, int)
-{
-	L_CALL("XapiandManager::setup_node_async_cb(...)");
-
-	L_MANAGER("Setup Node!");
-
-	auto leader_node = Node::leader_node();
-	auto local_node = Node::local_node();
-	auto is_leader = Node::is_equal(leader_node, local_node);
-
-	_new_cluster = 0;
-	Endpoint cluster_endpoint(".", leader_node.get());
-	try {
-		bool found = false;
-		if (is_leader) {
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
-			auto mset = db_handler.get_all_mset();
-			const auto m_e = mset.end();
-			for (auto m = mset.begin(); m != m_e; ++m) {
-				auto did = *m;
-				auto document = db_handler.get_document(did);
-				auto obj = document.get_obj();
-				if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
-					found = true;
-				}
-				#ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					_raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
-				}
-				#endif
-			}
-		} else {
-			#ifdef XAPIAND_CLUSTERING
-			auto node = Node::get_node(local_node->lower_name());
-			found = node && !!node->idx;
-			#endif
-		}
-		if (!found) {
-			THROW(NotFoundError);
-		}
-	} catch (const NotFoundError&) {
-		L_INFO("Cluster database doesn't exist. Generating database...");
-		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		auto did = db_handler.index(local_node->lower_name(), false, {
-			{ RESERVED_INDEX, "field_all" },
-			{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-			{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
-		}, false, msgpack_type).first;
-		_new_cluster = 1;
-		#ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
-			_raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
-		}
-		#else
-			ignore_unused(did);
-		#endif
-	}
-
-	// Set node as ready!
-	_node_name = set_node_name(local_node->name());
-	if (string::lower(_node_name) != local_node->lower_name()) {
-		auto local_node_copy = std::make_unique<Node>(*local_node);
-		local_node_copy->name(_node_name);
-		local_node = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
-	}
-
-	Metrics::metrics({{NODE_LABEL, _node_name}, {CLUSTER_LABEL, opts.cluster_name}});
-
-	#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		// Replicate database from the leader
-		if (!is_leader) {
-			ASSERT(!cluster_endpoint.is_local());
-			Endpoint local_endpoint(".");
-			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
-			_new_cluster = 2;
-			_binary->trigger_replication({cluster_endpoint, local_endpoint, true});
-		} else {
-			set_cluster_database_ready_impl();
-		}
-	} else
-	#endif
-	{
-		set_cluster_database_ready_impl();
-	}
-}
-
-
-void
-XapiandManager::set_cluster_database_ready_impl()
-{
-	set_cluster_database_ready_async.send();
-}
-
-
-void
-XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
-{
-	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
-
-	_state = State::READY;
-
-	_http->start();
-
-#ifdef XAPIAND_CLUSTERING
-	_binary->start();
-#endif
-
-	auto local_node = Node::local_node();
-	if (opts.solo) {
-		switch (_new_cluster) {
-			case 0:
-				L_NOTICE("%s%s" + NOTICE_COL + " using solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
-				break;
-			case 1:
-				L_NOTICE("%s%s" + NOTICE_COL + " using new solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
-				break;
-		}
-	} else {
-		switch (_new_cluster) {
-			case 0:
-				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
-				break;
-			case 1:
-				L_NOTICE("%s%s" + NOTICE_COL + " joined new cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
-				break;
-			case 2:
-				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it was already online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
-				break;
-		}
-	}
-}
-
-
 struct sockaddr_in
 XapiandManager::host_address()
 {
@@ -611,73 +469,6 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 
 
 void
-XapiandManager::stop_impl()
-{
-	L_CALL("XapiandManager::stop_impl()");
-
-	Worker::stop_impl();
-
-#ifdef XAPIAND_CLUSTERING
-	_raft->stop();
-	_discovery->stop();
-#endif
-
-	finish();
-}
-
-
-void
-XapiandManager::make_servers()
-{
-	L_CALL("XapiandManager::make_servers()");
-
-	std::string msg("Listening on ");
-
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.http_port);
-	msg += _http->getDescription() + ", ";
-
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.binary_port);
-		msg += _binary->getDescription() + ", ";
-
-		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
-		msg += _discovery->getDescription() + ", ";
-		_discovery->run();
-
-		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_port, opts.raft_group);
-		msg += _raft->getDescription() + ", ";
-		_raft->run();
-	}
-#endif
-
-	msg += "at pid:" + std::to_string(getpid()) + " ...";
-	L_NOTICE(msg);
-
-	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		_http_server_pool->enqueue(Worker::make_shared<HttpServer>(_http, nullptr, ev_flags));
-
-#ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
-			_binary_server_pool->enqueue(Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags));
-		}
-#endif
-	}
-
-	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
-	_database_cleanup->run();
-	_database_cleanup->start();
-
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		L_INFO("Discovering cluster %s...", opts.cluster_name);
-		_discovery->start();
-	}
-#endif
-}
-
-
-void
 XapiandManager::run()
 {
 	L_CALL("XapiandManager::run()");
@@ -689,21 +480,7 @@ XapiandManager::run()
 		return;
 	}
 
-	make_servers();
-
-	std::vector<std::string> values({
-		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
-		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
-#ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
-#endif
-#if XAPIAND_DATABASE_WAL
-		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
-#endif
-		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
-		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
-	});
-	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
+	start_discovery();
 
 	if (opts.solo) {
 		setup_node();
@@ -726,23 +503,242 @@ XapiandManager::run()
 
 
 void
-XapiandManager::finish()
+XapiandManager::start_discovery()
 {
-	L_CALL("XapiandManager::finish()");
+	L_CALL("XapiandManager::start_discovery()");
+
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		auto msg = string::format("Discovering cluster \"%s\" by listening on ", opts.cluster_name);
+
+		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
+		msg += _discovery->getDescription() + ", ";
+		_discovery->run();
+
+		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_port, opts.raft_group);
+		msg += _raft->getDescription() + ", ";
+		_raft->run();
+
+		_discovery->start();
+
+		L_NOTICE(msg);
+	}
+#endif
+}
+
+
+void
+XapiandManager::setup_node_impl()
+{
+	setup_node_async.send();
+}
+
+
+void
+XapiandManager::setup_node_async_cb(ev::async&, int)
+{
+	L_CALL("XapiandManager::setup_node_async_cb(...)");
+
+	L_MANAGER("Setup Node!");
+
+	auto leader_node = Node::leader_node();
+	auto local_node = Node::local_node();
+	auto is_leader = Node::is_equal(leader_node, local_node);
+
+	_new_cluster = 0;
+	Endpoint cluster_endpoint(".", leader_node.get());
+	try {
+		bool found = false;
+		if (is_leader) {
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
+			auto mset = db_handler.get_all_mset();
+			const auto m_e = mset.end();
+			for (auto m = mset.begin(); m != m_e; ++m) {
+				auto did = *m;
+				auto document = db_handler.get_document(did);
+				auto obj = document.get_obj();
+				if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
+					found = true;
+				}
+				#ifdef XAPIAND_CLUSTERING
+				if (!opts.solo) {
+					_raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+				}
+				#endif
+			}
+		} else {
+			#ifdef XAPIAND_CLUSTERING
+			auto node = Node::get_node(local_node->lower_name());
+			found = node && !!node->idx;
+			#endif
+		}
+		if (!found) {
+			THROW(NotFoundError);
+		}
+	} catch (const NotFoundError&) {
+		L_INFO("Cluster database doesn't exist. Generating database...");
+		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		auto did = db_handler.index(local_node->lower_name(), false, {
+			{ RESERVED_INDEX, "field_all" },
+			{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+			{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
+		}, false, msgpack_type).first;
+		_new_cluster = 1;
+		#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			_raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
+		}
+		#else
+			ignore_unused(did);
+		#endif
+	}
+
+	// Set node as ready!
+	_node_name = set_node_name(local_node->name());
+	if (string::lower(_node_name) != local_node->lower_name()) {
+		auto local_node_copy = std::make_unique<Node>(*local_node);
+		local_node_copy->name(_node_name);
+		local_node = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+	}
+
+	Metrics::metrics({{NODE_LABEL, _node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+
+	#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		// Replicate database from the leader
+		if (!is_leader) {
+			ASSERT(!cluster_endpoint.is_local());
+			Endpoint local_endpoint(".");
+			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
+			_new_cluster = 2;
+			_binary->trigger_replication({cluster_endpoint, local_endpoint, true});
+		} else {
+			set_cluster_database_ready_impl();
+		}
+	} else
+	#endif
+	{
+		set_cluster_database_ready_impl();
+	}
+
+	make_servers();
+}
+
+
+void
+XapiandManager::make_servers()
+{
+	L_CALL("XapiandManager::make_servers()");
+
+	std::string msg("Servers listening on ");
+
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.http_port);
+	msg += _http->getDescription() + ", ";
+
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.binary_port);
+		msg += _binary->getDescription() + ", ";
+	}
+#endif
+
+	msg += "at pid:" + std::to_string(getpid()) + " ...";
+	L_NOTICE(msg);
+
+	for (ssize_t i = 0; i < opts.num_servers; ++i) {
+		_http_server_pool->enqueue(Worker::make_shared<HttpServer>(_http, nullptr, ev_flags));
+
+#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			_binary_server_pool->enqueue(Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags));
+		}
+#endif
+	}
+
+	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
+	_database_cleanup->run();
+	_database_cleanup->start();
+
+	// Now print information about servers and workers.
+
+	std::vector<std::string> values({
+		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
+		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
+#ifdef XAPIAND_CLUSTERING
+		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+#endif
+#if XAPIAND_DATABASE_WAL
+		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
+#endif
+		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
+		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
+	});
+	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
+}
+
+
+void
+XapiandManager::set_cluster_database_ready_impl()
+{
+	set_cluster_database_ready_async.send();
+}
+
+
+void
+XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
+{
+	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
+
+	_state = State::READY;
+
+	_http->start();
+
+#ifdef XAPIAND_CLUSTERING
+	_binary->start();
+#endif
+
+	auto local_node = Node::local_node();
+	if (opts.solo) {
+		switch (_new_cluster) {
+			case 0:
+				L_NOTICE("%s%s" + NOTICE_COL + " using solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				break;
+			case 1:
+				L_NOTICE("%s%s" + NOTICE_COL + " using new solo cluster %s", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				break;
+		}
+	} else {
+		switch (_new_cluster) {
+			case 0:
+				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				break;
+			case 1:
+				L_NOTICE("%s%s" + NOTICE_COL + " joined new cluster %s (it is now online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				break;
+			case 2:
+				L_NOTICE("%s%s" + NOTICE_COL + " joined cluster %s (it was already online!)", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				break;
+		}
+	}
+}
+
+
+void
+XapiandManager::stop_impl()
+{
+	L_CALL("XapiandManager::stop_impl()");
+
+	Worker::stop_impl();
+
+	// During stop, finish HTTP servers and clients, but not binary
+	// as thosw may still be needed by the other end to start the
+	// shutting down process.
 
 	L_MANAGER("Finishing http servers pool!");
 	_http_server_pool->finish();
 
 	L_MANAGER("Finishing http client threads pool!");
 	_http_client_pool->finish();
-
-#ifdef XAPIAND_CLUSTERING
-	L_MANAGER("Finishing binary servers pool!");
-	_binary_server_pool->finish();
-
-	L_MANAGER("Finishing binary client threads pool!");
-	_binary_client_pool->finish();
-#endif
 }
 
 
@@ -754,6 +750,11 @@ XapiandManager::join()
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+
+#ifdef XAPIAND_CLUSTERING
+	_raft->stop();
+	_discovery->stop();
+#endif
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing http servers pool!");
