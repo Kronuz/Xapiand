@@ -352,12 +352,12 @@ DatabaseEndpoint::clear()
 
 	if (writable) {
 		if (!writable->busy.exchange(true)) {
-			auto shared_writable = writable;
-			std::weak_ptr<Database> weak_writable = shared_writable;
 			lk.unlock();
 			// First try closing internal database:
-			shared_writable->do_close(true, shared_writable->is_closed(), shared_writable->transaction, false);
+			writable->do_close(true, writable->is_closed(), writable->transaction, false);
 			lk.lock();
+			auto shared_writable = writable;
+			std::weak_ptr<Database> weak_writable = shared_writable;
 			writable.reset();
 			lk.unlock();
 			try {
@@ -383,12 +383,12 @@ DatabaseEndpoint::clear()
 				--readables_available;
 				it = readables.erase(it);
 			} else if (!readable->busy.exchange(true)) {
-				auto shared_readable = readable;
-				std::weak_ptr<Database> weak_readable = shared_readable;
 				lk.unlock();
 				// First try closing internal database:
-				shared_readable->do_close(true, shared_readable->is_closed(), shared_readable->transaction, false);
+				readable->do_close(true, readable->is_closed(), readable->transaction, false);
 				lk.lock();
+				auto shared_readable = readable;
+				std::weak_ptr<Database> weak_readable = shared_readable;
 				readable.reset();
 				lk.unlock();
 				try {
