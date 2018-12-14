@@ -92,25 +92,25 @@ public:
 	std::chrono::system_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 
-	bool local;
-	bool closed;
-	bool modified;
-	bool incomplete;
+	std::atomic_bool local;
+	std::atomic_bool closed;
+	std::atomic_bool modified;
+	std::atomic_bool incomplete;
 
 	bool is_local() const {
-		return local;
+		return local.load(std::memory_order::memory_order_relaxed);
 	}
 
 	bool is_closed() const {
-		return closed;
+		return closed.load(std::memory_order::memory_order_relaxed);
 	}
 
 	bool is_modified() const {
-		return modified;
+		return modified.load(std::memory_order::memory_order_relaxed);
 	}
 
 	bool is_incomplete() const {
-		return incomplete;
+		return incomplete.load(std::memory_order::memory_order_relaxed);
 	}
 
 	bool is_writable() const {
