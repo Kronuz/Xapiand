@@ -160,6 +160,10 @@ private:
 	ev::async set_cluster_database_ready_async;
 	ev::async shutdown_sig_async;
 
+#ifdef XAPIAND_CLUSTERING
+	ev::async new_leader_async;
+#endif
+
 	void signal_sig_async_cb(ev::async&, int);
 	void signal_sig_impl();
 
@@ -172,7 +176,8 @@ private:
 	void set_cluster_database_ready_impl();
 
 #ifdef XAPIAND_CLUSTERING
-	void new_leader_impl(std::shared_ptr<const Node>&& leader_node);
+	void new_leader_async_cb(ev::async&, int);
+	void new_leader_impl();
 	void renew_leader_impl();
 	void reset_state_impl();
 	void join_cluster_impl();
@@ -230,9 +235,9 @@ public:
 		_manager->setup_node_impl();
 	}
 
-	static void new_leader(std::shared_ptr<const Node>&& leader_node) {
+	static void new_leader() {
 		ASSERT(_manager);
-		_manager->new_leader_impl(std::move(leader_node));
+		_manager->new_leader_impl();
 	}
 
 	static void renew_leader() {

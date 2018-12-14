@@ -190,6 +190,9 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  signal_sig_async(*ev_loop),
 	  setup_node_async(*ev_loop),
 	  set_cluster_database_ready_async(*ev_loop),
+#ifdef XAPIAND_CLUSTERING
+	  new_leader_async(*ev_loop),
+#endif
 	  atom_sig(0)
 {
 	// Set the id in local node.
@@ -230,6 +233,11 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 
 	set_cluster_database_ready_async.set<XapiandManager, &XapiandManager::set_cluster_database_ready_async_cb>(this);
 	set_cluster_database_ready_async.start();
+
+#ifdef XAPIAND_CLUSTERING
+	new_leader_async.set<XapiandManager, &XapiandManager::new_leader_async_cb>(this);
+	new_leader_async.start();
+#endif
 }
 
 
@@ -512,11 +520,11 @@ XapiandManager::start_discovery()
 		auto msg = string::format("Discovering cluster \"%s\" by listening on ", opts.cluster_name);
 
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
-		msg += _discovery->getDescription() + ", ";
+		msg += _discovery->getDescription() + " and ";
 		_discovery->run();
 
 		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_port, opts.raft_group);
-		msg += _raft->getDescription() + ", ";
+		msg += _raft->getDescription();
 		_raft->run();
 
 		_discovery->start();
@@ -752,115 +760,135 @@ XapiandManager::join()
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
 
 #ifdef XAPIAND_CLUSTERING
-	_raft->stop();
-	_discovery->stop();
+	if (_raft) {
+		_raft->stop();
+	}
+	if (_discovery) {
+		_discovery->stop();
+	}
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing http servers pool!");
-	_http_server_pool->finish();
+	if (_http_server_pool) {
+		L_MANAGER("Finishing http servers pool!");
+		_http_server_pool->finish();
 
-	L_MANAGER("Waiting for %zu http server%s...", _http_server_pool->running_size(), (_http_server_pool->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP servers...", "HTTP servers finished!");
-	while (!_http_server_pool->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu http server%s...", _http_server_pool->running_size(), (_http_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP servers...", "HTTP servers finished!");
+		while (!_http_server_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing http client threads pool!");
-	_http_client_pool->finish();
+	if (_http_client_pool) {
+		L_MANAGER("Finishing http client threads pool!");
+		_http_client_pool->finish();
 
-	L_MANAGER("Waiting for %zu http client thread%s...", _http_client_pool->running_size(), (_http_client_pool->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP clients...", "HTTP clients finished!");
-	while (!_http_client_pool->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu http client thread%s...", _http_client_pool->running_size(), (_http_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP clients...", "HTTP clients finished!");
+		while (!_http_client_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 #ifdef XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing replication scheduler!");
-	trigger_replication()->finish();
+	if (trigger_replication()) {
+		L_MANAGER("Finishing replication scheduler!");
+		trigger_replication()->finish();
 
-	L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication()->running_size(), (trigger_replication()->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication schedulers finished!");
-	while (!trigger_replication()->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication()->running_size(), (trigger_replication()->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication schedulers finished!");
+		while (!trigger_replication()->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing binary servers pool!");
-	_binary_server_pool->finish();
+	if (_binary_server_pool) {
+		L_MANAGER("Finishing binary servers pool!");
+		_binary_server_pool->finish();
 
-	L_MANAGER("Waiting for %zu binary server%s...", _binary_server_pool->running_size(), (_binary_server_pool->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Binary servers finished!");
-	while (!_binary_server_pool->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu binary server%s...", _binary_server_pool->running_size(), (_binary_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Binary servers finished!");
+		while (!_binary_server_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing binary client threads pool!");
-	_binary_client_pool->finish();
+	if (_binary_client_pool) {
+		L_MANAGER("Finishing binary client threads pool!");
+		_binary_client_pool->finish();
 
-	L_MANAGER("Waiting for %zu binary client thread%s...", _binary_client_pool->running_size(), (_binary_client_pool->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
-	while (!_binary_client_pool->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu binary client thread%s...", _binary_client_pool->running_size(), (_binary_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
+		while (!_binary_client_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing database pool!");
-	_database_pool->finish();
+	if (_database_pool) {
+		L_MANAGER("Finishing database pool!");
+		_database_pool->finish();
 
-	L_MANAGER("Clearing and waiting for database pool!");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
-	while (!_database_pool->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Clearing and waiting for database pool!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
+		while (!_database_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing autocommitter scheduler!");
-	committer()->finish();
+	if (committer()) {
+		L_MANAGER("Finishing autocommitter scheduler!");
+		committer()->finish();
 
-	L_MANAGER("Waiting for %zu autocommitter%s...", committer()->running_size(), (committer()->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
-	while (!committer()->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu autocommitter%s...", committer()->running_size(), (committer()->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
+		while (!committer()->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing database updater!");
-	db_updater()->finish();
+	if (db_updater()) {
+		L_MANAGER("Finishing database updater!");
+		db_updater()->finish();
 
-	L_MANAGER("Waiting for %zu database updater%s...", db_updater()->running_size(), (db_updater()->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
-	while (!db_updater()->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu database updater%s...", db_updater()->running_size(), (db_updater()->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
+		while (!db_updater()->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
@@ -868,73 +896,83 @@ XapiandManager::join()
 #if XAPIAND_DATABASE_WAL
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing WAL writers!");
-	_wal_writer->finish();
+	if (_wal_writer) {
+		L_MANAGER("Finishing WAL writers!");
+		_wal_writer->finish();
 
-	L_MANAGER("Waiting for %zu WAL writer%s...", _wal_writer->running_size(), (_wal_writer->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
-	while (!_wal_writer->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu WAL writer%s...", _wal_writer->running_size(), (_wal_writer->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
+		while (!_wal_writer->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing async fsync threads pool!");
-	fsyncher()->finish();
+	if (fsyncher()) {
+		L_MANAGER("Finishing async fsync threads pool!");
+		fsyncher()->finish();
 
-	L_MANAGER("Waiting for %zu async fsync%s...", fsyncher()->running_size(), (fsyncher()->running_size() == 1) ? "" : "s");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
-	while (!fsyncher()->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for %zu async fsync%s...", fsyncher()->running_size(), (fsyncher()->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
+		while (!fsyncher()->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 #if XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing Discovery loop!");
-	_discovery->finish();
+	if (_discovery) {
+		L_MANAGER("Finishing Discovery loop!");
+		_discovery->finish();
 
-	L_MANAGER("Waiting for Discovery...");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the discovery protocol...", "Discovery protocol finished!");
-	while (!_discovery->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for Discovery...");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the discovery protocol...", "Discovery protocol finished!");
+		while (!_discovery->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing Raft loop!");
-	_raft->finish();
+	if (_raft) {
+		L_MANAGER("Finishing Raft loop!");
+		_raft->finish();
 
-	L_MANAGER("Waiting for Raft...");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the raft protocol...", "Raft protocol finished!");
-	while (!_raft->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for Raft...");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the raft protocol...", "Raft protocol finished!");
+		while (!_raft->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	L_MANAGER("Finishing Database Cleanup loop!");
-	_database_cleanup->finish();
+	if (_database_cleanup) {
+		L_MANAGER("Finishing Database Cleanup loop!");
+		_database_cleanup->finish();
 
-	L_MANAGER("Waiting for Database Cleanup...");
-	L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
-	while (!_database_cleanup->join(500ms)) {
-		int sig = atom_sig;
-		if (sig < 0) {
-			throw SystemExit(-sig);
+		L_MANAGER("Waiting for Database Cleanup...");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
+		while (!_database_cleanup->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
 		}
 	}
 
@@ -1005,46 +1043,62 @@ XapiandManager::renew_leader_impl()
 
 
 void
-XapiandManager::new_leader_impl(std::shared_ptr<const Node>&& leader_node)
+XapiandManager::new_leader_impl()
 {
-	L_CALL("XapiandManager::new_leader_impl(%s)", repr(leader_node->name()));
+	L_CALL("XapiandManager::new_leader_impl()");
 
+	new_leader_async.send();
+}
+
+
+void
+XapiandManager::new_leader_async_cb(ev::async& /*unused*/, int revents)
+{
+	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	ignore_unused(revents);
+
+	auto leader_node = Node::leader_node();
 	L_INFO("New leader of cluster %s is %s%s", opts.cluster_name, leader_node->col().ansi(), leader_node->name());
 
 	if (Node::is_local(leader_node)) {
-		// If we get promoted to leader, we immediately try to sync the known nodes:
-		// See if our local database has all nodes currently commited.
-		// If any is missing, it gets added.
+		try {
+			// If we get promoted to leader, we immediately try to sync the known nodes:
+			// See if our local database has all nodes currently commited.
+			// If any is missing, it gets added.
 
-		Endpoint cluster_endpoint(".");
-		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		auto mset = db_handler.get_all_mset();
-		const auto m_e = mset.end();
+			Endpoint cluster_endpoint(".");
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+			auto mset = db_handler.get_all_mset();
+			const auto m_e = mset.end();
 
-		std::vector<std::pair<size_t, std::string>> db_nodes;
-		for (auto m = mset.begin(); m != m_e; ++m) {
-			auto did = *m;
-			auto document = db_handler.get_document(did);
-			auto obj = document.get_obj();
-			db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
-		}
+			std::vector<std::pair<size_t, std::string>> db_nodes;
+			for (auto m = mset.begin(); m != m_e; ++m) {
+				auto did = *m;
+				auto document = db_handler.get_document(did);
+				auto obj = document.get_obj();
+				db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
+			}
 
-		for (const auto& node : Node::nodes()) {
-			if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
-				return db_node.first == node->idx && db_node.second == node->lower_name();
-			}) == db_nodes.end()) {
-				if (node->idx) {
-					// Node is not in our local database, add it now!
-					L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
-					auto prepared = db_handler.prepare(node->lower_name(), false, {
-						{ RESERVED_INDEX, "field_all" },
-						{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-						{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
-					}, msgpack_type);
-					auto& doc = std::get<1>(prepared);
-					db_handler.replace_document(node->idx, std::move(doc), false);
+			for (const auto& node : Node::nodes()) {
+				if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
+					return db_node.first == node->idx && db_node.second == node->lower_name();
+				}) == db_nodes.end()) {
+					if (node->idx) {
+						// Node is not in our local database, add it now!
+						L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
+						auto prepared = db_handler.prepare(node->lower_name(), false, {
+							{ RESERVED_INDEX, "field_all" },
+							{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+							{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
+						}, msgpack_type);
+						auto& doc = std::get<1>(prepared);
+						db_handler.replace_document(node->idx, std::move(doc), false);
+					}
 				}
 			}
+		} catch (...) {
+			L_EXC("ERROR: Cannot setup new local leader!");
 		}
 	}
 }
