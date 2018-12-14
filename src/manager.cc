@@ -703,29 +703,7 @@ XapiandManager::run()
 	}
 
 	stop();
-
 	join();
-
-	http.reset();
-#ifdef XAPIAND_CLUSTERING
-	binary.reset();
-	discovery.reset();
-	raft.reset();
-#endif
-
-	database_pool.reset();
-
-	wal_writer.reset();
-
-	http_client_pool.reset();
-	http_server_pool.reset();
-#ifdef XAPIAND_CLUSTERING
-	binary_client_pool.reset();
-	binary_server_pool.reset();
-#endif
-
-	database_cleanup.reset();
-
 	detach();
 }
 
@@ -928,6 +906,28 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
+
+	////////////////////////////////////////////////////////////////////
+
+	http.reset();
+#ifdef XAPIAND_CLUSTERING
+	binary.reset();
+	discovery.reset();
+	raft.reset();
+#endif
+
+	database_pool.reset();
+
+	wal_writer.reset();
+
+	http_client_pool.reset();
+	http_server_pool.reset();
+#ifdef XAPIAND_CLUSTERING
+	binary_client_pool.reset();
+	binary_server_pool.reset();
+#endif
+
+	database_cleanup.reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
