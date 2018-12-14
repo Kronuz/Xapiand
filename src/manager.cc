@@ -756,9 +756,13 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
+	// This method should finish and wait for all objects and threads to finish
+	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), database_pool->dump_databases(), Node::dump_nodes());
 
-	finish();
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing http servers pool!");
+	http_server_pool->finish();
 
 	L_MANAGER("Waiting for %zu http server%s...", http_server_pool->running_size(), (http_server_pool->running_size() == 1) ? "" : "s");
 	while (!http_server_pool->join(500ms)) {
@@ -767,6 +771,10 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
+
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing http client threads pool!");
+	http_client_pool->finish();
 
 	L_MANAGER("Waiting for %zu http client thread%s...", http_client_pool->running_size(), (http_client_pool->running_size() == 1) ? "" : "s");
 	while (!http_client_pool->join(500ms)) {
@@ -777,6 +785,23 @@ XapiandManager::join()
 	}
 
 #ifdef XAPIAND_CLUSTERING
+
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing replication scheduler!");
+	trigger_replication().finish();
+
+	L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication().running_size(), (trigger_replication().running_size() == 1) ? "" : "s");
+	while (!trigger_replication().join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing binary servers pool!");
+	binary_server_pool->finish();
+
 	L_MANAGER("Waiting for %zu binary server%s...", binary_server_pool->running_size(), (binary_server_pool->running_size() == 1) ? "" : "s");
 	while (!binary_server_pool->join(500ms)) {
 		int sig = atom_sig;
@@ -785,6 +810,10 @@ XapiandManager::join()
 		}
 	}
 
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing binary client threads pool!");
+	binary_client_pool->finish();
+
 	L_MANAGER("Waiting for %zu binary client thread%s...", binary_client_pool->running_size(), (binary_client_pool->running_size() == 1) ? "" : "s");
 	while (!binary_client_pool->join(500ms)) {
 		int sig = atom_sig;
@@ -792,11 +821,22 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
+
 #endif
 
+	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing database pool!");
 	database_pool->finish();
 
+	L_MANAGER("Clearing and waiting for database pool!");
+	while (!database_pool->join(500ms)) {
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing autocommitter scheduler!");
 	committer().finish();
 
@@ -808,15 +848,22 @@ XapiandManager::join()
 		}
 	}
 
-	L_MANAGER("Clearing and waiting for database pool!");
-	while (!database_pool->join(500ms)) {
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing database updater!");
+	db_updater().finish();
+
+	L_MANAGER("Waiting for %zu database updater%s...", db_updater().running_size(), (db_updater().running_size() == 1) ? "" : "s");
+	while (!db_updater().join(500ms)) {
 		int sig = atom_sig;
 		if (sig < 0) {
 			throw SystemExit(-sig);
 		}
 	}
 
+
 #if XAPIAND_DATABASE_WAL
+
+	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing WAL writers!");
 	wal_writer->finish();
 
@@ -827,8 +874,10 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
+
 #endif
 
+	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Finishing async fsync threads pool!");
 	fsyncher().finish();
 
@@ -841,6 +890,11 @@ XapiandManager::join()
 	}
 
 #if XAPIAND_CLUSTERING
+
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing Discovery loop!");
+	discovery->break_loop();
+
 	L_MANAGER("Waiting for Discovery...");
 	while (!discovery->join(500ms)) {
 		int sig = atom_sig;
@@ -849,6 +903,10 @@ XapiandManager::join()
 		}
 	}
 
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing Raft loop!");
+	raft->break_loop();
+
 	L_MANAGER("Waiting for Raft...");
 	while (!raft->join(500ms)) {
 		int sig = atom_sig;
@@ -856,7 +914,12 @@ XapiandManager::join()
 			throw SystemExit(-sig);
 		}
 	}
+
 #endif
+
+	////////////////////////////////////////////////////////////////////
+	L_MANAGER("Finishing Database Cleanup loop!");
+	database_cleanup->break_loop();
 
 	L_MANAGER("Waiting for Database Cleanup...");
 	while (!database_cleanup->join(500ms)) {
@@ -866,6 +929,7 @@ XapiandManager::join()
 		}
 	}
 
+	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
 }
 
