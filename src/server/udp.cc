@@ -40,13 +40,13 @@
 
 
 UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags)
-	: port(port),
-	  sock(-1),
+	: sock(-1),
 	  closed(true),
 	  flags(flags),
 	  description(description),
 	  major_version(major_version),
-	  minor_version(minor_version)
+	  minor_version(minor_version),
+	  port(port)
 {}
 
 

@@ -38,7 +38,6 @@ class UDP {
 protected:
 	struct sockaddr_in addr;
 
-	int port;
 	int sock;
 	std::atomic_bool closed;
 
@@ -54,6 +53,8 @@ protected:
 	bool close(bool close = false);
 
 public:
+	int port;
+
 	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags);
 	~UDP() noexcept;
 

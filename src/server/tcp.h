@@ -44,7 +44,6 @@ class TCP {
 	void _check_backlog(int tcp_backlog);
 
 protected:
-	int port;
 	int sock;
 	std::atomic_bool closed;
 
@@ -57,6 +56,8 @@ protected:
 	bool close(bool close = false);
 
 public:
+	int port;
+
 	TCP(int port, const char* description, int flags);
 	~TCP() noexcept;
 

@@ -428,9 +428,9 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
 #endif
-		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, 0, "port", cmd);
 
 		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
 		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);

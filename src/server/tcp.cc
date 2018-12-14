@@ -51,11 +51,11 @@
 
 
 TCP::TCP(int port, const char* description, int flags)
-	: port(port),
-	  sock(-1),
+	: sock(-1),
 	  closed(true),
 	  flags(flags),
-	  description(description)
+	  description(description),
+	  port(port)
 {}
 
 

@@ -549,6 +549,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	L_MANAGER("Setup Node!");
 
+	make_servers();
+
 	auto leader_node = Node::leader_node();
 	auto local_node = Node::local_node();
 	auto is_leader = Node::is_equal(leader_node, local_node);
@@ -621,6 +623,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			_new_cluster = 2;
 			_binary->trigger_replication({cluster_endpoint, local_endpoint, true});
 		} else {
+			load_nodes();
 			set_cluster_database_ready_impl();
 		}
 	} else
@@ -628,8 +631,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	{
 		set_cluster_database_ready_impl();
 	}
-
-	make_servers();
 }
 
 
@@ -638,37 +639,99 @@ XapiandManager::make_servers()
 {
 	L_CALL("XapiandManager::make_servers()");
 
-	std::string msg("Servers listening on ");
+	// Try to find suitable ports for the servers.
+	auto local_node = Node::local_node();
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.http_port);
-	msg += _http->getDescription() + ", ";
+	int http_port = opts.http_port ? opts.http_port : XAPIAND_HTTP_SERVERPORT;
+	int binary_port = opts.binary_port ? opts.binary_port : XAPIAND_BINARY_SERVERPORT;
+
+	auto nodes = Node::nodes();
+	for (auto it = nodes.begin(); it != nodes.end();) {
+		const auto& node = *it;
+		if (!node->is_local()) {
+			if (node->addr().sin_addr.s_addr == local_node->addr().sin_addr.s_addr) {
+				if (node->http_port == http_port) {
+					if (opts.http_port) {
+						THROW(Error, "Cannot use port %d, it's already in use!", opts.http_port);
+					}
+					++http_port;
+					it = nodes.begin();
+					continue;
+				}
+				if (node->binary_port == binary_port) {
+					if (opts.binary_port) {
+						THROW(Error, "Cannot use port %d, it's already in use!", opts.binary_port);
+					}
+					++binary_port;
+					it = nodes.begin();
+					continue;
+				}
+			}
+		}
+		++it;
+	}
+
+#if defined(__linux) || defined(__linux__) || defined(linux) || defined(SO_REUSEPORT_LB)
+	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
+	// of the incoming clients. It's not the case in other systems; FreeBSD is
+	// adding SO_REUSEPORT_LB for that.
+	int http_server_port = http_port;
+	int binary_server_port = binary_port;
+	http_port = 0;
+	binary_port = 0;
+#else
+	int http_server_port = 0;
+	int binary_server_port = 0;
+#endif
+
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, http_port);
+	http_port = _http->port;
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.binary_port);
-		msg += _binary->getDescription() + ", ";
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, binary_port);
+		binary_port = _binary->port;
 	}
 #endif
 
-	msg += "at pid:" + std::to_string(getpid()) + " ...";
-	L_NOTICE(msg);
-
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		_http_server_pool->enqueue(Worker::make_shared<HttpServer>(_http, nullptr, ev_flags));
+		auto http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, http_server_port);
+		if (!http_port) {
+			http_port = _http->port = http_server->port;
+		}
+		_http_server_pool->enqueue(std::move(http_server));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			_binary_server_pool->enqueue(Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags));
+			auto binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, binary_server_port);
+			if (!binary_port) {
+				binary_port = _binary->port = binary_server->port;
+			}
+			_binary_server_pool->enqueue(std::move(binary_server));
 		}
 #endif
 	}
 
+	// Setup local node ports.
+	auto node_copy = std::make_unique<Node>(*local_node);
+	node_copy->http_port = http_port;
+	node_copy->binary_port = binary_port;
+	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
+
+	std::string msg("Servers listening on ");
+	msg += _http->getDescription() + ", ";
+#ifdef XAPIAND_CLUSTERING
+	msg += _binary->getDescription() + ", ";
+#endif
+	msg += "at pid:" + std::to_string(getpid()) + " ...";
+	L_NOTICE(msg);
+
+	// Setup database cleanup thread.
 	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
 	_database_cleanup->run();
 	_database_cleanup->start();
 
 	// Now print information about servers and workers.
-
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
@@ -1061,44 +1124,55 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, int revents)
 	auto leader_node = Node::leader_node();
 	L_INFO("New leader of cluster %s is %s%s", opts.cluster_name, leader_node->col().ansi(), leader_node->name());
 
-	if (Node::is_local(leader_node)) {
-		try {
-			// If we get promoted to leader, we immediately try to sync the known nodes:
-			// See if our local database has all nodes currently commited.
-			// If any is missing, it gets added.
-
-			Endpoint cluster_endpoint(".");
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			auto mset = db_handler.get_all_mset();
-			const auto m_e = mset.end();
-
-			std::vector<std::pair<size_t, std::string>> db_nodes;
-			for (auto m = mset.begin(); m != m_e; ++m) {
-				auto did = *m;
-				auto document = db_handler.get_document(did);
-				auto obj = document.get_obj();
-				db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
+	if (_state == State::READY) {
+		if (leader_node->is_local()) {
+			try {
+				// If we get promoted to leader, we immediately try to load the nodes.
+				load_nodes();
+			} catch (...) {
+				L_EXC("ERROR: Cannot load local nodes!");
 			}
+		}
+	}
+}
 
-			for (const auto& node : Node::nodes()) {
-				if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
-					return db_node.first == node->idx && db_node.second == node->lower_name();
-				}) == db_nodes.end()) {
-					if (node->idx) {
-						// Node is not in our local database, add it now!
-						L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
-						auto prepared = db_handler.prepare(node->lower_name(), false, {
-							{ RESERVED_INDEX, "field_all" },
-							{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-							{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
-						}, msgpack_type);
-						auto& doc = std::get<1>(prepared);
-						db_handler.replace_document(node->idx, std::move(doc), false);
-					}
-				}
+
+void
+XapiandManager::load_nodes()
+{
+	L_CALL("XapiandManager::load_nodes()");
+
+	// See if our local database has all nodes currently commited.
+	// If any is missing, it gets added.
+
+	Endpoint cluster_endpoint(".");
+	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	auto mset = db_handler.get_all_mset();
+	const auto m_e = mset.end();
+
+	std::vector<std::pair<size_t, std::string>> db_nodes;
+	for (auto m = mset.begin(); m != m_e; ++m) {
+		auto did = *m;
+		auto document = db_handler.get_document(did);
+		auto obj = document.get_obj();
+		db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
+	}
+
+	for (const auto& node : Node::nodes()) {
+		if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
+			return db_node.first == node->idx && db_node.second == node->lower_name();
+		}) == db_nodes.end()) {
+			if (node->idx) {
+				// Node is not in our local database, add it now!
+				L_WARNING("Adding missing node: [%zu] %s", node->idx, node->name());
+				auto prepared = db_handler.prepare(node->lower_name(), false, {
+					{ RESERVED_INDEX, "field_all" },
+					{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
+					{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
+				}, msgpack_type);
+				auto& doc = std::get<1>(prepared);
+				db_handler.replace_document(node->idx, std::move(doc), false);
 			}
-		} catch (...) {
-			L_EXC("ERROR: Cannot setup new local leader!");
 		}
 	}
 }

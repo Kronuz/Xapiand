@@ -176,6 +176,7 @@ private:
 	void set_cluster_database_ready_impl();
 
 #ifdef XAPIAND_CLUSTERING
+	void load_nodes();
 	void new_leader_async_cb(ev::async&, int);
 	void new_leader_impl();
 	void renew_leader_impl();

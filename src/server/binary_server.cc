@@ -48,11 +48,13 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, binary_->port, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, port_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  binary(*binary_),
 	  trigger_replication_async(*ev_loop)
 {
+	bind(port == XAPIAND_BINARY_SERVERPORT ? 10 : 1);
+
 	trigger_replication_async.set<BinaryServer, &BinaryServer::trigger_replication_async_cb>(this);
 	trigger_replication_async.start();
 	L_EV("Start binary's async trigger replication signal event");
@@ -76,18 +78,8 @@ BinaryServer::start_impl()
 
 	Worker::start_impl();
 
-#if defined(__linux) || defined(__linux__) || defined(linux) || defined(SO_REUSEPORT_LB)
-	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
-	// of the incoming clients. It's not the case in other systems; FreeBSD is
-	// adding SO_REUSEPORT_LB for that.
-	binary.close(true);
-	bind(1);
-	io.start(sock, ev::READ);
-	L_EV("Start binary's server accept event {sock:%d}", sock);
-#else
-	io.start(binary.sock, ev::READ);
-	L_EV("Start binary's server accept event {sock:%d}", binary.sock);
-#endif
+	io.start(sock == -1 ? binary.sock : sock, ev::READ);
+	L_EV("Start binary's server accept event {sock:%d}", sock == -1 ? binary.sock : sock);
 }
 
 
@@ -123,8 +115,6 @@ BinaryServer::accept()
 	L_CALL("BinaryServer::accept()");
 
 	if (sock != -1) {
-		// If using SO_REUSEPORT for load balancing, this->sock
-		// will be opened and binary.sock will not.
 		return TCP::accept();
 	}
 	return binary.accept();
