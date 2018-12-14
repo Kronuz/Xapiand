@@ -99,7 +99,7 @@ TCP::bind(int tries)
 {
 	L_CALL("TCP::bind(%d)", tries);
 
-	if (!closed.exchange(false)) {
+	if (!closed.exchange(false) || !port) {
 		return;
 	}
 
