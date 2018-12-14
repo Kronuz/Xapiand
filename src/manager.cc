@@ -616,19 +616,19 @@ XapiandManager::make_servers()
 
 	std::string msg("Listening on ");
 
-	http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, opts.http_port);
+	http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, opts.binary_port);
+		binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.binary_port);
 		msg += binary->getDescription() + ", ";
 
-		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
+		discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
 		msg += discovery->getDescription() + ", ";
 		discovery->run();
 
-		raft = Worker::make_shared<Raft>(XapiandManager::manager, nullptr, ev_flags, opts.raft_port, opts.raft_group);
+		raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_port, opts.raft_group);
 		msg += raft->getDescription() + ", ";
 		raft->run();
 	}
@@ -647,7 +647,7 @@ XapiandManager::make_servers()
 #endif
 	}
 
-	database_cleanup = Worker::make_shared<DatabaseCleanup>(XapiandManager::manager, nullptr, ev_flags);
+	database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
 	database_cleanup->run();
 	database_cleanup->start();
 
