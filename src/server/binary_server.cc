@@ -48,12 +48,12 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
 	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, port_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  binary(*binary_),
 	  trigger_replication_async(*ev_loop)
 {
-	bind(port == XAPIAND_BINARY_SERVERPORT ? 10 : 1);
+	bind(tries);
 
 	trigger_replication_async.set<BinaryServer, &BinaryServer::trigger_replication_async_cb>(this);
 	trigger_replication_async.start();

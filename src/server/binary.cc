@@ -39,10 +39,10 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
 	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "Binary", TCP_TCP_NODELAY)
 {
-	bind(port == XAPIAND_BINARY_SERVERPORT ? 10 : 1);
+	bind(tries);
 }
 
 

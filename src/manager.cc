@@ -640,27 +640,38 @@ XapiandManager::make_servers()
 	L_CALL("XapiandManager::make_servers()");
 
 	// Try to find suitable ports for the servers.
-	auto local_node = Node::local_node();
 
+#if defined(__linux) || defined(__linux__) || defined(linux) || defined(SO_REUSEPORT_LB)
+	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
+	// of the incoming clients. It's not the case in other systems; FreeBSD is
+	// adding SO_REUSEPORT_LB for that.
+	bool reuse_ports = true;
+#else
+	bool reuse_ports = false;
+#endif
+
+	int http_tries = opts.http_port ? 1 : 10;
 	int http_port = opts.http_port ? opts.http_port : XAPIAND_HTTP_SERVERPORT;
+	int binary_tries = opts.binary_port ? 1 : 10;
 	int binary_port = opts.binary_port ? opts.binary_port : XAPIAND_BINARY_SERVERPORT;
 
+	auto local_node = Node::local_node();
 	auto nodes = Node::nodes();
 	for (auto it = nodes.begin(); it != nodes.end();) {
 		const auto& node = *it;
 		if (!node->is_local()) {
 			if (node->addr().sin_addr.s_addr == local_node->addr().sin_addr.s_addr) {
 				if (node->http_port == http_port) {
-					if (opts.http_port) {
-						THROW(Error, "Cannot use port %d, it's already in use!", opts.http_port);
+					if (--http_tries == 0) {
+						THROW(Error, "Cannot use port %d, it's already in use!", http_port);
 					}
 					++http_port;
 					it = nodes.begin();
 					continue;
 				}
 				if (node->binary_port == binary_port) {
-					if (opts.binary_port) {
-						THROW(Error, "Cannot use port %d, it's already in use!", opts.binary_port);
+					if (--binary_tries == 0) {
+						THROW(Error, "Cannot use port %d, it's already in use!", binary_port);
 					}
 					++binary_port;
 					it = nodes.begin();
@@ -671,43 +682,36 @@ XapiandManager::make_servers()
 		++it;
 	}
 
-#if defined(__linux) || defined(__linux__) || defined(linux) || defined(SO_REUSEPORT_LB)
-	// In Linux, accept(2) on sockets using SO_REUSEPORT do a load balancing
-	// of the incoming clients. It's not the case in other systems; FreeBSD is
-	// adding SO_REUSEPORT_LB for that.
-	int http_server_port = http_port;
-	int binary_server_port = binary_port;
-	http_port = 0;
-	binary_port = 0;
-#else
-	int http_server_port = 0;
-	int binary_server_port = 0;
-#endif
+	// Create and initialize servers.
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, http_port);
-	http_port = _http->port;
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, reuse_ports ? 0 : http_port, http_tries);
+	if (_http->port) {
+		http_port = _http->port;
+	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, binary_port);
-		binary_port = _binary->port;
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, reuse_ports ? 0 : binary_port, binary_tries);
+		if (_binary->port) {
+			binary_port = _binary->port;
+		}
 	}
 #endif
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		auto http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, http_server_port);
-		if (!http_port) {
-			http_port = _http->port = http_server->port;
+		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, reuse_ports ? http_port : 0, http_tries);
+		if (_http_server->port) {
+			http_port = _http->port = _http_server->port;
 		}
-		_http_server_pool->enqueue(std::move(http_server));
+		_http_server_pool->enqueue(std::move(_http_server));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, binary_server_port);
-			if (!binary_port) {
-				binary_port = _binary->port = binary_server->port;
+			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, reuse_ports ? binary_port : 0, binary_tries);
+			if (_binary_server->port) {
+				binary_port = _binary->port = _binary_server->port;
 			}
-			_binary_server_pool->enqueue(std::move(binary_server));
+			_binary_server_pool->enqueue(std::move(_binary_server));
 		}
 #endif
 	}

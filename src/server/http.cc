@@ -36,10 +36,10 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
 	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
 {
-	bind(port == XAPIAND_HTTP_SERVERPORT ? 10 : 1);
+	bind(tries);
 }
 
 

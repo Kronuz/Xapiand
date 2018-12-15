@@ -86,7 +86,7 @@ UDP::close(bool close) {
 void
 UDP::bind(int tries, const std::string& group)
 {
-	if (!closed.exchange(false) || !port) {
+	if (!closed.exchange(false) || !port || !tries) {
 		return;
 	}
 
