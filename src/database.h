@@ -98,19 +98,19 @@ public:
 	std::atomic_bool incomplete;
 
 	bool is_local() const {
-		return local.load(std::memory_order::memory_order_relaxed);
+		return local.load(std::memory_order_relaxed);
 	}
 
 	bool is_closed() const {
-		return closed.load(std::memory_order::memory_order_relaxed);
+		return closed.load(std::memory_order_relaxed);
 	}
 
 	bool is_modified() const {
-		return modified.load(std::memory_order::memory_order_relaxed);
+		return modified.load(std::memory_order_relaxed);
 	}
 
 	bool is_incomplete() const {
-		return incomplete.load(std::memory_order::memory_order_relaxed);
+		return incomplete.load(std::memory_order_relaxed);
 	}
 
 	bool is_writable() const {

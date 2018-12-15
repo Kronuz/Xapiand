@@ -275,7 +275,7 @@ Database::reopen_writable()
 
 	auto database = std::make_unique<Xapian::WritableDatabase>();
 
-	local.store(true, std::memory_order::memory_order_relaxed);
+	local.store(true, std::memory_order_relaxed);
 
 	const auto& endpoint = endpoints[0];
 	if (endpoint.empty()) {
@@ -326,7 +326,7 @@ Database::reopen_writable()
 	if (localdb) {
 		reopen_revision = database->get_revision();
 	} else {
-		local.store(false, std::memory_order::memory_order_relaxed);
+		local.store(false, std::memory_order_relaxed);
 	}
 
 	if (transaction != Transaction::none) {
@@ -361,7 +361,7 @@ Database::reopen_writable()
 			// WAL wasn't already active for the requested endpoint.
 			DatabaseWAL wal(this);
 			if (wal.execute(true)) {
-				modified.store(true, std::memory_order::memory_order_relaxed);
+				modified.store(true, std::memory_order_relaxed);
 			}
 		}
 	}
@@ -398,7 +398,7 @@ Database::reopen_readable()
 
 	size_t failures = 0;
 
-	local.store(true, std::memory_order::memory_order_relaxed);
+	local.store(true, std::memory_order_relaxed);
 
 	for (const auto& endpoint : endpoints) {
 		if (endpoint.empty()) {
@@ -432,7 +432,7 @@ Database::reopen_readable()
 					try {
 						// If remote is master (it should be), try triggering replication
 						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
-						incomplete.store(true, std::memory_order::memory_order_relaxed);
+						incomplete.store(true, std::memory_order_relaxed);
 					} catch (...) { }
 				}
 			} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -440,7 +440,7 @@ Database::reopen_readable()
 					try {
 						// If remote is master (it should be), try triggering replication
 						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
-						incomplete.store(true, std::memory_order::memory_order_relaxed);
+						incomplete.store(true, std::memory_order_relaxed);
 					} catch (...) { }
 				}
 			}
@@ -460,7 +460,7 @@ Database::reopen_readable()
 						if (endpoints.size() == failures) {
 							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
 						}
-						incomplete.store(true, std::memory_order::memory_order_relaxed);
+						incomplete.store(true, std::memory_order_relaxed);
 					} else {
 						{
 							build_path_index(endpoint.path);
@@ -480,7 +480,7 @@ Database::reopen_readable()
 		_databases.emplace_back(rsdb, localdb);
 
 		if (!localdb) {
-			local.store(false, std::memory_order::memory_order_relaxed);
+			local.store(false, std::memory_order_relaxed);
 		}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -611,10 +611,10 @@ Database::reset() noexcept
 		_database.reset();
 	} catch(...) {}
 	reopen_revision = 0;
-	local.store(false, std::memory_order::memory_order_relaxed);
-	closed.store(false, std::memory_order::memory_order_relaxed);
-	modified.store(false, std::memory_order::memory_order_relaxed);
-	incomplete.store(false, std::memory_order::memory_order_relaxed);
+	local.store(false, std::memory_order_relaxed);
+	closed.store(false, std::memory_order_relaxed);
+	modified.store(false, std::memory_order_relaxed);
+	incomplete.store(false, std::memory_order_relaxed);
 #ifdef XAPIAND_DATA_STORAGE
 	try {
 		storages.clear();
@@ -667,8 +667,8 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool th
 
 	reset();
 
-	local.store(local_, std::memory_order::memory_order_relaxed);
-	closed.store(closed_, std::memory_order::memory_order_relaxed);
+	local.store(local_, std::memory_order_relaxed);
+	closed.store(closed_, std::memory_order_relaxed);
 	transaction = transaction_;
 }
 
@@ -742,7 +742,7 @@ Database::commit(bool wal_, bool send_update)
 			} else {
 				wdb->commit();
 			}
-			modified.store(false, std::memory_order::memory_order_relaxed);
+			modified.store(false, std::memory_order_relaxed);
 			if (is_local()) {
 				endpoints.local_revision = wdb->get_revision();
 			}
@@ -851,7 +851,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		// L_DATABASE("Deleting document: %d  t: %d", did, t);
 		try {
 			wdb->delete_document(did);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -904,7 +904,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		// L_DATABASE("Deleting document: '%s'  t: %d", term, t);
 		try {
 			wdb->delete_document(term);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1067,7 +1067,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 		// L_DATABASE("Adding new document.  t: %d", t);
 		try {
 			did = wdb->add_document(doc);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1124,7 +1124,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		// L_DATABASE("Replacing: %d  t: %d", did, t);
 		try {
 			wdb->replace_document(did, doc);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1182,7 +1182,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		// L_DATABASE("Replacing: '%s'  t: %d", term, t);
 		try {
 			did = wdb->replace_document(term, doc);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1234,7 +1234,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
 			wdb->add_spelling(word, freqinc);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1290,7 +1290,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 #else
 			wdb->remove_spelling(word, freqdec);
 #endif
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1544,7 +1544,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	for (int t = DB_RETRIES; t; --t) {
 		try {
 			wdb->set_metadata(key, value);
-			modified.store(commit_ || is_local(), std::memory_order::memory_order_relaxed);
+			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
