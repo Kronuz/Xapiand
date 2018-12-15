@@ -168,9 +168,10 @@ public:
 
 	bool operator==(const Node& other) const {
 		return
-			_addr.sin_addr.s_addr == other._addr.sin_addr.s_addr &&
-			http_port == other.http_port &&
-			binary_port == other.binary_port &&
+			(!idx || !other.idx || idx == other.idx) &&
+			(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+			(!http_port || !other.http_port || http_port == other.http_port) &&
+			(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
 			_lower_name == other._lower_name;
 	}
 
