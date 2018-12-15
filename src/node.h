@@ -189,11 +189,11 @@ public:
 	}
 
 	bool is_local() const {
-		return is_equal(_local_node.load());
+		return is_equal(_local_node.load(std::memory_order_relaxed));
 	}
 
 	bool is_leader() const {
-		return is_equal(_leader_node.load());
+		return is_equal(_leader_node.load(std::memory_order_relaxed));
 	}
 
 	bool is_active() const {
@@ -236,15 +236,15 @@ private:
 
 public:
 	static size_t total_nodes() {
-		return _total_nodes.load();
+		return _total_nodes.load(std::memory_order_relaxed);
 	}
 
 	static size_t active_nodes() {
-		return _active_nodes.load();
+		return _active_nodes.load(std::memory_order_relaxed);
 	}
 
 	static size_t indexed_nodes() {
-		return _indexed_nodes.load();
+		return _indexed_nodes.load(std::memory_order_relaxed);
 	}
 
 	static std::shared_ptr<const Node> get_node(size_t idx);

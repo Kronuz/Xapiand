@@ -148,9 +148,9 @@ Node::local_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
 		set_as_title(node);
-		_local_node.store(node);
+		_local_node.store(node, std::memory_order_relaxed);
 	}
-	return _local_node.load();
+	return _local_node.load(std::memory_order_relaxed);
 }
 
 
@@ -158,9 +158,9 @@ std::shared_ptr<const Node>
 Node::leader_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		_leader_node.store(node);
+		_leader_node.store(node, std::memory_order_relaxed);
 	}
-	return _leader_node.load();
+	return _leader_node.load(std::memory_order_relaxed);
 }
 
 #else
@@ -177,17 +177,17 @@ std::atomic_size_t Node::_indexed_nodes;
 inline void
 Node::_update_nodes(const std::shared_ptr<const Node>& node)
 {
-	auto local_node_ = _local_node.load();
+	auto local_node_ = _local_node.load(std::memory_order_relaxed);
 	if (node->lower_name() == local_node_->lower_name()) {
 		if (node->idx != local_node_->idx) {
 			set_as_title(node);
 		}
-		_local_node.store(node);
+		_local_node.store(node, std::memory_order_relaxed);
 	}
 
-	auto leader_node_ = _leader_node.load();
+	auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
 	if (node->lower_name() == leader_node_->lower_name()) {
-		_leader_node.store(node);
+		_leader_node.store(node, std::memory_order_relaxed);
 	}
 
 	size_t cnt = 0;
@@ -222,10 +222,10 @@ Node::local_node(std::shared_ptr<const Node> node)
 		node_copy->touched = now;
 		node = std::shared_ptr<const Node>(node_copy.release());
 		set_as_title(node);
-		_local_node.store(node);
-		auto leader_node_ = _leader_node.load();
+		_local_node.store(node, std::memory_order_relaxed);
+		auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
 		if (node->lower_name() == leader_node_->lower_name()) {
-			_leader_node.store(node);
+			_leader_node.store(node, std::memory_order_relaxed);
 		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
@@ -249,7 +249,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 	} else {
 		L_CALL("Node::local_node()");
 	}
-	return _local_node.load();
+	return _local_node.load(std::memory_order_relaxed);
 }
 
 
@@ -263,13 +263,13 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		auto node_copy = std::make_unique<Node>(*node);
 		node_copy->touched = now;
 		node = std::shared_ptr<const Node>(node_copy.release());
-		_leader_node.store(node);
-		auto local_node_ = _local_node.load();
+		_leader_node.store(node, std::memory_order_relaxed);
+		auto local_node_ = _local_node.load(std::memory_order_relaxed);
 		if (node->lower_name() == local_node_->lower_name()) {
 			if (node->idx != local_node_->idx) {
 				set_as_title(node);
 			}
-			_local_node.store(node);
+			_local_node.store(node, std::memory_order_relaxed);
 		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
@@ -293,7 +293,7 @@ Node::leader_node(std::shared_ptr<const Node> node)
 	} else {
 		L_CALL("Node::leader_node()");
 	}
-	return _leader_node.load();
+	return _leader_node.load(std::memory_order_relaxed);
 }
 
 
