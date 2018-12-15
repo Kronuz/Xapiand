@@ -353,14 +353,8 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 			if (touch) {
 				node_ref->touched.store(now, std::memory_order_relaxed);
 			}
-			if ((!node_ref->http_port && node->http_port) || (!node_ref->binary_port && node->binary_port) || (!node_ref->idx && node->idx)) {
+			if ((!node_ref->idx && node->idx) || (!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) || (!node_ref->http_port && node->http_port) || (!node_ref->binary_port && node->binary_port)) {
 				auto node_ref_copy = std::make_unique<Node>(*node_ref);
-				if (!node_ref->http_port && node->http_port) {
-					node_ref_copy->http_port = node->http_port;
-				}
-				if (!node_ref->binary_port && node->binary_port) {
-					node_ref_copy->binary_port = node->binary_port;
-				}
 				if (!node_ref->idx && node->idx) {
 					node_ref_copy->idx = node->idx;
 					if (node_ref_copy->idx >= 1 && node_ref_copy->idx <= _nodes_indexed.size()) {
@@ -370,6 +364,16 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 							return std::make_pair(nullptr, false);
 						}
 					}
+				}
+				if (!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) {
+					node_ref_copy->_addr.sin_addr.s_addr = node->_addr.sin_addr.s_addr;
+					node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
+				}
+				if (!node_ref->http_port && node->http_port) {
+					node_ref_copy->http_port = node->http_port;
+				}
+				if (!node_ref->binary_port && node->binary_port) {
+					node_ref_copy->binary_port = node->binary_port;
 				}
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
@@ -423,8 +427,12 @@ Node::touch_node(const Node& node)
 			return nullptr;
 		}
 		node_ref->touched.store(now, std::memory_order_relaxed);
-		if ((!node_ref->http_port && node.http_port) || (!node_ref->binary_port && node.binary_port)) {
+		if ((!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) || (!node_ref->http_port && node.http_port) || (!node_ref->binary_port && node.binary_port)) {
 			auto node_ref_copy = std::make_unique<Node>(*node_ref);
+			if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
+				node_ref_copy->_addr.sin_addr.s_addr = node._addr.sin_addr.s_addr;
+				node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
+			}
 			if (!node_ref->http_port && node.http_port) {
 				node_ref_copy->http_port = node.http_port;
 			}
