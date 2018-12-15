@@ -268,7 +268,7 @@ Discovery::hello(Message type, const std::string& message)
 
 	auto local_node = Node::local_node();
 	if (!remote_node.is_equal(local_node)) {
-		auto node = Node::touch_node(remote_node);
+		auto node = Node::get_node(remote_node.name());
 		if (node) {
 			if (remote_node.is_equal(node)) {
 				send_message(Message::WAVE, local_node->serialise());
