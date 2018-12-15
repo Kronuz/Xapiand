@@ -349,6 +349,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (is_equal(node_ref, node)) {
+			auto active = is_active(node_ref);
 			if (touch) {
 				node_ref->touched.store(now, std::memory_order_relaxed);
 			}
@@ -373,8 +374,8 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
 			}
-			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (1)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
-			return std::make_pair(node_ref, false);
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> %s (1)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed), active ? "false" : "true");
+			return std::make_pair(node_ref, !active);
 		} else if (is_active(node_ref)) {
 			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (2)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 			return std::make_pair(node_ref, false);
