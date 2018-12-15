@@ -416,6 +416,12 @@ Node::touch_node(std::shared_ptr<const Node> node)
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->touched = now;
+		if (!node_ref_copy->http_port) {
+			node_ref_copy->http_port = node->http_port;
+		}
+		if (!node_ref_copy->binary_port) {
+			node_ref_copy->binary_port = node->binary_port;
+		}
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 
