@@ -61,7 +61,7 @@ public:
 	int http_port;
 	int binary_port;
 
-	std::atomic_llong touched;
+	mutable std::atomic_llong touched;
 
 	Node() : idx{0}, http_port{0}, binary_port{0}, touched{0} {
 		memset(&_addr, 0, sizeof(_addr));
@@ -251,7 +251,7 @@ public:
 	static std::shared_ptr<const Node> get_node(size_t idx);
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
 	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node, bool touch = true);
-	static std::shared_ptr<const Node> touch_node(std::shared_ptr<const Node> node);
+	static std::shared_ptr<const Node> touch_node(const Node& node);
 	static void drop_node(std::string_view node_name);
 	static void reset();
 

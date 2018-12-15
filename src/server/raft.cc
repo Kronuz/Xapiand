@@ -298,10 +298,10 @@ Raft::request_vote(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -384,13 +384,14 @@ Raft::request_vote_response(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	auto local_node = Node::local_node();
+	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
+
+	auto local_node = Node::local_node();
 
 	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
@@ -467,13 +468,14 @@ Raft::append_entries(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	auto local_node = Node::local_node();
+	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
+
+	auto local_node = Node::local_node();
 
 	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
@@ -631,10 +633,10 @@ Raft::append_entries_response(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -706,10 +708,10 @@ Raft::add_command(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
+	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node);
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node->name());
+		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
