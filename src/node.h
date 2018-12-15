@@ -25,7 +25,7 @@
 #include "config.h"             // for XAPIAND_CLUSTERING
 
 #include <arpa/inet.h>          // for inet_addr
-#include <atomic>               // for std::atomic_size_t
+#include <atomic>               // for std::atomic_llong, std::atomic_size_t
 #include <cstddef>              // for size_t
 #include <functional>           // for std::hash
 #include <memory>               // for std::shared_ptr
@@ -61,7 +61,7 @@ public:
 	int http_port;
 	int binary_port;
 
-	long long touched;
+	std::atomic_llong touched;
 
 	Node() : idx{0}, http_port{0}, binary_port{0}, touched{0} {
 		memset(&_addr, 0, sizeof(_addr));
@@ -76,7 +76,7 @@ public:
 		  idx{std::move(other.idx)},
 		  http_port{std::move(other.http_port)},
 		  binary_port{std::move(other.binary_port)},
-		  touched{std::move(other.touched)} { }
+		  touched{other.touched.load(std::memory_order_relaxed)} { }
 
 	// Copy Constructor
 	Node(const Node& other)
@@ -87,7 +87,7 @@ public:
 		  idx{other.idx},
 		  http_port{other.http_port},
 		  binary_port{other.binary_port},
-		  touched{other.touched} { }
+		  touched{other.touched.load(std::memory_order_relaxed)} { }
 
 	// Move assignment
 	Node& operator=(Node&& other) {
@@ -98,7 +98,7 @@ public:
 		idx = std::move(other.idx);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		touched = std::move(other.touched);
+		touched = other.touched.load(std::memory_order_relaxed);
 		return *this;
 	}
 
@@ -111,7 +111,7 @@ public:
 		idx = other.idx;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		touched = other.touched;
+		touched = other.touched.load(std::memory_order_relaxed);
 		return *this;
 	}
 
@@ -123,7 +123,7 @@ public:
 		idx = 0;
 		http_port = 0;
 		binary_port = 0;
-		touched = 0;
+		touched.store(0, std::memory_order_relaxed);
 	}
 
 	bool empty() const noexcept {
@@ -197,7 +197,7 @@ public:
 	}
 
 	bool is_active() const {
-		return (touched >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
+		return (touched.load(std::memory_order_relaxed) >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
 	}
 
 	static bool is_equal(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {

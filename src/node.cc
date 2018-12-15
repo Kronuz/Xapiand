@@ -41,7 +41,7 @@
 	L_SLATE_GREY(args); \
 	for (const auto& _ : _nodes) { \
 		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s", \
-			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched, \
+			_.first, _.second->idx, _.second->name(), _.second->http_port, _.second->binary_port, _.second->touched.load(std::memory_order_relaxed), \
 			Node::is_active(_.second) ? " active" : "", \
 			Node::is_local(_.second) ? " (local)" : "", \
 			Node::is_leader(_.second) ? " (leader)" : ""); \
@@ -110,7 +110,7 @@ std::string
 Node::__repr__() const
 {
 	return string::format("<Node {index:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s>",
-		idx, name(), http_port, binary_port, touched,
+		idx, name(), http_port, binary_port, touched.load(std::memory_order_relaxed),
 		is_active() ? " (active)" : "",
 		is_local() ? " (local)" : "",
 		is_leader() ? " (leader)" : "");
@@ -215,7 +215,7 @@ std::shared_ptr<const Node>
 Node::local_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		L_CALL("Node::local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+		L_CALL("Node::local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 
 		auto now = epoch::now<std::chrono::milliseconds>();
 		auto node_copy = std::make_unique<Node>(*node);
@@ -245,7 +245,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 		}
 		_indexed_nodes = _nodes_indexed.size();
 
-		L_NODE_NODES("local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+		L_NODE_NODES("local_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 	} else {
 		L_CALL("Node::local_node()");
 	}
@@ -257,7 +257,7 @@ std::shared_ptr<const Node>
 Node::leader_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		L_CALL("Node::leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+		L_CALL("Node::leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 
 		auto now = epoch::now<std::chrono::milliseconds>();
 		auto node_copy = std::make_unique<Node>(*node);
@@ -289,7 +289,7 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		}
 		_indexed_nodes = _nodes_indexed.size();
 
-		L_NODE_NODES("leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+		L_NODE_NODES("leader_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 	} else {
 		L_CALL("Node::leader_node()");
 	}
@@ -307,7 +307,7 @@ Node::get_node(std::string_view _node_name)
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("get_node(%s) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", _node_name, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 		return node_ref;
 	}
 
@@ -325,7 +325,7 @@ Node::get_node(size_t idx)
 
 	if (idx > 0 && idx <= _nodes_indexed.size()) {
 		auto& node_ref = _nodes_indexed[idx - 1];
-		// L_NODE_NODES("get_node(%zu) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", idx, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("get_node(%zu) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", idx, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 		return node_ref;
 	}
 
@@ -337,7 +337,7 @@ Node::get_node(size_t idx)
 std::pair<std::shared_ptr<const Node>, bool>
 Node::put_node(std::shared_ptr<const Node> node, bool touch)
 {
-	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}, %s)", node->idx, node->name(), node->http_port, node->binary_port, node->touched, touch ? "true" : "false");
+	L_CALL("Node::put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}, %s)", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed), touch ? "true" : "false");
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 
@@ -358,7 +358,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 				if (node_copy->idx >= 1 && node_copy->idx <= _nodes_indexed.size()) {
 					auto& indexed_node = _nodes_indexed[node_copy->idx - 1];
 					if (indexed_node && node_copy->lower_name() != indexed_node->lower_name()) {
-						L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+						L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 						return std::make_pair(nullptr, false);
 					}
 				}
@@ -366,10 +366,10 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 			node_ref = std::shared_ptr<const Node>(node_copy.release());
 			_update_nodes(node_ref);
 
-			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (1)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (1)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 			return std::make_pair(node_ref, false);
 		} else if (is_active(node_ref)) {
-			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (2)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+			L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> false (2)", node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 			return std::make_pair(node_ref, false);
 		}
 		idx = node_ref->idx;
@@ -384,7 +384,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 		if (node_copy->idx >= 1 && node_copy->idx <= _nodes_indexed.size()) {
 			auto& indexed_node = _nodes_indexed[node_copy->idx - 1];
 			if (indexed_node && node_copy->lower_name() != indexed_node->lower_name()) {
-				L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+				L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 				return std::make_pair(nullptr, false);
 			}
 		}
@@ -393,7 +393,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	_nodes[node->lower_name()] = node;
 	_update_nodes(node);
 
-	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> true", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+	L_NODE_NODES("put_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> true", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 	return std::make_pair(node, true);
 }
 
@@ -401,7 +401,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 std::shared_ptr<const Node>
 Node::touch_node(std::shared_ptr<const Node> node)
 {
-	L_CALL("Node::touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+	L_CALL("Node::touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld})", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 
@@ -411,7 +411,7 @@ Node::touch_node(std::shared_ptr<const Node> node)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (!is_active(node_ref) && !is_equal(node_ref, node)) {
-			L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+			L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (1)", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 			return nullptr;
 		}
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
@@ -425,11 +425,11 @@ Node::touch_node(std::shared_ptr<const Node> node)
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 
-		// L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", node->idx, node->name(), node->http_port, node->binary_port, node->touched, node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched);
+		// L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed), node_ref->idx, node_ref->name(), node_ref->http_port, node_ref->binary_port, node_ref->touched.load(std::memory_order_relaxed));
 		return node_ref;
 	}
 
-	L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (2)", node->idx, node->name(), node->http_port, node->binary_port, node->touched);
+	L_NODE_NODES("touch_node({idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%lld}) -> nullptr (2)", node->idx, node->name(), node->http_port, node->binary_port, node->touched.load(std::memory_order_relaxed));
 	return nullptr;
 }
 
