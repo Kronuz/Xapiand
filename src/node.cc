@@ -447,6 +447,15 @@ Node::touch_node(const Node& node)
 		return node_ref;
 	}
 
+	if (node.is_local()) {
+		auto new_node = std::make_shared<const Node>(node);
+		new_node->touched.store(now, std::memory_order_relaxed);
+		_nodes[new_node->lower_name()] = new_node;
+		_update_nodes(new_node);
+		L_NODE_NODES("touch_node(%s) -> %s", node.__repr__(), new_node->__repr__());
+		return new_node;
+	}
+
 	L_NODE_NODES("touch_node(%s) -> nullptr (2)", node.__repr__());
 	return nullptr;
 }
