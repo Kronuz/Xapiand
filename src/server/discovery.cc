@@ -60,11 +60,16 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  discovery(*ev_loop),
+	  enter_async(*ev_loop),
 	  db_update_send_async(*ev_loop)
 {
 	bind(1, group);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
 	discovery.set<Discovery, &Discovery::discovery_cb>(this);
+
+	enter_async.set<Discovery, &Discovery::enter_async_cb>(this);
+	enter_async.start();
+	L_EV("Start discovery's async enter signal event");
 
 	db_update_send_async.set<Discovery, &Discovery::db_update_send_async_cb>(this);
 	db_update_send_async.start();
@@ -496,9 +501,6 @@ Discovery::discovery_cb(ev::timer&, int revents)
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 
-			auto local_node = Node::local_node();
-			send_message(Message::ENTER, local_node->serialise());
-
 			XapiandManager::join_cluster();
 			break;
 		}
@@ -518,6 +520,30 @@ Discovery::_db_update_send(const std::string& path)
 		path);  // The path of the index
 
 	L_DEBUG("Sending database updated signal for %s", repr(path));
+}
+
+
+void
+Discovery::enter_async_cb(ev::async&, int revents)
+{
+	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("Discovery::enter_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::enter_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+
+	ignore_unused(revents);
+
+	auto local_node = Node::local_node();
+	send_message(Message::ENTER, local_node->serialise());
+}
+
+
+void
+Discovery::enter()
+{
+	L_CALL("Discovery::enter()");
+
+	enter_async.send();
 }
 
 

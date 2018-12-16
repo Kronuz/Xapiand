@@ -71,9 +71,12 @@ private:
 	ev::io io;
 	ev::timer discovery;
 
+	ev::async enter_async;
 	ev::async db_update_send_async;
 
 	ConcurrentQueue<std::string> db_update_send_args;
+
+	void enter_async_cb(ev::async& watcher, int revents);
 
 	void _db_update_send(const std::string& path);
 	void db_update_send_async_cb(ev::async& watcher, int revents);
@@ -110,6 +113,7 @@ public:
 
 	void operator()();
 
+	void enter();
 	void db_update_send(const std::string& path);
 
 	std::string __repr__() const override;

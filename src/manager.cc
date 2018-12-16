@@ -772,6 +772,8 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	_binary->start();
 #endif
 
+	_discovery->enter();
+
 	auto local_node = Node::local_node();
 	if (opts.solo) {
 		switch (_new_cluster) {
