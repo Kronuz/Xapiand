@@ -371,7 +371,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 					}
 				}
 				if (!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) {
-					node_ref_copy->_addr.sin_addr.s_addr = node->_addr.sin_addr.s_addr;
+					node_ref_copy->_addr = node->_addr;
 					node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
 				}
 				if (!node_ref->http_port && node->http_port) {
@@ -440,7 +440,7 @@ Node::touch_node(const Node& node)
 		) {
 			auto node_ref_copy = std::make_unique<Node>(*node_ref);
 			if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
-				node_ref_copy->_addr.sin_addr.s_addr = node._addr.sin_addr.s_addr;
+				node_ref_copy->_addr = node._addr;
 				node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
 			}
 			if (!node_ref->http_port && node.http_port) {

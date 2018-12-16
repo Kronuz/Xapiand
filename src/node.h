@@ -31,7 +31,6 @@
 #include <memory>               // for std::shared_ptr
 #include <mutex>                // for std::mutex
 #include <netinet/in.h>         // for sockaddr_in, INET_ADDRSTRLEN, in_addr
-#include <string.h>             // for memset
 #include <string>               // for std::string
 #include "string_view.hh"       // for std::string_view
 #include <unordered_map>        // for std::unordered_map
@@ -63,9 +62,7 @@ public:
 
 	mutable std::atomic_llong touched;
 
-	Node() : idx{0}, http_port{0}, binary_port{0}, touched{0} {
-		memset(&_addr, 0, sizeof(_addr));
-	}
+	Node() : _addr{}, idx{0}, http_port{0}, binary_port{0}, touched{0} { }
 
 	// Move constructor
 	Node(Node&& other)
@@ -119,7 +116,7 @@ public:
 		_host.clear();
 		_name.clear();
 		_lower_name.clear();
-		memset(&_addr, 0, sizeof(_addr));
+		_addr = sockaddr_in{};
 		idx = 0;
 		http_port = 0;
 		binary_port = 0;
