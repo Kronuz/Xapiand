@@ -851,7 +851,7 @@ Raft::_set_leader_node(const std::shared_ptr<const Node>& node)
 	L_CALL("Raft::_set_leader_node(%s)", repr(node->name()));
 
 	auto leader_node = Node::leader_node();
-	L_CALL("leader_node -> {idx:%zu, name:%s, http_port:%d, binary_port:%d, touched:%ld}", leader_node->idx, leader_node->name(), leader_node->http_port, leader_node->binary_port, leader_node->touched);
+	L_CALL("leader_node -> %s", leader_node->__repr__());
 	if (!Node::is_equal(node, leader_node)) {
 		Node::leader_node(node);
 		XapiandManager::new_leader();
