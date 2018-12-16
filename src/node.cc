@@ -481,6 +481,12 @@ Node::drop_node(std::string_view _node_name)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		node_ref->touched.store(0, std::memory_order_relaxed);
+		auto node_ref_copy = std::make_unique<Node>(*node_ref);
+		node_ref_copy->_addr = sockaddr_in{};
+		node_ref_copy->_host.clear();
+		node_ref_copy->http_port = 0;
+		node_ref_copy->binary_port = 0;
+		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 	}
 
