@@ -353,7 +353,12 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 			if (touch) {
 				node_ref->touched.store(now, std::memory_order_relaxed);
 			}
-			if ((!node_ref->idx && node->idx) || (!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) || (!node_ref->http_port && node->http_port) || (!node_ref->binary_port && node->binary_port)) {
+			if (
+				(!node_ref->idx && node->idx) ||
+				(!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) ||
+				(!node_ref->http_port && node->http_port) ||
+				(!node_ref->binary_port && node->binary_port)
+			) {
 				auto node_ref_copy = std::make_unique<Node>(*node_ref);
 				if (!node_ref->idx && node->idx) {
 					node_ref_copy->idx = node->idx;
@@ -428,7 +433,11 @@ Node::touch_node(const Node& node)
 			return nullptr;
 		}
 		node_ref->touched.store(now, std::memory_order_relaxed);
-		if ((!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) || (!node_ref->http_port && node.http_port) || (!node_ref->binary_port && node.binary_port)) {
+		if (
+			(!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) ||
+			(!node_ref->http_port && node.http_port) ||
+			(!node_ref->binary_port && node.binary_port)
+		) {
 			auto node_ref_copy = std::make_unique<Node>(*node_ref);
 			if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
 				node_ref_copy->_addr.sin_addr.s_addr = node._addr.sin_addr.s_addr;
