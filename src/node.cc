@@ -349,7 +349,7 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		if (is_equal(node_ref, node)) {
-			auto active = is_active(node_ref);
+			auto added = !is_active(node_ref);
 			if (touch) {
 				node_ref->touched.store(now, std::memory_order_relaxed);
 			}
@@ -377,9 +377,10 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 				}
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
+				added = true;
 			}
-			L_NODE_NODES("put_node(%s) -> %s (1)", node_ref->__repr__(), active ? "false" : "true");
-			return std::make_pair(node_ref, !active);
+			L_NODE_NODES("put_node(%s) -> %s (1)", node_ref->__repr__(), added ? "true" : "false");
+			return std::make_pair(node_ref, added);
 		} else if (is_active(node_ref)) {
 			L_NODE_NODES("put_node(%s) -> false (2)", node_ref->__repr__());
 			return std::make_pair(node_ref, false);
