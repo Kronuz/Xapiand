@@ -41,6 +41,14 @@
 #include "opts.h"                   // for opts
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_CONN
+// #define L_CONN L_LIGHT_GREEN
+
+
 UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags)
 	: sock(-1),
 	  closed(true),
@@ -304,7 +312,7 @@ UDP::get_message(std::string& result, char max_type)
 			L_ERR("ERROR: read error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			THROW(NetworkError, error::description(errno));
 		}
-		L_CONN("Received ERROR {sock:%d}!", sock);
+		// L_CONN("Received ERROR {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		return '\xff';
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
@@ -312,6 +320,7 @@ UDP::get_message(std::string& result, char max_type)
 		return '\xff';
 	} else if (received < 4) {
 		L_CONN("Badly formed message: Incomplete!");
+		return '\xff';
 	}
 
 	L_UDP_WIRE("{sock:%d} -->> %s", sock, repr(buf, received));

@@ -50,6 +50,8 @@
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_CONN
+// #define L_CONN L_LIGHT_GREEN
 
 
 TCP::TCP(const char* description, int flags)
