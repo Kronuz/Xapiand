@@ -394,13 +394,15 @@ void parseOptions(int argc, char** argv) {
 		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
 		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
 
-		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
+#ifdef XAPIAND_CLUSTERING
+		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
+#endif
 
 #if XAPIAND_DATABASE_WAL
 		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, std::ceil(NUM_ASYNC_WAL_WRITERS * hardware_concurrency), "writers", cmd);
@@ -431,6 +433,8 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
 #endif
 		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, 0, "port", cmd);
+
+		ValueArg<std::string> bind_address("", "bind-address", "Bind address to listen to.", false, "", "bind", cmd);
 
 		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
 		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
@@ -547,16 +551,17 @@ void parseOptions(int argc, char** argv) {
 #endif
 
 		opts.database = database.getValue();
+		opts.http_port = http_port.getValue();
+		opts.bind_address = bind_address.getValue();
+#ifdef XAPIAND_CLUSTERING
 		opts.cluster_name = cluster_name.getValue();
 		opts.node_name = node_name.getValue();
-		opts.http_port = http_port.getValue();
-#ifdef XAPIAND_CLUSTERING
 		opts.binary_port = binary_port.getValue();
-#endif
 		opts.discovery_port = discovery_port.getValue();
 		opts.discovery_group = discovery_group.getValue();
 		opts.raft_port = raft_port.getValue();
 		opts.raft_group = raft_group.getValue();
+#endif
 		opts.pidfile = pidfile.getValue();
 		opts.logfile = logfile.getValue();
 		opts.uid = uid.getValue();

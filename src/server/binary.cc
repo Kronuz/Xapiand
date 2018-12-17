@@ -39,10 +39,10 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "Binary", TCP_TCP_NODELAY)
+Binary::Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, "Binary", TCP_TCP_NODELAY)
 {
-	bind(tries);
+	bind(hostname, serv, tries);
 }
 
 

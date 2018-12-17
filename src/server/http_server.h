@@ -37,7 +37,7 @@ class HttpServer : public MetaBaseServer<HttpServer> {
 	void start_impl() override;
 
 public:
-	HttpServer(const std::shared_ptr<Http>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries);
+	HttpServer(const std::shared_ptr<Http>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 	~HttpServer() noexcept;
 
 	int accept();

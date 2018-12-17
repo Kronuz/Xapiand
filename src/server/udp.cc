@@ -27,7 +27,9 @@
 #include <errno.h>                  // for errno
 #include <utility>
 #include <fcntl.h>                  // for fcntl, F_GETFL, F_SETFL, O_NONBLOCK
+#include <sys/types.h>              // for SOL_SOCKET, SO_NOSIGPIPE
 #include <sys/socket.h>             // for setsockopt, bind, recvfrom, sendto
+#include <netdb.h>                  // for getaddrinfo, addrinfo
 #include <sysexits.h>               // for EX_CONFIG
 
 #include "error.hh"                 // for error:name, error::description
@@ -39,14 +41,15 @@
 #include "opts.h"                   // for opts
 
 
-UDP::UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags)
+UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags)
 	: sock(-1),
 	  closed(true),
 	  flags(flags),
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version),
-	  port(port)
+	  addr{},
+	  port(0)
 {}
 
 
@@ -84,111 +87,169 @@ UDP::close(bool close) {
 
 
 void
-UDP::bind(int tries, const std::string& group)
+UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 {
-	if (!closed.exchange(false) || !port || !tries) {
+	if (!closed.exchange(false) || !tries) {
 		return;
 	}
 
 	int optval = 1;
-	unsigned char ttl = 3;
-	struct ip_mreq mreq;
 
-	if ((sock = io::socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+	L_CONN("Binding UDP %s:%d", hostname ? hostname : "0.0.0.0", serv);
 
-	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+	for (; --tries >= 0; ++serv) {
+		char servname[6];  // strlen("65535") + 1
+		snprintf(servname, sizeof(servname), "%d", serv);
 
-	if ((flags & UDP_SO_REUSEPORT) != 0) {
-#ifdef SO_REUSEPORT_LB
-		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-			close();
+		struct addrinfo hints = {};
+		hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV;  // No effect if hostname != nullptr
+		hints.ai_family = PF_INET;
+		hints.ai_socktype = SOCK_DGRAM;
+		hints.ai_protocol = IPPROTO_UDP;
+
+		struct addrinfo *servinfo;
+		if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
 			sig_exit(-EX_CONFIG);
 			return;
 		}
-#else
-		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
-#endif
-	}
 
-	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
-
-	if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
-		L_ERR("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
-
-	// use io::setsockopt() to request that the kernel join a multicast group
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
-	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
-		L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);  // bind to all addresses (differs from sender)
-
-	for (int i = 0; i < tries; ++i, ++port) {
-		addr.sin_port = htons(port);
-
-		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-			if (!io::ignored_errno(errno, true, true, true)) {
-				if (i == tries - 1) { break; }
-				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+		for (auto p = servinfo; p != nullptr; p = p->ai_next) {
+			if ((sock = io::socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+				if (p->ai_next == nullptr) {
+					freeaddrinfo(servinfo);
+					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 				continue;
 			}
-		}
 
-		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_CRIT("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
-
-		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)
-
-		// Flush socket
-		L_DELAYED_N(1s, "UDP flush is taking too long...");
-		while (true) {
-			char buf[1024];
-			ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
-			if (received < 0 && !io::ignored_errno(errno, false, true, true)) {
+			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 				break;
 			}
-		}
-		L_DELAYED_N_CLEAR();
 
-		return;
+			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
+
+			if ((flags & UDP_SO_REUSEPORT) != 0) {
+		#ifdef SO_REUSEPORT_LB
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					L_CONN("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					break;
+				}
+		#else
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					break;
+				}
+		#endif
+			}
+
+			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				break;
+			}
+
+			unsigned char ttl = 3;
+			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				break;
+			}
+
+			// use io::setsockopt() to request that the kernel join a multicast group
+			struct ip_mreq mreq = {};
+			mreq.imr_multiaddr.s_addr = inet_addr(group);
+			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+			if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				break;
+			}
+
+			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
+
+			// Flush socket
+			L_DELAYED_N(1s, "UDP flush is taking too long...");
+			while (true) {
+				char buf[1024];
+				ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
+				if (received < 0 && !io::ignored_errno(errno, false, true, true)) {
+					break;
+				}
+			}
+			L_DELAYED_N_CLEAR();
+
+			port = serv;
+			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+
+			freeaddrinfo(servinfo);
+			return;
+		}
 	}
 
-	L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	L_CRIT("ERROR: %s unknown bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }

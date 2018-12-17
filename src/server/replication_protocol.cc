@@ -127,7 +127,7 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 		auto& node = src_endpoint.node;
 		int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
 		auto& host = node.host();
-		if (TCP::connect(client.sock, host, std::to_string(port)) == -1) {
+		if (TCP::connect(client.sock, host.c_str(), std::to_string(port).c_str()) == -1) {
 			return false;
 		}
 		L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client.sock);

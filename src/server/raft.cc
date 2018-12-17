@@ -61,8 +61,8 @@ static inline bool has_consensus(size_t votes) {
 }
 
 
-Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group)
-	: UDP(port, "Raft", XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION, XAPIAND_RAFT_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
+Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, const char* group)
+	: UDP("Raft", XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION, XAPIAND_RAFT_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  leader_election_timeout(*ev_loop),
@@ -76,7 +76,7 @@ Raft::Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	  commit_index(0),
 	  last_applied(0)
 {
-	bind(1, group);
+	bind(hostname, serv, group, 1);
 
 	io.set<Raft, &Raft::io_accept_cb>(this);
 

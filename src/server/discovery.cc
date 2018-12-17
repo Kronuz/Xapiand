@@ -55,15 +55,15 @@
 // #define L_EV_END L_DELAYED_N_UNLOG
 
 
-Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group)
-	: UDP(port, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
+Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, const char* group)
+	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  discovery(*ev_loop),
 	  enter_async(*ev_loop),
 	  db_update_send_async(*ev_loop)
 {
-	bind(1, group);
+	bind(hostname, serv, group, 1);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
 	discovery.set<Discovery, &Discovery::discovery_cb>(this);
 

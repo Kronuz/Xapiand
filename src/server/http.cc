@@ -36,10 +36,10 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, port_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
+Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
 {
-	bind(tries);
+	bind(hostname, serv, tries);
 }
 
 

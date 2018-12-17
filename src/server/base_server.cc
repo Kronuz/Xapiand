@@ -25,8 +25,8 @@
 #include "log.h"                              // for L_CALL
 
 
-BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags) :
-	TCP(port, description, flags),
+BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* description, int flags) :
+	TCP(description, flags),
 	Worker(parent_, ev_loop_, ev_flags_),
 	io(*ev_loop)
 {

@@ -31,7 +31,9 @@
 #include <netdb.h>                  // for addrinfo, freeaddrinfo, getaddrinfo
 #include <netinet/in.h>             // for sockaddr_in, INADDR_ANY, IPPROTO_TCP
 #include <netinet/tcp.h>            // for TCP_NODELAY
-#include <sys/socket.h>             // for setsockopt, SOL_SOCKET, SO_NOSIGPIPE
+#include <sys/types.h>              // for SOL_SOCKET, SO_NOSIGPIPE
+#include <sys/socket.h>             // for setsockopt, bind, connect
+#include <netdb.h>                  // for getaddrinfo, addrinfo
 #include <utility>
 #ifdef HAVE_SYS_SYSCTL_H
 #include <sys/sysctl.h>             // for sysctl, CTL_KERN, KIPC_SOMAXCONN
@@ -50,12 +52,12 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-TCP::TCP(int port, const char* description, int flags)
+TCP::TCP(const char* description, int flags)
 	: sock(-1),
 	  closed(true),
 	  flags(flags),
 	  description(description),
-	  port(port)
+	  port(0)
 {}
 
 
@@ -95,130 +97,219 @@ TCP::close(bool close) {
 
 
 void
-TCP::bind(int tries)
+TCP::bind(const char* hostname, unsigned int serv, int tries)
 {
 	L_CALL("TCP::bind(%d)", tries);
 
-	if (!closed.exchange(false) || !port || !tries) {
+	if (!closed.exchange(false) || !tries) {
 		return;
 	}
 
-	struct sockaddr_in addr;
-	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
 
-	if ((sock = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
-		sig_exit(-EX_IOERR);
-		return;
-	}
+	L_CONN("Binding TCP %s:%d", hostname ? hostname : "0.0.0.0", serv);
 
-	if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-		L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+	for (; --tries >= 0; ++serv) {
+		char servname[6];  // strlen("65535") + 1
+		snprintf(servname, sizeof(servname), "%d", serv);
 
-	if ((flags & TCP_SO_REUSEPORT) != 0) {
+		struct addrinfo hints = {};
+		hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST | AI_NUMERICSERV;  // No effect if hostname != nullptr
+		hints.ai_family = PF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+
+		struct addrinfo *servinfo;
+		if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
+			sig_exit(-EX_CONFIG);
+			return;
+		}
+
+		for (auto p = servinfo; p != nullptr; p = p->ai_next) {
+			if ((sock = io::socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+				if (p->ai_next == nullptr) {
+					freeaddrinfo(servinfo);
+					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+					sig_exit(-EX_IOERR);
+					return;
+				}
+				L_CONN("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+				continue;
+			}
+
+			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				break;
+			}
+
+			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
+
+			if ((flags & TCP_SO_REUSEPORT) != 0) {
 #ifdef SO_REUSEPORT_LB
-		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-			L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					L_CONN("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					break;
+				}
 #else
-		if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-			L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					L_CONN("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					break;
+				}
 #endif
-	}
+			}
 
 #ifdef SO_NOSIGPIPE
-	if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_CRIT("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+			if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
 #endif
 
-	if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-		L_CRIT("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+			if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
 
-	struct linger linger;
-	linger.l_onoff = 1;
-	linger.l_linger = 0;
-	if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
-		L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-		close();
-		sig_exit(-EX_CONFIG);
-		return;
-	}
+			struct linger linger;
+			linger.l_onoff = 1;
+			linger.l_linger = 0;
+			if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
 
-	if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
-		// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
-		// We want the HTTP server to wakeup accepting connections that already have some data
-		// to read; this is not the case for binary servers where the server is the one first
-		// sending data.
+			if ((flags & TCP_TCP_DEFER_ACCEPT) != 0) {
+				// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
+				// We want the HTTP server to wakeup accepting connections that already have some data
+				// to read; this is not the case for binary servers where the server is the one first
+				// sending data.
 
 #ifdef SO_ACCEPTFILTER
-		struct accept_filter_arg af = {"dataready", ""};
+				struct accept_filter_arg af = {"dataready", ""};
 
-		if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
-			L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
+				if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					L_CONN("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+					close();
+					break;
+				}
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
-		if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
-			L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
-			return;
-		}
+				if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					L_CONN("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+					close();
+					break;
+				}
 #endif
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	for (int i = 0; i < tries; ++i, ++port) {
-		addr.sin_port = htons(port);
-
-		if (io::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-			if (!io::ignored_errno(errno, true, true, true)) {
-				if (i == tries - 1) { break; }
-				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-				continue;
 			}
-		}
 
-		if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_CRIT("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
-			close();
-			sig_exit(-EX_CONFIG);
+			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
+
+			if (io::listen(sock, checked_tcp_backlog(XAPIAND_TCP_BACKLOG)) == -1) {
+				freeaddrinfo(servinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s listen error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				L_CONN("ERROR: %s listen error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				close();
+				break;
+			}
+
+			port = serv;
+
+			freeaddrinfo(servinfo);
 			return;
 		}
-
-		_check_backlog(tcp_backlog);
-		io::listen(sock, tcp_backlog);
-		return;
 	}
 
-	L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	L_CRIT("ERROR: %s unknown bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }
@@ -240,6 +331,12 @@ TCP::accept()
 		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: accept error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}
+		return -1;
+	}
+
+	if (io::fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
+		L_ERR("ERROR: fcntl O_NONBLOCK {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		io::close(client_sock);
 		return -1;
 	}
 
@@ -274,18 +371,12 @@ TCP::accept()
 		}
 	}
 
-	if (io::fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
-		io::close(client_sock);
-		return -1;
-	}
-
 	return client_sock;
 }
 
 
-void
-TCP::_check_backlog(int tcp_backlog)
+int
+TCP::checked_tcp_backlog(int tcp_backlog)
 {
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KIPC_SOMAXCONN)
@@ -299,7 +390,7 @@ TCP::_check_backlog(int tcp_backlog)
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(mib, mib_len, &somaxconn, &somaxconn_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
-		return;
+		return tcp_backlog;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
 		L_WARNING_ONCE("WARNING: The TCP backlog setting of %d cannot be enforced because "
@@ -311,13 +402,13 @@ TCP::_check_backlog(int tcp_backlog)
 	int fd = io::open("/proc/sys/net/core/somaxconn", O_RDONLY);
 	if unlikely(fd == -1) {
 		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
-		return;
+		return tcp_backlog;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
 		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
-		return;
+		return tcp_backlog;
 	}
 	int somaxconn = atoi(line);
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -328,42 +419,45 @@ TCP::_check_backlog(int tcp_backlog)
 #else
 	L_WARNING_ONCE("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
 #endif
+	return tcp_backlog;
 }
 
 
 int
-TCP::connect(int sock_, const std::string& hostname, const std::string& servname)
+TCP::connect(int sock_, const char* hostname, const char* servname)
 {
 	L_CALL("TCP::connect(%d, %s, servname)", sock_, hostname, servname);
-
-	struct addrinfo hints;
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
-	hints.ai_protocol = 0;
-
-	struct addrinfo *result;
-	if (getaddrinfo(hostname.c_str(), servname.c_str(), &hints, &result) != 0) {
-		L_ERR("Couldn't resolve host %s:%s", hostname, servname);
-		return -1;
-	}
 
 	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
 		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 
-	if (io::connect(sock_, result->ai_addr, result->ai_addrlen) == -1) {
-		if (!io::ignored_errno(errno, true, true, true)) {
-			L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
-			freeaddrinfo(result);
-			return -1;
+	struct addrinfo hints = {};
+	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
+	hints.ai_family = PF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	struct addrinfo *servinfo;
+	if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+		L_ERR("Couldn't resolve host %s:%s: %s", hostname, servname, gai_strerror(err));
+		return -1;
+	}
+
+	for (auto p = servinfo; p != nullptr; p = p->ai_next) {
+		if (io::connect(sock_, p->ai_addr, p->ai_addrlen) != -1) {
+			freeaddrinfo(servinfo);
+			return 0;
 		}
 	}
 
-	freeaddrinfo(result);
-	return 0;
+	if (!io::ignored_errno(errno, true, true, true)) {
+		L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
+	}
+	freeaddrinfo(servinfo);
+	return -1;
+
 }
 
 
@@ -414,8 +508,8 @@ TCP::socket()
 
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags)
-	: TCP(port, description, flags),
+BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* description, int flags)
+	: TCP(description, flags),
 	  Worker(parent_, ev_loop_, ev_flags_)
 {
 }

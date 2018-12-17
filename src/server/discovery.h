@@ -104,7 +104,7 @@ private:
 	Discovery& operator=(const Discovery&) = delete;
 
 public:
-	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const std::string& group);
+	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, const char* group);
 	~Discovery() noexcept;
 
 	const char* name() const noexcept {

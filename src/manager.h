@@ -81,7 +81,7 @@ class XapiandManager : public Worker  {
 	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_ = std::chrono::system_clock::now());
 	~XapiandManager() noexcept;
 
-	struct sockaddr_in host_address();
+	std::pair<struct sockaddr_in, std::string> host_address();
 
 	void shutdown_impl(long long asap, long long now) override;
 	void stop_impl() override;
@@ -195,6 +195,8 @@ private:
 		}
 	}
 
+	void init();
+
 public:
 	std::atomic_int atom_sig;
 
@@ -208,6 +210,7 @@ public:
 	template<typename... Args>
 	static auto& make(Args&&... args) {
 		_manager = Worker::make_shared<XapiandManager>(std::forward<Args>(args)...);
+		_manager->init();
 		return _manager;
 	}
 

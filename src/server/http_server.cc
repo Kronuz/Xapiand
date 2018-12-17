@@ -46,11 +46,11 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-HttpServer::HttpServer(const std::shared_ptr<Http>& http_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries)
-	: MetaBaseServer<HttpServer>(http_, ev_loop_, ev_flags_, port_, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
+HttpServer::HttpServer(const std::shared_ptr<Http>& http_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: MetaBaseServer<HttpServer>(http_, ev_loop_, ev_flags_, "Http", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT | TCP_SO_REUSEPORT),
 	  http(*http_)
 {
-	bind(tries);
+	bind(hostname, serv, tries);
 }
 
 

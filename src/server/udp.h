@@ -36,8 +36,6 @@ constexpr int UDP_SO_REUSEPORT     = 1;
 
 class UDP {
 protected:
-	struct sockaddr_in addr;
-
 	int sock;
 	std::atomic_bool closed;
 
@@ -48,14 +46,16 @@ protected:
 	uint8_t major_version;
 	uint8_t minor_version;
 
-	void bind(int tries, const std::string& group);
+	struct sockaddr_in addr;
+
+	void bind(const char* hostname, unsigned int serv, const char* group, int tries);
 
 	bool close(bool close = false);
 
 public:
-	int port;
+	unsigned int port;
 
-	UDP(int port, const char* description, uint8_t major_version, uint8_t minor_version, int flags);
+	UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags);
 	~UDP() noexcept;
 
 	ssize_t send_message(const std::string& message);

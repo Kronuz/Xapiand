@@ -35,7 +35,7 @@ class BaseServer : public TCP, public Worker {
 protected:
 	ev::io io;
 
-	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags);
+	BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* description, int flags);
 
 	~BaseServer() noexcept;
 
@@ -51,8 +51,8 @@ public:
 template <typename ServerImpl>
 class MetaBaseServer : public BaseServer {
 public:
-	MetaBaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port, const char* description, int flags) :
-		BaseServer(parent_, ev_loop_, ev_flags_, port, description, flags) {
+	MetaBaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* description, int flags) :
+		BaseServer(parent_, ev_loop_, ev_flags_, description, flags) {
 		io.set<ServerImpl, &ServerImpl::io_accept_cb>(static_cast<ServerImpl*>(this));
 	}
 };

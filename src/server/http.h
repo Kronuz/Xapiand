@@ -43,7 +43,7 @@ class Http : public BaseTCP {
 	friend HttpServer;
 
 public:
-	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries);
+	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 
 	std::string getDescription() const;
 

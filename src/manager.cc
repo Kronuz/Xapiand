@@ -23,6 +23,7 @@
 #include "manager.h"
 
 #include <algorithm>                          // for std::min, std::find_if
+#include <arpa/inet.h>                        // for inet_aton
 #include <cctype>                             // for isspace
 #include <chrono>                             // for std::chrono, std::chrono::system_clock
 #include <cstdlib>                            // for size_t, exit
@@ -195,36 +196,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 #endif
 	  atom_sig(0)
 {
-	// Set the id in local node.
-	auto local_node = Node::local_node();
-	auto node_copy = std::make_unique<Node>(*local_node);
-
-	// Setup node from node database directory
-	std::string node_name(load_node_name());
-	if (!node_name.empty()) {
-		if (!_node_name.empty() && string::lower(_node_name) != string::lower(node_name)) {
-			_node_name = "~";
-		} else {
-			_node_name = node_name;
-		}
-	}
-	if (opts.solo) {
-		if (_node_name.empty()) {
-			_node_name = name_generator();
-		}
-	}
-	node_copy->name(_node_name);
-
-	// Set addr in local node
-	node_copy->addr(host_address());
-
-	local_node = std::shared_ptr<const Node>(node_copy.release());
-	local_node = Node::local_node(local_node);
-
-	if (opts.solo) {
-		Node::leader_node(local_node);
-	}
-
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
 
@@ -309,26 +280,45 @@ XapiandManager::set_node_name(std::string_view node_name)
 }
 
 
-struct sockaddr_in
+std::pair<struct sockaddr_in, std::string>
 XapiandManager::host_address()
 {
 	L_CALL("XapiandManager::host_address()");
 
-	struct sockaddr_in addr;
+	struct sockaddr_in addr{};
+
+	auto hostname = opts.bind_address.empty() ? nullptr : opts.bind_address.c_str();
+	if (hostname) {
+		if (inet_aton(hostname, &addr.sin_addr) == -1) {
+			L_CRIT("ERROR: inet_aton %s: %s (%d): %s", hostname, error::name(errno), errno, error::description(errno));
+			sig_exit(-EX_CONFIG);
+			return {{}, ""};
+		}
+	}
+
 	struct ifaddrs *if_addr_struct;
-	if (getifaddrs(&if_addr_struct) < 0) {
-		L_ERR("ERROR: getifaddrs: %s (%d): %s", error::name(errno), errno, error::description(errno));
-	} else {
-		for (struct ifaddrs *ifa = if_addr_struct; ifa != nullptr; ifa = ifa->ifa_next) {
-			if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) { // check it is IP4
-				addr = *(struct sockaddr_in *)ifa->ifa_addr;
-				L_NOTICE("Node IP address is %s on interface %s", fast_inet_ntop4(addr.sin_addr), ifa->ifa_name);
-				break;
+	if (getifaddrs(&if_addr_struct) == -1) {
+		L_CRIT("ERROR: getifaddrs: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		sig_exit(-EX_CONFIG);
+		return {{}, ""};
+	}
+
+	for (struct ifaddrs *ifa = if_addr_struct; ifa != nullptr; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr != nullptr && ifa->ifa_addr->sa_family == AF_INET) { // check it is IP4
+			auto ifa_addr = reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
+			if ((!addr.sin_addr.s_addr && ((ifa->ifa_flags & IFF_LOOPBACK) == 0u)) || addr.sin_addr.s_addr == ifa_addr->sin_addr.s_addr) {
+				addr = *ifa_addr;
+				std::string ifa_name = ifa->ifa_name;
+				freeifaddrs(if_addr_struct);
+				return {std::move(addr), std::move(ifa_name)};
 			}
 		}
-		freeifaddrs(if_addr_struct);
 	}
-	return addr;
+
+	freeifaddrs(if_addr_struct);
+	L_CRIT("ERROR: host_address: Cannot find the node's IP address!");
+	sig_exit(-EX_CONFIG);
+	return {{}, ""};
 }
 
 
@@ -477,6 +467,45 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 
 
 void
+XapiandManager::init()
+{
+	L_CALL("XapiandManager::init()");
+
+	// Set the id in local node.
+	auto local_node = Node::local_node();
+	auto node_copy = std::make_unique<Node>(*local_node);
+
+	// Setup node from node database directory
+	std::string node_name(load_node_name());
+	if (!node_name.empty()) {
+		if (!_node_name.empty() && string::lower(_node_name) != string::lower(node_name)) {
+			_node_name = "~";
+		} else {
+			_node_name = node_name;
+		}
+	}
+	if (opts.solo) {
+		if (_node_name.empty()) {
+			_node_name = name_generator();
+		}
+	}
+	node_copy->name(_node_name);
+
+	// Set addr in local node
+	auto address = host_address();
+	L_NOTICE("Node IP address is %s on interface %s, running on pid:%d", fast_inet_ntop4(address.first.sin_addr), address.second, getpid());
+	node_copy->addr(address.first);
+
+	local_node = std::shared_ptr<const Node>(node_copy.release());
+	local_node = Node::local_node(local_node);
+
+	if (opts.solo) {
+		Node::leader_node(local_node);
+	}
+}
+
+
+void
 XapiandManager::run()
 {
 	L_CALL("XapiandManager::run()");
@@ -519,11 +548,13 @@ XapiandManager::start_discovery()
 	if (!opts.solo) {
 		auto msg = string::format("Discovering cluster \"%s\" by listening on ", opts.cluster_name);
 
-		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_port, opts.discovery_group);
+		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
+		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), discovery_port, opts.discovery_group.c_str());
 		msg += _discovery->getDescription() + " and ";
 		_discovery->run();
 
-		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_port, opts.raft_group);
+		int raft_port = opts.raft_port ? opts.raft_port : XAPIAND_RAFT_SERVERPORT;
+		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), raft_port, opts.raft_group.c_str());
 		msg += _raft->getDescription();
 		_raft->run();
 
@@ -684,14 +715,14 @@ XapiandManager::make_servers()
 
 	// Create and initialize servers.
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, reuse_ports ? 0 : http_port, http_tries);
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
 	if (_http->port) {
 		http_port = _http->port;
 	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, reuse_ports ? 0 : binary_port, binary_tries);
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
 		if (_binary->port) {
 			binary_port = _binary->port;
 		}
@@ -699,7 +730,7 @@ XapiandManager::make_servers()
 #endif
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, reuse_ports ? http_port : 0, http_tries);
+		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
 		if (_http_server->port) {
 			http_port = _http->port = _http_server->port;
 		}
@@ -707,7 +738,7 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, reuse_ports ? binary_port : 0, binary_tries);
+			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
 			if (_binary_server->port) {
 				binary_port = _binary->port = _binary_server->port;
 			}
@@ -723,11 +754,12 @@ XapiandManager::make_servers()
 	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	std::string msg("Servers listening on ");
-	msg += _http->getDescription() + ", ";
+	msg += _http->getDescription();
 #ifdef XAPIAND_CLUSTERING
-	msg += _binary->getDescription() + ", ";
+	if (!opts.solo) {
+		msg += " and " + _binary->getDescription();
+	}
 #endif
-	msg += "at pid:" + std::to_string(getpid()) + " ...";
 	L_NOTICE(msg);
 
 	// Setup database cleanup thread.
@@ -769,10 +801,11 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	_http->start();
 
 #ifdef XAPIAND_CLUSTERING
-	_binary->start();
+	if (!opts.solo) {
+		_binary->start();
+		_discovery->enter();
+	}
 #endif
-
-	_discovery->enter();
 
 	auto local_node = Node::local_node();
 	if (opts.solo) {

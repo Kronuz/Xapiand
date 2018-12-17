@@ -61,6 +61,7 @@ extern struct opts_t {
 	std::string database = ".";
 	std::string cluster_name = XAPIAND_CLUSTER_NAME;
 	std::string node_name = "";
+	std::string bind_address = "";
 	unsigned int http_port = XAPIAND_HTTP_SERVERPORT;
 	unsigned int binary_port = XAPIAND_BINARY_SERVERPORT;
 	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;

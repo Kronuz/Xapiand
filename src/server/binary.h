@@ -54,7 +54,7 @@ class Binary : public BaseTCP {
 	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 
 public:
-	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, int tries);
+	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 
 	void start();
 
