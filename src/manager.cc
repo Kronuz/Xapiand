@@ -904,7 +904,7 @@ XapiandManager::join()
 #ifdef XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
-	if (trigger_replication()) {
+	if (trigger_replication(false)) {
 		L_MANAGER("Finishing replication scheduler!");
 		trigger_replication()->finish();
 
@@ -966,7 +966,7 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (committer()) {
+	if (committer(false)) {
 		L_MANAGER("Finishing autocommitter scheduler!");
 		committer()->finish();
 
@@ -981,7 +981,7 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (db_updater()) {
+	if (db_updater(false)) {
 		L_MANAGER("Finishing database updater!");
 		db_updater()->finish();
 
@@ -1016,7 +1016,7 @@ XapiandManager::join()
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	if (fsyncher()) {
+	if (fsyncher(false)) {
 		L_MANAGER("Finishing async fsync threads pool!");
 		fsyncher()->finish();
 
@@ -1101,10 +1101,10 @@ XapiandManager::join()
 
 	_database_cleanup.reset();
 
-	trigger_replication().reset();
-	committer().reset();
-	db_updater().reset();
-	fsyncher().reset();
+	trigger_replication(false).reset();
+	committer(false).reset();
+	db_updater(false).reset();
+	fsyncher(false).reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");

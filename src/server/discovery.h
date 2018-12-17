@@ -123,9 +123,9 @@ public:
 
 void db_updater_send(std::string path);
 
-inline auto& db_updater() {
-	static auto db_updater = make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("DU--", "DU%02zu", 3, db_updater_send);
-	ASSERT(db_updater);
+inline auto& db_updater(bool create = true) {
+	static auto db_updater = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("DU--", "DU%02zu", 3, db_updater_send) : nullptr;
+	ASSERT(!create || db_updater);
 	return db_updater;
 }
 

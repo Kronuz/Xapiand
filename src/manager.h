@@ -346,9 +346,9 @@ public:
 #ifdef XAPIAND_CLUSTERING
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
-inline auto& trigger_replication() {
-	static auto trigger_replication = make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("TR--", "TR%02zu", 3, trigger_replication_trigger);
-	ASSERT(trigger_replication);
+inline auto& trigger_replication(bool create = true) {
+	static auto trigger_replication = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("TR--", "TR%02zu", 3, trigger_replication_trigger) : nullptr;
+	ASSERT(!create || trigger_replication);
 	return trigger_replication;
 }
 #endif

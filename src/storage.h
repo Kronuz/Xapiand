@@ -131,8 +131,8 @@ public:
 };
 
 
-inline auto& fsyncher() {
-	static auto fsyncher = make_unique_debouncer<int, 500, 500, 3000, ThreadPolicyType::fsynchers>("FS--", "FS%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
+inline auto& fsyncher(bool create = true) {
+	static auto fsyncher = create ? make_unique_debouncer<int, 500, 500, 3000, ThreadPolicyType::fsynchers>("FS--", "FS%02zu", opts.num_fsynchers, [] (int fd, bool full_fsync) {
 		auto start = std::chrono::system_clock::now();
 
 		int err = full_fsync
@@ -150,8 +150,8 @@ inline auto& fsyncher() {
 		} else {
 			L_DEBUG("Async %s succeeded after %s", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
 		}
-	});
-	ASSERT(fsyncher);
+	}) : nullptr;
+	ASSERT(!create || fsyncher);
 	return fsyncher;
 }
 

@@ -295,8 +295,8 @@ public:
 void committer_commit(std::weak_ptr<Database> weak_database);
 
 
-inline auto& committer() {
-	static auto committer = make_unique_debouncer<Endpoints, 1000, 3000, 9000, ThreadPolicyType::committers>("A--", "A%02zu", opts.num_committers, committer_commit);
-	ASSERT(committer);
+inline auto& committer(bool create = true) {
+	static auto committer = create ? make_unique_debouncer<Endpoints, 1000, 3000, 9000, ThreadPolicyType::committers>("A--", "A%02zu", opts.num_committers, committer_commit) : nullptr;
+	ASSERT(!create || committer);
 	return committer;
 }
