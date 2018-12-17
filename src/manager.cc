@@ -217,6 +217,8 @@ XapiandManager::~XapiandManager() noexcept
 	try {
 		Worker::deinit();
 
+		join();
+
 		if (log) {
 			log->clear();
 		}
@@ -514,7 +516,6 @@ XapiandManager::run()
 	if (_node_name == "~") {
 		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name);
 		sig_exit(EX_CONFIG);
-		join();
 		return;
 	}
 
