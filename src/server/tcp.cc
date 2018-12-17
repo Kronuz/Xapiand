@@ -430,11 +430,6 @@ TCP::connect(int sock_, const char* hostname, const char* servname)
 {
 	L_CALL("TCP::connect(%d, %s, servname)", sock_, hostname, servname);
 
-	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		return -1;
-	}
-
 	struct addrinfo hints = {};
 	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
 	hints.ai_family = PF_INET;
@@ -473,6 +468,12 @@ TCP::socket()
 
 	if ((sock_ = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		L_ERR("ERROR: cannot create binary connection: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		return -1;
+	}
+
+	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
+		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
+		io::close(sock_);
 		return -1;
 	}
 
