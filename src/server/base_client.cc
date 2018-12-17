@@ -100,6 +100,8 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 BaseClient::~BaseClient() noexcept
 {
 	try {
+		Worker::deinit();
+
 		if (sock != -1) {
 			if (io::close(sock) == -1) {
 				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
@@ -113,8 +115,6 @@ BaseClient::~BaseClient() noexcept
 
 		// If there are no more clients connected, try continue shutdown.
 		XapiandManager::try_shutdown();
-
-		Worker::deinit();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}

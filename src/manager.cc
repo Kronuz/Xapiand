@@ -215,10 +215,11 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 XapiandManager::~XapiandManager() noexcept
 {
 	try {
+		Worker::deinit();
+
 		if (log) {
 			log->clear();
 		}
-		Worker::deinit();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}

@@ -36,9 +36,9 @@ BaseServer::BaseServer(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 BaseServer::~BaseServer() noexcept
 {
 	try {
-		TCP::close();
-
 		Worker::deinit();
+
+		TCP::close();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}

@@ -518,9 +518,9 @@ BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_,
 BaseTCP::~BaseTCP() noexcept
 {
 	try {
-		TCP::close();
-
 		Worker::deinit();
+
+		TCP::close();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
