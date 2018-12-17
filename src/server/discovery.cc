@@ -56,7 +56,7 @@
 
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, const char* group)
-	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT),
+	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT | UDP_IP_MULTICAST_LOOP | UDP_IP_MULTICAST_TTL | UDP_IP_ADD_MEMBERSHIP),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  discovery(*ev_loop),
@@ -592,7 +592,7 @@ Discovery::getDescription() const
 {
 	L_CALL("Discovery::getDescription()");
 
-	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + ")";
+	return string::format("UDP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? fast_inet_ntop4(addr.sin_addr) : "", ntohs(addr.sin_port), description, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION);
 }
 
 

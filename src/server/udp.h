@@ -31,7 +31,10 @@
 #include "worker.h"      // for Worker
 
 
-constexpr int UDP_SO_REUSEPORT     = 1;
+constexpr int UDP_SO_REUSEPORT      = 1;
+constexpr int UDP_IP_MULTICAST_LOOP = 2;
+constexpr int UDP_IP_MULTICAST_TTL  = 4;
+constexpr int UDP_IP_ADD_MEMBERSHIP = 8;
 
 
 class UDP {
@@ -54,7 +57,6 @@ protected:
 
 public:
 	struct sockaddr_in addr;
-	unsigned int port;
 
 	UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags);
 	~UDP() noexcept;

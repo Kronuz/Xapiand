@@ -718,31 +718,25 @@ XapiandManager::make_servers()
 	// Create and initialize servers.
 
 	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
-	if (_http->port) {
-		http_port = _http->port;
-	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
-		if (_binary->port) {
-			binary_port = _binary->port;
-		}
 	}
 #endif
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
-		if (_http_server->port) {
-			http_port = _http->port = _http_server->port;
+		if (_http_server->addr.sin_len) {
+			_http->addr = _http_server->addr;
 		}
 		_http_server_pool->enqueue(std::move(_http_server));
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
-			if (_binary_server->port) {
-				binary_port = _binary->port = _binary_server->port;
+			if (_binary_server->addr.sin_len) {
+				_binary->addr = _binary_server->addr;
 			}
 			_binary_server_pool->enqueue(std::move(_binary_server));
 		}
@@ -751,8 +745,12 @@ XapiandManager::make_servers()
 
 	// Setup local node ports.
 	auto node_copy = std::make_unique<Node>(*local_node);
-	node_copy->http_port = http_port;
-	node_copy->binary_port = binary_port;
+	node_copy->http_port = ntohs(_http->addr.sin_port);
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		node_copy->binary_port = ntohs(_binary->addr.sin_port);
+	}
+#endif
 	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	std::string msg("Servers listening on ");

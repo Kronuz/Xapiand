@@ -58,7 +58,6 @@ protected:
 
 public:
 	struct sockaddr_in addr;
-	unsigned int port;
 
 	TCP(const char* description, int flags);
 	~TCP() noexcept;

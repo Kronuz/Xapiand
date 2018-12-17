@@ -59,8 +59,7 @@ TCP::TCP(const char* description, int flags)
 	  closed(true),
 	  flags(flags),
 	  description(description),
-	  addr{},
-	  port(0)
+	  addr{}
 {}
 
 
@@ -305,8 +304,9 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				break;
 			}
 
-			port = serv;
 			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+
+			// L_RED("TCP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(servinfo);
 			return;

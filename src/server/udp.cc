@@ -57,8 +57,7 @@ UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, 
 	  major_version(major_version),
 	  minor_version(minor_version),
 	  group_addr{},
-	  addr{},
-	  port(0)
+	  addr{}
 {}
 
 
@@ -103,6 +102,10 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 	}
 
 	int optval = 1;
+
+	if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
+		hostname = nullptr;
+	}
 
 	L_CONN("Binding UDP %s:%d", hostname ? hostname : "0.0.0.0", serv);
 
@@ -188,42 +191,48 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 		#endif
 			}
 
-			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
-				freeaddrinfo(servinfo);
-				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-					close();
-					sig_exit(-EX_CONFIG);
-					return;
+			if ((flags & UDP_IP_MULTICAST_LOOP) != 0) {
+				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					break;
 				}
-				break;
 			}
 
-			unsigned char ttl = 3;
-			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
-				freeaddrinfo(servinfo);
-				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-					close();
-					sig_exit(-EX_CONFIG);
-					return;
+			if ((flags & UDP_IP_MULTICAST_TTL) != 0) {
+				unsigned char ttl = 3;
+				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					break;
 				}
-				break;
 			}
 
-			// use io::setsockopt() to request that the kernel join a multicast group
 			struct ip_mreq mreq = {};
-			mreq.imr_multiaddr.s_addr = inet_addr(group);
-			mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
-			if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
-				freeaddrinfo(servinfo);
-				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-					close();
-					sig_exit(-EX_CONFIG);
-					return;
+			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
+				ASSERT(group);
+				mreq.imr_multiaddr.s_addr = inet_addr(group);
+				mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
+				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
+					freeaddrinfo(servinfo);
+					if (!tries) {
+						L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					break;
 				}
-				break;
 			}
 
 			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
@@ -250,10 +259,13 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 			}
 			L_DELAYED_N_CLEAR();
 
-			port = serv;
 			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+
 			group_addr = addr;
 			group_addr.sin_addr.s_addr = mreq.imr_multiaddr.s_addr;
+
+			// L_RED("UDP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
+			// L_RED("UDP group_addr -> %s:%d", fast_inet_ntop4(group_addr.sin_addr), ntohs(group_addr.sin_port));
 
 			freeaddrinfo(servinfo);
 			return;
