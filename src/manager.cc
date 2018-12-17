@@ -905,13 +905,14 @@ XapiandManager::join()
 #ifdef XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
-	if (trigger_replication(false)) {
+	auto& trigger_replication_obj = trigger_replication(false);
+	if (trigger_replication_obj) {
 		L_MANAGER("Finishing replication scheduler!");
-		trigger_replication()->finish();
+		trigger_replication_obj->finish();
 
-		L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication()->running_size(), (trigger_replication()->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication_obj->running_size(), (trigger_replication_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication schedulers finished!");
-		while (!trigger_replication()->join(500ms)) {
+		while (!trigger_replication_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -967,13 +968,14 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (committer(false)) {
+	auto& committer_obj = committer(false);
+	if (committer_obj) {
 		L_MANAGER("Finishing autocommitter scheduler!");
-		committer()->finish();
+		committer_obj->finish();
 
-		L_MANAGER("Waiting for %zu autocommitter%s...", committer()->running_size(), (committer()->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu autocommitter%s...", committer_obj->running_size(), (committer_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
-		while (!committer()->join(500ms)) {
+		while (!committer_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -982,13 +984,14 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (db_updater(false)) {
+	auto& db_updater_obj = db_updater(false);
+	if (db_updater_obj) {
 		L_MANAGER("Finishing database updater!");
-		db_updater()->finish();
+		db_updater_obj->finish();
 
-		L_MANAGER("Waiting for %zu database updater%s...", db_updater()->running_size(), (db_updater()->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu database updater%s...", db_updater_obj->running_size(), (db_updater_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
-		while (!db_updater()->join(500ms)) {
+		while (!db_updater_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1017,13 +1020,14 @@ XapiandManager::join()
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	if (fsyncher(false)) {
+	auto& fsyncher_obj = fsyncher(false);
+	if (fsyncher_obj) {
 		L_MANAGER("Finishing async fsync threads pool!");
-		fsyncher()->finish();
+		fsyncher_obj->finish();
 
-		L_MANAGER("Waiting for %zu async fsync%s...", fsyncher()->running_size(), (fsyncher()->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu async fsync%s...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
-		while (!fsyncher()->join(500ms)) {
+		while (!fsyncher_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1102,10 +1106,12 @@ XapiandManager::join()
 
 	_database_cleanup.reset();
 
-	trigger_replication(false).reset();
-	committer(false).reset();
-	db_updater(false).reset();
-	fsyncher(false).reset();
+#ifdef XAPIAND_CLUSTERING
+	trigger_replication_obj.reset();
+#endif
+	committer_obj.reset();
+	db_updater_obj.reset();
+	fsyncher_obj.reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
