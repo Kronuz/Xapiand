@@ -134,6 +134,10 @@ public:
 	void detach(bool async = true);
 	void redetach(bool async = true);
 
+	auto is_deinited() const {
+		return _deinited;
+	}
+
 	auto is_runner() const {
 		return _runner.load(std::memory_order_relaxed);
 	}

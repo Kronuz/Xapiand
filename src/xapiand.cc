@@ -232,7 +232,7 @@ void sig_handler(int sig) {
 // #endif
 
 	auto manager = XapiandManager::manager();
-	if (manager) {
+	if (manager && !manager->is_deinited()) {
 		try {
 			manager->signal_sig(sig);
 		} catch (const SystemExit& exc) {
