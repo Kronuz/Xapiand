@@ -143,7 +143,7 @@ public:
 	}
 
 	auto is_running_loop() const {
-		return ev_loop->depth() != 0u;
+		return ev_loop && ev_loop->raw_loop && ev_loop->depth() != 0u;
 	}
 
 	auto use_count() const {
