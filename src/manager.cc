@@ -496,7 +496,7 @@ XapiandManager::init()
 
 	// Set addr in local node
 	auto address = host_address();
-	L_NOTICE("Node IP address is %s on interface %s, running on pid:%d", fast_inet_ntop4(address.first.sin_addr), address.second, getpid());
+	L_NOTICE("Node IP address is %s on interface %s, running with pid:%d", fast_inet_ntop4(address.first.sin_addr), address.second, getpid());
 	node_copy->addr(address.first);
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
