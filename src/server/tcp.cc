@@ -447,11 +447,13 @@ TCP::connect(int sock_, const char* hostname, const char* servname)
 			freeaddrinfo(servinfo);
 			return 0;
 		}
+		if (errno == EINPROGRESS || errno == EALREADY) {
+			freeaddrinfo(servinfo);
+			return 0;
+		}
 	}
 
-	if (!io::ignored_errno(errno, true, true, true)) {
-		L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
-	}
+	L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
 	freeaddrinfo(servinfo);
 	return -1;
 
