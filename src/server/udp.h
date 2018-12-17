@@ -46,13 +46,14 @@ protected:
 	uint8_t major_version;
 	uint8_t minor_version;
 
-	struct sockaddr_in addr;
+	struct sockaddr_in group_addr;
 
 	void bind(const char* hostname, unsigned int serv, const char* group, int tries);
 
 	bool close(bool close = false);
 
 public:
+	struct sockaddr_in addr;
 	unsigned int port;
 
 	UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags);

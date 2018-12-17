@@ -59,6 +59,7 @@ TCP::TCP(const char* description, int flags)
 	  closed(true),
 	  flags(flags),
 	  description(description),
+	  addr{},
 	  port(0)
 {}
 
@@ -305,6 +306,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			port = serv;
+			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
 
 			freeaddrinfo(servinfo);
 			return;
@@ -326,10 +328,10 @@ TCP::accept()
 
 	int optval = 1;
 
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
+	struct sockaddr_in client_addr;
+	socklen_t addrlen = sizeof(client_addr);
 
-	if ((client_sock = io::accept(sock, (struct sockaddr *)&addr, &addrlen)) == -1) {
+	if ((client_sock = io::accept(sock, (struct sockaddr *)&client_addr, &addrlen)) == -1) {
 		if (!io::ignored_errno(errno, true, true, true)) {
 			L_ERR("ERROR: accept error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 		}

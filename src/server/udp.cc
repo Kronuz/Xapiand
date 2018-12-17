@@ -56,6 +56,7 @@ UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, 
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version),
+	  group_addr{},
 	  addr{},
 	  port(0)
 {}
@@ -251,7 +252,8 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 
 			port = serv;
 			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
-			addr.sin_addr.s_addr = inet_addr(group);
+			group_addr = addr;
+			group_addr.sin_addr.s_addr = mreq.imr_multiaddr.s_addr;
 
 			freeaddrinfo(servinfo);
 			return;
@@ -271,9 +273,9 @@ UDP::send_message(const std::string& message)
 		L_UDP_WIRE("{sock:%d} <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&group_addr, sizeof(group_addr));
 #else
-		ssize_t written = io::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&group_addr, sizeof(group_addr));
 #endif
 
 		if (written < 0) {

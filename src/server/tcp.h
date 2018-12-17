@@ -22,11 +22,12 @@
 
 #pragma once
 
-#include <atomic>    // for std::atomic_bool
-#include <memory>    // for shared_ptr
-#include <string>    // for string
+#include <atomic>        // for std::atomic_bool
+#include <netinet/in.h>  // for sockaddr_in
+#include <memory>        // for shared_ptr
+#include <string>        // for string
 
-#include "worker.h"  // for Worker
+#include "worker.h"      // for Worker
 
 
 constexpr int TCP_SO_REUSEPORT     = 1;
@@ -56,6 +57,7 @@ protected:
 	bool close(bool close = false);
 
 public:
+	struct sockaddr_in addr;
 	unsigned int port;
 
 	TCP(const char* description, int flags);
