@@ -34,6 +34,7 @@
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "ev/ev++.h"                          // for ev::loop_ref
+#include "ignore_unused.h"                    // for ignore_unused
 #include "length.h"                           // for serialise_length
 #include "node.h"                             // for Node, local_node
 #include "thread.hh"                          // for ThreadPolicyType::*
@@ -214,8 +215,9 @@ public:
 		return _manager;
 	}
 
-	static const auto& manager() {
-		ASSERT(_manager);
+	static const auto& manager(bool check = true) {
+		ASSERT(!check || _manager);
+		ignore_unused(check);
 		return _manager;
 	}
 

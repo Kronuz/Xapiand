@@ -1288,7 +1288,7 @@ cleanup_manager()
 {
 	int exit_code = EX_OK;
 	try {
-		auto& manager = XapiandManager::manager();
+		auto& manager = XapiandManager::manager(false);
 		if (manager) {
 			// At exit, join manager
 			manager->join();
