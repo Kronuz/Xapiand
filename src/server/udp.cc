@@ -213,7 +213,7 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 			// use io::setsockopt() to request that the kernel join a multicast group
 			struct ip_mreq mreq = {};
 			mreq.imr_multiaddr.s_addr = inet_addr(group);
-			mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+			mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
 			if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 				freeaddrinfo(servinfo);
 				if (!tries) {
@@ -251,6 +251,7 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 
 			port = serv;
 			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+			addr.sin_addr.s_addr = inet_addr(group);
 
 			freeaddrinfo(servinfo);
 			return;
