@@ -1283,6 +1283,25 @@ void restore() {
 }
 
 
+void
+cleanup_manager()
+{
+	int exit_code = EX_OK;
+	try {
+		auto& manager = XapiandManager::manager();
+		if (manager) {
+			// At exit, join manager
+			manager->join();
+		}
+	} catch (const SystemExit& exc) {
+		exit_code = exc.code;
+	} catch (...) {
+		exit_code = EX_SOFTWARE;
+	}
+	_Exit(exit_code);
+}
+
+
 int main(int argc, char **argv) {
 #ifdef XAPIAND_CHECK_SIZES
 	check_size();
@@ -1308,6 +1327,8 @@ int main(int argc, char **argv) {
 			detach();
 			writepid(opts.pidfile.c_str());
 		}
+
+		atexit(cleanup_manager);
 
 		// Initialize options:
 		setup_signal_handlers();
