@@ -548,7 +548,7 @@ XapiandManager::start_discovery()
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto msg = string::format("Discovering cluster \"%s\" by listening on ", opts.cluster_name);
+		auto msg = string::format("Discovering cluster %s by listening on ", opts.cluster_name);
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), discovery_port, opts.discovery_group.c_str());
