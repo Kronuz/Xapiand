@@ -551,12 +551,12 @@ XapiandManager::start_discovery()
 		auto msg = string::format("Discovering cluster %s by listening on ", opts.cluster_name);
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
-		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), discovery_port, opts.discovery_group.c_str());
+		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
 		msg += _discovery->getDescription() + " and ";
 		_discovery->run();
 
 		int raft_port = opts.raft_port ? opts.raft_port : XAPIAND_RAFT_SERVERPORT;
-		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), raft_port, opts.raft_group.c_str());
+		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_group.c_str(), raft_port);
 		msg += _raft->getDescription();
 		_raft->run();
 

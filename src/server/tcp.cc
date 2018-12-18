@@ -278,6 +278,8 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 #endif
 			}
 
+			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+
 			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
 				freeaddrinfo(servinfo);
 				if (!tries) {
@@ -303,8 +305,6 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				close();
 				break;
 			}
-
-			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
 
 			// L_RED("TCP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
 

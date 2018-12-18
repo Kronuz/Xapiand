@@ -163,7 +163,7 @@ private:
 	Raft& operator=(const Raft&) = delete;
 
 public:
-	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, const char* group);
+	Raft(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv);
 	~Raft() noexcept;
 
 	const char* name() const noexcept {

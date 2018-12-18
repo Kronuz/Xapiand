@@ -56,7 +56,6 @@ UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, 
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version),
-	  group_addr{},
 	  addr{}
 {}
 
@@ -95,17 +94,13 @@ UDP::close(bool close) {
 
 
 void
-UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
+UDP::bind(const char* hostname, unsigned int serv, int tries)
 {
 	if (!closed.exchange(false) || !tries) {
 		return;
 	}
 
 	int optval = 1;
-
-	if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
-		hostname = nullptr;
-	}
 
 	L_CONN("Binding UDP %s:%d", hostname ? hostname : "0.0.0.0", serv);
 
@@ -220,9 +215,10 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 
 			struct ip_mreq mreq = {};
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
-				ASSERT(group);
-				mreq.imr_multiaddr.s_addr = inet_addr(group);
-				mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
+				ASSERT(hostname);
+				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
+				mreq.imr_interface.s_addr = INADDR_ANY;
+				// mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 					freeaddrinfo(servinfo);
 					if (!tries) {
@@ -234,6 +230,18 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 					break;
 				}
 			}
+
+			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+
+#ifdef __APPLE__
+			// Binding to the multicast group address results in errno
+			// EADDRNOTAVAIL "Can't assign requested address" during
+			// sendto(2) under OS X, for some reason...
+			// So we bind to INADDR_ANY instead:
+			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
+				reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr.s_addr = INADDR_ANY;
+			}
+#endif
 
 			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
 				freeaddrinfo(servinfo);
@@ -259,13 +267,7 @@ UDP::bind(const char* hostname, unsigned int serv, const char* group, int tries)
 			}
 			L_DELAYED_N_CLEAR();
 
-			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
-
-			group_addr = addr;
-			group_addr.sin_addr.s_addr = mreq.imr_multiaddr.s_addr;
-
 			// L_RED("UDP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
-			// L_RED("UDP group_addr -> %s:%d", fast_inet_ntop4(group_addr.sin_addr), ntohs(group_addr.sin_port));
 
 			freeaddrinfo(servinfo);
 			return;
@@ -285,9 +287,9 @@ UDP::send_message(const std::string& message)
 		L_UDP_WIRE("{sock:%d} <<-- %s", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&group_addr, sizeof(group_addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
 #else
-		ssize_t written = io::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&group_addr, sizeof(group_addr));
+		ssize_t written = io::sendto(sock, message.c_str(), message.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
 #endif
 
 		if (written < 0) {

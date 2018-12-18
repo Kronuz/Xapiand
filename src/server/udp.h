@@ -49,9 +49,7 @@ protected:
 	uint8_t major_version;
 	uint8_t minor_version;
 
-	struct sockaddr_in group_addr;
-
-	void bind(const char* hostname, unsigned int serv, const char* group, int tries);
+	void bind(const char* hostname, unsigned int serv, int tries);
 
 	bool close(bool close = false);
 
