@@ -59,17 +59,17 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT | UDP_IP_MULTICAST_LOOP | UDP_IP_MULTICAST_TTL | UDP_IP_ADD_MEMBERSHIP),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
-	  discovery(*ev_loop),
-	  enter_async(*ev_loop),
+	  cluster_discovery(*ev_loop),
+	  cluster_enter_async(*ev_loop),
 	  db_update_send_async(*ev_loop)
 {
 	bind(hostname, serv, 1);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
-	discovery.set<Discovery, &Discovery::discovery_cb>(this);
+	cluster_discovery.set<Discovery, &Discovery::cluster_discovery_cb>(this);
 
-	enter_async.set<Discovery, &Discovery::enter_async_cb>(this);
-	enter_async.start();
-	L_EV("Start discovery's async enter signal event");
+	cluster_enter_async.set<Discovery, &Discovery::cluster_enter_async_cb>(this);
+	cluster_enter_async.start();
+	L_EV("Start discovery's async cluster_enter signal event");
 
 	db_update_send_async.set<Discovery, &Discovery::db_update_send_async_cb>(this);
 	db_update_send_async.start();
@@ -127,8 +127,8 @@ Discovery::start_impl()
 
 	Worker::start_impl();
 
-	discovery.start(0, WAITING_FAST);
-	L_EV("Start discovery's discovery exploring event (%f)", discovery.repeat);
+	cluster_discovery.start(0, CLUSTER_DISCOVERY_WAITING_FAST);
+	L_EV("Start discovery's cluster_discovery exploring event (%f)", cluster_discovery.repeat);
 
 	io.start(sock, ev::READ);
 	L_EV("Start discovery's server accept event {sock:%d}", sock);
@@ -145,11 +145,11 @@ Discovery::stop_impl()
 	Worker::stop_impl();
 
 	auto local_node = Node::local_node();
-	send_message(Message::BYE, local_node->serialise());
+	send_message(Message::CLUSTER_BYE, local_node->serialise());
 	L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
 
-	discovery.stop();
-	L_EV("Stop discovery's discovery event");
+	cluster_discovery.stop();
+	L_EV("Stop discovery's cluster_discovery event");
 
 	io.stop();
 	L_EV("Stop discovery's server accept event");
@@ -163,7 +163,7 @@ Discovery::operator()()
 {
 	L_CALL("Discovery::operator()()");
 
-	L_EV("Starting discovery server loop...");
+	L_EV("Starting cluster_discovery server loop...");
 	run_loop();
 	L_EV("Discovery server loop ended!");
 
@@ -199,7 +199,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid discovery event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid cluster_discovery event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
@@ -232,20 +232,20 @@ Discovery::discovery_server(Message type, const std::string& message)
 	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
 
 	switch (type) {
-		case Message::HELLO:
-			hello(type, message);
+		case Message::CLUSTER_HELLO:
+			cluster_hello(type, message);
 			return;
-		case Message::WAVE:
-			wave(type, message);
+		case Message::CLUSTER_WAVE:
+			cluster_wave(type, message);
 			return;
-		case Message::SNEER:
-			sneer(type, message);
+		case Message::CLUSTER_SNEER:
+			cluster_sneer(type, message);
 			return;
-		case Message::ENTER:
-			enter(type, message);
+		case Message::CLUSTER_ENTER:
+			cluster_enter(type, message);
 			return;
-		case Message::BYE:
-			bye(type, message);
+		case Message::CLUSTER_BYE:
+			cluster_bye(type, message);
 			return;
 		case Message::DB_UPDATED:
 			db_updated(type, message);
@@ -260,9 +260,9 @@ Discovery::discovery_server(Message type, const std::string& message)
 
 
 void
-Discovery::hello(Message type, const std::string& message)
+Discovery::cluster_hello(Message type, const std::string& message)
 {
-	L_CALL("Discovery::hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -276,21 +276,21 @@ Discovery::hello(Message type, const std::string& message)
 		auto node = Node::get_node(remote_node.name());
 		if (node) {
 			if (remote_node.is_equal(node)) {
-				send_message(Message::WAVE, local_node->serialise());
+				send_message(Message::CLUSTER_WAVE, local_node->serialise());
 			} else {
-				send_message(Message::SNEER, remote_node.serialise());
+				send_message(Message::CLUSTER_SNEER, remote_node.serialise());
 			}
 		} else {
-			send_message(Message::WAVE, local_node->serialise());
+			send_message(Message::CLUSTER_WAVE, local_node->serialise());
 		}
 	}
 }
 
 
 void
-Discovery::wave(Message type, const std::string& message)
+Discovery::cluster_wave(Message type, const std::string& message)
 {
-	L_CALL("Discovery::wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -315,9 +315,9 @@ Discovery::wave(Message type, const std::string& message)
 
 
 void
-Discovery::sneer(Message type, const std::string& message)
+Discovery::cluster_sneer(Message type, const std::string& message)
 {
-	L_CALL("Discovery::sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::RESET &&
@@ -349,9 +349,9 @@ Discovery::sneer(Message type, const std::string& message)
 
 
 void
-Discovery::enter(Message type, const std::string& message)
+Discovery::cluster_enter(Message type, const std::string& message)
 {
-	L_CALL("Discovery::enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
@@ -369,9 +369,9 @@ Discovery::enter(Message type, const std::string& message)
 
 
 void
-Discovery::bye(Message type, const std::string& message)
+Discovery::cluster_bye(Message type, const std::string& message)
 {
-	L_CALL("Discovery::bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
@@ -441,14 +441,14 @@ Discovery::db_updated(Message type, const std::string& message)
 
 
 void
-Discovery::discovery_cb(ev::timer&, int revents)
+Discovery::cluster_discovery_cb(ev::timer&, int revents)
 {
 	auto state = XapiandManager::state().load();
 
-	L_CALL("Discovery::discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
+	L_CALL("Discovery::cluster_discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
 
-	L_EV_BEGIN("Discovery::discovery_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
-	L_EV_END("Discovery::discovery_cb:END {state:%s}", XapiandManager::StateNames(state));
+	L_EV_BEGIN("Discovery::cluster_discovery_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
+	L_EV_END("Discovery::cluster_discovery_cb:END {state:%s}", XapiandManager::StateNames(state));
 
 	ignore_unused(revents);
 
@@ -475,16 +475,16 @@ Discovery::discovery_cb(ev::timer&, int revents)
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 			L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
-			send_message(Message::HELLO, local_node->serialise());
+			send_message(Message::CLUSTER_HELLO, local_node->serialise());
 			break;
 		}
 		case XapiandManager::State::WAITING: {
 			// We're here because no one sneered nor entered during
-			// WAITING_FAST, wait longer then...
+			// CLUSTER_DISCOVERY_WAITING_FAST, wait longer then...
 
-			discovery.repeat = WAITING_SLOW;
-			discovery.again();
-			L_EV("Reset discovery's discovery event (%f)", discovery.repeat);
+			cluster_discovery.repeat = CLUSTER_DISCOVERY_WAITING_SLOW;
+			cluster_discovery.again();
+			L_EV("Reset discovery's cluster_discovery event (%f)", cluster_discovery.repeat);
 
 			auto waiting = XapiandManager::State::WAITING;
 			if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
@@ -493,8 +493,8 @@ Discovery::discovery_cb(ev::timer&, int revents)
 			break;
 		}
 		case XapiandManager::State::WAITING_MORE: {
-			discovery.stop();
-			L_EV("Stop discovery's discovery event");
+			cluster_discovery.stop();
+			L_EV("Stop discovery's cluster_discovery event");
 
 			auto waiting_more = XapiandManager::State::WAITING_MORE;
 			if (XapiandManager::state().compare_exchange_strong(waiting_more, XapiandManager::State::JOINING)) {
@@ -524,26 +524,26 @@ Discovery::_db_update_send(const std::string& path)
 
 
 void
-Discovery::enter_async_cb(ev::async&, int revents)
+Discovery::cluster_enter_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::cluster_enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::enter_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::enter_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::cluster_enter_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
 	auto local_node = Node::local_node();
-	send_message(Message::ENTER, local_node->serialise());
+	send_message(Message::CLUSTER_ENTER, local_node->serialise());
 }
 
 
 void
-Discovery::enter()
+Discovery::cluster_enter()
 {
-	L_CALL("Discovery::enter()");
+	L_CALL("Discovery::cluster_enter()");
 
-	enter_async.send();
+	cluster_enter_async.send();
 }
 
 

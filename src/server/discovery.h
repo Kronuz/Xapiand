@@ -33,8 +33,8 @@
 
 
 // Values in seconds
-constexpr double WAITING_FAST  = 0.200;
-constexpr double WAITING_SLOW  = 0.600;
+constexpr double CLUSTER_DISCOVERY_WAITING_FAST  = 0.200;
+constexpr double CLUSTER_DISCOVERY_WAITING_SLOW  = 0.600;
 
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
@@ -46,18 +46,19 @@ class UUID;
 class Discovery : public UDP, public Worker, public Thread<Discovery, ThreadPolicyType::regular> {
 public:
 	enum class Message {
-		HELLO,         // New node saying hello
-		WAVE,          // Nodes telling the client they do agree with the new node's name
-		SNEER,         // Nodes telling the client they don't agree with the new node's name
-		ENTER,         // Node enters the room
-		BYE,           // Node says goodbye
-		DB_UPDATED,    //
-		MAX,           //
+		CLUSTER_HELLO,         // New node saying hello
+		CLUSTER_WAVE,          // Nodes telling the client they do agree with the new node's name
+		CLUSTER_SNEER,         // Nodes telling the client they don't agree with the new node's name
+		CLUSTER_ENTER,         // Node enters the room
+		CLUSTER_BYE,           // Node says goodbye
+		DB_UPDATED,            //
+		MAX,                   //
 	};
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string _[] = {
-			"HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB_UPDATED",
+			"CLUSTER_HELLO", "CLUSTER_WAVE", "CLUSTER_SNEER", "CLUSTER_ENTER", "CLUSTER_BYE",
+			"DB_UPDATED",
 		};
 		auto idx = static_cast<size_t>(type);
 		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
@@ -69,14 +70,14 @@ public:
 
 private:
 	ev::io io;
-	ev::timer discovery;
+	ev::timer cluster_discovery;
 
-	ev::async enter_async;
+	ev::async cluster_enter_async;
 	ev::async db_update_send_async;
 
 	ConcurrentQueue<std::string> db_update_send_args;
 
-	void enter_async_cb(ev::async& watcher, int revents);
+	void cluster_enter_async_cb(ev::async& watcher, int revents);
 
 	void _db_update_send(const std::string& path);
 	void db_update_send_async_cb(ev::async& watcher, int revents);
@@ -85,14 +86,14 @@ private:
 	void io_accept_cb(ev::io& watcher, int revents);
 	void discovery_server(Discovery::Message type, const std::string& message);
 
-	void hello(Message type, const std::string& message);
-	void wave(Message type, const std::string& message);
-	void sneer(Message type, const std::string& message);
-	void enter(Message type, const std::string& message);
-	void bye(Message type, const std::string& message);
+	void cluster_hello(Message type, const std::string& message);
+	void cluster_wave(Message type, const std::string& message);
+	void cluster_sneer(Message type, const std::string& message);
+	void cluster_enter(Message type, const std::string& message);
+	void cluster_bye(Message type, const std::string& message);
 	void db_updated(Message type, const std::string& message);
 
-	void discovery_cb(ev::timer& watcher, int revents);
+	void cluster_discovery_cb(ev::timer& watcher, int revents);
 
 	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
@@ -113,7 +114,7 @@ public:
 
 	void operator()();
 
-	void enter();
+	void cluster_enter();
 	void db_update_send(const std::string& path);
 
 	std::string __repr__() const override;

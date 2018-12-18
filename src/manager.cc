@@ -805,7 +805,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		_binary->start();
-		_discovery->enter();
+		_discovery->cluster_enter();
 	}
 #endif
 
