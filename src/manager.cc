@@ -605,7 +605,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 				#ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					_raft->add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					_raft->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
 				#endif
 			}
@@ -629,7 +629,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			_raft->add_command(serialise_length(did) + serialise_string(local_node->name()));
+			_raft->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
 		}
 		#else
 			ignore_unused(did);
@@ -1148,7 +1148,7 @@ XapiandManager::renew_leader_impl()
 {
 	L_CALL("XapiandManager::renew_leader_impl()");
 
-	_raft->request_vote();
+	_raft->raft_request_vote();
 }
 
 

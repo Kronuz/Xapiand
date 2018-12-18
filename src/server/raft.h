@@ -39,11 +39,11 @@
 
 
 // Values in seconds
-constexpr double HEARTBEAT_LEADER_MIN = 0.150;
-constexpr double HEARTBEAT_LEADER_MAX = 0.300;
+constexpr double RAFT_HEARTBEAT_LEADER_MIN = 0.150;
+constexpr double RAFT_HEARTBEAT_LEADER_MAX = 0.300;
 
-constexpr double LEADER_ELECTION_MIN = 2.5 * HEARTBEAT_LEADER_MAX;
-constexpr double LEADER_ELECTION_MAX = 5.0 * HEARTBEAT_LEADER_MAX;
+constexpr double RAFT_LEADER_ELECTION_MIN = 2.5 * RAFT_HEARTBEAT_LEADER_MAX;
+constexpr double RAFT_LEADER_ELECTION_MAX = 5.0 * RAFT_HEARTBEAT_LEADER_MAX;
 
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_RAFT_PROTOCOL_MINOR_VERSION = 0;
@@ -58,14 +58,14 @@ struct RaftLogEntry {
 class Raft : public UDP, public Worker, public Thread<Raft, ThreadPolicyType::regular> {
 public:
 	enum class Role {
-		FOLLOWER,
-		CANDIDATE,
-		LEADER,
+		RAFT_FOLLOWER,
+		RAFT_CANDIDATE,
+		RAFT_LEADER,
 	};
 
 	static const std::string& RoleNames(Role type) {
 		static const std::string _[] = {
-			"FOLLOWER", "CANDIDATE", "LEADER",
+			"RAFT_FOLLOWER", "RAFT_CANDIDATE", "RAFT_LEADER",
 		};
 		auto idx = static_cast<size_t>(type);
 		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
@@ -76,22 +76,22 @@ public:
 	}
 
 	enum class Message {
-		HEARTBEAT,               // same as APPEND_ENTRIES
-		HEARTBEAT_RESPONSE,      // same as APPEND_ENTRIES_RESPONSE
-		APPEND_ENTRIES,          // Node saying hello when it become leader
-		APPEND_ENTRIES_RESPONSE, // Request information from leader
-		REQUEST_VOTE,            // Invoked by candidates to gather votes
-		REQUEST_VOTE_RESPONSE,   // Gather votes
-		ADD_COMMAND,
+		RAFT_HEARTBEAT,               // same as RAFT_APPEND_ENTRIES
+		RAFT_HEARTBEAT_RESPONSE,      // same as RAFT_APPEND_ENTRIES_RESPONSE
+		RAFT_APPEND_ENTRIES,          // Node saying hello when it become leader
+		RAFT_APPEND_ENTRIES_RESPONSE, // Request information from leader
+		RAFT_REQUEST_VOTE,            // Invoked by candidates to gather votes
+		RAFT_REQUEST_VOTE_RESPONSE,   // Gather votes
+		RAFT_ADD_COMMAND,
 		MAX,
 	};
 
 	static const std::string& MessageNames(Message type) {
 		static const std::string _[] = {
-			"HEARTBEAT", "HEARTBEAT_RESPONSE",
-			"APPEND_ENTRIES", "APPEND_ENTRIES_RESPONSE",
-			"REQUEST_VOTE", "REQUEST_VOTE_RESPONSE",
-			"ADD_COMMAND",
+			"RAFT_HEARTBEAT", "RAFT_HEARTBEAT_RESPONSE",
+			"RAFT_APPEND_ENTRIES", "RAFT_APPEND_ENTRIES_RESPONSE",
+			"RAFT_REQUEST_VOTE", "RAFT_REQUEST_VOTE_RESPONSE",
+			"RAFT_ADD_COMMAND",
 		};
 		auto idx = static_cast<size_t>(type);
 		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
@@ -104,54 +104,54 @@ public:
 private:
 	ev::io io;
 
-	ev::timer leader_election_timeout;
-	ev::timer leader_heartbeat;
+	ev::timer raft_leader_election_timeout;
+	ev::timer raft_leader_heartbeat;
 
-	ev::async request_vote_async;
+	ev::async raft_request_vote_async;
 
-	ev::async add_command_async;
-	ConcurrentQueue<std::string> add_command_args;
+	ev::async raft_add_command_async;
+	ConcurrentQueue<std::string> raft_add_command_args;
 
-	Role role;
-	size_t votes_granted;
-	size_t votes_denied;
+	Role raft_role;
+	size_t raft_votes_granted;
+	size_t raft_votes_denied;
 
-	uint64_t current_term;
-	Node voted_for;
-	std::vector<RaftLogEntry> log;
+	uint64_t raft_current_term;
+	Node raft_voted_for;
+	std::vector<RaftLogEntry> raft_log;
 
-	size_t commit_index;
-	size_t last_applied;
+	size_t raft_commit_index;
+	size_t raft_last_applied;
 
-	std::unordered_map<std::string, size_t> next_indexes;
-	std::unordered_map<std::string, size_t> match_indexes;
+	std::unordered_map<std::string, size_t> raft_next_indexes;
+	std::unordered_map<std::string, size_t> raft_match_indexes;
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
 	void raft_server(Raft::Message type, const std::string& message);
 
-	void request_vote(Message type, const std::string& message);
-	void request_vote_response(Message type, const std::string& message);
-	void append_entries(Message type, const std::string& message);
-	void append_entries_response(Message type, const std::string& message);
-	void add_command(Message type, const std::string& message);
+	void raft_request_vote(Message type, const std::string& message);
+	void raft_request_vote_response(Message type, const std::string& message);
+	void raft_append_entries(Message type, const std::string& message);
+	void raft_append_entries_response(Message type, const std::string& message);
+	void raft_add_command(Message type, const std::string& message);
 
-	void leader_election_timeout_cb(ev::timer& watcher, int revents);
-	void leader_heartbeat_cb(ev::timer& watcher, int revents);
+	void raft_leader_election_timeout_cb(ev::timer& watcher, int revents);
+	void raft_leader_heartbeat_cb(ev::timer& watcher, int revents);
 
-	void _start_leader_heartbeat(double min = HEARTBEAT_LEADER_MIN, double max = HEARTBEAT_LEADER_MAX);
-	void _reset_leader_election_timeout(double min = LEADER_ELECTION_MIN, double max = LEADER_ELECTION_MAX);
-	void _set_leader_node(const std::shared_ptr<const Node>& node);
+	void _raft_leader_heartbeat_start(double min = RAFT_HEARTBEAT_LEADER_MIN, double max = RAFT_HEARTBEAT_LEADER_MAX);
+	void _raft_leader_election_timeout_reset(double min = RAFT_LEADER_ELECTION_MIN, double max = RAFT_LEADER_ELECTION_MAX);
+	void _raft_set_leader_node(const std::shared_ptr<const Node>& node);
 
-	void _apply(const std::string& command);
-	void _commit_log();
+	void _raft_apply(const std::string& command);
+	void _raft_commit_log();
 
-	void _request_vote(bool immediate);
+	void _raft_request_vote(bool immediate);
 
-	void request_vote_async_cb(ev::async& watcher, int revents);
+	void raft_request_vote_async_cb(ev::async& watcher, int revents);
 
-	void _add_command(const std::string& command);
-	void add_command_async_cb(ev::async& watcher, int revents);
+	void _raft_add_command(const std::string& command);
+	void raft_add_command_async_cb(ev::async& watcher, int revents);
 
 	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
@@ -172,8 +172,8 @@ public:
 
 	void operator()();
 
-	void add_command(const std::string& command);
-	void request_vote();
+	void raft_add_command(const std::string& command);
+	void raft_request_vote();
 
 	std::string __repr__() const override;
 
