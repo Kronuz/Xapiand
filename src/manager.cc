@@ -717,16 +717,18 @@ XapiandManager::make_servers()
 
 	// Create and initialize servers.
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
+	auto local_node_addr = fast_inet_ntop4(local_node->addr().sin_addr);
+
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
 	}
 #endif
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
+		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
 		if (_http_server->addr.sin_len) {
 			_http->addr = _http_server->addr;
 		}
@@ -734,7 +736,7 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
+			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
 			if (_binary_server->addr.sin_len) {
 				_binary->addr = _binary_server->addr;
 			}
