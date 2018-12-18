@@ -114,17 +114,17 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 		hints.ai_socktype = SOCK_DGRAM;
 		hints.ai_protocol = IPPROTO_UDP;
 
-		struct addrinfo *servinfo;
-		if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+		struct addrinfo *addrinfo;
+		if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
 			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
 			sig_exit(-EX_CONFIG);
 			return;
 		}
 
-		for (auto p = servinfo; p != nullptr; p = p->ai_next) {
-			if ((sock = io::socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-				if (p->ai_next == nullptr) {
-					freeaddrinfo(servinfo);
+		for (auto ai = addrinfo; ai != nullptr; ai = ai->ai_next) {
+			if ((sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
+				if (ai->ai_next == nullptr) {
+					freeaddrinfo(addrinfo);
 					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 					sig_exit(-EX_CONFIG);
 					return;
@@ -134,7 +134,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -146,7 +146,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -161,7 +161,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((flags & UDP_SO_REUSEPORT) != 0) {
 		#ifdef SO_REUSEPORT_LB
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -174,7 +174,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				}
 		#else
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -188,7 +188,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 
 			if ((flags & UDP_IP_MULTICAST_LOOP) != 0) {
 				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -202,7 +202,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((flags & UDP_IP_MULTICAST_TTL) != 0) {
 				unsigned char ttl = 3;
 				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -216,11 +216,10 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			struct ip_mreq mreq = {};
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
 				ASSERT(hostname);
-				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
+				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr;
 				mreq.imr_interface.s_addr = INADDR_ANY;
-				// mreq.imr_interface = reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr;
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -231,7 +230,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				}
 			}
 
-			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+			addr = *reinterpret_cast<struct sockaddr_in*>(ai->ai_addr);
 
 #ifdef __APPLE__
 			// Binding to the multicast group address results in errno
@@ -239,12 +238,12 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			// sendto(2) under OS X, for some reason...
 			// So we bind to INADDR_ANY instead:
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
-				reinterpret_cast<struct sockaddr_in*>(p->ai_addr)->sin_addr.s_addr = INADDR_ANY;
+				reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr.s_addr = INADDR_ANY;
 			}
 #endif
 
-			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
-				freeaddrinfo(servinfo);
+			if (io::bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -269,7 +268,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 
 			// L_RED("UDP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
 
-			freeaddrinfo(servinfo);
+			freeaddrinfo(addrinfo);
 			return;
 		}
 	}

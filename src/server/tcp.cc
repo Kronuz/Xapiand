@@ -121,17 +121,17 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
 
-		struct addrinfo *servinfo;
-		if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+		struct addrinfo *addrinfo;
+		if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
 			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
 			sig_exit(-EX_CONFIG);
 			return;
 		}
 
-		for (auto p = servinfo; p != nullptr; p = p->ai_next) {
-			if ((sock = io::socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-				if (p->ai_next == nullptr) {
-					freeaddrinfo(servinfo);
+		for (auto ai = addrinfo; ai != nullptr; ai = ai->ai_next) {
+			if ((sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
+				if (ai->ai_next == nullptr) {
+					freeaddrinfo(addrinfo);
 					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
 					sig_exit(-EX_IOERR);
 					return;
@@ -141,7 +141,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -153,7 +153,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -168,7 +168,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((flags & TCP_SO_REUSEPORT) != 0) {
 #ifdef SO_REUSEPORT_LB
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -181,7 +181,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				}
 #else
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -197,7 +197,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 
 #ifdef SO_NOSIGPIPE
 			if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -211,7 +211,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 #endif
 
 			if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -227,7 +227,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			linger.l_onoff = 1;
 			linger.l_linger = 0;
 			if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -249,7 +249,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				struct accept_filter_arg af = {"dataready", ""};
 
 				if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -264,7 +264,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 
 #ifdef TCP_DEFER_ACCEPT
 				if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(servinfo);
+					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 						close();
@@ -278,10 +278,10 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 #endif
 			}
 
-			addr = *reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
+			addr = *reinterpret_cast<struct sockaddr_in*>(ai->ai_addr);
 
-			if (io::bind(sock, p->ai_addr, p->ai_addrlen) == -1) {
-				freeaddrinfo(servinfo);
+			if (io::bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -294,7 +294,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 
 			if (io::listen(sock, checked_tcp_backlog(XAPIAND_TCP_BACKLOG)) == -1) {
-				freeaddrinfo(servinfo);
+				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s listen error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
 					close();
@@ -308,7 +308,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 
 			// L_RED("TCP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
 
-			freeaddrinfo(servinfo);
+			freeaddrinfo(addrinfo);
 			return;
 		}
 	}
