@@ -290,9 +290,7 @@
 
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "239.192.168.1" /* Gossip group */
-#define XAPIAND_DISCOVERY_SERVERPORT 58870           /* Gossip port */
-#define XAPIAND_RAFT_GROUP           "239.192.168.2" /* Gossip group */
-#define XAPIAND_RAFT_SERVERPORT      58880           /* Gossip port */
+#define XAPIAND_DISCOVERY_SERVERPORT 58880           /* Gossip port */
 #define XAPIAND_HTTP_SERVERPORT      8880            /* HTTP TCP port */
 #define XAPIAND_BINARY_SERVERPORT    9880            /* Binary TCP port */
 #ifndef XAPIAND_BINARY_PROXY

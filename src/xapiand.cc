@@ -395,9 +395,6 @@ void parseOptions(int argc, char** argv) {
 		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> raft_port("", "raft-port", "Raft UDP port number to listen on.", false, 0, "port", cmd);
-		ValueArg<std::string> raft_group("", "raft-group", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
-
 		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
@@ -559,8 +556,6 @@ void parseOptions(int argc, char** argv) {
 		opts.binary_port = binary_port.getValue();
 		opts.discovery_port = discovery_port.getValue();
 		opts.discovery_group = discovery_group.getValue();
-		opts.raft_port = raft_port.getValue();
-		opts.raft_group = raft_group.getValue();
 #endif
 		opts.pidfile = pidfile.getValue();
 		opts.logfile = logfile.getValue();

@@ -90,7 +90,6 @@
 #include "server/binary_server.h"             // for BinaryServer
 #include "server/binary_client.h"             // for BinaryClient
 #include "server/discovery.h"                 // for Discovery
-#include "server/raft.h"                      // for Raft
 #endif
 
 
@@ -552,13 +551,8 @@ XapiandManager::start_discovery()
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
-		msg += _discovery->getDescription() + " and ";
+		msg += _discovery->getDescription();
 		_discovery->run();
-
-		int raft_port = opts.raft_port ? opts.raft_port : XAPIAND_RAFT_SERVERPORT;
-		_raft = Worker::make_shared<Raft>(shared_from_this(), nullptr, ev_flags, opts.raft_group.c_str(), raft_port);
-		msg += _raft->getDescription();
-		_raft->run();
 
 		_discovery->start();
 
@@ -605,7 +599,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 				#ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					_raft->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
 				}
 				#endif
 			}
@@ -629,7 +623,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			_raft->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
+			_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
 		}
 		#else
 			ignore_unused(did);
@@ -864,9 +858,6 @@ XapiandManager::join()
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
 
 #ifdef XAPIAND_CLUSTERING
-	if (_raft) {
-		_raft->stop();
-	}
 	if (_discovery) {
 		_discovery->stop();
 	}
@@ -1052,21 +1043,6 @@ XapiandManager::join()
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////
-	if (_raft) {
-		L_MANAGER("Finishing Raft loop!");
-		_raft->finish();
-
-		L_MANAGER("Waiting for Raft...");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the raft protocol...", "Raft protocol finished!");
-		while (!_raft->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 #endif
 
 	////////////////////////////////////////////////////////////////////
@@ -1090,7 +1066,6 @@ XapiandManager::join()
 #ifdef XAPIAND_CLUSTERING
 	_binary.reset();
 	_discovery.reset();
-	_raft.reset();
 #endif
 
 	_database_pool.reset();
@@ -1139,7 +1114,7 @@ XapiandManager::join_cluster_impl()
 	L_CALL("XapiandManager::join_cluster_impl()");
 
 	L_INFO("Joining cluster %s...", opts.cluster_name);
-	_raft->start();
+	_discovery->raft_request_vote();
 }
 
 
@@ -1148,7 +1123,7 @@ XapiandManager::renew_leader_impl()
 {
 	L_CALL("XapiandManager::renew_leader_impl()");
 
-	_raft->raft_request_vote();
+	_discovery->raft_request_vote();
 }
 
 

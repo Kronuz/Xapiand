@@ -333,9 +333,6 @@ CHECK_MAX_SIZE(SMALL, (BinaryServer))
 // server/binary_client.h
 CHECK_MAX_SIZE(SMALL, (BinaryClient))
 
-// server/raft.h
-CHECK_MAX_SIZE(SMALL, (Raft))
-
 // server/discovery.h
 CHECK_MAX_SIZE(SMALL, (Discovery))
 

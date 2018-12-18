@@ -46,7 +46,6 @@ class Http;
 #ifdef XAPIAND_CLUSTERING
 class Binary;
 class Discovery;
-class Raft;
 class BinaryClient;
 class BinaryServer;
 #endif
@@ -132,7 +131,6 @@ private:
 #ifdef XAPIAND_CLUSTERING
 	std::shared_ptr<Binary> _binary;
 	std::shared_ptr<Discovery> _discovery;
-	std::shared_ptr<Raft> _raft;
 #endif
 
 	std::shared_ptr<DatabaseCleanup> _database_cleanup;
