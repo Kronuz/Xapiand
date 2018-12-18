@@ -723,7 +723,7 @@ XapiandManager::make_servers()
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
 		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
-		if (_http_server->addr.sin_len) {
+		if (_http_server->addr.sin_family) {
 			_http->addr = _http_server->addr;
 		}
 		_http_server_pool->enqueue(std::move(_http_server));
@@ -731,7 +731,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
-			if (_binary_server->addr.sin_len) {
+			if (_binary_server->addr.sin_family) {
 				_binary->addr = _binary_server->addr;
 			}
 			_binary_server_pool->enqueue(std::move(_binary_server));
