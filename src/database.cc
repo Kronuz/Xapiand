@@ -336,7 +336,7 @@ Database::reopen_writable()
 
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
-		if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) {
+		if ((flags & DB_NOSTORAGE) != DB_NOSTORAGE) {
 			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
 			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
 		} else {
