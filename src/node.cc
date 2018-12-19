@@ -482,3 +482,42 @@ Node::col() const
 	hsv2rgb(hue, saturation, value, red, green, blue);
 	return color(red * 255, green * 255, blue * 255);
 }
+
+
+bool
+Node::is_simmilar(const Node& other) const
+{
+	return (this == &other || (
+		(!idx || !other.idx || idx == other.idx) &&
+		(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+		(!http_port || !other.http_port || http_port == other.http_port) &&
+		(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
+		_lower_name == other._lower_name
+	));
+}
+
+
+bool
+Node::is_superset(const Node& other) const
+{
+	return (this == &other || (
+		(!idx || !other.idx || idx == other.idx) &&
+		(!_addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+		(!http_port || http_port == other.http_port) &&
+		(!binary_port || binary_port == other.binary_port) &&
+		_lower_name == other._lower_name
+	));
+}
+
+
+bool
+Node::is_subset(const Node& other) const
+{
+	return (this == &other || (
+		(!idx || !other.idx || idx == other.idx) &&
+		(!other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+		(!other.http_port || http_port == other.http_port) &&
+		(!other.binary_port || binary_port == other.binary_port) &&
+		_lower_name == other._lower_name
+	));
+}

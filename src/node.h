@@ -169,43 +169,19 @@ public:
 
 	color col() const;
 
-	bool is_simmilar(const Node& other) const {
-		return (this == &other || (
-			(!idx || !other.idx || idx == other.idx) &&
-			(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
-			(!http_port || !other.http_port || http_port == other.http_port) &&
-			(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
-			_lower_name == other._lower_name
-		));
-	}
+	bool is_simmilar(const Node& other) const;
 
 	bool is_simmilar(const std::shared_ptr<const Node>& other) const {
 		return other && is_simmilar(*other);
 	}
 
-	bool is_superset(const Node& other) const {
-		return (this == &other || (
-			(!idx || idx == other.idx) &&
-			(!_addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
-			(!http_port || http_port == other.http_port) &&
-			(!binary_port || binary_port == other.binary_port) &&
-			_lower_name == other._lower_name
-		));
-	}
+	bool is_superset(const Node& other) const;
 
 	bool is_superset(const std::shared_ptr<const Node>& other) const {
 		return other && is_superset(*other);
 	}
 
-	bool is_subset(const Node& other) const {
-		return (this == &other || (
-			(!other.idx || idx == other.idx) &&
-			(!other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
-			(!other.http_port || http_port == other.http_port) &&
-			(!other.binary_port || binary_port == other.binary_port) &&
-			_lower_name == other._lower_name
-		));
-	}
+	bool is_subset(const Node& other) const;
 
 	bool is_subset(const std::shared_ptr<const Node>& other) const {
 		return other && is_subset(*other);
