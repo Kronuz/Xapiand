@@ -324,12 +324,15 @@ Discovery::cluster_hello(Message type, const std::string& message)
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 
-	auto put = Node::touch_node(remote_node, false);
-	if (put.first == nullptr) {
-		send_message(Message::CLUSTER_SNEER, remote_node.serialise());
-	} else {
-		auto local_node = Node::local_node();
-		send_message(Message::CLUSTER_WAVE, local_node->serialise());
+	auto local_node = Node::local_node();
+
+	if (!Node::is_superset(local_node, remote_node)) {
+		auto put = Node::touch_node(remote_node, false);
+		if (put.first == nullptr) {
+			send_message(Message::CLUSTER_SNEER, remote_node.serialise());
+		} else {
+			send_message(Message::CLUSTER_WAVE, local_node->serialise());
+		}
 	}
 }
 
