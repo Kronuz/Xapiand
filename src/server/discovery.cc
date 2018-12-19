@@ -348,20 +348,25 @@ Discovery::cluster_wave(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
+	auto remote_node = Node::unserialise(&p, p_end);
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
-	auto put = Node::put_node(remote_node);
-	remote_node = put.first;
-	if (put.second) {
-		L_INFO("Node %s is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
-	}
+	auto put = Node::touch_node(remote_node, true);
+	if (put.first == nullptr) {
+		L_ERR("Denied node: %s[%zu] %s", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+	} else {
+		auto node = put.first;
+		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		if (put.second) {
+			L_INFO("Node %s is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->name(), node->host(), node->http_port, node->binary_port);
+		}
 
-	// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
-	// (prevent it from switching to slow waiting)
-	auto waiting = XapiandManager::State::WAITING;
-	if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
-		// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
+		// (prevent it from switching to slow waiting)
+		auto waiting = XapiandManager::State::WAITING;
+		if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+			// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+		}
 	}
 }
 
@@ -409,13 +414,18 @@ Discovery::cluster_enter(Message type, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node->name());
+	auto remote_node = Node::unserialise(&p, p_end);
+	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
-	auto put = Node::put_node(remote_node);
-	remote_node = put.first;
-	if (put.second) {
-		L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", remote_node->col().ansi(), remote_node->name(), remote_node->host(), remote_node->http_port, remote_node->binary_port);
+	auto put = Node::touch_node(remote_node, true);
+	if (put.first == nullptr) {
+		L_ERR("Denied node: %s[%zu] %s", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+	} else {
+		auto node = put.first;
+		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		if (put.second) {
+			L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->binary_port);
+		}
 	}
 }
 
@@ -471,7 +481,7 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -557,7 +567,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -641,7 +651,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -806,7 +816,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -881,7 +891,7 @@ Discovery::raft_add_command(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
 		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
@@ -920,7 +930,7 @@ Discovery::db_updated(Message type, const std::string& message)
 	auto path = std::string(p, p_end);
 	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node.name(), repr(path));
 
-	auto node = Node::touch_node(remote_node);
+	auto node = Node::touch_node(remote_node, false).first;
 	if (node) {
 		Endpoint local_endpoint(path);
 		if (local_endpoint.empty()) {
@@ -1151,22 +1161,20 @@ Discovery::_raft_apply(const std::string& command)
 	size_t idx = unserialise_length(&p, p_end);
 	auto node_name = unserialise_string(&p, p_end);
 
+	Node indexed_node;
+
 	auto node = Node::get_node(node_name);
 	if (node) {
-		auto node_copy = std::make_unique<Node>(*node);
-		node_copy->idx = idx;
-		node = std::shared_ptr<const Node>(node_copy.release());
+		indexed_node = *node;
+		indexed_node.idx = idx;
 	} else {
-		auto node_copy = std::make_unique<Node>();
-		node_copy->name(std::string(node_name));
-		node_copy->idx = idx;
-		node = std::shared_ptr<const Node>(node_copy.release());
+		indexed_node.name(std::string(node_name));
+		indexed_node.idx = idx;
 	}
 
-	auto put = Node::put_node(node, false);
-
+	auto put = Node::touch_node(indexed_node, false);
 	if (put.first == nullptr) {
-		L_DEBUG("Denied node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		L_ERR("Denied node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
 	} else {
 		node = put.first;
 		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());

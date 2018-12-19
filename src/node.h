@@ -247,8 +247,7 @@ public:
 
 	static std::shared_ptr<const Node> get_node(size_t idx);
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
-	static std::pair<std::shared_ptr<const Node>, bool> put_node(std::shared_ptr<const Node> node, bool touch = true);
-	static std::shared_ptr<const Node> touch_node(const Node& node);
+	static std::pair<std::shared_ptr<const Node>, bool> touch_node(const Node& node, bool activate = true);
 	static void drop_node(std::string_view node_name);
 	static void reset();
 

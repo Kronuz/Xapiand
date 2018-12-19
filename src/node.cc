@@ -335,9 +335,9 @@ Node::get_node(size_t idx)
 
 
 std::pair<std::shared_ptr<const Node>, bool>
-Node::put_node(std::shared_ptr<const Node> node, bool touch)
+Node::touch_node(const Node& node, bool activate)
 {
-	L_CALL("Node::put_node(%s, %s)", node->__repr__(), touch ? "true" : "false");
+	L_CALL("Node::touch_node(%s, %s)", node.__repr__(), activate ? "true" : "false");
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 
@@ -345,128 +345,76 @@ Node::put_node(std::shared_ptr<const Node> node, bool touch)
 
 	size_t idx = 0;
 
-	auto it = _nodes.find(node->lower_name());
+	auto it = _nodes.find(node.lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (is_equal(node_ref, node)) {
-			auto added = !is_active(node_ref);
-			if (touch) {
-				node_ref->touched.store(now, std::memory_order_relaxed);
-			}
+		if (node.is_equal(node_ref)) {
+			auto modified = false;
 			if (
-				(!node_ref->idx && node->idx) ||
-				(!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) ||
-				(!node_ref->http_port && node->http_port) ||
-				(!node_ref->binary_port && node->binary_port)
+				(!node_ref->idx && node.idx) ||
+				(!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) ||
+				(!node_ref->http_port && node.http_port) ||
+				(!node_ref->binary_port && node.binary_port)
 			) {
 				auto node_ref_copy = std::make_unique<Node>(*node_ref);
-				if (!node_ref->idx && node->idx) {
-					node_ref_copy->idx = node->idx;
+				if (!node_ref->idx && node.idx) {
+					node_ref_copy->idx = node.idx;
 					if (node_ref_copy->idx >= 1 && node_ref_copy->idx <= _nodes_indexed.size()) {
 						auto& indexed_node = _nodes_indexed[node_ref_copy->idx - 1];
 						if (indexed_node && node_ref_copy->lower_name() != indexed_node->lower_name()) {
-							L_NODE_NODES("put_node(%s) -> nullptr (1)", node->__repr__());
+							L_NODE_NODES("touch_node(%s) -> nullptr (1)", node.__repr__());
 							return std::make_pair(nullptr, false);
 						}
 					}
 				}
-				if (!node_ref->_addr.sin_addr.s_addr && node->_addr.sin_addr.s_addr) {
-					node_ref_copy->_addr = node->_addr;
+				if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
+					node_ref_copy->_addr = node._addr;
 					node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
 				}
-				if (!node_ref->http_port && node->http_port) {
-					node_ref_copy->http_port = node->http_port;
+				if (!node_ref->http_port && node.http_port) {
+					node_ref_copy->http_port = node.http_port;
 				}
-				if (!node_ref->binary_port && node->binary_port) {
-					node_ref_copy->binary_port = node->binary_port;
+				if (!node_ref->binary_port && node.binary_port) {
+					node_ref_copy->binary_port = node.binary_port;
 				}
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
-				added = true;
+				modified = true;
 			}
-			L_NODE_NODES("put_node(%s) -> %s (1)", node_ref->__repr__(), added ? "true" : "false");
-			return std::make_pair(node_ref, added);
+			if (activate || is_active(node_ref)) {
+				if (node_ref->touched.exchange(now, std::memory_order_relaxed) == 0) {
+					modified = true;
+				}
+			}
+			L_NODE_NODES("touch_node(%s) -> %s (1)", node_ref->__repr__(), modified ? "true" : "false");
+			return std::make_pair(node_ref, modified);
 		} else if (is_active(node_ref)) {
-			L_NODE_NODES("put_node(%s) -> false (2)", node_ref->__repr__());
-			return std::make_pair(node_ref, false);
+			L_NODE_NODES("touch_node(%s) -> nullptr (2)", node.__repr__());
+			return std::make_pair(nullptr, false);
 		}
 		idx = node_ref->idx;
 	}
 
-	if (touch) {
-		node->touched.store(now, std::memory_order_relaxed);
-	}
-	if (!node->idx && idx) {
-		auto node_copy = std::make_unique<Node>(*node);
-		node_copy->idx = idx;
-		if (node_copy->idx >= 1 && node_copy->idx <= _nodes_indexed.size()) {
-			auto& indexed_node = _nodes_indexed[node_copy->idx - 1];
-			if (indexed_node && node_copy->lower_name() != indexed_node->lower_name()) {
-				L_NODE_NODES("put_node(%s) -> nullptr (1)", node->__repr__());
+	auto new_node_copy = std::make_unique<Node>(node);
+	if (!new_node_copy->idx && idx) {
+		new_node_copy->idx = idx;
+		if (new_node_copy->idx >= 1 && new_node_copy->idx <= _nodes_indexed.size()) {
+			auto& indexed_node = _nodes_indexed[new_node_copy->idx - 1];
+			if (indexed_node && new_node_copy->lower_name() != indexed_node->lower_name()) {
+				L_NODE_NODES("touch_node(%s) -> nullptr (3)", new_node_copy->__repr__());
 				return std::make_pair(nullptr, false);
 			}
 		}
-		node = std::shared_ptr<const Node>(node_copy.release());
 	}
-	_nodes[node->lower_name()] = node;
-	_update_nodes(node);
-
-	L_NODE_NODES("put_node(%s) -> true", node->__repr__());
-	return std::make_pair(node, true);
-}
-
-
-std::shared_ptr<const Node>
-Node::touch_node(const Node& node)
-{
-	L_CALL("Node::touch_node(%s)", node.__repr__());
-
-	auto now = epoch::now<std::chrono::milliseconds>();
-
-	std::lock_guard<std::mutex> lk(_nodes_mtx);
-
-	auto it = _nodes.find(node.lower_name());
-	if (it != _nodes.end()) {
-		auto& node_ref = it->second;
-		if (!is_active(node_ref) && !node.is_equal(node_ref)) {
-			L_NODE_NODES("touch_node(%s) -> nullptr (1)", node.__repr__());
-			return nullptr;
-		}
-		node_ref->touched.store(now, std::memory_order_relaxed);
-		if (
-			(!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) ||
-			(!node_ref->http_port && node.http_port) ||
-			(!node_ref->binary_port && node.binary_port)
-		) {
-			auto node_ref_copy = std::make_unique<Node>(*node_ref);
-			if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
-				node_ref_copy->_addr = node._addr;
-				node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
-			}
-			if (!node_ref->http_port && node.http_port) {
-				node_ref_copy->http_port = node.http_port;
-			}
-			if (!node_ref->binary_port && node.binary_port) {
-				node_ref_copy->binary_port = node.binary_port;
-			}
-			node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
-			_update_nodes(node_ref);
-		}
-		// L_NODE_NODES("touch_node(%s) -> %s", node.__repr__(), node_ref->__repr__());
-		return node_ref;
-	}
-
-	if (node.is_local()) {
-		auto new_node = std::make_shared<const Node>(node);
+	auto new_node = std::shared_ptr<const Node>(new_node_copy.release());
+	if (activate || is_active(new_node)) {
 		new_node->touched.store(now, std::memory_order_relaxed);
-		_nodes[new_node->lower_name()] = new_node;
-		_update_nodes(new_node);
-		L_NODE_NODES("touch_node(%s) -> %s", node.__repr__(), new_node->__repr__());
-		return new_node;
 	}
+	_nodes[new_node->lower_name()] = new_node;
+	_update_nodes(new_node);
 
-	L_NODE_NODES("touch_node(%s) -> nullptr (2)", node.__repr__());
-	return nullptr;
+	L_NODE_NODES("touch_node(%s) -> true", new_node->__repr__());
+	return std::make_pair(new_node, true);
 }
 
 
