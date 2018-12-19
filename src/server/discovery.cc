@@ -43,14 +43,14 @@
 #include "utype.hh"                         // for toUType
 
 
-#undef L_DEBUG
-#define L_DEBUG L_GREY
-#undef L_CALL
-#define L_CALL L_STACKED_DIM_GREY
-#undef L_DISCOVERY
-#define L_DISCOVERY L_SALMON
-#undef L_RAFT
-#define L_RAFT L_SEA_GREEN
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #undef L_DISCOVERY
+// #define L_DISCOVERY L_SALMON
+// #undef L_RAFT
+// #define L_RAFT L_SEA_GREEN
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
 // #undef L_EV_END
