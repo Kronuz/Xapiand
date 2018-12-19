@@ -178,7 +178,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		auto local_node = Node::local_node();
 		auto nodes = XapiandManager::resolve_index_nodes(args.src_endpoint.path);
 		for (const auto& node : nodes) {
-			if (Node::is_equal(node, local_node)) {
+			if (Node::is_superset(local_node, node)) {
 				replicated = true;
 				break;
 			}

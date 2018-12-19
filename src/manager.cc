@@ -580,7 +580,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	auto leader_node = Node::leader_node();
 	auto local_node = Node::local_node();
-	auto is_leader = Node::is_equal(leader_node, local_node);
+	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
 	Endpoint cluster_endpoint(".", leader_node.get());

@@ -348,7 +348,7 @@ Node::touch_node(const Node& node, bool activate)
 	auto it = _nodes.find(node.lower_name());
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		if (node.is_equal(node_ref)) {
+		if (Node::is_superset(node_ref, node)) {
 			auto modified = false;
 			if (
 				(!node_ref->idx && node.idx) ||

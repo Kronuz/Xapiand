@@ -163,59 +163,165 @@ public:
 		return _host;
 	}
 
-	bool operator==(const Node& other) const {
-		return
-			(!idx || !other.idx || idx == other.idx) &&
-			(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
-			(!http_port || !other.http_port || http_port == other.http_port) &&
-			(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
-			_lower_name == other._lower_name;
-	}
-
-	bool operator!=(const Node& other) const {
-		return !operator==(other);
-	}
-
 	std::string to_string() const {
 		return _name;
 	}
 
 	color col() const;
 
-	bool is_equal(const std::shared_ptr<const Node>& other) const {
-		return other && (this == other.get() || *this == *other);
+	bool is_simmilar(const Node& other) const {
+		return (this == &other || (
+			(!idx || !other.idx || idx == other.idx) &&
+			(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+			(!http_port || !other.http_port || http_port == other.http_port) &&
+			(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
+			_lower_name == other._lower_name
+		));
+	}
+
+	bool is_simmilar(const std::shared_ptr<const Node>& other) const {
+		return other && is_simmilar(*other);
+	}
+
+	bool is_superset(const Node& other) const {
+		return (this == &other || (
+			(!idx || idx == other.idx) &&
+			(!_addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+			(!http_port || http_port == other.http_port) &&
+			(!binary_port || binary_port == other.binary_port) &&
+			_lower_name == other._lower_name
+		));
+	}
+
+	bool is_superset(const std::shared_ptr<const Node>& other) const {
+		return other && is_superset(*other);
+	}
+
+	bool is_subset(const Node& other) const {
+		return (this == &other || (
+			(!other.idx || idx == other.idx) &&
+			(!other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
+			(!other.http_port || http_port == other.http_port) &&
+			(!other.binary_port || binary_port == other.binary_port) &&
+			_lower_name == other._lower_name
+		));
+	}
+
+	bool is_subset(const std::shared_ptr<const Node>& other) const {
+		return other && is_subset(*other);
 	}
 
 	bool is_local() const {
-		return is_equal(_local_node.load(std::memory_order_relaxed));
+		return is_subset(_local_node.load(std::memory_order_relaxed));
 	}
 
 	bool is_leader() const {
-		return is_equal(_leader_node.load(std::memory_order_relaxed));
+		return is_subset(_leader_node.load(std::memory_order_relaxed));
 	}
 
 	bool is_active() const {
 		return (touched.load(std::memory_order_relaxed) >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
 	}
 
-	static bool is_equal(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
-		return a && b && (a == b || *a == *b);
+	bool operator==(const Node& other) const {
+		return is_simmilar(other);
+	}
+
+	bool operator==(const std::shared_ptr<const Node>& other) const {
+		return is_simmilar(other);
+	}
+
+	bool operator!=(const Node& other) const {
+		return !is_simmilar(other);
+	}
+
+	bool operator!=(const std::shared_ptr<const Node>& other) const {
+		return !is_simmilar(other);
+	}
+
+	static bool is_simmilar(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
+		return a && b && a->is_simmilar(*b);
+	}
+
+	static bool is_simmilar(const std::shared_ptr<const Node>& a, const Node& b) {
+		return a && a->is_simmilar(b);
+	}
+
+	static bool is_simmilar(const Node& a, const std::shared_ptr<const Node>& b) {
+		return b && a.is_simmilar(*b);
+	}
+
+	static bool is_simmilar(const Node& a, const Node& b) {
+		return a.is_simmilar(b);
+	}
+
+	static bool is_superset(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
+		return a && b && a->is_superset(*b);
+	}
+
+	static bool is_superset(const std::shared_ptr<const Node>& a, const Node& b) {
+		return a && a->is_superset(b);
+	}
+
+	static bool is_superset(const Node& a, const std::shared_ptr<const Node>& b) {
+		return b && a.is_superset(*b);
+	}
+
+	static bool is_superset(const Node& a, const Node& b) {
+		return a.is_superset(b);
+	}
+
+	static bool is_subset(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b) {
+		return a && b && a->is_subset(*b);
+	}
+
+	static bool is_subset(const std::shared_ptr<const Node>& a, const Node& b) {
+		return a && a->is_subset(b);
+	}
+
+	static bool is_subset(const Node& a, const std::shared_ptr<const Node>& b) {
+		return b && a.is_subset(*b);
+	}
+
+	static bool is_subset(const Node& a, const Node& b) {
+		return a.is_subset(b);
 	}
 
 	static bool is_local(const std::shared_ptr<const Node>& node) {
 		return node && node->is_local();
 	}
 
+	static bool is_local(const Node& node) {
+		return node.is_local();
+	}
+
 	static bool is_leader(const std::shared_ptr<const Node>& node) {
 		return node && node->is_leader();
+	}
+
+	static bool is_leader(const Node& node) {
+		return node.is_leader();
 	}
 
 	static bool is_active(const std::shared_ptr<const Node>& node) {
 		return node && node->is_active();
 	}
 
+	static bool is_active(const Node& node) {
+		return node.is_active();
+	}
+
 	static std::shared_ptr<const Node> local_node(std::shared_ptr<const Node> node = nullptr);
+
 	static std::shared_ptr<const Node> leader_node(std::shared_ptr<const Node> node = nullptr);
+
+	static std::shared_ptr<const Node> local_node(const Node& node) {
+		return local_node(std::make_shared<const Node>(node));
+	}
+
+	static std::shared_ptr<const Node> leader_node(const Node& node) {
+		return leader_node(std::make_shared<const Node>(node));
+	}
 
 private:
 	static atomic_shared_ptr<const Node> _local_node;

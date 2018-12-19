@@ -43,14 +43,14 @@
 #include "utype.hh"                         // for toUType
 
 
-// #undef L_DEBUG
-// #define L_DEBUG L_GREY
-// #undef L_CALL
-// #define L_CALL L_STACKED_DIM_GREY
-// #undef L_DISCOVERY
-// #define L_DISCOVERY L_SALMON
-// #undef L_RAFT
-// #define L_RAFT L_SEA_GREEN
+#undef L_DEBUG
+#define L_DEBUG L_GREY
+#undef L_CALL
+#define L_CALL L_STACKED_DIM_GREY
+#undef L_DISCOVERY
+#define L_DISCOVERY L_SALMON
+#undef L_RAFT
+#define L_RAFT L_SEA_GREEN
 // #undef L_EV_BEGIN
 // #define L_EV_BEGIN L_DELAYED_200
 // #undef L_EV_END
@@ -323,23 +323,13 @@ Discovery::cluster_hello(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
-	auto local_node = Node::local_node();
 
 	auto put = Node::touch_node(remote_node, false);
 	if (put.first == nullptr) {
 		send_message(Message::CLUSTER_SNEER, remote_node.serialise());
 	} else {
-		auto node = put.first;
-		if (
-			(!node->idx || node->idx == remote_node.idx) &&
-			(!node->addr().sin_addr.s_addr || node->addr().sin_addr.s_addr == remote_node.addr().sin_addr.s_addr) &&
-			(!node->http_port || node->http_port == remote_node.http_port) &&
-			(!node->binary_port || node->binary_port == remote_node.binary_port)
-		) {
-			send_message(Message::CLUSTER_WAVE, local_node->serialise());
-		} else {
-			send_message(Message::CLUSTER_SNEER, remote_node.serialise());
-		}
+		auto local_node = Node::local_node();
+		send_message(Message::CLUSTER_WAVE, local_node->serialise());
 	}
 }
 
@@ -596,7 +586,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
-		if (Node::is_equal(node, local_node)) {
+		if (Node::is_superset(local_node, node)) {
 			bool granted = unserialise_length(&p, p_end);
 			if (granted) {
 				++raft_votes_granted;
@@ -678,7 +668,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	}
 
 	if (raft_role == Role::RAFT_LEADER) {
-		if (!Node::is_equal(node, local_node)) {
+		if (!Node::is_superset(local_node, node)) {
 			// If another leader is around, immediately run for election
 			_raft_request_vote(true);
 		}
@@ -927,7 +917,7 @@ Discovery::db_updated(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 
 	auto local_node = Node::local_node();
-	if (remote_node.is_equal(local_node)) {
+	if (Node::is_superset(local_node, remote_node)) {
 		// It's just me, do nothing!
 		return;
 	}
@@ -1148,7 +1138,7 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 
 	auto leader_node = Node::leader_node();
 	L_CALL("leader_node -> %s", leader_node->__repr__());
-	if (!Node::is_equal(node, leader_node)) {
+	if (!Node::is_superset(leader_node, node)) {
 		Node::leader_node(node);
 		XapiandManager::new_leader();
 	}
