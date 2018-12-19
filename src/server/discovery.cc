@@ -249,8 +249,8 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 				Message type = static_cast<Message>(raw_type);
 				L_DISCOVERY_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
 				discovery_server(type, message);
-			} catch (const BaseException& exc) {
-				L_WARNING("WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+			} catch (...) {
+				L_EXC("ERROR: Unhandled exception in discovery_server");
 				break;
 			}
 		}
