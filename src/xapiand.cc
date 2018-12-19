@@ -1287,6 +1287,10 @@ cleanup_manager()
 		if (manager) {
 			// At exit, join manager
 			manager->join();
+			auto sig = manager->atom_sig.load();
+			if (sig < 0) {
+				exit_code = -sig;
+			}
 		}
 	} catch (const SystemExit& exc) {
 		exit_code = exc.code;
