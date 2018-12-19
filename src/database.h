@@ -76,7 +76,7 @@ public:
 private:
 #ifdef XAPIAND_DATA_STORAGE
 	void storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const;
-	void storage_push_blobs(Xapian::Document& doc, Xapian::docid did) const;
+	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data) const;
 	void storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
 

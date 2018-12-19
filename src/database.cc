@@ -986,18 +986,20 @@ Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
 }
 
 
-void
-Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid) const
+std::pair<std::string, std::string>
+Database::storage_push_blobs(std::string&& doc_data) const
 {
 	L_CALL("Database::storage_push_blobs()");
 
 	ASSERT(is_writable());
 
+	std::pair<std::string, std::string> pushed;
+
 	// Writable databases have only one subdatabase,
 	// simply get the single storage:
 	const auto& storage = writable_storages[0];
 	if (storage) {
-		auto data = Data(doc.get_data());
+		auto data = Data(std::move(doc_data));
 		for (auto& locator : data) {
 			if (locator.size == 0) {
 				data.erase(locator.ct_type);
@@ -1022,9 +1024,11 @@ Database::storage_push_blobs(Xapian::Document& doc, Xapian::docid) const
 				}
 			}
 		}
+		pushed.second = std::move(data.serialise());
 		data.flush();
-		doc.set_data(data.serialise());
+		pushed.first = std::move(data.serialise());
 	}
+	return pushed;
 }
 
 
@@ -1059,7 +1063,10 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc, doc.get_docid()); // Only writable database get_docid is enough
+	auto pushed = storage_push_blobs(doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
 #endif  // XAPIAND_DATA_STORAGE
 
 	Xapian::docid did = 0;
@@ -1087,7 +1094,14 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_add_document(*this, std::move(doc)); }
+	if (wal_ && is_wal_active()) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		XapiandManager::wal_writer()->write_add_document(*this, std::move(doc));
+	}
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1117,7 +1131,10 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc, did);
+	auto pushed = storage_push_blobs(doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
 #endif  // XAPIAND_DATA_STORAGE
 
 	for (int t = DB_RETRIES; t; --t) {
@@ -1144,7 +1161,14 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_replace_document(*this, did, std::move(doc)); }
+	if (wal_ && is_wal_active()) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		XapiandManager::wal_writer()->write_replace_document(*this, did, std::move(doc));
+	}
 #else
 	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
@@ -1174,7 +1198,10 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 #ifdef XAPIAND_DATA_STORAGE
-	storage_push_blobs(doc, doc.get_docid()); // Only writable database get_docid is enough
+	auto pushed = storage_push_blobs(doc.get_data());
+	if (!pushed.first.empty()) {
+		doc.set_data(pushed.first);
+	}
 #endif  // XAPIAND_DATA_STORAGE
 
 	Xapian::docid did = 0;
@@ -1202,7 +1229,14 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_replace_document_term(*this, term, std::move(doc)); }
+	if (wal_ && is_wal_active()) {
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // restore data with blobs
+		}
+#endif  // XAPIAND_DATA_STORAGE
+		XapiandManager::wal_writer()->write_replace_document_term(*this, term, std::move(doc));
+	}
 #else
 	ignore_unused(wal_);
 #endif

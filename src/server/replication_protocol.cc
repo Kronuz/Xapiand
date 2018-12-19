@@ -256,6 +256,18 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 					}
 				}
 
+				for (size_t volume = 0; true; ++volume) {
+					auto filename = "docdata." + std::to_string(volume);
+					auto path = endpoints[0].path + "/" + filename;
+					int fd = io::open(path.c_str());
+					if (fd != -1) {
+						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
+						send_file(ReplicationReplyType::REPLY_DB_FILEDATA, fd);
+						continue;
+					}
+					break;
+				}
+
 				lk_db.lock();
 				auto final_revision = db()->get_revision();
 				lk_db.unlock();
