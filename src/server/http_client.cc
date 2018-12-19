@@ -678,7 +678,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 					++next;
 					++i;
 				}
-				accept_sets.emplace(value, std::move(lookup.second));
+				accept_sets.emplace(value, lookup.second);
 			}
 			new_request.accept_set = std::move(lookup.second);
 			break;
@@ -709,7 +709,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 					++next;
 					++i;
 				}
-				accept_encoding_sets.emplace(value, std::move(lookup.second));
+				accept_encoding_sets.emplace(value, lookup.second);
 			}
 			new_request.accept_encoding_set = std::move(lookup.second);
 			break;
