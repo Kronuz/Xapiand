@@ -55,10 +55,10 @@ RUN CONFIG="\
   && mkdir /usr/src/Xapiand/build \
   && cd /usr/src/Xapiand/build \
   && cmake -GNinja $CONFIG .. \
-  && ninja install \
-  && rm -rf /usr/src/Xapiand
+  && ninja install
 
-RUN apk del .build-deps \
+RUN rm -rf /usr/src/Xapiand \
+  && apk del .build-deps \
   && apk del build-clang
 
 # Xapiand image
