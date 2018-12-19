@@ -324,16 +324,21 @@ Discovery::cluster_hello(Message type, const std::string& message)
 	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
 
 	auto local_node = Node::local_node();
-	if (!remote_node.is_equal(local_node)) {
-		auto node = Node::get_node(remote_node.name());
-		if (node) {
-			if (remote_node.is_equal(node)) {
-				send_message(Message::CLUSTER_WAVE, local_node->serialise());
-			} else {
-				send_message(Message::CLUSTER_SNEER, remote_node.serialise());
-			}
-		} else {
+
+	auto put = Node::touch_node(remote_node, false);
+	if (put.first == nullptr) {
+		send_message(Message::CLUSTER_SNEER, remote_node.serialise());
+	} else {
+		auto node = put.first;
+		if (
+			(!node->idx || node->idx == remote_node.idx) &&
+			(!node->addr().sin_addr.s_addr || node->addr().sin_addr.s_addr == remote_node.addr().sin_addr.s_addr) &&
+			(!node->http_port || node->http_port == remote_node.http_port) &&
+			(!node->binary_port || node->binary_port == remote_node.binary_port)
+		) {
 			send_message(Message::CLUSTER_WAVE, local_node->serialise());
+		} else {
+			send_message(Message::CLUSTER_SNEER, remote_node.serialise());
 		}
 	}
 }
