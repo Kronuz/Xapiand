@@ -170,7 +170,7 @@ class DatabaseHandler : protected LockableDatabase {
 	enum http_method method;
 	std::shared_ptr<Schema> schema;
 
-	std::shared_ptr<std::unordered_set<size_t>> context;
+	std::shared_ptr<std::unordered_set<std::string>> context;
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
@@ -191,12 +191,12 @@ class DatabaseHandler : protected LockableDatabase {
 
 public:
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<size_t>> context_=nullptr);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<std::string>> context_=nullptr);
 
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr);
 
-	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<size_t>>& context_=nullptr);
+	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<std::string>>& context_=nullptr);
 
 #if XAPIAND_DATABASE_WAL
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised);

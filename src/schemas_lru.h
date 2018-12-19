@@ -38,11 +38,11 @@ constexpr size_t MAX_SCHEMA_RECURSION = 10;
 class DatabaseHandler;
 
 
-class SchemasLRU : lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
+class SchemasLRU : lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> {
 	template <typename ErrorType>
 	std::pair<const MsgPack*, const MsgPack*> validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id);
 
-	MsgPack get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<size_t>> context);
+	MsgPack get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<std::string>> context);
 
 	std::mutex smtx;
 

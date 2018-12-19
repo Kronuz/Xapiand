@@ -249,7 +249,7 @@ DatabaseHandler::DatabaseHandler()
 	  method(HTTP_GET) { }
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<size_t>> context_)
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<std::string>> context_)
 	: LockableDatabase(endpoints_, flags_),
 	  method(method_),
 	  context(std::move(context_)) { }
@@ -265,7 +265,7 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 
 
 void
-DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<size_t>>& context_)
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<std::string>>& context_)
 {
 	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()), flags_);
 

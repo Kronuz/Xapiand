@@ -1214,8 +1214,7 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 		DatabaseHandler db_handler;
 
 		std::string serialised;
-		auto key = std::string(path);
-		key.push_back('/');
+		auto key = std::string(path) + "/";
 
 		static std::mutex resolve_index_lru_mtx;
 		static lru::LRU<std::string, std::string> resolve_index_lru(1000);
