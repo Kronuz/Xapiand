@@ -412,6 +412,10 @@ public:
 		return hasher(serialised);
 	}
 
+	bool operator==(const Data& other) const noexcept {
+		return serialise() == other.serialise();
+	}
+
 	auto operator[](size_t pos) const {
 		return locators.operator[](pos);
 	}

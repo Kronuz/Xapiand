@@ -346,7 +346,7 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<size_t, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
+std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
 
 
 template<typename Processor>
@@ -1789,17 +1789,13 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 {
 	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string(), repr(term_id));
 
-	std::hash<std::string_view> hash_fn_string;
-	auto key = endpoints.hash() ^ hash_fn_string(term_id);
-
+	ASSERT(endpoints.size() == 1);
+	auto key = endpoints[0].path + "/" + std::string(term_id);
 	bool is_local = endpoints[0].is_local();
 
 	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
 
-	auto it = DatabaseHandler::documents.end();
-	if (is_local) {
-		it = DatabaseHandler::documents.find(key);
-	}
+	auto it = is_local ? DatabaseHandler::documents.find(key) : DatabaseHandler::documents.end();
 
 	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
@@ -1834,17 +1830,13 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 {
 	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s)", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
 
-	std::hash<std::string_view> hash_fn_string;
-	auto key = endpoints.hash() ^ hash_fn_string(new_document_pair->first);
-
+	ASSERT(endpoints.size() == 1);
+	auto key = endpoints[0].path + "/" + new_document_pair->first;
 	bool is_local = endpoints[0].is_local();
 
 	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
 
-	auto it = DatabaseHandler::documents.end();
-	if (is_local) {
-		it = DatabaseHandler::documents.find(key);
-	}
+	auto it = is_local ? DatabaseHandler::documents.find(key) : DatabaseHandler::documents.end();
 
 	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
 	if (it == DatabaseHandler::documents.end()) {
@@ -1868,7 +1860,7 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 		current_document_pair = it->second;
 	}
 
-	bool accepted = (old_document_pair == nullptr || (current_document_pair && old_document_pair->second.hash() == current_document_pair->second.hash()));
+	bool accepted = (old_document_pair == nullptr || (current_document_pair && old_document_pair->second == current_document_pair->second));
 
 	current_document_pair.reset();
 	old_document_pair.reset();
@@ -1890,9 +1882,8 @@ DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, 
 {
 	L_CALL("DatabaseHandler::dec_document_change_cnt(%s)", endpoints.to_string(), repr(old_document_pair->first));
 
-	std::hash<std::string_view> hash_fn_string;
-	auto key = endpoints.hash() ^ hash_fn_string(old_document_pair->first);
-
+	ASSERT(endpoints.size() == 1);
+	auto key = endpoints[0].path + "/" + old_document_pair->first;
 	bool is_local = endpoints[0].is_local();
 
 	std::lock_guard<std::mutex> lk(DatabaseHandler::documents_mtx);

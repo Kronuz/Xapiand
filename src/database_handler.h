@@ -174,7 +174,7 @@ class DatabaseHandler : protected LockableDatabase {
 
 #if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
 	static std::mutex documents_mtx;
-	static std::unordered_map<size_t, std::shared_ptr<std::pair<std::string, const Data>>> documents;
+	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
 	template<typename ProcessorCompile>
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
