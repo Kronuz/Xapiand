@@ -35,11 +35,16 @@
 
 
 inline std::string inet_ntop(const struct sockaddr_in& addr) {
-	char ip[INET_ADDRSTRLEN] = {};
-	if (inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof(ip)) == nullptr) {
-		L_ERR("ERROR: inet_ntop: %s (%d): %s", error::name(errno), errno, error::description(errno));
-	}
-	return std::string(ip);
+	// char ip[INET_ADDRSTRLEN] = {};
+	// if (inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof(ip)) == nullptr) {
+	// 	L_ERR("ERROR: inet_ntop: %s (%d): %s", error::name(errno), errno, error::description(errno));
+	// }
+	// return std::string(ip);
+	return string::format("%d.%d.%d.%d",
+		addr.sin_addr.s_addr & 0xff,
+		(addr.sin_addr.s_addr >> 8) & 0xff,
+		(addr.sin_addr.s_addr >> 16) & 0xff,
+		(addr.sin_addr.s_addr >> 24) & 0xff);
 }
 
 
