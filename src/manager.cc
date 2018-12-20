@@ -1203,9 +1203,9 @@ XapiandManager::load_nodes()
 
 
 std::vector<std::shared_ptr<const Node>>
-XapiandManager::resolve_index_nodes_impl(std::string_view path)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_path)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl(%s)", repr(path));
+	L_CALL("XapiandManager::resolve_index_nodes_impl(%s)", repr(normalized_slashed_path));
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 
@@ -1214,23 +1214,22 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 		DatabaseHandler db_handler;
 
 		std::string serialised;
-		auto key = std::string(path) + "/";
 
 		static std::mutex resolve_index_lru_mtx;
 		static lru::LRU<std::string, std::string> resolve_index_lru(1000);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
-		auto it = resolve_index_lru.find(key);
+		auto it = resolve_index_lru.find(normalized_slashed_path);
 		if (it != resolve_index_lru.end()) {
 			serialised = it->second;
 			lk.unlock();
 		} else {
 			lk.unlock();
 			db_handler.reset(Endpoints{Endpoint{"."}});
-			serialised = db_handler.get_metadata(key);
+			serialised = db_handler.get_metadata(normalized_slashed_path);
 			if (!serialised.empty()) {
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(key, serialised));
+				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, serialised));
 				lk.unlock();
 			}
 		}
@@ -1238,7 +1237,7 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 		if (serialised.empty()) {
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
-				size_t consistent_hash = jump_consistent_hash(path, indexed_nodes);
+				size_t consistent_hash = jump_consistent_hash(normalized_slashed_path, indexed_nodes);
 				for (size_t replicas = std::min(opts.num_replicas, indexed_nodes); replicas; --replicas) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
@@ -1249,12 +1248,12 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 				}
 				ASSERT(!serialised.empty());
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(key, serialised));
+				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, serialised));
 				lk.unlock();
 				auto leader_node = Node::leader_node();
 				Endpoint cluster_endpoint(".", leader_node.get());
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				db_handler.set_metadata(key, serialised, false);
+				db_handler.set_metadata(normalized_slashed_path, serialised, false);
 			}
 		} else {
 			const char *p = serialised.data();
@@ -1269,7 +1268,7 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 	}
 	else
 #else
-	ignore_unused(path);
+	ignore_unused(normalized_slashed_path);
 #endif
 	{
 		nodes.push_back(Node::local_node());
@@ -1280,14 +1279,14 @@ XapiandManager::resolve_index_nodes_impl(std::string_view path)
 
 
 Endpoint
-XapiandManager::resolve_index_endpoint_impl(std::string_view path, bool master)
+XapiandManager::resolve_index_endpoint_impl(const std::string& normalized_slashed_path, bool master)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl(%s, %s)", repr(path), master ? "true" : "false");
+	L_CALL("XapiandManager::resolve_index_endpoint_impl(%s, %s)", repr(normalized_slashed_path), master ? "true" : "false");
 
-	for (const auto& node : resolve_index_nodes_impl(path)) {
+	for (const auto& node : resolve_index_nodes_impl(normalized_slashed_path)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of %zu nodes) %s", Node::indexed_nodes, node ? node->__repr__() : "null");
-			return {path, node.get()};
+			return {normalized_slashed_path, node.get()};
 		}
 		L_MANAGER("Inactive node ignored (of %zu nodes) %s", Node::indexed_nodes, node ? node->__repr__() : "null");
 		if (master) {

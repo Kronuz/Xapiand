@@ -97,7 +97,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 	bool exchanged;
 	const MsgPack* schema_obj = nullptr;
 
-	const auto local_schema_path = db_handler->endpoints[0].path + "/";
+	const auto& local_schema_path = db_handler->endpoints[0].path;
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -288,7 +288,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
-	const auto local_schema_path = db_handler->endpoints[0].path + "/";
+	const auto& local_schema_path = db_handler->endpoints[0].path;
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -489,7 +489,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
-	const auto local_schema_path = db_handler->endpoints[0].path + "/";
+	const auto& local_schema_path = db_handler->endpoints[0].path;
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);

@@ -226,12 +226,8 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	if (string::startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());
 		if (_path.empty()) {
-			_path = ".";
+			_path = "./";
 		}
-	}
-
-	if (_path.size() != 1 && string::endswith(_path, '/')) {
-		_path.remove_suffix(1);
 	}
 
 	if (opts.uuid_partition) {
