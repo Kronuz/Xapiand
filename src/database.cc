@@ -957,7 +957,7 @@ Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator)
 	}
 
 	std::string locator_key;
-	locator_key.push_back(':');
+	locator_key.push_back('\x00');
 	locator_key.append(serialise_length(locator.volume));
 	locator_key.append(serialise_length(locator.offset));
 	return get_metadata(locator_key, subdatabase);
@@ -1452,7 +1452,7 @@ Database::get_metadata(const std::string& key, int subdatabase)
 
 	const char *p = key.data();
 	const char *p_end = p + key.size();
-	if (*p == ':') {
+	if (*p == '\x00') {
 		const auto& storage = storages[subdatabase];
 		if (storage) {
 			++p;
