@@ -192,9 +192,8 @@ class Xapiand(object):
 
         if not isinstance(index, (tuple, list, set)):
             index = index.split(',')
-
-        indexes = ['{}{}'.format(self.prefix, i.strip('/')) for i in set(index)]
-        index = ','.join(['/'.join((i, id or '')) for i in indexes])
+        id = '' if id is None else '/{}'.format(id)
+        index = ','.join('{}{}{}'.format(self.prefix, i.strip('/'), id) for i in set(index))
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
@@ -453,7 +452,7 @@ class Xapiand(object):
 
     def index(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
         if doc_type:
-            index = '%s/%s' % (index, doc_type)
+            index = '{}/{}'.format(index, doc_type)
         return self.put(index, body, id, commit, pretty, kwargs)
 
     def patch(self, index, id, body, commit=None, pretty=False, kwargs=None):
