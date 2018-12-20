@@ -122,7 +122,7 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
 		});
 
-		client.temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
+		client.temp_directory_template = endpoints[0].path + ".tmp.XXXXXX";
 
 		L_REPLICATION("init_replication initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	} catch (const TimeOutError&) {
@@ -240,7 +240,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 				};
 
 				for (const auto& filename : filenames) {
-					auto path = endpoints[0].path + "/" + filename;
+					auto path = endpoints[0].path + filename;
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
@@ -250,7 +250,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 
 				for (size_t volume = 0; true; ++volume) {
 					auto filename = "docdata." + std::to_string(volume);
-					auto path = endpoints[0].path + "/" + filename;
+					auto path = endpoints[0].path + filename;
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);

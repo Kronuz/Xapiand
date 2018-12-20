@@ -163,12 +163,12 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 
 	bool replicated = false;
 
-	if (args.src_endpoint.path == ".") {
+	if (args.src_endpoint.path == "./") {
 		// Cluster database is always updated
 		replicated = true;
 	}
 
-	if (!replicated && exists(std::string(args.src_endpoint.path) + "/iamglass")) {
+	if (!replicated && exists(args.src_endpoint.path + "iamglass")) {
 		// If database is already there, its also always updated
 		replicated = true;
 	}
