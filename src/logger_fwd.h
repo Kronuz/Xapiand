@@ -31,6 +31,8 @@
 #include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
 #include "hashes.hh"          // for fnv1ah32
 #include "lazy.hh"            // for LAZY
+#include "traceback.h"        // for TRACEBACK
+
 
 #define ASYNC_LOG_LEVEL LOG_ERR  // The minimum log_level that is asynchronous
 

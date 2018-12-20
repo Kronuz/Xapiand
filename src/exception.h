@@ -47,10 +47,6 @@ inline std::string vsprintf(std::string_view format, va_list args) {
 #define VFPRINTF_ARGS fmt::printf_args
 #endif
 
-#define TRACEBACK() ::traceback(__func__, __FILE__, __LINE__)
-
-std::string traceback(const char* function, const char* filename, int line, int skip = 1);
-
 class BaseException {
 	static const BaseException& default_exc() {
 		static const BaseException default_exc;
