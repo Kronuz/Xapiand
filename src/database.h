@@ -75,8 +75,7 @@ public:
 
 private:
 #ifdef XAPIAND_DATA_STORAGE
-	void storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const;
-	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data) const;
+	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
 	void storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -149,7 +148,7 @@ public:
 	Xapian::Database* db();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(Xapian::docid did, const Data::Locator& locator) const;
+	std::string storage_get_stored(Xapian::docid did, const Data::Locator& locator);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	UUID get_uuid();
@@ -178,10 +177,10 @@ public:
 	Xapian::termcount remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
 
 	Xapian::docid find_document(const std::string& term_id);
-	Xapian::Document get_document(Xapian::docid did, bool assume_valid_ = false, bool pull_ = false);
+	Xapian::Document get_document(Xapian::docid did, bool assume_valid_ = false);
 
 	std::vector<std::string> get_metadata_keys();
-	std::string get_metadata(const std::string& key);
+	std::string get_metadata(const std::string& key, int subdatabase = 0);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
 
 	void dump_metadata(int fd, XXH32_state_t* xxh_state);

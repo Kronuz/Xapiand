@@ -939,7 +939,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) const
+Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator)
 {
 	L_CALL("Database::storage_get_stored()");
 
@@ -947,8 +947,9 @@ Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) co
 	ASSERT(locator.volume != -1);
 
 	ASSERT(did > 0);
-	ASSERT(endpoints.size() > 0);
-	int subdatabase = (did - 1) % endpoints.size();
+	ASSERT(_databases.size() > 0);
+	int subdatabase = (did - 1) % _databases.size();
+
 	const auto& storage = storages[subdatabase];
 	if (storage) {
 		storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
@@ -956,38 +957,16 @@ Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator) co
 		return storage->read();
 	}
 
-	return "";
-}
-
-
-void
-Database::storage_pull_blobs(Xapian::Document& doc, Xapian::docid did) const
-{
-	L_CALL("Database::storage_pull_blobs()");
-
-	ASSERT(did > 0);
-	ASSERT(endpoints.size() > 0);
-	int subdatabase = (did - 1) % endpoints.size();
-	const auto& storage = storages[subdatabase];
-	if (storage) {
-		auto data = Data(doc.get_data());
-		for (auto& locator : data) {
-			if (locator.type == Data::Type::stored) {
-				ASSERT(locator.volume != -1);
-				storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
-				storage->seek(static_cast<uint32_t>(locator.offset));
-				auto stored = storage->read();
-				data.update(locator.ct_type, unserialise_string_at(STORED_BLOB, stored));
-			}
-		}
-		data.flush();
-		doc.set_data(data.serialise());
-	}
+	std::string locator_key;
+	locator_key.push_back(':');
+	locator_key.append(serialise_length(locator.volume));
+	locator_key.append(serialise_length(locator.offset));
+	return get_metadata(locator_key, subdatabase);
 }
 
 
 std::pair<std::string, std::string>
-Database::storage_push_blobs(std::string&& doc_data) const
+Database::storage_push_blobs(std::string&& doc_data)
 {
 	L_CALL("Database::storage_push_blobs()");
 
@@ -1407,7 +1386,7 @@ Database::find_document(const std::string& term_id)
 
 
 Xapian::Document
-Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
+Database::get_document(Xapian::docid did, bool assume_valid_)
 {
 	L_CALL("Database::get_document(%d)", did);
 
@@ -1432,13 +1411,6 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 			{
 				doc = rdb->get_document(did);
 			}
-#ifdef XAPIAND_DATA_STORAGE
-			if (pull_) {
-				storage_pull_blobs(doc, did);
-			}
-#else
-	ignore_unused(pull_);
-#endif  // XAPIAND_DATA_STORAGE
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { throw; }
@@ -1468,9 +1440,9 @@ Database::get_document(Xapian::docid did, bool assume_valid_, bool pull_)
 
 
 std::string
-Database::get_metadata(const std::string& key)
+Database::get_metadata(const std::string& key, int subdatabase)
 {
-	L_CALL("Database::get_metadata(%s)", repr(key));
+	L_CALL("Database::get_metadata(%s, %d)", repr(key), subdatabase);
 
 	std::string value;
 
@@ -1479,7 +1451,22 @@ Database::get_metadata(const std::string& key)
 	L_DATABASE_WRAP_BEGIN("Database::get_metadata:BEGIN {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Database::get_metadata:END {endpoint:%s, flags:(%s)}", repr(endpoints.to_string()), readable_flags(flags));
 
-	auto *rdb = static_cast<Xapian::Database *>(db());
+	const char *p = key.data();
+	const char *p_end = p + key.size();
+	if (*p == ':') {
+		const auto& storage = storages[subdatabase];
+		if (storage) {
+			++p;
+			ssize_t volume = unserialise_length(&p, p_end);
+			size_t offset = unserialise_length(&p, p_end);
+			storage->open(string::format(DATA_STORAGE_PATH "%u", volume));
+			storage->seek(static_cast<uint32_t>(offset));
+			return storage->read();
+		}
+	}
+
+	db();
+	auto *rdb = static_cast<Xapian::Database *>(&_databases[subdatabase].first);
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
@@ -1502,7 +1489,8 @@ Database::get_metadata(const std::string& key)
 			break;
 		}
 		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
+		db();
+		rdb = static_cast<Xapian::Database *>(&_databases[subdatabase].first);
 		L_DATABASE_WRAP_END("Database::get_metadata:END {endpoint:%s, flags:(%s)} (%d retries)", repr(endpoints.to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 

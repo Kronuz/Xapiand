@@ -771,7 +771,7 @@ RemoteProtocol::msg_document(const std::string &message)
 	reset();
 	lock_database lk_db(this);
 
-	Xapian::Document doc = database()->get_document(did, false, true);
+	Xapian::Document doc = database()->get_document(did, false);
 
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
