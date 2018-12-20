@@ -407,11 +407,6 @@ public:
 		return serialised;
 	}
 
-	size_t hash() const {
-		static const std::hash<std::string> hasher;
-		return hasher(serialised);
-	}
-
 	bool operator==(const Data& other) const noexcept {
 		return serialise() == other.serialise();
 	}
