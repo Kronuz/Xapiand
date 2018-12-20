@@ -307,14 +307,14 @@ Database::reopen_writable()
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseOpeningError&) {
-			if (!exists(endpoint.path + "iamglass")) {
-				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
-					THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
-				}
-				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
+			if (exists(endpoint.path + "iamglass")) {
+				throw;
 			}
-			throw;
+			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
+				THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+			}
+			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
 		}
 		localdb = true;
 	}
@@ -348,7 +348,6 @@ Database::reopen_writable()
 		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 	}
 #endif  // XAPIAND_DATA_STORAGE
-	ASSERT(_databases.size() == endpoints_size);
 
 	_database = std::move(database);
 	reopen_time = std::chrono::system_clock::now();
@@ -454,25 +453,26 @@ Database::reopen_readable()
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				localdb = true;
 			} catch (const Xapian::DatabaseOpeningError& exc) {
-				if (!exists(endpoint.path + "iamglass")) {
-					++failures;
-					if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
-						if (endpoints.size() == failures) {
-							THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
-						}
-						incomplete.store(true, std::memory_order_relaxed);
-					} else {
-						{
-							build_path_index(endpoint.path);
-							RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-							Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
-						}
-						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-						rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-						localdb = true;
-					}
+				if (exists(endpoint.path + "iamglass")) {
+					throw;
 				}
-				throw;
+				++failures;
+				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
+					if (failures == endpoints_size) {
+						THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+					}
+					incomplete.store(true, std::memory_order_relaxed);
+					continue;
+				} else {
+					{
+						build_path_index(endpoint.path);
+						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+						Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
+					}
+					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+					rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+					localdb = true;
+				}
 			}
 		}
 
@@ -492,7 +492,6 @@ Database::reopen_readable()
 		}
 #endif  // XAPIAND_DATA_STORAGE
 	}
-	ASSERT(_databases.size() == endpoints_size);
 
 	_database = std::move(database);
 	reopen_time = std::chrono::system_clock::now();
