@@ -2575,54 +2575,28 @@ HttpClient::endpoints_maker(Request& request, bool master)
 void
 HttpClient::_endpoint_maker(Request& request, bool master)
 {
-	auto ns = request.path_parser.get_nsp();
-	if (string::startswith(ns, "/")) { /* ns without slash */
-		ns = ns.substr(1);
-	}
-
-	auto _path = request.path_parser.get_pth();
-	if (string::startswith(_path, "/")) { /* path without slash */
-		_path = _path.substr(1);
-	}
-
-	std::string index_path;
-	if (ns.empty() && _path.empty()) {
-		index_path = ".";
-	} else {
-		if (!ns.empty()) {
-			index_path.append(ns);
-			if (!string::endswith(index_path, "/")) {
-				index_path.push_back('/');
-			}
-		}
-		if (!_path.empty()) {
-			index_path.append(_path);
-		}
+	auto index_path = std::string(request.path_parser.get_nsp());
+	index_path.push_back('/');
+	index_path.append(request.path_parser.get_pth());
+	if (string::startswith(index_path, "/")) {  // index_path without leading slash
+		index_path = index_path.substr(1);
 	}
 
 	if (request.path_parser.off_hst != nullptr) {
 		auto node_name = request.path_parser.get_hst();
 #ifdef XAPIAND_CLUSTERING
-		Endpoint index("xapian://" + std::string(node_name) + "/" + index_path);
-		int node_port = (index.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.node.binary_port;
-		node_name = index.node.host().empty() ? node_name : index.node.host();
-
-		// Convert node to endpoint:
 		auto node = Node::get_node(node_name);
 		if (!node) {
-			THROW(Error, "Node %s not found", node_name);
+			index_path = string::format("xapian://%s/%s", node_name, index_path);
 		}
-		if (!node_port) {
-			node_port = node->binary_port;
-		}
-		Endpoint endpoint(string::format("xapian://%s:%d/%s", node->host(), node_port, index_path), nullptr, node_name);
+		Endpoint endpoint{index_path, node.get()};
 #else
 		Endpoint endpoint(index_path);
 		ignore_unused(node_name);
 #endif
 		endpoints.add(endpoint);
 	} else {
-		endpoints.add(XapiandManager::resolve_index_endpoint(index_path, master));
+		endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{index_path}, master));
 	}
 	L_HTTP("Endpoint: -> %s", endpoints.to_string());
 }

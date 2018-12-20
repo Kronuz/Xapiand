@@ -1279,14 +1279,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 
 
 Endpoint
-XapiandManager::resolve_index_endpoint_impl(const std::string& normalized_slashed_path, bool master)
+XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool master)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl(%s, %s)", repr(normalized_slashed_path), master ? "true" : "false");
+	L_CALL("XapiandManager::resolve_index_endpoint_impl(%s, %s)", repr(endpoint.to_string()), master ? "true" : "false");
 
-	for (const auto& node : resolve_index_nodes_impl(normalized_slashed_path)) {
+	for (const auto& node : resolve_index_nodes_impl(endpoint.path)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of %zu nodes) %s", Node::indexed_nodes, node ? node->__repr__() : "null");
-			return {normalized_slashed_path, node.get()};
+			return {endpoint, node.get()};
 		}
 		L_MANAGER("Inactive node ignored (of %zu nodes) %s", Node::indexed_nodes, node ? node->__repr__() : "null");
 		if (master) {

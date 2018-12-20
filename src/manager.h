@@ -184,7 +184,7 @@ private:
 #endif
 
 	std::vector<std::shared_ptr<const Node>> resolve_index_nodes_impl(const std::string& normalized_slashed_path);
-	Endpoint resolve_index_endpoint_impl(const std::string& normalized_slashed_path, bool master);
+	Endpoint resolve_index_endpoint_impl(const Endpoint& endpoint, bool master);
 
 	std::string server_metrics_impl();
 
@@ -229,9 +229,9 @@ public:
 		return _manager->resolve_index_nodes_impl(normalized_slashed_path);
 	}
 
-	static Endpoint resolve_index_endpoint(const std::string& normalized_slashed_path, bool master) {
+	static Endpoint resolve_index_endpoint(const Endpoint& endpoint, bool master) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoint_impl(normalized_slashed_path, master);
+		return _manager->resolve_index_endpoint_impl(endpoint, master);
 	}
 
 	static void setup_node() {
