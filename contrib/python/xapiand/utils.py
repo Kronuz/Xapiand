@@ -22,6 +22,11 @@
 # SOFTWARE.
 #
 
+import sys
+
+if sys.version_info[0] > 2:
+    long = int
+
 
 def serialise_length(length):
     if length < 255:
@@ -81,3 +86,29 @@ def unserialise_char(data):
     if len(data) < 1:
         raise ValueError("Bad encoded length: insufficient data")
     return data[:1], data[1:]
+
+
+def fnv1ah64(s):
+    # calculate FNV-1a 64 bit hash
+    fnv = 0xcbf29ce484222325
+    for c in s:
+        fnv = ((fnv ^ ord(c)) * 0x100000001b3) & 0xffffffffffffffff
+    return fnv
+
+
+def jump_consistent_hash(key, num_buckets):
+    # Computes the bucket number for key in the range [0, num_buckets).
+    # The algorithm used is the jump consistent hash by Lamping and Veach.
+    # A Fast, Minimal Memory, Consistent Hash Algorithm
+    # [http://arxiv.org/pdf/1406.2294v1.pdf]
+    if num_buckets < 1:
+        raise ValueError('num_buckets must be a positive number')
+    if not isinstance(key, (int, long)):
+        key = fnv1ah64(key)
+    b, j = -1, 0
+    while j < num_buckets:
+        b = j
+        key = (key * long(2862933555777941757) + 1) & 0xffffffffffffffff
+        j = long(float(b + 1) * (float(1 << 31) / float((key >> 33) + 1)))
+    # b cannot exceed the range of num_buckets, see while condition
+    return int(b)
