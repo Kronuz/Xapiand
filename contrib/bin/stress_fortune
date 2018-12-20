@@ -203,7 +203,7 @@ def _task(args):
                     FIELD: fortune,
                 }
                 offset += 1
-                fortune_id = '{}'.format(offset)
+                fortune_id = offset
                 db = random.choice(args.databases)
                 client.put(db, body, fortune_id)
                 indexed.append((db, fortune_id, fortune, now))
