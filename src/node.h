@@ -40,7 +40,7 @@
 #include "atomic_shared_ptr.h"  // for atomic_shared_ptr
 #include "color_tools.hh"       // for color, hsv2rgb
 #include "epoch.hh"             // for epoch::now
-#include "net.hh"               // for fast_inet_ntop4
+#include "net.hh"               // for inet_ntop
 #include "string.hh"            // for string::lower
 #include "stringified.hh"       // for stringified
 
@@ -147,7 +147,7 @@ public:
 
 	void addr(const struct sockaddr_in& addr) {
 		_addr = addr;
-		_host = fast_inet_ntop4(_addr.sin_addr);
+		_host = inet_ntop(_addr);
 	}
 
 	const struct sockaddr_in& addr() const noexcept {
@@ -156,7 +156,7 @@ public:
 
 	void host(std::string_view host) {
 		_addr.sin_addr.s_addr = inet_addr(stringified(host).c_str());
-		_host = fast_inet_ntop4(_addr.sin_addr);
+		_host = inet_ntop(_addr);
 	}
 
 	const std::string& host() const noexcept {

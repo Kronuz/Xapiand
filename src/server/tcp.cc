@@ -306,7 +306,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				break;
 			}
 
-			// L_RED("TCP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
+			// L_RED("TCP addr -> %s:%d", inet_ntop(addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(addrinfo);
 			return;

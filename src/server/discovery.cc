@@ -1417,7 +1417,7 @@ Discovery::getDescription() const
 {
 	L_CALL("Discovery::getDescription()");
 
-	return string::format("UDP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? fast_inet_ntop4(addr.sin_addr) : "", ntohs(addr.sin_port), description, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION);
+	return string::format("UDP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION);
 }
 
 

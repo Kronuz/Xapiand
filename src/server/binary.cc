@@ -91,7 +91,7 @@ std::string
 Binary::getDescription() const
 {
 	std::string proxy((ntohs(addr.sin_port) == XAPIAND_BINARY_SERVERPORT && XAPIAND_BINARY_SERVERPORT != XAPIAND_BINARY_PROXY) ? "->" + std::to_string(XAPIAND_BINARY_PROXY) : "");
-	return string::format("TCP %s:%d%s (%s v%d.%d)", addr.sin_addr.s_addr ? fast_inet_ntop4(addr.sin_addr) : "", ntohs(addr.sin_port), proxy, description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
+	return string::format("TCP %s:%d%s (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), proxy, description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

@@ -73,7 +73,7 @@
 #include "metrics.h"                          // for Metrics::metrics
 #include "msgpack.h"                          // for MsgPack, object::object
 #include "namegen.h"                          // for name_generator
-#include "net.hh"                             // for fast_inet_ntop4
+#include "net.hh"                             // for inet_ntop
 #include "opts.h"                             // for opts::*
 #include "package.h"                          // for Package
 #include "readable_revents.hh"                // for readable_revents
@@ -495,7 +495,7 @@ XapiandManager::init()
 
 	// Set addr in local node
 	auto address = host_address();
-	L_NOTICE("Node IP address is %s on interface %s, running with pid:%d", fast_inet_ntop4(address.first.sin_addr), address.second, getpid());
+	L_NOTICE("Node IP address is %s on interface %s, running with pid:%d", inet_ntop(address.first), address.second, getpid());
 	node_copy->addr(address.first);
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
@@ -711,7 +711,7 @@ XapiandManager::make_servers()
 
 	// Create and initialize servers.
 
-	auto local_node_addr = fast_inet_ntop4(local_node->addr().sin_addr);
+	auto local_node_addr = inet_ntop(local_node->addr());
 
 	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
 

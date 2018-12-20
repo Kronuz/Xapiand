@@ -27,21 +27,20 @@
 #include <netinet/tcp.h>            // for TCP_NOPUSH
 #include <string>                   // for std::string
 
+#include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::setsockopt
 #include "log.h"                    // for L_ERR
 #include "string.hh"                // for string::format, string::join
 
 
-inline std::string fast_inet_ntop4(const struct in_addr& addr) {
-	// char ip[INET_ADDRSTRLEN];
-	// inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-	// return std::string(ip);
-	return string::format("%d.%d.%d.%d",
-		addr.s_addr & 0xff,
-		(addr.s_addr >> 8) & 0xff,
-		(addr.s_addr >> 16) & 0xff,
-		(addr.s_addr >> 24) & 0xff);
+inline std::string inet_ntop(const struct sockaddr_in& addr) {
+	char ip[INET_ADDRSTRLEN] = {};
+	ASSERT(addr.sin_family == AF_INET || addr.sin_family == AF_INET6);
+	if (inet_ntop(addr.sin_family, &addr.sin_addr, ip, sizeof(ip)) == nullptr) {
+		L_ERR("ERROR: inet_ntop: %s (%d): %s", error::name(errno), errno, error::description(errno));
+	}
+	return std::string(ip);
 }
 
 

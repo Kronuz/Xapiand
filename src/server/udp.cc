@@ -266,7 +266,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			}
 			L_DELAYED_N_CLEAR();
 
-			// L_RED("UDP addr -> %s:%d", fast_inet_ntop4(addr.sin_addr), ntohs(addr.sin_port));
+			// L_RED("UDP addr -> %s:%d", inet_ntop(addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(addrinfo);
 			return;

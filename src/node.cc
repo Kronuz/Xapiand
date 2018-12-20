@@ -98,7 +98,7 @@ Node::unserialise(const char **p, const char *end)
 	}
 
 	node._lower_name = string::lower(node._name);
-	node._host = fast_inet_ntop4(node._addr.sin_addr);
+	node._host = inet_ntop(node._addr);
 
 	*p = ptr;
 
@@ -369,7 +369,7 @@ Node::touch_node(const Node& node, bool activate)
 				}
 				if (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) {
 					node_ref_copy->_addr = node._addr;
-					node_ref_copy->_host = fast_inet_ntop4(node_ref_copy->_addr.sin_addr);
+					node_ref_copy->_host = inet_ntop(node_ref_copy->_addr);
 				}
 				if (!node_ref->http_port && node.http_port) {
 					node_ref_copy->http_port = node.http_port;
