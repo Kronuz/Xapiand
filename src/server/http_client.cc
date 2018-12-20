@@ -2575,11 +2575,26 @@ HttpClient::endpoints_maker(Request& request, bool master)
 void
 HttpClient::_endpoint_maker(Request& request, bool master)
 {
-	auto index_path = std::string(request.path_parser.get_nsp());
-	index_path.push_back('/');
-	index_path.append(request.path_parser.get_pth());
-	if (string::startswith(index_path, "/")) {  // index_path without leading slash
-		index_path = index_path.substr(1);
+	std::string index_path;
+
+	auto pth = request.path_parser.get_pth();
+	if (string::startswith(pth, '/')) {
+		pth.remove_prefix(1);
+		index_path.append(pth);
+	} else {
+		auto ns = request.path_parser.get_nsp();
+		if (string::startswith(ns, '/')) {
+			ns.remove_prefix(1);
+		}
+		if (pth.empty()) {
+			index_path.append(ns);
+		} else {
+			if (!ns.empty()) {
+				index_path.append(ns);
+				index_path.push_back('/');
+			}
+			index_path.append(pth);
+		}
 	}
 
 	if (request.path_parser.off_hst != nullptr) {
