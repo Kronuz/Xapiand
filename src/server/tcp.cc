@@ -428,9 +428,9 @@ TCP::checked_tcp_backlog(int tcp_backlog)
 
 
 int
-TCP::connect(int sock_, const char* hostname, const char* servname)
+TCP::connect(const char* hostname, const char* servname)
 {
-	L_CALL("TCP::connect(%d, %s, servname)", sock_, hostname, servname);
+	L_CALL("TCP::connect(%s, %s)", hostname, servname);
 
 	struct addrinfo hints = {};
 	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
@@ -438,81 +438,75 @@ TCP::connect(int sock_, const char* hostname, const char* servname)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
-	struct addrinfo *servinfo;
-	if (int err = getaddrinfo(hostname, servname, &hints, &servinfo)) {
+	struct addrinfo *addrinfo;
+	if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
 		L_ERR("Couldn't resolve host %s:%s: %s", hostname, servname, gai_strerror(err));
 		return -1;
 	}
 
-	for (auto p = servinfo; p != nullptr; p = p->ai_next) {
-		if (io::connect(sock_, p->ai_addr, p->ai_addrlen) != -1) {
-			freeaddrinfo(servinfo);
-			return 0;
+	for (auto ai = addrinfo; ai != nullptr; ai = ai->ai_next) {
+		int conn_sock;
+		int optval = 1;
+
+		if ((conn_sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
+			if (ai->ai_next == nullptr) {
+				L_CRIT("ERROR: %s:%s socket: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+				return -1;
+			}
+			L_CONN("ERROR: %s:%s socket: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+			continue;
 		}
-		if (errno == EINPROGRESS || errno == EALREADY) {
-			freeaddrinfo(servinfo);
-			return 0;
+
+		if (io::fcntl(conn_sock, F_SETFL, io::fcntl(conn_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
+			L_ERR("ERROR: fcntl O_NONBLOCK {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			io::close(conn_sock);
+			return -1;
 		}
+
+#ifdef SO_NOSIGPIPE
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: setsockopt SO_NOSIGPIPE {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			io::close(conn_sock);
+			return -1;
+		}
+#endif
+
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: setsockopt SO_KEEPALIVE {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			io::close(conn_sock);
+			return -1;
+		}
+
+		struct linger linger;
+		linger.l_onoff = 1;
+		linger.l_linger = 0;
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
+			L_ERR("ERROR: setsockopt SO_LINGER {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			io::close(conn_sock);
+			return -1;
+		}
+
+		if (io::setsockopt(conn_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
+			L_ERR("ERROR: setsockopt TCP_NODELAY {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			io::close(conn_sock);
+			return -1;
+		}
+
+		if (io::connect(conn_sock, ai->ai_addr, ai->ai_addrlen) == -1 && errno != EINPROGRESS && errno != EALREADY) {
+			freeaddrinfo(addrinfo);
+			io::close(conn_sock);
+			return -1;
+		}
+
+		freeaddrinfo(addrinfo);
+		return conn_sock;
 	}
 
-	L_ERR("ERROR: connect error to %s:%s {sock:%d}: %s (%d): %s", hostname, servname, sock_, error::name(errno), errno, error::description(errno));
-	freeaddrinfo(servinfo);
+	L_ERR("ERROR: connect error to %s:%s: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+	freeaddrinfo(addrinfo);
 	return -1;
 
 }
-
-
-int
-TCP::socket()
-{
-	L_CALL("TCP::socket()");
-
-	int sock_;
-	int optval = 1;
-
-	if ((sock_ = io::socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		L_ERR("ERROR: cannot create binary connection: %s (%d): %s", error::name(errno), errno, error::description(errno));
-		return -1;
-	}
-
-	if (io::fcntl(sock_, F_SETFL, io::fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		io::close(sock_);
-		return -1;
-	}
-
-#ifdef SO_NOSIGPIPE
-	if (io::setsockopt(sock_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		io::close(sock_);
-		return -1;
-	}
-#endif
-
-	if (io::setsockopt(sock_, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		io::close(sock_);
-		return -1;
-	}
-
-	struct linger linger;
-	linger.l_onoff = 1;
-	linger.l_linger = 0;
-	if (io::setsockopt(sock_, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
-		L_ERR("ERROR: setsockopt SO_LINGER {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		io::close(sock_);
-		return -1;
-	}
-
-	if (io::setsockopt(sock_, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt TCP_NODELAY {sock:%d}: %s (%d): %s", sock_, error::name(errno), errno, error::description(errno));
-		io::close(sock_);
-		return -1;
-	}
-
-	return sock_;
-}
-
 
 
 BaseTCP::BaseTCP(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* description, int flags)

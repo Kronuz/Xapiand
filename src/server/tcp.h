@@ -62,8 +62,7 @@ public:
 	TCP(const char* description, int flags);
 	~TCP() noexcept;
 
-	static int connect(int sock_, const char* hostname, const char* servname);
-	static int socket();
+	static int connect(const char* hostname, const char* servname);
 
 	int accept();
 };

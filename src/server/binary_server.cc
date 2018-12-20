@@ -190,7 +190,10 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		return;
 	}
 
-	int client_sock = TCP::socket();
+	auto& node = args.src_endpoint.node;
+	int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
+	auto& host = node.host();
+	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
@@ -198,6 +201,7 @@ BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
 		}
 		return;
 	}
+	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client_sock);
 
 	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
 
