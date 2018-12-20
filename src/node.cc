@@ -88,6 +88,7 @@ Node::unserialise(const char **p, const char *end)
 
 	Node node;
 
+	node._addr.sin_family = AF_INET;
 	node._addr.sin_addr.s_addr = unserialise_length(&ptr, end);
 	node.http_port = unserialise_length(&ptr, end);
 	node.binary_port = unserialise_length(&ptr, end);

@@ -155,6 +155,7 @@ public:
 	}
 
 	void host(std::string_view host) {
+		_addr.sin_family = AF_INET;
 		_addr.sin_addr.s_addr = inet_addr(stringified(host).c_str());
 		_host = inet_ntop(_addr);
 	}

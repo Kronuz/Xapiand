@@ -36,8 +36,7 @@
 
 inline std::string inet_ntop(const struct sockaddr_in& addr) {
 	char ip[INET_ADDRSTRLEN] = {};
-	ASSERT(addr.sin_family == AF_INET || addr.sin_family == AF_INET6);
-	if (inet_ntop(addr.sin_family, &addr.sin_addr, ip, sizeof(ip)) == nullptr) {
+	if (inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof(ip)) == nullptr) {
 		L_ERR("ERROR: inet_ntop: %s (%d): %s", error::name(errno), errno, error::description(errno));
 	}
 	return std::string(ip);
