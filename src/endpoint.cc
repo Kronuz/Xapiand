@@ -238,6 +238,50 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 }
 
 
+Endpoint::Endpoint(const Endpoint& other, const Node* node_) :
+	node{node_ ? *node_ : other.node},
+	user{other.user},
+	password{other.password},
+	path{other.path},
+	search{other.search}
+{
+}
+
+
+Endpoint::Endpoint(Endpoint&& other, const Node* node_) :
+	node{node_ ? *node_ : std::move(other.node)},
+	user{std::move(other.user)},
+	password{std::move(other.password)},
+	path{std::move(other.path)},
+	search{std::move(other.search)}
+{
+}
+
+
+Endpoint&
+Endpoint::operator=(const Endpoint& other)
+{
+	node = other.node;
+	user = other.user;
+	password = other.password;
+	path = other.path;
+	search = other.search;
+	return *this;
+}
+
+
+Endpoint&
+Endpoint::operator=(Endpoint&& other)
+{
+	node = std::move(other.node);
+	user = std::move(other.user);
+	password = std::move(other.password);
+	path = std::move(other.path);
+	search = std::move(other.search);
+	return *this;
+}
+
+
 inline std::string_view
 Endpoint::slice_after(std::string_view& subject, std::string_view delimiter) const
 {
