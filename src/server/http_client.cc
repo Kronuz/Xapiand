@@ -2590,6 +2590,9 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 			index_path = string::format("xapian://%s/%s", node_name, index_path);
 		}
 		Endpoint endpoint{index_path, node.get()};
+		if (endpoint.node.binary_port == 0) {
+			endpoint.node.binary_port = XAPIAND_BINARY_SERVERPORT;
+		}
 #else
 		Endpoint endpoint(index_path);
 		ignore_unused(node_name);
