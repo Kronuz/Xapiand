@@ -314,7 +314,7 @@ inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 }
 
 inline uint32_t jump_consistent_hash(std::string_view key, int32_t num_buckets) {
-	return jump_consistent_hash(xxh64::hash(key), num_buckets);
+	return jump_consistent_hash(fnv1ah64::hash(key), num_buckets);
 }
 
 #endif // HASHES_HH
