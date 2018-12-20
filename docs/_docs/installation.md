@@ -8,6 +8,12 @@ If it ever becomes a pain, please [file an issue]({{ site.repository }}/issues/n
 we might make the process easier.
 
 
+## Docker
+
+```sh
+~ $ docker pull dubalu/xapiand:latest
+```
+
 ## Installation with Homebrew
 
 Xapiand contains a formula for Homebrew (a package manager for OS X). It can
@@ -30,7 +36,7 @@ There is also a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/con
 ## Linux
 
 ```sh
-(not yet available)
+Not yet available, build from sources.
 ```
 
 

@@ -65,11 +65,7 @@ layout: default
 		<div class="unit golden-large">
 			<div class="language-sh highlighter">
 {% highlight sh %}
-~ $ brew install Kronuz/tap/xapiand
-
-~ $ mkdir my-database
-~ $ cd my-database
-~/my-database $ xapiand -vvvv
+~ $ docker run -p 8880:8880 --rm dubalu/xapiand
 
 # => Ready to Rock!
 {% endhighlight %}

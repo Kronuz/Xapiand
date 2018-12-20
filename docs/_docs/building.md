@@ -14,7 +14,7 @@ from [GitHub]. Once you have a local copy, procede with the
 Xapiand is written in C++14, it makes use of libev (which is included in the
 codebase), it has the following build requirements:
 
-* Clang or GCC
+* Clang v4.0+
 * pkg-config
 * CMake
 

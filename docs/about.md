@@ -49,12 +49,9 @@ built for the cloud and with Data Locality. It features:
   * Reliable, asynchronous replication for long term persistence.
 
 ##### Multi-Partitioning and Distribution Strategies:
-  * Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
   * Random Consistent Partitioning and Replication.
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
-
-<sup><a id="footnote-2">2</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf){:target="_blank"}
 
 ---
 

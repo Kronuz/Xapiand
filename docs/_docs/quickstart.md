@@ -10,6 +10,17 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 
 ## Installing and Running
 
+
+### Using Docker
+
+```sh
+# Run with very verbose output:
+docker run -p 8880:8880 --rm dubalu/xapiand -vvvv
+```
+
+
+### Using Homebrew in macOS
+
 ```sh
 # Install with Homebrew:
 ~ $ brew install Kronuz/tap/xapiand

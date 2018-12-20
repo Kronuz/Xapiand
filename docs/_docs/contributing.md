@@ -25,7 +25,6 @@ are planned to be supported by Xapiand some time soonish in order to get closer
 to the final product:
 
 * Multi-Partitioning and Distribution Strategies:
-  * Social-Based Partitioning and Replication (SPAR <sup>[1](#footnote-1)</sup>).
   * Random Consistent Partitioning and Replication.
 
 * Highly Available:
@@ -42,17 +41,11 @@ can partition, replicate and distribute indexes across several nodes using
 any of the following partitioning strategies:
 
 
-#### Social-Based Partitioning and Replication
-
-* Horizontal scaling by distributing indexes among several nodes.
-* Maximizes data locality ensuring related indexes are kept (or are directly
-  available) in the same node.
-* Minimizes network usage when accessing a set of related indexes.
-
-
 #### Random Consistent Partitioning
 
 * Horizontal scaling by distributing indexes among several nodes.
+* Increases data locality by increasing number of read-only replicas.
+* Minimizes network usage when accessing indexes locally available.
 
 
 ---

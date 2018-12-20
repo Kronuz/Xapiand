@@ -10,7 +10,8 @@
 # Build using:
 # docker build -t dubalu/xapiand:latest contrib/docker/xapiand
 # docker tag dubalu/xapiand:latest dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version)
-# docker push dubalu/xapiand
+# docker push dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version)
+# docker push dubalu/xapiand:latest
 
 FROM dubalu/clang as builder
 
