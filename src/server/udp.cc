@@ -217,7 +217,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
 				ASSERT(hostname);
 				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr;
-				mreq.imr_interface.s_addr = INADDR_ANY;
+				mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
@@ -238,7 +238,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			// sendto(2) under OS X, for some reason...
 			// So we bind to INADDR_ANY instead:
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
-				reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr.s_addr = INADDR_ANY;
+				reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr.s_addr = htonl(INADDR_ANY);
 			}
 #endif
 
