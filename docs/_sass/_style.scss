@@ -598,10 +598,14 @@ article h2:first-child { margin-top: 0; }
 
 .avatar {
 	@include border-radius(50%);
-	@include box-shadow(0 0 0 1px #7c9162, 0 2px 2px 3px rgba(0,0,0,.1));
+	@include box-shadow(0 0 0 1px $theme_color_light);
 	display: inline-block;
 	vertical-align: middle;
 	margin: -4px 4px 0;
+
+	&:hover {
+		@include box-shadow(0 0 0 1px $theme_color_dark);
+	}
 }
 
 .post-meta {
