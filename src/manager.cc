@@ -623,7 +623,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (is_leader) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
 			if (db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				THROW(CheckoutError);
+				THROW(NotFoundError);
 			}
 			auto mset = db_handler.get_all_mset();
 			const auto m_e = mset.end();
