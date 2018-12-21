@@ -881,6 +881,10 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
+	if (!_database_pool) {
+		return;  // already joined!
+	}
+
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Workers:\n%sDatabases:\n%sNodes:\n%s", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
