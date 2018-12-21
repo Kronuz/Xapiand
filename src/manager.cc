@@ -1121,6 +1121,8 @@ XapiandManager::join()
 	db_updater_obj.reset();
 	fsyncher_obj.reset();
 
+	_schemas.reset();
+
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
 }
