@@ -1093,6 +1093,8 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 
+	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
+
 	_http.reset();
 #ifdef XAPIAND_CLUSTERING
 	_binary.reset();
