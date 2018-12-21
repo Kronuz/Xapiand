@@ -80,4 +80,4 @@ RUN apk add libuuid \
 EXPOSE 8880
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["-v"]
+CMD ["xapiand"]
