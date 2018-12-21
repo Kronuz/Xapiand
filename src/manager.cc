@@ -106,6 +106,12 @@
 #define NODE_LABEL "node"
 #define CLUSTER_LABEL "cluster"
 
+#define L_MANAGER_TIMED_CLEAR() { \
+	if (log) { \
+		log->clear(); \
+	} \
+}
+
 #define L_MANAGER_TIMED(delay, format_timeout, format_done, ...) { \
 	if (log) { \
 		log->clear(); \
@@ -820,7 +826,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 {
 	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
 
-	_state = State::READY;
+	exchange_state(_state.load(), State::READY);
 
 	_http->start();
 
@@ -1135,8 +1141,7 @@ XapiandManager::reset_state_impl()
 {
 	L_CALL("XapiandManager::reset_state_impl()");
 
-	if (_state != State::RESET) {
-		_state = State::RESET;
+	if (exchange_state(_state.load(), State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
 		Node::reset();
 		_discovery->start();
 	}
@@ -1404,6 +1409,25 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_databases.Set(count.second);
 
 	return metrics.serialise();
+}
+
+
+bool
+XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds timeout, std::string_view format_timeout, std::string_view format_done)
+{
+	ASSERT(_manager);
+	if (from != to) {
+		if (_manager->_state.compare_exchange_strong(from, to)) {
+			auto& log = _manager->log;
+			if (timeout == 0s) {
+				L_MANAGER_TIMED_CLEAR();
+			} else {
+				L_MANAGER_TIMED(timeout, format_timeout, format_done);
+			}
+			return true;
+		}
+	}
+	return false;
 }
 
 

@@ -284,6 +284,8 @@ public:
 		return _manager->_state;
 	}
 
+	static bool exchange_state(State from, State to, std::chrono::milliseconds timeout = 0s, std::string_view format_timeout = "", std::string_view format_done = "");
+
 	static auto& total_clients() {
 		ASSERT(_manager);
 		return _manager->_total_clients;

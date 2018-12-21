@@ -361,8 +361,7 @@ Discovery::cluster_wave(Message type, const std::string& message)
 
 		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
 		// (prevent it from switching to slow waiting)
-		auto waiting = XapiandManager::State::WAITING;
-		if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+		if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 			// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 		}
 	}
@@ -621,8 +620,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 						serialise_length(raft_commit_index));
 
 					// First time we elect a leader's, we setup node
-					auto joining = XapiandManager::State::JOINING;
-					if (XapiandManager::state().compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+					if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
 						// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 						XapiandManager::setup_node();
 					}
@@ -758,8 +756,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 
 			if (leader_commit == raft_commit_index) {
 				// First time we reach leader's commit, we setup node
-				auto joining = XapiandManager::State::JOINING;
-				if (XapiandManager::state().compare_exchange_strong(joining, XapiandManager::State::SETUP)) {
+				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
 					// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 					XapiandManager::setup_node();
 				}
@@ -972,12 +969,11 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 			}
 
 			local_node = Node::local_node();
-			auto reset = XapiandManager::State::RESET;
-			if (XapiandManager::state().compare_exchange_strong(reset, XapiandManager::State::WAITING)) {
+			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+				L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
+				send_message(Message::CLUSTER_HELLO, local_node->serialise());
 			}
-			L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
-			send_message(Message::CLUSTER_HELLO, local_node->serialise());
 			break;
 		}
 		case XapiandManager::State::WAITING: {
@@ -988,8 +984,7 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 			cluster_discovery.again();
 			L_EV("Reset discovery's cluster_discovery event (%f)", cluster_discovery.repeat);
 
-			auto waiting = XapiandManager::State::WAITING;
-			if (XapiandManager::state().compare_exchange_strong(waiting, XapiandManager::State::WAITING_MORE)) {
+			if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 			break;
@@ -998,12 +993,10 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 			cluster_discovery.stop();
 			L_EV("Stop discovery's cluster_discovery event");
 
-			auto waiting_more = XapiandManager::State::WAITING_MORE;
-			if (XapiandManager::state().compare_exchange_strong(waiting_more, XapiandManager::State::JOINING)) {
+			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 3s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
 				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+				XapiandManager::join_cluster();
 			}
-
-			XapiandManager::join_cluster();
 			break;
 		}
 		default: {
