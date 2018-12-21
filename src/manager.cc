@@ -974,23 +974,6 @@ XapiandManager::join()
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////
-	auto& db_updater_obj = db_updater(false);
-	if (db_updater_obj) {
-		L_MANAGER("Finishing database updater!");
-		db_updater_obj->finish();
-
-		L_MANAGER("Waiting for %zu database updater%s...", db_updater_obj->running_size(), (db_updater_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
-		while (!db_updater_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-
 #if XAPIAND_DATABASE_WAL
 
 	////////////////////////////////////////////////////////////////////
@@ -1009,6 +992,22 @@ XapiandManager::join()
 	}
 
 #endif
+
+	////////////////////////////////////////////////////////////////////
+	auto& db_updater_obj = db_updater(false);
+	if (db_updater_obj) {
+		L_MANAGER("Finishing database updater!");
+		db_updater_obj->finish();
+
+		L_MANAGER("Waiting for %zu database updater%s...", db_updater_obj->running_size(), (db_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
+		while (!db_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
 
 	////////////////////////////////////////////////////////////////////
 	auto& fsyncher_obj = fsyncher(false);
