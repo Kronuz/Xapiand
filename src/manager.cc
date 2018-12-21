@@ -440,7 +440,7 @@ XapiandManager::shutdown_sig(int sig)
 		_shutdown_now = now;
 	}
 
-	shutdown(_shutdown_asap, _shutdown_now);
+	shutdown(_shutdown_asap, _shutdown_now, is_running_loop());
 }
 
 
@@ -512,31 +512,59 @@ XapiandManager::run()
 {
 	L_CALL("XapiandManager::run()");
 
-	if (_node_name == "~") {
-		L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name);
-		sig_exit(EX_CONFIG);
-		return;
+	try {
+		if (_node_name == "~") {
+			L_CRIT("Node name %s doesn't match with the one in the cluster's database!", opts.node_name);
+			throw SystemExit(EX_CONFIG);
+		}
+
+		start_discovery();
+
+		if (opts.solo) {
+			setup_node();
+		}
+
+		L_MANAGER("Entered manager loop...");
+		run_loop();
+		L_MANAGER("Manager loop ended!");
+
+		int sig = atom_sig;
+		if (sig < 0) {
+			throw SystemExit(-sig);
+		}
+
+		shutdown_sig(0);
+		join();
+
+	} catch (const SystemExit& exc) {
+		shutdown_sig(0);
+		join();
+		sig_exit(-exc.code);
+
+	} catch (const BaseException& exc) {
+		L_CRIT("Exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+		shutdown_sig(0);
+		join();
+		sig_exit(-EX_SOFTWARE);
+
+	} catch (const Xapian::Error& exc) {
+		L_CRIT("Exception: %s", exc.get_description());
+		shutdown_sig(0);
+		join();
+		sig_exit(-EX_SOFTWARE);
+
+	} catch (const std::exception& exc) {
+		L_CRIT("Exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+		shutdown_sig(0);
+		join();
+		sig_exit(-EX_SOFTWARE);
+
+	} catch (...) {
+		L_CRIT("Exception: Unknown!");
+		shutdown_sig(0);
+		join();
+		sig_exit(-EX_SOFTWARE);
 	}
-
-	start_discovery();
-
-	if (opts.solo) {
-		setup_node();
-	}
-
-	L_MANAGER("Entered manager loop...");
-	run_loop();
-	L_MANAGER("Manager loop ended!");
-
-	int sig = atom_sig;
-	if (sig < 0) {
-		detach();
-		throw SystemExit(-sig);
-	}
-
-	stop();
-	join();
-	detach();
 }
 
 
