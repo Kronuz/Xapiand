@@ -112,7 +112,7 @@ DatabaseCleanup::operator()()
 	run_loop();
 	L_EV("Database cleanup loop ended!");
 
-	detach();
+	detach(false);
 }
 
 

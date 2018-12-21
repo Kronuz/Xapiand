@@ -99,5 +99,5 @@ BaseServer::operator()()
 	run_loop();
 	L_EV("Server loop ended!");
 
-	detach();
+	detach(false);
 }

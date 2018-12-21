@@ -202,7 +202,7 @@ Discovery::operator()()
 	run_loop();
 	L_EV("Discovery server loop ended!");
 
-	detach();
+	detach(false);
 }
 
 
