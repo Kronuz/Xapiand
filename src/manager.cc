@@ -622,6 +622,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		bool found = false;
 		if (is_leader) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
+			if (db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+				THROW(CheckoutError);
+			}
 			auto mset = db_handler.get_all_mset();
 			const auto m_e = mset.end();
 			for (auto m = mset.begin(); m != m_e; ++m) {
@@ -649,6 +652,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	} catch (const NotFoundError&) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), false, {
 			{ RESERVED_INDEX, "field_all" },
 			{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
