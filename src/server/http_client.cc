@@ -1344,7 +1344,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint(".", leader_node.get()));
+	endpoints.add(Endpoint{"./", leader_node.get()});
 
 	request.processing = std::chrono::system_clock::now();
 

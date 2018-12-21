@@ -583,7 +583,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint(".", leader_node.get());
+	Endpoint cluster_endpoint{"./", leader_node.get()};
 	try {
 		bool found = false;
 		if (is_leader) {
@@ -645,7 +645,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Replicate database from the leader
 		if (!is_leader) {
 			ASSERT(!cluster_endpoint.is_local());
-			Endpoint local_endpoint(".");
+			Endpoint local_endpoint{"./"};
 			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
 			_binary->trigger_replication({cluster_endpoint, local_endpoint, true});
@@ -1166,7 +1166,7 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint(".");
+	Endpoint cluster_endpoint{"./"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_all_mset();
 	const auto m_e = mset.end();
@@ -1224,7 +1224,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 			lk.unlock();
 		} else {
 			lk.unlock();
-			db_handler.reset(Endpoints{Endpoint{"."}});
+			db_handler.reset(Endpoints{Endpoint{"./"}});
 			serialised = db_handler.get_metadata(normalized_slashed_path);
 			if (!serialised.empty()) {
 				lk.lock();
@@ -1250,7 +1250,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, serialised));
 				lk.unlock();
 				auto leader_node = Node::leader_node();
-				Endpoint cluster_endpoint(".", leader_node.get());
+				Endpoint cluster_endpoint{"./", leader_node.get()};
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				db_handler.set_metadata(normalized_slashed_path, serialised, false);
 			}
