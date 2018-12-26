@@ -255,17 +255,6 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				break;
 			}
 
-			// Flush socket
-			L_DELAYED_N(1s, "UDP flush is taking too long...");
-			while (true) {
-				char buf[1024];
-				ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
-				if (received < 0 && !io::ignored_errno(errno, false, true, true)) {
-					break;
-				}
-			}
-			L_DELAYED_N_CLEAR();
-
 			// L_RED("UDP addr -> %s:%d", inet_ntop(addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(addrinfo);
