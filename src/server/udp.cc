@@ -187,6 +187,54 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 		#endif
 			}
 
+			size_t sndbuf_size = 0;
+			socklen_t sndbuf_size_len = sizeof(size_t);
+			if (io::getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf_size, &sndbuf_size_len) == -1) {
+				if (!tries) {
+					L_CRIT("ERROR: %s getsockopt SO_SNDBUF {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				break;
+			}
+			for (size_t size = 4194304; size >= 262144 && size > sndbuf_size; size /= 2) {
+				if (io::setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size_t)) != -1) {
+					if (size != 4194304) {
+						L_WARNING("WARNING: %s SO_SNDBUF is set to %zu {sock:%d}", description, size, sock);
+					}
+					sndbuf_size = 0;
+					break;
+				}
+			}
+			if (sndbuf_size) {
+				L_WARNING("WARNING: %s SO_SNDBUF is set to %zu {sock:%d}", description, sndbuf_size, sock);
+			}
+
+			size_t rcvbuf_size = 0;
+			socklen_t rcvbuf_size_len = sizeof(size_t);
+			if (io::getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcvbuf_size, &rcvbuf_size_len) == -1) {
+				if (!tries) {
+					L_CRIT("ERROR: %s getsockopt SO_RCVBUF {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
+				}
+				break;
+			}
+			for (size_t size = 4194304; size >= 262144 && size > rcvbuf_size; size /= 2) {
+				if (io::setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size_t)) != -1) {
+					if (size != 4194304) {
+						L_WARNING("WARNING: %s SO_RCVBUF is set to %zu {sock:%d}", description, size, sock);
+					}
+					rcvbuf_size = 0;
+					break;
+				}
+			}
+			if (rcvbuf_size) {
+				L_WARNING("WARNING: %s SO_RCVBUF is set to %zu {sock:%d}", description, rcvbuf_size, sock);
+			}
+
 			auto* onoff = ((flags & UDP_IP_MULTICAST_LOOP) != 0) ? &on : &off;
 			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, onoff, sizeof(int)) == -1) {
 				freeaddrinfo(addrinfo);
