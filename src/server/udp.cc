@@ -100,7 +100,8 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 		return;
 	}
 
-	int optval = 1;
+	const int on = 1;
+	const int off = 0;
 
 	L_CONN("Binding UDP %s:%d", hostname ? hostname : "0.0.0.0", serv);
 
@@ -145,7 +146,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				break;
 			}
 
-			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
 					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
@@ -160,7 +161,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 
 			if ((flags & UDP_SO_REUSEPORT) != 0) {
 		#ifdef SO_REUSEPORT_LB
-				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &on, sizeof(int)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
@@ -173,7 +174,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 					break;
 				}
 		#else
-				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
 						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
@@ -186,17 +187,16 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 		#endif
 			}
 
-			if ((flags & UDP_IP_MULTICAST_LOOP) != 0) {
-				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
-					freeaddrinfo(addrinfo);
-					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
-						close();
-						sig_exit(-EX_CONFIG);
-						return;
-					}
-					break;
+			auto* onoff = ((flags & UDP_IP_MULTICAST_LOOP) != 0) ? &on : &off;
+			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, onoff, sizeof(int)) == -1) {
+				freeaddrinfo(addrinfo);
+				if (!tries) {
+					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					close();
+					sig_exit(-EX_CONFIG);
+					return;
 				}
+				break;
 			}
 
 			if ((flags & UDP_IP_MULTICAST_TTL) != 0) {
