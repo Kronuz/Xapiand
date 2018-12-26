@@ -310,7 +310,7 @@ UDP::send_message(char type, const std::string& content)
 char
 UDP::get_message(std::string& result, char max_type)
 {
-	char buf[1024];
+	char buf[1500];
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
 		if (!io::ignored_errno(errno, true, false, false)) {
