@@ -8,11 +8,15 @@ if [ "${1:0:1}" = '-' ] || [ -z "$1" ]; then
 fi
 
 if [ "$1" = 'xapiand' ]; then
+	K8S_NAMESPACE_PATH="${K8S_NAMESPACE_PATH:-/var/run/secrets/kubernetes.io/serviceaccount/namespace}"
+	NAMESPACE="$(test -f $K8S_NAMESPACE_PATH && cat $K8S_NAMESPACE_PATH)"
+
 	# Normalize variables and allow the container to be started with `--user`
 	XAPIAND_UID="${XAPIAND_UID:-$UID}"
 	XAPIAND_GID="${XAPIAND_GID:-$GID}"
+	XAPIAND_NAME="${XAPIAND_NAME:-$HOSTNAME}"
+	XAPIAND_CLUSTER="${XAPIAND_CLUSTER:-$NAMESPACE}"
 	XAPIAND_DATABASE="${XAPIAND_DATABASE:-/var/db/xapiand}"
-	XAPIAND_CLUSTER="${XAPIAND_CLUSTER:-Xapiand}"
 
 	# Setup user
 	XAPIAND_UID="${XAPIAND_UID:-$(id -u -n)}"
@@ -29,8 +33,9 @@ if [ "$1" = 'xapiand' ]; then
 	# Set defaults for command
 	UID="$XAPIAND_UID"
 	GID="$XAPIAND_GID"
-	DATABASE="$XAPIAND_DATABASE"
+	NAME="$XAPIAND_NAME"
 	CLUSTER="$XAPIAND_CLUSTER"
+	DATABASE="$XAPIAND_DATABASE"
 
 	# Parse arguments
 	for i in "$@"
@@ -48,6 +53,12 @@ if [ "$1" = 'xapiand' ]; then
 		--gid=*)
 			unset XAPIAND_GID
 			GID="${i#*=}";;
+		--name)
+			unset XAPIAND_NAME
+			next=NAME;;
+		--name=*)
+			unset XAPIAND_NAME
+			NAME="${i#*=}";;
 		--cluster)
 			unset XAPIAND_CLUSTER
 			next=CLUSTER;;
@@ -79,6 +90,7 @@ if [ "$1" = 'xapiand' ]; then
 	set -- "$@" \
 		"${XAPIAND_UID:+--uid=$XAPIAND_UID}" \
 		"${XAPIAND_GID:+--gid=$XAPIAND_GID}" \
+		"${XAPIAND_NAME:+--name=$XAPIAND_NAME}" \
 		"${XAPIAND_CLUSTER:+--cluster=$XAPIAND_CLUSTER}" \
 		"${XAPIAND_DATABASE:+--database=$XAPIAND_DATABASE}"
 fi
