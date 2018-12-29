@@ -20,6 +20,10 @@ import struct
 import urllib2
 import httplib
 
+try:
+    from urllib.parse import quote_plus
+except ImportError:
+    from urllib import quote_plus
 
 MCAST_GRP = '239.192.168.1'
 MCAST_PORT = 58880
@@ -30,7 +34,7 @@ K8S_PORT = os.environ.get('K8S_PORT', 443)
 K8S_TOKEN_PATH = os.environ.get('K8S_TOKEN_PATH', "/var/run/secrets/kubernetes.io/serviceaccount/token")
 K8S_CERT_PATH = os.environ.get('K8S_CERT_PATH', "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 K8S_NAMESPACE_PATH = os.environ.get('K8S_NAMESPACE_PATH', "/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-K8S_LABEL_SELECTOR = os.environ.get('K8S_LABEL_SELECTOR', "app%3Dxapiand%2Ccomponent%3Dmulticast")
+K8S_LABEL_SELECTOR = os.environ.get('K8S_LABEL_SELECTOR', "app=xapiand,component=multicast")
 K8S_TOKEN = open(K8S_TOKEN_PATH).read().replace('\n', '')
 K8S_NAMESPACE = open(K8S_NAMESPACE_PATH).read().replace('\n', '')
 
@@ -135,7 +139,7 @@ class Server:
         while True:
             try:
                 servers = set()
-                result = json.loads(request("/api/v1/namespaces/{}/pods?labelSelector={}".format(K8S_NAMESPACE, K8S_LABEL_SELECTOR)))
+                result = json.loads(request("/api/v1/namespaces/{}/pods?labelSelector={}".format(K8S_NAMESPACE, quote_plus(K8S_LABEL_SELECTOR))))
                 for item in result['items']:
                     podIP = item['status']['podIP']
                     servers.add(podIP)
