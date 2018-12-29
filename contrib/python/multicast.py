@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+"""
+Google Cloud as well as other cloud providers do not allow UDP multicasting
+across its network. This script works by receiving multicast messages and
+sending them to all other listed nodes in the network using UDP unicast.
+
+Google Kubernetes is an example where this script is needed to be run as a
+node daemon so multicasted messages in a node get propagated to all other
+nodes.
+"""
+
 import os
 import sys
 import ssl
