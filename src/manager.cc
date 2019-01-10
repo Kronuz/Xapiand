@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -751,16 +751,16 @@ XapiandManager::make_servers()
 
 	auto local_node_addr = inet_ntop(local_node->addr());
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
+	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
+		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
 	}
 #endif
 
 	for (ssize_t i = 0; i < opts.num_servers; ++i) {
-		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
+		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
 		if (_http_server->addr.sin_family) {
 			_http->addr = _http_server->addr;
 		}
@@ -768,7 +768,7 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
+			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
 			if (_binary_server->addr.sin_family) {
 				_binary->addr = _binary_server->addr;
 			}
