@@ -55,7 +55,7 @@ repository from [https://github.com/xapian/xapian.git](https://github.com/xapian
   --disable-dependency-tracking \
   --disable-documentation \
   --enable-maintainer-mode \
-  --program-suffix="" \
+  --program-suffix='' \
   --prefix="$([ -d '/usr/local/Cellar' ] && echo '/usr/local/Cellar/xapian/1.5' || echo '/usr/local')" \
   CXXFLAGS="-O3 -DFLINTLOCK_USE_FLOCK -DXAPIAN_MOVE_SEMANTICS $CXXFLAGS" \
   LDFLAGS="-O3 $LDFLAGS"

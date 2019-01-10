@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -446,8 +446,8 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, XAPIAND_PREFIX "/var/run/xapiand.pid", "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, XAPIAND_PREFIX "/var/log/xapiand.log", "file", cmd);
 
 		SwitchArg admin_commands("", "admin-commands", "Enables administrative HTTP commands.", cmd, false);
 
@@ -462,7 +462,7 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, "./", "path", cmd);
+		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_PREFIX "/var/db/xapiand", "path", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
@@ -986,15 +986,13 @@ void detach() {
 
 
 void writepid(const char* pidfile) {
-	if (pidfile != nullptr && *pidfile != '\0') {
-		/* Try to write the pid file in a best-effort way. */
-		int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
-		if (fd != -1) {
-			char buffer[100];
-			std::snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
-			io::write(fd, buffer, std::strlen(buffer));
-			io::close(fd);
-		}
+	/* Try to write the pid file in a best-effort way. */
+	int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
+	if (fd != -1) {
+		char buffer[100];
+		std::snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
+		io::write(fd, buffer, std::strlen(buffer));
+		io::close(fd);
 	}
 }
 
@@ -1324,7 +1322,9 @@ int main(int argc, char **argv) {
 
 		if (opts.detach) {
 			detach();
-			writepid(opts.pidfile.c_str());
+			if (!opts.pidfile.empty()) {
+				writepid(opts.pidfile.c_str());
+			}
 		}
 
 		atexit(cleanup_manager);
