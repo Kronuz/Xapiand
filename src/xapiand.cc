@@ -433,6 +433,8 @@ void parseOptions(int argc, char** argv) {
 
 		ValueArg<std::string> bind_address("", "bind-address", "Bind address to listen to.", false, "", "bind", cmd);
 
+		SwitchArg iterm2("", "iterm2", "Set marks, tabs, title, badges and growl.", cmd, false);
+
 		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
 		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
 		SwitchArg log_timeless("", "log-timeless", "Logs without timestamp.", cmd, false);
@@ -528,6 +530,8 @@ void parseOptions(int argc, char** argv) {
 		opts.no_colors = no_colors.getValue();
 
 		opts.admin_commands = admin_commands.getValue();
+
+		opts.iterm2 = iterm2.getValue();
 
 		opts.log_epoch = log_epoch.getValue();
 		opts.log_iso8601 = log_iso8601.getValue();

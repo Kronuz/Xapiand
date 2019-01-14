@@ -442,7 +442,7 @@ Logging::finish(int wait)
 void
 Logging::set_mark()
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		auto buf = std::string("\033]1337;SetMark\a");
 		write_stderr(buf.data(), buf.size());
 	}
@@ -452,7 +452,7 @@ Logging::set_mark()
 void
 Logging::tab_rgb(int red, int green, int blue)
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		std::string buf;
 		buf += string::format("\033]6;1;bg;red;brightness;%d\a", red);
 		buf += string::format("\033]6;1;bg;green;brightness;%d\a", green);
@@ -464,7 +464,7 @@ Logging::tab_rgb(int red, int green, int blue)
 void
 Logging::tab_title(std::string_view title)
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		auto buf = string::format("\033]0;%s\a", title);
 		write_stderr(buf.data(), buf.size());
 	}
@@ -474,7 +474,7 @@ Logging::tab_title(std::string_view title)
 void
 Logging::badge(std::string_view badge)
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		auto buf = string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
 		write_stderr(buf.data(), buf.size());
 	}
@@ -484,7 +484,7 @@ Logging::badge(std::string_view badge)
 void
 Logging::growl(std::string_view text)
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		auto buf = string::format("\033]9;%s\a", text);
 		write_stderr(buf.data(), buf.size());
 	}
@@ -494,7 +494,7 @@ Logging::growl(std::string_view text)
 void
 Logging::reset()
 {
-	if (is_tty()) {
+	if (is_tty() && opts.iterm2) {
 		std::string buf;
 		buf += std::string("\033]1337;SetBadgeFormat=\a");
 		buf += std::string("\033]6;1;bg;*;default\a");
