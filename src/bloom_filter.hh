@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2018,2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,8 @@
 #include <bitset>         // for std::bitset
 #include <utility>        // for std::make_pair
 
-#include "hashes.hh"
+#include "cassert.h"      // for ASSERT
+#include "hashes.hh"      // for xxh64::hash, fnv1ah64::hash
 
 
 template <size_t N=8192>
@@ -47,23 +48,24 @@ class BloomFilter {
 	static constexpr size_t m = N * 32;
 	std::bitset<m> bits;
 
-	auto hash(const char* data, size_t len) const {
+	auto hash(const char* data, size_t len, uint64_t salt) const {
+		ASSERT(salt);
 		return std::make_pair(
 			xxh64::hash(data, len),
-			fnv1ah64::hash(data, len)
+			fnv1ah64::hash(data, len) * salt
 		);
 	}
 
 public:
-	void add(const char* data, size_t len) {
-		auto hashes = hash(data, len);
+	void add(const char* data, size_t len, uint64_t salt = 1) {
+		auto hashes = hash(data, len, salt);
 		for (auto n = k; n; --n) {
 			bits[(hashes.first + n * hashes.second) % m] = true;
 		}
 	}
 
-	bool contains(const char* data, size_t len) const {
-		auto hashes = hash(data, len);
+	bool contains(const char* data, size_t len, uint64_t salt = 1) const {
+		auto hashes = hash(data, len, salt);
 		for (auto n = k; n; --n) {
 			if (!bits[(hashes.first + n * hashes.second) % m]) {
 				return false;
