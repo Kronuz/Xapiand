@@ -29,7 +29,7 @@
 #include "hashes.hh"      // for xxh64::hash, fnv1ah64::hash
 
 
-template <size_t N=8192>
+template <size_t N=131072>
 class BloomFilter {
 	// [http://blog.michaelschmatz.com/2016/04/11/how-to-write-a-bloom-filter-cpp/]
 	// [http://citeseer.ist.psu.edu/viewdoc/download;jsessionid=4060353E67A356EF9528D2C57C064F5A?doi=10.1.1.152.579&rep=rep1&type=pdf]
@@ -42,8 +42,15 @@ class BloomFilter {
 	// m = N * 19.9315685693 / 0.6931471806
 	// m = N * 28.7551751321
 	// m = N * 32
-	// m = 8192 * 32
-	// m = 262144 bits => 32768 bytes => 32K
+	// if N = 8192
+	//    m = 8192 * 32
+	//    m = 262,144 bits => 32,768 bytes => 32K
+	// if N = 131072
+	//    m = 131,072 * 32
+	//    m = 4,194,304 bits => 524,288 bytes => 512K
+	// if N = 262144
+	//    m = 262,144 * 32
+	//    m = 8,388,608 bits => 1,048,576 bytes => 1M
 	static constexpr size_t k = 20;
 	static constexpr size_t m = N * 32;
 	std::bitset<m> bits;
