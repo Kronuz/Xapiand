@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -330,7 +330,7 @@ UDP::send_message(const std::string& message)
 
 		if (written < 0) {
 			if (!io::ignored_errno(errno, true, false, false)) {
-				L_ERR("ERROR: sendto error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_ERR_ONCE_PER_MINUTE("ERROR: sendto error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 		return written;

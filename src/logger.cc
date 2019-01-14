@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -149,7 +149,7 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, args);
 }
@@ -302,7 +302,7 @@ Logging::Logging(
 	bool async,
 	bool info,
 	bool stacked,
-	bool once,
+	uint64_t once,
 	int priority,
 	const std::chrono::time_point<std::chrono::system_clock>& created_at
 ) :
@@ -510,10 +510,10 @@ Logging::operator()()
 
 	if (once) {
 		static BloomFilter<> bloom;
-		if (bloom.contains(str.data(), str.size())) {
+		if (bloom.contains(str.data(), str.size(), once)) {
 			return;
 		}
-		bloom.add(str.data(), str.size());
+		bloom.add(str.data(), str.size(), once);
 	}
 
 	std::string msg;
@@ -724,7 +724,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
@@ -749,7 +749,7 @@ Logging::add(
 	bool async,
 	bool info,
 	bool stacked,
-	bool once,
+	uint64_t once,
 	int priority,
 	const std::chrono::time_point<std::chrono::system_clock>& created_at
 ) {

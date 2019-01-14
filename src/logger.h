@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	bool async;
 	bool info;
 	bool stacked;
-	bool once;
+	uint64_t once;
 	int priority;
 	std::atomic_ullong cleaned_at;
 
@@ -130,7 +130,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 		bool async,
 		bool info,
 		bool stacked,
-		bool once,
+		uint64_t once,
 		int priority,
 		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
 	);
@@ -154,7 +154,7 @@ public:
 		bool async,
 		bool info,
 		bool stacked,
-		bool once,
+		uint64_t once,
 		int priority,
 		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
 	);
@@ -182,7 +182,7 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, bool once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
 
 	template <typename... Args>
 	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
