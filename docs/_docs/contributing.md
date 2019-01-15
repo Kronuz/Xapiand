@@ -71,7 +71,3 @@ most likely need to have tests and documentation if it is a new feature.
 
 If you feel adventurous, you can hack the source code of {{ site.name }}. You can find
 information about how to build from the sources [here]({{ '/docs/building' | relative_url }}).
-
----
-
-<sup><a id="footnote-1">1</a></sup> [The Little Engine(s) That Could: Scaling Online Social Networks.](http://ccr.sigcomm.org/online/files/p375.pdf){:target="_blank"}
