@@ -68,7 +68,7 @@ community around the {{ site.name }} ecosystem thrive.*
 
 ## {{ site.name }} License
 
-Copyright &copy; 2015-2018 Dubalu LLC. All rights reserved.
+Copyright &copy; 2015-2019 Dubalu LLC. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
