@@ -38,7 +38,7 @@ The restore for the above dump can also be done in three steps:
 ```
 
 {: .note .warning}
-**_Use the same parameters used for the server_**<br>
+**_Use the same parameters used when running the server_**<br>
 For all the above commands you _should_ use the same parameters you use while
 running the server. For example, if the server runs in "optimal" mode by using
 the `--optimal` flag, also add the same flag to the dump/restore command above.

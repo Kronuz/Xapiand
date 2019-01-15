@@ -25,7 +25,7 @@ The only external dependencies for building it are:
 
 * zlib
 * libpthread (internally used by the Standard C++ thread library)
-* xapian-core v1.4+ (Optionally, with patches by Kronuz applied, see [https://github.com/Kronuz/xapian])
+* xapian-core v1.4+ (Optionally, with patches by Kronuz applied, see [https://github.com/Kronuz/xapian.git](https://github.com/Kronuz/xapian.git))
 
 
 ## Building process
