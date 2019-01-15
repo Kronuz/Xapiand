@@ -64,13 +64,14 @@ Response should be something like:
 ```json
 {
     "#database_info": {
-        "#uuid": "923a4470-7cdc-45ec-827c-fa85703fa8f6",
+        "#uuid": "bdb0ce31-a0ea-450b-a14e-2f99dfdf3be6",
+        "#revision": 1,
         "#doc_count": 1000,
         "#last_id": 1000,
         "#doc_del": 0,
-        "#av_length": 22.432,
-        "#doc_len_lower": 22,
-        "#doc_len_upper": 25,
+        "#av_length": 88.864,
+        "#doc_len_lower": 88,
+        "#doc_len_upper": 94,
         "#has_positions": false
     }
 }
@@ -102,7 +103,7 @@ GET /bank/:search?q=*&sort=account_number&pretty
 {% include curl.html req=req %}
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
-the `bank` index, and the `q=*` parameter instructs Xapiand to match all
+the `bank` index, and the `q=*` parameter instructs Xapiand to _match all_
 documents in the index. The `sort=account_number` parameter indicates to
 sort the results using the `account_number` field of each document in an
 ascending order. The `pretty` parameter just tells Xapiand to return
@@ -140,7 +141,7 @@ And the response (partially shown):
       }, ...
     ]
   },
-  "#took": 21.49
+  "#took": 7.898
 }
 ```
 
@@ -168,7 +169,7 @@ method:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": "*",
@@ -182,8 +183,8 @@ The difference here is that instead of passing `q=*` in the URI, we POST a
 JSON-style query request body to the `:search` API.
 
 Dissecting the above, the query part tells us what our query definition is and
-the `match_all` part is simply the type of query that we want to run. The
-`match_all` query is simply a search for all documents in the specified index.
+the `_query` part is simply the type of query that we want to run. The
+`*` query is simply a search for all documents in the specified index.
 
 In addition to the query parameter, we also can pass other parameters to
 influence the search results. In the example in the section above we passed in
@@ -192,7 +193,7 @@ sort, here we pass in `limit`:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": "*",
@@ -204,12 +205,12 @@ GET /bank/:search?pretty
 
 Note that if `limit` is not specified, it defaults to 10.
 
-This example does a `match_all` and returns documents 10 through 19:
+This example does a _match all_ and returns documents 10 through 19:
 
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": "*",
@@ -225,13 +226,13 @@ and the `limit` parameter specifies how many documents to return starting at the
 given `offset`. This feature is useful when implementing paging of search
 results. Note that if `offset` is not specified, it defaults to 0.
 
-This example does a `match_all` and sorts the results by account balance in
-descending order and returns the top 10 (default `limit`) documents.
+This example does a _match all_ and sorts the results by account balance in
+descending order and returns the top 10 (default for `limit`) documents.
 
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": "*",
@@ -246,36 +247,49 @@ GET /bank/:search?pretty
 
 Now that we have seen a few of the basic search parameters, let's dig in some
 more into the Query DSL. Let's first take a look at the returned document
-fields. By default, the full JSON document is returned as part of all searches.
-This is referred to as the source (_source field in the search hits). If we
-don't want the entire source document returned, we have the ability to request
-only a few fields from within source to be returned.
+fields. By default, the full JSON document is selected and returned as part of
+all searches. If we don't want the entire document returned, we have the ability
+to request only a few fields from within it to be returned by selecting them
+by using `_selector` field during the search.
 
 This example shows how to return two fields, `account_number` and `balance`
-(inside of _source), from the search:
+(by using `_selector`), from the search:
 
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": "*",
-  "_source": ["account_number", "balance"]
+  "_selector": "{account_number,balance}"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .unreleased}
-**_TODO:_** Work in progress...
+There are two types of selectors (which can be mixed):
+
++ Field selector
++ Drill selector
+
+### Field selector
+
+It takes the form of `"{field1,field2}"`, and it selects only `field1` and
+`field2` to be returned.
+
+### Drill selector
+
+It takes the form of `"field.sub_field.sub_sub_field"`, and it brings the
+innermost field to the top level.
+
 
 ## Executing Filters
 
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+POST /bank/:search?pretty
 
 {
   "_query": {
