@@ -24,7 +24,35 @@ built for the cloud and with Data Locality. It features:
 ##### Storage Engine:
   * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
 
-##### Support for query Aggregations.
+##### Support for query Aggregations:
+  * Count metrics.
+  * Cardinality metrics. <sup>*</sup>
+  * Sum metrics.
+  * Average metrics.
+  * Min metrics.
+  * Max metrics.
+  * Variance metrics.
+  * Standard deviation metrics.
+  * Median metrics.
+  * Mode metrics.
+  * Statistics metrics.
+  * Geo-spatial (bounds) metrics. <sup>*</sup>
+  * Geo-spatial (centroid) metrics. <sup>*</sup>
+  * Percentiles metrics. <sup>*</sup>
+  * Percentiles rank metrics. <sup>*</sup>
+  * Scripted metrics. <sup>*</sup>
+  * Extended statistics metrics.
+  * Filter buckets.
+  * Value buckets.
+  * Date histogram buckets. <sup>*</sup>
+  * Date range buckets. <sup>*</sup>
+  * Geo-spatial distance buckets. <sup>*</sup>
+  * Geo-spatial trixels buckets. <sup>*</sup>
+  * Histogram buckets.
+  * Missing value buckets. <sup>*</sup>
+  * Range buckets.
+  * IP range buckets. <sup>*</sup>
+  * Geo-spatial ip buckets. <sup>*</sup>
 
 ##### Multi Tenant with Multi Types:
   * Support for more than one index.
@@ -54,6 +82,8 @@ built for the cloud and with Data Locality. It features:
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
 
 <sup><a id="footnote-2">2</a></sup> [The Hierarchical Triangular Mesh.](http://www.noao.edu/noao/staff/yao/sdss_papers/kunszt.pdf){:target="_blank"}
+
+<sup>*</sup> Not yet implemented.
 
 ---
 
