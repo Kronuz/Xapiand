@@ -4,12 +4,13 @@ title: Storage API
 
 The storage is designed to put files in volumes much in the way Facebook's
 Haystack <sup>[1](#footnote-1)</sup> works; once there a file enters the
-storage it can't really get deleted/modified from the volume, but instead, if
+storage it can't really be deleted/modified from the volume, but instead, if
 a change is needed, a new file blob will be written to the volume. Storage is
 envisioned to be used when there are files you need to store which you know
-won't be changing often.
+won't be changing often or at all.
 
-Lets add something to the storage using `STORE`:
+Assuming there's a PNG image file called `Kronuz.png` in the working directory,
+lets add it to the storage using `STORE`:
 
 {% capture req %}
 ```json
@@ -31,9 +32,12 @@ Accept: image/png
 {% endcapture %}
 {% include curl.html req=req %}
 
+Or by visiting the link to it with your web browser:
+[http://localhost:8880/twitter/images/Kronuz](http://localhost:8880/twitter/images/Kronuz)
+
 {: .note}
 **_Toggle console previews_**<br>
-You can enable previews for images in the terminal using the very-very-very-very
+You can enable previews for images in the terminal using the "_very-very-very-very_"
 verbose command line option (`-vvvvv`). Note you a compatible terminal for this
 feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example).
 
@@ -118,6 +122,9 @@ Content-Length: 0
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+Note removing content doesn't actually removes the blob from the volume, it
+just removes the "link" to it from the document.
 
 ---
 
