@@ -652,8 +652,8 @@ li > code,
 li> pre,
 h5 > code,
 .note > code {
-	background-color: rgba(0,0,0,.1);
 	color: #cccccc;
+	margin: 0 0.2em;
 	max-width: 100%;
 	overflow-x: auto;
 	vertical-align: middle;
@@ -684,6 +684,7 @@ h5 > code,
 }
 
 .highlight {
+	background-color: rgba(0,0,0,.1);
 	margin: 1em 0;
 	width: 100%;
 	overflow: auto;
