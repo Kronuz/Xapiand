@@ -9,7 +9,7 @@ fi
 
 if [ "$1" = 'xapiand' ]; then
 	K8S_NAMESPACE_PATH="${K8S_NAMESPACE_PATH:-/var/run/secrets/kubernetes.io/serviceaccount/namespace}"
-	NAMESPACE="$(test -f $K8S_NAMESPACE_PATH && cat $K8S_NAMESPACE_PATH)"
+	NAMESPACE="$(test -f $K8S_NAMESPACE_PATH && cat $K8S_NAMESPACE_PATH || echo '')"
 
 	# Normalize variables and allow the container to be started with `--user`
 	XAPIAND_UID="${XAPIAND_UID:-$UID}"
