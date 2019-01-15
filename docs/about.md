@@ -38,7 +38,7 @@ built for the cloud and with Data Locality. It features:
   * Written in modern C++.
 
 ##### Geo-spatial support:
-  * Uses The Hierarchical Triangular Mesh for indexing.
+  * Uses the Hierarchical Triangular Mesh <sup>[2](#footnote-2)</sup> for indexing.
   * Accepts multiple Coordinate Reference Systems, including WGS84.
   * Implements EWKT.
 
@@ -52,6 +52,8 @@ built for the cloud and with Data Locality. It features:
   * Random Consistent Partitioning and Replication.
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf){:target="_blank"}
+
+<sup><a id="footnote-2">2</a></sup> [The Hierarchical Triangular Mesh.](http://www.noao.edu/noao/staff/yao/sdss_papers/kunszt.pdf){:target="_blank"}
 
 ---
 

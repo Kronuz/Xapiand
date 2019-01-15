@@ -33,7 +33,7 @@ Accept: image/png
 {% include curl.html req=req %}
 
 Or by visiting the link to it with your web browser:
-[http://localhost:8880/twitter/images/Kronuz](http://localhost:8880/twitter/images/Kronuz)
+[http://localhost:8880/twitter/images/Kronuz](http://localhost:8880/twitter/images/Kronuz){:target="_blank"}
 
 {: .note}
 **_Toggle console previews_**<br>
