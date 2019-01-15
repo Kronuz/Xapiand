@@ -64,6 +64,7 @@
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
+#include "query_dsl.h"                      // for QUERYDSL_SELECTOR
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
@@ -1637,6 +1638,10 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 	auto selector = request.path_parser.get_slc();
 	auto key = request.path_parser.get_pmt();
 
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
+
 	if (key.empty()) {
 		response_obj = MsgPack(MsgPack::Type::MAP);
 		for (auto& _key : db_handler.get_metadata_keys()) {
@@ -1711,6 +1716,10 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field.as_volatile);
+
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1990,6 +1999,10 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field.as_volatile);
 
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
+
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
@@ -2090,11 +2103,16 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 {
 	L_CALL("HttpClient::search_view()");
 
+	std::string selector_str;
 	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
 	endpoints_maker(request, query_field.as_volatile);
+
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
 
 	bool single = !id.empty() && !is_range(id);
 
@@ -2124,7 +2142,19 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				mset = db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
 			} else {
 				auto& decoded_body = request.decoded_body();
+
 				AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+
+				if (decoded_body.find(QUERYDSL_SELECTOR) != decoded_body.end()) {
+					auto selector_obj = decoded_body.at(QUERYDSL_SELECTOR);
+					if (selector_obj.is_string()) {
+						selector_str = selector_obj.as_str();
+						selector = selector_str;
+					} else {
+						THROW(ClientError, "The %s must be a string", QUERYDSL_SELECTOR);
+					}
+				}
+
 				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
 				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
 			}
@@ -2808,6 +2838,11 @@ HttpClient::query_field_maker(Request& request, int flags)
 		} else {
 			query_field.period = "1m";
 		}
+	}
+
+	request.query_parser.rewind();
+	if (request.query_parser.next("selector") != -1) {
+		query_field.selector = request.query_parser.get();
 	}
 
 	return query_field;

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+* Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -34,20 +34,21 @@
 #include "multivalue/keymaker.h"  // for Multi_MultiValueKeyMaker"
 
 
-constexpr const char QUERYDSL_FROM[]   = "_from";
-constexpr const char QUERYDSL_IN[]     = "_in";
-constexpr const char QUERYDSL_QUERY[]  = "_query";
-constexpr const char QUERYDSL_RANGE[]  = "_range";
-constexpr const char QUERYDSL_RAW[]    = "_raw";
-constexpr const char QUERYDSL_TO[]     = "_to";
-constexpr const char QUERYDSL_LIMIT[]  = "_limit";
-constexpr const char QUERYDSL_OFFSET[] = "_offset";
-constexpr const char QUERYDSL_SORT[]   = "_sort";
-constexpr const char QUERYDSL_ORDER[]  = "_order";
-constexpr const char QUERYDSL_METRIC[] = "_metric";
+constexpr const char QUERYDSL_FROM[]      = "_from";
+constexpr const char QUERYDSL_IN[]        = "_in";
+constexpr const char QUERYDSL_QUERY[]     = "_query";
+constexpr const char QUERYDSL_RANGE[]     = "_range";
+constexpr const char QUERYDSL_RAW[]       = "_raw";
+constexpr const char QUERYDSL_TO[]        = "_to";
+constexpr const char QUERYDSL_LIMIT[]     = "_limit";
+constexpr const char QUERYDSL_OFFSET[]    = "_offset";
+constexpr const char QUERYDSL_SORT[]      = "_sort";
+constexpr const char QUERYDSL_SELECTOR[]  = "_selector";
+constexpr const char QUERYDSL_ORDER[]     = "_order";
+constexpr const char QUERYDSL_METRIC[]    = "_metric";
 
-constexpr const char QUERYDSL_ASC[]    = "asc";
-constexpr const char QUERYDSL_DESC[]   = "desc";
+constexpr const char QUERYDSL_ASC[]       = "asc";
+constexpr const char QUERYDSL_DESC[]      = "desc";
 
 /* A domain-specific language (DSL) for query */
 
