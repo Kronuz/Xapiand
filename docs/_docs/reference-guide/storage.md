@@ -123,7 +123,7 @@ Content-Length: 0
 {% endcapture %}
 {% include curl.html req=req %}
 
-Note removing content doesn't actually removes the blob from the volume, it
+Note removing content doesn't actually remove the blob from the volume, it
 just removes the "link" to it from the document.
 
 ---
