@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1245,20 +1245,12 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 			commit_view(request, response, method, cmd);
 			break;
 		case Command::CMD_DUMP:
-			if (opts.admin_commands) {
-				request.path_parser.skip_id();  // Command has no ID
-				dump_view(request, response, method, cmd);
-			} else {
-				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
+			request.path_parser.skip_id();  // Command has no ID
+			dump_view(request, response, method, cmd);
 			break;
 		case Command::CMD_RESTORE:
-			if (opts.admin_commands) {
-				request.path_parser.skip_id();  // Command has no ID
-				restore_view(request, response, method, cmd);
-			} else {
-				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
+			request.path_parser.skip_id();  // Command has no ID
+			restore_view(request, response, method, cmd);
 			break;
 		case Command::CMD_QUIT:
 			if (opts.admin_commands) {
