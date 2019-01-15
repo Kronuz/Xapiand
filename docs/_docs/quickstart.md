@@ -17,14 +17,14 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 # Install with Homebrew:
 ~ $ brew install Kronuz/tap/xapiand
 
-# Run in foreground with *very* verbose output:
+# Run in foreground with *very-very-very* verbose output:
 ~ $ xapiand -vvvv
 ```
 
 ### Using Docker
 
 ```sh
-# Run with *very* verbose output:
+# Run from Docker with *very-very-very* verbose output:
 docker run -p 8880:8880 --rm dubalu/xapiand -vvvv
 ```
 
@@ -118,16 +118,3 @@ GET /twitter/tweet/:search?q=user:Kronuz&pretty
 {% include curl.html req=req %}
 
 You can find out more in the [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}) section.
-
----
-
-## Where to go from here?
-
-Xapiand is both a simple and complex product. We've so far learned the basics
-of what it is, how to look inside of it, and how to work with it using some of
-the REST APIs. Hopefully this guide has given you a better understanding of
-what Xapiand is and more importantly, inspired you to further experiment with
-the rest of its great features!
-
-Tutorials can be found in the [Tutorials]({{ '/tutorials/' | relative_url }})
-section.
