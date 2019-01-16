@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,7 @@ class Schema;
 
 class BucketAggregation : public HandledSubAggregation {
 protected:
-	std::unordered_map<uint64_t, Aggregation> _aggs;
+	std::unordered_map<std::string, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _conf;
 
@@ -66,13 +66,12 @@ public:
 	}
 
 	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
-		auto bucket_hash = xxh64::hash(bucket);
-		auto it = _aggs.find(bucket_hash);
+		auto it = _aggs.find(std::string(bucket));
 		if (it != _aggs.end()) {
 			it->second(doc);
 		} else {
 			auto p = _aggs.emplace(std::piecewise_construct,
-				std::forward_as_tuple(bucket_hash),
+				std::forward_as_tuple(bucket),
 				std::forward_as_tuple(_result[bucket], _conf, _schema));
 			p.first->second(doc);
 		}
