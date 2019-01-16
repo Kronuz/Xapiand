@@ -293,14 +293,11 @@ POST /bank/:search?pretty
 
 {
   "_query": {
-    "bool": {
-      "must": "*",
-      "filter": {
-        "range": {
-          "balance": {
-            "gte": 20000,
-            "lte": 30000
-          }
+    "balance": {
+      "_in": {
+        "_range": {
+          "_from": 2000,
+          "_to": 3000
         }
       }
     }
@@ -312,6 +309,7 @@ POST /bank/:search?pretty
 
 {: .note .unreleased}
 **_TODO:_** Work in progress...
+
 
 ## Executing Aggregations
 
