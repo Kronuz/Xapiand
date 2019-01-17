@@ -180,10 +180,10 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 					// 	add_bucket<GeoIPAggregation>(_result[sub_agg_name], sub_agg, schema);
 					// 	break;
 					default:
-						THROW(AggregationError, "Aggregation type: %s is not valid", repr(sub_agg_name));
+						THROW(AggregationError, "Aggregation type %s is not valid for %s", repr(sub_agg_type), repr(sub_agg_name));
 				}
 			} else {
-				THROW(AggregationError, "Aggregation sub_agg_name: %s is not valid", repr(sub_agg_name));
+				THROW(AggregationError, "Aggregation name %s is not valid", repr(sub_agg_name));
 			}
 		}
 	}
