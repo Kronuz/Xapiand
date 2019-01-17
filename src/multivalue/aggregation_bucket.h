@@ -72,7 +72,7 @@ public:
 		} else {
 			auto p = _aggs.emplace(std::piecewise_construct,
 				std::forward_as_tuple(bucket),
-				std::forward_as_tuple(_result[bucket], _conf, _schema));
+				std::forward_as_tuple(_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _conf, _schema));
 			p.first->second(doc);
 		}
 	}

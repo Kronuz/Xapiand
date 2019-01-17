@@ -83,8 +83,8 @@ public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
 		: _total(0),
-		  _result(),
-		  _aggregation(_result[AGGREGATION_AGGREGATIONS]) { }
+		  _result(MsgPack::Type::MAP),
+		  _aggregation(_result.put(AGGREGATION_AGGREGATIONS, MsgPack(MsgPack::Type::MAP))) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.
@@ -94,10 +94,10 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<T>>::value>>
 	AggregationMatchSpy(T&& aggs, const std::shared_ptr<Schema>& schema)
 		: _total(0),
-		  _result(),
+		  _result(MsgPack::Type::MAP),
 		  _aggs(std::forward<T>(aggs)),
 		  _schema(schema),
-		  _aggregation(_result[AGGREGATION_AGGREGATIONS], _aggs, _schema) { }
+		  _aggregation(_result.put(AGGREGATION_AGGREGATIONS, MsgPack(MsgPack::Type::MAP)), _aggs, _schema) { }
 
 	/*
 	 * Implementation of virtual operator().
