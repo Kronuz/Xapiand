@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -426,14 +426,14 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 #if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return nullptr;
-	} catch (const v8pp::Error& e) {
-		THROW(ClientError, e.what());
+	} catch (const v8pp::Error& exc) {
+		THROW(ClientError, exc.what());
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
 	} catch (const chaipp::ReferenceError&) {
 		return nullptr;
-	} catch (const chaipp::Error& e) {
-		THROW(ClientError, e.what());
+	} catch (const chaipp::Error& exc) {
+		THROW(ClientError, exc.what());
 #endif
 	}
 }
@@ -1339,49 +1339,61 @@ DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
 
 
 MSet
-DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
+DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs, std::vector<std::string>& /*suggestions*/)
 {
-	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(e.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
+	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
 	schema = get_schema();
 
-	auto limit = -1;
-	auto offset = -1;
+	auto limit = query_field.limit;
+	auto check_at_least = query_field.check_at_least;
+	auto offset = query_field.offset;
+
 	Xapian::Query query;
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
 	switch (method) {
 		case HTTP_GET:
 		case HTTP_POST: {
-			if ((qdsl != nullptr) && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
-				QueryDSL query_object(schema);
-				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+			QueryDSL query_object(schema);
 
-				if (qdsl->find(QUERYDSL_LIMIT) != qdsl->end()) {
-					auto lm = qdsl->at(QUERYDSL_LIMIT);
-					if (lm.is_integer()) {
-						limit = lm.as_u64();
-					} else {
-						THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_LIMIT);
-					}
-				}
-
-				if (qdsl->find(QUERYDSL_OFFSET) != qdsl->end()) {
-					auto off = qdsl->at(QUERYDSL_OFFSET);
-					if (off.is_integer()) {
-						offset = off.as_u64();
-					} else {
-						THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_OFFSET);
-					}
-				}
-
-				if (qdsl->find(QUERYDSL_SORT) != qdsl->end()) {
-					auto sort = qdsl->at(QUERYDSL_SORT);
-					query_object.get_sorter(sorter, sort);
-				}
-			} else {
-				QueryDSL query_object(schema);
-				query = query_object.get_query(query_object.make_dsl_query(e));
+			if (qdsl && qdsl->find(QUERYDSL_SORT) != qdsl->end()) {
+				auto value = qdsl->at(QUERYDSL_SORT);
+				query_object.get_sorter(sorter, value);
 			}
+
+			if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
+				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+			} else {
+				query = query_object.get_query(query_object.make_dsl_query(query_field));
+			}
+
+			if (qdsl && qdsl->find(QUERYDSL_OFFSET) != qdsl->end()) {
+				auto value = qdsl->at(QUERYDSL_OFFSET);
+				if (value.is_integer()) {
+					offset = value.as_u64();
+				} else {
+					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_OFFSET);
+				}
+			}
+
+			if (qdsl && qdsl->find(QUERYDSL_LIMIT) != qdsl->end()) {
+				auto value = qdsl->at(QUERYDSL_LIMIT);
+				if (value.is_integer()) {
+					limit = value.as_u64();
+				} else {
+					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_LIMIT);
+				}
+			}
+
+			if (qdsl && qdsl->find(QUERYDSL_CHECK_AT_LEAST) != qdsl->end()) {
+				auto value = qdsl->at(QUERYDSL_CHECK_AT_LEAST);
+				if (value.is_integer()) {
+					check_at_least = value.as_u64();
+				} else {
+					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_CHECK_AT_LEAST);
+				}
+			}
+
 			break;
 		}
 
@@ -1389,21 +1401,13 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			break;
 	}
 
-	if (offset < 0) {
-		offset = e.offset;
-	}
-
-	if (limit < 0) {
-		limit = e.limit;
-	}
-
 	// L_DEBUG("query: %s", query.get_description());
 
 	// Configure sorter.
-	if (!sorter && !e.sort.empty()) {
+	if (!sorter && !query_field.sort.empty()) {
 		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 		std::string field, value;
-		for (const auto& sort : e.sort) {
+		for (const auto& sort : query_field.sort) {
 			size_t pos = sort.find(":");
 			if (pos == std::string::npos) {
 				field.assign(sort);
@@ -1423,31 +1427,31 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			}
 			const auto field_spc = schema->get_slot_field(field);
 			if (field_spc.get_type() != FieldType::EMPTY) {
-				sorter->add_value(field_spc, descending, value, e);
+				sorter->add_value(field_spc, descending, value, query_field);
 			}
 		}
 	}
 
 	// Get the collapse key to use for queries.
 	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
-	if (!e.collapse.empty()) {
-		const auto field_spc = schema->get_slot_field(e.collapse);
+	if (!query_field.collapse.empty()) {
+		const auto field_spc = schema->get_slot_field(query_field.collapse);
 		collapse_key = field_spc.slot;
 	}
 
 	// Configure nearest and fuzzy search:
 	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	Xapian::RSet nearest_rset;
-	if (e.is_nearest) {
-		nearest_edecider = get_edecider(e.nearest);
-		nearest_rset = get_rset(query, e.nearest.n_rset);
+	if (query_field.is_nearest) {
+		nearest_edecider = get_edecider(query_field.nearest);
+		nearest_rset = get_rset(query, query_field.nearest.n_rset);
 	}
 
 	Xapian::RSet fuzzy_rset;
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
-	if (e.is_fuzzy) {
-		fuzzy_edecider = get_edecider(e.fuzzy);
-		fuzzy_rset = get_rset(query, e.fuzzy.n_rset);
+	if (query_field.is_fuzzy) {
+		fuzzy_edecider = get_edecider(query_field.fuzzy);
+		fuzzy_rset = get_rset(query, query_field.fuzzy.n_rset);
 	}
 
 	MSet mset{};
@@ -1458,7 +1462,7 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			auto final_query = query;
 			Xapian::Enquire enquire(*db());
 			if (collapse_key != Xapian::BAD_VALUENO) {
-				enquire.set_collapse_key(collapse_key, e.collapse_max);
+				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
 			}
 			if (aggs != nullptr) {
 				enquire.add_matchspy(aggs);
@@ -1466,16 +1470,16 @@ DatabaseHandler::get_mset(const query_field_t& e, const MsgPack* qdsl, Aggregati
 			if (sorter) {
 				enquire.set_sort_by_key_then_relevance(sorter.get(), false);
 			}
-			if (e.is_nearest) {
-				auto eset = enquire.get_eset(e.nearest.n_eset, nearest_rset, nearest_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), e.nearest.n_term);
+			if (query_field.is_nearest) {
+				auto eset = enquire.get_eset(query_field.nearest.n_eset, nearest_rset, nearest_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), query_field.nearest.n_term);
 			}
-			if (e.is_fuzzy) {
-				auto eset = enquire.get_eset(e.fuzzy.n_eset, fuzzy_rset, fuzzy_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), e.fuzzy.n_term));
+			if (query_field.is_fuzzy) {
+				auto eset = enquire.get_eset(query_field.fuzzy.n_eset, fuzzy_rset, fuzzy_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), query_field.fuzzy.n_term));
 			}
 			enquire.set_query(final_query);
-			mset = enquire.get_mset(offset, limit, e.check_at_least);
+			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
