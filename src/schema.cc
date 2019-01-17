@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -4856,7 +4856,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
 				return;
 			}
-			if (specification.flags.text_detection && (!specification.flags.string_detection && Serialise::isText(str_value, specification.flags.bool_term))) {
+			if (specification.flags.text_detection && Serialise::isText(str_value, specification.flags.bool_term)) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
 				return;
 			}
