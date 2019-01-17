@@ -43,7 +43,8 @@ built for the cloud and with Data Locality. It features:
   * Scripted metrics. <sup>*</sup>
   * Extended statistics metrics.
   * Filter buckets.
-  * Value buckets.
+  * Values buckets.
+  * Terms buckets.
   * Date histogram buckets. <sup>*</sup>
   * Date range buckets. <sup>*</sup>
   * Geo-spatial distance buckets. <sup>*</sup>
