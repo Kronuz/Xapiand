@@ -79,10 +79,10 @@ public:
 };
 
 
-class ValueAggregation : public BucketAggregation {
+class ValuesAggregation : public BucketAggregation {
 public:
-	ValueAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_VALUE, result, conf, schema, false) { }
+	ValuesAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_VALUES, result, conf, schema, false) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -126,10 +126,10 @@ public:
 };
 
 
-class TermAggregation : public BucketAggregation {
+class TermsAggregation : public BucketAggregation {
 public:
-	TermAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_TERM, result, conf, schema, true) { }
+	TermsAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_TERMS, result, conf, schema, true) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);

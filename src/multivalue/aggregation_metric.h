@@ -44,7 +44,8 @@
 class Schema;
 
 
-constexpr const char AGGREGATION_AGGS[]             = "_aggregations";
+constexpr const char AGGREGATION_AGGS[]             = "_aggs";
+constexpr const char AGGREGATION_AGGREGATIONS[]     = "_aggregations";
 constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
 constexpr const char AGGREGATION_FIELD[]            = "_field";
 constexpr const char AGGREGATION_FROM[]             = "_from";
@@ -82,8 +83,10 @@ constexpr const char AGGREGATION_HISTOGRAM[]        = "_histogram";
 constexpr const char AGGREGATION_IP_RANGE[]         = "_ip_range";
 constexpr const char AGGREGATION_MISSING[]          = "_missing";
 constexpr const char AGGREGATION_RANGE[]            = "_range";
+constexpr const char AGGREGATION_TERMS[]            = "_terms";
+constexpr const char AGGREGATION_VALUES[]           = "_values";
+
 constexpr const char AGGREGATION_TERM[]             = "_term";
-constexpr const char AGGREGATION_VALUE[]            = "_value";
 
 
 class HandledSubAggregation;

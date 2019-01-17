@@ -64,7 +64,8 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 		// hh(AGGREGATION_PERCENTILES_RANK),
 		// hh(AGGREGATION_SCRIPTED_METRIC),
 		hh(AGGREGATION_FILTER),
-		hh(AGGREGATION_VALUE),
+		hh(AGGREGATION_VALUES),
+		hh(AGGREGATION_TERMS),
 		// hh(AGGREGATION_DATE_HISTOGRAM),
 		// hh(AGGREGATION_DATE_RANGE),
 		// hh(AGGREGATION_GEO_DISTANCE),
@@ -78,11 +79,14 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 
 	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 
-	const auto aggs_it = conf.find(AGGREGATION_AGGS);
+	auto aggs_it = conf.find(AGGREGATION_AGGREGATIONS);
+	if (aggs_it == conf.end()) {
+		aggs_it = conf.find(AGGREGATION_AGGS);
+	}
 	if (aggs_it != conf.end()) {
 		const auto& aggs = aggs_it.value();
 		if (!aggs.is_map()) {
-			THROW(AggregationError, "'%s' must be an object", AGGREGATION_AGGS);
+			THROW(AggregationError, "'%s' must be an object", AGGREGATION_AGGREGATIONS);
 		}
 		const auto it = aggs.begin();
 		const auto it_end = aggs.end();
@@ -149,11 +153,11 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 					case _.fhh(AGGREGATION_FILTER):
 						add_bucket<FilterAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case _.fhh(AGGREGATION_VALUE):
-						add_bucket<ValueAggregation>(_result[sub_agg_name], sub_agg, schema);
+					case _.fhh(AGGREGATION_VALUES):
+						add_bucket<ValuesAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
-					case _.fhh(AGGREGATION_TERM):
-						add_bucket<TermAggregation>(_result[sub_agg_name], sub_agg, schema);
+					case _.fhh(AGGREGATION_TERMS):
+						add_bucket<TermsAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
 					// case _.fhh(AGGREGATION_DATE_HISTOGRAM):
 					// 	add_bucket<DateHistogramAggregation>(_result[sub_agg_name], sub_agg, schema);

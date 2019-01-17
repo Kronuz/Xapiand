@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #include <vector>                   // for vector
 #include <xapian.h>                 // for MatchSpy, doccount
 
-#include "aggregation_metric.h"     // for AGGREGATION_AGGS
+#include "aggregation_metric.h"     // for AGGREGATION_AGGREGATIONS
 #include "msgpack.h"                // for MsgPack
 
 
@@ -84,7 +84,7 @@ public:
 	AggregationMatchSpy()
 		: _total(0),
 		  _result(),
-		  _aggregation(_result[AGGREGATION_AGGS]) { }
+		  _aggregation(_result[AGGREGATION_AGGREGATIONS]) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.
@@ -97,7 +97,7 @@ public:
 		  _result(),
 		  _aggs(std::forward<T>(aggs)),
 		  _schema(schema),
-		  _aggregation(_result[AGGREGATION_AGGS], _aggs, _schema) { }
+		  _aggregation(_result[AGGREGATION_AGGREGATIONS], _aggs, _schema) { }
 
 	/*
 	 * Implementation of virtual operator().

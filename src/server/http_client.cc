@@ -60,7 +60,7 @@
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "multivalue/aggregation.h"         // for AggregationMatchSpy
-#include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGS
+#include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGREGATIONS
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
@@ -2156,7 +2156,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				}
 
 				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
-				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGS);
+				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGREGATIONS);
 			}
 		}
 	} catch (const NotFoundError&) {
