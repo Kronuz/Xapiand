@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -151,6 +151,9 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& conf, const std::shared
 						break;
 					case _.fhh(AGGREGATION_VALUE):
 						add_bucket<ValueAggregation>(_result[sub_agg_name], sub_agg, schema);
+						break;
+					case _.fhh(AGGREGATION_TERM):
+						add_bucket<TermAggregation>(_result[sub_agg_name], sub_agg, schema);
 						break;
 					// case _.fhh(AGGREGATION_DATE_HISTOGRAM):
 					// 	add_bucket<DateHistogramAggregation>(_result[sub_agg_name], sub_agg, schema);

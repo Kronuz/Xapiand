@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,27 +32,27 @@
 static func_value_handle get_func_value_handle(FieldType type, std::string_view field_name) {
 	switch (type) {
 		case FieldType::FLOAT:
-			return &SubAggregation::_aggregate_float;
+			return &HandledSubAggregation::_aggregate_float;
 		case FieldType::INTEGER:
-			return &SubAggregation::_aggregate_integer;
+			return &HandledSubAggregation::_aggregate_integer;
 		case FieldType::POSITIVE:
-			return &SubAggregation::_aggregate_positive;
+			return &HandledSubAggregation::_aggregate_positive;
 		case FieldType::DATE:
-			return &SubAggregation::_aggregate_date;
+			return &HandledSubAggregation::_aggregate_date;
 		case FieldType::TIME:
-			return &SubAggregation::_aggregate_time;
+			return &HandledSubAggregation::_aggregate_time;
 		case FieldType::TIMEDELTA:
-			return &SubAggregation::_aggregate_timedelta;
+			return &HandledSubAggregation::_aggregate_timedelta;
 		case FieldType::BOOLEAN:
-			return &SubAggregation::_aggregate_boolean;
+			return &HandledSubAggregation::_aggregate_boolean;
 		case FieldType::KEYWORD:
 		case FieldType::TEXT:
 		case FieldType::STRING:
-			return &SubAggregation::_aggregate_string;
+			return &HandledSubAggregation::_aggregate_string;
 		case FieldType::GEO:
-			return &SubAggregation::_aggregate_geo;
+			return &HandledSubAggregation::_aggregate_geo;
 		case FieldType::UUID:
-			return &SubAggregation::_aggregate_uuid;
+			return &HandledSubAggregation::_aggregate_uuid;
 		case FieldType::EMPTY:
 			THROW(AggregationError, "Field: %s has not been indexed", repr(field_name));
 		default:
@@ -61,18 +61,36 @@ static func_value_handle get_func_value_handle(FieldType type, std::string_view 
 }
 
 
-void
-ValueHandle::operator()(SubAggregation* agg, const Xapian::Document& doc) const
+std::vector<std::string>
+ValueHandle::values(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	std::vector<std::string> values;
 
-	if (!multiValues.empty()) {
-		(agg->*_func)(multiValues, doc);
+	if (!_prefix.empty()) {
+		auto it = doc.termlist_begin();
+		it.skip_to(_prefix);
+		auto it_e = doc.termlist_end();
+		for (; it != it_e; ++it) {
+			const auto& term = *it;
+			if (string::startswith(term, _prefix)) {
+				if (term.size() > _prefix.size() + 1) {
+					values.push_back(term.substr(_prefix.size() + 1));
+				}
+			} else {
+				break;
+			}
+		}
+		return values;
 	}
+
+	for (const auto& value : StringList(doc.get_value(_slot))) {
+		values.push_back(value);
+	}
+	return values;
 }
 
 
-HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema, bool use_terms)
 	: SubAggregation(result)
 {
 	if (!conf.is_map()) {
@@ -87,6 +105,7 @@ HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& con
 		THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
 	}
 	auto field_name = field_conf.str_view();
-	auto field_spc = schema->get_slot_field(field_name);
-	_handle.set(field_spc.slot, get_func_value_handle(field_spc.get_type(), field_name));
+	auto field_spc = use_terms ? schema->get_data_field(field_name).first : schema->get_slot_field(field_name);
+
+	_handle.set(field_spc.slot, use_terms ? field_spc.prefix() : "", get_func_value_handle(field_spc.get_type(), field_name));
 }

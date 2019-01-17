@@ -54,8 +54,8 @@ protected:
 	const MsgPack& _conf;
 
 public:
-	BucketAggregation(const char* name, MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, conf.at(name), schema),
+	BucketAggregation(const char* name, MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema, bool use_terms)
+		: HandledSubAggregation(result, conf.at(name), schema, use_terms),
 		  _schema(schema),
 		  _conf(conf) { }
 
@@ -82,7 +82,54 @@ public:
 class ValueAggregation : public BucketAggregation {
 public:
 	ValueAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_VALUE, result, conf, schema) { }
+		: BucketAggregation(AGGREGATION_VALUE, result, conf, schema, false) { }
+
+	void aggregate_float(double value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_integer(long value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_date(double value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_time(double value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+		aggregate(string::Number(value), doc);
+	}
+
+	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
+		aggregate(std::string_view(value ? "true" : "false"), doc);
+	}
+
+	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
+		aggregate(value, doc);
+	}
+
+	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
+		aggregate(value.to_string(), doc);
+	}
+
+	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
+		aggregate(value, doc);
+	}
+};
+
+
+class TermAggregation : public BucketAggregation {
+public:
+	TermAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(AGGREGATION_TERM, result, conf, schema, true) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -166,7 +213,7 @@ class HistogramAggregation : public BucketAggregation {
 
 public:
 	HistogramAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema),
+		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema, false),
 		  interval_u64(0),
 		  interval_i64(0),
 		  interval_f64(0.0)
@@ -249,7 +296,7 @@ class RangeAggregation : public BucketAggregation {
 
 public:
 	RangeAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema)
+		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema, false)
 	{
 		const auto& range_conf = _conf.at(AGGREGATION_RANGE);
 		if (!range_conf.is_map()) {
@@ -423,7 +470,7 @@ class FilterAggregation : public SubAggregation {
 public:
 	FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
-	inline void operator()(const Xapian::Document& doc) override {
+	void operator()(const Xapian::Document& doc) override {
 		(this->*func)(doc);
 	}
 
