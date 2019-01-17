@@ -252,8 +252,18 @@ all searches. If we don't want the entire document returned, we have the ability
 to request only a few fields from within it to be returned by selecting them
 by using `_selector` field during the search.
 
-This example shows how to return two fields, `account_number` and `balance`
-(by using `_selector`), from the search:
+There are two types of selectors (which can be mixed):
+
++ Field Selector
++ Drill Selector
+
+### Field Selector
+
+It takes the form of `"{field1,field2}"`, and it selects only `field1` and
+`field2` to be returned.
+
+This example shows how to return two fields using the _Field Selector_,
+`account_number` and `balance`, from the search:
 
 {% capture req %}
 
@@ -268,20 +278,26 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-There are two types of selectors (which can be mixed):
-
-+ Field selector
-+ Drill selector
-
-### Field selector
-
-It takes the form of `"{field1,field2}"`, and it selects only `field1` and
-`field2` to be returned.
-
-### Drill selector
+### Drill Selector
 
 It takes the form of `"field.sub_field.sub_sub_field"`, and it brings the
 innermost field to the top level.
+
+This example shows how to return a list of emails using the _Drill Selector_
+from the search:
+
+{% capture req %}
+
+```json
+POST /bank/:search?pretty
+
+{
+  "_query": "*",
+  "_selector": "email"
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
 
 
 ## Executing Filters
@@ -307,15 +323,12 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .unreleased}
-**_TODO:_** Work in progress...
-
 
 ## Executing Aggregations
 
 Aggregations provide the ability to group and extract statistics from your data.
 The easiest way to think about aggregations is by roughly equating it to the
-SQL GROUP BY and the SQL aggregate functions. In Xapiand, you have the ability
+SQL `GROUP BY` and the SQL aggregate functions. In Xapiand, you have the ability
 to execute searches returning hits and at the same time return aggregated
 results separate from the hits all in one response. This is very powerful and
 efficient in the sense that you can run queries and multiple aggregations and
@@ -323,7 +336,7 @@ get the results back of both (or either) operations in one shot avoiding network
 roundtrips using a concise and simplified API.
 
 To start with, this example groups all the accounts by state, and then returns
-the top 10 (default) states sorted by count descending (also default):
+the count of accounts by state:
 
 {% capture req %}
 
@@ -331,11 +344,13 @@ the top 10 (default) states sorted by count descending (also default):
 GET /bank/:search?pretty
 
 {
+  "_query": "*",
   "_limit": 0,
-  "_aggs": {
-    "_group_by_state": {
-      "terms": {
-        "field": "state.keyword"
+  "_check_at_least": 1000,
+  "_aggregations": {
+    "group_by_state": {
+      "_values": {
+        "_field": "state"
       }
     }
   }
@@ -347,21 +362,41 @@ GET /bank/:search?pretty
 In SQL, the above aggregation is similar in concept to:
 
 ```sql
-SELECT state, COUNT(*) FROM bank GROUP BY state ORDER BY COUNT(*) DESC
+SELECT state, COUNT(*) FROM bank GROUP BY state;
 ```
 
 And the response (partially shown):
 
 ```json
 {
-  ...
+  "#aggregations": {
+    "_doc_count": 1000,
+    "group_by_state": {
+      "Texas": {
+        "_doc_count": 15
+      },
+      "Pennsylvania": {
+        "_doc_count": 20
+      },
+      "Oklahoma": {
+        "_doc_count": 16
+      },
+      ...
+      "Nebraska": {
+        "_doc_count": 17
+      }
+    }
+  },
+  "#query": {
+      "#total_count": 0,
+      "#matches_estimated": 1000,
+      "#hits": [
+      ]
+  },
+  "#took": 2.573
 }
 ```
 
-
-{: .note .unreleased}
-**_TODO:_** Work in progress...
-
-There are many other aggregations capabilities that we won't go into detail
-here. The [Aggregations Reference Guide]({{ '/docs/reference-guide/aggregations/' | relative_url }}) is a great
-starting point if you want to do further experimentation.
+There are many other aggregations capabilities that we won't go into detail here.
+The [Aggregations Reference Guide]({{ '/docs/reference-guide/aggregations/' | relative_url }})
+is a great starting point if you want to do further experimentation.
