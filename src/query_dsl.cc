@@ -1013,7 +1013,6 @@ QueryDSL::make_dsl_query(std::string_view query)
 							stack_msgpack.pop_back();
 							MsgPack object;
 							object[RESERVED_AND] = last_op_object;
-							L_GREEN("%s", object.to_string());
 							stack_msgpack.push_back(std::move(object));
 						} else {
 							auto ob2 = stack_msgpack.back();
