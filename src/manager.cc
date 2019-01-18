@@ -89,6 +89,9 @@
 #include "server/binary.h"                    // for Binary
 #include "server/binary_server.h"             // for BinaryServer
 #include "server/binary_client.h"             // for BinaryClient
+#include "server/replication.h"               // for Replication
+#include "server/replication_server.h"        // for ReplicationServer
+#include "server/replication_client.h"        // for ReplicationClient
 #include "server/discovery.h"                 // for Discovery
 #endif
 
@@ -154,6 +157,8 @@ XapiandManager::XapiandManager()
 #ifdef XAPIAND_CLUSTERING
 	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
 	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
+	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
 #endif
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
@@ -186,6 +191,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 #ifdef XAPIAND_CLUSTERING
 	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
 	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
+	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
 #endif
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
@@ -686,7 +693,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			Endpoint local_endpoint{"./"};
 			L_INFO("Synchronizing cluster database from %s%s" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
-			_binary->trigger_replication({cluster_endpoint, local_endpoint, true});
+			_replication->trigger_replication({cluster_endpoint, local_endpoint, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
@@ -719,6 +726,8 @@ XapiandManager::make_servers()
 	int http_port = opts.http_port ? opts.http_port : XAPIAND_HTTP_SERVERPORT;
 	int binary_tries = opts.binary_port ? 1 : 10;
 	int binary_port = opts.binary_port ? opts.binary_port : XAPIAND_BINARY_SERVERPORT;
+	int replication_tries = opts.replication_port ? 1 : 10;
+	int replication_port = opts.replication_port ? opts.replication_port : XAPIAND_REPLICATION_SERVERPORT;
 
 	auto local_node = Node::local_node();
 	auto nodes = Node::nodes();
@@ -742,6 +751,14 @@ XapiandManager::make_servers()
 					it = nodes.begin();
 					continue;
 				}
+				if (node->replication_port == replication_port) {
+					if (--replication_tries == 0) {
+						THROW(Error, "Cannot use port %d, it's already in use!", replication_port);
+					}
+					++replication_port;
+					it = nodes.begin();
+					continue;
+				}
 			}
 		}
 		++it;
@@ -756,6 +773,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
+        _replication = Worker::make_shared<Replication>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
 	}
 #endif
 
@@ -773,6 +791,12 @@ XapiandManager::make_servers()
 				_binary->addr = _binary_server->addr;
 			}
 			_binary_server_pool->enqueue(std::move(_binary_server));
+
+			auto _replication_server = Worker::make_shared<ReplicationServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
+			if (_replication_server->addr.sin_family) {
+				_replication->addr = _replication_server->addr;
+			}
+			_replication_server_pool->enqueue(std::move(_replication_server));
 		}
 #endif
 	}
@@ -783,6 +807,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		node_copy->binary_port = ntohs(_binary->addr.sin_port);
+		node_copy->replication_port = ntohs(_replication->addr.sin_port);
 	}
 #endif
 	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
@@ -792,6 +817,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		msg += " and " + _binary->getDescription();
+		msg += " and " + _replication->getDescription();
 	}
 #endif
 	L_NOTICE(msg);
@@ -807,6 +833,7 @@ XapiandManager::make_servers()
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
 #ifdef XAPIAND_CLUSTERING
 		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication client thread" : " replication client threads"),
 #endif
 #if XAPIAND_DATABASE_WAL
 		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
@@ -837,6 +864,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		_binary->start();
+		_replication->start();
 		_discovery->cluster_enter();
 	}
 #endif
@@ -976,6 +1004,36 @@ XapiandManager::join()
 		L_MANAGER("Waiting for %zu binary client thread%s...", _binary_client_pool->running_size(), (_binary_client_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
 		while (!_binary_client_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	if (_replication_server_pool) {
+		L_MANAGER("Finishing replication servers pool!");
+		_replication_server_pool->finish();
+
+		L_MANAGER("Waiting for %zu replication server%s...", _replication_server_pool->running_size(), (_replication_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication servers...", "Replication servers finished!");
+		while (!_replication_server_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	if (_replication_client_pool) {
+		L_MANAGER("Finishing replication client threads pool!");
+		_replication_client_pool->finish();
+
+		L_MANAGER("Waiting for %zu replication client thread%s...", _replication_client_pool->running_size(), (_replication_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		while (!_replication_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1451,6 +1509,6 @@ XapiandManager::__repr__() const
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
-	XapiandManager::binary()->trigger_replication({src_endpoint, dst_endpoint, false});
+	XapiandManager::replication()->trigger_replication({src_endpoint, dst_endpoint, false});
 }
 #endif

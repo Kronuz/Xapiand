@@ -254,6 +254,20 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			constant_labels)
 		.Add({})
 	},
+	xapiand_replication_current_connections{
+		registry.AddGauge(
+			"xapiand_replication_current_connections",
+			"Current replication connections",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_connections{
+		registry.AddCounter(
+			"xapiand_replication_connections",
+			"Replication connections",
+			constant_labels)
+		.Add({})
+	},
 #endif
 	xapiand_http_sent_bytes{
 		registry.AddCounter(

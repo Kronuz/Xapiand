@@ -90,6 +90,8 @@ public:
 #ifdef XAPIAND_CLUSTERING
 	prometheus::Gauge& xapiand_binary_current_connections;
 	prometheus::Counter& xapiand_binary_connections;
+	prometheus::Gauge& xapiand_replication_current_connections;
+	prometheus::Counter& xapiand_replication_connections;
 #endif
 
 	prometheus::Counter& xapiand_http_sent_bytes;

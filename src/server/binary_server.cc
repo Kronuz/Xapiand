@@ -50,13 +50,10 @@
 
 BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
 	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
-	  binary(*binary_),
-	  trigger_replication_async(*ev_loop)
+	  binary(*binary_)
 {
 	bind(hostname, serv, tries);
 
-	trigger_replication_async.set<BinaryServer, &BinaryServer::trigger_replication_async_cb>(this);
-	trigger_replication_async.start();
 	L_EV("Start binary's async trigger replication signal event");
 }
 
@@ -80,32 +77,6 @@ BinaryServer::start_impl()
 
 	io.start(sock == -1 ? binary.sock : sock, ev::READ);
 	L_EV("Start binary's server accept event {sock:%d}", sock == -1 ? binary.sock : sock);
-}
-
-
-void
-BinaryServer::trigger_replication()
-{
-	L_CALL("BinaryServer::trigger_replication()");
-
-	trigger_replication_async.send();
-}
-
-
-void
-BinaryServer::trigger_replication_async_cb(ev::async&, int revents)
-{
-	L_CALL("BinaryServer::trigger_replication_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
-
-	L_EV_BEGIN("BinaryServer::trigger_replication_async_cb:BEGIN");
-	L_EV_END("BinaryServer::trigger_replication_async_cb:END");
-
-	ignore_unused(revents);
-
-	TriggerReplicationArgs args;
-	while (binary.trigger_replication_args.try_dequeue(args)) {
-		trigger_replication(args);
-	}
 }
 
 
@@ -150,68 +121,6 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 		client->start();
 	}
-}
-
-
-void
-BinaryServer::trigger_replication(const TriggerReplicationArgs& args)
-{
-	if (args.src_endpoint.is_local()) {
-		ASSERT(!args.cluster_database);
-		return;
-	}
-
-	bool replicated = false;
-
-	if (args.src_endpoint.path == "./") {
-		// Cluster database is always updated
-		replicated = true;
-	}
-
-	if (!replicated && exists(args.src_endpoint.path + "iamglass")) {
-		// If database is already there, its also always updated
-		replicated = true;
-	}
-
-	if (!replicated) {
-		// Otherwise, check if the local node resolves as replicator
-		auto local_node = Node::local_node();
-		auto nodes = XapiandManager::resolve_index_nodes(args.src_endpoint.path);
-		for (const auto& node : nodes) {
-			if (Node::is_superset(local_node, node)) {
-				replicated = true;
-				break;
-			}
-		}
-	}
-
-	if (!replicated) {
-		ASSERT(!args.cluster_database);
-		return;
-	}
-
-	auto& node = args.src_endpoint.node;
-	int port = (node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : node.binary_port;
-	auto& host = node.host();
-	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
-	if (client_sock == -1) {
-		if (args.cluster_database) {
-			L_CRIT("Cannot replicate cluster database");
-			sig_exit(-EX_SOFTWARE);
-		}
-		return;
-	}
-	L_CONN("Connected to %s! (in socket %d)", repr(src_endpoints.to_string()), client_sock);
-
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
-
-	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
-		client->detach();
-		return;
-	}
-
-	client->start();
-	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
 

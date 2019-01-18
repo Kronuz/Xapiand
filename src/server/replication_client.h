@@ -22,25 +22,61 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_CLUSTERING
+#include "config.h"                         // for XAPIAND_CLUSTERING
+
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <string>
-
+#include <deque>                            // for std::deque
+#include <memory>                           // for shared_ptr
+#include <mutex>                            // for std::mutex
+#include <string>                           // for std::string
+#include <vector>                           // for std::vector
 #include <xapian.h>
 
-#include "endpoint.h"          // for Endpoints, Endpoint
-#include "lock_database.h"     // for LockableDatabase
+#include "base_client.h"                    // for MetaBaseClient
+#include "lock_database.h"                  // for LockableDatabase
+#include "threadpool.hh"                    // for Task
 
 
-#define SWITCH_TO_REPL '\xfe'
+// #define SAVE_LAST_MESSAGES
+#if !defined(NDEBUG) || defined(XAPIAND_TRACEBACKS)
+#ifndef SAVE_LAST_MESSAGES
+#define SAVE_LAST_MESSAGES 1
+#endif
+#endif
+
+
+#define FILE_FOLLOWS '\xfd'
+
+enum class ReplicaState {
+	INIT_REPLICATION_CLIENT,
+	INIT_REPLICATION_SERVER,
+	REPLICATION_CLIENT,
+	REPLICATION_SERVER,
+};
 
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
 	MSG_MAX
 };
+
+
+inline const std::string& StateNames(ReplicaState type) {
+	static const std::string _[] = {
+		"INIT_REPLICATION_CLIENT",
+		"INIT_REPLICATION_SERVER",
+		"REPLICATION_CLIENT",
+		"REPLICATION_SERVER",
+	};
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
+}
 
 
 inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
@@ -72,15 +108,13 @@ enum class ReplicationReplyType {
 inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 	static const std::string _[] = {
 		"REPLY_WELCOME",
+		"REPLY_GET_CHANGESETS",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
 		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
 	};
 	auto idx = static_cast<size_t>(type);
-	if (idx == static_cast<size_t>(SWITCH_TO_REPL)) {
-		static const std::string SWITCH_TO_REPL_NAME = "SWITCH_TO_REPL";
-		return SWITCH_TO_REPL_NAME;
-	} else if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
 		return _[idx];
 	}
 	static const std::string UNKNOWN = "UNKNOWN";
@@ -88,12 +122,12 @@ inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 }
 
 
-class BinaryClient;
 class DatabaseWAL;
+class ReplicationClient;
 
 
-class ReplicationProtocol : protected LockableDatabase {
-	BinaryClient& client;
+class ReplicationProtocol : public LockableDatabase {
+	ReplicationClient& client;
 
 public:
 	Endpoints src_endpoints;
@@ -114,7 +148,7 @@ public:
 	std::shared_ptr<Logging> log;
 
 public:
-	ReplicationProtocol(BinaryClient& client_);
+	ReplicationProtocol(ReplicationClient& client_);
 	~ReplicationProtocol() noexcept;
 
 	void reset();
@@ -138,5 +172,59 @@ public:
 	void reply_changeset(const std::string& message);
 };
 
+
+// A single instance of a non-blocking Xapiand replication protocol handler
+class ReplicationClient : public MetaBaseClient<ReplicationClient>{
+	friend MetaBaseClient<ReplicationClient>;
+
+	mutable std::mutex runner_mutex;
+
+	std::atomic<ReplicaState> state;
+
+#ifdef SAVE_LAST_MESSAGES
+	std::atomic_char last_message_received;
+	std::atomic_char last_message_sent;
+#endif
+
+	int file_descriptor;
+	char file_message_type;
+	std::string temp_directory;
+	std::string temp_directory_template;
+	std::string temp_file_template;
+	std::vector<std::string> temp_files;
+
+	// Buffers that are pending write
+	std::string buffer;
+	std::deque<Buffer> messages;
+	bool cluster_database;
+
+	ReplicationClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+
+	bool is_idle() const;
+
+	ssize_t on_read(const char *buf, ssize_t received);
+	void on_read_file(const char *buf, ssize_t received);
+	void on_read_file_done();
+
+	// Replication protocol:
+	ReplicationProtocol replication_protocol;
+
+	friend Worker;
+	friend ReplicationProtocol;
+
+public:
+	~ReplicationClient() noexcept;
+
+	char get_message(std::string &result, char max_type);
+	void send_message(char type_as_char, const std::string& message);
+	void send_file(char type_as_char, int fd);
+
+	bool init_replication() noexcept;
+	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+
+	void operator()();
+
+	std::string __repr__() const override;
+};
 
 #endif  /* XAPIAND_CLUSTERING */

@@ -26,33 +26,37 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <memory>                             // for std::shared_ptr, std::weak_ptr
-#include <string>                             // for std::string
-#include <vector>                             // for std::vector
-
-#include "concurrent_queue.h"                 // for ConcurrentQueue
-#include "endpoint.h"                         // for Endpoint
-#include "tcp.h"                              // for BaseTCP
-#include "threadpool.hh"                      // for TaskQueue
+#include "base_server.h"                      // for BaseServer
 
 
-class BinaryServer;
-class DiscoveryServer;
+class Replication;
+struct TriggerReplicationArgs;
 
 
-// Configuration data for Binary
-class Binary : public BaseTCP {
-	friend BinaryServer;
+// Replication Server
+class ReplicationServer : public MetaBaseServer<ReplicationServer> {
+	Replication& replication;
+
+	ev::async trigger_replication_async;
+
+	void start_impl() override;
+
+	void trigger_replication_async_cb(ev::async& watcher, int revents);
 
 public:
-	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	ReplicationServer(const std::shared_ptr<Replication>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	~ReplicationServer() noexcept;
 
-	void start();
+	int accept();
+
+	void io_accept_cb(ev::io& watcher, int revents);
+
+	void trigger_replication(const TriggerReplicationArgs& args);
+
+	void trigger_replication();
 
 	std::string __repr__() const override;
-
-	std::string getDescription() const;
 };
 
 
-#endif  /* XAPIAND_CLUSTERING */
+#endif /* XAPIAND_CLUSTERING */

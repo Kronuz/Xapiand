@@ -72,8 +72,7 @@ BinaryClient::BinaryClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref*
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
 	  cluster_database(cluster_database_),
-	  remote_protocol(*this),
-	  replication_protocol(*this)
+	  remote_protocol(*this)
 {
 	++XapiandManager::binary_clients();
 
@@ -150,28 +149,6 @@ BinaryClient::init_remote() noexcept
 }
 
 
-bool
-BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
-{
-	L_CALL("BinaryClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
-
-	std::lock_guard<std::mutex> lk(runner_mutex);
-
-	ASSERT(!running);
-
-	// Setup state...
-	state = State::INIT_REPLICATION;
-
-	if (replication_protocol.init_replication(src_endpoint, dst_endpoint)) {
-		// And start a runner.
-		running = true;
-		XapiandManager::binary_client_pool()->enqueue(share_this<BinaryClient>());
-		return true;
-	}
-	return false;
-}
-
-
 ssize_t
 BinaryClient::on_read(const char *buf, ssize_t received)
 {
@@ -192,13 +169,6 @@ BinaryClient::on_read(const char *buf, ssize_t received)
 		char type = *p++;
 		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
-			case SWITCH_TO_REPL: {
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				state = State::REPLICATION_SERVER;  // Switch to replication protocol
-				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
-				L_BINARY("Switched to replication protocol");
-				break;
-			}
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX];
 				if (temp_directory.empty()) {
@@ -386,9 +356,6 @@ BinaryClient::operator()()
 			}
 			lk.lock();
 			break;
-		case State::INIT_REPLICATION:
-			state = State::REPLICATION_CLIENT;
-			break;
 		default:
 			break;
 	}
@@ -412,68 +379,6 @@ BinaryClient::operator()()
 					auto received = total_received_bytes.exchange(0);
 					Metrics::metrics()
 						.xapiand_remote_protocol_received_bytes
-						.Increment(received);
-
-				} catch (...) {
-					lk.lock();
-					running = false;
-					lk.unlock();
-					L_CONN("Running in worker ended with an exception.");
-					detach();
-					throw;
-				}
-				lk.lock();
-				break;
-			}
-
-			case State::REPLICATION_SERVER: {
-				std::string message;
-				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-				lk.unlock();
-				try {
-
-					L_BINARY_PROTO(">> get_message[REPLICATION_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
-					replication_protocol.replication_server(type, message);
-
-					auto sent = total_sent_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_sent_bytes
-						.Increment(sent);
-
-					auto received = total_received_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_received_bytes
-						.Increment(received);
-
-				} catch (...) {
-					lk.lock();
-					running = false;
-					lk.unlock();
-					L_CONN("Running in worker ended with an exception.");
-					detach();
-					throw;
-				}
-				lk.lock();
-				break;
-			}
-
-			case State::REPLICATION_CLIENT: {
-				std::string message;
-				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-				lk.unlock();
-				try {
-
-					L_BINARY_PROTO(">> get_message[REPLICATION_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
-					replication_protocol.replication_client(type, message);
-
-					auto sent = total_sent_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_sent_bytes
-						.Increment(sent);
-
-					auto received = total_received_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_received_bytes
 						.Increment(received);
 
 				} catch (...) {
@@ -528,17 +433,6 @@ BinaryClient::__repr__() const
 					StateNames(st),
 					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
 					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
-			case State::INIT_REPLICATION:
-			case State::REPLICATION_CLIENT:
-				return string::format("%s) (%s<->%s",
-					StateNames(st),
-					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(received)),
-					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(sent)));
-			case State::REPLICATION_SERVER:
-				return string::format("%s) (%s<->%s",
-					StateNames(st),
-					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(received)),
-					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(sent)));
 			default:
 				return "";
 		}

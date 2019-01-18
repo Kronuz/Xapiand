@@ -45,9 +45,12 @@
 class Http;
 #ifdef XAPIAND_CLUSTERING
 class Binary;
+class Replication;
 class Discovery;
 class BinaryClient;
 class BinaryServer;
+class ReplicationClient;
+class ReplicationServer;
 #endif
 
 class MsgPack;
@@ -126,10 +129,12 @@ private:
 	std::atomic_int _total_clients;
 	std::atomic_int _http_clients;
 	std::atomic_int _binary_clients;
+	std::atomic_int _replication_clients;
 
 	std::shared_ptr<Http> _http;
 #ifdef XAPIAND_CLUSTERING
 	std::shared_ptr<Binary> _binary;
+	std::shared_ptr<Replication> _replication;
 	std::shared_ptr<Discovery> _discovery;
 #endif
 
@@ -144,6 +149,9 @@ private:
 #ifdef XAPIAND_CLUSTERING
 	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>> _binary_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>> _binary_server_pool;
+
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationClient>, ThreadPolicyType::http_clients>> _replication_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationServer>, ThreadPolicyType::http_servers>> _replication_server_pool;
 #endif
 
 	std::atomic_llong _shutdown_asap;
@@ -298,6 +306,10 @@ public:
 		ASSERT(_manager);
 		return _manager->_binary_clients;
 	}
+	static auto& replication_clients() {
+		ASSERT(_manager);
+		return _manager->_replication_clients;
+	}
 
 	static auto& database_pool() {
 		ASSERT(_manager);
@@ -324,6 +336,16 @@ public:
 		ASSERT(_manager);
 		ASSERT(_manager->_binary);
 		return _manager->_binary;
+	}
+	static auto& replication() {
+		ASSERT(_manager);
+		ASSERT(_manager->_replication);
+		return _manager->_replication;
+	}
+	static auto& replication_client_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_replication_client_pool);
+		return _manager->_replication_client_pool;
 	}
 #endif
 

@@ -40,8 +40,8 @@
 #define L_NODE_NODES(args...) \
 	L_SLATE_GREY(args); \
 	for (const auto& _ : _nodes) { \
-		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, host:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s", \
-			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->binary_port, _.second->touched.load(std::memory_order_relaxed), \
+		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, host:%s, http_port:%d, binary_port:%d, replication_port:%d, touched:%lld}%s%s%s", \
+			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->binary_port, _.second->replication_port, _.second->touched.load(std::memory_order_relaxed), \
 			Node::is_active(_.second) ? " active" : "", \
 			Node::is_local(_.second) ? " (local)" : "", \
 			Node::is_leader(_.second) ? " (leader)" : ""); \
@@ -76,6 +76,7 @@ Node::serialise() const
 		: serialise_length(_addr.sin_addr.s_addr) +
 			serialise_length(http_port) +
 			serialise_length(binary_port) +
+			serialise_length(replication_port) +
 			serialise_length(idx) +
 			serialise_string(_name);
 }
@@ -92,6 +93,7 @@ Node::unserialise(const char **p, const char *end)
 	node._addr.sin_addr.s_addr = unserialise_length(&ptr, end);
 	node.http_port = unserialise_length(&ptr, end);
 	node.binary_port = unserialise_length(&ptr, end);
+	node.replication_port = unserialise_length(&ptr, end);
 	node.idx = unserialise_length(&ptr, end);
 	node._name = unserialise_string(&ptr, end);
 	if (node._name.empty()) {
@@ -110,8 +112,8 @@ Node::unserialise(const char **p, const char *end)
 std::string
 Node::__repr__() const
 {
-	return string::format("<Node {index:%zu, name:%s, host:%s, http_port:%d, binary_port:%d, touched:%lld}%s%s%s>",
-		idx, repr(name()), repr(host()), http_port, binary_port, touched.load(std::memory_order_relaxed),
+	return string::format("<Node {index:%zu, name:%s, host:%s, http_port:%d, binary_port:%d, replication_port:%d, touched:%lld}%s%s%s>",
+		idx, repr(name()), repr(host()), http_port, binary_port, replication_port, touched.load(std::memory_order_relaxed),
 		is_active() ? " (active)" : "",
 		is_local() ? " (local)" : "",
 		is_leader() ? " (leader)" : "");
@@ -355,7 +357,8 @@ Node::touch_node(const Node& node, bool activate)
 				(!node_ref->idx && node.idx) ||
 				(!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) ||
 				(!node_ref->http_port && node.http_port) ||
-				(!node_ref->binary_port && node.binary_port)
+				(!node_ref->binary_port && node.binary_port) ||
+				(!node_ref->replication_port && node.replication_port)
 			) {
 				auto node_ref_copy = std::make_unique<Node>(*node_ref);
 				if (!node_ref->idx && node.idx) {
@@ -377,6 +380,9 @@ Node::touch_node(const Node& node, bool activate)
 				}
 				if (!node_ref->binary_port && node.binary_port) {
 					node_ref_copy->binary_port = node.binary_port;
+				}
+				if (!node_ref->replication_port && node.replication_port) {
+					node_ref_copy->replication_port = node.replication_port;
 				}
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
@@ -435,6 +441,7 @@ Node::drop_node(std::string_view _node_name)
 		node_ref_copy->_host.clear();
 		node_ref_copy->http_port = 0;
 		node_ref_copy->binary_port = 0;
+		node_ref_copy->replication_port = 0;
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 	}
@@ -493,6 +500,7 @@ Node::is_simmilar(const Node& other) const
 		(!_addr.sin_addr.s_addr || !other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
 		(!http_port || !other.http_port || http_port == other.http_port) &&
 		(!binary_port || !other.binary_port || binary_port == other.binary_port) &&
+		(!replication_port || !other.replication_port || replication_port == other.replication_port) &&
 		_lower_name == other._lower_name
 	));
 }
@@ -506,6 +514,7 @@ Node::is_superset(const Node& other) const
 		(!_addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
 		(!http_port || http_port == other.http_port) &&
 		(!binary_port || binary_port == other.binary_port) &&
+		(!replication_port || replication_port == other.replication_port) &&
 		_lower_name == other._lower_name
 	));
 }
@@ -519,6 +528,7 @@ Node::is_subset(const Node& other) const
 		(!other._addr.sin_addr.s_addr || _addr.sin_addr.s_addr == other._addr.sin_addr.s_addr) &&
 		(!other.http_port || http_port == other.http_port) &&
 		(!other.binary_port || binary_port == other.binary_port) &&
+		(!other.replication_port || replication_port == other.replication_port) &&
 		_lower_name == other._lower_name
 	));
 }

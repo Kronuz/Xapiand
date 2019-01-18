@@ -36,18 +36,32 @@
 #include "threadpool.hh"                      // for TaskQueue
 
 
-class BinaryServer;
-class DiscoveryServer;
+constexpr uint16_t XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION = 1;
+constexpr uint16_t XAPIAND_REPLICATION_PROTOCOL_MINOR_VERSION = 1;
+
+
+class ReplicationServer;
+
+
+struct TriggerReplicationArgs {
+	Endpoint src_endpoint;
+	Endpoint dst_endpoint;
+	bool cluster_database;
+};
 
 
 // Configuration data for Binary
-class Binary : public BaseTCP {
-	friend BinaryServer;
+class Replication : public BaseTCP {
+	friend ReplicationServer;
+
+	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 
 public:
-	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	Replication(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 
 	void start();
+
+	void trigger_replication(const TriggerReplicationArgs& args);
 
 	std::string __repr__() const override;
 

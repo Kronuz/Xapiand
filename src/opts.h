@@ -34,6 +34,7 @@
 #define NUM_SERVERS              2       // Number of servers per CPU
 #define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
 #define NUM_BINARY_CLIENTS       16      // Number of binary client threads per CPU
+#define NUM_REPLICA_CLIENTS      16      // Number of replication client threads per CPU
 #define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
 #define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
 #define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
@@ -64,6 +65,7 @@ extern struct opts_t {
 	std::string bind_address = "";
 	unsigned int http_port = XAPIAND_HTTP_SERVERPORT;
 	unsigned int binary_port = XAPIAND_BINARY_SERVERPORT;
+	unsigned int replication_port = XAPIAND_REPLICATION_SERVERPORT;
 	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
 	std::string pidfile = "";
 	std::string logfile = "";
@@ -73,6 +75,7 @@ extern struct opts_t {
 	ssize_t num_servers = std::ceil(NUM_SERVERS);
 	ssize_t num_http_clients = std::ceil(NUM_BINARY_CLIENTS);
 	ssize_t num_binary_clients = std::ceil(NUM_BINARY_CLIENTS);
+	ssize_t num_replication_clients = std::ceil(NUM_REPLICA_CLIENTS);
 	ssize_t num_async_wal_writers = std::ceil(NUM_ASYNC_WAL_WRITERS);
 	ssize_t num_committers = std::ceil(NUM_COMMITTERS);
 	ssize_t num_fsynchers = std::ceil(NUM_FSYNCHERS);

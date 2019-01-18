@@ -36,7 +36,6 @@
 
 #include "base_client.h"                      // for MetaBaseClient
 #include "remote_protocol.h"                  // for RemoteProtocol
-#include "replication_protocol.h"             // for ReplicationProtocol
 #include "threadpool.hh"                      // for Task
 
 // #define SAVE_LAST_MESSAGES
@@ -109,12 +108,8 @@ class BinaryClient : public MetaBaseClient<BinaryClient> {
 	// Remote protocol:
 	RemoteProtocol remote_protocol;
 
-	// Replication protocol:
-	ReplicationProtocol replication_protocol;
-
 	friend Worker;
 	friend RemoteProtocol;
-	friend ReplicationProtocol;
 
 public:
 	~BinaryClient() noexcept;

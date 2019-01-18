@@ -59,10 +59,11 @@ public:
 
 	int http_port;
 	int binary_port;
+	int replication_port;
 
 	mutable std::atomic_llong touched;
 
-	Node() : _addr{}, idx{0}, http_port{0}, binary_port{0}, touched{0} { }
+	Node() : _addr{}, idx{0}, http_port{0}, binary_port{0}, replication_port{0}, touched{0} { }
 
 	// Move constructor
 	Node(Node&& other)
@@ -73,6 +74,7 @@ public:
 		  idx{std::move(other.idx)},
 		  http_port{std::move(other.http_port)},
 		  binary_port{std::move(other.binary_port)},
+		  replication_port{std::move(other.replication_port)},
 		  touched{other.touched.load(std::memory_order_relaxed)} { }
 
 	// Copy Constructor
@@ -84,6 +86,7 @@ public:
 		  idx{other.idx},
 		  http_port{other.http_port},
 		  binary_port{other.binary_port},
+		  replication_port{other.replication_port},
 		  touched{other.touched.load(std::memory_order_relaxed)} { }
 
 	// Move assignment
@@ -95,6 +98,7 @@ public:
 		idx = std::move(other.idx);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
+		replication_port = std::move(other.replication_port);
 		touched = other.touched.load(std::memory_order_relaxed);
 		return *this;
 	}
@@ -108,6 +112,7 @@ public:
 		idx = other.idx;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
+		replication_port = other.replication_port;
 		touched = other.touched.load(std::memory_order_relaxed);
 		return *this;
 	}
@@ -120,6 +125,7 @@ public:
 		idx = 0;
 		http_port = 0;
 		binary_port = 0;
+		replication_port = 0;
 		touched.store(0, std::memory_order_relaxed);
 	}
 

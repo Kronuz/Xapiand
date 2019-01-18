@@ -1789,6 +1789,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 				obj["host"] = node->host();
 				obj["http_port"] = node->http_port;
 				obj["binary_port"] = node->binary_port;
+				obj["replication_port"] = node->replication_port;
 				obj["active"] = true;
 			} else {
 				obj["active"] = false;
@@ -2629,6 +2630,9 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		Endpoint endpoint{index_path, node.get()};
 		if (endpoint.node.binary_port == 0) {
 			endpoint.node.binary_port = XAPIAND_BINARY_SERVERPORT;
+		}
+		if (endpoint.node.replication_port == 0) {
+			endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;
 		}
 #else
 		Endpoint endpoint(index_path);
