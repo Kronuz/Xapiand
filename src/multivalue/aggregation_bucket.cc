@@ -31,17 +31,17 @@
 #include "schema.h"                       // for Schema, required_spc_t
 
 
-FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 	: SubAggregation(result),
-	  _agg(result, conf, schema)
+	  _agg(result, context, schema)
 {
-	if (!conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
+	if (!context.is_map()) {
+		THROW(AggregationError, "%s must be object", repr(context.to_string()));
 	}
 
-	const auto filter_it = conf.find(AGGREGATION_FILTER);
-	if (filter_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FILTER, repr(conf.to_string()));
+	const auto filter_it = context.find(name);
+	if (filter_it == context.end()) {
+		THROW(AggregationError, "'%s' must be specified in %s", name, repr(context.to_string()));
 	}
 	const auto& filter_conf = filter_it.value();
 	if (!filter_conf.is_map()) {

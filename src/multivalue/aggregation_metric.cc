@@ -91,14 +91,15 @@ ValueHandle::values(const Xapian::Document& doc) const
 
 
 HandledSubAggregation::HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema, bool use_terms)
-	: SubAggregation(result)
+	: SubAggregation(result),
+	  _conf(conf)
 {
-	if (!conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
+	if (!_conf.is_map()) {
+		THROW(AggregationError, "%s must be object", repr(_conf.to_string()));
 	}
-	const auto field_it = conf.find(AGGREGATION_FIELD);
-	if (field_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
+	const auto field_it = _conf.find(AGGREGATION_FIELD);
+	if (field_it == _conf.end()) {
+		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(_conf.to_string()));
 	}
 	const auto& field_conf = field_it.value();
 	if (!field_conf.is_string()) {

@@ -51,13 +51,13 @@ class BucketAggregation : public HandledSubAggregation {
 protected:
 	std::unordered_map<std::string, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
-	const MsgPack& _conf;
+	const MsgPack& _context;
 
 public:
-	BucketAggregation(const char* name, MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema, bool use_terms)
-		: HandledSubAggregation(result, conf.at(name), schema, use_terms),
+	BucketAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, bool use_terms)
+		: HandledSubAggregation(result, context, name, schema, use_terms),
 		  _schema(schema),
-		  _conf(conf) { }
+		  _context(context) { }
 
 	void update() override {
 		for (auto& _agg : _aggs) {
@@ -72,7 +72,7 @@ public:
 		} else {
 			auto p = _aggs.emplace(std::piecewise_construct,
 				std::forward_as_tuple(bucket),
-				std::forward_as_tuple(_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _conf, _schema));
+				std::forward_as_tuple(_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
 			p.first->second(doc);
 		}
 	}
@@ -81,8 +81,8 @@ public:
 
 class ValuesAggregation : public BucketAggregation {
 public:
-	ValuesAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_VALUES, result, conf, schema, false) { }
+	ValuesAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(result, context, name, schema, false) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -128,8 +128,8 @@ public:
 
 class TermsAggregation : public BucketAggregation {
 public:
-	TermsAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_TERMS, result, conf, schema, true) { }
+	TermsAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(result, context, name, schema, true) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -212,19 +212,15 @@ class HistogramAggregation : public BucketAggregation {
 	}
 
 public:
-	HistogramAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_HISTOGRAM, result, conf, schema, false),
+	HistogramAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(result, context, name, schema, false),
 		  interval_u64(0),
 		  interval_i64(0),
 		  interval_f64(0.0)
 	{
-		const auto& histogram_conf = _conf.at(AGGREGATION_HISTOGRAM);
-		if (!histogram_conf.is_map()) {
-			THROW(AggregationError, "'%s' must be object", AGGREGATION_HISTOGRAM);
-		}
-		const auto it = histogram_conf.find(AGGREGATION_INTERVAL);
-		if (it == histogram_conf.end()) {
-			THROW(AggregationError, "'%s' must be object with '%s'", AGGREGATION_HISTOGRAM, AGGREGATION_INTERVAL);
+		const auto it = _conf.find(AGGREGATION_INTERVAL);
+		if (it == _conf.end()) {
+			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_INTERVAL);
 		}
 		const auto& interval_value = it.value();
 		switch (interval_value.getType()) {
@@ -236,7 +232,7 @@ public:
 				interval_f64 = interval_value.f64();
 				break;
 			default:
-				THROW(AggregationError, "'%s' must be object", AGGREGATION_HISTOGRAM);
+				THROW(AggregationError, "'%s' must be object", name);
 		}
 	}
 
@@ -295,20 +291,16 @@ class RangeAggregation : public BucketAggregation {
 	}
 
 public:
-	RangeAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(AGGREGATION_RANGE, result, conf, schema, false)
+	RangeAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation(result, context, name, schema, false)
 	{
-		const auto& range_conf = _conf.at(AGGREGATION_RANGE);
-		if (!range_conf.is_map()) {
-			THROW(AggregationError, "'%s' must be object", AGGREGATION_RANGE);
-		}
-		const auto it = range_conf.find(AGGREGATION_RANGES);
-		if (it == range_conf.end()) {
-			THROW(AggregationError, "'%s' must be object with '%s'", AGGREGATION_RANGE, AGGREGATION_RANGES);
+		const auto it = _conf.find(AGGREGATION_RANGES);
+		if (it == _conf.end()) {
+			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_RANGES);
 		}
 		const auto& ranges = it.value();
 		if (!ranges.is_array()) {
-			THROW(AggregationError, "'%s.%s' must be an array", AGGREGATION_RANGE, AGGREGATION_RANGES);
+			THROW(AggregationError, "'%s.%s' must be an array", name, AGGREGATION_RANGES);
 		}
 		for (const auto& range : ranges) {
 			std::string_view key;
@@ -468,7 +460,7 @@ class FilterAggregation : public SubAggregation {
 	func_filter func;
 
 public:
-	FilterAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
+	FilterAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc) override {
 		(this->*func)(doc);

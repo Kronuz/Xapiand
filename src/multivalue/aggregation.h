@@ -47,20 +47,21 @@ class Aggregation {
 
 public:
 	explicit Aggregation(MsgPack& result);
+
 	Aggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc);
 
 	void update();
 
-	template <const char* name, typename MetricAggregation>
-	void add_metric(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(result, conf[name], schema));
+	template <typename MetricAggregation, typename... Args>
+	void add_metric(Args&&... args) {
+		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(std::forward<Args>(args)...));
 	}
 
-	template <typename BucketAggregation>
-	void add_bucket(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
-		_sub_aggregations.push_back(std::make_shared<BucketAggregation>(result, conf, schema));
+	template <typename BucketAggregation, typename... Args>
+	void add_bucket(Args&&... args) {
+		_sub_aggregations.push_back(std::make_shared<BucketAggregation>(std::forward<Args>(args)...));
 	}
 };
 
