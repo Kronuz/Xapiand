@@ -90,34 +90,44 @@ constexpr const char AGGREGATION_TERMS[]            = "_terms";
 constexpr const char AGGREGATION_TERM[]             = "_term";
 
 
+template <typename Handler>
 class HandledSubAggregation;
 
 
-using func_value_handle = void (HandledSubAggregation::*)(const Xapian::Document&);
+class ValuesHandler {
+	using func_value_handle = void (HandledSubAggregation<ValuesHandler>::*)(const Xapian::Document&);
 
-
-class ValueHandle {
 protected:
 	Xapian::valueno _slot;
-	std::string _prefix;
 	func_value_handle _func;
 
 public:
-	ValueHandle() = default;
-
-	void set(Xapian::valueno slot, const std::string& prefix, func_value_handle func) {
-		_slot = slot;
-		_prefix = prefix;
-		_func = func;
-	}
+	ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	std::vector<std::string> values(const Xapian::Document& doc) const;
 
-	void operator()(HandledSubAggregation* agg, const Xapian::Document& doc) const {
+	void operator()(HandledSubAggregation<ValuesHandler>* agg, const Xapian::Document& doc) const {
 		(agg->*_func)(doc);
 	}
 };
 
+
+class TermsHandler {
+	using func_value_handle = void (HandledSubAggregation<TermsHandler>::*)(const Xapian::Document&);
+
+protected:
+	std::string _prefix;
+	func_value_handle _func;
+
+public:
+	TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
+
+	std::vector<std::string> values(const Xapian::Document& doc) const;
+
+	void operator()(HandledSubAggregation<TermsHandler>* agg, const Xapian::Document& doc) const {
+		(agg->*_func)(doc);
+	}
+};
 
 
 class SubAggregation {
@@ -135,16 +145,20 @@ public:
 };
 
 
+template <typename Handler>
 class HandledSubAggregation : public SubAggregation {
 protected:
-	ValueHandle _handle;
+	Handler _handler;
 	const MsgPack& _conf;
 
 public:
-	HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema, bool use_terms);
+	HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: SubAggregation(result),
+		  _handler(conf, schema),
+		  _conf(conf) { }
 
-	HandledSubAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, bool use_terms)
-		: HandledSubAggregation(result, context.at(name), schema, use_terms) { }
+	HandledSubAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(result, context.at(name), schema) { }
 
 	virtual void aggregate_float(double, const Xapian::Document&) {
 		THROW(AggregationError, "float type is not supported");
@@ -187,55 +201,55 @@ public:
 	}
 
 	void _aggregate_float(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_float(Unserialise::_float(value), doc);
 		}
 	}
 
 	void _aggregate_integer(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_integer(Unserialise::integer(value), doc);
 		}
 	}
 
 	void _aggregate_positive(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_positive(Unserialise::positive(value), doc);
 		}
 	}
 
 	void _aggregate_date(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_date(Unserialise::timestamp(value), doc);
 		}
 	}
 
 	void _aggregate_time(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_time(Unserialise::time_d(value), doc);
 		}
 	}
 
 	void _aggregate_timedelta(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_timedelta(Unserialise::timedelta_d(value), doc);
 		}
 	}
 
 	void _aggregate_boolean(const Xapian::Document& doc)  {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_boolean(Unserialise::boolean(value), doc);
 		}
 	}
 
 	void _aggregate_string(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_string(value, doc);
 		}
 	}
 
 	void _aggregate_geo(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			for (const auto& range : RangeList(value)) {
 				aggregate_geo(range, doc);
 			}
@@ -243,24 +257,24 @@ public:
 	}
 
 	void _aggregate_uuid(const Xapian::Document& doc) {
-		for (const auto& value : _handle.values(doc)) {
+		for (const auto& value : _handler.values(doc)) {
 			aggregate_uuid(Unserialise::uuid(value), doc);
 		}
 	}
 
 	void operator()(const Xapian::Document& doc) override {
-		_handle(this, doc);
+		_handler(this, doc);
 	}
 };
 
 
-class MetricCount : public HandledSubAggregation {
+class MetricCount : public HandledSubAggregation<ValuesHandler> {
 protected:
 	size_t _count;
 
 public:
 	MetricCount(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
 		  _count(0) { }
 
 	void update() override {
@@ -313,13 +327,13 @@ public:
 };
 
 
-class MetricSum : public HandledSubAggregation {
+class MetricSum : public HandledSubAggregation<ValuesHandler> {
 protected:
 	long double _sum;
 
 public:
 	MetricSum(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
 		  _sum(0) { }
 
 	void update() override {
@@ -408,7 +422,7 @@ class MetricExtendedStats;
 class MetricStats;
 
 
-class MetricMin : public HandledSubAggregation {
+class MetricMin : public HandledSubAggregation<ValuesHandler> {
 	friend class MetricStats;
 	friend class MetricExtendedStats;
 
@@ -417,11 +431,11 @@ protected:
 
 public:
 	MetricMin(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, conf, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
 		  _min(DBL_MAX) { }
 
 	MetricMin(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
 		  _min(DBL_MAX) { }
 
 	void update() override {
@@ -460,7 +474,7 @@ public:
 };
 
 
-class MetricMax : public HandledSubAggregation {
+class MetricMax : public HandledSubAggregation<ValuesHandler> {
 	friend class MetricStats;
 	friend class MetricExtendedStats;
 
@@ -469,11 +483,11 @@ protected:
 
 public:
 	MetricMax(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, conf, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
 		  _max(-DBL_MAX) { }
 
 	MetricMax(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false),
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
 		  _max(-DBL_MAX) { }
 
 	void update() override {
@@ -578,12 +592,12 @@ public:
 };
 
 
-class MetricMedian : public HandledSubAggregation {
+class MetricMedian : public HandledSubAggregation<ValuesHandler> {
 	std::vector<double> values;
 
 public:
 	MetricMedian(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false) { }
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema) { }
 
 	void update() override {
 		if (values.empty()) {
@@ -634,12 +648,12 @@ public:
 };
 
 
-class MetricMode : public HandledSubAggregation {
+class MetricMode : public HandledSubAggregation<ValuesHandler> {
 	std::unordered_map<double, size_t> _histogram;
 
 public:
 	MetricMode(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context, name, schema, false) { }
+		: HandledSubAggregation<ValuesHandler>(result, context, name, schema) { }
 
 	void update() override {
 		if (_histogram.empty()) {

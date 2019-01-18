@@ -47,15 +47,16 @@
 class Schema;
 
 
-class BucketAggregation : public HandledSubAggregation {
+template <typename Handler>
+class BucketAggregation : public HandledSubAggregation<Handler> {
 protected:
 	std::unordered_map<std::string, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
 
 public:
-	BucketAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, bool use_terms)
-		: HandledSubAggregation(result, context, name, schema, use_terms),
+	BucketAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<Handler>(result, context, name, schema),
 		  _schema(schema),
 		  _context(context) { }
 
@@ -72,17 +73,17 @@ public:
 		} else {
 			auto p = _aggs.emplace(std::piecewise_construct,
 				std::forward_as_tuple(bucket),
-				std::forward_as_tuple(_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
+				std::forward_as_tuple(this->_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
 			p.first->second(doc);
 		}
 	}
 };
 
 
-class ValuesAggregation : public BucketAggregation {
+class ValuesAggregation : public BucketAggregation<ValuesHandler> {
 public:
 	ValuesAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(result, context, name, schema, false) { }
+		: BucketAggregation<ValuesHandler>(result, context, name, schema) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -126,10 +127,10 @@ public:
 };
 
 
-class TermsAggregation : public BucketAggregation {
+class TermsAggregation : public BucketAggregation<TermsHandler> {
 public:
 	TermsAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(result, context, name, schema, true) { }
+		: BucketAggregation<TermsHandler>(result, context, name, schema) { }
 
 	void aggregate_float(double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -173,7 +174,7 @@ public:
 };
 
 
-class HistogramAggregation : public BucketAggregation {
+class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 	uint64_t interval_u64;
 	int64_t interval_i64;
 	double interval_f64;
@@ -213,7 +214,7 @@ class HistogramAggregation : public BucketAggregation {
 
 public:
 	HistogramAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(result, context, name, schema, false),
+		: BucketAggregation<ValuesHandler>(result, context, name, schema),
 		  interval_u64(0),
 		  interval_i64(0),
 		  interval_f64(0.0)
@@ -268,7 +269,7 @@ public:
 };
 
 
-class RangeAggregation : public BucketAggregation {
+class RangeAggregation : public BucketAggregation<ValuesHandler> {
 	std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> ranges_u64;
 	std::vector<std::pair<std::string, std::pair<int64_t, int64_t>>> ranges_i64;
 	std::vector<std::pair<std::string, std::pair<double, double>>> ranges_f64;
@@ -292,7 +293,7 @@ class RangeAggregation : public BucketAggregation {
 
 public:
 	RangeAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation(result, context, name, schema, false)
+		: BucketAggregation<ValuesHandler>(result, context, name, schema)
 	{
 		const auto it = _conf.find(AGGREGATION_RANGES);
 		if (it == _conf.end()) {
