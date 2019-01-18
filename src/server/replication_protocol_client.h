@@ -49,17 +49,12 @@
 
 #define FILE_FOLLOWS '\xfd'
 
+
 enum class ReplicaState {
 	INIT_REPLICATION_CLIENT,
 	INIT_REPLICATION_SERVER,
 	REPLICATION_CLIENT,
 	REPLICATION_SERVER,
-};
-
-
-enum class ReplicationMessageType {
-	MSG_GET_CHANGESETS,
-	MSG_MAX
 };
 
 
@@ -77,6 +72,12 @@ inline const std::string& StateNames(ReplicaState type) {
 	static const std::string UNKNOWN = "UNKNOWN";
 	return UNKNOWN;
 }
+
+
+enum class ReplicationMessageType {
+	MSG_GET_CHANGESETS,
+	MSG_MAX
+};
 
 
 inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
@@ -123,59 +124,11 @@ inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 
 
 class DatabaseWAL;
-class ReplicationClient;
-
-
-class ReplicationProtocol : public LockableDatabase {
-	ReplicationClient& client;
-
-public:
-	Endpoints src_endpoints;
-
-	lock_database lk_db;
-
-	std::string switch_database_path;
-	std::shared_ptr<Database> switch_database;
-
-	std::unique_ptr<DatabaseWAL> wal;
-
-	std::string file_path;
-
-	std::string current_uuid;
-	Xapian::rev current_revision;
-
-	size_t changesets;
-	std::shared_ptr<Logging> log;
-
-public:
-	ReplicationProtocol(ReplicationClient& client_);
-	~ReplicationProtocol() noexcept;
-
-	void reset();
-
-	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
-
-	void send_message(ReplicationReplyType type, const std::string& message);
-	void send_file(ReplicationReplyType type, int fd);
-
-	void replication_server(ReplicationMessageType type, const std::string& message);
-	void replication_client(ReplicationReplyType type, const std::string& message);
-
-	void msg_get_changesets(const std::string& message);
-	void reply_welcome(const std::string& message);
-	void reply_end_of_changes(const std::string& message);
-	void reply_fail(const std::string& message);
-	void reply_db_header(const std::string& message);
-	void reply_db_filename(const std::string& message);
-	void reply_db_filedata(const std::string& message);
-	void reply_db_footer(const std::string& message);
-	void reply_changeset(const std::string& message);
-};
 
 
 // A single instance of a non-blocking Xapiand replication protocol handler
-class ReplicationClient : public MetaBaseClient<ReplicationClient>{
-	friend MetaBaseClient<ReplicationClient>;
+class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClient>, public LockableDatabase {
+	friend MetaBaseClient<ReplicationProtocolClient>;
 
 	mutable std::mutex runner_mutex;
 
@@ -198,7 +151,7 @@ class ReplicationClient : public MetaBaseClient<ReplicationClient>{
 	std::deque<Buffer> messages;
 	bool cluster_database;
 
-	ReplicationClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+	ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
 	bool is_idle() const;
 
@@ -206,14 +159,47 @@ class ReplicationClient : public MetaBaseClient<ReplicationClient>{
 	void on_read_file(const char *buf, ssize_t received);
 	void on_read_file_done();
 
-	// Replication protocol:
-	ReplicationProtocol replication_protocol;
-
 	friend Worker;
-	friend ReplicationProtocol;
 
 public:
-	~ReplicationClient() noexcept;
+	Endpoints src_endpoints;
+
+	lock_database lk_db;
+
+	std::string switch_database_path;
+	std::shared_ptr<Database> switch_database;
+
+	std::unique_ptr<DatabaseWAL> wal;
+
+	std::string file_path;
+
+	std::string current_uuid;
+	Xapian::rev current_revision;
+
+	size_t changesets;
+	std::shared_ptr<Logging> log;
+
+	~ReplicationProtocolClient() noexcept;
+
+	void reset();
+
+	bool init_replication_protocol(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+
+	void send_message(ReplicationReplyType type, const std::string& message);
+	void send_file(ReplicationReplyType type, int fd);
+
+	void replication_server(ReplicationMessageType type, const std::string& message);
+	void replication_client(ReplicationReplyType type, const std::string& message);
+
+	void msg_get_changesets(const std::string& message);
+	void reply_welcome(const std::string& message);
+	void reply_end_of_changes(const std::string& message);
+	void reply_fail(const std::string& message);
+	void reply_db_header(const std::string& message);
+	void reply_db_filename(const std::string& message);
+	void reply_db_filedata(const std::string& message);
+	void reply_db_footer(const std::string& message);
+	void reply_changeset(const std::string& message);
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);

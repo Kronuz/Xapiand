@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "replication_client.h"
+#include "replication_protocol_client.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -73,19 +73,62 @@
  */
 
 
-ReplicationProtocol::ReplicationProtocol(ReplicationClient& client_)
-	: LockableDatabase(),
-	  client(client_),
+ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
+	: MetaBaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
+	  LockableDatabase(),
+	  state(ReplicaState::INIT_REPLICATION_CLIENT),
+#ifdef SAVE_LAST_MESSAGES
+	  last_message_received('\xff'),
+	  last_message_sent('\xff'),
+#endif
+	  file_descriptor(-1),
+	  file_message_type('\xff'),
+	  temp_file_template("xapiand.XXXXXX"),
+	  cluster_database(cluster_database_),
 	  lk_db(this),
 	  changesets(0)
 {
+	++XapiandManager::replication_clients();
+
+	Metrics::metrics()
+		.xapiand_replication_connections
+		.Increment();
+
+	L_CONN("New Replication Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
 }
 
 
-ReplicationProtocol::~ReplicationProtocol() noexcept
+ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 {
 	try {
 		reset();
+
+		if (XapiandManager::replication_clients().fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of replication clients");
+			sig_exit(-EX_SOFTWARE);
+		}
+
+		if (file_descriptor != -1) {
+			io::close(file_descriptor);
+			file_descriptor = -1;
+		}
+
+		for (const auto& filename : temp_files) {
+			io::unlink(filename.c_str());
+		}
+
+		if (!temp_directory.empty()) {
+			delete_files(temp_directory.c_str());
+		}
+
+		if (is_shutting_down() && !is_idle()) {
+			L_INFO("Replication client killed!");
+		}
+
+		if (cluster_database) {
+			L_CRIT("Cannot synchronize cluster database!");
+			sig_exit(-EX_CANTCREAT);
+		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
@@ -93,7 +136,7 @@ ReplicationProtocol::~ReplicationProtocol() noexcept
 
 
 void
-ReplicationProtocol::reset()
+ReplicationProtocolClient::reset()
 {
 	wal.reset();
 
@@ -115,9 +158,9 @@ ReplicationProtocol::reset()
 
 
 bool
-ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
+ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
-	L_CALL("ReplicationProtocol::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocolClient::init_replication_protocol(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	try {
 		src_endpoints = Endpoints{src_endpoint};
@@ -129,11 +172,11 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
 		});
 
-		client.temp_directory_template = endpoints[0].path + ".tmp.XXXXXX";
+		temp_directory_template = endpoints[0].path + ".tmp.XXXXXX";
 
-		L_REPLICATION("init_replication initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	} catch (const TimeOutError&) {
-		L_REPLICATION("init_replication deferred: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol deferred: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 		return false;
 	} catch (...) {
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
@@ -144,34 +187,34 @@ ReplicationProtocol::init_replication(const Endpoint &src_endpoint, const Endpoi
 
 
 void
-ReplicationProtocol::send_message(ReplicationReplyType type, const std::string& message)
+ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocol::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
 
 	L_REPLICA_PROTO("<< send_message (%s): %s", ReplicationReplyTypeNames(type), repr(message));
 
-	client.send_message(toUType(type), message);
+	send_message(toUType(type), message);
 }
 
 
 void
-ReplicationProtocol::send_file(ReplicationReplyType type, int fd)
+ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 {
-	L_CALL("ReplicationProtocol::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
 
 	L_REPLICA_PROTO("<< send_file (%s): %d", ReplicationReplyTypeNames(type), fd);
 
-	client.send_file(toUType(type), fd);
+	send_file(toUType(type), fd);
 }
 
 
 void
-ReplicationProtocol::replication_server(ReplicationMessageType type, const std::string& message)
+ReplicationProtocolClient::replication_server(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocol::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
+	L_CALL("ReplicationProtocolClient::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
 
-	L_OBJ_BEGIN("ReplicationProtocol::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
-	L_OBJ_END("ReplicationProtocol::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
 
 	switch (type) {
 		case ReplicationMessageType::MSG_GET_CHANGESETS:
@@ -187,13 +230,13 @@ ReplicationProtocol::replication_server(ReplicationMessageType type, const std::
 
 
 void
-ReplicationProtocol::msg_get_changesets(const std::string& message)
+ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 {
-	L_CALL("ReplicationProtocol::msg_get_changesets(<message>)");
+	L_CALL("ReplicationProtocolClient::msg_get_changesets(<message>)");
 
-	L_REPLICATION("ReplicationProtocol::msg_get_changesets");
+	L_REPLICATION("ReplicationProtocolClient::msg_get_changesets");
 
-	size_t total_sent_bytes = client.total_sent_bytes;
+	size_t _total_sent_bytes = total_sent_bytes;
 	auto begins = std::chrono::system_clock::now();
 
 	const char *p = message.c_str();
@@ -282,8 +325,8 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
 
 					auto ends = std::chrono::system_clock::now();
-					total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
-					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
+					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
@@ -316,7 +359,7 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
 
 	auto ends = std::chrono::system_clock::now();
-	total_sent_bytes = client.total_sent_bytes - total_sent_bytes;
+	total_sent_bytes = total_sent_bytes - total_sent_bytes;
 	if (from_revision == to_revision) {
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {%s} %llu %s\" OK EMPTY %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	} else {
@@ -326,12 +369,12 @@ ReplicationProtocol::msg_get_changesets(const std::string& message)
 
 
 void
-ReplicationProtocol::replication_client(ReplicationReplyType type, const std::string& message)
+ReplicationProtocolClient::replication_client(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocol::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
 
-	L_OBJ_BEGIN("ReplicationProtocol::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
-	L_OBJ_END("ReplicationProtocol::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
 
 	switch (type) {
 		case ReplicationReplyType::REPLY_WELCOME:
@@ -368,7 +411,7 @@ ReplicationProtocol::replication_client(ReplicationReplyType type, const std::st
 
 
 void
-ReplicationProtocol::reply_welcome(const std::string&)
+ReplicationProtocolClient::reply_welcome(const std::string&)
 {
 	std::string message;
 
@@ -381,9 +424,9 @@ ReplicationProtocol::reply_welcome(const std::string&)
 
 
 void
-ReplicationProtocol::reply_end_of_changes(const std::string&)
+ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 {
-	L_CALL("ReplicationProtocol::reply_end_of_changes(<message>)");
+	L_CALL("ReplicationProtocolClient::reply_end_of_changes(<message>)");
 
 	bool switching = !switch_database_path.empty();
 
@@ -407,38 +450,38 @@ ReplicationProtocol::reply_end_of_changes(const std::string&)
 		XapiandManager::database_pool()->unlock(database());
 	}
 
-	L_REPLICATION("ReplicationProtocol::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
+	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
 	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s a set of %zu changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
-	if (client.cluster_database) {
-		client.cluster_database = false;
+	if (cluster_database) {
+		cluster_database = false;
 		XapiandManager::set_cluster_database_ready();
 	}
 
-	client.destroy();
-	client.detach();
+	destroy();
+	detach();
 }
 
 
 void
-ReplicationProtocol::reply_fail(const std::string&)
+ReplicationProtocolClient::reply_fail(const std::string&)
 {
-	L_CALL("ReplicationProtocol::reply_fail(<message>)");
+	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
-	L_REPLICATION("ReplicationProtocol::reply_fail: %s", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_fail: %s", repr(endpoints[0].path));
 
 	reset();
 
-	L_ERR("ReplicationProtocol failure!");
-	client.destroy();
-	client.detach();
+	L_ERR("ReplicationProtocolClient failure!");
+	destroy();
+	detach();
 }
 
 
 void
-ReplicationProtocol::reply_db_header(const std::string& message)
+ReplicationProtocolClient::reply_db_header(const std::string& message)
 {
-	L_CALL("ReplicationProtocol::reply_db_header(<message>)");
+	L_CALL("ReplicationProtocolClient::reply_db_header(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -449,16 +492,16 @@ ReplicationProtocol::reply_db_header(const std::string& message)
 	reset();
 
 	char path[PATH_MAX];
-	strncpy(path, client.temp_directory_template.c_str(), PATH_MAX);
-	build_path_index(client.temp_directory_template);
+	strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+	build_path_index(temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
 		L_ERR("Directory %s not created: %s (%d): %s", path, error::name(errno), errno, error::description(errno));
-		client.detach();
+		detach();
 		return;
 	}
 	switch_database_path = path;
 
-	L_REPLICATION("ReplicationProtocol::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
 	L_TIMED_VAR(log, 1s,
 		"Replication of whole database taking too long: %s",
 		"Replication of whole database took too long: %s",
@@ -467,39 +510,39 @@ ReplicationProtocol::reply_db_header(const std::string& message)
 
 
 void
-ReplicationProtocol::reply_db_filename(const std::string& filename)
+ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 {
-	L_CALL("ReplicationProtocol::reply_db_filename(<filename>)");
+	L_CALL("ReplicationProtocolClient::reply_db_filename(<filename>)");
 
 	ASSERT(!switch_database_path.empty());
 
 	file_path = switch_database_path + "/" + filename;
 
-	L_REPLICATION("ReplicationProtocol::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
 }
 
 
 void
-ReplicationProtocol::reply_db_filedata(const std::string& tmp_file)
+ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 {
-	L_CALL("ReplicationProtocol::reply_db_filedata(<tmp_file>)");
+	L_CALL("ReplicationProtocolClient::reply_db_filedata(<tmp_file>)");
 
 	ASSERT(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, error::name(errno), errno, error::description(errno));
-		client.detach();
+		detach();
 		return;
 	}
 
-	L_REPLICATION("ReplicationProtocol::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
 }
 
 
 void
-ReplicationProtocol::reply_db_footer(const std::string& message)
+ReplicationProtocolClient::reply_db_footer(const std::string& message)
 {
-	L_CALL("ReplicationProtocol::reply_db_footer(<message>)");
+	L_CALL("ReplicationProtocolClient::reply_db_footer(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -512,14 +555,14 @@ ReplicationProtocol::reply_db_footer(const std::string& message)
 		switch_database_path.clear();
 	}
 
-	L_REPLICATION("ReplicationProtocol::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
 }
 
 
 void
-ReplicationProtocol::reply_changeset(const std::string& line)
+ReplicationProtocolClient::reply_changeset(const std::string& line)
 {
-	L_CALL("ReplicationProtocol::reply_changeset(<line>)");
+	L_CALL("ReplicationProtocolClient::reply_changeset(<line>)");
 
 	bool switching = !switch_database_path.empty();
 
@@ -544,74 +587,12 @@ ReplicationProtocol::reply_changeset(const std::string& line)
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("ReplicationProtocol::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
-}
-
-
-//
-// Xapian replication client
-//
-
-ReplicationClient::ReplicationClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: MetaBaseClient<ReplicationClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  state(ReplicaState::INIT_REPLICATION_CLIENT),
-#ifdef SAVE_LAST_MESSAGES
-	  last_message_received('\xff'),
-	  last_message_sent('\xff'),
-#endif
-	  file_descriptor(-1),
-	  file_message_type('\xff'),
-	  temp_file_template("xapiand.XXXXXX"),
-	  cluster_database(cluster_database_),
-	  replication_protocol(*this)
-{
-	++XapiandManager::replication_clients();
-
-	Metrics::metrics()
-		.xapiand_replication_connections
-		.Increment();
-
-	L_CONN("New Replication Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
-}
-
-
-ReplicationClient::~ReplicationClient() noexcept
-{
-	try {
-		if (XapiandManager::replication_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of replication clients");
-			sig_exit(-EX_SOFTWARE);
-		}
-
-		if (file_descriptor != -1) {
-			io::close(file_descriptor);
-			file_descriptor = -1;
-		}
-
-		for (const auto& filename : temp_files) {
-			io::unlink(filename.c_str());
-		}
-
-		if (!temp_directory.empty()) {
-			delete_files(temp_directory.c_str());
-		}
-
-		if (is_shutting_down() && !is_idle()) {
-			L_INFO("Replication client killed!");
-		}
-
-		if (cluster_database) {
-			L_CRIT("Cannot synchronize cluster database!");
-			sig_exit(-EX_CANTCREAT);
-		}
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
-	}
+	L_REPLICATION("ReplicationProtocolClient::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
 }
 
 
 bool
-ReplicationClient::is_idle() const
+ReplicationProtocolClient::is_idle() const
 {
 	if (!is_waiting() && !is_running() && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
@@ -622,9 +603,9 @@ ReplicationClient::is_idle() const
 
 
 bool
-ReplicationClient::init_replication() noexcept
+ReplicationProtocolClient::init_replication() noexcept
 {
-	L_CALL("ReplicationClient::init_replication()");
+	L_CALL("ReplicationProtocolClient::init_replication()");
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
@@ -635,15 +616,15 @@ ReplicationClient::init_replication() noexcept
 
 	// And start a runner.
 	running = true;
-	XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationClient>());
+	XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
 	return true;
 }
 
 
 bool
-ReplicationClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
+ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
-	L_CALL("ReplicationClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocolClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
@@ -652,10 +633,10 @@ ReplicationClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 	// Setup state...
 	state = ReplicaState::INIT_REPLICATION_CLIENT;
 
-	if (replication_protocol.init_replication(src_endpoint, dst_endpoint)) {
+	if (init_replication_protocol(src_endpoint, dst_endpoint)) {
 		// And start a runner.
 		running = true;
-		XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationClient>());
+		XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
 		return true;
 	}
 	return false;
@@ -663,15 +644,15 @@ ReplicationClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 
 
 ssize_t
-ReplicationClient::on_read(const char *buf, ssize_t received)
+ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 {
-	L_CALL("ReplicationClient::on_read(<buf>, %zu)", received);
+	L_CALL("ReplicationProtocolClient::on_read(<buf>, %zu)", received);
 
 	if (received <= 0) {
 		return received;
 	}
 
-	L_REPLICA_WIRE("ReplicationClient::on_read: %zd bytes", received);
+	L_REPLICA_WIRE("ReplicationProtocolClient::on_read: %zd bytes", received);
 	ssize_t processed = -buffer.size();
 	buffer.append(buf, received);
 	while (buffer.size() >= 2) {
@@ -730,7 +711,7 @@ ReplicationClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationClient>());
+				XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -746,22 +727,22 @@ ReplicationClient::on_read(const char *buf, ssize_t received)
 
 
 void
-ReplicationClient::on_read_file(const char *buf, ssize_t received)
+ReplicationProtocolClient::on_read_file(const char *buf, ssize_t received)
 {
-	L_CALL("ReplicationClient::on_read_file(<buf>, %zu)", received);
+	L_CALL("ReplicationProtocolClient::on_read_file(<buf>, %zu)", received);
 
-	L_REPLICA_WIRE("ReplicationClient::on_read_file: %zd bytes", received);
+	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file: %zd bytes", received);
 
 	io::write(file_descriptor, buf, received);
 }
 
 
 void
-ReplicationClient::on_read_file_done()
+ReplicationProtocolClient::on_read_file_done()
 {
-	L_CALL("ReplicationClient::on_read_file_done()");
+	L_CALL("ReplicationProtocolClient::on_read_file_done()");
 
-	L_REPLICA_WIRE("ReplicationClient::on_read_file_done");
+	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file_done");
 
 	io::close(file_descriptor);
 	file_descriptor = -1;
@@ -775,7 +756,7 @@ ReplicationClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationClient>());
+			XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
@@ -785,9 +766,9 @@ ReplicationClient::on_read_file_done()
 
 
 char
-ReplicationClient::get_message(std::string &result, char max_type)
+ReplicationProtocolClient::get_message(std::string &result, char max_type)
 {
-	L_CALL("ReplicationClient::get_message(<result>, <max_type>)");
+	L_CALL("ReplicationProtocolClient::get_message(<result>, <max_type>)");
 
 	auto& msg = messages.front();
 
@@ -814,9 +795,9 @@ ReplicationClient::get_message(std::string &result, char max_type)
 
 
 void
-ReplicationClient::send_message(char type_as_char, const std::string &message)
+ReplicationProtocolClient::send_message(char type_as_char, const std::string &message)
 {
-	L_CALL("ReplicationClient::send_message(<type_as_char>, <message>)");
+	L_CALL("ReplicationProtocolClient::send_message(<type_as_char>, <message>)");
 
 #ifdef SAVE_LAST_MESSAGES
 	last_message_sent.store(type_as_char, std::memory_order_relaxed);
@@ -831,23 +812,23 @@ ReplicationClient::send_message(char type_as_char, const std::string &message)
 
 
 void
-ReplicationClient::send_file(char type_as_char, int fd)
+ReplicationProtocolClient::send_file(char type_as_char, int fd)
 {
-	L_CALL("ReplicationClient::send_file(<type_as_char>, <fd>)");
+	L_CALL("ReplicationProtocolClient::send_file(<type_as_char>, <fd>)");
 
 	std::string buf;
 	buf += FILE_FOLLOWS;
 	buf += type_as_char;
 	write(buf);
 
-	MetaBaseClient<ReplicationClient>::send_file(fd);
+	MetaBaseClient<ReplicationProtocolClient>::send_file(fd);
 }
 
 
 void
-ReplicationClient::operator()()
+ReplicationProtocolClient::operator()()
 {
-	L_CALL("ReplicationClient::operator()()");
+	L_CALL("ReplicationProtocolClient::operator()()");
 
 	L_CONN("Start running in replication worker...");
 
@@ -884,7 +865,7 @@ ReplicationClient::operator()()
 				try {
 
 					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
-					replication_protocol.replication_server(type, message);
+					replication_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
@@ -915,7 +896,7 @@ ReplicationClient::operator()()
 				try {
 
 					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
-					replication_protocol.replication_client(type, message);
+					replication_client(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
 					Metrics::metrics()
@@ -942,7 +923,7 @@ ReplicationClient::operator()()
 			default:
 				running = false;
 				lk.unlock();
-				L_ERR("Unexpected ReplicationClient State!");
+				L_ERR("Unexpected ReplicationProtocolClient State!");
 				stop();
 				destroy();
 				detach();
@@ -965,7 +946,7 @@ ReplicationClient::operator()()
 
 
 std::string
-ReplicationClient::__repr__() const
+ReplicationProtocolClient::__repr__() const
 {
 #ifdef SAVE_LAST_MESSAGES
 	auto state_repr = ([this]() -> std::string {
@@ -992,7 +973,7 @@ ReplicationClient::__repr__() const
 #else
 	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
 #endif
-	return string::format("<ReplicationClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
+	return string::format("<ReplicationProtocolClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
 		state_repr,
 		use_count(),
 		sock,

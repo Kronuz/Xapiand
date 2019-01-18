@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "replication_server.h"
+#include "replication_protocol_server.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -33,33 +33,33 @@
 #include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
 #include "replication.h"                    // for Replication
-#include "replication_client.h"             // for ReplicationClient
+#include "replication_protocol_client.h"    // for ReplicationProtocolClient
 #include "repr.hh"                          // for repr
 #include "tcp.h"                            // for TCP::socket
 
 
- #undef L_DEBUG
- #define L_DEBUG L_GREY
+ // #undef L_DEBUG
+ // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_EV
 // #define L_EV L_MEDIUM_PURPLE
 
 
-ReplicationServer::ReplicationServer(const std::shared_ptr<Replication>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
-	: MetaBaseServer<ReplicationServer>(replication_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+ReplicationProtocolServer::ReplicationProtocolServer(const std::shared_ptr<Replication>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: MetaBaseServer<ReplicationProtocolServer>(replication_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  replication(*replication_),
 	  trigger_replication_async(*ev_loop)
 {
 	bind(hostname, serv, tries);
 
-	trigger_replication_async.set<ReplicationServer, &ReplicationServer::trigger_replication_async_cb>(this);
+	trigger_replication_async.set<ReplicationProtocolServer, &ReplicationProtocolServer::trigger_replication_async_cb>(this);
 	trigger_replication_async.start();
 	L_EV("Start replication's async trigger replication signal event");
 }
 
 
-ReplicationServer::~ReplicationServer() noexcept
+ReplicationProtocolServer::~ReplicationProtocolServer() noexcept
 {
 	try {
 		Worker::deinit();
@@ -70,9 +70,9 @@ ReplicationServer::~ReplicationServer() noexcept
 
 
 void
-ReplicationServer::start_impl()
+ReplicationProtocolServer::start_impl()
 {
-	L_CALL("ReplicationServer::start_impl()");
+	L_CALL("ReplicationProtocolServer::start_impl()");
 
 	Worker::start_impl();
 
@@ -82,9 +82,9 @@ ReplicationServer::start_impl()
 
 
 int
-ReplicationServer::accept()
+ReplicationProtocolServer::accept()
 {
-	L_CALL("ReplicationServer::accept()");
+	L_CALL("ReplicationProtocolServer::accept()");
 
 	if (sock != -1) {
 		return TCP::accept();
@@ -94,17 +94,17 @@ ReplicationServer::accept()
 
 
 void
-ReplicationServer::io_accept_cb(ev::io& watcher, int revents)
+ReplicationProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("ReplicationServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("ReplicationProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
-	L_EV_BEGIN("ReplicationServer::io_accept_cb:BEGIN");
-	L_EV_END("ReplicationServer::io_accept_cb:END");
+	L_EV_BEGIN("ReplicationProtocolServer::io_accept_cb:BEGIN");
+	L_EV_END("ReplicationProtocolServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
-	L_DEBUG_HOOK("ReplicationServer::io_accept_cb", "ReplicationServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
 		L_EV("ERROR: got invalid replication event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
@@ -113,7 +113,7 @@ ReplicationServer::io_accept_cb(ev::io& watcher, int revents)
 
 	int client_sock = accept();
 	if (client_sock != -1) {
-		auto client = Worker::make_shared<ReplicationClient>(share_this<ReplicationServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
 
 		if (!client->init_replication()) {
 			client->detach();
@@ -126,21 +126,21 @@ ReplicationServer::io_accept_cb(ev::io& watcher, int revents)
 
 
 void
-ReplicationServer::trigger_replication()
+ReplicationProtocolServer::trigger_replication()
 {
-	L_CALL("ReplicationServer::trigger_replication()");
+	L_CALL("ReplicationProtocolServer::trigger_replication()");
 
 	trigger_replication_async.send();
 }
 
 
 void
-ReplicationServer::trigger_replication_async_cb(ev::async&, int revents)
+ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, int revents)
 {
-	L_CALL("ReplicationServer::trigger_replication_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("ReplicationProtocolServer::trigger_replication_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("ReplicationServer::trigger_replication_async_cb:BEGIN");
-	L_EV_END("ReplicationServer::trigger_replication_async_cb:END");
+	L_EV_BEGIN("ReplicationProtocolServer::trigger_replication_async_cb:BEGIN");
+	L_EV_END("ReplicationProtocolServer::trigger_replication_async_cb:END");
 
 	ignore_unused(revents);
 
@@ -152,7 +152,7 @@ ReplicationServer::trigger_replication_async_cb(ev::async&, int revents)
 
 
 void
-ReplicationServer::trigger_replication(const TriggerReplicationArgs& args)
+ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& args)
 {
 	if (args.src_endpoint.is_local()) {
 		ASSERT(!args.cluster_database);
@@ -202,7 +202,7 @@ ReplicationServer::trigger_replication(const TriggerReplicationArgs& args)
 	}
 	L_CONN("Connected to %s! (in socket %d)", repr(args.src_endpoint.to_string()), client_sock);
 
-	auto client = Worker::make_shared<ReplicationClient>(share_this<ReplicationServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
+	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
 
 	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
 		client->detach();
@@ -215,9 +215,9 @@ ReplicationServer::trigger_replication(const TriggerReplicationArgs& args)
 
 
 std::string
-ReplicationServer::__repr__() const
+ReplicationProtocolServer::__repr__() const
 {
-	return string::format("<ReplicationServer {cnt:%ld, sock:%d}%s%s%s>",
+	return string::format("<ReplicationProtocolServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
 		sock == -1 ? replication.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",

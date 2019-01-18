@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "binary_server.h"
+#include "remote_protocol_server.h"
 
 #ifdef XAPIAND_CLUSTERING
 
@@ -28,7 +28,7 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "binary.h"                         // for Binary
-#include "binary_client.h"                  // for BinaryClient
+#include "remote_protocol_client.h"         // for RemoteProtocolClient
 #include "cassert.h"                        // for ASSERT
 #include "endpoint.h"                       // for Endpoints
 #include "error.hh"                         // for error:name, error::description
@@ -48,8 +48,8 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
-	: MetaBaseServer<BinaryServer>(binary_, ev_loop_, ev_flags_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+RemoteProtocolServer::RemoteProtocolServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: MetaBaseServer<RemoteProtocolServer>(binary_, ev_loop_, ev_flags_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  binary(*binary_)
 {
 	bind(hostname, serv, tries);
@@ -58,7 +58,7 @@ BinaryServer::BinaryServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref*
 }
 
 
-BinaryServer::~BinaryServer() noexcept
+RemoteProtocolServer::~RemoteProtocolServer() noexcept
 {
 	try {
 		Worker::deinit();
@@ -69,9 +69,9 @@ BinaryServer::~BinaryServer() noexcept
 
 
 void
-BinaryServer::start_impl()
+RemoteProtocolServer::start_impl()
 {
-	L_CALL("BinaryServer::start_impl()");
+	L_CALL("RemoteProtocolServer::start_impl()");
 
 	Worker::start_impl();
 
@@ -81,9 +81,9 @@ BinaryServer::start_impl()
 
 
 int
-BinaryServer::accept()
+RemoteProtocolServer::accept()
 {
-	L_CALL("BinaryServer::accept()");
+	L_CALL("RemoteProtocolServer::accept()");
 
 	if (sock != -1) {
 		return TCP::accept();
@@ -93,17 +93,17 @@ BinaryServer::accept()
 
 
 void
-BinaryServer::io_accept_cb(ev::io& watcher, int revents)
+RemoteProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("RemoteProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
-	L_EV_BEGIN("BinaryServer::io_accept_cb:BEGIN");
-	L_EV_END("BinaryServer::io_accept_cb:END");
+	L_EV_BEGIN("RemoteProtocolServer::io_accept_cb:BEGIN");
+	L_EV_END("RemoteProtocolServer::io_accept_cb:END");
 
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
-	L_DEBUG_HOOK("BinaryServer::io_accept_cb", "BinaryServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
 		L_EV("ERROR: got invalid binary event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
@@ -112,7 +112,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 	int client_sock = accept();
 	if (client_sock != -1) {
-		auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+		auto client = Worker::make_shared<RemoteProtocolClient>(share_this<RemoteProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
 
 		if (!client->init_remote()) {
 			client->detach();
@@ -125,9 +125,9 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 
 
 std::string
-BinaryServer::__repr__() const
+RemoteProtocolServer::__repr__() const
 {
-	return string::format("<BinaryServer {cnt:%ld, sock:%d}%s%s%s>",
+	return string::format("<RemoteProtocolServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
 		sock == -1 ? binary.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",

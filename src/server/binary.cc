@@ -26,11 +26,11 @@
 
 #include <netinet/tcp.h>                      // for TCP_NODELAY
 
-#include "binary_server.h"                    // For BinaryServer
+#include "remote_protocol_server.h"           // For RemoteProtocolServer
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
 #include "node.h"                             // for Node, local_node
-#include "remote_protocol.h"                  // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
+#include "remote_protocol_client.h"           // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 
 
 // #undef L_DEBUG
@@ -54,7 +54,7 @@ Binary::start()
 	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			std::static_pointer_cast<BinaryServer>(child)->start();
+			std::static_pointer_cast<RemoteProtocolServer>(child)->start();
 		}
 	}
 }

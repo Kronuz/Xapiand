@@ -36,13 +36,13 @@
 #include "threadpool.hh"                      // for TaskQueue
 
 
-class BinaryServer;
+class RemoteProtocolServer;
 class DiscoveryServer;
 
 
 // Configuration data for Binary
 class Binary : public BaseTCP {
-	friend BinaryServer;
+	friend RemoteProtocolServer;
 
 public:
 	Binary(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);

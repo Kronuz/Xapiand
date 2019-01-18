@@ -40,7 +40,7 @@ constexpr uint16_t XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_REPLICATION_PROTOCOL_MINOR_VERSION = 1;
 
 
-class ReplicationServer;
+class ReplicationProtocolServer;
 
 
 struct TriggerReplicationArgs {
@@ -52,7 +52,7 @@ struct TriggerReplicationArgs {
 
 // Configuration data for Binary
 class Replication : public BaseTCP {
-	friend ReplicationServer;
+	friend ReplicationProtocolServer;
 
 	ConcurrentQueue<TriggerReplicationArgs> trigger_replication_args;
 

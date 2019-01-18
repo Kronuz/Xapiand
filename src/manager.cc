@@ -22,77 +22,77 @@
 
 #include "manager.h"
 
-#include <algorithm>                          // for std::min, std::find_if
-#include <arpa/inet.h>                        // for inet_aton
-#include <cctype>                             // for isspace
-#include <chrono>                             // for std::chrono, std::chrono::system_clock
-#include <cstdlib>                            // for size_t, exit
-#include <errno.h>                            // for errno
-#include <exception>                          // for exception
-#include <fcntl.h>                            // for O_CLOEXEC, O_CREAT, O_RD...
-#include <ifaddrs.h>                          // for ifaddrs, freeifaddrs
-#include <memory>                             // for std::shared_ptr
-#include <mutex>                              // for mutex, lock_guard, uniqu...
-#include <net/if.h>                           // for IFF_LOOPBACK
-#include <netinet/in.h>                       // for sockaddr_in, INET_ADDRST...
-#include <regex>                              // for std::regex
-#include <signal.h>                           // for SIGTERM, SIGINT
-#include <string>                             // for std::string, std::to_string
-#include <sys/socket.h>                       // for AF_INET, sockaddr
-#include <sysexits.h>                         // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
-#include <unistd.h>                           // for ssize_t, getpid
-#include <utility>                            // for std::move
-#include <vector>                             // for std::vector
+#include <algorithm>                             // for std::min, std::find_if
+#include <arpa/inet.h>                           // for inet_aton
+#include <cctype>                                // for isspace
+#include <chrono>                                // for std::chrono, std::chrono::system_clock
+#include <cstdlib>                               // for size_t, exit
+#include <errno.h>                               // for errno
+#include <exception>                             // for exception
+#include <fcntl.h>                               // for O_CLOEXEC, O_CREAT, O_RD...
+#include <ifaddrs.h>                             // for ifaddrs, freeifaddrs
+#include <memory>                                // for std::shared_ptr
+#include <mutex>                                 // for mutex, lock_guard, uniqu...
+#include <net/if.h>                              // for IFF_LOOPBACK
+#include <netinet/in.h>                          // for sockaddr_in, INET_ADDRST...
+#include <regex>                                 // for std::regex
+#include <signal.h>                              // for SIGTERM, SIGINT
+#include <string>                                // for std::string, std::to_string
+#include <sys/socket.h>                          // for AF_INET, sockaddr
+#include <sysexits.h>                            // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
+#include <unistd.h>                              // for ssize_t, getpid
+#include <utility>                               // for std::move
+#include <vector>                                // for std::vector
 
 #if defined(XAPIAND_V8)
-#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
+#include <v8-version.h>                          // for V8_MAJOR_VERSION, V8_MINOR_VERSION
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
-#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#include <chaiscript/chaiscript_defines.hpp>     // for chaiscript::Build_Info
 #endif
 
-#include "allocator.h"                        // for allocator::total_allocated
-#include "cassert.h"                          // for ASSERT
-#include "color_tools.hh"                     // for color
-#include "database_cleanup.h"                 // for DatabaseCleanup
-#include "database_handler.h"                 // for DatabaseHandler, committer
-#include "database_pool.h"                    // for DatabasePool
-#include "database_utils.h"                   // for RESERVED_TYPE
-#include "database_wal.h"                     // for DatabaseWALWriter
-#include "epoch.hh"                           // for epoch::now
-#include "error.hh"                           // for error:name, error::description
-#include "ev/ev++.h"                          // for ev::async, ev::loop_ref
-#include "exception.h"                        // for SystemExit, Excep...
-#include "hashes.hh"                          // for jump_consistent_hash
-#include "ignore_unused.h"                    // for ignore_unused
-#include "io.hh"                              // for io::*
-#include "length.h"                           // for serialise_length
-#include "log.h"                              // for L_CALL, L_DEBUG
-#include "lru.h"                              // for LRU
-#include "memory_stats.h"                     // for get_total_ram, get_total_virtual_memor...
-#include "metrics.h"                          // for Metrics::metrics
-#include "msgpack.h"                          // for MsgPack, object::object
-#include "namegen.h"                          // for name_generator
-#include "net.hh"                             // for inet_ntop
-#include "opts.h"                             // for opts::*
-#include "package.h"                          // for Package
-#include "readable_revents.hh"                // for readable_revents
-#include "schemas_lru.h"                      // for SchemasLRU
-#include "serialise.h"                        // for KEYWORD_STR
-#include "server/http.h"                      // for Http
-#include "server/http_client.h"               // for HttpClient
-#include "server/http_server.h"               // for HttpServer
-#include "storage.h"                          // for Storage
-#include "system.hh"                          // for get_open_files_per_proc, get_max_files_per_proc
+#include "allocator.h"                           // for allocator::total_allocated
+#include "cassert.h"                             // for ASSERT
+#include "color_tools.hh"                        // for color
+#include "database_cleanup.h"                    // for DatabaseCleanup
+#include "database_handler.h"                    // for DatabaseHandler, committer
+#include "database_pool.h"                       // for DatabasePool
+#include "database_utils.h"                      // for RESERVED_TYPE
+#include "database_wal.h"                        // for DatabaseWALWriter
+#include "epoch.hh"                              // for epoch::now
+#include "error.hh"                              // for error:name, error::description
+#include "ev/ev++.h"                             // for ev::async, ev::loop_ref
+#include "exception.h"                           // for SystemExit, Excep...
+#include "hashes.hh"                             // for jump_consistent_hash
+#include "ignore_unused.h"                       // for ignore_unused
+#include "io.hh"                                 // for io::*
+#include "length.h"                              // for serialise_length
+#include "log.h"                                 // for L_CALL, L_DEBUG
+#include "lru.h"                                 // for LRU
+#include "memory_stats.h"                        // for get_total_ram, get_total_virtual_memor...
+#include "metrics.h"                             // for Metrics::metrics
+#include "msgpack.h"                             // for MsgPack, object::object
+#include "namegen.h"                             // for name_generator
+#include "net.hh"                                // for inet_ntop
+#include "opts.h"                                // for opts::*
+#include "package.h"                             // for Package
+#include "readable_revents.hh"                   // for readable_revents
+#include "schemas_lru.h"                         // for SchemasLRU
+#include "serialise.h"                           // for KEYWORD_STR
+#include "server/http.h"                         // for Http
+#include "server/http_client.h"                  // for HttpClient
+#include "server/http_server.h"                  // for HttpServer
+#include "storage.h"                             // for Storage
+#include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 
 #ifdef XAPIAND_CLUSTERING
-#include "server/binary.h"                    // for Binary
-#include "server/binary_server.h"             // for BinaryServer
-#include "server/binary_client.h"             // for BinaryClient
-#include "server/replication.h"               // for Replication
-#include "server/replication_server.h"        // for ReplicationServer
-#include "server/replication_client.h"        // for ReplicationClient
-#include "server/discovery.h"                 // for Discovery
+#include "server/binary.h"                       // for Binary
+#include "server/remote_protocol_server.h"       // for RemoteProtocolServer
+#include "server/remote_protocol_client.h"       // for RemoteProtocolClient
+#include "server/replication.h"                  // for Replication
+#include "server/replication_protocol_client.h"  // for ReplicationProtocolClient
+#include "server/replication_protocol_server.h"  // for ReplicationProtocolServer
+#include "server/discovery.h"                    // for Discovery
 #endif
 
 
@@ -155,10 +155,10 @@ XapiandManager::XapiandManager()
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
-	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
-	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
+	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
+	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
 #endif
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
@@ -189,10 +189,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
-	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<BinaryServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
-	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
+	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
+	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
 #endif
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
@@ -786,13 +786,13 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _binary_server = Worker::make_shared<BinaryServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
+			auto _binary_server = Worker::make_shared<RemoteProtocolServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
 			if (_binary_server->addr.sin_family) {
 				_binary->addr = _binary_server->addr;
 			}
 			_binary_server_pool->enqueue(std::move(_binary_server));
 
-			auto _replication_server = Worker::make_shared<ReplicationServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? local_node_addr.c_str() : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
+			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
 			if (_replication_server->addr.sin_family) {
 				_replication->addr = _replication_server->addr;
 			}

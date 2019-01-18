@@ -29,8 +29,8 @@
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
 #include "node.h"                             // for Node, local_node
-#include "remote_protocol.h"                  // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
-#include "replication_server.h"               // For ReplicationServer
+#include "remote_protocol_client.h"           // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
+#include "replication_protocol_server.h"      // For ReplicationProtocolServer
 
 
 // #undef L_DEBUG
@@ -54,7 +54,7 @@ Replication::start()
 	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			std::static_pointer_cast<ReplicationServer>(child)->start();
+			std::static_pointer_cast<ReplicationProtocolServer>(child)->start();
 		}
 	}
 }
@@ -70,7 +70,7 @@ Replication::trigger_replication(const TriggerReplicationArgs& args)
 	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			std::static_pointer_cast<ReplicationServer>(child)->trigger_replication();
+			std::static_pointer_cast<ReplicationProtocolServer>(child)->trigger_replication();
 		}
 	}
 }

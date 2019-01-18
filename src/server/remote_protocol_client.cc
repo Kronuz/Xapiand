@@ -1,33 +1,47 @@
-/** @file remoteserver.cc
- *  @brief Xapian remote backend server base class
- */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017 Olly Betts
- * Copyright (C) 2006,2007,2009,2010 Lemur Consulting Ltd
+/*
+ * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
-#include "remote_protocol.h"
+#include "remote_protocol_client.h"
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <errno.h>                            // for errno
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sysexits.h>
+#include <unistd.h>
+
 #include "database.h"                         // for Database
+#include "error.hh"                           // for error:name, error::description
+#include "fs.hh"                              // for delete_files, build_path_index
 #include "ignore_unused.h"                    // for ignore_unused
-#include "length.h"                           // for serialise_length, unserialise_length
+#include "io.hh"                              // for io::*
+#include "length.h"
+#include "manager.h"                          // for XapiandManager
+#include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
-#include "server/binary_client.h"             // for BinaryClient
+#include "utype.hh"                           // for toUType
+#include "server/remote_protocol_client.h"    // for RemoteProtocolClient
 
 
 // #undef L_DEBUG
@@ -88,32 +102,83 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
 }
 
 
-RemoteProtocol::RemoteProtocol(BinaryClient& client_)
-	: LockableDatabase(),
-	  client(client_),
+RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
+	: MetaBaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
+	  LockableDatabase(),
+	  state(State::INIT_REMOTE),
+#ifdef SAVE_LAST_MESSAGES
+	  last_message_received('\xff'),
+	  last_message_sent('\xff'),
+#endif
+	  file_descriptor(-1),
+	  file_message_type('\xff'),
+	  temp_file_template("xapiand.XXXXXX"),
+	  cluster_database(cluster_database_),
 	  _msg_query_database_lock(this)
 {
+	++XapiandManager::binary_clients();
+
+	Metrics::metrics()
+		.xapiand_binary_connections
+		.Increment();
+
+	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::binary_clients().load(), XapiandManager::total_clients().load());
+}
+
+
+RemoteProtocolClient::~RemoteProtocolClient() noexcept
+{
+	try {
+		if (XapiandManager::binary_clients().fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of binary clients");
+			sig_exit(-EX_SOFTWARE);
+		}
+
+		if (file_descriptor != -1) {
+			io::close(file_descriptor);
+			file_descriptor = -1;
+		}
+
+		for (const auto& filename : temp_files) {
+			io::unlink(filename.c_str());
+		}
+
+		if (!temp_directory.empty()) {
+			delete_files(temp_directory.c_str());
+		}
+
+		if (is_shutting_down() && !is_idle()) {
+			L_INFO("Binary client killed!");
+		}
+
+		if (cluster_database) {
+			L_CRIT("Cannot synchronize cluster database!");
+			sig_exit(-EX_CANTCREAT);
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
 }
 
 
 void
-RemoteProtocol::send_message(RemoteReplyType type, const std::string& message)
+RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_CALL("RemoteProtocol::send_message(%s, <message>)", RemoteReplyTypeNames(type));
+	L_CALL("RemoteProtocolClient::send_message(%s, <message>)", RemoteReplyTypeNames(type));
 
 	L_BINARY_PROTO("<< send_message (%s): %s", RemoteReplyTypeNames(type), repr(message));
 
-	client.send_message(toUType(type), message);
+	send_message(toUType(type), message);
 }
 
 
 void
-RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message)
+RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocol::remote_server(%s, <message>)", RemoteMessageTypeNames(type));
+	L_CALL("RemoteProtocolClient::remote_server(%s, <message>)", RemoteMessageTypeNames(type));
 
-	L_OBJ_BEGIN("RemoteProtocol::remote_server:BEGIN {type:%s}", RemoteMessageTypeNames(type));
-	L_OBJ_END("RemoteProtocol::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
+	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {type:%s}", RemoteMessageTypeNames(type));
+	L_OBJ_END("RemoteProtocolClient::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
 
 	try {
 		switch (type) {
@@ -228,13 +293,13 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
-		client.detach();
+		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
-		client.detach();
+		detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
@@ -242,15 +307,15 @@ RemoteProtocol::remote_server(RemoteMessageType type, const std::string &message
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		client.detach();
+		detach();
 	}
 }
 
 
 void
-RemoteProtocol::msg_allterms(const std::string &message)
+RemoteProtocolClient::msg_allterms(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_allterms(<message>)");
+	L_CALL("RemoteProtocolClient::msg_allterms(<message>)");
 
 	std::string prev = message;
 	const std::string& prefix = message;
@@ -277,9 +342,9 @@ RemoteProtocol::msg_allterms(const std::string &message)
 
 
 void
-RemoteProtocol::msg_termlist(const std::string &message)
+RemoteProtocolClient::msg_termlist(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_termlist(<message>)");
+	L_CALL("RemoteProtocolClient::msg_termlist(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -312,9 +377,9 @@ RemoteProtocol::msg_termlist(const std::string &message)
 
 
 void
-RemoteProtocol::msg_positionlist(const std::string &message)
+RemoteProtocolClient::msg_positionlist(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_positionlist(<message>)");
+	L_CALL("RemoteProtocolClient::msg_positionlist(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -340,9 +405,9 @@ RemoteProtocol::msg_positionlist(const std::string &message)
 
 
 void
-RemoteProtocol::msg_positionlistcount(const std::string &message)
+RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_positionlistcount(<message>)");
+	L_CALL("RemoteProtocolClient::msg_positionlistcount(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -364,9 +429,9 @@ RemoteProtocol::msg_positionlistcount(const std::string &message)
 
 
 void
-RemoteProtocol::msg_postlist(const std::string &message)
+RemoteProtocolClient::msg_postlist(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_postlist(<message>)");
+	L_CALL("RemoteProtocolClient::msg_postlist(<message>)");
 
 	const std::string & term = message;
 
@@ -397,9 +462,9 @@ RemoteProtocol::msg_postlist(const std::string &message)
 
 
 void
-RemoteProtocol::msg_readaccess(const std::string &message)
+RemoteProtocolClient::msg_readaccess(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_readaccess(<message>)");
+	L_CALL("RemoteProtocolClient::msg_readaccess(<message>)");
 
 	reset();
 
@@ -444,9 +509,9 @@ RemoteProtocol::msg_readaccess(const std::string &message)
 
 
 void
-RemoteProtocol::msg_writeaccess(const std::string & message)
+RemoteProtocolClient::msg_writeaccess(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_writeaccess(<message>)");
+	L_CALL("RemoteProtocolClient::msg_writeaccess(<message>)");
 
 	reset();
 
@@ -492,9 +557,9 @@ RemoteProtocol::msg_writeaccess(const std::string & message)
 
 
 void
-RemoteProtocol::msg_reopen(const std::string & message)
+RemoteProtocolClient::msg_reopen(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_reopen(<message>)");
+	L_CALL("RemoteProtocolClient::msg_reopen(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -512,9 +577,9 @@ RemoteProtocol::msg_reopen(const std::string & message)
 
 
 void
-RemoteProtocol::msg_update(const std::string &)
+RemoteProtocolClient::msg_update(const std::string &)
 {
-	L_CALL("RemoteProtocol::msg_update(<message>)");
+	L_CALL("RemoteProtocolClient::msg_update(<message>)");
 
 	static const char protocol[2] = {
 		char(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION),
@@ -550,7 +615,7 @@ RemoteProtocol::msg_update(const std::string &)
 
 
 void
-RemoteProtocol::init_msg_query()
+RemoteProtocolClient::init_msg_query()
 {
 	flags = DB_OPEN;
 	_msg_query_database_lock.lock();
@@ -561,7 +626,7 @@ RemoteProtocol::init_msg_query()
 
 
 void
-RemoteProtocol::reset()
+RemoteProtocolClient::reset()
 {
 	_msg_query_matchspies.clear();
 	_msg_query_reg = Xapian::Registry{};
@@ -571,9 +636,9 @@ RemoteProtocol::reset()
 
 
 void
-RemoteProtocol::msg_query(const std::string &message_in)
+RemoteProtocolClient::msg_query(const std::string &message_in)
 {
-	L_CALL("RemoteProtocol::msg_query(<message>)");
+	L_CALL("RemoteProtocolClient::msg_query(<message>)");
 
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
@@ -725,9 +790,9 @@ RemoteProtocol::msg_query(const std::string &message_in)
 
 
 void
-RemoteProtocol::msg_getmset(const std::string & message)
+RemoteProtocolClient::msg_getmset(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_getmset(<message>)");
+	L_CALL("RemoteProtocolClient::msg_getmset(<message>)");
 
 	if (!_msg_query_enquire) {
 		THROW(NetworkError, "Unexpected MSG_GETMSET");
@@ -760,9 +825,9 @@ RemoteProtocol::msg_getmset(const std::string & message)
 
 
 void
-RemoteProtocol::msg_document(const std::string &message)
+RemoteProtocolClient::msg_document(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_document(<message>)");
+	L_CALL("RemoteProtocolClient::msg_document(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -787,9 +852,9 @@ RemoteProtocol::msg_document(const std::string &message)
 
 
 void
-RemoteProtocol::msg_keepalive(const std::string &)
+RemoteProtocolClient::msg_keepalive(const std::string &)
 {
-	L_CALL("RemoteProtocol::msg_keepalive(<message>)");
+	L_CALL("RemoteProtocolClient::msg_keepalive(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -804,9 +869,9 @@ RemoteProtocol::msg_keepalive(const std::string &)
 
 
 void
-RemoteProtocol::msg_termexists(const std::string &term)
+RemoteProtocolClient::msg_termexists(const std::string &term)
 {
-	L_CALL("RemoteProtocol::msg_termexists(<term>)");
+	L_CALL("RemoteProtocolClient::msg_termexists(<term>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -818,9 +883,9 @@ RemoteProtocol::msg_termexists(const std::string &term)
 
 
 void
-RemoteProtocol::msg_collfreq(const std::string &term)
+RemoteProtocolClient::msg_collfreq(const std::string &term)
 {
-	L_CALL("RemoteProtocol::msg_collfreq(<term>)");
+	L_CALL("RemoteProtocolClient::msg_collfreq(<term>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -832,9 +897,9 @@ RemoteProtocol::msg_collfreq(const std::string &term)
 
 
 void
-RemoteProtocol::msg_termfreq(const std::string &term)
+RemoteProtocolClient::msg_termfreq(const std::string &term)
 {
-	L_CALL("RemoteProtocol::msg_termfreq(<term>)");
+	L_CALL("RemoteProtocolClient::msg_termfreq(<term>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -846,9 +911,9 @@ RemoteProtocol::msg_termfreq(const std::string &term)
 
 
 void
-RemoteProtocol::msg_freqs(const std::string &term)
+RemoteProtocolClient::msg_freqs(const std::string &term)
 {
-	L_CALL("RemoteProtocol::msg_freqs(<term>)");
+	L_CALL("RemoteProtocolClient::msg_freqs(<term>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -863,9 +928,9 @@ RemoteProtocol::msg_freqs(const std::string &term)
 
 
 void
-RemoteProtocol::msg_valuestats(const std::string & message)
+RemoteProtocolClient::msg_valuestats(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_valuestats(<message>)");
+	L_CALL("RemoteProtocolClient::msg_valuestats(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -889,9 +954,9 @@ RemoteProtocol::msg_valuestats(const std::string & message)
 
 
 void
-RemoteProtocol::msg_doclength(const std::string &message)
+RemoteProtocolClient::msg_doclength(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_doclength(<message>)");
+	L_CALL("RemoteProtocolClient::msg_doclength(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -907,9 +972,9 @@ RemoteProtocol::msg_doclength(const std::string &message)
 
 
 void
-RemoteProtocol::msg_uniqueterms(const std::string &message)
+RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 {
-	L_CALL("RemoteProtocol::msg_uniqueterms(<message>)");
+	L_CALL("RemoteProtocolClient::msg_uniqueterms(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -925,9 +990,9 @@ RemoteProtocol::msg_uniqueterms(const std::string &message)
 
 
 void
-RemoteProtocol::msg_commit(const std::string &)
+RemoteProtocolClient::msg_commit(const std::string &)
 {
-	L_CALL("RemoteProtocol::msg_commit(<message>)");
+	L_CALL("RemoteProtocolClient::msg_commit(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -939,9 +1004,9 @@ RemoteProtocol::msg_commit(const std::string &)
 
 
 void
-RemoteProtocol::msg_cancel(const std::string &)
+RemoteProtocolClient::msg_cancel(const std::string &)
 {
-	L_CALL("RemoteProtocol::msg_cancel(<message>)");
+	L_CALL("RemoteProtocolClient::msg_cancel(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -953,9 +1018,9 @@ RemoteProtocol::msg_cancel(const std::string &)
 
 
 void
-RemoteProtocol::msg_adddocument(const std::string & message)
+RemoteProtocolClient::msg_adddocument(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_adddocument(<message>)");
+	L_CALL("RemoteProtocolClient::msg_adddocument(<message>)");
 
 	auto document = Xapian::Document::unserialise(message);
 
@@ -969,9 +1034,9 @@ RemoteProtocol::msg_adddocument(const std::string & message)
 
 
 void
-RemoteProtocol::msg_deletedocument(const std::string & message)
+RemoteProtocolClient::msg_deletedocument(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_deletedocument(<message>)");
+	L_CALL("RemoteProtocolClient::msg_deletedocument(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -987,9 +1052,9 @@ RemoteProtocol::msg_deletedocument(const std::string & message)
 
 
 void
-RemoteProtocol::msg_deletedocumentterm(const std::string & message)
+RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_deletedocumentterm(<message>)");
+	L_CALL("RemoteProtocolClient::msg_deletedocumentterm(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -998,9 +1063,9 @@ RemoteProtocol::msg_deletedocumentterm(const std::string & message)
 
 
 void
-RemoteProtocol::msg_replacedocument(const std::string & message)
+RemoteProtocolClient::msg_replacedocument(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_replacedocument(<message>)");
+	L_CALL("RemoteProtocolClient::msg_replacedocument(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1015,9 +1080,9 @@ RemoteProtocol::msg_replacedocument(const std::string & message)
 
 
 void
-RemoteProtocol::msg_replacedocumentterm(const std::string & message)
+RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_replacedocumentterm(<message>)");
+	L_CALL("RemoteProtocolClient::msg_replacedocumentterm(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1037,9 +1102,9 @@ RemoteProtocol::msg_replacedocumentterm(const std::string & message)
 
 
 void
-RemoteProtocol::msg_getmetadata(const std::string & message)
+RemoteProtocolClient::msg_getmetadata(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_getmetadata(<message>)");
+	L_CALL("RemoteProtocolClient::msg_getmetadata(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -1051,9 +1116,9 @@ RemoteProtocol::msg_getmetadata(const std::string & message)
 
 
 void
-RemoteProtocol::msg_metadatakeylist(const std::string & message)
+RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_metadatakeylist(<message>)");
+	L_CALL("RemoteProtocolClient::msg_metadatakeylist(<message>)");
 
 	reset();
 	lock_database lk_db(this);
@@ -1082,9 +1147,9 @@ RemoteProtocol::msg_metadatakeylist(const std::string & message)
 
 
 void
-RemoteProtocol::msg_setmetadata(const std::string & message)
+RemoteProtocolClient::msg_setmetadata(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_setmetadata(<message>)");
+	L_CALL("RemoteProtocolClient::msg_setmetadata(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1100,9 +1165,9 @@ RemoteProtocol::msg_setmetadata(const std::string & message)
 
 
 void
-RemoteProtocol::msg_addspelling(const std::string & message)
+RemoteProtocolClient::msg_addspelling(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_addspelling(<message>)");
+	L_CALL("RemoteProtocolClient::msg_addspelling(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1115,9 +1180,9 @@ RemoteProtocol::msg_addspelling(const std::string & message)
 
 
 void
-RemoteProtocol::msg_removespelling(const std::string & message)
+RemoteProtocolClient::msg_removespelling(const std::string & message)
 {
-	L_CALL("RemoteProtocol::msg_removespelling(<message>)");
+	L_CALL("RemoteProtocolClient::msg_removespelling(<message>)");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1135,15 +1200,350 @@ RemoteProtocol::msg_removespelling(const std::string & message)
 
 
 void
-RemoteProtocol::msg_shutdown(const std::string &)
+RemoteProtocolClient::msg_shutdown(const std::string &)
 {
-	L_CALL("RemoteProtocol::msg_shutdown(<message>)");
+	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
 
-	client.close();
-	client.stop();
-	client.destroy();
-	client.detach();
+	close();
+	stop();
+	destroy();
+	detach();
 }
 
+
+bool
+RemoteProtocolClient::is_idle() const
+{
+	if (!is_waiting() && !is_running() && write_queue.empty()) {
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		return messages.empty();
+	}
+	return false;
+}
+
+
+bool
+RemoteProtocolClient::init_remote() noexcept
+{
+	L_CALL("RemoteProtocolClient::init_remote()");
+
+	std::lock_guard<std::mutex> lk(runner_mutex);
+
+	ASSERT(!running);
+
+	// Setup state...
+	state = State::INIT_REMOTE;
+
+	// And start a runner.
+	running = true;
+	XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+	return true;
+}
+
+
+ssize_t
+RemoteProtocolClient::on_read(const char *buf, ssize_t received)
+{
+	L_CALL("RemoteProtocolClient::on_read(<buf>, %zu)", received);
+
+	if (received <= 0) {
+		return received;
+	}
+
+	L_BINARY_WIRE("RemoteProtocolClient::on_read: %zd bytes", received);
+	ssize_t processed = -buffer.size();
+	buffer.append(buf, received);
+	while (buffer.size() >= 2) {
+		const char *o = buffer.data();
+		const char *p = o;
+		const char *p_end = p + buffer.size();
+
+		char type = *p++;
+		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
+		switch (type) {
+			case FILE_FOLLOWS: {
+				char path[PATH_MAX];
+				if (temp_directory.empty()) {
+					if (temp_directory_template.empty()) {
+						temp_directory = "/tmp";
+					} else {
+						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+						build_path_index(temp_directory_template);
+						if (io::mkdtemp(path) == nullptr) {
+							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, error::name(errno), errno, error::description(errno));
+							detach();
+							return processed;
+						}
+						temp_directory = path;
+					}
+				}
+				strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
+				file_descriptor = io::mkstemp(path);
+				temp_files.push_back(path);
+				file_message_type = *p++;
+				if (file_descriptor == -1) {
+					L_ERR("Cannot create temporary file: %s (%d): %s", error::name(errno), errno, error::description(errno));
+					detach();
+					return processed;
+				} else {
+					L_BINARY("Start reading file: %s (%d)", path, file_descriptor);
+				}
+				read_file();
+				processed += p - o;
+				buffer.clear();
+				return processed;
+			}
+		}
+
+		ssize_t len;
+		try {
+			len = unserialise_length(&p, p_end, true);
+		} catch (const Xapian::SerialisationError) {
+			return received;
+		}
+
+		if (!closed) {
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (!running) {
+				// Enqueue message...
+				messages.push_back(Buffer(type, p, len));
+				// And start a runner.
+				running = true;
+				XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+			} else {
+				// There should be a runner, just enqueue message.
+				messages.push_back(Buffer(type, p, len));
+			}
+		}
+
+		buffer.erase(0, p - o + len);
+		processed += p - o + len;
+	}
+
+	return received;
+}
+
+
+void
+RemoteProtocolClient::on_read_file(const char *buf, ssize_t received)
+{
+	L_CALL("RemoteProtocolClient::on_read_file(<buf>, %zu)", received);
+
+	L_BINARY_WIRE("RemoteProtocolClient::on_read_file: %zd bytes", received);
+
+	io::write(file_descriptor, buf, received);
+}
+
+
+void
+RemoteProtocolClient::on_read_file_done()
+{
+	L_CALL("RemoteProtocolClient::on_read_file_done()");
+
+	L_BINARY_WIRE("RemoteProtocolClient::on_read_file_done");
+
+	io::close(file_descriptor);
+	file_descriptor = -1;
+
+	const auto& temp_file = temp_files.back();
+
+	if (!closed) {
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		if (!running) {
+			// Enqueue message...
+			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+			// And start a runner.
+			running = true;
+			XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+		} else {
+			// There should be a runner, just enqueue message.
+			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
+		}
+	}
+}
+
+
+char
+RemoteProtocolClient::get_message(std::string &result, char max_type)
+{
+	L_CALL("RemoteProtocolClient::get_message(<result>, <max_type>)");
+
+	auto& msg = messages.front();
+
+	char type = msg.type;
+
+#ifdef SAVE_LAST_MESSAGES
+	last_message_received.store(type, std::memory_order_relaxed);
+#endif
+
+	if (type >= max_type) {
+		std::string errmsg("Invalid message type ");
+		errmsg += std::to_string(int(type));
+		THROW(InvalidArgumentError, errmsg);
+	}
+
+	const char *msg_str = msg.dpos();
+	size_t msg_size = msg.nbytes();
+	result.assign(msg_str, msg_size);
+
+	messages.pop_front();
+
+	return type;
+}
+
+
+void
+RemoteProtocolClient::send_message(char type_as_char, const std::string &message)
+{
+	L_CALL("RemoteProtocolClient::send_message(<type_as_char>, <message>)");
+
+#ifdef SAVE_LAST_MESSAGES
+	last_message_sent.store(type_as_char, std::memory_order_relaxed);
+#endif
+
+	std::string buf;
+	buf += type_as_char;
+	buf += serialise_length(message.size());
+	buf += message;
+	write(buf);
+}
+
+
+void
+RemoteProtocolClient::send_file(char type_as_char, int fd)
+{
+	L_CALL("RemoteProtocolClient::send_file(<type_as_char>, <fd>)");
+
+	std::string buf;
+	buf += FILE_FOLLOWS;
+	buf += type_as_char;
+	write(buf);
+
+	MetaBaseClient<RemoteProtocolClient>::send_file(fd);
+}
+
+
+void
+RemoteProtocolClient::operator()()
+{
+	L_CALL("RemoteProtocolClient::operator()()");
+
+	L_CONN("Start running in binary worker...");
+
+	std::unique_lock<std::mutex> lk(runner_mutex);
+
+	switch (state) {
+		case State::INIT_REMOTE:
+			state = State::REMOTE_SERVER;
+			lk.unlock();
+			try {
+				msg_update(std::string());
+			} catch (...) {
+				lk.lock();
+				running = false;
+				lk.unlock();
+				L_CONN("Running in worker ended with an exception.");
+				detach();
+				throw;
+			}
+			lk.lock();
+			break;
+		default:
+			break;
+	}
+
+	while (!messages.empty() && !closed) {
+		switch (state) {
+			case State::REMOTE_SERVER: {
+				std::string message;
+				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
+				lk.unlock();
+				try {
+
+					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
+					remote_server(type, message);
+
+					auto sent = total_sent_bytes.exchange(0);
+					Metrics::metrics()
+						.xapiand_remote_protocol_sent_bytes
+						.Increment(sent);
+
+					auto received = total_received_bytes.exchange(0);
+					Metrics::metrics()
+						.xapiand_remote_protocol_received_bytes
+						.Increment(received);
+
+				} catch (...) {
+					lk.lock();
+					running = false;
+					lk.unlock();
+					L_CONN("Running in worker ended with an exception.");
+					detach();
+					throw;
+				}
+				lk.lock();
+				break;
+			}
+
+			default:
+				running = false;
+				lk.unlock();
+				L_ERR("Unexpected RemoteProtocolClient State!");
+				stop();
+				destroy();
+				detach();
+				return;
+		}
+	}
+
+	running = false;
+	lk.unlock();
+
+	if (is_shutting_down() && is_idle()) {
+		L_CONN("Running in worker ended due shutdown.");
+		detach();
+		return;
+	}
+
+	L_CONN("Running in binary worker ended.");
+	redetach();  // try re-detaching if already flagged as detaching
+}
+
+
+std::string
+RemoteProtocolClient::__repr__() const
+{
+#ifdef SAVE_LAST_MESSAGES
+	auto state_repr = ([this]() -> std::string {
+		auto received = last_message_received.load(std::memory_order_relaxed);
+		auto sent = last_message_sent.load(std::memory_order_relaxed);
+		auto st = state.load(std::memory_order_relaxed);
+		switch (st) {
+			case State::INIT_REMOTE:
+			case State::REMOTE_SERVER:
+				return string::format("%s) (%s<->%s",
+					StateNames(st),
+					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
+					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
+			default:
+				return "";
+		}
+	})();
+#else
+	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
+#endif
+	return string::format("<RemoteProtocolClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
+		state_repr,
+		use_count(),
+		sock,
+		is_runner() ? " (runner)" : " (worker)",
+		is_running_loop() ? " (running loop)" : " (stopped loop)",
+		is_detaching() ? " (deteaching)" : "",
+		is_idle() ? " (idle)" : "",
+		is_waiting() ? " (waiting)" : "",
+		is_running() ? " (running)" : "",
+		is_shutting_down() ? " (shutting down)" : "",
+		is_closed() ? " (closed)" : "");
+}
 
 #endif  /* XAPIAND_CLUSTERING */

@@ -1,36 +1,50 @@
-/** @file remoteserver.cc
- *  @brief Xapian remote backend server base class
- */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016 Olly Betts
- * Copyright (C) 2006,2007,2009,2010 Lemur Consulting Ltd
+/*
+ * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 #pragma once
 
 #include "config.h"             // for XAPIAND_CLUSTERING
 
+
 #ifdef XAPIAND_CLUSTERING
 
+#include <deque>                              // for std::deque
+#include <memory>                             // for shared_ptr
+#include <mutex>                              // for std::mutex
+#include <string>                             // for std::string
+#include <vector>                             // for std::vector
 #include <xapian.h>
-#include <memory>
-#include <string>
-#include <vector>
 
+#include "base_client.h"                      // for MetaBaseClient
 #include "lock_database.h"
+#include "threadpool.hh"                      // for Task
+
+// #define SAVE_LAST_MESSAGES
+#if !defined(NDEBUG) || defined(XAPIAND_TRACEBACKS)
+#ifndef SAVE_LAST_MESSAGES
+#define SAVE_LAST_MESSAGES 1
+#endif
+#endif
+
 
 #if XAPIAN_AT_LEAST(1, 5, 0)
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 40
@@ -40,7 +54,27 @@
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 1
 #endif
 
-class BinaryClient;
+#define FILE_FOLLOWS '\xfd'
+
+
+enum class State {
+	INIT_REMOTE,
+	REMOTE_SERVER,
+};
+
+
+inline const std::string& StateNames(State type) {
+	static const std::string _[] = {
+		"INIT_REMOTE",
+		"REMOTE_SERVER",
+	};
+	auto idx = static_cast<size_t>(type);
+	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		return _[idx];
+	}
+	static const std::string UNKNOWN = "UNKNOWN";
+	return UNKNOWN;
+}
 
 
 enum class RemoteMessageType {
@@ -152,10 +186,31 @@ inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 }
 
 
-class RemoteProtocol : protected LockableDatabase {
-	friend class BinaryClient;
 
-	BinaryClient& client;
+// A single instance of a non-blocking Xapiand binary protocol handler
+class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient>, public LockableDatabase {
+	friend MetaBaseClient<RemoteProtocolClient>;
+
+	mutable std::mutex runner_mutex;
+
+	std::atomic<State> state;
+
+#ifdef SAVE_LAST_MESSAGES
+	std::atomic_char last_message_received;
+	std::atomic_char last_message_sent;
+#endif
+
+	int file_descriptor;
+	char file_message_type;
+	std::string temp_directory;
+	std::string temp_directory_template;
+	std::string temp_file_template;
+	std::vector<std::string> temp_files;
+
+	// Buffers that are pending write
+	std::string buffer;
+	std::deque<Buffer> messages;
+	bool cluster_database;
 
 	// For msg_query and msg_mset:
 	lock_database _msg_query_database_lock;
@@ -165,8 +220,20 @@ class RemoteProtocol : protected LockableDatabase {
 	void init_msg_query();
 	void reset();
 
+	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+
+	bool is_idle() const;
+
+	ssize_t on_read(const char *buf, ssize_t received);
+	void on_read_file(const char *buf, ssize_t received);
+	void on_read_file_done();
+
+	friend Worker;
+
 public:
-	explicit RemoteProtocol(BinaryClient& client_);
+	~RemoteProtocolClient() noexcept;
+
+	explicit RemoteProtocolClient(RemoteProtocolClient& client_);
 
 	void send_message(RemoteReplyType type, const std::string& message);
 
@@ -204,6 +271,17 @@ public:
 	void msg_addspelling(const std::string& message);
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
+
+	char get_message(std::string &result, char max_type);
+	void send_message(char type_as_char, const std::string& message);
+	void send_file(char type_as_char, int fd);
+
+	bool init_remote() noexcept;
+	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+
+	void operator()();
+
+	std::string __repr__() const override;
 };
 
 

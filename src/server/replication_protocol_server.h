@@ -29,23 +29,31 @@
 #include "base_server.h"                      // for BaseServer
 
 
-class Binary;
-class Endpoint;
+class Replication;
+struct TriggerReplicationArgs;
 
 
-// Binary Server
-class BinaryServer : public MetaBaseServer<BinaryServer> {
-	Binary& binary;
+// Replication Server
+class ReplicationProtocolServer : public MetaBaseServer<ReplicationProtocolServer> {
+	Replication& replication;
+
+	ev::async trigger_replication_async;
 
 	void start_impl() override;
 
+	void trigger_replication_async_cb(ev::async& watcher, int revents);
+
 public:
-	BinaryServer(const std::shared_ptr<Binary>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
-	~BinaryServer() noexcept;
+	ReplicationProtocolServer(const std::shared_ptr<Replication>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	~ReplicationProtocolServer() noexcept;
 
 	int accept();
 
 	void io_accept_cb(ev::io& watcher, int revents);
+
+	void trigger_replication(const TriggerReplicationArgs& args);
+
+	void trigger_replication();
 
 	std::string __repr__() const override;
 };

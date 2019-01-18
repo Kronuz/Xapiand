@@ -328,10 +328,10 @@ CHECK_MAX_SIZE(SMALL, (Request))
 CHECK_MAX_SIZE(SMALL, (Binary))
 
 // server/binary_server.h
-CHECK_MAX_SIZE(SMALL, (BinaryServer))
+CHECK_MAX_SIZE(SMALL, (RemoteProtocolServer))
 
 // server/binary_client.h
-CHECK_MAX_SIZE(SMALL, (BinaryClient))
+CHECK_MAX_SIZE(SMALL, (RemoteProtocolClient))
 
 // server/discovery.h
 CHECK_MAX_SIZE(SMALL, (Discovery))
