@@ -39,6 +39,7 @@
 - title: Miscellaneous
   docs:
     - url: faq
+      title: FAQ
     - url: contributing
     - url: conduct
     - url: history
