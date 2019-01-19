@@ -7,12 +7,15 @@ permalink: /about/
 [Xapian]: https://xapian.org
 [GitHub]: https://github.com/Kronuz/Xapiand
 
-Xapiand is a Modern Highly Available Distributed RESTful Search and Storage Engine
-built for the cloud and with Data Locality. It features:
+Xapiand is a _fast_, _simple_ and _modern_ search and storage server built for the cloud.
+It features:
+
+##### Lightweight engine
+  * Small footprint with very low memory usage.
 
 ##### Liberal Open Source license:
   * MIT license *(Note Xapian engine itself is GNU GPL)*.
-  * You can find the source code for Xapiand at [GitHub]:
+  * You can find the source code for Xapiand at [GitHub]
 
 ##### HTTP RESTful API:
   * Document oriented.
