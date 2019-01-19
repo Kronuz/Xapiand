@@ -10,9 +10,6 @@ permalink: /about/
 Xapiand is a _fast_, _simple_ and _modern_ search and storage server built for the cloud.
 It features:
 
-##### Lightweight engine
-  * Small footprint with very low memory usage.
-
 ##### Liberal Open Source license:
   * MIT license *(Note Xapian engine itself is GNU GPL)*.
   * You can find the source code for Xapiand at [GitHub]
@@ -21,10 +18,13 @@ It features:
   * Document oriented.
   * No need for upfront schema definition.
 
-##### Search Engine:
+##### Lightweight Engine:
+  * Small footprint with very low memory usage.
+
+##### Search Server:
   * Built on top of [Xapian]{:target="_blank"} indexes.
 
-##### Storage Engine:
+##### Storage Server:
   * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
 
 ##### Support for query Aggregations:
