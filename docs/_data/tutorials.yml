@@ -1,7 +1,7 @@
 - title: Tutorials
   tutorials:
-    - home
+    - url: home
 
-# - title: Another section
-#  tutorials:
-#    - sample
+- title: Another section
+  tutorials:
+    - url: sample

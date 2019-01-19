@@ -121,13 +121,11 @@ a.logo {
 			}
 		}
 
-		&.current {
-			a {
-				background-color: $theme_color_dark;
-				color: #222;
-				@include box-shadow(inset 0 1px 0 rgba(255,255,255,.3), 0 1px 5px rgba(0,0,0,.5));
-				text-shadow: 0 1px 0 rgba(255,255,255,.3);
-			}
+		&.current > a {
+			background-color: $theme_color_dark;
+			color: #222;
+			@include box-shadow(inset 0 1px 0 rgba(255,255,255,.3), 0 1px 5px rgba(0,0,0,.5));
+			text-shadow: 0 1px 0 rgba(255,255,255,.3);
 		}
 	}
 }
@@ -164,13 +162,11 @@ a.logo {
 		padding: 8px 2px;
 	}
 
-	.current {
-		a {
-			background-color: $theme_color_dark;
-			color: #222;
-			@include box-shadow(inset 0 1px 0 rgba(255,255,255,.5), 0 1px 5px rgba(0,0,0,.5));
-			text-shadow: 0 1px 0 rgba(255,255,255,.3);
-		}
+	.current > a {
+		background-color: $theme_color_dark;
+		color: #222;
+		@include box-shadow(inset 0 1px 0 rgba(255,255,255,.5), 0 1px 5px rgba(0,0,0,.5));
+		text-shadow: 0 1px 0 rgba(255,255,255,.3);
 	}
 }
 
@@ -394,6 +390,7 @@ article {
 
 aside {
 	padding-top: 30px;
+	position: relative;
 
 	h4 {
 		text-transform: uppercase;
@@ -416,10 +413,15 @@ aside {
 
 		a {
 			font-size: 16px;
-			position: relative
 		}
 
-		&.current a:before {
+		li {
+			margin-left: .2em;
+			border-left: 1px solid #444;
+			padding-left: .4em;
+		}
+
+		&.current > a:before {
 			content: "";
 			border-color: transparent transparent transparent #444;
 			border-style: solid;
@@ -427,10 +429,9 @@ aside {
 			width: 0;
 			height: 0;
 			position: absolute;
-			top: 0;
 			left: -30px;
 		}
-		&.current a {
+		&.current > a {
 			color: $theme_color_dark;
 		}
 	}
@@ -734,7 +735,7 @@ article {
 
 	ul li,
 	ol li {
-		line-height: 1.5em;
+		margin-top: 0.5em;
 	}
 
 }

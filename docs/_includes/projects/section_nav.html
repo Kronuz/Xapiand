@@ -1,8 +1,32 @@
 {% comment %}
-Map grabs the doc sections, giving us an array of arrays. Join, flattens all
+Map grabs the projects sections, giving us an array of arrays. Join, flattens all
 the items to a comma delimited string. Split turns it into an array again.
 {% endcomment %}
-{% assign projects = site.data.projects | map: 'projects' | join: ',' | split: ',' %}
+{% assign _urls = "" %}
+{% for section in site.data.projects %}
+	{% for l1 in section.projects %}
+		{% assign l1_url = l1.url | prepend:"/projects/" | append:"/" %}
+		{% assign l1_doc = site.projects | where:"url", l1_url | first %}
+		{% if l1_doc %}
+			{% capture _urls %}{{ _urls }},{{ l1_url }}{% endcapture %}
+			{% for l2 in l1.projects %}
+				{% assign l2_url = l2.url | prepend:"/projects/" | append:"/" %}
+				{% assign l2_doc = site.projects | where:"url", l2_url | first %}
+				{% if l2_doc %}
+					{% capture _urls %}{{ _urls }},{{ l2_url }}{% endcapture %}
+					{% for l3 in l2.projects %}
+						{% assign l3_url = l3.url | prepend:"/projects/" | append:"/" %}
+						{% assign l3_doc = site.projects | where:"url", l3_url | first %}
+						{% if l3_doc %}
+							{% capture _urls %}{{ _urls }},{{ l3_url }}{% endcapture %}
+						{% endif %}
+					{% endfor %}
+				{% endif %}
+			{% endfor %}
+		{% endif %}
+	{% endfor %}
+{% endfor %}
+{% assign projects = _urls | remove_first: ',' | split: ',' %}
 
 {% comment %}
 Because this is built for every page, lets find where we are in the ordered
@@ -10,8 +34,7 @@ project list by comparing url strings. Then if there's something previous or
 next, lets build a link to it.
 {% endcomment %}
 
-{% for project in projects %}
-	{% assign project_url = project | prepend:"/projects/" | append:"/" %}
+{% for project_url in projects %}
 	{% if project_url == page.url %}
 		<div class="section-nav">
 			<div class="left align-right">
@@ -19,9 +42,9 @@ next, lets build a link to it.
 					<span class="prev disabled">Back</span>
 				{% else %}
 					{% assign prev = forloop.index0 | minus: 1 %}
-					{% assign prev_url = projects[prev] | prepend:"/projects/" | append:"/" %}
-					{% assign prev_doc = site.docs | where: "url", prev_url | first %}
-					<a href="{{ prev_url | relative_url }}" class="prev" title="{{ prev_doc.title }}">Back</a>
+					{% assign prev_url = projects[prev] %}
+					{% assign prev_doc = site.projects | where: "url", prev_url | first %}
+					<a href="{{ prev_doc.url | relative_url }}" class="prev" title="{{ prev_doc.title }}">Back</a>
 				{% endif %}
 			</div>
 			<div class="right align-left">
@@ -29,9 +52,9 @@ next, lets build a link to it.
 					<span class="next disabled">Next</span>
 				{% else %}
 					{% assign next = forloop.index0 | plus: 1 %}
-					{% assign next_url = projects[next] | prepend:"/projects/" | append:"/" %}
-					{% assign next_doc = site.docs | where: "url", next_url | first %}
-					<a href="{{ next_url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
+					{% assign next_url = projects[next] %}
+					{% assign next_doc = site.projects | where: "url", next_url | first %}
+					<a href="{{ next_doc.url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
 				{% endif %}
 			</div>
 		</div>

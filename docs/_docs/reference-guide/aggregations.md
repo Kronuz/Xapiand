@@ -19,6 +19,10 @@ There are many different types of aggregations, each with its own purpose and
 output. To better understand these types, it is often easier to break them into
 four main families:
 
+* **Metrics Aggregations**
+
+  Aggregations that keep track and compute metrics over a set of documents.
+
 * **Bucket Aggregations**
 
   A family of aggregations that build buckets, where each bucket is associated
@@ -27,11 +31,6 @@ four main families:
   a criterion matches, the document is considered to "fall in" the relevant
   bucket. By the end of the aggregation process, we’ll end up with a list of
   buckets - each one with a set of documents that "belong" to it.
-
-
-* **Metrics Aggregations**
-
-  Aggregations that keep track and compute metrics over a set of documents.
 
 The interesting part comes next. Since each bucket effectively defines a
 document set (all documents belonging to the bucket), one can potentially
@@ -52,81 +51,3 @@ sub-aggregation of another higher-level aggregation).
 Aggregations operate on the double representation of the data. As a consequence,
 the result may be approximate when running on longs whose absolute value is
 greater than 2^53.
-
-
-## Metrics Aggregations
-
-The aggregations in this family compute metrics based on values extracted in one
-way or another from the documents that are being aggregated. The values are
-typically extracted from the fields of the document (using the field data), but
-can also be generated using scripts.
-
-Numeric metrics aggregations are a special type of metrics aggregation which
-output numeric values. Some aggregations output a single numeric metric
-(e.g. avg) and are called single-value numeric metrics aggregation, others
-generate multiple metrics (e.g. stats) and are called multi-value numeric
-metrics aggregation. The distinction between single-value and multi-value
-numeric metrics aggregations plays a role when these aggregations serve as
-direct sub-aggregations of some bucket aggregations (some bucket aggregations
-enable you to sort the returned buckets based on the numeric metrics in each
-bucket).
-
-Available metrics aggregations:
-
-  * Count
-  * Cardinality <sup>*</sup>
-  * Sum
-  * Average
-  * Min
-  * Max
-  * Variance
-  * Standard deviation
-  * Median
-  * Mode
-  * Statistics
-  * Geo-spatial (bounds) <sup>*</sup>
-  * Geo-spatial (centroid) <sup>*</sup>
-  * Percentiles <sup>*</sup>
-  * Percentiles rank <sup>*</sup>
-  * Scripted <sup>*</sup>
-  * Extended statistics
-
-
-## Bucket Aggregations
-
-Bucket aggregations don’t calculate metrics over fields like the metrics
-aggregations do, but instead, they create buckets of documents. Each bucket is
-associated with a criterion (depending on the aggregation type) which determines
-whether or not a document in the current context "falls" into it. In other
-words, the buckets effectively define document sets. In addition to the buckets
-themselves, the bucket aggregations also compute and return the number of
-documents that "fell into" each bucket.
-
-Bucket aggregations, as opposed to metrics aggregations, can hold
-sub-aggregations. These sub-aggregations will be aggregated for the buckets
-created by their "parent" bucket aggregation.
-
-There are different bucket aggregators, each with a different "bucketing"
-strategy. Some define a single bucket, some define fixed number of multiple
-buckets, and others dynamically create the buckets during the aggregation
-process.
-
-Available bucket aggregations:
-
-  * Filter
-  * Values
-  * Terms
-  * Date histogram <sup>*</sup>
-  * Date range <sup>*</sup>
-  * Geo-spatial distance <sup>*</sup>
-  * Geo-spatial trixels <sup>*</sup>
-  * Histogram
-  * Missing value <sup>*</sup>
-  * Range
-  * IP range <sup>*</sup>
-  * Geo-spatial IP <sup>*</sup>
-
-
----
-
-<sup>*</sup> Not yet implemented.

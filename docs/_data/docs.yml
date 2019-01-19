@@ -1,37 +1,44 @@
 - title: Getting Started
   docs:
-    - welcome
-    - quickstart
-    - modifying
-    - exploring
-    - next
+    - url: welcome
+    - url: quickstart
+      docs:
+        - url: modifying
+        - url: exploring
+        - url: next
 
 - title: Reference Guide
   docs:
-    - reference-guide/api
-    - reference-guide/indices
-    - reference-guide/documents
-    - reference-guide/info
-    - reference-guide/schema
-    - reference-guide/search
-    - reference-guide/query-dsl
-    - reference-guide/aggregations
-    - reference-guide/scripting
-    - reference-guide/storage
-    - reference-guide/stats
-    - reference-guide/monitoring
-    - reference-guide/wal
-    - reference-guide/backups
-    - reference-guide/kubernetes
+    - url: reference-guide/api
+    - url: reference-guide/indices
+    - url: reference-guide/documents
+    - url: reference-guide/info
+    - url: reference-guide/schema
+    - url: reference-guide/search
+    - url: reference-guide/query-dsl
+    - url: reference-guide/aggregations
+      docs:
+        - url: reference-guide/aggregations/metrics
+          docs:
+            - url: reference-guide/aggregations/metrics/avg
+            - url: reference-guide/aggregations/metrics/count
+        - url: reference-guide/aggregations/bucket
+    - url: reference-guide/scripting
+    - url: reference-guide/storage
+    - url: reference-guide/stats
+    - url: reference-guide/monitoring
+    - url: reference-guide/wal
+    - url: reference-guide/backups
+    - url: reference-guide/kubernetes
 
 - title: Set up
   docs:
-    - installation
-    - building
+    - url: installation
+    - url: building
 
 - title: Miscellaneous
   docs:
-    - faq
-    - contributing
-    - conduct
-    - history
+    - url: faq
+    - url: contributing
+    - url: conduct
+    - url: history

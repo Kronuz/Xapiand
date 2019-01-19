@@ -1,14 +1,53 @@
 <div class="unit one-fifth hide-on-mobiles">
-	<aside>
+	<aside id="sidebar">
 	{% for section in site.data.docs %}
 		<h4>{{ section.title }}</h4>
 		<ul>
-		{% for item in section.docs %}
-			{% assign item_url = item | prepend:"/docs/" | append:"/" %}
-			{% assign p = site.docs | where:"url", item_url | first %}
-			<li class="{% if item_url == page.url %}current{% endif %}"><a href="{{ p.url | relative_url }}">{{ p.title }}</a></li>
+		{% for l1 in section.docs %}
+			{% assign l1_url = l1.url | prepend:"/docs/" | append:"/" %}
+			{% assign l1_doc = site.docs | where:"url", l1_url | first %}
+			{% if l1_doc %}
+				<li class="{% if l1_url == page.url %}current{% endif %}">
+					<a href="{{ l1_url | relative_url }}">{{ l1.title | default: l1_doc.title }}</a>
+					<ul {% if l1_url != page.url %}style="display:none"{% endif %}>
+						{% for l2 in l1.docs %}
+							{% assign l2_url = l2.url | prepend:"/docs/" | append:"/" %}
+							{% assign l2_doc = site.docs | where:"url", l2_url | first %}
+							{% if l2_doc %}
+								<li class="{% if l2_url == page.url %}current{% endif %}">
+									<a href="{{ l2_url | relative_url }}">{{ l2.title | default: l2_doc.title }}</a>
+									<ul {% if l2_url != page.url %}style="display:none"{% endif %}>
+										{% for l3 in l2.docs %}
+											{% assign l3_url = l3.url | prepend:"/docs/" | append:"/" %}
+											{% assign l3_doc = site.docs | where:"url", l3_url | first %}
+											{% if l3_doc %}
+												<li class="{% if l3_url == page.url %}current{% endif %}">
+													<a href="{{ l3_url | relative_url }}">{{ l3.title | default: l3_doc.title }}</a>
+												</li>
+											{% endif %}
+										{% endfor %}
+									</ul>
+								</li>
+							{% endif %}
+						{% endfor %}
+					</ul>
+				</li>
+			{% endif %}
 		{% endfor %}
 		</ul>
 	{% endfor %}
 	</aside>
+	<script>
+		var sidebar = document.getElementById('sidebar');
+		var curr = sidebar.querySelectorAll('.current');
+		for (var i = 0; i < curr.length; i++) {
+			var p = curr[i].parentElement;
+			while (p != sidebar) {
+				if (p.tagName == 'UL') {
+					p.style.display = 'block';
+				}
+				p = p.parentElement;
+			}
+		}
+	</script>
 </div>

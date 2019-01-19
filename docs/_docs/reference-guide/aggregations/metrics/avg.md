@@ -1,5 +1,5 @@
 ---
-title: Info API
+title: Average Metric
 ---
 
 {: .note .unreleased}
