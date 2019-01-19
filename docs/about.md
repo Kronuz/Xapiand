@@ -101,7 +101,7 @@ community around the {{ site.name }} ecosystem thrive.*
 
 ## {{ site.name }} License
 
-Copyright &copy; 2015-2019 Dubalu LLC. All rights reserved.
+Copyright &copy; 2015-2019 Dubalu LLC
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
@@ -124,14 +124,14 @@ IN THE SOFTWARE.
 
 ## {{ site.name }} Documentation License
 
-Copyright &copy; 2015-2019 Dubalu LLC
+Copyright &copy; 2015-2019 Dubalu LLC<br>
 Copyright &copy; 2009-2018 Elasticsearch
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-      http://www.apache.org/licenses/LICENSE-2.0
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0){:target="_blank"}
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
