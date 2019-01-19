@@ -54,7 +54,7 @@ next, lets build a link to it.
 					{% assign next = forloop.index0 | plus: 1 %}
 					{% assign next_url = docs[next] %}
 					{% assign next_doc = site.docs | where: "url", next_url | first %}
-					<a href="{{ prev_doc.url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
+					<a href="{{ next_doc.url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
 				{% endif %}
 			</div>
 		</div>
