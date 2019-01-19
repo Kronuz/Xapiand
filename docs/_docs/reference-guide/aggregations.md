@@ -19,19 +19,19 @@ There are many different types of aggregations, each with its own purpose and
 output. To better understand these types, it is often easier to break them into
 four main families:
 
-* Bucket Aggregations
+* **Bucket Aggregations**
 
-	A family of aggregations that build buckets, where each bucket is associated
-	with a key and a document criterion. When the aggregation is executed, all
-	the buckets criteria are evaluated on every document in the context and when
-	a criterion matches, the document is considered to "fall in" the relevant
-	bucket. By the end of the aggregation process, we’ll end up with a list of
-	buckets - each one with a set of documents that "belong" to it.
+  A family of aggregations that build buckets, where each bucket is associated
+  with a key and a document criterion. When the aggregation is executed, all
+  the buckets criteria are evaluated on every document in the context and when
+  a criterion matches, the document is considered to "fall in" the relevant
+  bucket. By the end of the aggregation process, we’ll end up with a list of
+  buckets - each one with a set of documents that "belong" to it.
 
 
-* Metrics Aggregations
+* **Metrics Aggregations**
 
-	Aggregations that keep track and compute metrics over a set of documents.
+  Aggregations that keep track and compute metrics over a set of documents.
 
 The interesting part comes next. Since each bucket effectively defines a
 document set (all documents belonging to the bucket), one can potentially
