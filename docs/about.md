@@ -25,35 +25,8 @@ built for the cloud and with Data Locality. It features:
   * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
 
 ##### Support for query Aggregations:
-  * Count metrics.
-  * Cardinality metrics. <sup>*</sup>
-  * Sum metrics.
-  * Average metrics.
-  * Min metrics.
-  * Max metrics.
-  * Variance metrics.
-  * Standard deviation metrics.
-  * Median metrics.
-  * Mode metrics.
-  * Statistics metrics.
-  * Geo-spatial (bounds) metrics. <sup>*</sup>
-  * Geo-spatial (centroid) metrics. <sup>*</sup>
-  * Percentiles metrics. <sup>*</sup>
-  * Percentiles rank metrics. <sup>*</sup>
-  * Scripted metrics. <sup>*</sup>
-  * Extended statistics metrics.
-  * Filter buckets.
-  * Values buckets.
-  * Terms buckets.
-  * Date histogram buckets. <sup>*</sup>
-  * Date range buckets. <sup>*</sup>
-  * Geo-spatial distance buckets. <sup>*</sup>
-  * Geo-spatial trixels buckets. <sup>*</sup>
-  * Histogram buckets.
-  * Missing value buckets. <sup>*</sup>
-  * Range buckets.
-  * IP range buckets. <sup>*</sup>
-  * Geo-spatial ip buckets. <sup>*</sup>
+  * Metrics aggregations.
+  * Bucket aggregations.
 
 ##### Multi Tenant with Multi Types:
   * Support for more than one index.
@@ -84,7 +57,6 @@ built for the cloud and with Data Locality. It features:
 
 <sup><a id="footnote-2">2</a></sup> [The Hierarchical Triangular Mesh.](http://www.noao.edu/noao/staff/yao/sdss_papers/kunszt.pdf){:target="_blank"}
 
-<sup>*</sup> Not yet implemented.
 
 ---
 
@@ -96,6 +68,7 @@ community around the {{ site.name }} ecosystem thrive.*
 * [Germán Méndez Bravo (Kronuz)](https://kronuz.io)
 * [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
 * [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}
+
 
 ---
 
@@ -121,6 +94,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 
+
+---
 
 ## {{ site.name }} Documentation License
 

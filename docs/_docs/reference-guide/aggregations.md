@@ -2,6 +2,10 @@
 title: Aggregations
 ---
 
+{: .note .unreleased}
+**_TODO:_** This section is a work in progress...
+
+
 The aggregations framework helps provide aggregated data based on a search query.
 It is based on simple building blocks called aggregations, that can be composed
 in order to build complex summaries of the data.
@@ -67,6 +71,26 @@ direct sub-aggregations of some bucket aggregations (some bucket aggregations
 enable you to sort the returned buckets based on the numeric metrics in each
 bucket).
 
+Available metrics aggregations:
+
+  * Count
+  * Cardinality <sup>*</sup>
+  * Sum
+  * Average
+  * Min
+  * Max
+  * Variance
+  * Standard deviation
+  * Median
+  * Mode
+  * Statistics
+  * Geo-spatial (bounds) <sup>*</sup>
+  * Geo-spatial (centroid) <sup>*</sup>
+  * Percentiles <sup>*</sup>
+  * Percentiles rank <sup>*</sup>
+  * Scripted <sup>*</sup>
+  * Extended statistics
+
 
 ## Bucket Aggregations
 
@@ -87,6 +111,22 @@ strategy. Some define a single bucket, some define fixed number of multiple
 buckets, and others dynamically create the buckets during the aggregation
 process.
 
+Available bucket aggregations:
 
-{: .note .unreleased}
-**_TODO:_** Work in progress...
+  * Filter
+  * Values
+  * Terms
+  * Date histogram <sup>*</sup>
+  * Date range <sup>*</sup>
+  * Geo-spatial distance <sup>*</sup>
+  * Geo-spatial trixels <sup>*</sup>
+  * Histogram
+  * Missing value <sup>*</sup>
+  * Range
+  * IP range <sup>*</sup>
+  * Geo-spatial IP <sup>*</sup>
+
+
+---
+
+<sup>*</sup> Not yet implemented.
