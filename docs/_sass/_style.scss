@@ -106,7 +106,7 @@ a.logo {
 	li {
 		a {
 			color: $theme_color_dark;
-			@include border-radius(5px);
+			@include border-radius(20px);
 			font-weight: 900;
 			font-size: 0.75em;
 			padding: 0.5em 1em;
@@ -153,7 +153,7 @@ a.logo {
 		font-size: 0.625em;
 		font-weight: 900;
 		padding: 10px 5px;
-		@include border-radius(5px);
+		@include border-radius(20px);
 	}
 
 	li {
