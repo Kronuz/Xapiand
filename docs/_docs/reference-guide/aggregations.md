@@ -2,10 +2,6 @@
 title: Aggregations
 ---
 
-{: .note .unreleased}
-**_TODO:_** This section is a work in progress...
-
-
 The aggregations framework helps provide aggregated data based on a search query.
 It is based on simple building blocks called aggregations, that can be composed
 in order to build complex summaries of the data.
@@ -19,11 +15,11 @@ There are many different types of aggregations, each with its own purpose and
 output. To better understand these types, it is often easier to break them into
 four main families:
 
-* **Metrics Aggregations**
+* [**_Metric_**](metrics)
 
   Aggregations that keep track and compute metrics over a set of documents.
 
-* **Bucket Aggregations**
+* [**_Bucketing_**](bucket)
 
   A family of aggregations that build buckets, where each bucket is associated
   with a key and a document criterion. When the aggregation is executed, all
@@ -39,7 +35,7 @@ context of that bucket. This is where the real power of aggregations kicks in:
 **aggregations can be nested!**
 
 {: .note .info}
-**_sub-aggregations_**<br>
+**_Sub-aggregations_**<br>
 Bucketing aggregations can have _sub-aggregations_ (bucketing or metric). The
 sub-aggregations will be computed for the buckets which their parent aggregation
 generates. There is no hard limit on the level/depth of nested aggregations (one
@@ -47,7 +43,7 @@ can nest an aggregation under a "parent" aggregation, which is itself a
 sub-aggregation of another higher-level aggregation).
 
 {: .note .info}
-**_limits_**<br>
-Aggregations operate on the double representation of the data. As a consequence,
-the result may be approximate when running on longs whose absolute value is
-greater than 2^53.
+**_Limits_**<br>
+Aggregations operate on the `double` representation of the data. As a
+consequence, the result may be approximate when running on longs whose absolute
+value is greater than 2^53.

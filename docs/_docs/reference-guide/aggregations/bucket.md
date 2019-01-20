@@ -1,5 +1,5 @@
 ---
-title: Bucket
+title: Bucket Aggregations
 ---
 
 {: .note .unreleased}

@@ -1,5 +1,5 @@
 ---
-title: Metrics
+title: Metrics Aggregations
 ---
 
 {: .note .unreleased}
@@ -12,22 +12,22 @@ can also be generated using scripts.
 
 Numeric metrics aggregations are a special type of metrics aggregation which
 output numeric values. Some aggregations output a single numeric metric
-(e.g. avg) and are called single-value numeric metrics aggregation, others
-generate multiple metrics (e.g. stats) and are called multi-value numeric
-metrics aggregation. The distinction between single-value and multi-value
-numeric metrics aggregations plays a role when these aggregations serve as
-direct sub-aggregations of some bucket aggregations (some bucket aggregations
-enable you to sort the returned buckets based on the numeric metrics in each
-bucket).
+(e.g. `_avg`) and are called _single-value numeric metrics aggregation_, others
+generate multiple metrics (e.g. `_stats`) and are called
+_multi-value numeric metrics aggregation_. The distinction between single-value
+and multi-value numeric metrics aggregations plays a role when these
+aggregations serve as direct sub-aggregations of some bucket aggregations (some
+bucket aggregations enable you to sort the returned buckets based on the numeric
+metrics in each bucket).
 
 Available metrics aggregations:
 
-  * Count
+  * [Count](count-aggregation)
   * Cardinality <sup>*</sup>
   * Sum
-  * Average
-  * Min
-  * Max
+  * [Average](avg-aggregation)
+  * [Min](min-aggregation)
+  * [Max](max-aggregation)
   * Variance
   * Standard deviation
   * Median

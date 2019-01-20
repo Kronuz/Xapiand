@@ -19,10 +19,18 @@
     - url: reference-guide/aggregations
       docs:
         - url: reference-guide/aggregations/metrics
+          title: Metrics
           docs:
-            - url: reference-guide/aggregations/metrics/avg
-            - url: reference-guide/aggregations/metrics/count
+            - url: reference-guide/aggregations/metrics/avg-aggregation
+              title: Average
+            - url: reference-guide/aggregations/metrics/max-aggregation
+              title: Max
+            - url: reference-guide/aggregations/metrics/min-aggregation
+              title: Min
+            - url: reference-guide/aggregations/metrics/count-aggregation
+              title: Count
         - url: reference-guide/aggregations/bucket
+          title: Bucket
     - url: reference-guide/scripting
     - url: reference-guide/storage
     - url: reference-guide/stats
