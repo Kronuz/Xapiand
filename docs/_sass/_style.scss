@@ -649,7 +649,8 @@ code {
 	pre, code { font-size: 16px; }
 }
 
-.highlight,
+div.highlight,
+figure.highlight,
 p > pre,
 p > code,
 p > nobr > code,
@@ -688,7 +689,8 @@ h5 > code,
 	code { background: none; }
 }
 
-.highlight {
+div.highlight,
+figure.highlight {
 	background-color: rgba(0,0,0,.1);
 	margin: 1em 0;
 	width: 100%;
@@ -1093,7 +1095,8 @@ code.output {
 		@include border-radius(5px 5px 0 0);
 		@include box-shadow(0 3px 10px rgba(0,0,0,.5));
 	}
-	.highlight {
+	div.highlight,
+	figure.highlight {
 		@include border-radius(0 0 5px 5px);
 	}
 	pre.highlight {
