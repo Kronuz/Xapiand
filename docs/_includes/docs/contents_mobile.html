@@ -12,12 +12,12 @@
 			            {% assign l2_url = l2.url | prepend:"/docs/" | append:"/" %}
 			            {% assign l2_doc = site.docs | where: "url", l2_url | first %}
 			            {% if l2_doc %}
-			                <option value="{{ l2_doc.url | relative_url }}">&nbsp;&nbsp;{{ l2.title | default:l2_doc.title }}</option>
+			                <option value="{{ l2_doc.url | relative_url }}">&#160;{{ l2.title | default:l2_doc.title }}</option>
 			                {% for l3 in l2.docs %}
 			                        {% assign l3_url = l3.url | prepend:"/docs/" | append:"/" %}
 			                        {% assign l3_doc = site.docs | where: "url", l3_url | first %}
 			                        {% if l3_doc %}
-			                            <option value="{{ l3_doc.url | relative_url }}">&nbsp;&nbsp;&nbsp;&nbsp;{{ l3.title | default:l3_doc.title }}</option>
+			                            <option value="{{ l3_doc.url | relative_url }}">&#160;&#160;{{ l3.title | default:l3_doc.title }}</option>
 		    	                        {% endif %}
 		                        {% endfor %}
 		    	            {% endif %}
