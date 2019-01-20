@@ -80,6 +80,7 @@ plugins:
   - jekyll-feed
   - jekyll-mentions
   - jekyll-redirect-from
+  - jekyll-relative-links
   - jekyll-seo-tag
   - jekyll-sitemap
   - jemoji
