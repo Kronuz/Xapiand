@@ -4,10 +4,18 @@
 		{% for section in site.data.docs %}
 		<optgroup label="{{ section.title }}">
 		{% for l1 in section.docs %}
-			{% assign l1_url = l1 | prepend:"/docs/" | append:"/" %}
+			{% assign l1_url = l1.url | prepend:"/docs/" | append:"/" %}
 			{% assign l1_doc = site.docs | where: "url", l1_url | first %}
 			{% if l1_doc %}
-			    <option value="{{ l1_doc.url | relative_url }}">{{ l1_doc.title }}</option>
+			    <option value="{{ l1_doc.url | relative_url }}">{{ l1.title | default:l1_doc.title }}</option>
+		            {% for l2 in l1.docs %}
+			            {% assign l2_url = l2.url | prepend:"/docs/" | append:"/" %}
+			            {% assign l2_doc = site.docs | where: "url", l2_url | first %}
+			            {% if l2_doc %}
+			                <option value="{{ l2_doc.url | relative_url }}">{{ l2.title | default:l2_doc.title }}</option>
+		    	            {% endif %}
+		            {% endfor %}
+
 			{% endif %}
 		{% endfor %}
 		</optgroup>
