@@ -3,10 +3,12 @@
 		<option value="">Navigate the docs…</option>
 		{% for section in site.data.docs %}
 		<optgroup label="{{ section.title }}">
-		{% for item in section.docs %}
-			{% assign item_url = item | prepend:"/docs/" | append:"/" %}
-			{% assign doc = site.docs | where: "url", item_url | first %}
-			<option value="{{ doc.url | relative_url }}">{{ doc.title }}</option>
+		{% for l1 in section.docs %}
+			{% assign l1_url = l1 | prepend:"/docs/" | append:"/" %}
+			{% assign l1_doc = site.docs | where: "url", l1_url | first %}
+			{% if l1_doc %}
+			    <option value="{{ l1_doc.url | relative_url }}">{{ l1_doc.title }}</option>
+			{% endif %}
 		{% endfor %}
 		</optgroup>
 		{% endfor %}
