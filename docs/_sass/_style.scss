@@ -462,7 +462,7 @@ aside {
 		text-transform: uppercase;
 		font-weight: 700;
 		padding: 8px 12px 10px;
-		@include border-radius(5px);
+		@include border-radius(20px);
 		/*border: 1px solid #333;*/
 		@include box-shadow(0 1px 3px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.3));
 		background-color: #767676;
@@ -497,10 +497,10 @@ aside {
 	}
 
 	.prev,
-	.prev:hover { padding-left: 30px; }
+	.prev:hover { padding-left: 30px; padding-right: 15px; }
 
 	.next,
-	.next:hover { padding-right: 30px; }
+	.next:hover { padding-right: 30px; padding-left: 15px; }
 
 	.disabled {
 		opacity: .3;
