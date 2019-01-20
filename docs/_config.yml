@@ -21,7 +21,7 @@ title: Xapiand
 owner: Dubalu LLC
 email: german.mb@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Search and Storage Engine
+  Search and Storage Server
 baseurl: /Xapiand # the subpath of your site, e.g. /blog
 url: https://kronuz.io
 repository: https://github.com/Kronuz/Xapiand
