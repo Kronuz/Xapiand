@@ -3,10 +3,26 @@
 		<option value="">Navigate the projects…</option>
 		{% for section in site.data.projects %}
 		<optgroup label="{{ section.title }}">
-		{% for item in section.projects %}
-			{% assign item_url = item | prepend:"/projects/" | append:"/" %}
-			{% assign project = site.projects | where: "url", item_url | first %}
-			<option value="{{ project.url | relative_url }}">{{ project.title }}</option>
+		{% for l1 in section.projects %}
+			{% assign l1_url = l1.url | prepend:"/projects/" | append:"/" %}
+			{% assign l1_doc = site.projects | where: "url", l1_url | first %}
+			{% if l1_doc %}
+				<option value="{{ l1_doc.url | relative_url }}"{% if l1_doc.url == page.url %} selected="selected"{% endif %}>{{ l1.title | default:l1_doc.title }}</option>
+					{% for l2 in l1.projects %}
+						{% assign l2_url = l2.url | prepend:"/projects/" | append:"/" %}
+						{% assign l2_doc = site.projects | where: "url", l2_url | first %}
+						{% if l2_doc %}
+							<option value="{{ l2_doc.url | relative_url }}"{% if l2_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;{{ l2.title | default:l2_doc.title }}</option>
+							{% for l3 in l2.projects %}
+									{% assign l3_url = l3.url | prepend:"/projects/" | append:"/" %}
+									{% assign l3_doc = site.projects | where: "url", l3_url | first %}
+									{% if l3_doc %}
+										<option value="{{ l3_doc.url | relative_url }}"{% if l3_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;&#160;&#160;{{ l3.title | default:l3_doc.title }}</option>
+										{% endif %}
+								{% endfor %}
+							{% endif %}
+					{% endfor %}
+			{% endif %}
 		{% endfor %}
 		</optgroup>
 		{% endfor %}

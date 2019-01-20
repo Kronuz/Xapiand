@@ -1,10 +1,10 @@
 <div class="projects-nav-mobile unit whole show-on-mobiles">
   <select onchange="if (this.value) window.location.href=this.value">
 	<option value="">Navigate the blog…</option>
-	<option value="/blog/">Home</option>
+	<option value="{{ '/blog/' | relative_url }}"{% if '/blog/' == page.url %} selected="selected"{% endif %}>Home</option>
 	<optgroup label="Articles">
 	{% for post in site.posts %}
-		<option value="{{ post.url | relative_url }}">{{ post.title }}</option>
+		<option value="{{ post.url | relative_url }}"{% if post.url == page.url %} selected="selected"{% endif %}>{{ post.title }}</option>
 	{% endfor %}
 	</optgroup>
   </select>

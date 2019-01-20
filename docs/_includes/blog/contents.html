@@ -1,14 +1,14 @@
 <div class="unit one-fifth hide-on-mobiles">
 	<aside>
 		<ul>
-			<li class="{% if page.title == 'Blog' %}current{% endif %}">
-				<a href="{{ '/blog' | relative_url }}">All Articles</a>
+			<li class="{% if '/blog/' == page.url %}current{% endif %}">
+				<a href="{{ '/blog/' | relative_url }}">All Articles</a>
 			</li>
 		</ul>
 		<h4>Articles</h4>
 		<ul>
 			{% for post in site.posts %}
-			<li class="{% if page.title == post.title %}current{% endif %}">
+			<li class="{% if post.url == page.url %}current{% endif %}">
 				<a href="{{ post.url | relative_url }}">{{ post.title }}</a>
 			</li>
 			{% endfor %}

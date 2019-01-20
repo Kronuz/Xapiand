@@ -1,17 +1,17 @@
 <div class="unit one-fifth hide-on-mobiles">
 	<aside>
 		<ul>
-			<li class="{% if page.title == 'News' %}current{% endif %}">
+			<li class="{% if '/news/' == page.url %}current{% endif %}">
 				<a href="{{ '/news/' | relative_url }}">All News</a>
 			</li>
-			<li class="{% if page.title == 'Releases' %}current{% endif %}">
+			<li class="{% if '/news/releases/' == page.url %}current{% endif %}">
 				<a href="{{ '/news/releases/' | relative_url }}">{{ site.name }} Releases</a>
 			</li>
 		</ul>
 		<h4>Recent Releases</h4>
 		<ul>
 			{% for post in site.categories.release limit:5 %}
-			<li class="{% if page.title == post.title %}current{% endif %}">
+			<li class="{% if post.url == page.url %}current{% endif %}">
 				<a href="{{ post.url | relative_url }}">Version {{ post.version }}</a>
 			</li>
 			{% endfor %}
@@ -23,7 +23,7 @@
 		<ul>
 			{% for post in site.posts %}
 			{% unless post.categories contains 'release' %}
-			<li class="{% if page.title == post.title %}current{% endif %}">
+			<li class="{% if post.url == page.url %}current{% endif %}">
 				<a href="{{ post.url | relative_url }}">{{ post.title }}</a>
 			</li>
 			{% endunless %}
