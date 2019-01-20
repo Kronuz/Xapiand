@@ -604,6 +604,9 @@ article h2:first-child { margin-top: 0; }
 	vertical-align: middle;
 	margin: -4px 4px 0;
 
+	width: 24px !important;
+	height: 24px !important;
+
 	&:hover {
 		@include box-shadow(0 0 0 1px $theme_color_dark);
 	}
@@ -613,6 +616,7 @@ article h2:first-child { margin-top: 0; }
 	padding: 5px 0;
 	color: #a0a0a0;
 	text-shadow: 0 -1px 0 #000;
+	width: 60%;
 }
 
 .news .post-meta {
