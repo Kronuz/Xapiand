@@ -41,6 +41,10 @@ Be aware of these messages if you wish to avoid certain death.
 **_You'll see this by a feature that hasn't been released_**<br>
 Some pieces are for future versions of {{ site.name }} that are not yet released.
 
+{: .note .construction}
+**_Documentation section under construction_**<br>
+This part of the {{ site.name }} documentation is still not completed.
+
 <!--
 ## Keyboard symbols used:
 - Ctrl: ⌃

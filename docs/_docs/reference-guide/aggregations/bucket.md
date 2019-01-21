@@ -2,7 +2,7 @@
 title: Bucket Aggregations
 ---
 
-{: .note .unreleased}
+{: .note .construction}
 **_TODO:_** This section is a work in progress...
 
 Bucket aggregations don’t calculate metrics over fields like the metrics

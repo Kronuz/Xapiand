@@ -2,7 +2,7 @@
 title: Metrics Aggregations
 ---
 
-{: .note .unreleased}
+{: .note .construction}
 **_TODO:_** This section is a work in progress...
 
 The aggregations in this family compute metrics based on values extracted in one
