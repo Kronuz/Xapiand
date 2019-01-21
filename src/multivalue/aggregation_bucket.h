@@ -179,16 +179,15 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 	int64_t interval_i64;
 	long double interval_f64;
 
-	std::string get_bucket(uint64_t value) {
+	auto get_bucket(uint64_t value) {
 		if (!interval_u64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
 		auto rem = value % interval_u64;
-		auto bucket_key = value - rem;
-		return string::Number(bucket_key).str();
+		return value - rem;
 	}
 
-	std::string get_bucket(int64_t value) {
+	auto get_bucket(int64_t value) {
 		if (!interval_i64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
@@ -196,11 +195,10 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		if (rem < 0) {
 			rem += interval_i64;
 		}
-		auto bucket_key = value - rem;
-		return string::Number(bucket_key).str();
+		return value - rem;
 	}
 
-	std::string get_bucket(long double value) {
+	auto get_bucket(long double value) {
 		if (!interval_f64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
@@ -208,8 +206,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		if (rem < 0) {
 			rem += interval_f64;
 		}
-		auto bucket_key = value - rem;
-		return string::Number(bucket_key).str();
+		return value - rem;
 	}
 
 public:
@@ -268,32 +265,32 @@ public:
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(bucket, doc);
+		aggregate(string::Number(bucket), doc);
 	}
 };
 
