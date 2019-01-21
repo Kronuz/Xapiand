@@ -448,8 +448,8 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, XAPIAND_PREFIX "/var/run/xapiand.pid", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, XAPIAND_PREFIX "/var/log/xapiand.log", "file", cmd);
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
 
 		SwitchArg admin_commands("", "admin-commands", "Enables administrative HTTP commands.", cmd, false);
 
@@ -464,7 +464,7 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_PREFIX "/var/db/xapiand", "path", cmd);
+		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, "./", "path", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
@@ -586,10 +586,10 @@ void parseOptions(int argc, char** argv) {
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
 			if (opts.logfile.empty()) {
-				opts.logfile = XAPIAND_LOG_FILE;
+				opts.logfile = XAPIAND_PREFIX "/var/log/" XAPIAND_LOG_FILE;
 			}
 			if (opts.pidfile.empty()) {
-				opts.pidfile = XAPIAND_PID_FILE;
+				opts.pidfile = XAPIAND_PREFIX "/var/run/" XAPIAND_PID_FILE;
 			}
 		}
 		opts.ev_flags = ev_backend(use.getValue());
@@ -1326,9 +1326,9 @@ int main(int argc, char **argv) {
 
 		if (opts.detach) {
 			detach();
-			if (!opts.pidfile.empty()) {
-				writepid(opts.pidfile.c_str());
-			}
+		}
+		if (!opts.pidfile.empty()) {
+			writepid(opts.pidfile.c_str());
 		}
 
 		atexit(cleanup_manager);
@@ -1411,7 +1411,7 @@ int main(int argc, char **argv) {
 		exit_code = EX_SOFTWARE;
 	}
 
-	if (opts.detach && !opts.pidfile.empty()) {
+	if (!opts.pidfile.empty()) {
 		L_INFO("Removing the pid file.");
 		unlink(opts.pidfile.c_str());
 	}
