@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -357,7 +357,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 
 
 std::string
-Serialise::_float(FieldType field_type, double field_value)
+Serialise::_float(FieldType field_type, long double field_value)
 {
 	switch (field_type) {
 		case FieldType::DATE:
@@ -563,7 +563,7 @@ std::string
 Serialise::_float(std::string_view field_value)
 {
 	try {
-		return _float(strict_stod(field_value));
+		return _float(strict_stold(field_value));
 	} catch (const std::invalid_argument& exc) {
 		RETHROW(SerialisationError, "Invalid float format: %s", repr(field_value));
 	} catch (const std::out_of_range& exc) {
@@ -902,7 +902,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			// Try like FLOAT
 			{
 				int errno_save;
-				strict_stod(&errno_save, str_value);
+				strict_stold(&errno_save, str_value);
 				if (errno_save == 0) {
 					return FieldType::FLOAT;
 				}
@@ -1123,7 +1123,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 	class MsgPack result;
 	switch (field_type) {
 		case FieldType::FLOAT:
-			result = _float(serialised_val);
+			result = static_cast<double>(_float(serialised_val));
 			break;
 		case FieldType::INTEGER:
 			result = integer(serialised_val);
