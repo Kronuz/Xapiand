@@ -219,7 +219,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 				interval_u64 = interval_value.as_u64();
 				break;
 			default:
-				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
 		}
 	}
 
@@ -231,7 +231,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 				interval_i64 = interval_value.as_i64();
 				break;
 			default:
-				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
 		}
 	}
 
@@ -243,7 +243,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 				interval_f64 = interval_value.as_f64();
 				break;
 			default:
-				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
 		}
 	}
 
@@ -354,7 +354,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						from_u64 = from_value.as_u64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_FROM);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
 				}
 			}
 
@@ -369,7 +369,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						to_u64 = to_value.as_u64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
 				}
 			}
 
@@ -405,7 +405,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						from_i64 = from_value.as_i64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_FROM);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
 				}
 			}
 
@@ -420,7 +420,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						to_i64 = to_value.as_i64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
 				}
 			}
 
@@ -456,7 +456,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						from_f64 = from_value.as_f64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_FROM);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
 				}
 			}
 
@@ -471,7 +471,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 						to_f64 = to_value.as_f64();
 						break;
 					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
+						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
 				}
 			}
 
