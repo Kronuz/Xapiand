@@ -26,7 +26,7 @@ Available metrics aggregations:
   * [Min](min-aggregation)
   * [Max](max-aggregation)
   * [Variance](variance-aggregation)
-  * [Standard Deviation](std-aggregation)
+  * [Standard Deviation](std_deviation-aggregation)
   * [Median](median-aggregation)
   * [Mode](mode-aggregation)
   * [Statistics](stats-aggregation)
@@ -35,7 +35,7 @@ Available metrics aggregations:
   * Percentiles <sup>*</sup>
   * Percentiles Rank <sup>*</sup>
   * Scripted <sup>*</sup>
-  * [Extended Statistics](ext_stats-aggregation)
+  * [Extended Statistics](extended_stats-aggregation)
 
 {: .note .unreleased}
 **_Unimplemented Features!_**<br>

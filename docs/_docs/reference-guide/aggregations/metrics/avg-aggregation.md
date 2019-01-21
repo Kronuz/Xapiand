@@ -6,8 +6,9 @@ A _single-value_ metrics aggregation that computes the average of numeric values
 that are extracted from the aggregated documents. These values are extracted
 from specific numeric fields in the documents.
 
-Assuming the data consists of documents representing bank accounts (as shown in
-the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset) section:
+Assuming the data consists of documents representing bank accounts, as shown in
+the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
+section, computing the average age of all account holders:
 
 {% capture req %}
 
@@ -37,13 +38,13 @@ following:
 
 ```json
 {
-    "#aggregations": {
-        "_doc_count": 1000,
-        "avg_age": {
-            "_avg": 30.034
-        }
-    },
-    ...
+  "#aggregations": {
+    "_doc_count": 1000,
+    "avg_age": {
+      "_avg": 30.034
+    }
+  },
+  ...
 }
 ```
 

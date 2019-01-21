@@ -69,7 +69,8 @@ constexpr const char AGGREGATION_PERCENTILES[]      = "_percentiles";
 constexpr const char AGGREGATION_PERCENTILES_RANK[] = "_percentiles_rank";
 constexpr const char AGGREGATION_SCRIPTED_METRIC[]  = "_scripted_metric";
 constexpr const char AGGREGATION_STATS[]            = "_stats";
-constexpr const char AGGREGATION_STD[]              = "_std";
+constexpr const char AGGREGATION_STD[]              = "_std_deviation";
+constexpr const char AGGREGATION_STD_BOUNDS[]       = "_std_deviation_bounds";
 constexpr const char AGGREGATION_SUM[]              = "_sum";
 constexpr const char AGGREGATION_VARIANCE[]         = "_variance";
 

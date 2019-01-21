@@ -12,7 +12,9 @@ The `_min` aggregation operates on the `double` representation of the data.
 As a consequence, the result may be approximate when running on longs whose
 absolute value is greater than 2^53.
 
-Computing the min balance value across all accounts:
+Assuming the data consists of documents representing bank accounts, as shown in
+the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
+section, computing the min balance value across all accounts:
 
 {% capture req %}
 
@@ -39,13 +41,13 @@ Response:
 
 ```json
 {
-    "#aggregations": {
-        "_doc_count": 1000,
-        "max_balance": {
-            "_min": 1002.25
-        }
-    },
-    ...
+  "#aggregations": {
+    "_doc_count": 1000,
+    "max_balance": {
+      "_min": 1002.25
+    }
+  },
+  ...
 }
 ```
 

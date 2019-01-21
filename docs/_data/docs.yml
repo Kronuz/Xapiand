@@ -33,7 +33,7 @@
               title: Min
             - url: reference-guide/aggregations/metrics/variance-aggregation
               title: Variance
-            - url: reference-guide/aggregations/metrics/std-aggregation
+            - url: reference-guide/aggregations/metrics/std_deviation-aggregation
               title: Standard Deviation
             - url: reference-guide/aggregations/metrics/median-aggregation
               title: Median
@@ -41,7 +41,7 @@
               title: Mode
             - url: reference-guide/aggregations/metrics/stats-aggregation
               title: Statistics
-            - url: reference-guide/aggregations/metrics/ext_stats-aggregation
+            - url: reference-guide/aggregations/metrics/extended_stats-aggregation
               title: Extended Statistics
         - url: reference-guide/aggregations/bucket
           title: Bucket
