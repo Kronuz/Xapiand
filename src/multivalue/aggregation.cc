@@ -123,7 +123,7 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& context, const std::sha
 						add_metric<MetricVariance>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_STD):
-						add_metric<MetricSTD>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricStdDeviation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_MEDIAN):
 						add_metric<MetricMedian>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);

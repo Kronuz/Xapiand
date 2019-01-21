@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2018,2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -284,7 +284,7 @@ CHECK_MAX_SIZE(SMALL, (MetricAvg))
 CHECK_MAX_SIZE(SMALL, (MetricMin))
 CHECK_MAX_SIZE(SMALL, (MetricMax))
 CHECK_MAX_SIZE(SMALL, (MetricVariance))
-CHECK_MAX_SIZE(SMALL, (MetricSTD))
+CHECK_MAX_SIZE(SMALL, (MetricStdDeviation))
 CHECK_MAX_SIZE(SMALL, (MetricMedian))
 CHECK_MAX_SIZE(SMALL, (MetricMode))
 CHECK_MAX_SIZE(SMALL, (MetricStats))

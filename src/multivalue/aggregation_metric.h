@@ -588,9 +588,9 @@ public:
 
 
 // Standard deviation.
-class MetricSTD : public MetricVariance {
+class MetricStdDeviation : public MetricVariance {
 public:
-	MetricSTD(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+	MetricStdDeviation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricVariance(result, context, name, schema) { }
 
 	void update() override {
@@ -756,14 +756,14 @@ public:
 };
 
 
-class MetricExtendedStats : public MetricSTD {
+class MetricExtendedStats : public MetricStdDeviation {
 protected:
 	MetricMin _min_metric;
 	MetricMax _max_metric;
 
 public:
 	MetricExtendedStats(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricSTD(result, context, name, schema),
+		: MetricStdDeviation(result, context, name, schema),
 		  _min_metric(_result, _conf, schema),
 		  _max_metric(_result, _conf, schema) { }
 
@@ -781,7 +781,7 @@ public:
 	void _aggregate(long double value) {
 		_min_metric._aggregate(value);
 		_max_metric._aggregate(value);
-		MetricSTD::_aggregate(value);
+		MetricStdDeviation::_aggregate(value);
 	}
 
 	void aggregate_float(long double value, const Xapian::Document&) override {
