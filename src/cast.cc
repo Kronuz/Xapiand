@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ Cast::cast(const MsgPack& obj)
 			case Hash::POSITIVE:
 				return positive(obj.at(str_key));
 			case Hash::FLOAT:
-				return _float(obj.at(str_key));
+				return static_cast<double>(_float(obj.at(str_key)));
 			case Hash::BOOLEAN:
 				return boolean(obj.at(str_key));
 			case Hash::KEYWORD:
@@ -83,7 +83,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 		case FieldType::POSITIVE:
 			return positive(obj);
 		case FieldType::FLOAT:
-			return _float(obj);
+			return static_cast<double>(_float(obj));
 		case FieldType::BOOLEAN:
 			return boolean(obj);
 		case FieldType::KEYWORD:
@@ -195,7 +195,7 @@ Cast::positive(const MsgPack& obj)
 }
 
 
-double
+long double
 Cast::_float(const MsgPack& obj)
 {
 	switch (obj.getType()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -81,7 +81,7 @@ namespace Cast {
 	MsgPack cast(FieldType type, const MsgPack& obj);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
-	double _float(const MsgPack& obj);
+	long double _float(const MsgPack& obj);
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	std::string uuid(const MsgPack& obj);
