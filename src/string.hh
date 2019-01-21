@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -368,6 +368,7 @@ private:
 	explicit Number(unsigned long value) : str_(format_decimal(value)) {}
 	explicit Number(unsigned long long value) : str_(format_decimal(value)) {}
 	explicit Number(double value, int maxDecimalPlaces = 324) : str_(format_double(value, maxDecimalPlaces)) {}
+	explicit Number(long double value, int maxDecimalPlaces = 324) : str_(format_double(static_cast<double>(value), maxDecimalPlaces)) {}
 
 	/** Returns the number of characters written to the output buffer. */
 	std::size_t size() const {

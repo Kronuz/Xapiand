@@ -24,7 +24,7 @@
 
 #include <cstdint>                          // for int64_t, uint64_t
 #include <limits>                           // for numeric_limits
-#include <math.h>                           // for fmod
+#include <math.h>                           // for fmodl
 #include <memory>                           // for shared_ptr, allocator
 #include <stdexcept>                        // for out_of_range
 #include <string>                           // for string, to_string, hash
@@ -85,15 +85,15 @@ public:
 	ValuesAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<ValuesHandler>(result, context, name, schema) { }
 
-	void aggregate_float(double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
@@ -132,15 +132,15 @@ public:
 	TermsAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<TermsHandler>(result, context, name, schema) { }
 
-	void aggregate_float(double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
 	}
 
@@ -177,9 +177,9 @@ public:
 class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 	uint64_t interval_u64;
 	int64_t interval_i64;
-	double interval_f64;
+	long double interval_f64;
 
-	std::string get_bucket(unsigned long value) {
+	std::string get_bucket(uint64_t value) {
 		if (!interval_u64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
@@ -188,7 +188,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		return string::Number(bucket_key).str();
 	}
 
-	std::string get_bucket(long value) {
+	std::string get_bucket(int64_t value) {
 		if (!interval_i64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
@@ -200,11 +200,11 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		return string::Number(bucket_key).str();
 	}
 
-	std::string get_bucket(double value) {
+	std::string get_bucket(long double value) {
 		if (!interval_f64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
-		auto rem = fmod(value, interval_f64);
+		auto rem = fmodl(value, interval_f64);
 		if (rem < 0) {
 			rem += interval_f64;
 		}
@@ -237,33 +237,33 @@ public:
 		}
 	}
 
-	void aggregate_float(double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(bucket, doc);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(bucket, doc);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
 		aggregate(bucket, doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		auto bucket = get_bucket(value);
+		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(bucket, doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		auto bucket = get_bucket(value);
+		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(bucket, doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		auto bucket = get_bucket(value);
+		auto bucket = get_bucket(static_cast<long double>(value));
 		aggregate(bucket, doc);
 	}
 };
@@ -272,7 +272,7 @@ public:
 class RangeAggregation : public BucketAggregation<ValuesHandler> {
 	std::vector<std::pair<std::string, std::pair<uint64_t, uint64_t>>> ranges_u64;
 	std::vector<std::pair<std::string, std::pair<int64_t, int64_t>>> ranges_i64;
-	std::vector<std::pair<std::string, std::pair<double, double>>> ranges_f64;
+	std::vector<std::pair<std::string, std::pair<long double, long double>>> ranges_f64;
 
 	template <typename T>
 	std::string _as_bucket(T start, T end) const {
@@ -320,7 +320,7 @@ public:
 
 			uint64_t from_u64 = std::numeric_limits<uint64_t>::min();
 			int64_t from_i64 = std::numeric_limits<int64_t>::min();
-			double from_f64 = std::numeric_limits<double>::min();
+			double from_f64 = std::numeric_limits<long double>::min();
 			auto from_it = range.find(AGGREGATION_FROM);
 			if (from_it != range.end()) {
 				const auto& from_value = from_it.value();
@@ -344,7 +344,7 @@ public:
 
 			uint64_t to_u64 = std::numeric_limits<uint64_t>::max();
 			int64_t to_i64 = std::numeric_limits<int64_t>::max();
-			double to_f64 = std::numeric_limits<double>::max();
+			double to_f64 = std::numeric_limits<long double>::max();
 			auto to_it = range.find(AGGREGATION_TO);
 			if (to_it != range.end()) {
 				const auto& to_value = to_it.value();
@@ -403,7 +403,7 @@ public:
 		}
 	}
 
-	void aggregate_float(double value, const Xapian::Document& doc) override {
+	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
@@ -411,7 +411,7 @@ public:
 		}
 	}
 
-	void aggregate_integer(long value, const Xapian::Document& doc) override {
+	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		for (const auto& range : ranges_i64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);
@@ -419,7 +419,7 @@ public:
 		}
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document& doc) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		for (const auto& range : ranges_u64) {
 			if (value >= range.second.first && value < range.second.second) {
 				aggregate(range.first, doc);

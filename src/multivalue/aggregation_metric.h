@@ -23,10 +23,10 @@
 #pragma once
 
 #include <algorithm>           // for nth_element, max_element
-#include <cfloat>              // for DBL_MAX
 #include <cmath>               // for sqrt
 #include <cstdio>
 #include <cstring>             // for size_t
+#include <limits>              // for numeric_limits
 #include <memory>              // for shared_ptr, allocator
 #include <stdexcept>           // for out_of_range
 #include <string>              // for string
@@ -161,15 +161,15 @@ public:
 	HandledSubAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation(result, context.at(name), schema) { }
 
-	virtual void aggregate_float(double, const Xapian::Document&) {
+	virtual void aggregate_float(long double, const Xapian::Document&) {
 		THROW(AggregationError, "float type is not supported");
 	}
 
-	virtual void aggregate_integer(long, const Xapian::Document&) {
+	virtual void aggregate_integer(int64_t, const Xapian::Document&) {
 		THROW(AggregationError, "integer type is not supported");
 	}
 
-	virtual void aggregate_positive(unsigned long, const Xapian::Document&) {
+	virtual void aggregate_positive(uint64_t, const Xapian::Document&) {
 		THROW(AggregationError, "positive type is not supported");
 	}
 
@@ -286,15 +286,15 @@ public:
 		++_count;
 	}
 
-	void aggregate_float(double, const Xapian::Document&) override {
+	void aggregate_float(long double, const Xapian::Document&) override {
 		_aggregate();
 	}
 
-	void aggregate_integer(long, const Xapian::Document&) override {
+	void aggregate_integer(int64_t, const Xapian::Document&) override {
 		_aggregate();
 	}
 
-	void aggregate_positive(unsigned long, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t, const Xapian::Document&) override {
 		_aggregate();
 	}
 
@@ -341,19 +341,19 @@ public:
 		_result[AGGREGATION_SUM] = static_cast<double>(_sum);
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		_sum += value;
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -384,20 +384,20 @@ public:
 		_result[AGGREGATION_AVG] = static_cast<double>(avg());
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		++_count;
 		_sum += value;
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -428,36 +428,36 @@ class MetricMin : public HandledSubAggregation<ValuesHandler> {
 	friend class MetricExtendedStats;
 
 protected:
-	double _min;
+	long double _min;
 
 public:
 	MetricMin(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
-		  _min(DBL_MAX) { }
+		  _min(std::numeric_limits<long double>::max()) { }
 
 	MetricMin(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
-		  _min(DBL_MAX) { }
+		  _min(std::numeric_limits<long double>::max()) { }
 
 	void update() override {
-		_result[AGGREGATION_MIN] = _min;
+		_result[AGGREGATION_MIN] = static_cast<double>(_min);
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		if (value < _min) {
 			_min = value;
 		}
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -480,36 +480,36 @@ class MetricMax : public HandledSubAggregation<ValuesHandler> {
 	friend class MetricExtendedStats;
 
 protected:
-	double _max;
+	long double _max;
 
 public:
 	MetricMax(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
-		  _max(-DBL_MAX) { }
+		  _max(std::numeric_limits<long double>::min()) { }
 
 	MetricMax(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
-		  _max(-DBL_MAX) { }
+		  _max(std::numeric_limits<long double>::min()) { }
 
 	void update() override {
-		_result[AGGREGATION_MAX] = _max;
+		_result[AGGREGATION_MAX] = static_cast<double>(_max);
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		if (value > _max) {
 			_max = value;
 		}
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -540,21 +540,21 @@ public:
 		_result[AGGREGATION_VARIANCE] = static_cast<double>(variance());
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		++_count;
 		_sum += value;
 		_sq_sum += value * value;
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -594,7 +594,7 @@ public:
 
 
 class MetricMedian : public HandledSubAggregation<ValuesHandler> {
-	std::vector<double> values;
+	std::vector<long double> values;
 
 public:
 	MetricMedian(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
@@ -602,7 +602,7 @@ public:
 
 	void update() override {
 		if (values.empty()) {
-			_result[AGGREGATION_MEDIAN] = 0;
+			_result[AGGREGATION_MEDIAN] = 0.0;
 			return;
 		}
 		size_t median_pos = values.size();
@@ -611,27 +611,27 @@ public:
 			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
 			auto val1 = values[median_pos];
 			std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
-			_result[AGGREGATION_MEDIAN] = (val1 + values[median_pos - 1]) / 2;
+			_result[AGGREGATION_MEDIAN] = static_cast<double>((val1 + values[median_pos - 1]) / 2);
 		} else {
 			median_pos /= 2;
 			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-			_result[AGGREGATION_MEDIAN] = values[median_pos];
+			_result[AGGREGATION_MEDIAN] = static_cast<double>(values[median_pos]);
 		}
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		values.push_back(value);
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -650,7 +650,7 @@ public:
 
 
 class MetricMode : public HandledSubAggregation<ValuesHandler> {
-	std::unordered_map<double, size_t> _histogram;
+	std::unordered_map<long double, size_t> _histogram;
 
 public:
 	MetricMode(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
@@ -658,26 +658,26 @@ public:
 
 	void update() override {
 		if (_histogram.empty()) {
-			_result[AGGREGATION_MODE] = 0;
+			_result[AGGREGATION_MODE] = 0.0;
 			return;
 		}
 		auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
-		_result[AGGREGATION_MODE] = it->first;
+		_result[AGGREGATION_MODE] = static_cast<double>(it->first);
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		++_histogram[value];
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -708,27 +708,27 @@ public:
 
 	void update() override {
 		_result[AGGREGATION_COUNT] = _count;
-		_result[AGGREGATION_MIN]   = _min_metric._min;
-		_result[AGGREGATION_MAX]   = _max_metric._max;
+		_result[AGGREGATION_MIN]   = static_cast<double>(_min_metric._min);
+		_result[AGGREGATION_MAX]   = static_cast<double>(_max_metric._max);
 		_result[AGGREGATION_AVG]   = static_cast<double>(avg());
 		_result[AGGREGATION_SUM]   = static_cast<double>(_sum);
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		_min_metric._aggregate(value);
 		_max_metric._aggregate(value);
 		MetricAvg::_aggregate(value);
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
@@ -759,8 +759,8 @@ public:
 
 	void update() override {
 		_result[AGGREGATION_COUNT]      = _count;
-		_result[AGGREGATION_MIN]        = _min_metric._min;
-		_result[AGGREGATION_MAX]        = _max_metric._max;
+		_result[AGGREGATION_MIN]        = static_cast<double>(_min_metric._min);
+		_result[AGGREGATION_MAX]        = static_cast<double>(_max_metric._max);
 		_result[AGGREGATION_AVG]        = static_cast<double>(avg());
 		_result[AGGREGATION_SUM]        = static_cast<double>(_sum);
 		_result[AGGREGATION_SUM_OF_SQ]  = static_cast<double>(_sq_sum);
@@ -768,21 +768,21 @@ public:
 		_result[AGGREGATION_STD]        = static_cast<double>(std());
 	}
 
-	void _aggregate(double value) {
+	void _aggregate(long double value) {
 		_min_metric._aggregate(value);
 		_max_metric._aggregate(value);
 		MetricSTD::_aggregate(value);
 	}
 
-	void aggregate_float(double value, const Xapian::Document&) override {
+	void aggregate_float(long double value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_integer(long value, const Xapian::Document&) override {
+	void aggregate_integer(int64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
-	void aggregate_positive(unsigned long value, const Xapian::Document&) override {
+	void aggregate_positive(uint64_t value, const Xapian::Document&) override {
 		_aggregate(value);
 	}
 
