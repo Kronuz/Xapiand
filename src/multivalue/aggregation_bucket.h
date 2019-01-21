@@ -230,7 +230,7 @@ public:
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						interval_u64 = interval_value.u64();
+						interval_u64 = interval_value.as_u64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
@@ -241,7 +241,7 @@ public:
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						interval_i64 = interval_value.i64();
+						interval_i64 = interval_value.as_i64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
@@ -255,7 +255,7 @@ public:
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						interval_f64 = interval_value.f64();
+						interval_f64 = interval_value.as_f64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
@@ -322,6 +322,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 
 	void configure_u64(const MsgPack& ranges) {
 		for (const auto& range : ranges) {
+			std::string default_key;
 			std::string_view key;
 			auto key_it = range.find(AGGREGATION_KEY);
 			if (key_it != range.end()) {
@@ -355,7 +356,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						to_u64 = to_value.u64();
+						to_u64 = to_value.as_u64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
@@ -363,7 +364,8 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 			}
 
 			if (key.empty()) {
-				key = _as_bucket(from_u64, to_u64);
+				default_key = _as_bucket(from_u64, to_u64);
+				key = default_key;
 			}
 			ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
 		}
@@ -371,6 +373,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 
 	void configure_i64(const MsgPack& ranges) {
 		for (const auto& range : ranges) {
+			std::string default_key;
 			std::string_view key;
 			auto key_it = range.find(AGGREGATION_KEY);
 			if (key_it != range.end()) {
@@ -404,7 +407,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						to_i64 = to_value.i64();
+						to_i64 = to_value.as_i64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
@@ -412,7 +415,8 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 			}
 
 			if (key.empty()) {
-				key = _as_bucket(from_i64, to_i64);
+				default_key = _as_bucket(from_i64, to_i64);
+				key = default_key;
 			}
 			ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
 		}
@@ -420,6 +424,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 
 	void configure_f64(const MsgPack& ranges) {
 		for (const auto& range : ranges) {
+			std::string default_key;
 			std::string_view key;
 			auto key_it = range.find(AGGREGATION_KEY);
 			if (key_it != range.end()) {
@@ -453,7 +458,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
-						to_f64 = to_value.f64();
+						to_f64 = to_value.as_f64();
 						break;
 					default:
 						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_TO);
@@ -461,7 +466,8 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 			}
 
 			if (key.empty()) {
-				key = _as_bucket(from_f64, to_f64);
+				default_key = _as_bucket(from_f64, to_f64);
+				key = default_key;
 			}
 			ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
 		}
