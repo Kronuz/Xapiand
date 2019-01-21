@@ -2,9 +2,6 @@
 title: Bucket Aggregations
 ---
 
-{: .note .construction}
-**_TODO:_** This section is a work in progress...
-
 Bucket aggregations don’t calculate metrics over fields like the metrics
 aggregations do, but instead, they create buckets of documents. Each bucket is
 associated with a criterion (depending on the aggregation type) which determines
@@ -24,20 +21,20 @@ process.
 
 Available bucket aggregations:
 
-  * Filter
-  * Values
-  * Terms
-  * Date histogram <sup>*</sup>
-  * Date range <sup>*</sup>
-  * Geo-spatial distance <sup>*</sup>
-  * Geo-spatial trixels <sup>*</sup>
-  * Histogram
+  * [Filter](filter-aggregation)
+  * [Values](values-aggregation)
+  * [Terms](terms-aggregation)
+  * Date Histogram <sup>*</sup>
+  * Date Range <sup>*</sup>
+  * Geo-spatial Distance <sup>*</sup>
+  * Geo-spatial Trixels <sup>*</sup>
+  * [Histogram](histogram-aggregation)
   * Missing value <sup>*</sup>
-  * Range
+  * [Range](range-aggregation)
   * IP range <sup>*</sup>
   * Geo-spatial IP <sup>*</sup>
 
-
----
-
-<sup>*</sup> Not yet implemented.
+{: .note .unreleased}
+**_Unimplemented Features!_**<br>
+Features with asterisk haven't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)

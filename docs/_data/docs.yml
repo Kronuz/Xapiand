@@ -21,16 +21,41 @@
         - url: reference-guide/aggregations/metrics
           title: Metrics
           docs:
+            - url: reference-guide/aggregations/metrics/count-aggregation
+              title: Count
+            - url: reference-guide/aggregations/metrics/sum-aggregation
+              title: Sum
             - url: reference-guide/aggregations/metrics/avg-aggregation
               title: Average
             - url: reference-guide/aggregations/metrics/max-aggregation
               title: Max
             - url: reference-guide/aggregations/metrics/min-aggregation
               title: Min
-            - url: reference-guide/aggregations/metrics/count-aggregation
-              title: Count
+            - url: reference-guide/aggregations/metrics/variance-aggregation
+              title: Variance
+            - url: reference-guide/aggregations/metrics/std-aggregation
+              title: Standard Deviation
+            - url: reference-guide/aggregations/metrics/median-aggregation
+              title: Median
+            - url: reference-guide/aggregations/metrics/mode-aggregation
+              title: Mode
+            - url: reference-guide/aggregations/metrics/stats-aggregation
+              title: Statistics
+            - url: reference-guide/aggregations/metrics/ext_stats-aggregation
+              title: Extended Statistics
         - url: reference-guide/aggregations/bucket
           title: Bucket
+          docs:
+            - url: reference-guide/aggregations/bucket/filter-aggregation
+              title: Filter
+            - url: reference-guide/aggregations/bucket/values-aggregation
+              title: Values
+            - url: reference-guide/aggregations/bucket/terms-aggregation
+              title: Terms
+            - url: reference-guide/aggregations/bucket/histogram-aggregation
+              title: Histogram
+            - url: reference-guide/aggregations/bucket/range-aggregation
+              title: Range
     - url: reference-guide/scripting
     - url: reference-guide/storage
     - url: reference-guide/stats

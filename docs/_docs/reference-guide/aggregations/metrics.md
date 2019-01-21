@@ -2,9 +2,6 @@
 title: Metrics Aggregations
 ---
 
-{: .note .construction}
-**_TODO:_** This section is a work in progress...
-
 The aggregations in this family compute metrics based on values extracted in one
 way or another from the documents that are being aggregated. The values are
 typically extracted from the fields of the document (using the field data), but
@@ -24,23 +21,23 @@ Available metrics aggregations:
 
   * [Count](count-aggregation)
   * Cardinality <sup>*</sup>
-  * Sum
+  * [Sum](sum-aggregation)
   * [Average](avg-aggregation)
   * [Min](min-aggregation)
   * [Max](max-aggregation)
-  * Variance
-  * Standard deviation
-  * Median
-  * Mode
-  * Statistics
+  * [Variance](variance-aggregation)
+  * [Standard Deviation](std-aggregation)
+  * [Median](median-aggregation)
+  * [Mode](mode-aggregation)
+  * [Statistics](stats-aggregation)
   * Geo-spatial (bounds) <sup>*</sup>
   * Geo-spatial (centroid) <sup>*</sup>
   * Percentiles <sup>*</sup>
-  * Percentiles rank <sup>*</sup>
+  * Percentiles Rank <sup>*</sup>
   * Scripted <sup>*</sup>
-  * Extended statistics
+  * [Extended Statistics](ext_stats-aggregation)
 
-
----
-
-<sup>*</sup> Not yet implemented.
+{: .note .unreleased}
+**_Unimplemented Features!_**<br>
+Features with asterisk haven't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
