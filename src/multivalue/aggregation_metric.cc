@@ -79,8 +79,9 @@ ValuesHandler::ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>&
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_slot_field(field_name);
 
+	_type = field_spc.get_type();
 	_slot = field_spc.slot;
-	_func = get_func_value_handle<ValuesHandler>(field_spc.get_type(), field_name);
+	_func = get_func_value_handle<ValuesHandler>(_type, field_name);
 }
 
 
@@ -111,8 +112,9 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_data_field(field_name).first;
 
+	_type = field_spc.get_type();
 	_prefix = field_spc.prefix();
-	_func = get_func_value_handle<TermsHandler>(field_spc.get_type(), field_name);
+	_func = get_func_value_handle<TermsHandler>(_type, field_name);
 }
 
 

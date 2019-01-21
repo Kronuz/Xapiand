@@ -99,6 +99,7 @@ class ValuesHandler {
 	using func_value_handle = void (HandledSubAggregation<ValuesHandler>::*)(const Xapian::Document&);
 
 protected:
+	FieldType _type;
 	Xapian::valueno _slot;
 	func_value_handle _func;
 
@@ -117,6 +118,7 @@ class TermsHandler {
 	using func_value_handle = void (HandledSubAggregation<TermsHandler>::*)(const Xapian::Document&);
 
 protected:
+	FieldType _type;
 	std::string _prefix;
 	func_value_handle _func;
 
