@@ -649,8 +649,7 @@ code {
 	pre, code { font-size: 16px; }
 }
 
-div.highlight,
-figure.highlight,
+.highlight,
 p > pre,
 p > code,
 p > nobr > code,
@@ -692,6 +691,8 @@ h5 > code,
 div.highlight,
 figure.highlight {
 	background-color: rgba(0,0,0,.1);
+}
+.highlight {
 	margin: 1em 0;
 	width: 100%;
 	overflow: auto;
@@ -1095,8 +1096,7 @@ code.output {
 		@include border-radius(5px 5px 0 0);
 		@include box-shadow(0 3px 10px rgba(0,0,0,.5));
 	}
-	div.highlight,
-	figure.highlight {
+	.highlight {
 		@include border-radius(0 0 5px 5px);
 	}
 	pre.highlight {
