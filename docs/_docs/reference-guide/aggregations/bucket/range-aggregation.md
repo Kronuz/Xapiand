@@ -27,9 +27,9 @@ POST /bank/:search?pretty
       "_range": {
         "_field": "balance",
         "_ranges": [
-          { "_to": 2000.0 },
-          { "_from": 2000.0, "_to": 3500.0 },
-          { "_from": 3500.0 }
+          { "_to": 2000 },
+          { "_from": 2000, "_to": 3500 },
+          { "_from": 3500 }
         ]
       }
     }
@@ -80,9 +80,9 @@ POST /bank/:search?pretty
       "_range": {
         "_field": "balance",
         "_ranges": [
-          { "_key": "poor", "_to": 2000.0 },
-          { "_key": "average", "_from": 2000.0, "_to": 3500.0 },
-          { "_key": "rich", "_from": 3500.0 }
+          { "_key": "poor", "_to": 2000 },
+          { "_key": "average", "_from": 2000, "_to": 3500 },
+          { "_key": "rich", "_from": 3500 }
         ]
       }
     }
@@ -135,9 +135,9 @@ POST /bank/:search?pretty
       "_range": {
         "_field": "balance",
         "_ranges": [
-          { "_key": "poor", "_to": 2000.0 },
-          { "_key": "average", "_from": 2000.0, "_to": 3500.0 },
-          { "_key": "rich", "_from": 3500.0 }
+          { "_key": "poor", "_to": 2000 },
+          { "_key": "average", "_from": 2000, "_to": 3500 },
+          { "_key": "rich", "_from": 3500 }
         ]
       },
       "_aggs": {
