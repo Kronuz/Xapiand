@@ -108,6 +108,10 @@ public:
 
 	std::vector<std::string> values(const Xapian::Document& doc) const;
 
+	FieldType get_type() {
+		return _type;
+	}
+
 	void operator()(HandledSubAggregation<ValuesHandler>* agg, const Xapian::Document& doc) const {
 		(agg->*_func)(doc);
 	}
@@ -126,6 +130,10 @@ public:
 	TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	std::vector<std::string> values(const Xapian::Document& doc) const;
+
+	FieldType get_type() {
+		return _type;
+	}
 
 	void operator()(HandledSubAggregation<TermsHandler>* agg, const Xapian::Document& doc) const {
 		(agg->*_func)(doc);
