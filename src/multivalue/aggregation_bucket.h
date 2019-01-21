@@ -65,17 +65,19 @@ public:
 			_agg.second.update();
 		}
 	}
-
-	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
+	auto& add(std::string_view bucket) {
 		auto it = _aggs.find(std::string(bucket));
 		if (it != _aggs.end()) {
-			it->second(doc);
-		} else {
-			auto p = _aggs.emplace(std::piecewise_construct,
-				std::forward_as_tuple(bucket),
-				std::forward_as_tuple(this->_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
-			p.first->second(doc);
+			return it->second;
 		}
+		auto emplaced = _aggs.emplace(std::piecewise_construct,
+			std::forward_as_tuple(bucket),
+			std::forward_as_tuple(this->_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
+		return emplaced.first->second;
+	}
+
+	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
+		add(bucket)(doc);
 	}
 };
 
@@ -209,13 +211,48 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		return value - rem;
 	}
 
+	void configure_u64(const MsgPack& interval_value) {
+		switch (interval_value.getType()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+			case MsgPack::Type::NEGATIVE_INTEGER:
+			case MsgPack::Type::FLOAT:
+				interval_u64 = interval_value.as_u64();
+				break;
+			default:
+				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+		}
+	}
+
+	void configure_i64(const MsgPack& interval_value) {
+		switch (interval_value.getType()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+			case MsgPack::Type::NEGATIVE_INTEGER:
+			case MsgPack::Type::FLOAT:
+				interval_i64 = interval_value.as_i64();
+				break;
+			default:
+				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+		}
+	}
+
+	void configure_f64(const MsgPack& interval_value) {
+		switch (interval_value.getType()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+			case MsgPack::Type::NEGATIVE_INTEGER:
+			case MsgPack::Type::FLOAT:
+				interval_f64 = interval_value.as_f64();
+				break;
+			default:
+				THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
+		}
+	}
+
 public:
 	HistogramAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<ValuesHandler>(result, context, name, schema),
 		  interval_u64(0),
 		  interval_i64(0),
-		  interval_f64(0.0)
-	{
+		  interval_f64(0.0) {
 		const auto it = _conf.find(AGGREGATION_INTERVAL);
 		if (it == _conf.end()) {
 			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_INTERVAL);
@@ -223,40 +260,16 @@ public:
 		const auto& interval_value = it.value();
 		switch (_handler.get_type()) {
 			case FieldType::POSITIVE:
-				switch (interval_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						interval_u64 = interval_value.as_u64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
-				}
+				configure_u64(interval_value);
 				break;
 			case FieldType::INTEGER:
-				switch (interval_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						interval_i64 = interval_value.as_i64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
-				}
+				configure_i64(interval_value);
 				break;
 			case FieldType::FLOAT:
 			case FieldType::DATE:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
-				switch (interval_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						interval_f64 = interval_value.as_f64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be numeric", AGGREGATION_INTERVAL);
-				}
+				configure_f64(interval_value);
 				break;
 			default:
 				THROW(AggregationError, "Histogram aggregation can work only on numeric fields");
