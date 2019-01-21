@@ -54,8 +54,8 @@ return the following:
       "_variance": 721904.4614057642,
       "_std_deviation": 849.649610960756,
       "_std_deviation_bounds": {
-      	"_upper": 3000,
-      	"_lower": 500
+        "_upper": 4222.1322619215129,
+        "_lower": 823.5338180784878
       }
     }
   },
@@ -66,11 +66,6 @@ The name of the aggregation (`balance_stats` above) also serves as the key by
 which the aggregation result can be retrieved from the returned response.
 
 ### Standard Deviation Bounds
-
-{: .note .unreleased}
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
 
 By default, the `_extended_stats` metric will return an object called
 `_std_deviation_bounds`, which provides an interval of plus/minus two standard

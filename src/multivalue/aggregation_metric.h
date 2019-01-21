@@ -88,6 +88,10 @@ constexpr const char AGGREGATION_VALUE[]            = "_value";
 constexpr const char AGGREGATION_VALUES[]           = "_values";
 constexpr const char AGGREGATION_TERMS[]            = "_terms";
 
+constexpr const char AGGREGATION_UPPER[]            = "_upper";
+constexpr const char AGGREGATION_LOWER[]            = "_lower";
+constexpr const char AGGREGATION_SIGMA[]            = "_sigma";
+
 constexpr const char AGGREGATION_TERM[]             = "_term";
 
 
@@ -589,12 +593,38 @@ public:
 
 // Standard deviation.
 class MetricStdDeviation : public MetricVariance {
+protected:
+	long double _sigma;
+
 public:
 	MetricStdDeviation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricVariance(result, context, name, schema) { }
+		: MetricVariance(result, context, name, schema),
+		  _sigma{2.0} {
+		const auto it = _conf.find(AGGREGATION_SIGMA);
+		if (it != _conf.end()) {
+			const auto& sigma_value = it.value();
+			switch (sigma_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					_sigma = sigma_value.as_f64();
+					if (_sigma >= 0) {
+						break;
+					}
+				default:
+					THROW(AggregationError, "'%s' must be a positive number", AGGREGATION_SIGMA);
+			}
+		}
+	}
 
 	void update() override {
-		_result[AGGREGATION_STD] = static_cast<double>(std());
+		auto _std = std();
+		auto _avg = avg();
+		_result[AGGREGATION_STD] = static_cast<double>(_std);
+		_result[AGGREGATION_STD_BOUNDS] = {
+			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
+			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+		};
 	}
 
 	long double std() const {
@@ -768,14 +798,21 @@ public:
 		  _max_metric(_result, _conf, schema) { }
 
 	void update() override {
+		auto _std = std();
+		auto _avg = avg();
+		auto _variance = variance();
 		_result[AGGREGATION_COUNT]      = _count;
 		_result[AGGREGATION_MIN]        = static_cast<double>(_min_metric._min);
 		_result[AGGREGATION_MAX]        = static_cast<double>(_max_metric._max);
-		_result[AGGREGATION_AVG]        = static_cast<double>(avg());
+		_result[AGGREGATION_AVG]        = static_cast<double>(_avg);
 		_result[AGGREGATION_SUM]        = static_cast<double>(_sum);
 		_result[AGGREGATION_SUM_OF_SQ]  = static_cast<double>(_sq_sum);
-		_result[AGGREGATION_VARIANCE]   = static_cast<double>(variance());
-		_result[AGGREGATION_STD]        = static_cast<double>(std());
+		_result[AGGREGATION_VARIANCE]   = static_cast<double>(_variance);
+		_result[AGGREGATION_STD]        = static_cast<double>(_std);
+		_result[AGGREGATION_STD_BOUNDS] = {
+			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
+			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+		};
 	}
 
 	void _aggregate(long double value) {
