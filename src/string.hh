@@ -159,7 +159,7 @@ inline std::string indent(std::string_view str, char sep, int level, bool indent
 		result.append(level, sep);
 	}
 
-	Split<> lines(str, '\n');
+	Split<std::string_view> lines(str, '\n');
 	auto it = lines.begin();
 	ASSERT(it != lines.end());
 	for (; !it.last(); ++it) {
