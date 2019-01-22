@@ -158,7 +158,7 @@ bool build_path(std::string_view path) {
 	if (exists(path)) {
 		return true;
 	}
-	Split<> directories(path, '/');
+	Split<std::string_view> directories(path, '/');
 	std::string dir;
 	dir.reserve(path.size());
 	if (path.front() == '/') {
