@@ -133,10 +133,10 @@ inline std::string join(const std::vector<T>& values, std::string_view delimiter
 }
 
 
-template <typename T>
-inline std::vector<std::string_view> split(std::string_view value, const T& sep) {
-	std::vector<std::string_view> values;
-	Split<T>::split(value, sep, std::back_inserter(values));
+template <typename S, typename T>
+inline std::vector<S> split(const S& value, const T& sep) {
+	std::vector<S> values;
+	Split<S, T>::split(value, sep, std::back_inserter(values));
 	return values;
 }
 
