@@ -99,11 +99,11 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
-      "poor": {
-        "_doc_count": 318
-      },
       "average": {
         "_doc_count": 520
+      },
+      "poor": {
+        "_doc_count": 318
       },
       "rich": {
         "_doc_count": 162
@@ -161,16 +161,6 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
-      "poor": {
-        "_doc_count": 318,
-        "age_stats": {
-          "_count": 318,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 30.166666666666669,
-          "_sum": 9593.0
-        }
-      },
       "average": {
         "_doc_count": 520,
         "age_stats": {
@@ -179,6 +169,16 @@ Response:
           "_max": 40.0,
           "_avg": 29.892307692307694,
           "_sum": 15544.0
+        }
+      },
+      "poor": {
+        "_doc_count": 318,
+        "age_stats": {
+          "_count": 318,
+          "_min": 20.0,
+          "_max": 40.0,
+          "_avg": 30.166666666666669,
+          "_sum": 9593.0
         }
       },
       "rich": {
