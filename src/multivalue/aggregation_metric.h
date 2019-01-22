@@ -83,7 +83,6 @@ constexpr const char AGGREGATION_HISTOGRAM[]        = "_histogram";
 constexpr const char AGGREGATION_IP_RANGE[]         = "_ip_range";
 constexpr const char AGGREGATION_MISSING[]          = "_missing";
 constexpr const char AGGREGATION_RANGE[]            = "_range";
-constexpr const char AGGREGATION_VALUE[]            = "_value";
 constexpr const char AGGREGATION_VALUES[]           = "_values";
 constexpr const char AGGREGATION_TERMS[]            = "_terms";
 
@@ -91,7 +90,12 @@ constexpr const char AGGREGATION_UPPER[]            = "_upper";
 constexpr const char AGGREGATION_LOWER[]            = "_lower";
 constexpr const char AGGREGATION_SIGMA[]            = "_sigma";
 
+constexpr const char AGGREGATION_VALUE[]            = "_value";
 constexpr const char AGGREGATION_TERM[]             = "_term";
+constexpr const char AGGREGATION_SORT[]             = "_sort";
+constexpr const char AGGREGATION_ORDER[]            = "_order";
+constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
+constexpr const char AGGREGATION_LIMIT[]            = "_limit";
 
 
 template <typename Handler>
@@ -150,6 +154,8 @@ public:
 
 	virtual void operator()(const Xapian::Document&) = 0;
 	virtual MsgPack get_aggregation() = 0;
+
+	virtual void update() { }
 };
 
 
@@ -386,13 +392,15 @@ class MetricAvg : public MetricSum {
 protected:
 	size_t _count;
 
+	long double _avg;
+
 public:
 	MetricAvg(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricSum(context, name, schema),
-		  _count(0) { }
+		  _count(0),
+		  _avg(0) { }
 
 	MsgPack get_aggregation() override {
-		auto _avg = avg();
 		return {
 			{ AGGREGATION_AVG, static_cast<double>(_avg) },
 		};
@@ -427,8 +435,8 @@ public:
 		_aggregate(value);
 	}
 
-	long double avg() const {
-		return _sum ? _sum / _count : _sum;
+	void update() override {
+		_avg = _sum ? _sum / _count : _sum;
 	}
 };
 
@@ -548,14 +556,15 @@ public:
 class MetricVariance : public MetricAvg {
 protected:
 	long double _sq_sum;
+	long double _variance;
 
 public:
 	MetricVariance(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricAvg(context, name, schema),
-		  _sq_sum(0) { }
+		  _sq_sum(0),
+		  _variance(0) { }
 
 	MsgPack get_aggregation() override {
-		auto _variance = variance();
 		return {
 			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
 		};
@@ -591,9 +600,9 @@ public:
 		_aggregate(value);
 	}
 
-	long double variance() const {
-		auto _avg = avg();
-		return (_sq_sum - _count * _avg * _avg) / (_count - 1);
+	void update() override {
+		MetricAvg::update();
+		_variance = (_sq_sum - _count * _avg * _avg) / (_count - 1);
 	}
 };
 
@@ -602,6 +611,8 @@ public:
 class MetricStdDeviation : public MetricVariance {
 protected:
 	long double _sigma;
+
+	long double _std;
 
 public:
 	MetricStdDeviation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
@@ -625,8 +636,6 @@ public:
 	}
 
 	MsgPack get_aggregation() override {
-		auto _std = std();
-		auto _avg = avg();
 		return {
 			{ AGGREGATION_STD, static_cast<double>(_std) },
 			{ AGGREGATION_STD_BOUNDS, {
@@ -636,8 +645,9 @@ public:
 		};
 	}
 
-	long double std() const {
-		return std::sqrt(variance());
+	void update() override {
+		MetricVariance::update();
+		_std = std::sqrt(_variance);
 	}
 };
 
@@ -760,7 +770,6 @@ public:
 		  _max_metric(_conf, schema) { }
 
 	MsgPack get_aggregation() override {
-		auto _avg = avg();
 		return {
 			{ AGGREGATION_COUNT, _count },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
@@ -814,9 +823,6 @@ public:
 		  _max_metric(_conf, schema) { }
 
 	MsgPack get_aggregation() override {
-		auto _std = std();
-		auto _avg = avg();
-		auto _variance = variance();
 		return {
 			{ AGGREGATION_COUNT, _count },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },

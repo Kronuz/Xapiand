@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <algorithm>                        // for std::sort, std::sort_heap
 #include <cstdint>                          // for int64_t, uint64_t
 #include <limits>                           // for std::numeric_limits
 #include <map>                              // for std::map
@@ -52,19 +53,259 @@ protected:
 	std::map<std::string, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
+	enum class Sort {
+		by_key_asc,
+		by_key_desc,
+		by_count_asc,
+		by_count_desc,
+		by_field_asc,
+		by_field_desc,
+	} _sort;
+	size_t _limit;
+	size_t _min_doc_count;
+
+	struct CmpByKeyAsc {
+		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->first > b->first) return false;
+			return true;
+		}
+	};
+
+	struct CmpByKeyDesc {
+		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->first < b->first) return false;
+			return true;
+		}
+	};
+
+	struct CmpByCountAsc {
+		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->second.doc_count() < b->second.doc_count()) return true;
+			if (a->second.doc_count() > b->second.doc_count()) return false;
+			if (a->first > b->first) return false;
+			return true;
+		}
+	};
+
+	struct CmpByCountDesc {
+		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->second.doc_count() > b->second.doc_count()) return true;
+			if (a->second.doc_count() < b->second.doc_count()) return false;
+			if (a->first < b->first) return false;
+			return true;
+		}
+	};
+
+	template <typename Cmp>
+	MsgPack _get_aggregation() {
+		Cmp cmp;
+		bool is_heap = false;
+		std::vector<std::map<std::string, Aggregation>::iterator> ordered;
+		for (auto it = _aggs.begin(); it != _aggs.end(); ++it) {
+			if (it->second.doc_count() >= _min_doc_count) {
+				it->second.update();
+				ordered.push_back(it);
+				if (ordered.size() > _limit) {
+					if (is_heap) {
+						std::push_heap(ordered.begin(), ordered.end(), cmp);
+					} else {
+						std::make_heap(ordered.begin(), ordered.end(), cmp);
+						is_heap = true;
+					}
+					std::pop_heap(ordered.begin(), ordered.end(), cmp);
+					ordered.pop_back();
+				}
+			}
+		}
+		if (is_heap) {
+			std::sort_heap(ordered.begin(), ordered.end(), cmp);
+		} else {
+			std::sort(ordered.begin(), ordered.end(), cmp);
+		}
+
+		MsgPack result(MsgPack::Type::MAP);
+		for (auto& agg : ordered) {
+			result[agg->first] = agg->second.get_aggregation();
+		}
+		return result;
+	}
+
+	Sort _conf_sort() {
+		const auto& conf = this->_conf;
+		auto it = conf.find(AGGREGATION_SORT);
+		if (it != conf.end()) {
+			const auto& value = it.value();
+			switch (value.getType()) {
+				case MsgPack::Type::STR: {
+					auto str = value.str_view();
+					if (str == AGGREGATION_DOC_COUNT) {
+						return Sort::by_count_asc;
+					}
+					if (str == AGGREGATION_KEY) {
+						return Sort::by_key_asc;
+					}
+					THROW(AggregationError, "'%s' must be either '%s' or '%s'", AGGREGATION_SORT, AGGREGATION_DOC_COUNT, AGGREGATION_KEY);
+				}
+
+				case MsgPack::Type::MAP: {
+					it = value.find(AGGREGATION_DOC_COUNT);
+					if (it != value.end()) {
+						const auto& count = it.value();
+						switch (count.getType()) {
+							case MsgPack::Type::STR: {
+								auto order_str = count.str_view();
+								if (order_str == "desc") {
+									return Sort::by_count_desc;
+								}
+								if (order_str == "asc") {
+									return Sort::by_count_asc;
+								}
+								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", AGGREGATION_SORT, AGGREGATION_DOC_COUNT);
+							}
+							case MsgPack::Type::MAP: {
+								it = count.find(AGGREGATION_ORDER);
+								if (it != count.end()) {
+									const auto& order = it.value();
+									switch (order.getType()) {
+										case MsgPack::Type::STR: {
+											auto order_str = order.str_view();
+											if (order_str == "desc") {
+												return Sort::by_count_desc;
+											}
+											if (order_str == "asc") {
+												return Sort::by_count_asc;
+											}
+											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", AGGREGATION_SORT, AGGREGATION_DOC_COUNT, AGGREGATION_ORDER);
+										}
+										default:
+											THROW(AggregationError, "'%s.%s.%s' must be a string", AGGREGATION_SORT, AGGREGATION_DOC_COUNT, AGGREGATION_ORDER);
+									}
+									break;
+								}
+								THROW(AggregationError, "'%s.%s' must contain '%s'", AGGREGATION_SORT, AGGREGATION_DOC_COUNT, AGGREGATION_ORDER);
+							}
+							default:
+								THROW(AggregationError, "'%s.%s' must be a string or an object", AGGREGATION_SORT, AGGREGATION_DOC_COUNT);
+						}
+					}
+
+					it = value.find(AGGREGATION_KEY);
+					if (it != value.end()) {
+						const auto& key = it.value();
+						switch (key.getType()) {
+							case MsgPack::Type::STR: {
+								auto order_str = key.str_view();
+								if (order_str == "desc") {
+									return Sort::by_key_desc;
+								}
+								if (order_str == "asc") {
+									return Sort::by_key_asc;
+								}
+								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", AGGREGATION_SORT, AGGREGATION_KEY);
+							}
+							case MsgPack::Type::MAP: {
+								it = key.find(AGGREGATION_ORDER);
+								if (it != key.end()) {
+									const auto& order = it.value();
+									switch (order.getType()) {
+										case MsgPack::Type::STR: {
+											auto order_str = order.str_view();
+											if (order_str == "desc") {
+												return Sort::by_key_desc;
+											}
+											if (order_str == "asc") {
+												return Sort::by_key_asc;
+											}
+											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", AGGREGATION_SORT, AGGREGATION_KEY, AGGREGATION_ORDER);
+										}
+										default:
+											THROW(AggregationError, "'%s.%s.%s' must be a string", AGGREGATION_SORT, AGGREGATION_KEY, AGGREGATION_ORDER);
+									}
+									break;
+								}
+								THROW(AggregationError, "'%s.%s' must contain '%s'", AGGREGATION_SORT, AGGREGATION_KEY, AGGREGATION_ORDER);
+							}
+							default:
+								THROW(AggregationError, "'%s.%s' must be a string or an object", AGGREGATION_SORT, AGGREGATION_KEY);
+						}
+					}
+
+					THROW(AggregationError, "'%s' must contain either '%s' or '%s'", AGGREGATION_SORT, AGGREGATION_DOC_COUNT, AGGREGATION_KEY);
+				}
+				default:
+					THROW(AggregationError, "'%s' must be a string or an object", AGGREGATION_SORT);
+			}
+		}
+
+		return Sort::by_count_desc;
+	}
+
+	size_t _conf_limit() {
+		const auto& conf = this->_conf;
+		auto it = conf.find(AGGREGATION_LIMIT);
+		if (it != conf.end()) {
+			const auto& value = it.value();
+			switch (value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER: {
+					auto val = value.as_i64();
+					if (val >= 0) {
+						return val;
+					}
+				}
+				default:
+					THROW(AggregationError, "'%s' must be a positive integer", AGGREGATION_LIMIT);
+			}
+		}
+
+		return 10;
+	}
+
+	size_t _conf_min_doc_count() {
+		const auto& conf = this->_conf;
+		auto it = conf.find(AGGREGATION_MIN_DOC_COUNT);
+		if (it != conf.end()) {
+			const auto& value = it.value();
+			switch (value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER: {
+					auto val = value.as_i64();
+					if (val >= 0) {
+						return val;
+					}
+				}
+				default:
+					THROW(AggregationError, "'%s' must be a positive number", AGGREGATION_MIN_DOC_COUNT);
+			}
+		}
+
+		return 1;
+	}
 
 public:
 	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<Handler>(context, name, schema),
 		  _schema(schema),
-		  _context(context) { }
+		  _context(context),
+		  _sort(_conf_sort()),
+		  _limit(_conf_limit()),
+		  _min_doc_count(_conf_min_doc_count()) { }
 
 	MsgPack get_aggregation() override {
-		MsgPack result(MsgPack::Type::MAP);
-		for (auto& _agg : _aggs) {
-			result[_agg.first] = _agg.second.get_aggregation();
+		switch (_sort) {
+			case Sort::by_key_asc:
+				L_RED("Sort::by_key_asc");
+				return _get_aggregation<CmpByKeyAsc>();
+			case Sort::by_key_desc:
+				L_RED("Sort::by_key_desc");
+				return _get_aggregation<CmpByKeyDesc>();
+			case Sort::by_count_asc:
+				L_RED("Sort::by_count_asc");
+				return _get_aggregation<CmpByCountAsc>();
+			case Sort::by_count_desc:
+				L_RED("Sort::by_count_desc");
+				return _get_aggregation<CmpByCountDesc>();
 		}
-		return result;
 	}
 
 	auto& add(std::string_view bucket) {

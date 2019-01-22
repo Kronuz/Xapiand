@@ -50,7 +50,13 @@ public:
 
 	void operator()(const Xapian::Document& doc);
 
+	void update();
+
 	MsgPack get_aggregation();
+
+	size_t doc_count() const {
+		return _doc_count;
+	}
 
 	template <typename MetricAggregation, typename... Args>
 	void add_metric(std::string_view name, Args&&... args) {
@@ -111,6 +117,7 @@ public:
 	std::string get_description() const override;
 
 	const auto& get_aggregation() noexcept {
+		_aggregation.update();
 		_result[AGGREGATION_AGGREGATIONS] = _aggregation.get_aggregation();
 		return _result;
 	}

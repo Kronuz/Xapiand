@@ -206,7 +206,16 @@ Aggregation::operator()(const Xapian::Document& doc)
 	for (auto& sub_agg : _sub_aggregations) {
 		(*sub_agg.second)(doc);
 	}
-};
+}
+
+
+void
+Aggregation::update()
+{
+	for (auto& sub_agg : _sub_aggregations) {
+		sub_agg.second->update();
+	}
+}
 
 
 MsgPack
