@@ -419,14 +419,39 @@ public:
 		}
 	}
 
+	BaseAggregation* get_agg(std::string_view field) override {
+		auto it = _aggs.find(std::string(field));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
+		if (it != _aggs.end()) {
+			return &it->second;
+		}
+		return nullptr;
+	}
+
 	auto& add(std::string_view bucket) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
 			return it->second;
 		}
+
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
 			std::forward_as_tuple(_context, _schema));
+
+		// Find and store the Aggregation the value should be recovered from:
+		if (!_fields.empty()) {
+			BaseAggregation* agg = this;
+			for (const auto& field : _fields) {
+				if (emplaced.first->second.value_fn) {
+					THROW(AggregationError, "Bad field!");
+				}
+				auto agg_ = agg->get_agg(field);
+				if (!agg_) {
+					emplaced.first->second.value_fn = agg->get_value_func(field);
+				}
+			}
+			THROW(AggregationError, "Bad field!");
+		}
+
 		return emplaced.first->second;
 	}
 

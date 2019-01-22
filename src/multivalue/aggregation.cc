@@ -34,13 +34,15 @@
 
 
 Aggregation::Aggregation()
-	: _doc_count(0)
+	: _doc_count(0),
+	  value_fn(nullptr)
 {
 }
 
 
 Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& schema)
-	: _doc_count(0)
+	: _doc_count(0),
+	  value_fn(nullptr)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(AGGREGATION_COUNT),
@@ -228,6 +230,17 @@ Aggregation::get_result()
 		result[sub_agg.first] = sub_agg.second->get_result();
 	}
 	return result;
+}
+
+
+BaseAggregation*
+Aggregation::get_agg(std::string_view field)
+{
+	auto it = _sub_aggs.find(field);  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
+	if (it != _sub_aggs.end()) {
+		return it->second.get();
+	}
+	return nullptr;
 }
 
 

@@ -89,7 +89,11 @@ constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
 constexpr const char AGGREGATION_LIMIT[]            = "_limit";
 
 
+class BaseAggregation;
 class Schema;
+
+
+typedef long double (BaseAggregation::* value_func)();
 
 
 class BaseAggregation {
@@ -101,6 +105,14 @@ public:
 	virtual void update() { }
 
 	virtual MsgPack get_result() = 0;
+
+	virtual BaseAggregation* get_agg(std::string_view) {
+		return nullptr;
+	}
+
+	virtual value_func get_value_func(std::string_view) {
+		return nullptr;
+	}
 };
 
 
@@ -110,7 +122,9 @@ class Aggregation : public BaseAggregation {
 	std::map<std::string_view, std::unique_ptr<BaseAggregation>> _sub_aggs;
 
 public:
-	explicit Aggregation();
+	value_func value_fn;
+
+	Aggregation();
 
 	Aggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
@@ -119,6 +133,8 @@ public:
 	void update() override;
 
 	MsgPack get_result() override;
+
+	BaseAggregation* get_agg(std::string_view field) override;
 
 	size_t doc_count() const {
 		return _doc_count;
