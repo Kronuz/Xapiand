@@ -287,9 +287,9 @@ public:
 		  _count(0) { }
 
 	MsgPack get_aggregation() override {
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_COUNT] = _count;
-		return result;
+		return {
+			{ AGGREGATION_COUNT, _count },
+		};
 	}
 
 	void _aggregate() {
@@ -348,9 +348,9 @@ public:
 		  _sum(0) { }
 
 	MsgPack get_aggregation() override {
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_SUM] = static_cast<double>(_sum);
-		return result;
+		return {
+			{ AGGREGATION_SUM, static_cast<double>(_sum) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -394,9 +394,9 @@ public:
 
 	MsgPack get_aggregation() override {
 		auto _avg = avg();
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_AVG] = static_cast<double>(_avg);
-		return result;
+		return {
+			{ AGGREGATION_AVG, static_cast<double>(_avg) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -455,9 +455,9 @@ public:
 		  _min(std::numeric_limits<long double>::max()) { }
 
 	MsgPack get_aggregation() override {
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_MIN] = static_cast<double>(_min);
-		return result;
+		return {
+			{ AGGREGATION_MIN, static_cast<double>(_min) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -509,9 +509,9 @@ public:
 		  _max(std::numeric_limits<long double>::min()) { }
 
 	MsgPack get_aggregation() override {
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_MAX] = static_cast<double>(_max);
-		return result;
+		return {
+			{ AGGREGATION_MAX, static_cast<double>(_max) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -557,9 +557,9 @@ public:
 
 	MsgPack get_aggregation() override {
 		auto _variance = variance();
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_VARIANCE] = static_cast<double>(_variance);
-		return result;
+		return {
+			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -628,13 +628,13 @@ public:
 	MsgPack get_aggregation() override {
 		auto _std = std();
 		auto _avg = avg();
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_STD] = static_cast<double>(_std);
-		result[AGGREGATION_STD_BOUNDS] = {
-			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
-			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+		return {
+			{ AGGREGATION_STD, static_cast<double>(_std) },
+			{ AGGREGATION_STD_BOUNDS, {
+				{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
+				{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+			}},
 		};
-		return result;
 	}
 
 	long double std() const {
@@ -666,9 +666,9 @@ public:
 				_median = static_cast<double>(values[median_pos]);
 			}
 		}
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_MEDIAN] = _median;
-		return result;
+		return {
+			{ AGGREGATION_MEDIAN, _median },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -714,9 +714,9 @@ public:
 			auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
 			_mode = static_cast<double>(it->first);
 		}
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_MODE] = _mode;
-		return result;
+		return {
+			{ AGGREGATION_MODE, _mode },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -762,13 +762,13 @@ public:
 
 	MsgPack get_aggregation() override {
 		auto _avg = avg();
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_COUNT] = _count;
-		result[AGGREGATION_MIN] = static_cast<double>(_min_metric._min);
-		result[AGGREGATION_MAX] = static_cast<double>(_max_metric._max);
-		result[AGGREGATION_AVG] = static_cast<double>(_avg);
-		result[AGGREGATION_SUM] = static_cast<double>(_sum);
-		return result;
+		return {
+			{ AGGREGATION_COUNT, _count },
+			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
+			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
+			{ AGGREGATION_AVG, static_cast<double>(_avg) },
+			{ AGGREGATION_SUM, static_cast<double>(_sum) },
+		};
 	}
 
 	void _aggregate(long double value) {
@@ -818,20 +818,20 @@ public:
 		auto _std = std();
 		auto _avg = avg();
 		auto _variance = variance();
-		MsgPack result(MsgPack::Type::MAP);
-		result[AGGREGATION_COUNT] = _count;
-		result[AGGREGATION_MIN] = static_cast<double>(_min_metric._min);
-		result[AGGREGATION_MAX] = static_cast<double>(_max_metric._max);
-		result[AGGREGATION_AVG] = static_cast<double>(_avg);
-		result[AGGREGATION_SUM] = static_cast<double>(_sum);
-		result[AGGREGATION_SUM_OF_SQ] = static_cast<double>(_sq_sum);
-		result[AGGREGATION_VARIANCE] = static_cast<double>(_variance);
-		result[AGGREGATION_STD] = static_cast<double>(_std);
-		result[AGGREGATION_STD_BOUNDS] = {
-			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
-			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+		return {
+			{ AGGREGATION_COUNT, _count },
+			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
+			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
+			{ AGGREGATION_AVG, static_cast<double>(_avg) },
+			{ AGGREGATION_SUM, static_cast<double>(_sum) },
+			{ AGGREGATION_SUM_OF_SQ, static_cast<double>(_sq_sum) },
+			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
+			{ AGGREGATION_STD, static_cast<double>(_std) },
+			{ AGGREGATION_STD_BOUNDS, {
+				{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
+				{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+			}},
 		};
-		return result;
 	}
 
 	void _aggregate(long double value) {
