@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -158,7 +158,7 @@ bool build_path(std::string_view path) {
 	if (exists(path)) {
 		return true;
 	}
-	Split<char> directories(path, '/');
+	Split<> directories(path, '/');
 	std::string dir;
 	dir.reserve(path.size());
 	if (path.front() == '/') {

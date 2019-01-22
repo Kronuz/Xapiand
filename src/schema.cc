@@ -2359,7 +2359,7 @@ Schema::get_properties(std::string_view full_meta_name)
 	L_CALL("Schema::get_properties(%s)", repr(full_meta_name));
 
 	const MsgPack* prop = &get_properties();
-	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
+	Split<> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop).at(field_name);
 	}
@@ -2373,7 +2373,7 @@ Schema::get_mutable_properties(std::string_view full_meta_name)
 	L_CALL("Schema::get_mutable_properties(%s)", repr(full_meta_name));
 
 	MsgPack* prop = &get_mutable_properties();
-	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
+	Split<> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop)[field_name];
 	}
@@ -2387,7 +2387,7 @@ Schema::get_newest_properties(std::string_view full_meta_name)
 	L_CALL("Schema::get_newest_properties(%s)", repr(full_meta_name));
 
 	const MsgPack* prop = &get_newest_properties();
-	Split<char> field_names(full_meta_name, DB_OFFSPRING_UNION);
+	Split<> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
 		prop = &(*prop).at(field_name);
 	}
@@ -2654,7 +2654,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 {
 	L_CALL("Schema::index_subproperties(%s, %s, %s, %s, <fields>, %zu)", repr(properties->to_string()), repr(data->to_string()), repr(name), repr(object.to_string()), pos);
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -2800,7 +2800,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 {
 	L_CALL("Schema::index_subproperties(%s, %s, %s, %zu)", repr(properties->to_string()), repr(data->to_string()), repr(name), pos);
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -3345,7 +3345,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 {
 	L_CALL("Schema::update_subproperties(%s, %s, %s, <fields>)", repr(properties->to_string()), repr(name), repr(object.to_string()));
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -3436,7 +3436,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 {
 	L_CALL("Schema::update_subproperties(%s, %s)", repr(properties->to_string()), repr(name));
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -3788,7 +3788,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 {
 	L_CALL("Schema::write_subproperties(%s, %s, %s, <fields>)", repr(mut_properties->to_string()), repr(name), repr(object.to_string()));
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -3877,7 +3877,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 {
 	L_CALL("Schema::write_subproperties(%s, %s)", repr(mut_properties->to_string()), repr(name));
 
-	Split<char> field_names(name, DB_OFFSPRING_UNION);
+	Split<> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
 	ASSERT(it != field_names.end());
@@ -9277,7 +9277,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 {
 	L_CALL("Schema::get_dynamic_subproperties(%s, %s)", repr(properties.to_string()), repr(full_name));
 
-	Split<char> field_names(full_name, DB_OFFSPRING_UNION);
+	Split<> field_names(full_name, DB_OFFSPRING_UNION);
 
 	dynamic_spc_t spc(&properties);
 
