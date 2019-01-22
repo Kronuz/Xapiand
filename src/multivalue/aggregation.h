@@ -107,7 +107,7 @@ public:
 class Aggregation : public BaseAggregation {
 	size_t _doc_count;
 
-	std::vector<std::pair<std::string_view, std::unique_ptr<BaseAggregation>>> _sub_aggs;
+	std::map<std::string_view, std::unique_ptr<BaseAggregation>> _sub_aggs;
 
 public:
 	explicit Aggregation();
@@ -126,12 +126,12 @@ public:
 
 	template <typename MetricAggregation, typename... Args>
 	void add_metric(std::string_view name, Args&&... args) {
-		_sub_aggs.push_back(std::make_pair(name, std::make_unique<MetricAggregation>(std::forward<Args>(args)...)));
+		_sub_aggs[name] = std::make_unique<MetricAggregation>(std::forward<Args>(args)...);
 	}
 
 	template <typename BucketAggregation, typename... Args>
 	void add_bucket(std::string_view name, Args&&... args) {
-		_sub_aggs.push_back(std::make_pair(name, std::make_unique<BucketAggregation>(std::forward<Args>(args)...)));
+		_sub_aggs[name] = std::make_unique<BucketAggregation>(std::forward<Args>(args)...);
 	}
 };
 
