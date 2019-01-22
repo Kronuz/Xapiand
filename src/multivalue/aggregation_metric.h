@@ -225,7 +225,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _count(0) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_COUNT, _count },
 		};
@@ -286,7 +286,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _sum(0) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_SUM, static_cast<double>(_sum) },
 		};
@@ -334,7 +334,7 @@ public:
 		  _count(0),
 		  _avg(0) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_AVG, static_cast<double>(_avg) },
 		};
@@ -395,7 +395,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _min(std::numeric_limits<long double>::max()) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_MIN, static_cast<double>(_min) },
 		};
@@ -449,7 +449,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _max(std::numeric_limits<long double>::min()) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_MAX, static_cast<double>(_max) },
 		};
@@ -498,7 +498,7 @@ public:
 		  _sq_sum(0),
 		  _variance(0) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
 		};
@@ -569,7 +569,7 @@ public:
 		}
 	}
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_STD, static_cast<double>(_std) },
 			{ AGGREGATION_STD_BOUNDS, {
@@ -593,7 +593,7 @@ public:
 	MetricMedian(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		double _median = 0.0;
 		if (!values.empty()) {
 			size_t median_pos = values.size();
@@ -651,7 +651,7 @@ public:
 	MetricMode(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		double _mode = 0.0;
 		if (!_histogram.empty()) {
 			auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
@@ -703,7 +703,7 @@ public:
 		  _min_metric(_conf, schema),
 		  _max_metric(_conf, schema) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_COUNT, _count },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
@@ -756,7 +756,7 @@ public:
 		  _min_metric(_conf, schema),
 		  _max_metric(_conf, schema) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		return {
 			{ AGGREGATION_COUNT, _count },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },

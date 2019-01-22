@@ -194,7 +194,7 @@ private:
 
 		MsgPack result(MsgPack::Type::MAP);
 		for (auto& agg : ordered) {
-			result[agg->first] = agg->second.get_aggregation();
+			result[agg->first] = agg->second.get_result();
 		}
 		return result;
 	}
@@ -407,7 +407,7 @@ public:
 		  _limit(_conf_limit()),
 		  _min_doc_count(_conf_min_doc_count()) { }
 
-	MsgPack get_aggregation() override {
+	MsgPack get_result() override {
 		switch (_sort) {
 			case Sort::by_key_asc:
 				return _get_aggregation<CmpByKeyAsc>();
@@ -937,7 +937,7 @@ public:
 		(this->*func)(doc);
 	}
 
-	MsgPack get_aggregation() override;
+	MsgPack get_result() override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

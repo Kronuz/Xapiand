@@ -100,7 +100,7 @@ public:
 
 	virtual void update() { }
 
-	virtual MsgPack get_aggregation() = 0;
+	virtual MsgPack get_result() = 0;
 };
 
 
@@ -118,7 +118,7 @@ public:
 
 	void update() override;
 
-	MsgPack get_aggregation() override;
+	MsgPack get_result() override;
 
 	size_t doc_count() const {
 		return _doc_count;
@@ -184,7 +184,7 @@ public:
 
 	const auto& get_aggregation() noexcept {
 		_aggregation.update();
-		_result[AGGREGATION_AGGREGATIONS] = _aggregation.get_aggregation();
+		_result[AGGREGATION_AGGREGATIONS] = _aggregation.get_result();
 		return _result;
 	}
 };

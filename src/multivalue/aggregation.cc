@@ -219,13 +219,13 @@ Aggregation::update()
 
 
 MsgPack
-Aggregation::get_aggregation()
+Aggregation::get_result()
 {
 	MsgPack result = {
 		{ AGGREGATION_DOC_COUNT, _doc_count },
 	};
 	for (auto& sub_agg : _sub_aggs) {
-		result[sub_agg.first] = sub_agg.second->get_aggregation();
+		result[sub_agg.first] = sub_agg.second->get_result();
 	}
 	return result;
 }
