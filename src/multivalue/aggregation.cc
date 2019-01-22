@@ -210,12 +210,12 @@ Aggregation::operator()(const Xapian::Document& doc)
 
 
 MsgPack
-Aggregation::update()
+Aggregation::get_aggregation()
 {
 	MsgPack result(MsgPack::Type::MAP);
 	result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 	for (auto& sub_agg : _sub_aggregations) {
-		result[sub_agg.first] = sub_agg.second->update();
+		result[sub_agg.first] = sub_agg.second->get_aggregation();
 	}
 	return result;
 }

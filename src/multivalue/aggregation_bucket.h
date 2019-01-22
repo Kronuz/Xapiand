@@ -60,10 +60,10 @@ public:
 		  _schema(schema),
 		  _context(context) { }
 
-	MsgPack update() override {
+	MsgPack get_aggregation() override {
 		MsgPack result(MsgPack::Type::MAP);
 		for (auto& _agg : _aggs) {
-			result[_agg.first] = std::move(_agg.second.update());
+			result[_agg.first] = _agg.second.get_aggregation();
 		}
 		return result;
 	}
@@ -581,7 +581,7 @@ public:
 		(this->*func)(doc);
 	}
 
-	MsgPack update() override;
+	MsgPack get_aggregation() override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);
