@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,26 +26,27 @@
 #include "string_view.hh"        // for std::string_view
 
 
-template <typename T=char>
+template <typename S = std::string, typename T = char>
 class Split {
-	using dispatch_search = std::string::size_type (Split::*)(std::string::size_type) const;
+	using size_type = typename S::size_type;
+	using dispatch_search = size_type (Split::*)(size_type) const;
 
-	std::string str;
+	S str;
 	T sep;
 	bool skip_blank;
 	size_t inc;
 
 	dispatch_search search_func;
 
-	std::string::size_type find(std::string::size_type pos=0) const noexcept {
+	size_type find(size_type pos=0) const noexcept {
 		return str.find(sep, pos);
 	}
 
-	std::string::size_type find_first_of(std::string::size_type pos=0) const noexcept {
+	size_type find_first_of(size_type pos=0) const noexcept {
 		return str.find_first_of(sep, pos);
 	}
 
-	std::string::size_type next(std::string::size_type pos=0) const noexcept {
+	size_type next(size_type pos=0) const noexcept {
 		return (this->*search_func)(pos);
 	}
 
@@ -54,44 +55,44 @@ class Split {
 		friend class Split;
 
 		const Split* split;
-		std::string::size_type start;
-		std::string::size_type end;
-		mutable std::string value;
+		size_type start;
+		size_type end;
+		mutable S value;
 		size_t inc;
 
-		Iterator(const Split* split_, std::string::size_type pos_=0)
+		Iterator(const Split* split_, size_type pos_=0)
 			: split(split_),
 			  start(pos_),
 			  end(pos_),
 			  inc(0)
 		{
-			if (end != std::string::npos) {
+			if (end != S::npos) {
 				do {
 					start = end + inc;
 					if (start == split->str.size()) {
-						start = std::string::npos;
-						end = std::string::npos;
+						start = S::npos;
+						end = S::npos;
 						return;
 					}
 					end = split->next(start);
 					inc = split->inc;
-				} while (split->skip_blank && start == end && end != std::string::npos);
+				} while (split->skip_blank && start == end && end != S::npos);
 			}
 		}
 
 		void next() {
-			if (end == std::string::npos) {
-				start = std::string::npos;
+			if (end == S::npos) {
+				start = S::npos;
 			} else {
 				do {
 					start = end + inc;
 					if (start == split->str.size()) {
-						start = std::string::npos;
-						end = std::string::npos;
+						start = S::npos;
+						end = S::npos;
 						return;
 					}
 					end = split->next(start);
-				} while (split->skip_blank && start == end && end != std::string::npos);
+				} while (split->skip_blank && start == end && end != S::npos);
 			}
 		}
 
@@ -108,19 +109,19 @@ class Split {
 		}
 
 		Value& operator*() const {
-			if (end == std::string::npos) {
-				value.assign(split->str.substr(start));
+			if (end == S::npos) {
+				value = split->str.substr(start);
 			} else {
-				value.assign(split->str.substr(start, end - start));
+				value = split->str.substr(start, end - start);
 			}
 			return value;
 		}
 
 		Value& operator*() {
-			if (end == std::string::npos) {
-				value.assign(split->str.substr(start));
+			if (end == S::npos) {
+				value = split->str.substr(start);
 			} else {
-				value.assign(split->str.substr(start, end - start));
+				value = split->str.substr(start, end - start);
 			}
 			return value;
 		}
@@ -142,11 +143,11 @@ class Split {
 		}
 
 		explicit operator bool() const noexcept {
-			return start != std::string::npos;
+			return start != S::npos;
 		}
 
 		bool last() const noexcept {
-			return end == std::string::npos;
+			return end == S::npos;
 		}
 	};
 
@@ -158,7 +159,9 @@ public:
 		SKIP_BLANK_FIND_FIRST_OF,
 	};
 
-	template <typename String, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<String>>::value && std::is_same<T, std::decay_t<String>>::value>>
+	Split() = default;
+
+	template <typename String, typename = std::enable_if_t<std::is_same<S, std::decay_t<String>>::value && std::is_same<T, std::decay_t<String>>::value>>
 	Split(String&& str_, String&& sep_, Type type=Type::FIND)
 		: str(std::forward<String>(str_)),
 		  sep(std::forward<String>(sep_)),
@@ -210,8 +213,8 @@ public:
 		}
 	}
 
-	using iterator = Iterator<std::string>;
-	using const_iterator = Iterator<const std::string>;
+	using iterator = Iterator<S>;
+	using const_iterator = Iterator<const S>;
 
 	iterator begin() {
 		return iterator(this);
@@ -226,15 +229,15 @@ public:
 	}
 
 	iterator end() {
-		return iterator(this, std::string::npos);
+		return iterator(this, S::npos);
 	}
 
 	const_iterator end() const {
-		return const_iterator(this, std::string::npos);
+		return const_iterator(this, S::npos);
 	}
 
 	const_iterator cend() const {
-		return const_iterator(this, std::string::npos);
+		return const_iterator(this, S::npos);
 	}
 
 	size_t size() const noexcept {
@@ -249,7 +252,7 @@ public:
 	static void split(std::string_view str, std::string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
-		while ((next = str.find(delimiter, prev)) != std::string::npos) {
+		while ((next = str.find(delimiter, prev)) != S::npos) {
 			size_t len = next - prev;
 			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
@@ -267,7 +270,7 @@ public:
 	static void split(std::string_view str, char delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
-		while ((next = str.find(delimiter, prev)) != std::string::npos) {
+		while ((next = str.find(delimiter, prev)) != S::npos) {
 			size_t len = next - prev;
 			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
@@ -285,7 +288,7 @@ public:
 	static void split_first_of(std::string_view str, std::string_view delimiter, OutputIt d_first, bool skip_blank=true) {
 		size_t prev = 0, next = 0;
 
-		while ((next = str.find_first_of(delimiter, prev)) != std::string::npos) {
+		while ((next = str.find_first_of(delimiter, prev)) != S::npos) {
 			size_t len = next - prev;
 			if (!skip_blank || len > 0) {
 				*d_first = str.substr(prev, len);
