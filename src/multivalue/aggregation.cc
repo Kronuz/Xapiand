@@ -203,7 +203,7 @@ void
 Aggregation::operator()(const Xapian::Document& doc)
 {
 	++_doc_count;
-	for (auto& sub_agg : _sub_aggregations) {
+	for (auto& sub_agg : _sub_aggs) {
 		(*sub_agg.second)(doc);
 	}
 }
@@ -212,7 +212,7 @@ Aggregation::operator()(const Xapian::Document& doc)
 void
 Aggregation::update()
 {
-	for (auto& sub_agg : _sub_aggregations) {
+	for (auto& sub_agg : _sub_aggs) {
 		sub_agg.second->update();
 	}
 }
@@ -224,7 +224,7 @@ Aggregation::get_aggregation()
 	MsgPack result = {
 		{ AGGREGATION_DOC_COUNT, _doc_count },
 	};
-	for (auto& sub_agg : _sub_aggregations) {
+	for (auto& sub_agg : _sub_aggs) {
 		result[sub_agg.first] = sub_agg.second->get_aggregation();
 	}
 	return result;

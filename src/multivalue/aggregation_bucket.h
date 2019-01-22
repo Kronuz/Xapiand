@@ -923,7 +923,7 @@ public:
 };
 
 
-class FilterAggregation : public SubAggregation {
+class FilterAggregation : public BaseAggregation {
 	using func_filter = void (FilterAggregation::*)(const Xapian::Document&);
 
 	std::vector<std::pair<Xapian::valueno, std::set<std::string>>> _filters;

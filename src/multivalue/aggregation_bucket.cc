@@ -32,8 +32,7 @@
 
 
 FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-	: SubAggregation(),
-	  _agg(context, schema)
+	: _agg(context, schema)
 {
 	if (!context.is_map()) {
 		THROW(AggregationError, "%s must be object", repr(context.to_string()));

@@ -90,24 +90,35 @@ constexpr const char AGGREGATION_LIMIT[]            = "_limit";
 
 
 class Schema;
-class SubAggregation;
 
 
-class Aggregation {
+class BaseAggregation {
+public:
+	virtual ~BaseAggregation() = default;
+
+	virtual void operator()(const Xapian::Document&) = 0;
+
+	virtual void update() { }
+
+	virtual MsgPack get_aggregation() = 0;
+};
+
+
+class Aggregation : public BaseAggregation {
 	size_t _doc_count;
 
-	std::vector<std::pair<std::string_view, std::unique_ptr<SubAggregation>>> _sub_aggregations;
+	std::vector<std::pair<std::string_view, std::unique_ptr<BaseAggregation>>> _sub_aggs;
 
 public:
 	explicit Aggregation();
 
 	Aggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
-	void operator()(const Xapian::Document& doc);
+	void operator()(const Xapian::Document& doc) override;
 
-	void update();
+	void update() override;
 
-	MsgPack get_aggregation();
+	MsgPack get_aggregation() override;
 
 	size_t doc_count() const {
 		return _doc_count;
@@ -115,12 +126,12 @@ public:
 
 	template <typename MetricAggregation, typename... Args>
 	void add_metric(std::string_view name, Args&&... args) {
-		_sub_aggregations.push_back(std::make_pair(name, std::make_unique<MetricAggregation>(std::forward<Args>(args)...)));
+		_sub_aggs.push_back(std::make_pair(name, std::make_unique<MetricAggregation>(std::forward<Args>(args)...)));
 	}
 
 	template <typename BucketAggregation, typename... Args>
 	void add_bucket(std::string_view name, Args&&... args) {
-		_sub_aggregations.push_back(std::make_pair(name, std::make_unique<BucketAggregation>(std::forward<Args>(args)...)));
+		_sub_aggs.push_back(std::make_pair(name, std::make_unique<BucketAggregation>(std::forward<Args>(args)...)));
 	}
 };
 

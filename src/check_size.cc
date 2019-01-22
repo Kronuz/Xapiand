@@ -276,7 +276,6 @@ CHECK_MAX_SIZE(SMALL, (FilterAggregation))
 
 // multivalue/aggregation_metric.h
 CHECK_MAX_SIZE(SMALL, (ValueHandle))
-CHECK_MAX_SIZE(SMALL, (SubAggregation))
 CHECK_MAX_SIZE(SMALL, (HandledSubAggregation))
 CHECK_MAX_SIZE(SMALL, (MetricCount))
 CHECK_MAX_SIZE(SMALL, (MetricSum))

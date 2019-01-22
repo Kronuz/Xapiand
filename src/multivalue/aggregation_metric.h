@@ -35,7 +35,7 @@
 #include <vector>                   // for std::vector
 #include <xapian.h>                 // for valueno
 
-#include "aggregation.h"            // for AGGREGATION_*
+#include "aggregation.h"            // for BaseAggregation, AGGREGATION_*
 #include "exception.h"              // for AggregationError, MSG_AggregationError
 #include "msgpack.h"                // for MsgPack, object::object
 #include "serialise_list.h"         // for StringList, RangeList
@@ -94,27 +94,15 @@ public:
 };
 
 
-class SubAggregation {
-public:
-	virtual ~SubAggregation() = default;
-
-	virtual void operator()(const Xapian::Document&) = 0;
-	virtual MsgPack get_aggregation() = 0;
-
-	virtual void update() { }
-};
-
-
 template <typename Handler>
-class HandledSubAggregation : public SubAggregation {
+class HandledSubAggregation : public BaseAggregation {
 protected:
 	Handler _handler;
 	const MsgPack& _conf;
 
 public:
 	HandledSubAggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: SubAggregation(),
-		  _handler(conf, schema),
+		: _handler(conf, schema),
 		  _conf(conf) { }
 
 	HandledSubAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
