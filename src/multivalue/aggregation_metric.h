@@ -26,14 +26,13 @@
 #include <cmath>               // for sqrt
 #include <cstdio>
 #include <cstring>             // for size_t
-#include <limits>              // for numeric_limits
-#include <memory>              // for shared_ptr, allocator
-#include <stdexcept>           // for out_of_range
-#include <string>              // for string
+#include <limits>              // for std::numeric_limits
+#include <map>                 // for std::map
+#include <memory>              // for std::shared_ptr
+#include <string>              // for std::string
 #include "string_view.hh"      // for std::string_view
-#include <unordered_map>       // for __hash_map_iterator, unordered_map
-#include <utility>             // for pair
-#include <vector>              // for vector
+#include <utility>             // for std::pair
+#include <vector>              // for std::vector
 #include <xapian.h>            // for valueno
 
 #include "exception.h"         // for AggregationError, MSG_AggregationError
@@ -702,7 +701,7 @@ public:
 
 
 class MetricMode : public HandledSubAggregation<ValuesHandler> {
-	std::unordered_map<long double, size_t> _histogram;
+	std::map<long double, size_t> _histogram;
 
 public:
 	MetricMode(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)

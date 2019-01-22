@@ -23,16 +23,15 @@
 #pragma once
 
 #include <cstdint>                          // for int64_t, uint64_t
-#include <limits>                           // for numeric_limits
+#include <limits>                           // for std::numeric_limits
+#include <map>                              // for std::map
 #include <math.h>                           // for fmodl
-#include <memory>                           // for shared_ptr, allocator
-#include <stdexcept>                        // for out_of_range
-#include <string>                           // for string, to_string, hash
+#include <memory>                           // for std::shared_ptr
+#include <string>                           // for std::string
 #include <sys/types.h>                      // for int64_t, uint64_t
-#include <tuple>                            // for forward_as_tuple
-#include <unordered_map>                    // for unordered_map, __hash_map...
-#include <utility>                          // for pair, make_pair, piecewis...
-#include <vector>                           // for vector
+#include <tuple>                            // for std::forward_as_tuple
+#include <utility>                          // for std::pair, std::make_pair
+#include <vector>                           // for std::vector
 #include <xapian.h>                         // for Document, valueno
 
 #include "aggregation.h"                    // for Aggregation
@@ -50,7 +49,7 @@ class Schema;
 template <typename Handler>
 class BucketAggregation : public HandledSubAggregation<Handler> {
 protected:
-	std::unordered_map<std::string_view, Aggregation> _aggs;
+	std::map<std::string, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
 
@@ -69,7 +68,7 @@ public:
 	}
 
 	auto& add(std::string_view bucket) {
-		auto it = _aggs.find(bucket);
+		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
 			return it->second;
 		}

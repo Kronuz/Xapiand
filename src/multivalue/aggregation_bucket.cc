@@ -22,9 +22,9 @@
 
 #include "aggregation_bucket.h"
 
-#include <algorithm>                      // for move, set_intersection
-#include <iterator>                       // for back_insert_iterator, back_...
-#include <map>                            // for __tree_const_iterator, oper...
+#include <algorithm>                      // for std::move, std::set_intersection
+#include <iterator>                       // for std::inserter
+#include <set>                            // for std::set
 
 #include "metrics/basic_string_metric.h"  // for Counter
 #include "multivalue/aggregation.h"       // for Aggregation
@@ -89,7 +89,7 @@ void
 FilterAggregation::check_single(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
-		std::unordered_set<std::string> values;
+		std::set<std::string> values;
 		StringList::unserialise(doc.get_value(filter.first), std::inserter(values, values.begin()));
 		if (values.find(*filter.second.begin()) != values.end()) {
 			return _agg(doc);
