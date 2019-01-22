@@ -54,11 +54,11 @@ Serialise::possiblyUUID(std::string_view field_value) noexcept
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
-		Split<> split(field_value, UUID_SEPARATOR_LIST);
+		Split<std::string_view> split(field_value, UUID_SEPARATOR_LIST);
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
@@ -89,11 +89,11 @@ Serialise::isUUID(std::string_view field_value) noexcept
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
-		Split<> split(field_value, UUID_SEPARATOR_LIST);
+		Split<std::string_view> split(field_value, UUID_SEPARATOR_LIST);
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
 		for (const auto& uuid : split) {
 			auto uuid_sz = uuid.size();
@@ -603,11 +603,11 @@ Serialise::uuid(std::string_view field_value)
 {
 	auto field_value_sz = field_value.size();
 	if (field_value_sz > 2) {
-		Split<> split(field_value, UUID_SEPARATOR_LIST);
+		Split<std::string_view> split(field_value, UUID_SEPARATOR_LIST);
 		if (field_value.front() == '{' && field_value.back() == '}') {
-			split = Split<>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(1, field_value_sz - 2), UUID_SEPARATOR_LIST);
 		} else if (field_value.compare(0, 9, "urn:uuid:") == 0) {
-			split = Split<>(field_value.substr(9), UUID_SEPARATOR_LIST);
+			split = Split<std::string_view>(field_value.substr(9), UUID_SEPARATOR_LIST);
 		}
 		std::string serialised;
 		for (const auto& uuid : split) {
