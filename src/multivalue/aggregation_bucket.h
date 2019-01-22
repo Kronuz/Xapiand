@@ -56,7 +56,7 @@ protected:
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
 
-	Split<std::string_view> _field;
+	Split<std::string_view> _fields;
 	enum class Sort {
 		by_key_asc,
 		by_key_desc,
@@ -135,10 +135,6 @@ private:
 			: _agg(agg) { }
 
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			for (const auto& f : _agg._field) {
-				L_BLUE("  %s", repr(f));
-			}
-
 			if (a->second.doc_count() < b->second.doc_count()) return true;
 			if (a->second.doc_count() > b->second.doc_count()) return false;
 			if (a->first > b->first) return false;
@@ -153,10 +149,6 @@ private:
 			: _agg(agg) { }
 
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			for (const auto& f : _agg._field) {
-				L_BLUE("  %s", repr(f));
-			}
-
 			if (a->second.doc_count() > b->second.doc_count()) return true;
 			if (a->second.doc_count() < b->second.doc_count()) return false;
 			if (a->first < b->first) return false;
@@ -302,16 +294,19 @@ private:
 					it = value.begin();
 					if (it != value.end()) {
 						const auto& field = it->str_view();
+						if (field.empty()) {
+							THROW(AggregationError, "'%s' must have a valid field name", AGGREGATION_SORT);
+						}
 						const auto& sorter = it.value();
 						switch (sorter.getType()) {
 							case MsgPack::Type::STR: {
 								auto order_str = sorter.str_view();
 								if (order_str == "desc") {
-									_field = Split<std::string_view>(field, '.');
+									_fields = Split<std::string_view>(field, '.');
 									return Sort::by_field_desc;
 								}
 								if (order_str == "asc") {
-									_field = Split<std::string_view>(field, '.');
+									_fields = Split<std::string_view>(field, '.');
 									return Sort::by_field_asc;
 								}
 								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", AGGREGATION_SORT, field);
@@ -324,11 +319,11 @@ private:
 										case MsgPack::Type::STR: {
 											auto order_str = order.str_view();
 											if (order_str == "desc") {
-												_field = Split<std::string_view>(field, '.');
+												_fields = Split<std::string_view>(field, '.');
 												return Sort::by_field_desc;
 											}
 											if (order_str == "asc") {
-												_field = Split<std::string_view>(field, '.');
+												_fields = Split<std::string_view>(field, '.');
 												return Sort::by_field_asc;
 											}
 											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", AGGREGATION_SORT, field, AGGREGATION_ORDER);
