@@ -146,17 +146,11 @@ public:
 
 
 class SubAggregation {
-protected:
-	MsgPack& _result;
-
 public:
-	explicit SubAggregation(MsgPack& result)
-		: _result(result) { }
-
 	virtual ~SubAggregation() = default;
 
 	virtual void operator()(const Xapian::Document&) = 0;
-	virtual void update() = 0;
+	virtual MsgPack update() = 0;
 };
 
 
@@ -167,13 +161,13 @@ protected:
 	const MsgPack& _conf;
 
 public:
-	HandledSubAggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: SubAggregation(result),
+	HandledSubAggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: SubAggregation(),
 		  _handler(conf, schema),
 		  _conf(conf) { }
 
-	HandledSubAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation(result, context.at(name), schema) { }
+	HandledSubAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation(context.at(name), schema) { }
 
 	virtual void aggregate_float(long double, const Xapian::Document&) {
 		THROW(AggregationError, "float type is not supported");
@@ -288,12 +282,14 @@ protected:
 	size_t _count;
 
 public:
-	MetricCount(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
+	MetricCount(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _count(0) { }
 
-	void update() override {
-		_result[AGGREGATION_COUNT] = _count;
+	MsgPack update() override {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_COUNT] = _count;
+		return result;
 	}
 
 	void _aggregate() {
@@ -347,12 +343,14 @@ protected:
 	long double _sum;
 
 public:
-	MetricSum(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
+	MetricSum(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _sum(0) { }
 
-	void update() override {
-		_result[AGGREGATION_SUM] = static_cast<double>(_sum);
+	MsgPack update() override {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_SUM] = static_cast<double>(_sum);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -390,12 +388,15 @@ protected:
 	size_t _count;
 
 public:
-	MetricAvg(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricSum(result, context, name, schema),
+	MetricAvg(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: MetricSum(context, name, schema),
 		  _count(0) { }
 
-	void update() override {
-		_result[AGGREGATION_AVG] = static_cast<double>(avg());
+	MsgPack update() override {
+		auto _avg = avg();
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_AVG] = static_cast<double>(_avg);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -445,16 +446,18 @@ protected:
 	long double _min;
 
 public:
-	MetricMin(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
+	MetricMin(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(conf, schema),
 		  _min(std::numeric_limits<long double>::max()) { }
 
-	MetricMin(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
+	MetricMin(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _min(std::numeric_limits<long double>::max()) { }
 
-	void update() override {
-		_result[AGGREGATION_MIN] = static_cast<double>(_min);
+	MsgPack update() override {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_MIN] = static_cast<double>(_min);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -497,16 +500,18 @@ protected:
 	long double _max;
 
 public:
-	MetricMax(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, conf, schema),
+	MetricMax(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(conf, schema),
 		  _max(std::numeric_limits<long double>::min()) { }
 
-	MetricMax(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema),
+	MetricMax(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _max(std::numeric_limits<long double>::min()) { }
 
-	void update() override {
-		_result[AGGREGATION_MAX] = static_cast<double>(_max);
+	MsgPack update() override {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_MAX] = static_cast<double>(_max);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -546,12 +551,15 @@ protected:
 	long double _sq_sum;
 
 public:
-	MetricVariance(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricAvg(result, context, name, schema),
+	MetricVariance(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: MetricAvg(context, name, schema),
 		  _sq_sum(0) { }
 
-	void update() override {
-		_result[AGGREGATION_VARIANCE] = static_cast<double>(variance());
+	MsgPack update() override {
+		auto _variance = variance();
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_VARIANCE] = static_cast<double>(_variance);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -597,8 +605,8 @@ protected:
 	long double _sigma;
 
 public:
-	MetricStdDeviation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricVariance(result, context, name, schema),
+	MetricStdDeviation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: MetricVariance(context, name, schema),
 		  _sigma{2.0} {
 		const auto it = _conf.find(AGGREGATION_SIGMA);
 		if (it != _conf.end()) {
@@ -617,14 +625,16 @@ public:
 		}
 	}
 
-	void update() override {
+	MsgPack update() override {
 		auto _std = std();
 		auto _avg = avg();
-		_result[AGGREGATION_STD] = static_cast<double>(_std);
-		_result[AGGREGATION_STD_BOUNDS] = {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_STD] = static_cast<double>(_std);
+		result[AGGREGATION_STD_BOUNDS] = {
 			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
 			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
 		};
+		return result;
 	}
 
 	long double std() const {
@@ -637,26 +647,28 @@ class MetricMedian : public HandledSubAggregation<ValuesHandler> {
 	std::vector<long double> values;
 
 public:
-	MetricMedian(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema) { }
+	MetricMedian(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
 
-	void update() override {
-		if (values.empty()) {
-			_result[AGGREGATION_MEDIAN] = 0.0;
-			return;
+	MsgPack update() override {
+		double _median = 0.0;
+		if (!values.empty()) {
+			size_t median_pos = values.size();
+			if (median_pos % 2 == 0) {
+				median_pos /= 2;
+				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
+				auto val1 = values[median_pos];
+				std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
+				_median = static_cast<double>((val1 + values[median_pos - 1]) / 2);
+			} else {
+				median_pos /= 2;
+				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
+				_median = static_cast<double>(values[median_pos]);
+			}
 		}
-		size_t median_pos = values.size();
-		if (median_pos % 2 == 0) {
-			median_pos /= 2;
-			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-			auto val1 = values[median_pos];
-			std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
-			_result[AGGREGATION_MEDIAN] = static_cast<double>((val1 + values[median_pos - 1]) / 2);
-		} else {
-			median_pos /= 2;
-			std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-			_result[AGGREGATION_MEDIAN] = static_cast<double>(values[median_pos]);
-		}
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_MEDIAN] = _median;
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -693,16 +705,18 @@ class MetricMode : public HandledSubAggregation<ValuesHandler> {
 	std::unordered_map<long double, size_t> _histogram;
 
 public:
-	MetricMode(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(result, context, name, schema) { }
+	MetricMode(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
 
-	void update() override {
-		if (_histogram.empty()) {
-			_result[AGGREGATION_MODE] = 0.0;
-			return;
+	MsgPack update() override {
+		double _mode = 0.0;
+		if (!_histogram.empty()) {
+			auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
+			_mode = static_cast<double>(it->first);
 		}
-		auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
-		_result[AGGREGATION_MODE] = static_cast<double>(it->first);
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_MODE] = _mode;
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -741,17 +755,20 @@ protected:
 	MetricMax _max_metric;
 
 public:
-	MetricStats(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricAvg(result, context, name, schema),
-		  _min_metric(_result, _conf, schema),
-		  _max_metric(_result, _conf, schema) { }
+	MetricStats(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: MetricAvg(context, name, schema),
+		  _min_metric(_conf, schema),
+		  _max_metric(_conf, schema) { }
 
-	void update() override {
-		_result[AGGREGATION_COUNT] = _count;
-		_result[AGGREGATION_MIN]   = static_cast<double>(_min_metric._min);
-		_result[AGGREGATION_MAX]   = static_cast<double>(_max_metric._max);
-		_result[AGGREGATION_AVG]   = static_cast<double>(avg());
-		_result[AGGREGATION_SUM]   = static_cast<double>(_sum);
+	MsgPack update() override {
+		auto _avg = avg();
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_COUNT] = _count;
+		result[AGGREGATION_MIN] = static_cast<double>(_min_metric._min);
+		result[AGGREGATION_MAX] = static_cast<double>(_max_metric._max);
+		result[AGGREGATION_AVG] = static_cast<double>(_avg);
+		result[AGGREGATION_SUM] = static_cast<double>(_sum);
+		return result;
 	}
 
 	void _aggregate(long double value) {
@@ -792,27 +809,29 @@ protected:
 	MetricMax _max_metric;
 
 public:
-	MetricExtendedStats(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: MetricStdDeviation(result, context, name, schema),
-		  _min_metric(_result, _conf, schema),
-		  _max_metric(_result, _conf, schema) { }
+	MetricExtendedStats(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: MetricStdDeviation(context, name, schema),
+		  _min_metric(_conf, schema),
+		  _max_metric(_conf, schema) { }
 
-	void update() override {
+	MsgPack update() override {
 		auto _std = std();
 		auto _avg = avg();
 		auto _variance = variance();
-		_result[AGGREGATION_COUNT]      = _count;
-		_result[AGGREGATION_MIN]        = static_cast<double>(_min_metric._min);
-		_result[AGGREGATION_MAX]        = static_cast<double>(_max_metric._max);
-		_result[AGGREGATION_AVG]        = static_cast<double>(_avg);
-		_result[AGGREGATION_SUM]        = static_cast<double>(_sum);
-		_result[AGGREGATION_SUM_OF_SQ]  = static_cast<double>(_sq_sum);
-		_result[AGGREGATION_VARIANCE]   = static_cast<double>(_variance);
-		_result[AGGREGATION_STD]        = static_cast<double>(_std);
-		_result[AGGREGATION_STD_BOUNDS] = {
+		MsgPack result(MsgPack::Type::MAP);
+		result[AGGREGATION_COUNT] = _count;
+		result[AGGREGATION_MIN] = static_cast<double>(_min_metric._min);
+		result[AGGREGATION_MAX] = static_cast<double>(_max_metric._max);
+		result[AGGREGATION_AVG] = static_cast<double>(_avg);
+		result[AGGREGATION_SUM] = static_cast<double>(_sum);
+		result[AGGREGATION_SUM_OF_SQ] = static_cast<double>(_sq_sum);
+		result[AGGREGATION_VARIANCE] = static_cast<double>(_variance);
+		result[AGGREGATION_STD] = static_cast<double>(_std);
+		result[AGGREGATION_STD_BOUNDS] = {
 			{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
 			{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
 		};
+		return result;
 	}
 
 	void _aggregate(long double value) {

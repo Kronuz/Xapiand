@@ -31,9 +31,9 @@
 #include "schema.h"                       // for Schema, required_spc_t
 
 
-FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-	: SubAggregation(result),
-	  _agg(result, context, schema)
+FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+	: SubAggregation(),
+	  _agg(context, schema)
 {
 	if (!context.is_map()) {
 		THROW(AggregationError, "%s must be object", repr(context.to_string()));
@@ -78,10 +78,10 @@ FilterAggregation::FilterAggregation(MsgPack& result, const MsgPack& context, st
 }
 
 
-void
+MsgPack
 FilterAggregation::update()
 {
-	_agg.update();
+	return _agg.update();
 }
 
 

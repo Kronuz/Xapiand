@@ -50,29 +50,32 @@ class Schema;
 template <typename Handler>
 class BucketAggregation : public HandledSubAggregation<Handler> {
 protected:
-	std::unordered_map<std::string, Aggregation> _aggs;
+	std::unordered_map<std::string_view, Aggregation> _aggs;
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
 
 public:
-	BucketAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<Handler>(result, context, name, schema),
+	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: HandledSubAggregation<Handler>(context, name, schema),
 		  _schema(schema),
 		  _context(context) { }
 
-	void update() override {
+	MsgPack update() override {
+		MsgPack result(MsgPack::Type::MAP);
 		for (auto& _agg : _aggs) {
-			_agg.second.update();
+			result[_agg.first] = std::move(_agg.second.update());
 		}
+		return result;
 	}
+
 	auto& add(std::string_view bucket) {
-		auto it = _aggs.find(std::string(bucket));
+		auto it = _aggs.find(bucket);
 		if (it != _aggs.end()) {
 			return it->second;
 		}
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
-			std::forward_as_tuple(this->_result.put(bucket, MsgPack(MsgPack::Type::MAP)), _context, _schema));
+			std::forward_as_tuple(_context, _schema));
 		return emplaced.first->second;
 	}
 
@@ -84,8 +87,8 @@ public:
 
 class ValuesAggregation : public BucketAggregation<ValuesHandler> {
 public:
-	ValuesAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(result, context, name, schema) { }
+	ValuesAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation<ValuesHandler>(context, name, schema) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -131,8 +134,8 @@ public:
 
 class TermsAggregation : public BucketAggregation<TermsHandler> {
 public:
-	TermsAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<TermsHandler>(result, context, name, schema) { }
+	TermsAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation<TermsHandler>(context, name, schema) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -248,8 +251,8 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 	}
 
 public:
-	HistogramAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(result, context, name, schema),
+	HistogramAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation<ValuesHandler>(context, name, schema),
 		  interval_u64(0),
 		  interval_i64(0),
 		  interval_f64(0.0) {
@@ -484,8 +487,8 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 	}
 
 public:
-	RangeAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(result, context, name, schema)
+	RangeAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+		: BucketAggregation<ValuesHandler>(context, name, schema)
 	{
 		const auto it = _conf.find(AGGREGATION_RANGES);
 		if (it == _conf.end()) {
@@ -572,13 +575,13 @@ class FilterAggregation : public SubAggregation {
 	func_filter func;
 
 public:
-	FilterAggregation(MsgPack& result, const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema);
+	FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc) override {
 		(this->*func)(doc);
 	}
 
-	void update() override;
+	MsgPack update() override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

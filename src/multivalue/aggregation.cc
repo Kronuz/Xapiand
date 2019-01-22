@@ -33,17 +33,14 @@
 #include "hashes.hh"                        // for fnv1ah32
 
 
-Aggregation::Aggregation(MsgPack& result)
-	: _result(result),
-	  _doc_count(0)
+Aggregation::Aggregation()
+	: _doc_count(0)
 {
-	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 }
 
 
-Aggregation::Aggregation(MsgPack& result, const MsgPack& context, const std::shared_ptr<Schema>& schema)
-	: _result(result),
-	  _doc_count(0)
+Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& schema)
+	: _doc_count(0)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(AGGREGATION_COUNT),
@@ -79,8 +76,6 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& context, const std::sha
 		// hh(AGGREGATION_GEO_IP),
 	});
 
-	_result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
-
 	auto aggs_it = context.find(AGGREGATION_AGGREGATIONS);
 	if (aggs_it == context.end()) {
 		aggs_it = context.find(AGGREGATION_AGGS);
@@ -102,96 +97,96 @@ Aggregation::Aggregation(MsgPack& result, const MsgPack& context, const std::sha
 				auto sub_agg_type = sub_agg.begin()->str_view();
 				switch (_.fhh(sub_agg_type)) {
 					case _.fhh(AGGREGATION_COUNT):
-						add_metric<MetricCount>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricCount>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					// case _.fhh(AGGREGATION_CARDINALITY):
-					// 	add_metric<MetricCardinality>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricCardinality>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					case _.fhh(AGGREGATION_SUM):
-						add_metric<MetricSum>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricSum>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_AVG):
-						add_metric<MetricAvg>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricAvg>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_MIN):
-						add_metric<MetricMin>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricMin>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_MAX):
-						add_metric<MetricMax>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricMax>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_VARIANCE):
-						add_metric<MetricVariance>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricVariance>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_STD):
-						add_metric<MetricStdDeviation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricStdDeviation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_MEDIAN):
-						add_metric<MetricMedian>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricMedian>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_MODE):
-						add_metric<MetricMode>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricMode>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_STATS):
-						add_metric<MetricStats>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_EXT_STATS):
-						add_metric<MetricExtendedStats>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_metric<MetricExtendedStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					// case _.fhh(AGGREGATION_GEO_BOUNDS):
-					// 	add_metric<MetricGeoBounds>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricGeoBounds>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_GEO_CENTROID):
-					// 	add_metric<MetricGeoCentroid>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricGeoCentroid>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_PERCENTILES):
-					// 	add_metric<MetricPercentiles>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricPercentiles>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_PERCENTILES_RANK):
-					// 	add_metric<MetricPercentilesRank>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricPercentilesRank>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_SCRIPTED_METRIC):
-					// 	add_metric<MetricScripted>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_metric<MetricScripted>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 
 					case _.fhh(AGGREGATION_FILTER):
-						add_bucket<FilterAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_bucket<FilterAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_VALUE):
 						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", AGGREGATION_VALUE, AGGREGATION_VALUES);
 					case _.fhh(AGGREGATION_VALUES):
-						add_bucket<ValuesAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_bucket<ValuesAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					case _.fhh(AGGREGATION_TERM):
 						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", AGGREGATION_TERM, AGGREGATION_TERMS);
 					case _.fhh(AGGREGATION_TERMS):
-						add_bucket<TermsAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_bucket<TermsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					// case _.fhh(AGGREGATION_DATE_HISTOGRAM):
-					// 	add_bucket<DateHistogramAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<DateHistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_DATE_RANGE):
-					// 	add_bucket<DateRangeAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<DateRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_GEO_DISTANCE):
-					// 	add_bucket<GeoDistanceAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<GeoDistanceAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_GEO_TRIXELS):
-					// 	add_bucket<GeoTrixelsAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<GeoTrixelsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					case _.fhh(AGGREGATION_HISTOGRAM):
-						add_bucket<HistogramAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_bucket<HistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					// case _.fhh(AGGREGATION_MISSING):
-					// 	add_bucket<MissingAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<MissingAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					case _.fhh(AGGREGATION_RANGE):
-						add_bucket<RangeAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+						add_bucket<RangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
 					// case _.fhh(AGGREGATION_IP_RANGE):
-					// 	add_bucket<IPRangeAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<IPRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					// case _.fhh(AGGREGATION_GEO_IP):
-					// 	add_bucket<GeoIPAggregation>(_result.put(sub_agg_name, MsgPack(MsgPack::Type::MAP)), sub_agg, sub_agg_type, schema);
+					// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					default:
 						THROW(AggregationError, "Aggregation type %s is not valid for %s", repr(sub_agg_type), repr(sub_agg_name));
@@ -209,18 +204,20 @@ Aggregation::operator()(const Xapian::Document& doc)
 {
 	++_doc_count;
 	for (auto& sub_agg : _sub_aggregations) {
-		(*sub_agg)(doc);
+		(*sub_agg.second)(doc);
 	}
 };
 
 
-void
+MsgPack
 Aggregation::update()
 {
+	MsgPack result(MsgPack::Type::MAP);
+	result[AGGREGATION_DOC_COUNT] = _doc_count;  // Initialize here so it's at the start
 	for (auto& sub_agg : _sub_aggregations) {
-		sub_agg->update();
+		result[sub_agg.first] = sub_agg.second->update();
 	}
-	_result[AGGREGATION_DOC_COUNT] = _doc_count;
+	return result;
 }
 
 

@@ -27,7 +27,7 @@
 #include <string>                   // for string
 #include "string_view.hh"           // for std::string_view
 #include <type_traits>              // for decay_t, enable_if_t, forward
-#include <unordered_map>            // for unordered_map
+#include <utility>                  // for std::pair, std::make_pair
 #include <vector>                   // for vector
 #include <xapian.h>                 // for MatchSpy, doccount
 
@@ -39,29 +39,27 @@ class Schema;
 
 
 class Aggregation {
-	MsgPack& _result;
 	size_t _doc_count;
 
-	std::vector<std::shared_ptr<SubAggregation>> _sub_aggregations;
-
+	std::vector<std::pair<std::string_view, std::unique_ptr<SubAggregation>>> _sub_aggregations;
 
 public:
-	explicit Aggregation(MsgPack& result);
+	explicit Aggregation();
 
-	Aggregation(MsgPack& result, const MsgPack& conf, const std::shared_ptr<Schema>& schema);
+	Aggregation(const MsgPack& conf, const std::shared_ptr<Schema>& schema);
 
 	void operator()(const Xapian::Document& doc);
 
-	void update();
+	MsgPack update();
 
 	template <typename MetricAggregation, typename... Args>
-	void add_metric(Args&&... args) {
-		_sub_aggregations.push_back(std::make_shared<MetricAggregation>(std::forward<Args>(args)...));
+	void add_metric(std::string_view name, Args&&... args) {
+		_sub_aggregations.push_back(std::make_pair(name, std::make_unique<MetricAggregation>(std::forward<Args>(args)...)));
 	}
 
 	template <typename BucketAggregation, typename... Args>
-	void add_bucket(Args&&... args) {
-		_sub_aggregations.push_back(std::make_shared<BucketAggregation>(std::forward<Args>(args)...));
+	void add_bucket(std::string_view name, Args&&... args) {
+		_sub_aggregations.push_back(std::make_pair(name, std::make_unique<BucketAggregation>(std::forward<Args>(args)...)));
 	}
 };
 
@@ -84,8 +82,7 @@ public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
 		: _total(0),
-		  _result(MsgPack::Type::MAP),
-		  _aggregation(_result.put(AGGREGATION_AGGREGATIONS, MsgPack(MsgPack::Type::MAP))) { }
+		  _result(MsgPack::Type::MAP) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.
@@ -98,7 +95,7 @@ public:
 		  _result(MsgPack::Type::MAP),
 		  _aggs(std::forward<T>(aggs)),
 		  _schema(schema),
-		  _aggregation(_result.put(AGGREGATION_AGGREGATIONS, MsgPack(MsgPack::Type::MAP)), _aggs, _schema) { }
+		  _aggregation(_aggs, _schema) { }
 
 	/*
 	 * Implementation of virtual operator().
@@ -114,7 +111,7 @@ public:
 	std::string get_description() const override;
 
 	const auto& get_aggregation() noexcept {
-		_aggregation.update();
+		_result[AGGREGATION_AGGREGATIONS] = _aggregation.update();
 		return _result;
 	}
 };
