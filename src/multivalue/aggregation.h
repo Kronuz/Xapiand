@@ -31,11 +31,66 @@
 #include <vector>                   // for vector
 #include <xapian.h>                 // for MatchSpy, doccount
 
-#include "aggregation_metric.h"     // for AGGREGATION_AGGREGATIONS
 #include "msgpack.h"                // for MsgPack
 
 
+constexpr const char AGGREGATION_AGGS[]             = "_aggs";
+constexpr const char AGGREGATION_AGGREGATIONS[]     = "_aggregations";
+constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
+constexpr const char AGGREGATION_FIELD[]            = "_field";
+constexpr const char AGGREGATION_FROM[]             = "_from";
+constexpr const char AGGREGATION_INTERVAL[]         = "_interval";
+constexpr const char AGGREGATION_KEY[]              = "_key";
+constexpr const char AGGREGATION_RANGES[]           = "_ranges";
+constexpr const char AGGREGATION_SUM_OF_SQ[]        = "_sum_of_squares";
+constexpr const char AGGREGATION_TO[]               = "_to";
+
+constexpr const char AGGREGATION_AVG[]              = "_avg";
+constexpr const char AGGREGATION_CARDINALITY[]      = "_cardinality";
+constexpr const char AGGREGATION_COUNT[]            = "_count";
+constexpr const char AGGREGATION_EXT_STATS[]        = "_extended_stats";
+constexpr const char AGGREGATION_GEO_BOUNDS[]       = "_geo_bounds";
+constexpr const char AGGREGATION_GEO_CENTROID[]     = "_geo_centroid";
+constexpr const char AGGREGATION_MAX[]              = "_max";
+constexpr const char AGGREGATION_MEDIAN[]           = "_median";
+constexpr const char AGGREGATION_MIN[]              = "_min";
+constexpr const char AGGREGATION_MODE[]             = "_mode";
+constexpr const char AGGREGATION_PERCENTILES[]      = "_percentiles";
+constexpr const char AGGREGATION_PERCENTILES_RANK[] = "_percentiles_rank";
+constexpr const char AGGREGATION_SCRIPTED_METRIC[]  = "_scripted_metric";
+constexpr const char AGGREGATION_STATS[]            = "_stats";
+constexpr const char AGGREGATION_STD[]              = "_std_deviation";
+constexpr const char AGGREGATION_STD_BOUNDS[]       = "_std_deviation_bounds";
+constexpr const char AGGREGATION_SUM[]              = "_sum";
+constexpr const char AGGREGATION_VARIANCE[]         = "_variance";
+
+constexpr const char AGGREGATION_DATE_HISTOGRAM[]   = "_date_histogram";
+constexpr const char AGGREGATION_DATE_RANGE[]       = "_date_range";
+constexpr const char AGGREGATION_FILTER[]           = "_filter";
+constexpr const char AGGREGATION_GEO_DISTANCE[]     = "_geo_distance";
+constexpr const char AGGREGATION_GEO_IP[]           = "_geo_ip";
+constexpr const char AGGREGATION_GEO_TRIXELS[]      = "_geo_trixels";
+constexpr const char AGGREGATION_HISTOGRAM[]        = "_histogram";
+constexpr const char AGGREGATION_IP_RANGE[]         = "_ip_range";
+constexpr const char AGGREGATION_MISSING[]          = "_missing";
+constexpr const char AGGREGATION_RANGE[]            = "_range";
+constexpr const char AGGREGATION_VALUES[]           = "_values";
+constexpr const char AGGREGATION_TERMS[]            = "_terms";
+
+constexpr const char AGGREGATION_UPPER[]            = "_upper";
+constexpr const char AGGREGATION_LOWER[]            = "_lower";
+constexpr const char AGGREGATION_SIGMA[]            = "_sigma";
+
+constexpr const char AGGREGATION_VALUE[]            = "_value";
+constexpr const char AGGREGATION_TERM[]             = "_term";
+constexpr const char AGGREGATION_SORT[]             = "_sort";
+constexpr const char AGGREGATION_ORDER[]            = "_order";
+constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
+constexpr const char AGGREGATION_LIMIT[]            = "_limit";
+
+
 class Schema;
+class SubAggregation;
 
 
 class Aggregation {

@@ -35,14 +35,15 @@
 #include <vector>                           // for std::vector
 #include <xapian.h>                         // for Document, valueno
 
-#include "aggregation.h"                    // for Aggregation
+#include "aggregation.h"                    // for Aggregation, AGGREGATION_*
 #include "msgpack.h"                        // for MsgPack, object::object, ...
-#include "aggregation_metric.h"             // for AGGREGATION_INTERVAL, AGG...
+#include "aggregation_metric.h"             // for HandledSubAggregation
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "schema.h"                         // for FieldType
 #include "serialise.h"                      // for _float
 #include "string.hh"                        // for string::format, string::Number
 #include "hashes.hh"                        // for xxh64
+
 
 class Schema;
 
@@ -51,8 +52,10 @@ template <typename Handler>
 class BucketAggregation : public HandledSubAggregation<Handler> {
 protected:
 	std::map<std::string, Aggregation> _aggs;
+
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
+
 	Split<std::string_view> _field;
 	enum class Sort {
 		by_key_asc,
