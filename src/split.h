@@ -57,7 +57,6 @@ class Split {
 		const Split* split;
 		size_type start;
 		size_type end;
-		mutable V value;
 		size_t inc;
 
 		Iterator(const Split* split_, size_type pos_=0)
@@ -110,20 +109,16 @@ class Split {
 
 		V operator*() const {
 			if (end == S::npos) {
-				value = V(split->str).substr(start);
-			} else {
-				value = V(split->str).substr(start, end - start);
+				return V(split->str).substr(start);
 			}
-			return value;
+			return V(split->str).substr(start, end - start);
 		}
 
 		V operator*() {
 			if (end == S::npos) {
-				value = V(split->str).substr(start);
-			} else {
-				value = V(split->str).substr(start, end - start);
+				return V(split->str).substr(start);
 			}
-			return value;
+			return V(split->str).substr(start, end - start);
 		}
 
 		V operator->() const {
