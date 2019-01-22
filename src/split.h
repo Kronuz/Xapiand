@@ -235,6 +235,10 @@ public:
 		return const_iterator(this, S::npos);
 	}
 
+	bool empty() const noexcept {
+		return str.empty();
+	}
+
 	size_t size() const noexcept {
 		return std::distance(begin(), end());
 	}
