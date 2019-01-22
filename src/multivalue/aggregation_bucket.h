@@ -56,7 +56,7 @@ protected:
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
 
-	Split<std::string_view> _fields;
+	Split<std::string_view> _sort_field;
 	enum class Sort {
 		by_key_asc,
 		by_key_desc,
@@ -302,11 +302,11 @@ private:
 							case MsgPack::Type::STR: {
 								auto order_str = sorter.str_view();
 								if (order_str == "desc") {
-									_fields = Split<std::string_view>(field, '.');
+									_sort_field = Split<std::string_view>(field, '.');
 									return Sort::by_field_desc;
 								}
 								if (order_str == "asc") {
-									_fields = Split<std::string_view>(field, '.');
+									_sort_field = Split<std::string_view>(field, '.');
 									return Sort::by_field_asc;
 								}
 								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", AGGREGATION_SORT, field);
@@ -319,11 +319,11 @@ private:
 										case MsgPack::Type::STR: {
 											auto order_str = order.str_view();
 											if (order_str == "desc") {
-												_fields = Split<std::string_view>(field, '.');
+												_sort_field = Split<std::string_view>(field, '.');
 												return Sort::by_field_desc;
 											}
 											if (order_str == "asc") {
-												_fields = Split<std::string_view>(field, '.');
+												_sort_field = Split<std::string_view>(field, '.');
 												return Sort::by_field_asc;
 											}
 											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", AGGREGATION_SORT, field, AGGREGATION_ORDER);
@@ -438,18 +438,20 @@ public:
 			std::forward_as_tuple(_context, _schema));
 
 		// Find and store the Aggregation the value should be recovered from:
-		if (!_fields.empty()) {
+		if (!_sort_field.empty()) {
 			BaseAggregation* agg = this;
-			for (const auto& field : _fields) {
+			for (const auto& field : _sort_field) {
 				if (emplaced.first->second.value_fn) {
-					THROW(AggregationError, "Bad field!");
+					THROW(AggregationError, "Bad field path!");
 				}
 				auto agg_ = agg->get_agg(field);
 				if (!agg_) {
 					emplaced.first->second.value_fn = agg->get_value_func(field);
 				}
 			}
-			THROW(AggregationError, "Bad field!");
+			// if (!emplaced.first->second.value_fn) {
+			// 	THROW(AggregationError, "Field not found!");
+			// }
 		}
 
 		return emplaced.first->second;
