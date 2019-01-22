@@ -50,14 +50,14 @@ class Split {
 		return (this->*search_func)(pos);
 	}
 
-	template <typename Value>
-	class Iterator : public std::iterator<std::input_iterator_tag, Value> {
+	template <typename V>
+	class Iterator : public std::iterator<std::input_iterator_tag, V> {
 		friend class Split;
 
 		const Split* split;
 		size_type start;
 		size_type end;
-		mutable S value;
+		mutable V value;
 		size_t inc;
 
 		Iterator(const Split* split_, size_type pos_=0)
@@ -108,29 +108,29 @@ class Split {
 			return it;
 		}
 
-		Value& operator*() const {
+		V operator*() const {
 			if (end == S::npos) {
-				value = split->str.substr(start);
+				value = V(split->str).substr(start);
 			} else {
-				value = split->str.substr(start, end - start);
+				value = V(split->str).substr(start, end - start);
 			}
 			return value;
 		}
 
-		Value& operator*() {
+		V operator*() {
 			if (end == S::npos) {
-				value = split->str.substr(start);
+				value = V(split->str).substr(start);
 			} else {
-				value = split->str.substr(start, end - start);
+				value = V(split->str).substr(start, end - start);
 			}
 			return value;
 		}
 
-		Value* operator->() const {
+		V operator->() const {
 			return &operator*();
 		}
 
-		Value* operator->() {
+		V operator->() {
 			return &operator*();
 		}
 
@@ -213,8 +213,8 @@ public:
 		}
 	}
 
-	using iterator = Iterator<S>;
-	using const_iterator = Iterator<const S>;
+	using iterator = Iterator<std::string_view>;
+	using const_iterator = Iterator<const std::string_view>;
 
 	iterator begin() {
 		return iterator(this);
