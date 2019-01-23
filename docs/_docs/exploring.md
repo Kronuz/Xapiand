@@ -63,17 +63,17 @@ Response should be something like:
 
 ```json
 {
-    "#database_info": {
-        "#uuid": "bdb0ce31-a0ea-450b-a14e-2f99dfdf3be6",
-        "#revision": 1,
-        "#doc_count": 1000,
-        "#last_id": 1000,
-        "#doc_del": 0,
-        "#av_length": 88.864,
-        "#doc_len_lower": 88,
-        "#doc_len_upper": 94,
-        "#has_positions": false
-    }
+  "#database_info": {
+    "#uuid": "bdb0ce31-a0ea-450b-a14e-2f99dfdf3be6",
+    "#revision": 1,
+    "#doc_count": 1000,
+    "#last_id": 1000,
+    "#doc_del": 0,
+    "#av_length": 88.864,
+    "#doc_len_lower": 88,
+    "#doc_len_upper": 94,
+    "#has_positions": false
+  }
 }
 ```
 
@@ -119,25 +119,25 @@ And the response (partially shown):
     "#matches_estimated": 1000,
     "#hits": [
       {
-          "city": "Fairview",
-          "gender": "female",
-          "balance": "1073.05",
-          "firstname": "Hester",
-          "lastname": "Blake",
-          "company": "Affluex",
-          "favoriteFruit": "strawberry",
-          "eyeColor": "brown",
-          "phone": "+1 (919) 400-3616",
-          "state": "Virgin Islands",
-          "account_number": 100123,
-          "address": "756 Strauss Street",
-          "age": 24,
-          "email": "hester.blake@affluex.net",
-          "_id": 233,
-          "#docid": 233,
-          "#rank": 0,
-          "#weight": 0.0,
-          "#percent": 100
+        "city": "Fairview",
+        "gender": "female",
+        "balance": "1073.05",
+        "firstname": "Hester",
+        "lastname": "Blake",
+        "company": "Affluex",
+        "favoriteFruit": "strawberry",
+        "eyeColor": "brown",
+        "phone": "+1 (919) 400-3616",
+        "state": "Virgin Islands",
+        "account_number": 100123,
+        "address": "756 Strauss Street",
+        "age": 24,
+        "email": "hester.blake@affluex.net",
+        "_id": 233,
+        "#docid": 233,
+        "#rank": 0,
+        "#weight": 0.0,
+        "#percent": 100
       }, ...
     ]
   },
