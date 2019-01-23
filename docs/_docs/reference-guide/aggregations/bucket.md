@@ -240,6 +240,59 @@ By default, the buckets are returned as an ordered array. It is also possible
 to request the response as an object keyed by the buckets keys by using the
 `_keyed` boolean option:
 
+{% capture req %}
+
+```json
+POST /bank/:search?pretty
+
+{
+  "_query": "*",
+  "_limit": 0,
+  "_check_at_least": 1000,
+  "_aggs": {
+    "balances": {
+      "_histogram": {
+        "_field": "balance",
+        "_interval": 500,
+        "_keyed": true
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+Response:
+
+```json
+  "#aggregations": {
+    "_doc_count": 1000,
+    "balances": {
+      "3000.0": {
+        "_doc_count": 179
+      },
+      "2500.0": {
+        "_doc_count": 174
+      },
+      "2000.0": {
+        "_doc_count": 167
+      },
+      "1500.0": {
+        "_doc_count": 165
+      },
+      "3500.0": {
+        "_doc_count": 162
+      },
+      "1000.0": {
+        "_doc_count": 153
+      }
+    }
+  },
+  ...
+```
+
+
 #### Minimum Document Count
 
 It is possible to only return terms that match more than a configured number of
