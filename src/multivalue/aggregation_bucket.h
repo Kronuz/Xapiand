@@ -51,32 +51,44 @@ class Schema;
 template <typename Handler>
 class BucketAggregation : public HandledSubAggregation<Handler> {
 protected:
-	std::map<std::string, Aggregation> _aggs;
-
-	const std::shared_ptr<Schema> _schema;
-	const MsgPack& _context;
-	const std::string_view _name;
-
-	Split<std::string_view> _sort_field;
 	enum class Sort {
+		by_index,
 		by_key_asc,
 		by_key_desc,
 		by_count_asc,
 		by_count_desc,
 		by_field_asc,
 		by_field_desc,
-	} _sort;
+	};
+
+	std::map<std::string, Aggregation> _aggs;
+
+	const std::shared_ptr<Schema> _schema;
+	const MsgPack& _context;
+	const std::string_view _name;
+
+	Sort _default_sort;
+	Split<std::string_view> _sort_field;
+	Sort _sort;
 	size_t _limit;
 	bool _keyed;
 	size_t _min_doc_count;
 
 private:
+	friend struct CmpByIndex;
 	friend struct CmpByKeyAsc;
 	friend struct CmpByKeyDesc;
 	friend struct CmpByCountAsc;
 	friend struct CmpByCountDesc;
 	friend struct CmpByFieldAsc;
 	friend struct CmpByFieldDesc;
+
+	struct CmpByIndex {
+		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->second.idx > b->second.idx) return false;
+			return true;
+		}
+	};
 
 	struct CmpByKeyAsc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
@@ -331,7 +343,7 @@ private:
 					THROW(AggregationError, "'%s' must be a string or an object", AGGREGATION_SORT);
 			}
 		}
-		return Sort::by_count_desc;
+		return _default_sort;
 	}
 
 	size_t _conf_limit() {
@@ -391,11 +403,12 @@ private:
 	}
 
 public:
-	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
+	BucketAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema, Sort default_sort)
 		: HandledSubAggregation<Handler>(context, name, schema),
 		  _schema(schema),
 		  _context(context),
 		  _name(name),
+		  _default_sort(default_sort),
 		  _sort(_conf_sort()),
 		  _limit(_conf_limit()),
 		  _keyed(_conf_keyed()),
@@ -403,6 +416,8 @@ public:
 
 	MsgPack get_result() override {
 		switch (_sort) {
+			case Sort::by_index:
+				return _get_result<CmpByIndex>();
 			case Sort::by_key_asc:
 				return _get_result<CmpByKeyAsc>();
 			case Sort::by_key_desc:
@@ -426,7 +441,7 @@ public:
 		return nullptr;
 	}
 
-	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
+	void aggregate(std::string_view bucket, const Xapian::Document& doc, size_t idx = 0) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
 			it->second(doc);
@@ -438,6 +453,8 @@ public:
 			std::forward_as_tuple(_context, _schema));
 
 		emplaced.first->second(doc);
+
+		emplaced.first->second.idx = idx;
 
 		// Find and store the Aggregation the value should be recovered from:
 		if (!_sort_field.empty()) {
@@ -467,7 +484,7 @@ public:
 class ValuesAggregation : public BucketAggregation<ValuesHandler> {
 public:
 	ValuesAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(context, name, schema) { }
+		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -514,7 +531,7 @@ public:
 class TermsAggregation : public BucketAggregation<TermsHandler> {
 public:
 	TermsAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<TermsHandler>(context, name, schema) { }
+		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		aggregate(string::Number(value), doc);
@@ -686,7 +703,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 
 public:
 	HistogramAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(context, name, schema),
+		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_key_asc),
 		  interval_u64{0},
 		  interval_i64{0},
 		  interval_f64{0.0},
@@ -950,7 +967,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 
 public:
 	RangeAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: BucketAggregation<ValuesHandler>(context, name, schema)
+		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_index)
 	{
 		switch (_handler.get_type()) {
 			case FieldType::POSITIVE:
@@ -971,50 +988,62 @@ public:
 	}
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_i64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_u64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
+		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc);
+				aggregate(range.first, doc, idx);
 			}
+			++idx;
 		}
 	}
 };
