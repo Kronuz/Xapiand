@@ -1063,6 +1063,8 @@ public:
 		(this->*func)(doc);
 	}
 
+	void update() override;
+
 	MsgPack get_result() override;
 
 	void check_single(const Xapian::Document& doc);

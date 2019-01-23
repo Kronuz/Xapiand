@@ -77,6 +77,13 @@ FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view na
 }
 
 
+void
+FilterAggregation::update()
+{
+	return _agg.update();
+}
+
+
 MsgPack
 FilterAggregation::get_result()
 {
