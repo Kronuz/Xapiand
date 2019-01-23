@@ -79,11 +79,6 @@ private:
 	friend struct CmpByFieldDesc;
 
 	struct CmpByKeyAsc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByKeyAsc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->first > b->first) return false;
 			return true;
@@ -91,11 +86,6 @@ private:
 	};
 
 	struct CmpByKeyDesc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByKeyDesc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->first < b->first) return false;
 			return true;
@@ -103,11 +93,6 @@ private:
 	};
 
 	struct CmpByCountAsc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByCountAsc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->second.doc_count() < b->second.doc_count()) return true;
 			if (a->second.doc_count() > b->second.doc_count()) return false;
@@ -117,11 +102,6 @@ private:
 	};
 
 	struct CmpByCountDesc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByCountDesc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->second.doc_count() > b->second.doc_count()) return true;
 			if (a->second.doc_count() < b->second.doc_count()) return false;
@@ -131,11 +111,6 @@ private:
 	};
 
 	struct CmpByFieldAsc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByFieldAsc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			ASSERT(a->second.value_ptr);
 			ASSERT(b->second.value_ptr);
@@ -147,11 +122,6 @@ private:
 	};
 
 	struct CmpByFieldDesc {
-		BucketAggregation<Handler>& _agg;
-
-		CmpByFieldDesc(BucketAggregation<Handler>& agg)
-			: _agg(agg) { }
-
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			ASSERT(a->second.value_ptr);
 			ASSERT(b->second.value_ptr);
@@ -165,7 +135,7 @@ private:
 
 	template <typename Cmp>
 	MsgPack _get_result() {
-		Cmp cmp(*this);
+		Cmp cmp;
 		bool is_heap = false;
 		std::vector<std::map<std::string, Aggregation>::iterator> ordered;
 		for (auto it = _aggs.begin(); it != _aggs.end(); ++it) {
