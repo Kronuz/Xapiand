@@ -129,14 +129,62 @@ And the following may be the response:
 
 By default the bucket keys start with 0 and then continue in even spaced steps
 of interval, e.g. if the interval is 10 the first buckets (assuming there is
-data inside them) will be [0, 10), [10, 20), [20, 30). The bucket boundaries
-can be shifted by using the `_shift` option.
+data inside them) will be `[0, 10)`, `[10, 20)`, `[20, 30)`. The bucket
+boundaries can be shifted by using the `_shift` option.
 
-This can be best illustrated with an example. If there are 10 documents with
-values ranging from 5 to 14, using interval 10 will result in two buckets with
-5 documents each. If an additional shift of 5 is used, there will be only one
-single bucket [5, 15) containing all the 10 documents.
+This can be best illustrated with an example. If there are many account holders
+with ages ranging from 17 to 44, using interval 10 will result in four buckets:
+`[10, 20)`, `[20, 30)`, `[30, 40)`, `[40, 50)`. If an additional `_shift` of 5
+is used, however, there will be only three buckets to collect all the account
+holders: `[15, 25)`, `[25, 35)`, `[35, 45)`:
 
+{% capture req %}
+
+```json
+POST /bank/:search?pretty
+
+{
+  "_query": "*",
+  "_limit": 0,
+  "_check_at_least": 1000,
+  "_aggs": {
+    "ages": {
+      "_histogram": {
+        "_field": "age",
+        "_interval": 10,
+        "_shift": 5
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+Response:
+
+```json
+{
+  "#aggregations": {
+    "_doc_count": 1000,
+    "ages": [
+      {
+        "_doc_count": 243,
+        "_key": "15"
+      },
+      {
+        "_doc_count": 471,
+        "_key": "25"
+      },
+      {
+        "_doc_count": 286,
+        "_key": "35"
+      }
+    ]
+  },
+  ...
+}
+```
 
 ### Ordering
 
