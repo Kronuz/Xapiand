@@ -1353,11 +1353,6 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	auto document = db_handler.get_document(local_node->lower_name());
 
 	auto obj = document.get_obj();
-	if (obj.find(ID_FIELD_NAME) == obj.end()) {
-		obj[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
-	}
-
-	request.ready = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_CLUSTERING
 	obj[RESPONSE_CLUSTER_NAME] = opts.cluster_name;
@@ -1374,6 +1369,12 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 		{ "ChaiScript", string::format("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};
+
+	if (obj.find(ID_FIELD_NAME) == obj.end()) {
+		obj[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
+	}
+
+	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, response, HTTP_STATUS_OK, obj);
 }
@@ -2168,6 +2169,8 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 			obj = obj.select(selector);
 		}
 
+		request.ready = std::chrono::system_clock::now();
+
 		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 			response.body += obj.to_string(DEFAULT_INDENTATION);
 		}
@@ -2189,6 +2192,9 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
 		response.blob = document.get_blob(ct_type);
+
+		request.ready = std::chrono::system_clock::now();
+
 		response.ct_type = ct_type;
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(response, request.type_encoding, response.blob, false, true, true);
@@ -2202,7 +2208,6 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 		}
 	}
 
-	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Retrieving took %s", string::from_delta(took));
 
@@ -2337,6 +2342,10 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		hits.append(hit_obj);
 	}
 
+	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Searching took %s", string::from_delta(took));
+
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 		response.body += obj.to_string(DEFAULT_INDENTATION);
 	}
@@ -2353,10 +2362,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	} else {
 		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
 	}
-
-	request.ready = std::chrono::system_clock::now();
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Searching took %s", string::from_delta(took));
 
 	if (aggregations) {
 		Metrics::metrics()
