@@ -2559,10 +2559,10 @@ HttpClient::url_resolve(Request& request)
 		if (request.query_parser.next("pretty") != -1) {
 			if (request.query_parser.len != 0u) {
 				try {
-					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? 4 : -1;
+					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? 2 : -1;
 				} catch (const Exception&) { }
 			} else if (request.indented == -1) {
-				request.indented = 4;
+				request.indented = 2;
 			}
 		}
 
