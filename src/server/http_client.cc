@@ -2296,6 +2296,175 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	int rc = 0;
 	auto total_count = mset.size();
 
+	// Get default content type to return.
+	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
+	if (
+		!is_acceptable_type(msgpack_type, ct_type) &&
+		!is_acceptable_type(x_msgpack_type, ct_type) &&
+		!is_acceptable_type(json_type, ct_type)
+	) {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
+		};
+		write_http_response(request, response, error_code, err_response);
+		L_SEARCH("ABORTED SEARCH");
+		return;
+	}
+
+	MsgPack obj;
+	if (aggregations) {
+		obj[RESPONSE_AGGREGATIONS] = aggregations;
+	}
+	obj[RESPONSE_QUERY] = {
+		{ RESPONSE_TOTAL_COUNT, total_count},
+		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+		{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
+	};
+	auto& hits = obj[RESPONSE_QUERY][RESPONSE_HITS];
+
+	const auto m_e = mset.end();
+	for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
+		auto document = db_handler.get_document(*m);
+
+		const auto data = Data(document.get_data());
+		if (data.empty()) {
+			continue;
+		}
+
+		MsgPack hit_obj;
+		auto main_locator = data.get("");
+		if (main_locator != nullptr) {
+			hit_obj = MsgPack::unserialise(main_locator->data());
+		}
+
+		// Detailed info about the document:
+		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
+			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+		hit_obj[RESPONSE_DOCID] = document.get_docid();
+		hit_obj[RESPONSE_RANK] = m.get_rank();
+		hit_obj[RESPONSE_WEIGHT] = m.get_weight();
+		hit_obj[RESPONSE_PERCENT] = m.get_percent();
+		// int subdatabase = (document.get_docid() - 1) % endpoints.size();
+		// auto endpoint = endpoints[subdatabase];
+		// hit_obj[RESPONSE_ENDPOINT] = endpoint.to_string();
+
+		if (!selector.empty()) {
+			hit_obj = hit_obj.select(selector);
+		}
+
+		hits.append(hit_obj);
+	}
+
+	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+		response.body += obj.to_string(4);
+	}
+
+	// Get default content type to return.
+	auto result = serialize_response(obj, ct_type, request.indented);
+	if (request.type_encoding != Encoding::none) {
+		auto encoded = encoding_http_response(response, request.type_encoding, result.first, false, true, true);
+		if (!encoded.empty() && encoded.size() <= result.first.size()) {
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
+		} else {
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+		}
+	} else {
+		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
+	}
+
+	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	auto took_milliseconds = took / 1e6;
+	auto took_delta = string::Number(took_milliseconds).str();
+	L_TIME("Searching took %s", string::from_delta(took));
+
+	if (aggregations) {
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({
+				{"operation", "aggregation"},
+			})
+			.Observe(took / 1e9);
+	} else {
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({
+				{"operation", "search"},
+			})
+			.Observe(took / 1e9);
+	}
+
+	L_SEARCH("FINISH SEARCH");
+}
+
+
+/*
+//
+// The following is the "chunked" version of search_view
+//
+void
+HttpClient::search_view(Request& request, Response& response, enum http_method method, Command)
+{
+	L_CALL("HttpClient::search_view()");
+
+	std::string selector_string_holder;
+	auto selector = request.path_parser.get_slc();
+	auto id = request.path_parser.get_id();
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
+	endpoints_maker(request, query_field.as_volatile);
+
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
+
+	MSet mset{};
+	MsgPack aggregations;
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler;
+	try {
+		if (query_field.as_volatile) {
+			if (endpoints.size() != 1) {
+				THROW(ClientError, "Expecting exactly one index with volatile");
+			}
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		} else {
+			db_handler.reset(endpoints, DB_OPEN, method);
+		}
+
+		if (request.raw.empty()) {
+			mset = db_handler.get_mset(query_field, nullptr, nullptr);
+		} else {
+			auto& decoded_body = request.decoded_body();
+
+			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+
+			if (decoded_body.find(QUERYDSL_SELECTOR) != decoded_body.end()) {
+				auto selector_obj = decoded_body.at(QUERYDSL_SELECTOR);
+				if (selector_obj.is_string()) {
+					selector_string_holder = selector_obj.as_str();
+					selector = selector_string_holder;
+				} else {
+					THROW(ClientError, "The %s must be a string", QUERYDSL_SELECTOR);
+				}
+			}
+
+			mset = db_handler.get_mset(query_field, &decoded_body, &aggs);
+			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGREGATIONS);
+		}
+	} catch (const NotFoundError&) {
+		// At the moment when the endpoint does not exist and it is chunck it will return 200 response
+		// with zero matches this behavior may change in the future for instance ( return 404 )
+	}
+
+	int rc = 0;
+	auto total_count = mset.size();
+
 	bool indent_chunk = false;
 	std::string first_chunk;
 	std::string last_chunk;
@@ -2390,11 +2559,10 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			obj = MsgPack::unserialise(main_locator->data());
 		}
 
+		// Detailed info about the document:
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
 			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
-
-		// Detailed info about the document:
 		obj[RESPONSE_DOCID] = document.get_docid();
 		obj[RESPONSE_RANK] = m.get_rank();
 		obj[RESPONSE_WEIGHT] = m.get_weight();
@@ -2533,6 +2701,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	L_SEARCH("FINISH SEARCH");
 }
+*/
 
 
 void
