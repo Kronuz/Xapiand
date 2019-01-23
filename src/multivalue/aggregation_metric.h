@@ -589,11 +589,15 @@ protected:
 	long double _sigma;
 
 	long double _std;
+	long double _upper;
+	long double _lower;
 
 public:
 	MetricStdDeviation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricVariance(context, name, schema),
-		  _sigma{2.0} {
+		  _sigma{2.0},
+		  _upper{0.0},
+		  _lower{0.0} {
 		const auto it = _conf.find(AGGREGATION_SIGMA);
 		if (it != _conf.end()) {
 			const auto& sigma_value = it.value();
@@ -602,7 +606,7 @@ public:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
 					_sigma = sigma_value.as_f64();
-					if (_sigma >= 0) {
+					if (_sigma >= 0.0) {
 						break;
 					}
 				default:
@@ -615,8 +619,8 @@ public:
 		return {
 			{ AGGREGATION_STD, static_cast<double>(_std) },
 			{ AGGREGATION_STD_BOUNDS, {
-				{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
-				{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+				{ AGGREGATION_UPPER, static_cast<double>(_upper) },
+				{ AGGREGATION_LOWER, static_cast<double>(_lower) },
 			}},
 		};
 	}
@@ -631,6 +635,8 @@ public:
 	void update() override {
 		MetricVariance::update();
 		_std = std::sqrt(_variance);
+		_upper = _avg + _std * _sigma;
+		_lower = _avg - _std * _sigma;
 	}
 };
 
@@ -859,8 +865,8 @@ public:
 			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
 			{ AGGREGATION_STD, static_cast<double>(_std) },
 			{ AGGREGATION_STD_BOUNDS, {
-				{ AGGREGATION_UPPER, static_cast<double>(_avg + _std * _sigma) },
-				{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
+				{ AGGREGATION_UPPER, static_cast<double>(_upper) },
+				{ AGGREGATION_LOWER, static_cast<double>(_lower) },
 			}},
 		};
 	}
