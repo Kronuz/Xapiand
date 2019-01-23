@@ -1,10 +1,13 @@
 from __future__ import print_function
 
 import json
+import msgpack
 
 if __name__ == '__main__':
-    with open('accounts.req', 'w') as fp:
-        for i, a in enumerate(json.load(open('accounts.json')), 1):
+    accounts = json.load(open('accounts.json'))
+    msgpack.dump(accounts, open('accounts.msgpack', 'w'))
+    with open('accounts.http', 'w') as fp:
+        for i, a in enumerate(accounts, 1):
             aj = json.dumps(a)
             print("""PUT /bank/{} HTTP/1.1
 Host: localhost:8880
