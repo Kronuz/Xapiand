@@ -27,6 +27,8 @@ The following snippet captures the structure of range aggregations:
 }
 ```
 
+Also supports all other functionality as explained in [Bucket Aggregations](..#structuring).
+
 ### Field
 
 The `<field_name>` in the `_field` parameter defines the field on which the

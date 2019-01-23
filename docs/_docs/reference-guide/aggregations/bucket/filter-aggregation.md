@@ -20,6 +20,8 @@ The following snippet captures the structure of filter aggregations:
 }
 ```
 
+Also supports all other functionality as explained in [Bucket Aggregations](..#structuring).
+
 ### Filtering Terms
 
 Often this will be used to narrow down the current aggregation context to a
