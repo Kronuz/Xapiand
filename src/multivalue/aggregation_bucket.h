@@ -637,9 +637,9 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 public:
 	HistogramAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<ValuesHandler>(context, name, schema),
-		  interval_u64(0),
-		  interval_i64(0),
-		  interval_f64(0.0) {
+		  interval_u64{0},
+		  interval_i64{0},
+		  interval_f64{0.0} {
 		const auto it = _conf.find(AGGREGATION_INTERVAL);
 		if (it == _conf.end()) {
 			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_INTERVAL);
