@@ -1660,7 +1660,7 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 	} else {
 		auto metadata = db_handler.get_metadata(key);
 		if (metadata.empty()) {
-			status_code = HTTP_STATUS_NOT_FOUND;
+			THROW(NotFoundError);
 		} else {
 			response_obj = MsgPack::unserialise(metadata);
 		}
@@ -2136,17 +2136,7 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 
 	// Retrive document ID
 	Xapian::docid did;
-	try {
-		did = db_handler.get_docid(id);
-	} catch (const NotFoundError&) {
-		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, http_status_str(error_code) }
-		};
-		write_http_response(request, response, error_code, err_response);
-		return;
-	}
+	did = db_handler.get_docid(id);
 
 	// Retrive document data
 	auto document = db_handler.get_document(did);
