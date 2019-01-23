@@ -657,16 +657,11 @@ li > code,
 li> pre,
 h5 > code,
 .note > code {
-	color: #cccccc;
-	margin: 0 0.2em;
 	max-width: 100%;
 	overflow-x: auto;
 	vertical-align: middle;
-	@include border-radius(5px);
-	@include box-shadow(inset 0 1px 10px rgba(0,0,0,.2),
-		0 1px 0 rgba(255,255,255,.1),
-		0 -1px 0 rgba(0,0,0,.5));
 }
+
 
 .language-sh code {
 	color: #f0e68c;
@@ -688,10 +683,6 @@ h5 > code,
 	code { background: none; }
 }
 
-div.highlight,
-figure.highlight {
-	background-color: rgba(0,0,0,.1);
-}
 .highlight {
 	margin: 1em 0;
 	width: 100%;
@@ -704,6 +695,31 @@ pre.highlight { padding: 10px 0.5em; }
 	@extend .highlight;
 	margin: 0;
 }
+
+
+div.highlight,
+figure.highlight {
+	background-color: rgba(0,0,0,.1);
+	@include border-radius(5px);
+	@include box-shadow(inset 0 1px 10px rgba(0,0,0,.1),
+		0 1px 0 rgba(255,255,255,.1),
+		0 -1px 0 rgba(0,0,0,.4));
+}
+
+pre.highlighter-rouge,
+code.highlighter-rouge {
+	display: inline;
+	padding: .15em .4em;
+	margin: 0 .1em;
+
+	color: #cccccc;
+	background-color: rgba(0,0,0,.03);
+	@include border-radius(5px);
+	@include box-shadow(inset 0 1px 5px rgba(0,0,0,.1),
+		0 1px 0 rgba(255,255,255,.05),
+		0 -1px 0 rgba(0,0,0,.2));
+}
+
 
 /* HTML Elements */
 
