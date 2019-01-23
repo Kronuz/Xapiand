@@ -2233,6 +2233,23 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 {
 	L_CALL("HttpClient::search_view()");
 
+	// Get default content type to return.
+	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
+	if (
+		!is_acceptable_type(msgpack_type, ct_type) &&
+		!is_acceptable_type(x_msgpack_type, ct_type) &&
+		!is_acceptable_type(json_type, ct_type)
+	) {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
+		};
+		write_http_response(request, response, error_code, err_response);
+		L_SEARCH("ABORTED SEARCH");
+		return;
+	}
+
 	std::string selector_string_holder;
 	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
@@ -2249,6 +2266,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
+	// Open database
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.as_volatile) {
@@ -2285,25 +2303,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
 
-	int rc = 0;
 	auto total_count = mset.size();
-
-	// Get default content type to return.
-	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
-	if (
-		!is_acceptable_type(msgpack_type, ct_type) &&
-		!is_acceptable_type(x_msgpack_type, ct_type) &&
-		!is_acceptable_type(json_type, ct_type)
-	) {
-		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
-		};
-		write_http_response(request, response, error_code, err_response);
-		L_SEARCH("ABORTED SEARCH");
-		return;
-	}
 
 	MsgPack obj;
 	if (aggregations) {
@@ -2317,13 +2317,11 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	auto& hits = obj[RESPONSE_QUERY][RESPONSE_HITS];
 
 	const auto m_e = mset.end();
-	for (auto m = mset.begin(); m != m_e; ++rc, ++m) {
-		auto document = db_handler.get_document(*m);
+	for (auto m = mset.begin(); m != m_e; ++m) {
 
+		// Retrive document data
+		auto document = db_handler.get_document(*m);
 		const auto data = Data(document.get_data());
-		if (data.empty()) {
-			continue;
-		}
 
 		MsgPack hit_obj;
 		auto main_locator = data.get("");
@@ -2369,8 +2367,6 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	auto took_milliseconds = took / 1e6;
-	auto took_delta = string::Number(took_milliseconds).str();
 	L_TIME("Searching took %s", string::from_delta(took));
 
 	if (aggregations) {
