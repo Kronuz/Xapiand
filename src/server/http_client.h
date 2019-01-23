@@ -204,6 +204,8 @@ class Request {
 	void _decode();
 
 public:
+	Encoding type_encoding;
+
 	std::string _header_name;
 
 	accept_set_t accept_set;
