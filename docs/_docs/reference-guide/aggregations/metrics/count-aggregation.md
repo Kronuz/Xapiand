@@ -2,15 +2,31 @@
 title: Count Aggregation
 ---
 
-{: .note .construction}
-**_TODO:_** This section is a work in progress...
-
 A _single-value_ metrics aggregation that counts the number of values that are
-extracted from the aggregated documents. These values are extracted from
-specific fields in the documents. Typically, this aggregator will be used in
-conjunction with other single-value aggregations. For example, when computing
-the `_avg` one might be interested in the number of values the average is
-computed over.
+extracted from the aggregated documents.
+
+Typically, this aggregator will be used in conjunction with other single-value
+aggregations. For example, when computing the `_avg` one might be interested in
+the number of values the average is computed over.
+
+## Structuring
+
+The following snippet captures the structure of count aggregations:
+
+```json
+"<aggregation_name>": {
+  "_count": {
+      "_field": "<field_name>"
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the specific field from
+which the numeric values in the documents are extracted and used to compute the
+returned count.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)

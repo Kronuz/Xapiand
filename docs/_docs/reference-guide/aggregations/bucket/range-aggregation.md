@@ -3,10 +3,38 @@ title: Range Aggregation
 ---
 
 A _multi-bucket_ value source based aggregation that enables the user to define
-a set of ranges - each representing a bucket. During the aggregation process,
-the values extracted from each document will be checked against each bucket
-range and "bucket" the relevant/matching document. Note that this aggregation
-includes the `_from` value and excludes the `_to` value for each range.
+a set of ranges - each representing a bucket.
+
+
+## Structuring
+
+The following snippet captures the structure of range aggregations:
+
+```json
+"<aggregation_name>": {
+  "_range": {
+      "_field": "<field_name>",
+      "_ranges": [
+        ( {
+          ( "_key": <key_name>, )?
+          "_from": <from_value>,
+          "_to": <to_value>
+        }, )+
+      ]
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the field on which the
+aggregation will act upon.
+
+#### Ranges
+
+During the aggregation process, the values extracted from each document will be
+checked against each bucket range and "bucket" the relevant/matching document.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
@@ -45,24 +73,27 @@ Response:
 {
   "#aggregations": {
     "_doc_count": 1000,
-    "balances_by_range": {
-      "..2000.0": {
-        "_doc_count": 318
+    "balances_by_range": [
+      {
+        "_doc_count": 520,
+        "_key": "2000.0..3500.0"
       },
-      "2000.0..3500.0": {
-        "_doc_count": 520
+      {
+        "_doc_count": 318,
+        "_key": "..2000.0"
       },
-      "3500.0..": {
-        "_doc_count": 162
+      {
+        "_doc_count": 162,
+        "_key": "3500.0.."
       }
-    }
+    ]
   },
   ...
 }
 ```
 
 
-### Keyed Response
+#### Keyed Response
 
 It is possible to customize the key associated with each bucket in each range:
 
@@ -98,100 +129,21 @@ Response:
 {
   "#aggregations": {
     "_doc_count": 1000,
-    "balances_by_range": {
-      "average": {
-        "_doc_count": 520
+    "balances_by_range": [
+      {
+        "_doc_count": 520,
+        "_key": "average"
       },
-      "poor": {
-        "_doc_count": 318
+      {
+        "_doc_count": 318,
+        "_key": "poor"
       },
-      "rich": {
-        "_doc_count": 162
+      {
+        "_doc_count": 162,
+        "_key": "rich"
       }
-    }
+    ]
   },
   ...
-}
-```
-
-
-## Sub Aggregations
-
-The following example, not only "bucket" the documents to the different buckets,
-but also computes statistics over the ages of account holders in each balance
-range:
-
-{% capture req %}
-
-```json
-POST /bank/:search?pretty
-
-{
-  "_query": "*",
-  "_limit": 0,
-  "_check_at_least": 1000,
-  "_aggs": {
-    "balances_by_range": {
-      "_range": {
-        "_field": "balance",
-        "_ranges": [
-          { "_key": "poor", "_to": 2000 },
-          { "_key": "average", "_from": 2000, "_to": 3500 },
-          { "_key": "rich", "_from": 3500 }
-        ]
-      },
-      "_aggs": {
-        "age_stats": {
-          "_stats": {
-            "_field": "age"
-          }
-        }
-      }
-    }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-Response:
-
-```json
-{
-  "#aggregations": {
-    "_doc_count": 1000,
-    "balances_by_range": {
-      "average": {
-        "_doc_count": 520,
-        "age_stats": {
-          "_count": 520,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 29.892307692307694,
-          "_sum": 15544.0
-        }
-      },
-      "poor": {
-        "_doc_count": 318,
-        "age_stats": {
-          "_count": 318,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 30.166666666666669,
-          "_sum": 9593.0
-        }
-      },
-      "rich": {
-        "_doc_count": 162,
-        "age_stats": {
-          "_count": 162,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 30.228395061728397,
-          "_sum": 4897.0
-        }
-      }
-    }
-  },
 }
 ```

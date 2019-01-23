@@ -40,35 +40,27 @@ Features with asterisk haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
 
 
-## Structuring Bucket Aggregations
+## Structuring
 
 The following snippet captures the structure of aggregations types for buckets:
 
 ```json
-"_aggregations": {
-    "<aggregation_name>": {
-        "<bucket_aggregation_type>": {
-            "_field": "<field_name>"
-            [,"_sort": {  [<sort_body>] } ]?
-            [,"_limit": <limit_count>]?
-            [,"_min_doc_count": <min_doc_count>]?
-        }
-        ...
-    }
-    ...
+"<aggregation_name>": {
+  "<bucket_aggregation_type>": {
+      ("_sort": {  <sort_body> }, )?
+      ("_limit": <limit_count>, )?
+      ("_min_doc_count": <min_doc_count>, )?
+      ("_keyed": <keyed_boolean>, )?
+      ...
+  },
+  ...
 }
-...
 ```
-
-#### Field
-
-The `<field_name>` in the `"_field"` parameter defines the field on which the
-aggregation will act upon.
 
 #### Sorting Buckets
 
 The order of the buckets can be customized by setting a `<sort_body>` in the
-`"_sort"` parameter. By default, the buckets are ordered by their `_doc_count`
+`_sort` parameter. By default, the buckets are ordered by their `_doc_count`
 descending. It is possible to change this behaviour as documented below:
 
 Ordering the buckets by their document count in an ascending manner:
@@ -233,10 +225,15 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-#### Limiting Buckets
+#### Limit
 
-The `<limit_count>` in the `"_limit"` parameter is a positive integer number
+The `<limit_count>` in the `_limit` option is a positive integer number
 used for limiting the number of returned buckets.
+
+#### Response Format
+By default, the buckets are returned as an ordered array. It is also possible
+to request the response as an object keyed by the buckets keys by using the
+`_keyed` boolean option:
 
 #### Minimum Document Count
 
@@ -334,6 +331,95 @@ POST /bank/:search?pretty
 
 Documents without a value in the `gender` field will fall into the same bucket
 as documents that have the value `"N/A"`.
+
+
+## Sub Aggregations
+
+Side-by-side the `<bucket_aggregation_type>`, an additional `_aggregations`
+object can be added, to nest other sub-aggregations.
+
+The following example, not only "bucket" the documents to the different buckets,
+but also computes statistics over the ages of account holders in each balance
+range:
+
+{% capture req %}
+
+```json
+POST /bank/:search?pretty
+
+{
+  "_query": "*",
+  "_limit": 0,
+  "_check_at_least": 1000,
+  "_aggs": {
+    "balances_by_range": {
+      "_range": {
+        "_field": "balance",
+        "_ranges": [
+          { "_key": "poor", "_to": 2000 },
+          { "_key": "average", "_from": 2000, "_to": 3500 },
+          { "_key": "rich", "_from": 3500 }
+        ]
+      },
+      "_aggs": {
+        "age_stats": {
+          "_stats": {
+            "_field": "age"
+          }
+        }
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+Response:
+
+```json
+{
+  "#aggregations": {
+    "_doc_count": 1000,
+    "balances_by_range": [
+      {
+        "_doc_count": 520,
+        "age_stats": {
+          "_count": 520,
+          "_min": 20.0,
+          "_max": 40.0,
+          "_avg": 29.892307692307694,
+          "_sum": 15544.0
+        },
+        "_key": "average"
+      },
+      {
+        "_doc_count": 318,
+        "age_stats": {
+          "_count": 318,
+          "_min": 20.0,
+          "_max": 40.0,
+          "_avg": 30.166666666666669,
+          "_sum": 9593.0
+        },
+        "_key": "poor"
+      },
+      {
+        "_doc_count": 162,
+        "age_stats": {
+          "_count": 162,
+          "_min": 20.0,
+          "_max": 40.0,
+          "_avg": 30.228395061728397,
+          "_sum": 4897.0
+        },
+        "_key": "rich"
+      }
+    ]
+  },
+  ...
+}
+```
 
 
 ## Mixing field types

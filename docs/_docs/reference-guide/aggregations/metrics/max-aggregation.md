@@ -6,11 +6,25 @@ A _single-value_ metrics aggregation that keeps track and returns the maximum
 value among the numeric values extracted from the aggregated documents. These
 values are extracted from specific numeric fields in the documents.
 
-{: .note .info}
-**_Limits_**<br>
-The `_max` aggregation operates on the `double` representation of the data.
-As a consequence, the result may be approximate when running on longs whose
-absolute value is greater than 2^53.
+
+## Structuring
+
+The following snippet captures the structure of max aggregations:
+
+```json
+"<aggregation_name>": {
+  "_max": {
+      "_field": "<field_name>"
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the specific field from
+which the numeric values in the documents are extracted and used to compute the
+returned maximum value.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
@@ -51,6 +65,6 @@ Response:
 }
 ```
 
-As can be seen, the name of the aggregation (`max_price` above) also serves as
+As can be seen, the name of the aggregation (`max_balance` above) also serves as
 the key by which the aggregation result can be retrieved from the returned
 response.

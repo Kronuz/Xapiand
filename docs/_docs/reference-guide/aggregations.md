@@ -49,7 +49,7 @@ consequence, the result may be approximate when running on longs whose absolute
 value is greater than 2^53.
 
 
-## Structuring Aggregations
+## Structuring
 
 The following snippet captures the basic structure of aggregations:
 
@@ -58,20 +58,19 @@ The following snippet captures the basic structure of aggregations:
     "<aggregation_name>": {
         "<aggregation_type>": {
             <aggregation_body>
-        }
-        [,"_meta": {  [<metadata_body>] } ]?
-        [,"_aggregations": { [<sub_aggregation>]+ } ]?
+        },
+        ( "_meta": {  <metadata_body> }, )?
+        ( "_aggregations": { (<sub_aggregation>)+ }, )?
     }
-    [,"<aggregation_name_2>": { ... } ]*
+    ( "<aggregation_name_2>": { ... }, )*
 }
-[,"_limit": <limit>]
-[,"_check_at_least": <check_at_least>]
-
+( "_limit": <limit>, )
+( "_check_at_least": <check_at_least>, )
 ```
 
 #### Aggregation Name
 
-The `"_aggregations"` object (the key `"_aggs"` can also be used) in the JSON
+The `_aggregations` object (the key `_aggs` can also be used) in the JSON
 holds the aggregations to be computed.
 
 Each aggregation is associated with a logical `<aggregation_name>` that the user
@@ -82,7 +81,7 @@ identify the aggregations in the response.
 #### Aggregation Body
 
 Typically, the first key within the named aggregation body sets the specific
-`"<aggregation_type>"`, which defines it's own `<aggregation_body>`, depending
+`<aggregation_type>`, which defines it's own `<aggregation_body>`, depending
 on the nature of the aggregation (e.g. an _Average aggregation_ on a specific
 field will define the _field_ on which the average will be calculated).
 
@@ -95,13 +94,13 @@ This feature hasn't yet been implemented...
 
 At the same level of the aggregation type definition, one can optionally
 associate a piece of metadata with individual aggregations at request time
-(by using `<metadata_body>`, in `"_meta"`) that will be returned in place at
+(by using `<metadata_body>`, in `_meta`) that will be returned in place at
 response time.
 
 #### Nested Aggregations
 
 Also at the same level of the aggregation type definition, one can optionally
-define a set of additional nested `"_aggregations"`, though this only makes
+define a set of additional nested `_aggregations`, though this only makes
 sense if the aggregation you defined is of a _bucketing_ nature. In this
 scenario, the `<sub_aggregation>` you define on the bucketing aggregation level
 will be computed for all the buckets built by the bucketing aggregation. For
@@ -129,6 +128,6 @@ which accepts the same values as the index schema (e.g. `string`, `positive`,
 #### Query DSL
 
 One can use other Query DSL specific parameters at the same level as the topmost
-`"_aggregations"` key. For example, there are many occasions when aggregations
+`_aggregations` key. For example, there are many occasions when aggregations
 are required but search hits are not. For these cases the hits can be ignored by
-setting the Query DSL `"_limit"` parameter to zero.
+setting the Query DSL `_limit` parameter to zero.

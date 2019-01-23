@@ -350,7 +350,8 @@ GET /bank/:search?pretty
   "_aggregations": {
     "group_by_state": {
       "_values": {
-        "_field": "state"
+        "_field": "state",
+        "_keyed": true
       }
     }
   }

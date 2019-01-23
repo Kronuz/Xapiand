@@ -2,11 +2,37 @@
 title: Statistics Aggregation
 ---
 
-A _multi-value_ metrics aggregation that computes stats over numeric values
-extracted from the aggregated documents. These values are extracted from
-specific numeric fields in the documents.
+A _multi-value_ metrics aggregation that computes statistics over numeric values
+extracted from the aggregated documents.
 
-The stats that are returned consist of: `_min`, `_max`, `_sum`, `_count` and `_avg`.
+The stats that are returned consist of `_min`, `_max`, `_sum`, `_count` and
+`_avg`, each of which is an aggregation by itself and is detailed in it's own
+aggregation section:
+
+* [Min Aggregation](min-aggregation)
+* [Max Aggregation](max-aggregation)
+* [Sum Aggregation](sum-aggregation)
+* [Count Aggregation](count-aggregation)
+
+
+## Structuring
+
+The following snippet captures the structure of statistics aggregations:
+
+```json
+"<aggregation_name>": {
+  "_stats": {
+      "_field": "<field_name>"
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the specific field from
+which the numeric values in the documents are extracted and used to compute the
+returned statistics.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
@@ -34,9 +60,7 @@ POST /bank/:search?pretty
 {% include curl.html req=req %}
 
 The above aggregation computes the balance statistics over all documents. The
-aggregation type is `_stats` and the `_field` setting defines the numeric field
-of the documents the stats will be computed on. The above will return the
-following:
+above will return the following:
 
 
 ```json

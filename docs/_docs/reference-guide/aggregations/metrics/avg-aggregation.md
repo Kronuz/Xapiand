@@ -3,8 +3,26 @@ title: Average Aggregation
 ---
 
 A _single-value_ metrics aggregation that computes the average of numeric values
-that are extracted from the aggregated documents. These values are extracted
-from specific numeric fields in the documents.
+that are extracted from the aggregated documents.
+
+## Structuring
+
+The following snippet captures the structure of average aggregations:
+
+```json
+"<aggregation_name>": {
+  "_avg": {
+      "_field": "<field_name>"
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the specific field from
+which the numeric values in the documents are extracted and used to compute the
+returned average.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
@@ -31,10 +49,8 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above aggregation computes the average grade over all documents. The
-aggregation type is `_avg` and the `_field` setting defines the numeric field
-of the documents the average will be computed on. The above will return the
-following:
+The above aggregation computes the average grade over all documents. The above
+will return the following:
 
 ```json
 {

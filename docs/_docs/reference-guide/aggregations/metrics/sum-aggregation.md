@@ -3,8 +3,25 @@ title: Sum Aggregation
 ---
 
 A _single-value_ metrics aggregation that sums up numeric values that are
-extracted from the aggregated documents. These values are extracted from
-specific numeric fields in the documents.
+extracted from the aggregated documents.
+
+## Structuring
+
+The following snippet captures the structure of sum aggregations:
+
+```json
+"<aggregation_name>": {
+  "_sum": {
+      "_field": "<field_name>"
+  },
+  ...
+}
+```
+
+#### Field
+
+The `<field_name>` in the `_field` parameter defines the specific field from
+which the numeric values in the documents are extracted.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)

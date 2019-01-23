@@ -43,19 +43,16 @@ Features with asterisk haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
 
 
-## Structuring Metrics Aggregations
+## Structuring
 
 The following snippet captures the structure of aggregations types for metrics:
 
 ```json
-"_aggregations": {
-    "<aggregation_name>": {
-        "<metrics_aggregation_type>": {
-            "_field": "<field_name>"
-        }
-        ...
-    }
-    ...
+"<aggregation_name>": {
+  "<metrics_aggregation_type>": {
+      "_field": "<field_name>",
+      ...
+  },
+  ...
 }
-...
 ```

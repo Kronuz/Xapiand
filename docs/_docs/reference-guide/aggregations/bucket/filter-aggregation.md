@@ -3,8 +3,27 @@ title: Filter Aggregation
 ---
 
 Defines a _single-bucket_ of all the documents in the current document set
-context that match a specified filter. Often this will be used to narrow down
-the current aggregation context to a specific set of documents.
+context that match a specified filter.
+
+## Structuring
+
+The following snippet captures the structure of filter aggregations:
+
+```json
+"<aggregation_name>": {
+  "_filter": {
+      "_term": {
+        ( "<key>": <value>, )*
+      }
+  },
+  ...
+}
+```
+
+#### Filtering Terms
+
+Often this will be used to narrow down the current aggregation context to a
+specific set of documents containing certain terms.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
