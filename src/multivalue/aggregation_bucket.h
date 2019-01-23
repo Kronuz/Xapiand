@@ -135,8 +135,10 @@ private:
 			: _agg(agg) { }
 
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.doc_count() < b->second.doc_count()) return true;
-			if (a->second.doc_count() > b->second.doc_count()) return false;
+			ASSERT(a->second.value_ptr);
+			ASSERT(b->second.value_ptr);
+			if (*a->second.value_ptr < *b->second.value_ptr) return true;
+			if (*a->second.value_ptr > *b->second.value_ptr) return false;
 			if (a->first > b->first) return false;
 			return true;
 		}
@@ -149,8 +151,10 @@ private:
 			: _agg(agg) { }
 
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.doc_count() > b->second.doc_count()) return true;
-			if (a->second.doc_count() < b->second.doc_count()) return false;
+			ASSERT(a->second.value_ptr);
+			ASSERT(b->second.value_ptr);
+			if (*a->second.value_ptr > *b->second.value_ptr) return true;
+			if (*a->second.value_ptr < *b->second.value_ptr) return false;
 			if (a->first < b->first) return false;
 			return true;
 		}
@@ -158,7 +162,7 @@ private:
 
 
 	template <typename Cmp>
-	MsgPack _get_aggregation() {
+	MsgPack _get_result() {
 		Cmp cmp(*this);
 		bool is_heap = false;
 		std::vector<std::map<std::string, Aggregation>::iterator> ordered;
@@ -405,17 +409,17 @@ public:
 	MsgPack get_result() override {
 		switch (_sort) {
 			case Sort::by_key_asc:
-				return _get_aggregation<CmpByKeyAsc>();
+				return _get_result<CmpByKeyAsc>();
 			case Sort::by_key_desc:
-				return _get_aggregation<CmpByKeyDesc>();
+				return _get_result<CmpByKeyDesc>();
 			case Sort::by_count_asc:
-				return _get_aggregation<CmpByCountAsc>();
+				return _get_result<CmpByCountAsc>();
 			case Sort::by_count_desc:
-				return _get_aggregation<CmpByCountDesc>();
+				return _get_result<CmpByCountDesc>();
 			case Sort::by_field_asc:
-				return _get_aggregation<CmpByFieldAsc>();
+				return _get_result<CmpByFieldAsc>();
 			case Sort::by_field_desc:
-				return _get_aggregation<CmpByFieldDesc>();
+				return _get_result<CmpByFieldDesc>();
 		}
 	}
 
@@ -427,38 +431,40 @@ public:
 		return nullptr;
 	}
 
-	auto& add(std::string_view bucket) {
+	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
-			return it->second;
+			it->second(doc);
+			return;
 		}
 
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
 			std::forward_as_tuple(_context, _schema));
 
+		emplaced.first->second(doc);
+
 		// Find and store the Aggregation the value should be recovered from:
 		if (!_sort_field.empty()) {
-			BaseAggregation* agg = this;
+			BaseAggregation* agg = &emplaced.first->second;
 			for (const auto& field : _sort_field) {
-				if (emplaced.first->second.value_fn) {
+				if (emplaced.first->second.value_ptr) {
 					THROW(AggregationError, "Bad field path!");
 				}
 				auto agg_ = agg->get_agg(field);
-				if (!agg_) {
-					emplaced.first->second.value_fn = agg->get_value_func(field);
+				if (agg_) {
+					agg = agg_;
+				} else {
+					emplaced.first->second.value_ptr = agg->get_value_ptr(field);
+					if (!emplaced.first->second.value_ptr) {
+						THROW(AggregationError, "Field not found! (1)");
+					}
 				}
 			}
-			// if (!emplaced.first->second.value_fn) {
-			// 	THROW(AggregationError, "Field not found!");
-			// }
+			if (!emplaced.first->second.value_ptr) {
+				THROW(AggregationError, "Field not found! (2)");
+			}
 		}
-
-		return emplaced.first->second;
-	}
-
-	void aggregate(std::string_view bucket, const Xapian::Document& doc) {
-		add(bucket)(doc);
 	}
 };
 

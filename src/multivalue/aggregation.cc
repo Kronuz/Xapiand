@@ -35,14 +35,14 @@
 
 Aggregation::Aggregation()
 	: _doc_count(0),
-	  value_fn(nullptr)
+	  value_ptr(nullptr)
 {
 }
 
 
 Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& schema)
 	: _doc_count(0),
-	  value_fn(nullptr)
+	  value_ptr(nullptr)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(AGGREGATION_COUNT),

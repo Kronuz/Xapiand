@@ -89,11 +89,7 @@ constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
 constexpr const char AGGREGATION_LIMIT[]            = "_limit";
 
 
-class BaseAggregation;
 class Schema;
-
-
-typedef long double (BaseAggregation::* value_func)();
 
 
 class BaseAggregation {
@@ -110,7 +106,7 @@ public:
 		return nullptr;
 	}
 
-	virtual value_func get_value_func(std::string_view) {
+	virtual const long double* get_value_ptr(std::string_view) const {
 		return nullptr;
 	}
 };
@@ -122,7 +118,7 @@ class Aggregation : public BaseAggregation {
 	std::map<std::string_view, std::unique_ptr<BaseAggregation>> _sub_aggs;
 
 public:
-	value_func value_fn;
+	const long double* value_ptr;
 
 	Aggregation();
 

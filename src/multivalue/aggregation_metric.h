@@ -218,7 +218,7 @@ public:
 
 class MetricCount : public HandledSubAggregation<ValuesHandler> {
 protected:
-	size_t _count;
+	long double _count;
 
 public:
 	MetricCount(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
@@ -227,8 +227,15 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, _count },
+			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
 		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_COUNT) {
+			return &_count;
+		}
+		return nullptr;
 	}
 
 	void _aggregate() {
@@ -292,6 +299,13 @@ public:
 		};
 	}
 
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_SUM) {
+			return &_sum;
+		}
+		return nullptr;
+	}
+
 	void _aggregate(long double value) {
 		_sum += value;
 	}
@@ -324,7 +338,7 @@ public:
 
 class MetricAvg : public MetricSum {
 protected:
-	size_t _count;
+	long double _count;
 
 	long double _avg;
 
@@ -338,6 +352,13 @@ public:
 		return {
 			{ AGGREGATION_AVG, static_cast<double>(_avg) },
 		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_AVG) {
+			return &_avg;
+		}
+		return nullptr;
 	}
 
 	void _aggregate(long double value) {
@@ -401,6 +422,13 @@ public:
 		};
 	}
 
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_MIN) {
+			return &_min;
+		}
+		return nullptr;
+	}
+
 	void _aggregate(long double value) {
 		if (value < _min) {
 			_min = value;
@@ -455,6 +483,13 @@ public:
 		};
 	}
 
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_MAX) {
+			return &_max;
+		}
+		return nullptr;
+	}
+
 	void _aggregate(long double value) {
 		if (value > _max) {
 			_max = value;
@@ -502,6 +537,13 @@ public:
 		return {
 			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
 		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_VARIANCE) {
+			return &_variance;
+		}
+		return nullptr;
 	}
 
 	void _aggregate(long double value) {
@@ -579,6 +621,13 @@ public:
 		};
 	}
 
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_STD) {
+			return &_std;
+		}
+		return nullptr;
+	}
+
 	void update() override {
 		MetricVariance::update();
 		_std = std::sqrt(_variance);
@@ -589,12 +638,27 @@ public:
 class MetricMedian : public HandledSubAggregation<ValuesHandler> {
 	std::vector<long double> values;
 
+	long double _median;
+
 public:
 	MetricMedian(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
+		  _median(0) { }
 
 	MsgPack get_result() override {
-		double _median = 0.0;
+		return {
+			{ AGGREGATION_MEDIAN, static_cast<double>(_median) },
+		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_MEDIAN) {
+			return &_median;
+		}
+		return nullptr;
+	}
+
+	void update() override {
 		if (!values.empty()) {
 			size_t median_pos = values.size();
 			if (median_pos % 2 == 0) {
@@ -602,16 +666,13 @@ public:
 				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
 				auto val1 = values[median_pos];
 				std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
-				_median = static_cast<double>((val1 + values[median_pos - 1]) / 2);
+				_median = (val1 + values[median_pos - 1]) / 2;
 			} else {
 				median_pos /= 2;
 				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-				_median = static_cast<double>(values[median_pos]);
+				_median = values[median_pos];
 			}
 		}
-		return {
-			{ AGGREGATION_MEDIAN, _median },
-		};
 	}
 
 	void _aggregate(long double value) {
@@ -647,19 +708,31 @@ public:
 class MetricMode : public HandledSubAggregation<ValuesHandler> {
 	std::map<long double, size_t> _histogram;
 
+	long double _mode;
+
 public:
 	MetricMode(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
-		: HandledSubAggregation<ValuesHandler>(context, name, schema) { }
+		: HandledSubAggregation<ValuesHandler>(context, name, schema),
+		  _mode(0) { }
 
 	MsgPack get_result() override {
-		double _mode = 0.0;
+		return {
+			{ AGGREGATION_MODE, static_cast<double>(_mode) },
+		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_MODE) {
+			return &_mode;
+		}
+		return nullptr;
+	}
+
+	void update() override {
 		if (!_histogram.empty()) {
 			auto it = std::max_element(_histogram.begin(), _histogram.end(), [](const std::pair<double, size_t>& a, const std::pair<double, size_t>& b) { return a.second < b.second; });
 			_mode = static_cast<double>(it->first);
 		}
-		return {
-			{ AGGREGATION_MODE, _mode },
-		};
 	}
 
 	void _aggregate(long double value) {
@@ -705,12 +778,31 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, _count },
+			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
 			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
 			{ AGGREGATION_AVG, static_cast<double>(_avg) },
 			{ AGGREGATION_SUM, static_cast<double>(_sum) },
 		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_COUNT) {
+			return &_count;
+		}
+		if (field == AGGREGATION_MIN) {
+			return &_min_metric._min;
+		}
+		if (field == AGGREGATION_MAX) {
+			return &_max_metric._max;
+		}
+		if (field == AGGREGATION_AVG) {
+			return &_avg;
+		}
+		if (field == AGGREGATION_SUM) {
+			return &_sum;
+		}
+		return nullptr;
 	}
 
 	void _aggregate(long double value) {
@@ -758,7 +850,7 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, _count },
+			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
 			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
 			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
 			{ AGGREGATION_AVG, static_cast<double>(_avg) },
@@ -771,6 +863,34 @@ public:
 				{ AGGREGATION_LOWER, static_cast<double>(_avg - _std * _sigma) },
 			}},
 		};
+	}
+
+	const long double* get_value_ptr(std::string_view field) const override {
+		if (field == AGGREGATION_COUNT) {
+			return &_count;
+		}
+		if (field == AGGREGATION_MIN) {
+			return &_min_metric._min;
+		}
+		if (field == AGGREGATION_MAX) {
+			return &_max_metric._max;
+		}
+		if (field == AGGREGATION_AVG) {
+			return &_avg;
+		}
+		if (field == AGGREGATION_SUM) {
+			return &_sum;
+		}
+		if (field == AGGREGATION_SUM_OF_SQ) {
+			return &_sq_sum;
+		}
+		if (field == AGGREGATION_VARIANCE) {
+			return &_variance;
+		}
+		if (field == AGGREGATION_STD) {
+			return &_std;
+		}
+		return nullptr;
 	}
 
 	void _aggregate(long double value) {
