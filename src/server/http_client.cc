@@ -92,6 +92,7 @@
 #define QUERY_FIELD_PERIOD     (1 << 4)
 #define QUERY_FIELD_VOLATILE   (1 << 5)
 
+#define DEFAULT_INDENTATION 2
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_ENDPOINT[]            = "#endpoint";
@@ -2188,7 +2189,7 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 		}
 
 		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-			response.body += obj.to_string(4);
+			response.body += obj.to_string(DEFAULT_INDENTATION);
 		}
 
 		// Get default content type to return.
@@ -2359,7 +2360,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		response.body += obj.to_string(4);
+		response.body += obj.to_string(DEFAULT_INDENTATION);
 	}
 
 	// Get default content type to return.
@@ -2534,7 +2535,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		l_first_chunk = basic_response.to_string(4);
+		l_first_chunk = basic_response.to_string(DEFAULT_INDENTATION);
 		l_first_chunk.erase(l_first_chunk.size() - 9);
 		l_first_chunk += "\n";
 		l_last_chunk = "        ]\n    },\n    \"" + std::string(RESPONSE_TOOK) + "\": %s\n}";
@@ -2580,9 +2581,9 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				response.body += l_first_chunk;
 			}
 			if (!l_buffer.empty()) {
-				response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
+				response.body += string::indent(l_buffer, ' ', 3 * DEFAULT_INDENTATION) + l_sep_chunk + l_eol_chunk;
 			}
-			l_buffer = obj.to_string(4);
+			l_buffer = obj.to_string(DEFAULT_INDENTATION);
 		}
 
 		auto result = serialize_response(obj, ct_type, request.indented);
@@ -2629,7 +2630,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		}
 
 		if (!l_buffer.empty()) {
-			response.body += string::indent(l_buffer, ' ', 3 * 4) + l_eol_chunk;
+			response.body += string::indent(l_buffer, ' ', 3 * DEFAULT_INDENTATION) + l_eol_chunk;
 		}
 
 		response.body += string::format(l_last_chunk, took_delta);
@@ -2761,10 +2762,10 @@ HttpClient::url_resolve(Request& request)
 		if (request.query_parser.next("pretty") != -1) {
 			if (request.query_parser.len != 0u) {
 				try {
-					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? 2 : -1;
+					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? DEFAULT_INDENTATION : -1;
 				} catch (const Exception&) { }
 			} else if (request.indented == -1) {
-				request.indented = 2;
+				request.indented = DEFAULT_INDENTATION;
 			}
 		}
 
@@ -3293,15 +3294,15 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
 		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
-				response.body.append(obj.to_string(4));
+				response.body.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
-				response.body.append(obj.to_string(4));
+				response.body.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, x_msgpack_type) != nullptr) {
-				response.body.append(obj.to_string(4));
+				response.body.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, html_type) != nullptr) {
-				response.body.append(obj.to_string(4));
+				response.body.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, text_type) != nullptr) {
-				response.body.append(obj.to_string(4));
+				response.body.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (!obj.empty()) {
 				response.body.append("...");
 			}
@@ -3657,7 +3658,7 @@ Request::to_text(bool decode)
 			} else {
 				auto& decoded = decoded_body();
 				if (ct_type == json_type || ct_type == msgpack_type) {
-					request_text += decoded.to_string(4);
+					request_text += decoded.to_string(DEFAULT_INDENTATION);
 				} else {
 					request_text += "<body " + string::from_bytes(raw.size()) + ">";
 				}
