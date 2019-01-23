@@ -58,7 +58,7 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "max_balance": {
-      "_max": 3998.71
+      "_max": 12699.46
     }
   },
   ...

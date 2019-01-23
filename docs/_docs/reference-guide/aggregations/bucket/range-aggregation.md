@@ -66,8 +66,8 @@ POST /bank/:search?pretty
         "_keyed": true,
         "_ranges": [
           { "_to": 2000 },
-          { "_from": 2000, "_to": 3500 },
-          { "_from": 3500 }
+          { "_from": 2000, "_to": 4000 },
+          { "_from": 4000 }
         ]
       }
     }
@@ -85,13 +85,13 @@ Response:
     "_doc_count": 1000,
     "balances_by_range": {
       "..2000.0": {
-        "_doc_count": 318
+        "_doc_count": 384
       },
-      "2000.0..3500.0": {
-        "_doc_count": 520
+      "2000.0..4000.0": {
+        "_doc_count": 580
       },
-      "3500.0..": {
-        "_doc_count": 162
+      "4000.0..": {
+        "_doc_count": 36
       }
     }
   },
@@ -120,8 +120,8 @@ POST /bank/:search?pretty
         "_keyed": true,
         "_ranges": [
           { "_key": "poor", "_to": 2000 },
-          { "_key": "average", "_from": 2000, "_to": 3500 },
-          { "_key": "rich", "_from": 3500 }
+          { "_key": "average", "_from": 2000, "_to": 4000 },
+          { "_key": "rich", "_from": 4000 }
         ]
       }
     }
@@ -139,13 +139,13 @@ Response:
     "_doc_count": 1000,
     "balances_by_range": {
       "poor": {
-        "_doc_count": 318
+        "_doc_count": 384
       },
       "average": {
-        "_doc_count": 520
+        "_doc_count": 580
       },
       "rich": {
-        "_doc_count": 162
+        "_doc_count": 36
       }
     }
   },

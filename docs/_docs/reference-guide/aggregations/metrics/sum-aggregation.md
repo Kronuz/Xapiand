@@ -57,7 +57,7 @@ Resulting in:
     "#aggregations": {
         "_doc_count": 17,
         "indiana_total_balance": {
-            "_sum": 45152.87
+            "_sum": 2565033.04
         }
     },
     ...

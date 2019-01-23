@@ -73,7 +73,7 @@ Response:
     "strawberry_lovers": {
       "_doc_count": 345,
       "avg_balance": {
-        "_avg": 2588.3637101449278
+        "_avg": 2576.7695072463768
       }
     }
   },

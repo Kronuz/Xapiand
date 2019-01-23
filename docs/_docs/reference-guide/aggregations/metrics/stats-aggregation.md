@@ -68,10 +68,10 @@ above will return the following:
     "_doc_count": 1000,
     "balance_stats": {
       "_count": 1000,
-      "_min": 1002.25,
-      "_max": 3998.71,
-      "_avg": 2522.83304,
-      "_sum": 2522833.04
+      "_min": 7.99,
+      "_max": 12699.46,
+      "_avg": 2565.03304,
+      "_sum": 2565033.04
     }
   },
   ...

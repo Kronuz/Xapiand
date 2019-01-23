@@ -67,16 +67,16 @@ above will return the following:
     "_doc_count": 1000,
     "balance_stats": {
       "_count": 1000,
-      "_min": 1002.25,
-      "_max": 3998.71,
-      "_avg": 2522.83304,
-      "_sum": 2522833.04,
-      "_sum_of_squares": 7085869104.66,
-      "_variance": 721904.4614057642,
-      "_std_deviation": 849.649610960756,
+      "_min": 7.99,
+      "_max": 12699.46,
+      "_avg": 2565.03304,
+      "_sum": 2565033.04,
+      "_sum_of_squares": 8844461934.66,
+      "_variance": 2267334.7731415,
+      "_std_deviation": 1505.7671709602053,
       "_std_deviation_bounds": {
-        "_upper": 4222.1322619215129,
-        "_lower": 823.5338180784878
+        "_upper": 5576.56738192041,
+        "_lower": -446.50130192041049
       }
     }
   },

@@ -65,7 +65,7 @@ POST /bank/:search?pretty
     "balances": {
       "_histogram": {
         "_field": "balance",
-        "_interval": 500
+        "_interval": 1000
       }
     }
   }
@@ -81,28 +81,44 @@ And the following may be the response:
     "_doc_count": 1000,
     "balances": [
       {
-        "_doc_count": 179,
-        "_key": "3000.0"
+        "_doc_count": 55,
+        "_key": "0.0"
       },
       {
-        "_doc_count": 174,
-        "_key": "2500.0"
+        "_doc_count": 329,
+        "_key": "1000.0"
       },
       {
-        "_doc_count": 167,
+        "_doc_count": 286,
         "_key": "2000.0"
       },
       {
-        "_doc_count": 165,
-        "_key": "1500.0"
+        "_doc_count": 294,
+        "_key": "3000.0"
       },
       {
-        "_doc_count": 162,
-        "_key": "3500.0"
+        "_doc_count": 1,
+        "_key": "4000.0"
       },
       {
-        "_doc_count": 153,
-        "_key": "1000.0"
+        "_doc_count": 1,
+        "_key": "5000.0"
+      },
+      {
+        "_doc_count": 4,
+        "_key": "6000.0"
+      },
+      {
+        "_doc_count": 12,
+        "_key": "7000.0"
+      },
+      {
+        "_doc_count": 9,
+        "_key": "10000.0"
+      },
+      {
+        "_doc_count": 1,
+        "_key": "12000.0"
       }
     ]
   },

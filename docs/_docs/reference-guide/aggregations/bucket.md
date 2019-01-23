@@ -254,7 +254,7 @@ POST /bank/:search?pretty
     "balances": {
       "_histogram": {
         "_field": "balance",
-        "_interval": 500,
+        "_interval": 1000,
         "_keyed": true
       }
     }
@@ -270,23 +270,35 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "balances": {
-      "1000.0": {
-        "_doc_count": 153
+      "0.0": {
+        "_doc_count": 55
       },
-      "1500.0": {
-        "_doc_count": 165
+      "1000.0": {
+        "_doc_count": 329
       },
       "2000.0": {
-        "_doc_count": 167
-      },
-      "2500.0": {
-        "_doc_count": 174
+        "_doc_count": 286
       },
       "3000.0": {
-        "_doc_count": 179
+        "_doc_count": 294
       },
-      "3500.0": {
-        "_doc_count": 162
+      "4000.0": {
+        "_doc_count": 1
+      },
+      "5000.0": {
+        "_doc_count": 1
+      },
+      "6000.0": {
+        "_doc_count": 4
+      },
+      "7000.0": {
+        "_doc_count": 12
+      },
+      "10000.0": {
+        "_doc_count": 9
+      },
+      "12000.0": {
+        "_doc_count": 1
       }
     }
   },
@@ -376,8 +388,8 @@ POST /bank/:search?pretty
   "_limit": 0,
   "_check_at_least": 1000,
   "_aggs": {
-    "avg_gender": {
-      "_avg": {
+    "gender": {
+      "_values": {
         "_field": "gender",
         "_missing": "N/A"
       }
@@ -417,8 +429,8 @@ POST /bank/:search?pretty
         "_keyed": true,
         "_ranges": [
           { "_key": "poor", "_to": 2000 },
-          { "_key": "average", "_from": 2000, "_to": 3500 },
-          { "_key": "rich", "_from": 3500 }
+          { "_key": "average", "_from": 2000, "_to": 4000 },
+          { "_key": "rich", "_from": 4000 }
         ]
       },
       "_aggs": {
@@ -443,33 +455,33 @@ Response:
     "_doc_count": 1000,
     "balances_by_range": {
       "poor": {
-        "_doc_count": 318,
+        "_doc_count": 384,
         "age_stats": {
-          "_count": 318,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 30.166666666666669,
-          "_sum": 9593.0
+          "_count": 384,
+          "_min": 17.0,
+          "_max": 44.0,
+          "_avg": 28.817708333333333,
+          "_sum": 11066.0
         }
       },
       "average": {
-        "_doc_count": 520,
+        "_doc_count": 580,
         "age_stats": {
-          "_count": 520,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 29.892307692307694,
-          "_sum": 15544.0
+          "_count": 580,
+          "_min": 17.0,
+          "_max": 42.0,
+          "_avg": 30.387931034482759,
+          "_sum": 17625.0
         }
       },
       "rich": {
-        "_doc_count": 162,
+        "_doc_count": 36,
         "age_stats": {
-          "_count": 162,
+          "_count": 36,
           "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 30.228395061728397,
-          "_sum": 4897.0
+          "_max": 44.0,
+          "_avg": 37.52777777777778,
+          "_sum": 1351.0
         }
       }
     }

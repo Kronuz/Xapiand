@@ -58,10 +58,10 @@ documents. The above will return the following:
   "#aggregations": {
     "_doc_count": 1000,
     "balance_std_deviation": {
-      "_std_deviation": 849.649610960756,
+      "_std_deviation": 1505.7671709602053,
       "_std_deviation_bounds": {
-        "_upper": 4222.1322619215129,
-        "_lower": 823.5338180784878
+        "_upper": 5576.56738192041,
+        "_lower": -446.50130192041049
       }
     }
   },

@@ -58,7 +58,7 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "min_balance": {
-      "_min": 1002.25
+      "_min": 7.99
     }
   },
   ...
