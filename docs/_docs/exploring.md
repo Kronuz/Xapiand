@@ -15,7 +15,7 @@ customer bank account information. Each document has the following schema:
   "age": 24,
   "gender": "female",
   "phone": "+1 (964) 525-3462",
-  "company": "Pearlessa",
+  "employer": "Syntac",
   "address": "477 Branton Street",
   "city": "Trexlertown",
   "state": "Indiana",
