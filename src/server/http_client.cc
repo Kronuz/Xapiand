@@ -1351,7 +1351,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, method);
 
 	auto local_node = Node::local_node();
-	auto document = db_handler.get_document(local_node->name());
+	auto document = db_handler.get_document(local_node->lower_name());
 
 	auto obj = document.get_obj();
 	if (obj.find(ID_FIELD_NAME) == obj.end()) {
