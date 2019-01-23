@@ -2319,8 +2319,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		obj[RESPONSE_AGGREGATIONS] = aggregations;
 	}
 	obj[RESPONSE_QUERY] = {
-		{ RESPONSE_TOTAL_COUNT, total_count},
 		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+		{ RESPONSE_TOTAL_COUNT, total_count},
 		{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
 	};
 	auto& hits = obj[RESPONSE_QUERY][RESPONSE_HITS];
