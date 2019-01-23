@@ -189,6 +189,11 @@ the metric name to sort by in case of a multi-value metrics aggregation, and in
 case of a single-value metrics aggregation the sort will be applied on that
 value).
 
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
+
 {% capture req %}
 
 ```json
