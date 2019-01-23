@@ -20,7 +20,7 @@ The following snippet captures the structure of filter aggregations:
 }
 ```
 
-#### Filtering Terms
+### Filtering Terms
 
 Often this will be used to narrow down the current aggregation context to a
 specific set of documents containing certain terms.

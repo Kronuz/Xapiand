@@ -34,12 +34,12 @@ The following snippet captures the structure of histogram aggregations:
 }
 ```
 
-#### Field
+### Field
 
 The `<field_name>` in the `_field` parameter defines the field on which the
 aggregation will act upon.
 
-#### Interval
+### Interval
 
 The `_interval` must be a positive decimal, while the `_shift` must be a decimal
 in `[0, _interval)` (a decimal greater than or equal to `0` and less than
@@ -107,7 +107,7 @@ And the following may be the response:
   ...
 ```
 
-#### Shift
+### Shift
 
 By default the bucket keys start with 0 and then continue in even spaced steps
 of interval, e.g. if the interval is 10 the first buckets (assuming there is
@@ -118,3 +118,10 @@ This can be best illustrated with an example. If there are 10 documents with
 values ranging from 5 to 14, using interval 10 will result in two buckets with
 5 documents each. If an additional shift of 5 is used, there will be only one
 single bucket [5, 15) containing all the 10 documents.
+
+
+### Ordering
+
+By default, the returned buckets are sorted by their `_key` ascending, though
+the order behaviour can be controlled using the `_sort` setting. Supports the
+same order functionality as explained in [Bucket Ordering](..#ordering).

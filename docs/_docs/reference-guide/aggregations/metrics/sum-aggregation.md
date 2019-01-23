@@ -18,7 +18,7 @@ The following snippet captures the structure of sum aggregations:
 }
 ```
 
-#### Field
+### Field
 
 The `<field_name>` in the `_field` parameter defines the specific field from
 which the numeric values in the documents are extracted.

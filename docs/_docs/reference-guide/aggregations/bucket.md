@@ -57,11 +57,12 @@ The following snippet captures the structure of aggregations types for buckets:
 }
 ```
 
-#### Sorting Buckets
+### Ordering
 
 The order of the buckets can be customized by setting a `<sort_body>` in the
-`_sort` parameter. By default, the buckets are ordered by their `_doc_count`
-descending. It is possible to change this behaviour as documented below:
+`_sort` setting. By default each bucket type has different ordering (e.g.
+Histogram Aggregation orders its returned buckets by their key ascending).
+It is possible to change this default behaviour as documented below:
 
 Ordering the buckets by their document count in an ascending manner:
 
@@ -230,12 +231,12 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-#### Limit
+### Limit
 
 The `<limit_count>` in the `_limit` option is a positive integer number
 used for limiting the number of returned buckets.
 
-#### Response Format
+### Response Format
 By default, the buckets are returned as an ordered array. It is also possible
 to request the response as an object keyed by the buckets keys by using the
 `_keyed` boolean option:
@@ -269,23 +270,23 @@ Response:
   "#aggregations": {
     "_doc_count": 1000,
     "balances": {
-      "3000.0": {
-        "_doc_count": 179
-      },
-      "2500.0": {
-        "_doc_count": 174
-      },
-      "2000.0": {
-        "_doc_count": 167
+      "1000.0": {
+        "_doc_count": 153
       },
       "1500.0": {
         "_doc_count": 165
       },
+      "2000.0": {
+        "_doc_count": 167
+      },
+      "2500.0": {
+        "_doc_count": 174
+      },
+      "3000.0": {
+        "_doc_count": 179
+      },
       "3500.0": {
         "_doc_count": 162
-      },
-      "1000.0": {
-        "_doc_count": 153
       }
     }
   },
@@ -293,7 +294,7 @@ Response:
 ```
 
 
-#### Minimum Document Count
+### Minimum Document Count
 
 It is possible to only return terms that match more than a configured number of
 hits using the `_min_doc_count` option:
@@ -324,7 +325,7 @@ The above aggregation would only return tags which have been found in 5 hits
 or more. Default value is 1.
 
 
-#### Filtering Values
+### Filtering Values
 
 {: .note .unreleased}
 **_Unimplemented Feature!_**<br>
@@ -337,7 +338,7 @@ expression strings or arrays of exact values. Additionally, include clauses can
 filter using partition expressions.
 
 
-#### Collect Mode
+### Collect Mode
 
 {: .note .unreleased}
 **_Unimplemented Feature!_**<br>
@@ -353,7 +354,7 @@ tree are expanded in one _depth-first_ pass and only then any pruning occurs.
 In some scenarios this can be very wasteful and can hit memory constraints.
 
 
-#### Missing Value
+### Missing Value
 
 {: .note .unreleased}
 **_Unimplemented Feature!_**<br>
@@ -413,6 +414,7 @@ POST /bank/:search?pretty
     "balances_by_range": {
       "_range": {
         "_field": "balance",
+        "_keyed": true,
         "_ranges": [
           { "_key": "poor", "_to": 2000 },
           { "_key": "average", "_from": 2000, "_to": 3500 },
@@ -439,19 +441,8 @@ Response:
 {
   "#aggregations": {
     "_doc_count": 1000,
-    "balances_by_range": [
-      {
-        "_doc_count": 520,
-        "age_stats": {
-          "_count": 520,
-          "_min": 20.0,
-          "_max": 40.0,
-          "_avg": 29.892307692307694,
-          "_sum": 15544.0
-        },
-        "_key": "average"
-      },
-      {
+    "balances_by_range": {
+      "poor": {
         "_doc_count": 318,
         "age_stats": {
           "_count": 318,
@@ -459,10 +450,19 @@ Response:
           "_max": 40.0,
           "_avg": 30.166666666666669,
           "_sum": 9593.0
-        },
-        "_key": "poor"
+        }
       },
-      {
+      "average": {
+        "_doc_count": 520,
+        "age_stats": {
+          "_count": 520,
+          "_min": 20.0,
+          "_max": 40.0,
+          "_avg": 29.892307692307694,
+          "_sum": 15544.0
+        }
+      },
+      "rich": {
         "_doc_count": 162,
         "age_stats": {
           "_count": 162,
@@ -470,10 +470,9 @@ Response:
           "_max": 40.0,
           "_avg": 30.228395061728397,
           "_sum": 4897.0
-        },
-        "_key": "rich"
+        }
       }
-    ]
+    }
   },
   ...
 }
