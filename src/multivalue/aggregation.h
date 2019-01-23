@@ -40,6 +40,7 @@ constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
 constexpr const char AGGREGATION_FIELD[]            = "_field";
 constexpr const char AGGREGATION_FROM[]             = "_from";
 constexpr const char AGGREGATION_INTERVAL[]         = "_interval";
+constexpr const char AGGREGATION_SHIFT[]            = "_shift";
 constexpr const char AGGREGATION_KEY[]              = "_key";
 constexpr const char AGGREGATION_RANGES[]           = "_ranges";
 constexpr const char AGGREGATION_SUM_OF_SQ[]        = "_sum_of_squares";
@@ -87,6 +88,7 @@ constexpr const char AGGREGATION_SORT[]             = "_sort";
 constexpr const char AGGREGATION_ORDER[]            = "_order";
 constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
 constexpr const char AGGREGATION_LIMIT[]            = "_limit";
+constexpr const char AGGREGATION_KEYED[]            = "_keyed";
 
 
 class Schema;

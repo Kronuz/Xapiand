@@ -55,6 +55,7 @@ protected:
 
 	const std::shared_ptr<Schema> _schema;
 	const MsgPack& _context;
+	const std::string_view _name;
 
 	Split<std::string_view> _sort_field;
 	enum class Sort {
@@ -66,6 +67,7 @@ protected:
 		by_field_desc,
 	} _sort;
 	size_t _limit;
+	bool _keyed;
 	size_t _min_doc_count;
 
 private:
@@ -188,9 +190,17 @@ private:
 			std::sort(ordered.begin(), ordered.end(), cmp);
 		}
 
-		MsgPack result(MsgPack::Type::MAP);
+		if (_keyed) {
+			MsgPack result(MsgPack::Type::MAP);
+			for (auto& agg : ordered) {
+				result[agg->first] = agg->second.get_result();
+			}
+			return result;
+		}
+
+		MsgPack result(MsgPack::Type::ARRAY);
 		for (auto& agg : ordered) {
-			result[agg->first] = agg->second.get_result();
+			result.append(agg->second.get_result())[AGGREGATION_KEY] = agg->first;
 		}
 		return result;
 	}
@@ -351,7 +361,6 @@ private:
 					THROW(AggregationError, "'%s' must be a string or an object", AGGREGATION_SORT);
 			}
 		}
-
 		return Sort::by_count_desc;
 	}
 
@@ -372,8 +381,23 @@ private:
 					THROW(AggregationError, "'%s' must be a positive integer", AGGREGATION_LIMIT);
 			}
 		}
-
 		return 10;
+	}
+
+	size_t _conf_keyed() {
+		const auto& conf = this->_conf;
+		auto it = conf.find(AGGREGATION_KEYED);
+		if (it != conf.end()) {
+			const auto& value = it.value();
+			switch (value.getType()) {
+				case MsgPack::Type::BOOLEAN: {
+					return value.as_boolean();
+				}
+				default:
+					THROW(AggregationError, "'%s' must be a boolean", AGGREGATION_KEYED);
+			}
+		}
+		return false;
 	}
 
 	size_t _conf_min_doc_count() {
@@ -393,7 +417,6 @@ private:
 					THROW(AggregationError, "'%s' must be a positive number", AGGREGATION_MIN_DOC_COUNT);
 			}
 		}
-
 		return 1;
 	}
 
@@ -402,8 +425,10 @@ public:
 		: HandledSubAggregation<Handler>(context, name, schema),
 		  _schema(schema),
 		  _context(context),
+		  _name(name),
 		  _sort(_conf_sort()),
 		  _limit(_conf_limit()),
+		  _keyed(_conf_keyed()),
 		  _min_doc_count(_conf_min_doc_count()) { }
 
 	MsgPack get_result() override {
@@ -568,69 +593,124 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 	int64_t interval_i64;
 	long double interval_f64;
 
+	uint64_t shift_u64;
+	int64_t shift_i64;
+	long double shift_f64;
+
 	auto get_bucket(uint64_t value) {
 		if (!interval_u64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
-		auto rem = value % interval_u64;
-		return value - rem;
+		return ((value - shift_u64) / interval_u64) * interval_u64 + shift_u64;
 	}
 
 	auto get_bucket(int64_t value) {
 		if (!interval_i64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
-		auto rem = value % interval_i64;
-		if (rem < 0) {
-			rem += interval_i64;
-		}
-		return value - rem;
+		return ((value - shift_i64) / interval_i64) * interval_i64 + shift_i64;
 	}
 
 	auto get_bucket(long double value) {
 		if (!interval_f64) {
 			THROW(AggregationError, "'%s' must be a non-zero number", AGGREGATION_INTERVAL);
 		}
-		auto rem = fmodl(value, interval_f64);
-		if (rem < 0) {
-			rem += interval_f64;
-		}
-		return value - rem;
+		return floorl((value - shift_f64) / interval_f64) * interval_f64 + shift_f64;
 	}
 
-	void configure_u64(const MsgPack& interval_value) {
-		switch (interval_value.getType()) {
-			case MsgPack::Type::POSITIVE_INTEGER:
-			case MsgPack::Type::NEGATIVE_INTEGER:
-			case MsgPack::Type::FLOAT:
-				interval_u64 = interval_value.as_u64();
-				break;
-			default:
-				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+	void configure_u64() {
+		const auto interval_it = _conf.find(AGGREGATION_INTERVAL);
+		if (interval_it != _conf.end()) {
+			const auto& interval_value = interval_it.value();
+			switch (interval_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					interval_u64 = interval_value.as_u64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+			}
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_INTERVAL);
+		}
+
+		const auto shift_it = _conf.find(AGGREGATION_SHIFT);
+		if (shift_it != _conf.end()) {
+			const auto& shift_value = shift_it.value();
+			switch (shift_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					shift_u64 = shift_value.as_u64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_SHIFT);
+			}
 		}
 	}
 
-	void configure_i64(const MsgPack& interval_value) {
-		switch (interval_value.getType()) {
-			case MsgPack::Type::POSITIVE_INTEGER:
-			case MsgPack::Type::NEGATIVE_INTEGER:
-			case MsgPack::Type::FLOAT:
-				interval_i64 = interval_value.as_i64();
-				break;
-			default:
-				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+	void configure_i64() {
+		const auto interval_it = _conf.find(AGGREGATION_INTERVAL);
+		if (interval_it != _conf.end()) {
+			const auto& interval_value = interval_it.value();
+			switch (interval_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					interval_i64 = interval_value.as_i64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+			}
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_INTERVAL);
+		}
+
+		const auto shift_it = _conf.find(AGGREGATION_SHIFT);
+		if (shift_it != _conf.end()) {
+			const auto& shift_value = shift_it.value();
+			switch (shift_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					shift_i64 = shift_value.as_i64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_SHIFT);
+			}
 		}
 	}
 
-	void configure_f64(const MsgPack& interval_value) {
-		switch (interval_value.getType()) {
-			case MsgPack::Type::POSITIVE_INTEGER:
-			case MsgPack::Type::NEGATIVE_INTEGER:
-			case MsgPack::Type::FLOAT:
-				interval_f64 = interval_value.as_f64();
-				break;
-			default:
-				THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+	void configure_f64() {
+		const auto interval_it = _conf.find(AGGREGATION_INTERVAL);
+		if (interval_it != _conf.end()) {
+			const auto& interval_value = interval_it.value();
+			switch (interval_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					interval_f64 = interval_value.as_f64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_INTERVAL);
+			}
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_INTERVAL);
+		}
+
+		const auto shift_it = _conf.find(AGGREGATION_SHIFT);
+		if (shift_it != _conf.end()) {
+			const auto& shift_value = shift_it.value();
+			switch (shift_value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+				case MsgPack::Type::NEGATIVE_INTEGER:
+				case MsgPack::Type::FLOAT:
+					shift_f64 = shift_value.as_f64();
+					break;
+				default:
+					THROW(AggregationError, "'%s' must be a number", AGGREGATION_SHIFT);
+			}
 		}
 	}
 
@@ -639,24 +719,23 @@ public:
 		: BucketAggregation<ValuesHandler>(context, name, schema),
 		  interval_u64{0},
 		  interval_i64{0},
-		  interval_f64{0.0} {
-		const auto it = _conf.find(AGGREGATION_INTERVAL);
-		if (it == _conf.end()) {
-			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_INTERVAL);
-		}
-		const auto& interval_value = it.value();
+		  interval_f64{0.0},
+		  shift_u64{0},
+		  shift_i64{0},
+		  shift_f64{0.0}
+	{
 		switch (_handler.get_type()) {
 			case FieldType::POSITIVE:
-				configure_u64(interval_value);
+				configure_u64();
 				break;
 			case FieldType::INTEGER:
-				configure_i64(interval_value);
+				configure_i64();
 				break;
 			case FieldType::FLOAT:
 			case FieldType::DATE:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
-				configure_f64(interval_value);
+				configure_f64();
 				break;
 			default:
 				THROW(AggregationError, "Histogram aggregation can work only on numeric fields");
@@ -717,156 +796,185 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		return string::format("%s..%s", string::Number(start), string::Number(end));
 	}
 
-	void configure_u64(const MsgPack& ranges) {
-		for (const auto& range : ranges) {
-			std::string default_key;
-			std::string_view key;
-			auto key_it = range.find(AGGREGATION_KEY);
-			if (key_it != range.end()) {
-				const auto& key_value = key_it.value();
-				if (!key_value.is_string()) {
-					THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
-				}
-				key = key_value.str_view();
+	void configure_u64() {
+		const auto it = _conf.find(AGGREGATION_RANGES);
+		if (it != _conf.end()) {
+			const auto& ranges = it.value();
+			if (!ranges.is_array()) {
+				THROW(AggregationError, "'%s.%s' must be an array", _name, AGGREGATION_RANGES);
 			}
 
-			long double from_u64 = std::numeric_limits<long double>::min();
-			auto from_it = range.find(AGGREGATION_FROM);
-			if (from_it != range.end()) {
-				const auto& from_value = from_it.value();
-				switch (from_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						from_u64 = from_value.as_u64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+			for (const auto& range : ranges) {
+				std::string default_key;
+				std::string_view key;
+				auto key_it = range.find(AGGREGATION_KEY);
+				if (key_it != range.end()) {
+					const auto& key_value = key_it.value();
+					if (!key_value.is_string()) {
+						THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
+					}
+					key = key_value.str_view();
 				}
-			}
 
-			long double to_u64 = std::numeric_limits<long double>::max();
-			auto to_it = range.find(AGGREGATION_TO);
-			if (to_it != range.end()) {
-				const auto& to_value = to_it.value();
-				switch (to_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						to_u64 = to_value.as_u64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+				long double from_u64 = std::numeric_limits<long double>::min();
+				auto from_it = range.find(AGGREGATION_FROM);
+				if (from_it != range.end()) {
+					const auto& from_value = from_it.value();
+					switch (from_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							from_u64 = from_value.as_u64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+					}
 				}
-			}
 
-			if (key.empty()) {
-				default_key = _as_bucket(from_u64, to_u64);
-				key = default_key;
+				long double to_u64 = std::numeric_limits<long double>::max();
+				auto to_it = range.find(AGGREGATION_TO);
+				if (to_it != range.end()) {
+					const auto& to_value = to_it.value();
+					switch (to_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							to_u64 = to_value.as_u64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+					}
+				}
+
+				if (key.empty()) {
+					default_key = _as_bucket(from_u64, to_u64);
+					key = default_key;
+				}
+				ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
 			}
-			ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_RANGES);
 		}
 	}
 
-	void configure_i64(const MsgPack& ranges) {
-		for (const auto& range : ranges) {
-			std::string default_key;
-			std::string_view key;
-			auto key_it = range.find(AGGREGATION_KEY);
-			if (key_it != range.end()) {
-				const auto& key_value = key_it.value();
-				if (!key_value.is_string()) {
-					THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
-				}
-				key = key_value.str_view();
+	void configure_i64() {
+		const auto it = _conf.find(AGGREGATION_RANGES);
+		if (it != _conf.end()) {
+			const auto& ranges = it.value();
+			if (!ranges.is_array()) {
+				THROW(AggregationError, "'%s.%s' must be an array", _name, AGGREGATION_RANGES);
 			}
 
-			long double from_i64 = std::numeric_limits<long double>::min();
-			auto from_it = range.find(AGGREGATION_FROM);
-			if (from_it != range.end()) {
-				const auto& from_value = from_it.value();
-				switch (from_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						from_i64 = from_value.as_i64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+			for (const auto& range : ranges) {
+				std::string default_key;
+				std::string_view key;
+				auto key_it = range.find(AGGREGATION_KEY);
+				if (key_it != range.end()) {
+					const auto& key_value = key_it.value();
+					if (!key_value.is_string()) {
+						THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
+					}
+					key = key_value.str_view();
 				}
-			}
 
-			long double to_i64 = std::numeric_limits<long double>::max();
-			auto to_it = range.find(AGGREGATION_TO);
-			if (to_it != range.end()) {
-				const auto& to_value = to_it.value();
-				switch (to_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						to_i64 = to_value.as_i64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+				long double from_i64 = std::numeric_limits<long double>::min();
+				auto from_it = range.find(AGGREGATION_FROM);
+				if (from_it != range.end()) {
+					const auto& from_value = from_it.value();
+					switch (from_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							from_i64 = from_value.as_i64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+					}
 				}
-			}
 
-			if (key.empty()) {
-				default_key = _as_bucket(from_i64, to_i64);
-				key = default_key;
+				long double to_i64 = std::numeric_limits<long double>::max();
+				auto to_it = range.find(AGGREGATION_TO);
+				if (to_it != range.end()) {
+					const auto& to_value = to_it.value();
+					switch (to_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							to_i64 = to_value.as_i64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+					}
+				}
+
+				if (key.empty()) {
+					default_key = _as_bucket(from_i64, to_i64);
+					key = default_key;
+				}
+				ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
 			}
-			ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_RANGES);
 		}
 	}
 
-	void configure_f64(const MsgPack& ranges) {
-		for (const auto& range : ranges) {
-			std::string default_key;
-			std::string_view key;
-			auto key_it = range.find(AGGREGATION_KEY);
-			if (key_it != range.end()) {
-				const auto& key_value = key_it.value();
-				if (!key_value.is_string()) {
-					THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
+	void configure_f64() {
+		const auto it = _conf.find(AGGREGATION_RANGES);
+		if (it != _conf.end()) {
+			const auto& ranges = it.value();
+			if (!ranges.is_array()) {
+				THROW(AggregationError, "'%s.%s' must be an array", _name, AGGREGATION_RANGES);
+			}
+			for (const auto& range : ranges) {
+				std::string default_key;
+				std::string_view key;
+				auto key_it = range.find(AGGREGATION_KEY);
+				if (key_it != range.end()) {
+					const auto& key_value = key_it.value();
+					if (!key_value.is_string()) {
+						THROW(AggregationError, "'%s' must be a string", AGGREGATION_KEY);
+					}
+					key = key_value.str_view();
 				}
-				key = key_value.str_view();
-			}
 
-			long double from_f64 = std::numeric_limits<long double>::min();
-			auto from_it = range.find(AGGREGATION_FROM);
-			if (from_it != range.end()) {
-				const auto& from_value = from_it.value();
-				switch (from_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						from_f64 = from_value.as_f64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+				long double from_f64 = std::numeric_limits<long double>::min();
+				auto from_it = range.find(AGGREGATION_FROM);
+				if (from_it != range.end()) {
+					const auto& from_value = from_it.value();
+					switch (from_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							from_f64 = from_value.as_f64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_FROM);
+					}
 				}
-			}
 
-			long double to_f64 = std::numeric_limits<long double>::max();
-			auto to_it = range.find(AGGREGATION_TO);
-			if (to_it != range.end()) {
-				const auto& to_value = to_it.value();
-				switch (to_value.getType()) {
-					case MsgPack::Type::POSITIVE_INTEGER:
-					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
-						to_f64 = to_value.as_f64();
-						break;
-					default:
-						THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+				long double to_f64 = std::numeric_limits<long double>::max();
+				auto to_it = range.find(AGGREGATION_TO);
+				if (to_it != range.end()) {
+					const auto& to_value = to_it.value();
+					switch (to_value.getType()) {
+						case MsgPack::Type::POSITIVE_INTEGER:
+						case MsgPack::Type::NEGATIVE_INTEGER:
+						case MsgPack::Type::FLOAT:
+							to_f64 = to_value.as_f64();
+							break;
+						default:
+							THROW(AggregationError, "'%s' must be a number", AGGREGATION_TO);
+					}
 				}
-			}
 
-			if (key.empty()) {
-				default_key = _as_bucket(from_f64, to_f64);
-				key = default_key;
+				if (key.empty()) {
+					default_key = _as_bucket(from_f64, to_f64);
+					key = default_key;
+				}
+				ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
 			}
-			ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
+		} else {
+			THROW(AggregationError, "'%s' must be object with '%s'", _name, AGGREGATION_RANGES);
 		}
 	}
 
@@ -874,27 +982,18 @@ public:
 	RangeAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: BucketAggregation<ValuesHandler>(context, name, schema)
 	{
-		const auto it = _conf.find(AGGREGATION_RANGES);
-		if (it == _conf.end()) {
-			THROW(AggregationError, "'%s' must be object with '%s'", name, AGGREGATION_RANGES);
-		}
-		const auto& ranges = it.value();
-		if (!ranges.is_array()) {
-			THROW(AggregationError, "'%s.%s' must be an array", name, AGGREGATION_RANGES);
-		}
-
 		switch (_handler.get_type()) {
 			case FieldType::POSITIVE:
-				configure_u64(ranges);
+				configure_u64();
 				break;
 			case FieldType::INTEGER:
-				configure_i64(ranges);
+				configure_i64();
 				break;
 			case FieldType::FLOAT:
 			case FieldType::DATE:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
-				configure_f64(ranges);
+				configure_f64();
 				break;
 			default:
 				THROW(AggregationError, "Range aggregation can work only on numeric fields");
