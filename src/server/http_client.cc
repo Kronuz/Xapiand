@@ -108,16 +108,15 @@ constexpr const char RESPONSE_MESSAGE[]             = "#message";
 constexpr const char RESPONSE_STATUS[]              = "#status";
 constexpr const char RESPONSE_TOOK[]                = "#took";
 constexpr const char RESPONSE_NODES[]               = "#nodes";
-constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
 constexpr const char RESPONSE_COMMIT[]              = "#commit";
-constexpr const char RESPONSE_SERVER[]              = "#server";
-constexpr const char RESPONSE_URL[]                 = "#url";
-constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
-
+constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
+constexpr const char RESPONSE_SERVER[]              = "#server";
+constexpr const char RESPONSE_URL[]                 = "#url";
+constexpr const char RESPONSE_VERSIONS[]            = "#versions";
 
 static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
 static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
