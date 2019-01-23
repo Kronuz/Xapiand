@@ -1110,7 +1110,11 @@ HttpClient::_get(Request& request, Response& response, enum http_method method)
 			home_view(request, response, method, cmd);
 			break;
 		case Command::NO_CMD_ID:
-			search_view(request, response, method, cmd);
+			if (!is_range(request.path_parser.get_id())) {
+				retrieve_view(request, response, method, cmd);
+			} else {
+				search_view(request, response, method, cmd);
+			}
 			break;
 		case Command::CMD_SEARCH:
 			request.path_parser.skip_id();  // Command has no ID
@@ -2100,11 +2104,145 @@ HttpClient::check_view(Request& request, Response& response, enum http_method /*
 
 
 void
+HttpClient::retrieve_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+{
+	L_CALL("HttpClient::retrieve_view()");
+
+	auto selector = request.path_parser.get_slc();
+	auto id = request.path_parser.get_id();
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
+	endpoints_maker(request, query_field.as_volatile);
+
+	if (!query_field.selector.empty()) {
+		selector = query_field.selector;
+	}
+
+	auto type_encoding = resolve_encoding(request);
+	if (type_encoding == Encoding::unknown) {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
+		};
+		write_http_response(request, response, error_code, err_response);
+		L_SEARCH("ABORTED RETRIEVE");
+		return;
+	}
+
+	request.processing = std::chrono::system_clock::now();
+
+	// Open database
+	DatabaseHandler db_handler;
+	if (query_field.as_volatile) {
+		if (endpoints.size() != 1) {
+			THROW(ClientError, "Expecting exactly one index with volatile");
+		}
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+	} else {
+		db_handler.reset(endpoints, DB_OPEN, method);
+	}
+
+	// Retrive document ID
+	Xapian::docid did;
+	try {
+		did = db_handler.get_docid(id);
+	} catch (const NotFoundError&) {
+		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, http_status_str(error_code) }
+		};
+		write_http_response(request, response, error_code, err_response);
+		return;
+	}
+
+	// Retrive document data
+	auto document = db_handler.get_document(did);
+	const auto data = Data(document.get_data());
+	auto accepted = data.get_accepted(request.accept_set);
+	if (accepted.first == nullptr) {
+		// No content type could be resolved, return NOT ACCEPTABLE.
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response type not accepted by the Accept header" } }
+		};
+		write_http_response(request, response, error_code, err_response);
+		L_SEARCH("ABORTED RETRIEVE");
+		return;
+	}
+
+	auto& locator = *accepted.first;
+	if (locator.ct_type.empty()) {
+		// Locator doesn't have a content type, serialize and return as document
+		auto obj = MsgPack::unserialise(locator.data());
+
+		// Detailed info about the document:
+		if (obj.find(ID_FIELD_NAME) == obj.end()) {
+			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+		obj[RESPONSE_DOCID] = document.get_docid();
+
+		if (!selector.empty()) {
+			obj = obj.select(selector);
+		}
+
+		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+			response.body += obj.to_string(4);
+		}
+
+		// Get default content type to return.
+		auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
+		auto result = serialize_response(obj, ct_type, request.indented);
+		if (type_encoding != Encoding::none) {
+			auto encoded = encoding_http_response(response, type_encoding, result.first, false, true, true);
+			if (!encoded.empty() && encoded.size() <= result.first.size()) {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
+			} else {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+			}
+		} else {
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
+		}
+	} else {
+		// Locator has content type, return as a blob (an image for instance)
+		auto ct_type = locator.ct_type;
+		response.blob = document.get_blob(ct_type);
+		response.ct_type = ct_type;
+		if (type_encoding != Encoding::none) {
+			auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
+			if (!encoded.empty() && encoded.size() <= response.blob.size()) {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(type_encoding)));
+			} else {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
+			}
+		} else {
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string()));
+		}
+	}
+
+	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Retrieving took %s", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "retrieve"},
+		})
+		.Observe(took / 1e9);
+
+	L_SEARCH("FINISH RETRIEVE");
+}
+
+
+void
 HttpClient::search_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
 {
 	L_CALL("HttpClient::search_view()");
 
-	std::string selector_str;
+	std::string selector_string_holder;
 	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
 
@@ -2115,11 +2253,8 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		selector = query_field.selector;
 	}
 
-	bool single = !id.empty() && !is_range(id);
-
 	MSet mset{};
 	MsgPack aggregations;
-	std::vector<std::string> suggestions;
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2134,60 +2269,33 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			db_handler.reset(endpoints, DB_OPEN, method);
 		}
 
-		if (single) {
-			try {
-				mset = db_handler.get_docid(id);
-			} catch (const NotFoundError&) { }
+		if (request.raw.empty()) {
+			mset = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
-			if (request.raw.empty()) {
-				mset = db_handler.get_mset(query_field, nullptr, nullptr, suggestions);
-			} else {
-				auto& decoded_body = request.decoded_body();
+			auto& decoded_body = request.decoded_body();
 
-				AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
 
-				if (decoded_body.find(QUERYDSL_SELECTOR) != decoded_body.end()) {
-					auto selector_obj = decoded_body.at(QUERYDSL_SELECTOR);
-					if (selector_obj.is_string()) {
-						selector_str = selector_obj.as_str();
-						selector = selector_str;
-					} else {
-						THROW(ClientError, "The %s must be a string", QUERYDSL_SELECTOR);
-					}
+			if (decoded_body.find(QUERYDSL_SELECTOR) != decoded_body.end()) {
+				auto selector_obj = decoded_body.at(QUERYDSL_SELECTOR);
+				if (selector_obj.is_string()) {
+					selector_string_holder = selector_obj.as_str();
+					selector = selector_string_holder;
+				} else {
+					THROW(ClientError, "The %s must be a string", QUERYDSL_SELECTOR);
 				}
-
-				mset = db_handler.get_mset(query_field, &decoded_body, &aggs, suggestions);
-				aggregations = aggs.get_aggregation().at(AGGREGATION_AGGREGATIONS);
 			}
+
+			mset = db_handler.get_mset(query_field, &decoded_body, &aggs);
+			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGREGATIONS);
 		}
 	} catch (const NotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
-		if (single) {
-			throw;
-		}
 	}
-
-	L_SEARCH("Suggested queries: %s", [&suggestions]() {
-		MsgPack res(MsgPack::Type::ARRAY);
-		for (const auto& suggestion : suggestions) {
-			res.push_back(suggestion);
-		}
-		return res;
-	}().to_string());
 
 	int rc = 0;
 	auto total_count = mset.size();
-
-	if (single && total_count == 0u) {
-		enum http_status error_code = HTTP_STATUS_NOT_FOUND;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, http_status_str(error_code) }
-		};
-		write_http_response(request, response, error_code, err_response);
-		return;
-	}
 
 	auto type_encoding = resolve_encoding(request);
 	if (type_encoding == Encoding::unknown) {
@@ -2215,69 +2323,67 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	// Get default content type to return.
 	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 
-	if (!single) {
-		MsgPack basic_query({
-			{ RESPONSE_TOTAL_COUNT, total_count},
-			{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
-			{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
-		});
-		MsgPack basic_response;
-		if (aggregations) {
-			basic_response[RESPONSE_AGGREGATIONS] = aggregations;
-		}
-		basic_response[RESPONSE_QUERY] = basic_query;
-		basic_response[""] = nullptr;
+	MsgPack basic_query({
+		{ RESPONSE_TOTAL_COUNT, total_count},
+		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+		{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
+	});
+	MsgPack basic_response;
+	if (aggregations) {
+		basic_response[RESPONSE_AGGREGATIONS] = aggregations;
+	}
+	basic_response[RESPONSE_QUERY] = basic_query;
+	basic_response[""] = nullptr;
 
-		if ((is_acceptable_type(msgpack_type, ct_type) != nullptr) || (is_acceptable_type(x_msgpack_type, ct_type) != nullptr)) {
-			first_chunk = basic_response.serialise();
-			// Remove zero size array and manually add the msgpack array header
-			first_chunk.erase(first_chunk.size() - 3);
-			if (total_count < 16) {
-				first_chunk.push_back(static_cast<char>(0x90u | total_count));
-			} else if (total_count < 65536) {
-				char buf[3];
-				buf[0] = static_cast<char>(0xdcu); _msgpack_store16(&buf[1], static_cast<uint16_t>(total_count));
-				first_chunk.append(buf, 3);
-			} else {
-				char buf[5];
-				buf[0] = static_cast<char>(0xddu); _msgpack_store32(&buf[1], static_cast<uint32_t>(total_count));
-				first_chunk.append(buf, 5);
-			}
-			basic_response.erase("");
-		} else if (is_acceptable_type(json_type, ct_type) != nullptr) {
-			basic_response.erase("");
-			first_chunk = basic_response.to_string(request.indented);
-			if (request.indented != -1) {
-				first_chunk.erase(first_chunk.size() - ((request.indented * 2) + 1));
-				first_chunk += "\n";
-				last_chunk = std::string(request.indented * 2, ' ') + "]\n" + std::string(request.indented, ' ') + "},\n" + std::string(request.indented, ' ') + "\"" + std::string(RESPONSE_TOOK) + "\": %s\n}";
-				eol_chunk = "\n";
-				sep_chunk = ",";
-				indent_chunk = true;
-			} else {
-				first_chunk.erase(first_chunk.size() - 3);
-				last_chunk = "]},\"" + std::string(RESPONSE_TOOK) + "\":%s}";
-				sep_chunk = ",";
-			}
+	if ((is_acceptable_type(msgpack_type, ct_type) != nullptr) || (is_acceptable_type(x_msgpack_type, ct_type) != nullptr)) {
+		first_chunk = basic_response.serialise();
+		// Remove zero size array and manually add the msgpack array header
+		first_chunk.erase(first_chunk.size() - 3);
+		if (total_count < 16) {
+			first_chunk.push_back(static_cast<char>(0x90u | total_count));
+		} else if (total_count < 65536) {
+			char buf[3];
+			buf[0] = static_cast<char>(0xdcu); _msgpack_store16(&buf[1], static_cast<uint16_t>(total_count));
+			first_chunk.append(buf, 3);
 		} else {
-			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
-			};
-			write_http_response(request, response, error_code, err_response);
-			L_SEARCH("ABORTED SEARCH");
-			return;
+			char buf[5];
+			buf[0] = static_cast<char>(0xddu); _msgpack_store32(&buf[1], static_cast<uint32_t>(total_count));
+			first_chunk.append(buf, 5);
 		}
+		basic_response.erase("");
+	} else if (is_acceptable_type(json_type, ct_type) != nullptr) {
+		basic_response.erase("");
+		first_chunk = basic_response.to_string(request.indented);
+		if (request.indented != -1) {
+			first_chunk.erase(first_chunk.size() - ((request.indented * 2) + 1));
+			first_chunk += "\n";
+			last_chunk = std::string(request.indented * 2, ' ') + "]\n" + std::string(request.indented, ' ') + "},\n" + std::string(request.indented, ' ') + "\"" + std::string(RESPONSE_TOOK) + "\": %s\n}";
+			eol_chunk = "\n";
+			sep_chunk = ",";
+			indent_chunk = true;
+		} else {
+			first_chunk.erase(first_chunk.size() - 3);
+			last_chunk = "]},\"" + std::string(RESPONSE_TOOK) + "\":%s}";
+			sep_chunk = ",";
+		}
+	} else {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
+		};
+		write_http_response(request, response, error_code, err_response);
+		L_SEARCH("ABORTED SEARCH");
+		return;
+	}
 
-		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-			l_first_chunk = basic_response.to_string(4);
-			l_first_chunk.erase(l_first_chunk.size() - 9);
-			l_first_chunk += "\n";
-			l_last_chunk = "        ]\n    },\n    \"" + std::string(RESPONSE_TOOK) + "\": %s\n}";
-			l_eol_chunk = "\n";
-			l_sep_chunk = ",";
-		}
+	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+		l_first_chunk = basic_response.to_string(4);
+		l_first_chunk.erase(l_first_chunk.size() - 9);
+		l_first_chunk += "\n";
+		l_last_chunk = "        ]\n    },\n    \"" + std::string(RESPONSE_TOOK) + "\": %s\n}";
+		l_eol_chunk = "\n";
+		l_sep_chunk = ",";
 	}
 
 	std::string buffer;
@@ -2292,44 +2398,9 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		}
 
 		MsgPack obj;
-		if (single) {
-			auto accepted = data.get_accepted(request.accept_set);
-			if (accepted.first != nullptr) {
-				auto& locator = *accepted.first;
-				if (locator.ct_type.empty()) {
-					obj = MsgPack::unserialise(locator.data());
-				} else {
-					ct_type = locator.ct_type;
-					response.ct_type = ct_type;
-					response.blob = document.get_blob(response.ct_type);
-					if (type_encoding != Encoding::none) {
-						auto encoded = encoding_http_response(response, type_encoding, response.blob, false, true, true);
-						if (!encoded.empty() && encoded.size() <= response.blob.size()) {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(type_encoding)));
-						} else {
-							write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
-						}
-					} else {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string()));
-					}
-					return;
-				}
-			} else {
-				// No content type could be resolved, return NOT ACCEPTABLE.
-				enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-				MsgPack err_response = {
-					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, { "Response type not accepted by the Accept header" } }
-				};
-				write_http_response(request, response, error_code, err_response);
-				L_SEARCH("ABORTED SEARCH");
-				return;
-			}
-		} else {
-			auto main_locator = data.get("");
-			if (main_locator != nullptr) {
-				obj = MsgPack::unserialise(main_locator->data());
-			}
+		auto main_locator = data.get("");
+		if (main_locator != nullptr) {
+			obj = MsgPack::unserialise(main_locator->data());
 		}
 
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
@@ -2338,101 +2409,28 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 		// Detailed info about the document:
 		obj[RESPONSE_DOCID] = document.get_docid();
-		if (!single) {
-			obj[RESPONSE_RANK] = m.get_rank();
-			obj[RESPONSE_WEIGHT] = m.get_weight();
-			obj[RESPONSE_PERCENT] = m.get_percent();
-			// int subdatabase = (document.get_docid() - 1) % endpoints.size();
-			// auto endpoint = endpoints[subdatabase];
-			// obj[RESPONSE_ENDPOINT] = endpoint.to_string();
-		}
+		obj[RESPONSE_RANK] = m.get_rank();
+		obj[RESPONSE_WEIGHT] = m.get_weight();
+		obj[RESPONSE_PERCENT] = m.get_percent();
+		// int subdatabase = (document.get_docid() - 1) % endpoints.size();
+		// auto endpoint = endpoints[subdatabase];
+		// obj[RESPONSE_ENDPOINT] = endpoint.to_string();
 
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
 
 		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-			if (single) {
-				response.body += obj.to_string(4);
-			} else {
-				if (rc == 0) {
-					response.body += l_first_chunk;
-				}
-				if (!l_buffer.empty()) {
-					response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
-				}
-				l_buffer = obj.to_string(4);
-			}
-		}
-
-		auto result = serialize_response(obj, ct_type, request.indented);
-		if (single) {
-			if (type_encoding != Encoding::none) {
-				auto encoded = encoding_http_response(response, type_encoding, result.first, false, true, true);
-				if (!encoded.empty() && encoded.size() <= result.first.size()) {
-					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(type_encoding)));
-				} else {
-					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
-				}
-			} else {
-				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
-			}
-		} else {
-			if (rc == 0) {
-				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
-					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.to_string(), readable_encoding(type_encoding)));
-					if (!encoded.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
-					}
-				} else {
-					write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.to_string()));
-					if (!first_chunk.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, first_chunk));
-					}
-				}
-			}
-
-			if (!buffer.empty()) {
-				auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + sep_chunk + eol_chunk;
-				if (type_encoding != Encoding::none) {
-					auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
-					if (!encoded.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
-					}
-				} else {
-					if (!indented_buffer.empty()) {
-						write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, indented_buffer));
-					}
-				}
-			}
-			buffer = result.first;
-		}
-
-		if (single) { break; }
-	}
-
-	request.ready = std::chrono::system_clock::now();
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	auto took_milliseconds = took / 1e6;
-	auto took_delta = string::Number(took_milliseconds).str();
-	L_TIME("Searching took %s", string::from_delta(took));
-
-	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		if (!single) {
 			if (rc == 0) {
 				response.body += l_first_chunk;
 			}
-
 			if (!l_buffer.empty()) {
-				response.body += string::indent(l_buffer, ' ', 3 * 4) + l_eol_chunk;
+				response.body += string::indent(l_buffer, ' ', 3 * 4) + l_sep_chunk + l_eol_chunk;
 			}
-
-			response.body += string::format(l_last_chunk, took_delta);
+			l_buffer = obj.to_string(4);
 		}
-	}
 
-	if (!single) {
+		auto result = serialize_response(obj, ct_type, request.indented);
 		if (rc == 0) {
 			if (type_encoding != Encoding::none) {
 				auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
@@ -2449,7 +2447,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		}
 
 		if (!buffer.empty()) {
-			auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + eol_chunk;
+			auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + sep_chunk + eol_chunk;
 			if (type_encoding != Encoding::none) {
 				auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
 				if (!encoded.empty()) {
@@ -2461,26 +2459,74 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 				}
 			}
 		}
+		buffer = result.first;
+	}
 
-		if (last_chunk.empty()) {
-			last_chunk = MsgPack({
-				{ RESPONSE_TOOK, took_milliseconds },
-			}).serialise().substr(1);
-		} else {
-			last_chunk = string::format(last_chunk, took_delta);
+	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	auto took_milliseconds = took / 1e6;
+	auto took_delta = string::Number(took_milliseconds).str();
+	L_TIME("Searching took %s", string::from_delta(took));
+
+	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+		if (rc == 0) {
+			response.body += l_first_chunk;
 		}
 
+		if (!l_buffer.empty()) {
+			response.body += string::indent(l_buffer, ' ', 3 * 4) + l_eol_chunk;
+		}
+
+		response.body += string::format(l_last_chunk, took_delta);
+	}
+
+	if (rc == 0) {
 		if (type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, type_encoding, last_chunk, true, false, true);
+			auto encoded = encoding_http_response(response, type_encoding, first_chunk, true, true, false);
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.to_string(), readable_encoding(type_encoding)));
 			if (!encoded.empty()) {
 				write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
 			}
 		} else {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, last_chunk));
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CHUNKED_RESPONSE | HTTP_TOTAL_COUNT_RESPONSE | HTTP_MATCHES_ESTIMATED_RESPONSE, mset.size(), mset.get_matches_estimated(), "", ct_type.to_string()));
+			if (!first_chunk.empty()) {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, first_chunk));
+			}
 		}
-
-		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 	}
+
+	if (!buffer.empty()) {
+		auto indented_buffer = (indent_chunk ? string::indent(buffer, ' ', 3 * request.indented) : buffer) + eol_chunk;
+		if (type_encoding != Encoding::none) {
+			auto encoded = encoding_http_response(response, type_encoding, indented_buffer, true, false, false);
+			if (!encoded.empty()) {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
+			}
+		} else {
+			if (!indented_buffer.empty()) {
+				write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, indented_buffer));
+			}
+		}
+	}
+
+	if (last_chunk.empty()) {
+		last_chunk = MsgPack({
+			{ RESPONSE_TOOK, took_milliseconds },
+		}).serialise().substr(1);
+	} else {
+		last_chunk = string::format(last_chunk, took_delta);
+	}
+
+	if (type_encoding != Encoding::none) {
+		auto encoded = encoding_http_response(response, type_encoding, last_chunk, true, false, true);
+		if (!encoded.empty()) {
+			write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded));
+		}
+	} else {
+		write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, last_chunk));
+	}
+
+	write(http_response(request, response, HTTP_STATUS_OK, HTTP_CHUNKED_RESPONSE | HTTP_BODY_RESPONSE));
 
 	if (aggregations) {
 		Metrics::metrics()

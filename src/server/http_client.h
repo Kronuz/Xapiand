@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -317,6 +317,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void write_schema_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void document_info_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void update_document_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void retrieve_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void search_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void touch_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void commit_view(Request& request, Response& response, enum http_method method, Command cmd);
