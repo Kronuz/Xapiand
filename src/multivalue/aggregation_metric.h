@@ -625,9 +625,22 @@ public:
 		};
 	}
 
+	BaseAggregation* get_agg(std::string_view field) override {
+		if (field == AGGREGATION_STD_BOUNDS) {
+			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
+		}
+		return nullptr;
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == AGGREGATION_STD) {
 			return &_std;
+		}
+		if (field == AGGREGATION_UPPER) {
+			return &_upper;
+		}
+		if (field == AGGREGATION_LOWER) {
+			return &_lower;
 		}
 		return nullptr;
 	}
@@ -870,6 +883,12 @@ public:
 			}},
 		};
 	}
+	BaseAggregation* get_agg(std::string_view field) override {
+		if (field == AGGREGATION_STD_BOUNDS) {
+			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
+		}
+		return nullptr;
+	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == AGGREGATION_COUNT) {
@@ -895,6 +914,12 @@ public:
 		}
 		if (field == AGGREGATION_STD) {
 			return &_std;
+		}
+		if (field == AGGREGATION_UPPER) {
+			return &_upper;
+		}
+		if (field == AGGREGATION_LOWER) {
+			return &_lower;
 		}
 		return nullptr;
 	}
