@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,7 @@ int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 
 void json_load(rapidjson::Document& doc, std::string_view str)
 {
-	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data());
+	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data(), str.size());
 	if (!parse_done) {
 		constexpr size_t tabsize = 3;
 		std::string tabs(tabsize, ' ');
