@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  * Copyright (C) 2014 Graeme Hill (http://graemehill.ca).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -179,8 +179,8 @@ UUIDCondenser::serialise() const
 	uint64_t buf0, buf1;
 	if (compact.compacted != 0u) {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
-	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
-	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
+	// v0:PPPPTTTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
+	// b0:                                              TTTTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSSSC
 		ASSERT(compact.padding0 == 0);
 		ASSERT(compact.padding1 == 0);
 		buf0 = (val0 >> PADDING_C1_BITS);

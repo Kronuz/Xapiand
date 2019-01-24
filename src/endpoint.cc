@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -93,7 +93,15 @@ normalize_and_partition(const void *p, size_t size)
 #endif
 #ifdef XAPIAND_UUID_ENCODED
 		case UUIDRepr::encoded:
-			if (serialised_uuid.front() != 1 && (((serialised_uuid.back() & 1) != 0) || (serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0)))) {
+			if (
+				// Is UUID condensed
+				serialised_uuid.front() != 1 && (
+					// and compacted
+					((serialised_uuid.back() & 1) != 0) ||
+					// or has node multicast bit "on" for (uuid with Data)
+					(serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0))
+				)
+			) {
 				auto cit = normalized.cbegin();
 				auto cit_e = normalized.cend();
 				result.reserve(4 + normalized.size());

@@ -1243,7 +1243,15 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 #endif
 #ifdef XAPIAND_UUID_ENCODED
 		case UUIDRepr::encoded:
-			if (serialised_uuid.front() != 1 && (((serialised_uuid.back() & 1) != 0) || (serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0)))) {
+			if (
+				// Is UUID condensed
+				serialised_uuid.front() != 1 && (
+					// and compacted
+					((serialised_uuid.back() & 1) != 0) ||
+					// or has node multicast bit "on" for (uuid with Data)
+					(serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0))
+				)
+			) {
 				result.append("~" + UUID_ENCODER.encode(serialised_uuid));
 				break;
 			}
