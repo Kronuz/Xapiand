@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,8 @@ constexpr std::string_view ANY_CONTENT_TYPE               = "*/*";
 constexpr std::string_view HTML_CONTENT_TYPE              = "text/html";
 constexpr std::string_view TEXT_CONTENT_TYPE              = "text/plain";
 constexpr std::string_view JSON_CONTENT_TYPE              = "application/json";
+constexpr std::string_view NDJSON_CONTENT_TYPE            = "application/ndjson";
+constexpr std::string_view X_NDJSON_CONTENT_TYPE          = "application/x-ndjson";
 constexpr std::string_view MSGPACK_CONTENT_TYPE           = "application/msgpack";
 constexpr std::string_view X_MSGPACK_CONTENT_TYPE         = "application/x-msgpack";
 constexpr std::string_view FORM_URLENCODED_CONTENT_TYPE   = "application/www-form-urlencoded";

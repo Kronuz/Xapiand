@@ -3167,13 +3167,34 @@ Request::_decode()
 		rapidjson::Document rdoc;
 
 		constexpr static auto _ = phf::make_phf({
-			hhl(FORM_URLENCODED_CONTENT_TYPE),
-			hhl(X_FORM_URLENCODED_CONTENT_TYPE),
 			hhl(JSON_CONTENT_TYPE),
 			hhl(MSGPACK_CONTENT_TYPE),
 			hhl(X_MSGPACK_CONTENT_TYPE),
+			hhl(NDJSON_CONTENT_TYPE),
+			hhl(X_NDJSON_CONTENT_TYPE),
+			hhl(FORM_URLENCODED_CONTENT_TYPE),
+			hhl(X_FORM_URLENCODED_CONTENT_TYPE),
 		});
 		switch (_.fhhl(ct_type_str)) {
+			case _.fhhl(JSON_CONTENT_TYPE):
+				json_load(rdoc, raw);
+				_decoded_body = MsgPack(rdoc);
+				ct_type = json_type;
+				break;
+			case _.fhhl(NDJSON_CONTENT_TYPE):
+			case _.fhhl(X_NDJSON_CONTENT_TYPE):
+				_decoded_body = MsgPack(MsgPack::Type::ARRAY);
+				ct_type = json_type;
+				for (auto json : Split<std::string_view>(raw, '\n')) {
+					json_load(rdoc, json);
+					_decoded_body.append(rdoc);
+				}
+				break;
+			case _.fhhl(MSGPACK_CONTENT_TYPE):
+			case _.fhhl(X_MSGPACK_CONTENT_TYPE):
+				_decoded_body = MsgPack::unserialise(raw);
+				ct_type = msgpack_type;
+				break;
 			case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
 			case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
 				try {
@@ -3184,16 +3205,6 @@ Request::_decode()
 					_decoded_body = MsgPack(raw);
 					ct_type = msgpack_type;
 				}
-				break;
-			case _.fhhl(JSON_CONTENT_TYPE):
-				json_load(rdoc, raw);
-				_decoded_body = MsgPack(rdoc);
-				ct_type = json_type;
-				break;
-			case _.fhhl(MSGPACK_CONTENT_TYPE):
-			case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-				_decoded_body = MsgPack::unserialise(raw);
-				ct_type = msgpack_type;
 				break;
 			default:
 				_decoded_body = MsgPack(raw);
