@@ -113,6 +113,14 @@ And the following may be the response:
         "_key": "7000.0"
       },
       {
+        "_doc_count": 7,
+        "_key": "8000.0"
+      },
+      {
+        "_doc_count": 1,
+        "_key": "9000.0"
+      },
+      {
         "_doc_count": 9,
         "_key": "10000.0"
       },

@@ -233,8 +233,9 @@ POST /bank/:search?pretty
 
 ### Limit
 
-The `<limit_count>` in the `_limit` option is a positive integer number
-used for limiting the number of returned buckets.
+The maximum number of buckets allowed in a single response is not currently
+hard limited, but the default is 10,000 buckets. The `<limit_count>` in the
+`_limit` option is a positive integer number used for changing this default.
 
 ### Response Format
 By default, the buckets are returned as an ordered array. It is also possible

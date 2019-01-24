@@ -375,7 +375,7 @@ private:
 					THROW(AggregationError, "'%s' must be a positive integer", AGGREGATION_LIMIT);
 			}
 		}
-		return 10;
+		return 10000;
 	}
 
 	size_t _conf_keyed() {
