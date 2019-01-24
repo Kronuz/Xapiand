@@ -1201,13 +1201,17 @@ DatabaseHandler::restore_documents(const MsgPack& docs)
 {
 	L_CALL("DatabaseHandler::restore_documents(<docs>)");
 
+	std::size_t total = docs.size();
+	if (!total) {
+		return;
+	}
+
 	constexpr size_t limit_max = 16;
 	constexpr size_t limit_signal = 8;
 	LightweightSemaphore limit(limit_max);
 	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
 	std::atomic_bool ready = false;
 	std::atomic_size_t processed = 0;
-	std::size_t total = docs.size();
 
 	ThreadPool<> thread_pool("TP%02zu", 4 * std::thread::hardware_concurrency());
 
