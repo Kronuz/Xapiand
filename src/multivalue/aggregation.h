@@ -121,6 +121,7 @@ class Aggregation : public BaseAggregation {
 
 public:
 	const long double* value_ptr;
+	long double slot;
 	size_t idx;
 
 	Aggregation();

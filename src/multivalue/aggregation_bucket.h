@@ -92,6 +92,8 @@ private:
 
 	struct CmpByKeyAsc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->second.slot < b->second.slot) return true;
+			if (a->second.slot > b->second.slot) return false;
 			if (a->first > b->first) return false;
 			return true;
 		}
@@ -99,6 +101,8 @@ private:
 
 	struct CmpByKeyDesc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+			if (a->second.slot > b->second.slot) return true;
+			if (a->second.slot < b->second.slot) return false;
 			if (a->first < b->first) return false;
 			return true;
 		}
@@ -108,6 +112,8 @@ private:
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->second.doc_count() < b->second.doc_count()) return true;
 			if (a->second.doc_count() > b->second.doc_count()) return false;
+			if (a->second.slot < b->second.slot) return true;
+			if (a->second.slot > b->second.slot) return false;
 			if (a->first > b->first) return false;
 			return true;
 		}
@@ -117,6 +123,8 @@ private:
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			if (a->second.doc_count() > b->second.doc_count()) return true;
 			if (a->second.doc_count() < b->second.doc_count()) return false;
+			if (a->second.slot > b->second.slot) return true;
+			if (a->second.slot < b->second.slot) return false;
 			if (a->first < b->first) return false;
 			return true;
 		}
@@ -128,6 +136,8 @@ private:
 			ASSERT(b->second.value_ptr);
 			if (*a->second.value_ptr < *b->second.value_ptr) return true;
 			if (*a->second.value_ptr > *b->second.value_ptr) return false;
+			if (a->second.slot < b->second.slot) return true;
+			if (a->second.slot > b->second.slot) return false;
 			if (a->first > b->first) return false;
 			return true;
 		}
@@ -139,6 +149,8 @@ private:
 			ASSERT(b->second.value_ptr);
 			if (*a->second.value_ptr > *b->second.value_ptr) return true;
 			if (*a->second.value_ptr < *b->second.value_ptr) return false;
+			if (a->second.slot > b->second.slot) return true;
+			if (a->second.slot < b->second.slot) return false;
 			if (a->first < b->first) return false;
 			return true;
 		}
@@ -441,7 +453,7 @@ public:
 		return nullptr;
 	}
 
-	void aggregate(std::string_view bucket, const Xapian::Document& doc, size_t idx = 0) {
+	void aggregate(long double slot, std::string_view bucket, const Xapian::Document& doc, size_t idx = 0) {
 		auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
 			it->second(doc);
@@ -454,6 +466,7 @@ public:
 
 		emplaced.first->second(doc);
 
+		emplaced.first->second.slot = slot;
 		emplaced.first->second.idx = idx;
 
 		// Find and store the Aggregation the value should be recovered from:
@@ -487,43 +500,43 @@ public:
 		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
-		aggregate(std::string_view(value ? "true" : "false"), doc);
+		aggregate(value ? 1.0 : 0.0, std::string_view(value ? "true" : "false"), doc);
 	}
 
 	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
-		aggregate(value, doc);
+		aggregate(0.0, value, doc);
 	}
 
 	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
-		aggregate(value.to_string(), doc);
+		aggregate(0.0, value.to_string(), doc);
 	}
 
 	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
-		aggregate(value, doc);
+		aggregate(0.0, value, doc);
 	}
 };
 
@@ -534,43 +547,43 @@ public:
 		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		aggregate(string::Number(value), doc);
+		aggregate(value, string::Number(value), doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
-		aggregate(std::string_view(value ? "true" : "false"), doc);
+		aggregate(value ? 1.0 : 0.0, std::string_view(value ? "true" : "false"), doc);
 	}
 
 	void aggregate_string(std::string_view value, const Xapian::Document& doc) override {
-		aggregate(value, doc);
+		aggregate(0.0, value, doc);
 	}
 
 	void aggregate_geo(const range_t& value, const Xapian::Document& doc) override {
-		aggregate(value.to_string(), doc);
+		aggregate(0.0, value.to_string(), doc);
 	}
 
 	void aggregate_uuid(std::string_view value, const Xapian::Document& doc) override {
-		aggregate(value, doc);
+		aggregate(0.0, value, doc);
 	}
 };
 
@@ -731,32 +744,32 @@ public:
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(string::Number(bucket), doc);
+		aggregate(value, string::Number(bucket), doc);
 	}
 };
 
@@ -991,7 +1004,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
@@ -1001,7 +1014,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_i64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
@@ -1011,7 +1024,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_u64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
@@ -1021,7 +1034,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
@@ -1031,7 +1044,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
@@ -1041,7 +1054,7 @@ public:
 		size_t idx = 0;
 		for (const auto& range : ranges_f64) {
 			if (value >= range.second.first && value < range.second.second) {
-				aggregate(range.first, doc, idx);
+				aggregate(range.second.first, range.first, doc, idx);
 			}
 			++idx;
 		}
