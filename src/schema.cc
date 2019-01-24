@@ -1954,6 +1954,7 @@ specification_t::specification_t()
 	: position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
+	  stopword({ DEFAULT_STOPWORD }),
 	  positions({ DEFAULT_POSITIONS }),
 	  index(DEFAULT_INDEX),
 	  index_uuid_field(DEFAULT_INDEX_UUID_FIELD) { }
@@ -1965,6 +1966,7 @@ specification_t::specification_t(Xapian::valueno _slot, FieldType type, const st
 	  position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),
+	  stopword({ DEFAULT_STOPWORD }),
 	  positions({ DEFAULT_POSITIONS }),
 	  index(DEFAULT_INDEX),
 	  index_uuid_field(DEFAULT_INDEX_UUID_FIELD) { }
@@ -1976,6 +1978,7 @@ specification_t::specification_t(const specification_t& o)
 	  position(o.position),
 	  weight(o.weight),
 	  spelling(o.spelling),
+	  stopword(o.stopword),
 	  positions(o.positions),
 	  index(o.index),
 	  index_uuid_field(o.index_uuid_field),
@@ -1993,6 +1996,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  position(std::move(o.position)),
 	  weight(std::move(o.weight)),
 	  spelling(std::move(o.spelling)),
+	  stopword(std::move(o.stopword)),
 	  positions(std::move(o.positions)),
 	  index(std::move(o.index)),
 	  index_uuid_field(std::move(o.index_uuid_field)),
@@ -2011,6 +2015,7 @@ specification_t::operator=(const specification_t& o)
 	position = o.position;
 	weight = o.weight;
 	spelling = o.spelling;
+	stopword = o.stopword;
 	positions = o.positions;
 	index = o.index;
 	index_uuid_field = o.index_uuid_field;
@@ -2038,6 +2043,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	position = std::move(o.position);
 	weight = std::move(o.weight);
 	spelling = std::move(o.spelling);
+	stopword = std::move(o.stopword);
 	positions = std::move(o.positions);
 	index = std::move(o.index);
 	index_uuid_field = std::move(o.index_uuid_field);
@@ -5203,9 +5209,12 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
-			const auto& stopper = getStopper(field_spc.language);
-			term_generator.set_stopper(stopper.get());
-			term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			bool stopword = field_spc.stopword[getPos(pos, field_spc.stopword.size())];
+			if (stopword) {
+				const auto& stopper = getStopper(field_spc.language);
+				term_generator.set_stopper(stopper.get());
+				term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			}
 			term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 			term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
 			// Xapian::WritableDatabase *wdb = nullptr;
@@ -5898,6 +5907,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
+		hh(RESERVED_STOPWORD),
 		hh(RESERVED_POSITIONS),
 		hh(RESERVED_INDEX),
 		hh(RESERVED_STORE),
@@ -5930,6 +5940,9 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 			return true;
 		case _.fhh(RESERVED_SPELLING):
 			write_spelling(mut_properties, prop_name, value);
+			return true;
+		case _.fhh(RESERVED_STOPWORD):
+			write_stopword(mut_properties, prop_name, value);
 			return true;
 		case _.fhh(RESERVED_POSITIONS):
 			write_positions(mut_properties, prop_name, value);
@@ -6769,6 +6782,26 @@ Schema::feed_spelling(const MsgPack& prop_spelling)
 
 
 void
+Schema::feed_stopword(const MsgPack& prop_stopword)
+{
+	L_CALL("Schema::feed_stopword(%s)", repr(prop_stopword.to_string()));
+
+	try {
+		specification.stopword.clear();
+		if (prop_stopword.is_array()) {
+			for (const auto& _stopword : prop_stopword) {
+				specification.stopword.push_back(_stopword.boolean());
+			}
+		} else {
+			specification.stopword.push_back(prop_stopword.boolean());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STOPWORD, repr(specification.full_meta_name));
+	}
+}
+
+
+void
 Schema::feed_positions(const MsgPack& prop_positions)
 {
 	L_CALL("Schema::feed_positions(%s)", repr(prop_positions.to_string()));
@@ -7288,6 +7321,17 @@ Schema::write_spelling(MsgPack& mut_properties, std::string_view prop_name, cons
 
 	process_spelling(prop_name, doc_spelling);
 	mut_properties[prop_name] = specification.spelling;
+}
+
+
+void
+Schema::write_stopword(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_stopword)
+{
+	// RESERVED_STOPWORD is heritable and can change between documents.
+	L_CALL("Schema::write_stopword(%s)", repr(doc_stopword.to_string()));
+
+	process_stopword(prop_name, doc_stopword);
+	mut_properties[prop_name] = specification.stopword;
 }
 
 
@@ -7889,6 +7933,30 @@ Schema::process_spelling(std::string_view prop_name, const MsgPack& doc_spelling
 			}
 		} else {
 			specification.spelling.push_back(doc_spelling.boolean());
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+	}
+}
+
+
+inline void
+Schema::process_stopword(std::string_view prop_name, const MsgPack& doc_stopword)
+{
+	// RESERVED_STOPWORD is heritable and can change between documents.
+	L_CALL("Schema::process_stopword(%s)", repr(doc_stopword.to_string()));
+
+	try {
+		specification.stopword.clear();
+		if (doc_stopword.is_array()) {
+			if (doc_stopword.empty()) {
+				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+			}
+			for (const auto& _stopword : doc_stopword) {
+				specification.stopword.push_back(_stopword.boolean());
+			}
+		} else {
+			specification.stopword.push_back(doc_stopword.boolean());
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));

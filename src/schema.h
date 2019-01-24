@@ -115,6 +115,7 @@ constexpr bool DEFAULT_GEO_PARTIALS               = true;
 constexpr double DEFAULT_GEO_ERROR                = 0.3;
 constexpr bool DEFAULT_POSITIONS                  = true;
 constexpr bool DEFAULT_SPELLING                   = false;
+constexpr bool DEFAULT_STOPWORD                   = true;
 constexpr bool DEFAULT_BOOL_TERM                  = false;
 constexpr TypeIndex DEFAULT_INDEX                 = TypeIndex::ALL;
 constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::BOTH;
@@ -495,6 +496,7 @@ struct specification_t : required_spc_t {
 	std::vector<Xapian::termpos> position;
 	std::vector<Xapian::termcount> weight;
 	std::vector<bool> spelling;
+	std::vector<bool> stopword;
 	std::vector<bool> positions;
 
 	TypeIndex index;
@@ -794,6 +796,7 @@ class Schema {
 	void feed_position(const MsgPack& prop_position);
 	void feed_weight(const MsgPack& prop_weight);
 	void feed_spelling(const MsgPack& prop_spelling);
+	void feed_stopword(const MsgPack& prop_spelling);
 	void feed_positions(const MsgPack& prop_positions);
 	void feed_language(const MsgPack& prop_language);
 	void feed_stop_strategy(const MsgPack& prop_stop_strategy);
@@ -836,6 +839,7 @@ class Schema {
 	void write_weight(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_weight);
 	void write_position(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_position);
 	void write_spelling(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_spelling);
+	void write_stopword(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_stopword);
 	void write_positions(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_positions);
 	void write_index(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index);
 	void write_store(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_store);
@@ -868,6 +872,7 @@ class Schema {
 	void process_weight(std::string_view prop_name, const MsgPack& doc_weight);
 	void process_position(std::string_view prop_name, const MsgPack& doc_position);
 	void process_spelling(std::string_view prop_name, const MsgPack& doc_spelling);
+	void process_stopword(std::string_view prop_name, const MsgPack& doc_stopword);
 	void process_positions(std::string_view prop_name, const MsgPack& doc_positions);
 	void process_language(std::string_view prop_name, const MsgPack& doc_language);
 	void process_prefix(std::string_view prop_name, const MsgPack& doc_prefix);

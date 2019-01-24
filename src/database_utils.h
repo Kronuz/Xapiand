@@ -43,6 +43,7 @@ constexpr const char UUID_FIELD_NAME[]              = "<uuid_field>";
 constexpr const char RESERVED_WEIGHT[]              = "_weight";
 constexpr const char RESERVED_POSITION[]            = "_position";
 constexpr const char RESERVED_SPELLING[]            = "_spelling";
+constexpr const char RESERVED_STOPWORD[]            = "_stopword";
 constexpr const char RESERVED_POSITIONS[]           = "_positions";
 constexpr const char RESERVED_LANGUAGE[]            = "_language";
 constexpr const char RESERVED_ACCURACY[]            = "_accuracy";
