@@ -1,5 +1,5 @@
 ---
-title: Schema API
+title: Casting Types
 ---
 
 {: .note .construction}

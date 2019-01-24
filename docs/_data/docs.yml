@@ -13,7 +13,10 @@
     - url: reference-guide/indices
     - url: reference-guide/documents
     - url: reference-guide/info
-    - url: reference-guide/schema
+    - url: reference-guide/schemas
+      docs:
+        - url: reference-guide/schemas/field-types
+        - url: reference-guide/schemas/dynamic-typing
     - url: reference-guide/search
     - url: reference-guide/query-dsl
     - url: reference-guide/aggregations
