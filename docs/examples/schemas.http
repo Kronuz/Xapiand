@@ -1,3 +1,4 @@
+
 POST /test/schemas/implicit-foreign-_schema
 
 {
@@ -484,24 +485,24 @@ GET /test/schemas/implicit-foreign-_schema/.schemas/:metadata
 PUT /test/xxx/:schema
 
 {
-		"version": 2.0,
-		"description": "Descripcion",
-		"schema": {
-			"_type": "object",
-			"campo": {
-					"_prefix": "\xff\x03w\xcb",
-					"_index": "terms",
-					"_language": "en",
-					"_slot": 3064504733,  // slot: '\xff\x03w\xcb' = 3064504733
-					"_type": "string"
-			},
-			"_id": {
-					"_bool_term": true,
-					"_prefix": "Q",
-					"_slot": 0,
-					"_type": "uuid"
-			}
+	"version": 2.0,
+	"description": "Descripcion",
+	"schema": {
+		"_type": "object",
+		"campo": {
+			"_prefix": "\xff\x03w\xcb",
+			"_index": "terms",
+			"_language": "en",
+			"_slot": 3064504733,  // slot: '\xff\x03w\xcb' = 3064504733
+			"_type": "string"
 		},
+		"_id": {
+			"_bool_term": true,
+			"_prefix": "Q",
+			"_slot": 0,
+			"_type": "uuid"
+		}
+	},
 }
 ###
 GET /test/xxx/:schema
@@ -515,19 +516,19 @@ GET /test/xxx/:metadata
 PUT /test/xxx/:schema
 
 {
-		"version": 2.0,
-		"description": "Descripcion",
-		"schema": {
-				"campo": {
-						"_index": "terms",
-						"_language": "en",
-						"_type": "string"
-				},
-				"_id": {
-						"_bool_term": true,
-						"_type": "uuid"
-				}
+	"version": 2.0,
+	"description": "Descripcion",
+	"schema": {
+		"campo": {
+			"_index": "terms",
+			"_language": "en",
+			"_type": "string"
 		},
+		"_id": {
+			"_bool_term": true,
+			"_type": "uuid"
+		}
+	},
 }
 ###
 GET /test/xxx/:schema
