@@ -828,16 +828,16 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 	switch (field_spc.get_type()) {
 		case FieldType::TEXT: {
 			Xapian::QueryParser parser;
-			if (field_spc.flags.bool_term) {
-				parser.add_boolean_prefix("_", field_spc.prefix() + field_spc.get_ctype());
-			} else {
-				parser.add_prefix("_", field_spc.prefix() + field_spc.get_ctype());
-			}
 			const auto& stopper = getStopper(field_spc.language);
 			parser.set_stopper(stopper.get());
 			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-			return parser.parse_query("_:" + std::string(serialised_term), q_flags);
+			if (field_spc.flags.bool_term) {
+				parser.add_boolean_prefix("_", field_spc.prefix() + field_spc.get_ctype());
+				return parser.parse_query("_:" + std::string(serialised_term), q_flags);
+			} else {
+				return parser.parse_query(std::string(serialised_term), q_flags, field_spc.prefix() + field_spc.get_ctype());
+			}
 		}
 
 		case FieldType::STRING: {
