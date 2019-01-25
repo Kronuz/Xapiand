@@ -110,7 +110,6 @@ enum class UnitTime : uint64_t {
 
 constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::STOP_ALL;
 constexpr StemStrategy DEFAULT_STEM_STRATEGY      = StemStrategy::STEM_SOME;
-constexpr const char DEFAULT_LANGUAGE[]           = "en";
 constexpr bool DEFAULT_GEO_PARTIALS               = true;
 constexpr double DEFAULT_GEO_ERROR                = 0.3;
 constexpr bool DEFAULT_POSITIONS                  = true;
