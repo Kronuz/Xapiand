@@ -2179,23 +2179,7 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 
 		request.ready = std::chrono::system_clock::now();
 
-		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-			response.body += obj.to_string(DEFAULT_INDENTATION);
-		}
-
-		// Get default content type to return.
-		auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
-		auto result = serialize_response(obj, ct_type, request.indented);
-		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, request.type_encoding, result.first, false, true, true);
-			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
-			} else {
-				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
-			}
-		} else {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
-		}
+		write_http_response(request, response, HTTP_STATUS_OK, obj);
 	} else {
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
@@ -2234,23 +2218,6 @@ void
 HttpClient::search_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
 {
 	L_CALL("HttpClient::search_view()");
-
-	// Get default content type to return.
-	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
-	if (
-		!is_acceptable_type(msgpack_type, ct_type) &&
-		!is_acceptable_type(x_msgpack_type, ct_type) &&
-		!is_acceptable_type(json_type, ct_type)
-	) {
-		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, { "Response type application/msgpack or application/json not provided in the Accept header" } }
-		};
-		write_http_response(request, response, error_code, err_response);
-		L_SEARCH("ABORTED SEARCH");
-		return;
-	}
 
 	std::string selector_string_holder;
 	auto selector = request.path_parser.get_slc();
@@ -2358,18 +2325,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 		response.body += obj.to_string(DEFAULT_INDENTATION);
 	}
 
-	// Get default content type to return.
-	auto result = serialize_response(obj, ct_type, request.indented);
-	if (request.type_encoding != Encoding::none) {
-		auto encoded = encoding_http_response(response, request.type_encoding, result.first, false, true, true);
-		if (!encoded.empty() && encoded.size() <= result.first.size()) {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
-		} else {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
-		}
-	} else {
-		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
-	}
+	write_http_response(request, response, HTTP_STATUS_OK, obj);
 
 	if (aggregations) {
 		Metrics::metrics()
