@@ -1122,6 +1122,10 @@ HttpClient::_get(Request& request, Response& response, enum http_method method)
 			request.path_parser.skip_id();  // Command has no ID
 			search_view(request, response, method, cmd);
 			break;
+		case Command::CMD_COUNT:
+			request.path_parser.skip_id();  // Command has no ID
+			count_view(request, response, method, cmd);
+			break;
 		case Command::CMD_SCHEMA:
 			request.path_parser.skip_id();  // Command has no ID
 			schema_view(request, response, method, cmd);
@@ -1242,6 +1246,10 @@ HttpClient::_post(Request& request, Response& response, enum http_method method)
 		case Command::CMD_SEARCH:
 			request.path_parser.skip_id();  // Command has no ID
 			search_view(request, response, method, cmd);
+			break;
+		case Command::CMD_COUNT:
+			request.path_parser.skip_id();  // Command has no ID
+			count_view(request, response, method, cmd);
 			break;
 		case Command::CMD_TOUCH:
 			request.path_parser.skip_id();  // Command has no ID
@@ -2380,6 +2388,59 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 	}
 
 	L_SEARCH("FINISH SEARCH");
+}
+
+
+void
+HttpClient::count_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+{
+	L_CALL("HttpClient::count_view()");
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
+	endpoints_maker(request, query_field.as_volatile);
+
+	MSet mset{};
+
+	request.processing = std::chrono::system_clock::now();
+
+	// Open database
+	DatabaseHandler db_handler;
+	try {
+		if (query_field.as_volatile) {
+			if (endpoints.size() != 1) {
+				THROW(ClientError, "Expecting exactly one index with volatile");
+			}
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		} else {
+			db_handler.reset(endpoints, DB_OPEN, method);
+		}
+
+		if (request.raw.empty()) {
+			mset = db_handler.get_mset(query_field, nullptr, nullptr);
+		} else {
+			auto& decoded_body = request.decoded_body();
+
+			mset = db_handler.get_mset(query_field, &decoded_body, nullptr);
+		}
+	} catch (const NotFoundError&) {
+		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
+		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
+	}
+
+	MsgPack obj;
+	obj[RESPONSE_QUERY] = {
+		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
+	};
+
+	request.ready = std::chrono::system_clock::now();
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Searching took %s", string::from_delta(took));
+
+	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+		response.body += obj.to_string(DEFAULT_INDENTATION);
+	}
+
+	write_http_response(request, response, HTTP_STATUS_OK, obj);
 }
 
 

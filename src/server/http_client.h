@@ -136,6 +136,7 @@ enum class Encoding {
 
 constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
 constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
+constexpr const char COMMAND_COUNT[]       = COMMAND_PREFIX "count";
 constexpr const char COMMAND_DUMP[]        = COMMAND_PREFIX "dump";
 constexpr const char COMMAND_FLUSH[]       = COMMAND_PREFIX "flush";
 constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
@@ -152,6 +153,7 @@ constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
 #define COMMAND_OPTIONS() \
 	OPTION(CHECK) \
 	OPTION(COMMIT) \
+	OPTION(COUNT) \
 	OPTION(DUMP) \
 	OPTION(FLUSH) \
 	OPTION(INFO) \
@@ -321,6 +323,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void update_document_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void retrieve_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void search_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void count_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void touch_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void commit_view(Request& request, Response& response, enum http_method method, Command cmd);
 	void dump_view(Request& request, Response& response, enum http_method method, Command cmd);
