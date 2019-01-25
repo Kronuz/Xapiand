@@ -1715,7 +1715,6 @@ required_spc_t::flags_t::flags_t()
 	  numeric_detection(true),
 	  geo_detection(true),
 	  bool_detection(true),
-	  string_detection(true),
 	  text_detection(true),
 	  term_detection(true),
 	  uuid_detection(true),
@@ -1873,7 +1872,6 @@ required_spc_t::to_obj() const
 	obj_flags["numeric_detection"] = flags.numeric_detection;
 	obj_flags["geo_detection"] = flags.geo_detection;
 	obj_flags["bool_detection"] = flags.bool_detection;
-	obj_flags["string_detection"] = flags.string_detection;
 	obj_flags["text_detection"] = flags.text_detection;
 	obj_flags["term_detection"] = flags.term_detection;
 	obj_flags["uuid_detection"] = flags.uuid_detection;
@@ -2066,9 +2064,9 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::KEYWORD:
 			return field_type;
 
-		case FieldType::TEXT:
 		case FieldType::STRING:
-			return FieldType::STRING;
+		case FieldType::TEXT:
+			return FieldType::TEXT;
 
 		default:
 			THROW(ClientError, "Type: 0x%02x is an unknown type", field_type);
@@ -2120,9 +2118,9 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_STRING, FieldType::KEYWORD, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::TEXT:
-		case FieldType::STRING: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::STRING, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::STRING:
+		case FieldType::TEXT: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		default:
@@ -4483,6 +4481,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
+		case FieldType::STRING:
 		case FieldType::TEXT:
 			specification.language = default_spc.language;
 			if (!specification.language.empty()) {
@@ -4490,10 +4489,6 @@ Schema::validate_required_namespace_data()
 				specification.stem_strategy = default_spc.stem_strategy;
 				specification.stem_language = default_spc.stem_language;
 			}
-			specification.flags.concrete = true;
-			break;
-
-		case FieldType::STRING:
 			specification.flags.concrete = true;
 			break;
 
@@ -4635,6 +4630,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
+		case FieldType::STRING:
 		case FieldType::TEXT: {
 			// Language could be needed, for soundex.
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
@@ -4653,15 +4649,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::STRING: {
-			// Language could be needed, for soundex.
-			if (!specification.language.empty()) {
-				mut_properties[RESERVED_LANGUAGE] = specification.language;
-			}
-
-			specification.flags.concrete = true;
-			break;
-		}
 		case FieldType::KEYWORD: {
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
@@ -4672,11 +4659,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
 				}
 				specification.flags.has_bool_term = true;
-			}
-
-			// Language could be needed, for soundex.
-			if (!specification.language.empty()) {
-				mut_properties[RESERVED_LANGUAGE] = specification.language;
 			}
 
 			specification.flags.concrete = true;
@@ -4808,12 +4790,8 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
 				return;
 			}
-			if (specification.flags.text_detection && !specification.flags.bool_term && Serialise::isText(str_value)) {
+			if (specification.flags.text_detection && !specification.flags.bool_term) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
-				return;
-			}
-			if (specification.flags.string_detection && !specification.flags.bool_term) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::STRING;
 				return;
 			}
 			if (specification.flags.term_detection) {
@@ -5179,6 +5157,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 	L_CALL("Schema::index_term(<Xapian::Document>, %s, <specification_t>, %zu)", repr(serialise_val), pos);
 
 	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
+		case FieldType::STRING:
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
@@ -5203,20 +5182,6 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
 			}
 			L_INDEX("Field Text to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.field, serialise_val, positions ? "true" : "false");
-			break;
-		}
-
-		case FieldType::STRING: {
-			Xapian::TermGenerator term_generator;
-			term_generator.set_document(doc);
-			const auto position = field_spc.position[getPos(pos, field_spc.position.size())]; // String uses position (not positions) which is off by default
-			if (position != 0u) {
-				term_generator.index_text(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
-				L_INDEX("Field String to Index [%d] => %s:%s [Positions: %s]", pos, field_spc.prefix.field, serialise_val, position ? "true" : "false");
-			} else {
-				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
-				L_INDEX("Field String to Index [%d] => %s:%s", pos, field_spc.prefix.field, serialise_val);
-			}
 			break;
 		}
 
@@ -5404,7 +5369,21 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
 			return;
 		}
-		case FieldType::KEYWORD:
+		case FieldType::KEYWORD: {
+			try {
+				auto ser_value = value.str();
+				if (field_spc != nullptr) {
+					index_term(doc, ser_value, *field_spc, pos);
+				}
+				if (global_spc != nullptr) {
+					index_term(doc, ser_value, *global_spc, pos);
+				}
+				s.insert(std::move(ser_value));
+				return;
+			} catch (const msgpack::type_error&) {
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+			}
+		}
 		case FieldType::STRING:
 		case FieldType::TEXT: {
 			try {
@@ -5415,7 +5394,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				if (global_spc != nullptr) {
 					index_term(doc, ser_value, *global_spc, pos);
 				}
-				s.insert(std::move(ser_value));
+				if (ser_value.size() <= 100) {
+					// For text and string, only add relatively short values
+					s.insert(std::move(ser_value));
+				}
 				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
@@ -5628,9 +5610,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING: {
+		case FieldType::KEYWORD: {
 			try {
 				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -5641,6 +5621,26 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
+				return;
+			} catch (const msgpack::type_error&) {
+				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+			}
+		}
+		case FieldType::STRING:
+		case FieldType::TEXT: {
+			try {
+				auto ser_value = value.str();
+				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
+					index_term(doc, ser_value, field_spc, pos);
+				}
+				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
+					index_term(doc, ser_value, global_spc, pos);
+				}
+				if (ser_value.size() <= 100) {
+					// For text and string, only add relatively short values
+					s_f.insert(ser_value);
+					s_g.insert(std::move(ser_value));
+				}
 				return;
 			} catch (const msgpack::type_error&) {
 				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
@@ -5891,7 +5891,6 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
-		hh(RESERVED_STRING_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
 		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
@@ -5948,9 +5947,6 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			write_bool_detection(mut_properties, prop_name, value);
 			return true;
-		case _.fhh(RESERVED_STRING_DETECTION):
-			write_string_detection(mut_properties, prop_name, value);
-			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			write_text_detection(mut_properties, prop_name, value);
 			return true;
@@ -6005,7 +6001,6 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
-		hh(RESERVED_STRING_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
 		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
@@ -6079,9 +6074,6 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 			return true;
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			Schema::feed_bool_detection(value);
-			return true;
-		case _.fhh(RESERVED_STRING_DETECTION):
-			Schema::feed_string_detection(value);
 			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::feed_text_detection(value);
@@ -6283,7 +6275,6 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
-		hh(RESERVED_STRING_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
 		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
@@ -6355,7 +6346,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
-		hh(RESERVED_STRING_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
 		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
@@ -6527,9 +6517,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_BOOL_DETECTION):
 			Schema::consistency_bool_detection(prop_name, value);
-			return true;
-		case _.fhh(RESERVED_STRING_DETECTION):
-			Schema::consistency_string_detection(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::consistency_text_detection(prop_name, value);
@@ -7076,19 +7063,6 @@ Schema::feed_bool_detection(const MsgPack& prop_bool_detection)
 
 
 void
-Schema::feed_string_detection(const MsgPack& prop_string_detection)
-{
-	L_CALL("Schema::feed_string_detection(%s)", repr(prop_string_detection.to_string()));
-
-	try {
-		specification.flags.string_detection = prop_string_detection.boolean();
-	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STRING_DETECTION, repr(specification.full_meta_name));
-	}
-}
-
-
-void
 Schema::feed_text_detection(const MsgPack& prop_text_detection)
 {
 	L_CALL("Schema::feed_text_detection(%s)", repr(prop_text_detection.to_string()));
@@ -7438,21 +7412,6 @@ Schema::write_bool_detection(MsgPack& mut_properties, std::string_view prop_name
 	try {
 		specification.flags.bool_detection = doc_bool_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
-	}
-}
-
-
-void
-Schema::write_string_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_string_detection)
-{
-	// RESERVED_S_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_string_detection(%s)", repr(doc_string_detection.to_string()));
-
-	try {
-		specification.flags.string_detection = doc_string_detection.boolean();
-		mut_properties[prop_name] = static_cast<bool>(specification.flags.string_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
 	}
@@ -8512,23 +8471,6 @@ Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& do
 
 
 inline void
-Schema::consistency_string_detection(std::string_view prop_name, const MsgPack& doc_string_detection)
-{
-	// RESERVED_S_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_string_detection(%s)", repr(doc_string_detection.to_string()));
-
-	try {
-		const auto _string_detection = doc_string_detection.boolean();
-		if (specification.flags.string_detection != _string_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.string_detection ? "true" : "false", _string_detection ? "true" : "false");
-		}
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
-	}
-}
-
-
-inline void
 Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& doc_text_detection)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
@@ -9054,6 +8996,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
+				case FieldType::STRING:
 				case FieldType::TEXT: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
@@ -9075,18 +9018,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::STRING: {
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
-					break;
-				}
 				case FieldType::KEYWORD: {
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
 					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 					if (bool_term_it != it_e) {
 						res.flags.bool_term = bool_term_it.value().boolean();
@@ -9110,6 +9042,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
+				case FieldType::STRING:
 				case FieldType::TEXT: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
@@ -9131,18 +9064,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::STRING: {
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
-					break;
-				}
 				case FieldType::KEYWORD: {
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
 					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 					if (bool_term_it != it_e) {
 						res.flags.bool_term = bool_term_it.value().boolean();
@@ -9211,6 +9133,7 @@ Schema::get_slot_field(std::string_view field_name) const
 				}
 				break;
 			}
+			case FieldType::STRING:
 			case FieldType::TEXT: {
 				auto language_it = properties.find(RESERVED_LANGUAGE);
 				if (language_it != it_e) {
@@ -9232,18 +9155,7 @@ Schema::get_slot_field(std::string_view field_name) const
 				}
 				break;
 			}
-			case FieldType::STRING: {
-				auto language_it = properties.find(RESERVED_LANGUAGE);
-				if (language_it != it_e) {
-					res.language = language_it.value().str();
-				}
-				break;
-			}
 			case FieldType::KEYWORD: {
-				auto language_it = properties.find(RESERVED_LANGUAGE);
-				if (language_it != it_e) {
-					res.language = language_it.value().str();
-				}
 				auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 				if (bool_term_it != it_e) {
 					res.flags.bool_term = bool_term_it.value().boolean();

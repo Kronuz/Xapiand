@@ -320,7 +320,6 @@ struct required_spc_t {
 		bool numeric_detection:1;
 		bool geo_detection:1;
 		bool bool_detection:1;
-		bool string_detection:1;
 		bool text_detection:1;
 		bool term_detection:1;
 		bool uuid_detection:1;
@@ -814,7 +813,6 @@ class Schema {
 	void feed_numeric_detection(const MsgPack& prop_numeric_detection);
 	void feed_geo_detection(const MsgPack& prop_geo_detection);
 	void feed_bool_detection(const MsgPack& prop_bool_detection);
-	void feed_string_detection(const MsgPack& prop_string_detection);
 	void feed_text_detection(const MsgPack& prop_text_detection);
 	void feed_term_detection(const MsgPack& prop_term_detection);
 	void feed_uuid_detection(const MsgPack& prop_uuid_detection);
@@ -847,7 +845,6 @@ class Schema {
 	void write_numeric_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_numeric_detection);
 	void write_geo_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_geo_detection);
 	void write_bool_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_detection);
-	void write_string_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_string_detection);
 	void write_text_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_text_detection);
 	void write_term_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_term_detection);
 	void write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_uuid_detection);
@@ -907,7 +904,6 @@ class Schema {
 	void consistency_numeric_detection(std::string_view prop_name, const MsgPack& doc_numeric_detection);
 	void consistency_geo_detection(std::string_view prop_name, const MsgPack& doc_geo_detection);
 	void consistency_bool_detection(std::string_view prop_name, const MsgPack& doc_bool_detection);
-	void consistency_string_detection(std::string_view prop_name, const MsgPack& doc_string_detection);
 	void consistency_text_detection(std::string_view prop_name, const MsgPack& doc_text_detection);
 	void consistency_term_detection(std::string_view prop_name, const MsgPack& doc_term_detection);
 	void consistency_uuid_detection(std::string_view prop_name, const MsgPack& doc_uuid_detection);

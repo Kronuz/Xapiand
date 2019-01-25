@@ -76,7 +76,6 @@ constexpr const char RESERVED_TIMEDELTA_DETECTION[] = "_timedelta_detection";
 constexpr const char RESERVED_NUMERIC_DETECTION[]   = "_numeric_detection";
 constexpr const char RESERVED_GEO_DETECTION[]       = "_geo_detection";
 constexpr const char RESERVED_BOOL_DETECTION[]      = "_bool_detection";
-constexpr const char RESERVED_STRING_DETECTION[]    = "_string_detection";
 constexpr const char RESERVED_TEXT_DETECTION[]      = "_text_detection";
 constexpr const char RESERVED_TERM_DETECTION[]      = "_term_detection";
 constexpr const char RESERVED_UUID_DETECTION[]      = "_uuid_detection";
