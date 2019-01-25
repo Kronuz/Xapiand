@@ -2389,8 +2389,6 @@ HttpClient::count_view(Request& request, Response& response, enum http_method me
 	};
 
 	request.ready = std::chrono::system_clock::now();
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Searching took %s", string::from_delta(took));
 
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 		response.body += obj.to_string(DEFAULT_INDENTATION);
