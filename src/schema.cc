@@ -4496,17 +4496,18 @@ Schema::validate_required_namespace_data()
 				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
 				specification.flags.has_index = true;
 			}
-
 			specification.language = default_spc.language;
-
 			specification.stop_strategy = default_spc.stop_strategy;
-
 			specification.stem_strategy = default_spc.stem_strategy;
 			specification.stem_language = default_spc.stem_language;
 			specification.flags.concrete = true;
 			break;
 
 		case FieldType::STRING:
+			if (!specification.flags.has_index) {
+				specification.index &= ~TypeIndex::VALUES; // Fallback to index anything but values
+				specification.flags.has_index = true;
+			}
 			specification.flags.concrete = true;
 			break;
 
@@ -4675,6 +4676,15 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			break;
 		}
 		case FieldType::STRING: {
+			if (!specification.flags.has_index) {
+				const auto index = specification.index & ~TypeIndex::VALUES; // Fallback to index anything but values
+				if (specification.index != index) {
+					specification.index = index;
+					mut_properties[RESERVED_INDEX] = _get_str_index(index);
+				}
+				specification.flags.has_index = true;
+			}
+
 			// Language could be needed, for soundex.
 			if (specification.language != DEFAULT_LANGUAGE) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
