@@ -88,8 +88,8 @@ struct required_spc_t;
 
 
 namespace Serialise {
-	inline bool isText(std::string_view field_value, bool bool_term) noexcept {
-		return !bool_term && field_value.size() > 100 && field_value.find(' ') != std::string::npos;
+	inline bool isText(std::string_view field_value) noexcept {
+		return field_value.size() > 100 && field_value.find(' ') != std::string::npos;
 	}
 
 	// Returns if field_value is UUID.

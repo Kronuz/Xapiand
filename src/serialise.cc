@@ -912,7 +912,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 				return FieldType::KEYWORD;
 			}
 
-			if (isText(str_value, bool_term)) {
+			if (isText(str_value)) {
 				return FieldType::TEXT;
 			}
 
@@ -1046,7 +1046,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			}
 
 			// Like TEXT
-			if (isText(str_value, bool_term)) {
+			if (isText(str_value)) {
 				return std::make_pair(FieldType::TEXT, std::string(str_value));
 			}
 
