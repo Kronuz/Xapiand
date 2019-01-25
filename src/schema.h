@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -116,8 +116,8 @@ constexpr double DEFAULT_GEO_ERROR                = 0.3;
 constexpr bool DEFAULT_POSITIONS                  = true;
 constexpr bool DEFAULT_SPELLING                   = false;
 constexpr bool DEFAULT_BOOL_TERM                  = false;
-constexpr TypeIndex DEFAULT_INDEX                 = TypeIndex::ALL;
-constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::BOTH;
+constexpr TypeIndex DEFAULT_INDEX                 = TypeIndex::FIELD_ALL;
+constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::UUID;
 constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 256 namespace terms
 
 
