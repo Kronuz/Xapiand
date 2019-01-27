@@ -5162,18 +5162,8 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
 			if (!field_spc.language.empty()) {
-				const auto& stopper = getStopper(field_spc.language);
-				term_generator.set_stopper(stopper.get());
-				term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
 				term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 				term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
-				// Xapian::WritableDatabase *wdb = nullptr;
-				// bool spelling = field_spc.spelling[getPos(pos, field_spc.spelling.size())];
-				// if (spelling) {
-				// 	wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
-				// 	term_generator.set_database(*wdb);
-				// 	term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-				// }
 			}
 			const bool positions = field_spc.positions[getPos(pos, field_spc.positions.size())];
 			if (positions) {
