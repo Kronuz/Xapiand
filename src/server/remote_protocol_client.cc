@@ -1,23 +1,21 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC
+ * Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019 Olly Betts
+ * Copyright (C) 2006,2007,2009,2010 Lemur Consulting Ltd
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "remote_protocol_client.h"
@@ -317,27 +315,46 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_allterms(<message>)");
 
+	std::string reply;
 	std::string prev = message;
 	const std::string& prefix = message;
 
 	reset();
 	lock_database lk_db(this);
 
+#if XAPIAN_AT_LEAST(1, 5, 0)
 	const Xapian::TermIterator end = db()->allterms_end(prefix);
 	for (Xapian::TermIterator t = db()->allterms_begin(prefix); t != end; ++t) {
 		if unlikely(prev.size() > 255)
 			prev.resize(255);
-		const std::string & v = *t;
-		size_t reuse = common_prefix_length(prev, v);
-		std::string reply(serialise_length(t.get_termfreq()));
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
+		reply += serialise_length(t.get_termfreq());
 		reply.append(1, char(reuse));
-		reply.append(v, reuse, std::string::npos);
+		reply += serialise_length(term.size() - reuse);
+		reply.append(term, reuse, std::string::npos);
+		prev = term;
+	}
+	lk_db.unlock();
+
+	send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
+#else
+	const Xapian::TermIterator end = db()->allterms_end(prefix);
+	for (Xapian::TermIterator t = db()->allterms_begin(prefix); t != end; ++t) {
+		if unlikely(prev.size() > 255)
+			prev.resize(255);
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
+		reply = serialise_length(t.get_termfreq());
+		reply.append(1, char(reuse));
+		reply.append(term, reuse, std::string::npos);
 		send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
-		prev = v;
+		prev = term;
 	}
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
+#endif
 }
 
 
@@ -353,26 +370,58 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	reset();
 	lock_database lk_db(this);
 
+#if XAPIAN_AT_LEAST(1, 5, 0)
+	Xapian::TermIterator t = db()->termlist_begin(did);
+	Xapian::termcount num_terms = t.get_approx_size();
+
+	send_message(RemoteReplyType::REPLY_TERMLIST0, serialise_length(db()->get_doclength(did)) + serialise_length(num_terms));
+
+    std::string reply;
+    std::string prev;
+
+    while (t != db()->termlist_end(did)) {
+		if unlikely(prev.size() > 255) {
+			prev.resize(255);
+		}
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
+		reply += serialise_length(t.get_wdf());
+		reply += serialise_length(t.get_termfreq());
+		reply.append(1, char(reuse));
+		reply += serialise_length(term.size() - reuse);
+		reply.append(term, reuse, std::string::npos);
+		prev = term;
+		++t;
+    }
+
+	lk_db.unlock();
+
+	send_message(RemoteReplyType::REPLY_TERMLIST, reply);
+#else
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db()->get_doclength(did)));
-	std::string prev;
+
+    std::string reply;
+    std::string prev;
+
 	const Xapian::TermIterator end = db()->termlist_end(did);
 	for (Xapian::TermIterator t = db()->termlist_begin(did); t != end; ++t) {
 		if unlikely(prev.size() > 255) {
 			prev.resize(255);
 		}
-		const std::string & v = *t;
-		size_t reuse = common_prefix_length(prev, v);
-		std::string reply(serialise_length(t.get_wdf()));
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
+		reply = serialise_length(t.get_wdf());
 		reply += serialise_length(t.get_termfreq());
 		reply.append(1, char(reuse));
-		reply.append(v, reuse, std::string::npos);
+		reply.append(term, reuse, std::string::npos);
 		send_message(RemoteReplyType::REPLY_TERMLIST, reply);
-		prev = v;
+		prev = term;
 	}
 
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
+#endif
 }
 
 
@@ -1123,26 +1172,48 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 	reset();
 	lock_database lk_db(this);
 
-	std::string prev = message;
+#if XAPIAN_AT_LEAST(1, 5, 0)
 	std::string reply;
+	std::string prev = message;
+	const std::string& prefix = message;
+	for (Xapian::TermIterator t = db()->metadata_keys_begin(prefix);
+		 t != db()->metadata_keys_end(prefix);
+		 ++t) {
+		if unlikely(prev.size() > 255)
+			prev.resize(255);
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
+		reply.append(1, char(reuse));
+		reply += serialise_length(term.size() - reuse);
+		reply.append(term, reuse, std::string::npos);
+		prev = term;
+	}
 
-	const std::string & prefix = message;
+	lk_db.unlock();
+
+	send_message(RemoteReplyType::REPLY_METADATAKEYLIST, reply);
+
+#else
+	std::string reply;
+	std::string prev = message;
+	const std::string& prefix = message;
 	const Xapian::TermIterator end = db()->metadata_keys_end(prefix);
 	Xapian::TermIterator t = db()->metadata_keys_begin(prefix);
 	for (; t != end; ++t) {
 		if unlikely(prev.size() > 255)
 			prev.resize(255);
-		const std::string & v = *t;
-		size_t reuse = common_prefix_length(prev, v);
+		const std::string& term = *t;
+		size_t reuse = common_prefix_length(prev, term);
 		reply.assign(1, char(reuse));
-		reply.append(v, reuse, std::string::npos);
+		reply.append(term, reuse, std::string::npos);
 		send_message(RemoteReplyType::REPLY_METADATAKEYLIST, reply);
-		prev = v;
+		prev = term;
 	}
 
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
+#endif
 }
 
 

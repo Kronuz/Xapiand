@@ -1,23 +1,21 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC
+ * Copyright (C) 2006,2007,2008,2009,2010,2014,2017 Olly Betts
+ * Copyright (C) 2007,2009,2010 Lemur Consulting Ltd
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #pragma once
@@ -46,8 +44,38 @@
 #endif
 
 
+// Versions:
+// 21: Overhauled remote backend supporting WritableDatabase
+// 22: Lossless double serialisation
+// 23: Support get_lastdocid() on remote databases
+// 24: Support for OP_VALUE_RANGE in query serialisation
+// 25: Support for delete_document and replace_document with unique term
+// 26: Tweak delete_document with unique term; delta encode rset and termpos
+// 27: Support for postlists (always passes the whole list across)
+// 28: Pass document length in reply to MSG_TERMLIST
+// 29: Serialisation of Xapian::Error includes error_string
+// 30: Add minor protocol version numbers, to reduce need for client upgrades
+// 30.1: Pass the prefix parameter for MSG_ALLTERMS, and use it.
+// 30.2: New REPLY_DELETEDOCUMENT returns MSG_DONE to allow exceptions.
+// 30.3: New MSG_GETMSET which passes check_at_least parameter.
+// 30.4: New query operator OP_SCALE_WEIGHT.
+// 30.5: New MSG_GETMSET which expects MSet's percent_factor to be returned.
+// 30.6: Support for OP_VALUE_GE and OP_VALUE_LE in query serialisation
+// 31: 1.1.0 Clean up for Xapian 1.1.0
+// 32: 1.1.1 Serialise termfreq and reltermfreqs together in serialise_stats.
+// 33: 1.1.3 Support for passing matchspies over the remote connection.
+// 34: 1.1.4 Support for metadata over with remote databases.
+// 35: 1.1.5 Support for add_spelling() and remove_spelling().
+// 35.1: 1.2.4 Support for metadata_keys_begin().
+// 36: 1.3.0 REPLY_UPDATE and REPLY_GREETING merged, and more...
+// 37: 1.3.1 Prefix-compress termlists.
+// 38: 1.3.2 Stats serialisation now includes collection freq, and more...
+// 39: 1.3.3 New query operator OP_WILDCARD; sort keys in serialised MSet.
+// 39.1: pre-1.5.0 MSG_POSITIONLISTCOUNT added.
+// 40: pre-1.5.0 REPLY_REMOVESPELLING added.
+// 41: 1.5.0 Changed REPLY_ALLTERMS, REPLY_METADATAKEYLIST, REPLY_TERMLIST.
 #if XAPIAN_AT_LEAST(1, 5, 0)
-#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 40
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 41
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 #else
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
@@ -163,6 +191,7 @@ enum class RemoteReplyType {
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
 	REPLY_POSITIONLISTCOUNT,    // Get PositionList length
 	REPLY_REMOVESPELLING,       // Remove a spelling
+	REPLY_TERMLIST0,            // Header for get Termlist
 	REPLY_MAX
 };
 
