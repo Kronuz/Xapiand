@@ -943,7 +943,7 @@ Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
 	L_CALL("Database::storage_get_stored()");
 
-	ASSERT(locator.type == Locator::Type::stored);
+	ASSERT(locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored);
 	ASSERT(locator.volume != -1);
 
 	ASSERT(did > 0);
@@ -982,7 +982,7 @@ Database::storage_push_blobs(std::string&& doc_data)
 		for (auto& locator : data) {
 			if (locator.size == 0) {
 				data.erase(locator.ct_type);
-			} else if (locator.type == Locator::Type::stored) {
+			} else if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
 				uint32_t offset;
 				while (true) {
 					try {
@@ -990,14 +990,14 @@ Database::storage_push_blobs(std::string&& doc_data)
 							storage->volume = storage->get_volumes_range(DATA_STORAGE_PATH).second;
 							storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 						}
-						offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.data() }));
+						offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 						break;
 					} catch (StorageEOF) {
 						++storage->volume;
 						storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 					}
 				}
-				data.update(locator.ct_type, storage->volume, offset, locator.data().size());
+				data.update(locator.ct_type, storage->volume, offset, locator.size);
 			}
 		}
 		pushed.second = std::move(data.serialise());
@@ -1677,7 +1677,8 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 				auto data = Data(doc.get_data());
 				for (auto& locator : data) {
 					switch (locator.type) {
-						case Locator::Type::inplace: {
+						case Locator::Type::inplace:
+						case Locator::Type::compressed_inplace: {
 							auto content_type = locator.ct_type.to_string();
 							auto blob = locator.data();
 							char type = toUType(locator.type);
@@ -1689,7 +1690,8 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 							XXH32_update(xxh_state, &type, 1);
 							break;
 						}
-						case Locator::Type::stored: {
+						case Locator::Type::stored:
+						case Locator::Type::compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
 							auto stored = storage_get_stored(locator, did);
 							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
@@ -1766,7 +1768,8 @@ Database::dump_documents()
 				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 				for (auto& locator : data) {
 					switch (locator.type) {
-						case Locator::Type::inplace: {
+						case Locator::Type::inplace:
+						case Locator::Type::compressed_inplace: {
 							if (!locator.ct_type.empty()) {
 								obj["_data"].push_back(MsgPack({
 									{ "_content_type", locator.ct_type.to_string() },
@@ -1776,7 +1779,8 @@ Database::dump_documents()
 							}
 							break;
 						}
-						case Locator::Type::stored: {
+						case Locator::Type::stored:
+						case Locator::Type::compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
 							auto stored = storage_get_stored(locator, did);
 							obj["_data"].push_back(MsgPack({

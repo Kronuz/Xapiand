@@ -30,6 +30,7 @@
 #include "msgpack.h"               // for MsgPack
 #include "string.hh"               // for string::*
 #include "utype.hh"                // for toUType
+#include "compressor_lz4.h"        // for compress_lz4, decompress_lz4
 
 
 constexpr int STORED_CONTENT_TYPE  = 0;
@@ -148,6 +149,8 @@ public:
 	enum class Type : uint8_t {
 		inplace,
 		stored,
+		compressed_inplace,
+		compressed_stored,
 	};
 
 	Type type;
@@ -162,7 +165,7 @@ public:
 
 	template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
 	Locator(C&& ct_type) :
-		type(Type::inplace),
+		type(Type::compressed_inplace),
 		ct_type(std::forward<C>(ct_type)),
 		volume(-1),
 		offset(0),
@@ -178,17 +181,47 @@ public:
 
 	void data(std::string_view new_data) {
 		size = new_data.size();
-		raw = new_data;
+		switch (type) {
+			case Type::inplace:
+			case Type::stored:
+				raw = new_data;
+				break;
+			case Type::compressed_inplace:
+			case Type::compressed_stored:
+				_raw_holder = compress_lz4(new_data);
+				raw = _raw_holder;
+				break;
+		}
 	}
 
 	void data(const std::string& new_data) {
 		size = new_data.size();
-		_raw_holder = new_data;
-		raw = _raw_holder;
+		switch (type) {
+			case Type::inplace:
+			case Type::stored:
+				_raw_holder = new_data;
+				raw = _raw_holder;
+				break;
+			case Type::compressed_inplace:
+			case Type::compressed_stored:
+				_raw_holder = compress_lz4(new_data);
+				raw = _raw_holder;
+				break;
+		}
 	}
 
 	std::string_view data() const {
-		return raw;
+		if (raw.empty()) {
+			return "";
+		}
+		switch (type) {
+			case Type::inplace:
+			case Type::stored:
+				return raw;
+			case Type::compressed_inplace:
+			case Type::compressed_stored:
+				return decompress_lz4(raw);
+		}
 	}
 
 	static Locator unserialise(std::string_view locator_str) {
@@ -200,10 +233,12 @@ public:
 		locator.type = static_cast<Type>(*p++);
 		switch (locator.type) {
 			case Type::inplace:
+			case Type::compressed_inplace:
 				locator.raw = std::string_view(p, p_end - p);
 				locator.size = p_end - p;
 				break;
 			case Type::stored:
+			case Type::compressed_stored:
 				locator.volume = unserialise_length(&p, p_end);
 				locator.offset = unserialise_length(&p, p_end);
 				locator.size = unserialise_length(&p, p_end);
@@ -224,8 +259,10 @@ public:
 		result.push_back(toUType(type));
 		switch (type) {
 			case Type::inplace:
+			case Type::compressed_inplace:
 				break;
 			case Type::stored:
+			case Type::compressed_stored:
 				result.append(serialise_length(volume));
 				result.append(serialise_length(offset));
 				result.append(serialise_length(size));

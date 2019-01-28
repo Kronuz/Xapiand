@@ -1070,9 +1070,11 @@ DatabaseHandler::restore(int fd)
 					} else {
 						switch (static_cast<Locator::Type>(type_ser)) {
 							case Locator::Type::inplace:
+							case Locator::Type::compressed_inplace:
 								data.update(content_type, blob);
 								break;
 							case Locator::Type::stored:
+							case Locator::Type::compressed_stored:
 								data.update(content_type, -1, 0, 0, blob);
 								break;
 						}
@@ -1719,6 +1721,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 		for (auto& locator : data) {
 			switch (locator.type) {
 				case Locator::Type::inplace:
+				case Locator::Type::compressed_inplace:
 					if (locator.ct_type.empty()) {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
@@ -1732,6 +1735,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 					}
 					break;
 				case Locator::Type::stored:
+				case Locator::Type::compressed_stored:
 					info_data.push_back(MsgPack({
 						{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 						{ RESPONSE_TYPE, "stored" },

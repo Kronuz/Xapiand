@@ -321,6 +321,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 	for (auto& locator : data) {
 		switch (locator.type) {
 			case Locator::Type::inplace:
+			case Locator::Type::compressed_inplace:
 				if (!locator.ct_type.empty()) {
 					obj["_data"].push_back(MsgPack({
 						{ "_content_type", locator.ct_type.to_string() },
@@ -330,6 +331,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 				}
 				break;
 			case Locator::Type::stored:
+			case Locator::Type::compressed_stored:
 #ifdef XAPIAND_DATA_STORAGE
 				obj["_data"].push_back(MsgPack({
 					{ "_content_type", locator.ct_type.to_string() },
