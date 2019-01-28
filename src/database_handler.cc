@@ -76,7 +76,6 @@ constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "#doc_len_upper";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_HAS_POSITIONS[]       = "#has_positions";
 constexpr const char RESPONSE_LAST_ID[]             = "#last_id";
-constexpr const char RESPONSE_OBJECT[]              = "#object";
 constexpr const char RESPONSE_OFFSET[]              = "#offset";
 constexpr const char RESPONSE_POS[]                 = "#pos";
 constexpr const char RESPONSE_RAW_DATA[]            = "#raw_data";
@@ -1724,14 +1723,11 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
 							{ RESPONSE_TYPE, "inplace" },
-							{ RESPONSE_SIZE, locator.data().size() },
-							{ RESPONSE_OBJECT, MsgPack::unserialise(locator.data()) }
 						}));
 					} else {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 							{ RESPONSE_TYPE, "inplace" },
-							{ RESPONSE_SIZE, locator.data().size() },
 						}));
 					}
 					break;
