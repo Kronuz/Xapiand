@@ -5162,6 +5162,9 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
 			if (!field_spc.language.empty()) {
+				// const auto& stopper = getStopper(field_spc.language);
+				// term_generator.set_stopper(stopper.get());
+				// term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
 				term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 				term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
 			}
