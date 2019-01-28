@@ -320,7 +320,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 	for (auto& locator : data) {
 		switch (locator.type) {
-			case Locator::Type::inplace: {
+			case Locator::Type::inplace:
 				if (!locator.ct_type.empty()) {
 					obj["_data"].push_back(MsgPack({
 						{ "_content_type", locator.ct_type.to_string() },
@@ -329,8 +329,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 					}));
 				}
 				break;
-			}
-			case Locator::Type::stored: {
+			case Locator::Type::stored:
 #ifdef XAPIAND_DATA_STORAGE
 				obj["_data"].push_back(MsgPack({
 					{ "_content_type", locator.ct_type.to_string() },
@@ -338,7 +337,6 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 				}));
 #endif
 				break;
-			}
 		}
 	}
 	return obj;
