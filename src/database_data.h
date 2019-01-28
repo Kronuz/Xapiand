@@ -144,6 +144,7 @@ static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_typ
 
 class Locator {
 	std::string _raw_holder;
+	mutable std::string _raw_decompressed;
 
 public:
 	enum class Type : uint8_t {
@@ -209,18 +210,8 @@ public:
 				break;
 		}
 	}
-
-	void clear() {
-		size = 0;
-		raw = "";
-	}
-
-	bool empty() const noexcept {
-		return raw.empty();
-	}
-
 	std::string_view data() const {
-		if (raw.empty()) {
+		if (size == 0) {
 			return "";
 		}
 		switch (type) {
@@ -229,7 +220,10 @@ public:
 				return raw;
 			case Type::compressed_inplace:
 			case Type::compressed_stored:
-				return decompress_lz4(raw);
+				if (_raw_decompressed.empty() && !raw.empty()) {
+					_raw_decompressed = decompress_lz4(raw);
+				}
+				return _raw_decompressed;
 		}
 	}
 
@@ -260,7 +254,7 @@ public:
 	}
 
 	std::string serialise() const {
-		if (raw.empty()) {
+		if (size == 0) {
 			return "";
 		}
 		std::string result;
@@ -348,8 +342,8 @@ class Data {
 		// First disable current locators which are inside ops
 		for (auto& op : ops) {
 			for (auto& locator : locators) {
-				if (locator == op) {
-					locator.clear();
+				if (locator.size && locator == op) {
+					locator.size = 0;
 				}
 			}
 			if (op.ct_type.empty() && op.size) {
@@ -360,7 +354,7 @@ class Data {
 
 		// Then push the remaining locators
 		for (auto& locator : locators) {
-			if (!locator.empty()) {
+			if (locator.size) {
 				new_locators.push_back(locator);
 			}
 		}

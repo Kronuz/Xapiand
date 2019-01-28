@@ -980,24 +980,27 @@ Database::storage_push_blobs(std::string&& doc_data)
 	if (storage) {
 		auto data = Data(std::move(doc_data));
 		for (auto& locator : data) {
-			if (locator.empty()) {
+			if (locator.size == 0) {
 				data.erase(locator.ct_type);
-			} else if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
-				uint32_t offset;
-				while (true) {
-					try {
-						if (storage->closed()) {
-							storage->volume = storage->get_volumes_range(DATA_STORAGE_PATH).second;
+			}
+			if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
+				if (!locator.raw.empty()) {
+					uint32_t offset;
+					while (true) {
+						try {
+							if (storage->closed()) {
+								storage->volume = storage->get_volumes_range(DATA_STORAGE_PATH).second;
+								storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
+							}
+							offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
+							break;
+						} catch (StorageEOF) {
+							++storage->volume;
 							storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 						}
-						offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
-						break;
-					} catch (StorageEOF) {
-						++storage->volume;
-						storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
 					}
+					data.update(locator.ct_type, storage->volume, offset, locator.size);
 				}
-				data.update(locator.ct_type, storage->volume, offset, locator.size);
 			}
 		}
 		pushed.second = std::move(data.serialise());
