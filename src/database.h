@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,10 +34,12 @@
 #include <xapian.h>               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 #include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
-#include "database_flags.h"       // for Data::Locator
-#include "database_data.h"        // for Data::Locator
+#include "database_flags.h"       // for DB_OPEN
+#include "lz4/xxhash.h"           // for XXH32_state_t
+#include "string.hh"              // for string::join
 
 
+class Locator;
 class Logging;
 class MsgPack;
 class DataStorage;
@@ -148,7 +150,7 @@ public:
 	Xapian::Database* db();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(Xapian::docid did, const Data::Locator& locator);
+	std::string storage_get_stored(Xapian::docid did, const Locator& locator);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	UUID get_uuid();

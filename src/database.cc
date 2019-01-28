@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "cassert.h"              // for ASSERT
+#include "database_data.h"        // for Locator
 #include "database_flags.h"       // DB_*
 #include "database_pool.h"        // for DatabaseEndpoint
 #include "database_handler.h"     // for committer
@@ -938,11 +939,11 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(Xapian::docid did, const Data::Locator& locator)
+Database::storage_get_stored(Xapian::docid did, const Locator& locator)
 {
 	L_CALL("Database::storage_get_stored()");
 
-	ASSERT(locator.type == Data::Type::stored);
+	ASSERT(locator.type == Locator::Type::stored);
 	ASSERT(locator.volume != -1);
 
 	ASSERT(did > 0);
@@ -982,7 +983,7 @@ Database::storage_push_blobs(std::string&& doc_data)
 			if (locator.size == 0) {
 				data.erase(locator.ct_type);
 			}
-			if (locator.type == Data::Type::stored) {
+			if (locator.type == Locator::Type::stored) {
 				if (!locator.data().empty()) {
 					uint32_t offset;
 					while (true) {
@@ -1679,7 +1680,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 				auto data = Data(doc.get_data());
 				for (auto& locator : data) {
 					switch (locator.type) {
-						case Data::Type::inplace: {
+						case Locator::Type::inplace: {
 							auto content_type = locator.ct_type.to_string();
 							auto blob = locator.data();
 							char type = toUType(locator.type);
@@ -1691,7 +1692,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 							XXH32_update(xxh_state, &type, 1);
 							break;
 						}
-						case Data::Type::stored: {
+						case Locator::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
 							auto stored = storage_get_stored(did, locator);
 							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
@@ -1768,7 +1769,7 @@ Database::dump_documents()
 				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 				for (auto& locator : data) {
 					switch (locator.type) {
-						case Data::Type::inplace: {
+						case Locator::Type::inplace: {
 							if (!locator.ct_type.empty()) {
 								obj["_data"].push_back(MsgPack({
 									{ "_content_type", locator.ct_type.to_string() },
@@ -1778,7 +1779,7 @@ Database::dump_documents()
 							}
 							break;
 						}
-						case Data::Type::stored: {
+						case Locator::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
 							auto stored = storage_get_stored(did, locator);
 							obj["_data"].push_back(MsgPack({

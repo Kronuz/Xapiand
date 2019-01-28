@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -320,7 +320,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
 	for (auto& locator : data) {
 		switch (locator.type) {
-			case Data::Type::inplace: {
+			case Locator::Type::inplace: {
 				if (!locator.ct_type.empty()) {
 					obj["_data"].push_back(MsgPack({
 						{ "_content_type", locator.ct_type.to_string() },
@@ -330,7 +330,7 @@ DatabaseWAL::repr_document(std::string_view serialised_document, bool unserialis
 				}
 				break;
 			}
-			case Data::Type::stored: {
+			case Locator::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
 				obj["_data"].push_back(MsgPack({
 					{ "_content_type", locator.ct_type.to_string() },

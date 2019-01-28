@@ -1069,11 +1069,11 @@ DatabaseHandler::restore(int fd)
 					if (content_type.empty()) {
 						obj = MsgPack::unserialise(blob);
 					} else {
-						switch (static_cast<Data::Type>(type_ser)) {
-							case Data::Type::inplace:
+						switch (static_cast<Locator::Type>(type_ser)) {
+							case Locator::Type::inplace:
 								data.update(content_type, blob);
 								break;
-							case Data::Type::stored:
+							case Locator::Type::stored:
 								data.update(content_type, -1, 0, 0, blob);
 								break;
 						}
@@ -1719,7 +1719,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 	if (!data.empty()) {
 		for (auto& locator : data) {
 			switch (locator.type) {
-				case Data::Type::inplace:
+				case Locator::Type::inplace:
 					if (locator.ct_type.empty()) {
 						info_data.push_back(MsgPack({
 							{ RESPONSE_CONTENT_TYPE, MSGPACK_CONTENT_TYPE },
@@ -1735,7 +1735,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 						}));
 					}
 					break;
-				case Data::Type::stored:
+				case Locator::Type::stored:
 					info_data.push_back(MsgPack({
 						{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 						{ RESPONSE_TYPE, "stored" },
@@ -2028,7 +2028,7 @@ Document::get_blob(const ct_type_t& ct_type, size_t retries)
 			if (!locator->data().empty()) {
 				return std::string(locator->data());
 			}
-			if (locator->type == Data::Type::stored) {
+			if (locator->type == Locator::Type::stored) {
 #ifdef XAPIAND_DATA_STORAGE
 				auto stored = db_handler->database()->storage_get_stored(did, *locator);
  				return std::string(unserialise_string_at(STORED_BLOB, stored));

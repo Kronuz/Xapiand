@@ -141,118 +141,118 @@ static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
 static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type });
 
 
-class Data {
+class Locator {
 public:
 	enum class Type : uint8_t {
 		inplace,
 		stored,
 	};
 
-	struct Locator {
-		Type type;
+	Type type;
 
-		ct_type_t ct_type;
+	ct_type_t ct_type;
 
-		std::string _str_holder;
-		std::string_view _str;
+	std::string _str_holder;
+	std::string_view _str;
 
-		ssize_t volume;
-		size_t offset;
-		size_t size;
+	ssize_t volume;
+	size_t offset;
+	size_t size;
 
-		template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
-		Locator(C&& ct_type, std::string_view data = "") :
-			type(Type::inplace),
-			ct_type(std::forward<C>(ct_type)),
-			_str(data),
-			volume(-1),
-			offset(0),
-			size(_str.size()) { }
+	template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
+	Locator(C&& ct_type, std::string_view data = "") :
+		type(Type::inplace),
+		ct_type(std::forward<C>(ct_type)),
+		_str(data),
+		volume(-1),
+		offset(0),
+		size(_str.size()) { }
 
-		template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
-		Locator(C&& ct_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") :
-			type(Type::stored),
-			ct_type(std::forward<C>(ct_type)),
-			_str(data),
-			volume(volume),
-			offset(volume == -1 ? 0 : offset),
-			size(volume == -1 ? _str.size() : size) { }
+	template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
+	Locator(C&& ct_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") :
+		type(Type::stored),
+		ct_type(std::forward<C>(ct_type)),
+		_str(data),
+		volume(volume),
+		offset(volume == -1 ? 0 : offset),
+		size(volume == -1 ? _str.size() : size) { }
 
-		template <typename S>
-		void data(S&& new_data) {
-			_str_holder.assign(std::forward<S>(new_data));
-			size = _str_holder.size();
-			_str = _str_holder;
+	template <typename S>
+	void data(S&& new_data) {
+		_str_holder.assign(std::forward<S>(new_data));
+		size = _str_holder.size();
+		_str = _str_holder;
+	}
+
+	std::string_view data() const {
+		return _str;
+	}
+
+	static Locator unserialise(std::string_view locator_str) {
+		const char *p = locator_str.data();
+		const char *p_end = p + locator_str.size();
+		auto length = unserialise_length(&p, p_end, true);
+		Locator locator(ct_type_t(std::string_view(p, length)));
+		p += length;
+		locator.type = static_cast<Type>(*p++);
+		switch (locator.type) {
+			case Type::inplace:
+				locator._str = std::string_view(p, p_end - p);
+				locator.size = p_end - p;
+				break;
+			case Type::stored:
+				locator.volume = unserialise_length(&p, p_end);
+				locator.offset = unserialise_length(&p, p_end);
+				locator.size = unserialise_length(&p, p_end);
+				locator._str = std::string_view(p, p_end - p);
+				break;
+			default:
+				THROW(SerialisationError, "Bad encoded data locator: Unknown type");
 		}
+		return locator;
+	}
 
-		std::string_view data() const {
-			return _str;
+	std::string serialise() const {
+		std::string result;
+		result.append(serialise_string(ct_type.to_string()));
+		result.push_back(toUType(type));
+		switch (type) {
+			case Type::inplace:
+				if (size == 0) {
+					return "";
+				}
+				break;
+			case Type::stored:
+				if (size == 0) {
+					return "";
+				}
+				result.append(serialise_length(volume));
+				result.append(serialise_length(offset));
+				result.append(serialise_length(size));
+				break;
+			default:
+				THROW(SerialisationError, "Bad data locator: Unknown type");
 		}
+		result.append(data());
+		result.insert(0, serialise_length(result.size()));
+		return result;
+	}
 
-		static Locator unserialise(std::string_view locator_str) {
-			const char *p = locator_str.data();
-			const char *p_end = p + locator_str.size();
-			auto length = unserialise_length(&p, p_end, true);
-			Locator locator(ct_type_t(std::string_view(p, length)));
-			p += length;
-			locator.type = static_cast<Type>(*p++);
-			switch (locator.type) {
-				case Type::inplace:
-					locator._str = std::string_view(p, p_end - p);
-					locator.size = p_end - p;
-					break;
-				case Type::stored:
-					locator.volume = unserialise_length(&p, p_end);
-					locator.offset = unserialise_length(&p, p_end);
-					locator.size = unserialise_length(&p, p_end);
-					locator._str = std::string_view(p, p_end - p);
-					break;
-				default:
-					THROW(SerialisationError, "Bad encoded data locator: Unknown type");
-			}
-			return locator;
-		}
+	bool operator==(const Locator& other) const noexcept {
+		return ct_type == other.ct_type;
+	}
 
-		std::string serialise() const {
-			std::string result;
-			result.append(serialise_string(ct_type.to_string()));
-			result.push_back(toUType(type));
-			switch (type) {
-				case Type::inplace:
-					if (size == 0) {
-						return "";
-					}
-					break;
-				case Type::stored:
-					if (size == 0) {
-						return "";
-					}
-					result.append(serialise_length(volume));
-					result.append(serialise_length(offset));
-					result.append(serialise_length(size));
-					break;
-				default:
-					THROW(SerialisationError, "Bad data locator: Unknown type");
-			}
-			result.append(data());
-			result.insert(0, serialise_length(result.size()));
-			return result;
-		}
+	bool operator!=(const Locator& other) const noexcept {
+		return !operator==(other);
+	}
 
-		bool operator==(const Locator& other) const noexcept {
-			return ct_type == other.ct_type;
-		}
+	bool operator<(const Locator& other) const noexcept {
+		return ct_type < other.ct_type;
+	}
+};
 
-		bool operator!=(const Locator& other) const noexcept {
-			return !operator==(other);
-		}
 
-		bool operator<(const Locator& other) const noexcept {
-			return ct_type < other.ct_type;
-		}
-	};
-
-private:
+class Data {
 	std::string serialised;
 	std::vector<Locator> locators;
 
