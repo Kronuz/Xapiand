@@ -212,19 +212,16 @@ public:
 	}
 
 	std::string serialise() const {
+		if (size == 0) {
+			return "";
+		}
 		std::string result;
 		result.append(serialise_string(ct_type.to_string()));
 		result.push_back(toUType(type));
 		switch (type) {
 			case Type::inplace:
-				if (size == 0) {
-					return "";
-				}
 				break;
 			case Type::stored:
-				if (size == 0) {
-					return "";
-				}
 				result.append(serialise_length(volume));
 				result.append(serialise_length(offset));
 				result.append(serialise_length(size));
