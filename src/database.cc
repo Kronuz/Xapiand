@@ -939,7 +939,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(Xapian::docid did, const Locator& locator)
+Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
 	L_CALL("Database::storage_get_stored()");
 
@@ -1694,7 +1694,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 						}
 						case Locator::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(did, locator);
+							auto stored = storage_get_stored(locator, did);
 							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
 							auto blob = unserialise_string_at(STORED_BLOB, stored);
 							char type = toUType(locator.type);
@@ -1781,7 +1781,7 @@ Database::dump_documents()
 						}
 						case Locator::Type::stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(did, locator);
+							auto stored = storage_get_stored(locator, did);
 							obj["_data"].push_back(MsgPack({
 								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 								{ "_type", "stored" },

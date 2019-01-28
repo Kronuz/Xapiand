@@ -2183,7 +2183,16 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 	} else {
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
-		response.blob = document.get_blob(ct_type);
+		if (locator.data().empty()) {
+#ifdef XAPIAND_DATA_STORAGE
+			if (locator.type == Locator::Type::stored) {
+				auto stored = db_handler.storage_get_stored(locator, did);
+				response.blob = unserialise_string_at(STORED_BLOB, stored);
+#endif
+			}
+		} else {
+			response.blob = locator.data();
+		}
 
 		request.ready = std::chrono::system_clock::now();
 

@@ -150,7 +150,7 @@ public:
 	Xapian::Database* db();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(Xapian::docid did, const Locator& locator);
+	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	UUID get_uuid();

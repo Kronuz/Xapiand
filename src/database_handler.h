@@ -44,6 +44,7 @@
 
 class AggregationMatchSpy;
 class Data;
+class Locator;
 class Database;
 class DatabaseHandler;
 class Document;
@@ -248,6 +249,10 @@ public:
 	MsgPack get_document_info(std::string_view document_id, bool raw_data);
 	MsgPack get_database_info();
 
+#ifdef XAPIAND_DATA_STORAGE
+	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
+#endif /* XAPIAND_DATA_STORAGE */
+
 	bool commit(bool wal = true);
 	bool reopen();
 
@@ -279,7 +284,6 @@ public:
 	std::string serialise(size_t retries=DB_RETRIES);
 	std::string get_value(Xapian::valueno slot, size_t retries=DB_RETRIES);
 	std::string get_data(size_t retries=DB_RETRIES);
-	std::string get_blob(const ct_type_t& ct_type, size_t retries=DB_RETRIES);
 	MsgPack get_terms(size_t retries=DB_RETRIES);
 	MsgPack get_values(size_t retries=DB_RETRIES);
 

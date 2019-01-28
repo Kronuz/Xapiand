@@ -1777,6 +1777,18 @@ DatabaseHandler::get_database_info()
 }
 
 
+#ifdef XAPIAND_DATA_STORAGE
+std::string
+DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
+{
+	L_CALL("DatabaseHandler::storage_get_stored()");
+
+	lock_database lk_db(this);
+	return database()->storage_get_stored(locator, did);
+}
+#endif /* XAPIAND_DATA_STORAGE */
+
+
 bool
 DatabaseHandler::commit(bool wal)
 {
@@ -2008,39 +2020,6 @@ Document::get_data(size_t retries)
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries != 0u) {
 			return get_data(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
-	}
-}
-
-
-std::string
-Document::get_blob(const ct_type_t& ct_type, size_t retries)
-{
-	L_CALL("Document::get_blob(%zu)", retries);
-
-	try {
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-		auto data = Data(doc.get_data());
-		auto locator = data.get(ct_type);
-		if (locator != nullptr) {
-			if (!locator->data().empty()) {
-				return std::string(locator->data());
-			}
-			if (locator->type == Locator::Type::stored) {
-#ifdef XAPIAND_DATA_STORAGE
-				auto stored = db_handler->database()->storage_get_stored(did, *locator);
- 				return std::string(unserialise_string_at(STORED_BLOB, stored));
-#else
- 				return "";
-#endif
-			}
-		}
-		return "";
-	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return get_blob(ct_type, --retries);
 		}
 		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
 	}
