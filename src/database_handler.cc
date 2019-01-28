@@ -59,6 +59,12 @@
 #endif
 
 
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
 constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
