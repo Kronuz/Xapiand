@@ -980,7 +980,7 @@ Database::storage_push_blobs(std::string&& doc_data)
 	if (storage) {
 		auto data = Data(std::move(doc_data));
 		for (auto& locator : data) {
-			if (locator.size == 0) {
+			if (locator.empty()) {
 				data.erase(locator.ct_type);
 			} else if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
 				uint32_t offset;

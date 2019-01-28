@@ -210,6 +210,15 @@ public:
 		}
 	}
 
+	void clear() {
+		size = 0;
+		raw = "";
+	}
+
+	bool empty() const noexcept {
+		return raw.empty();
+	}
+
 	std::string_view data() const {
 		if (raw.empty()) {
 			return "";
@@ -251,7 +260,7 @@ public:
 	}
 
 	std::string serialise() const {
-		if (size == 0) {
+		if (raw.empty()) {
 			return "";
 		}
 		std::string result;
@@ -339,8 +348,8 @@ class Data {
 		// First disable current locators which are inside ops
 		for (auto& op : ops) {
 			for (auto& locator : locators) {
-				if (locator.size && locator == op) {
-					locator.size = 0;
+				if (locator == op) {
+					locator.clear();
 				}
 			}
 			if (op.ct_type.empty() && op.size) {
@@ -351,7 +360,7 @@ class Data {
 
 		// Then push the remaining locators
 		for (auto& locator : locators) {
-			if (locator.size) {
+			if (!locator.empty()) {
 				new_locators.push_back(locator);
 			}
 		}
