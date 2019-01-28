@@ -153,9 +153,8 @@ public:
 
 		ct_type_t ct_type;
 
-		bool _has_str;
-		std::string _str;
-		std::string_view _view;
+		std::string _str_holder;
+		std::string_view _str;
 
 		ssize_t volume;
 		size_t offset;
@@ -165,31 +164,29 @@ public:
 		Locator(C&& ct_type, std::string_view data = "") :
 			type(Type::inplace),
 			ct_type(std::forward<C>(ct_type)),
-			_has_str(false),
-			_view(data),
+			_str(data),
 			volume(-1),
 			offset(0),
-			size(_view.size()) { }
+			size(_str.size()) { }
 
 		template <typename C, typename = std::enable_if_t<not std::is_same<Locator, std::decay_t<C>>::value>>
 		Locator(C&& ct_type, ssize_t volume, size_t offset, size_t size, std::string_view data = "") :
 			type(Type::stored),
 			ct_type(std::forward<C>(ct_type)),
-			_has_str(false),
-			_view(data),
+			_str(data),
 			volume(volume),
 			offset(volume == -1 ? 0 : offset),
-			size(volume == -1 ? _view.size() : size) { }
+			size(volume == -1 ? _str.size() : size) { }
 
 		template <typename S>
 		void data(S&& new_data) {
-			_has_str = true;
-			_str.assign(std::forward<S>(new_data));
-			size = _str.size();
+			_str_holder.assign(std::forward<S>(new_data));
+			size = _str_holder.size();
+			_str = _str_holder;
 		}
 
 		std::string_view data() const {
-			return _has_str ? _str : _view;
+			return _str;
 		}
 
 		static Locator unserialise(std::string_view locator_str) {
@@ -201,14 +198,14 @@ public:
 			locator.type = static_cast<Type>(*p++);
 			switch (locator.type) {
 				case Type::inplace:
-					locator._view = std::string_view(p, p_end - p);
+					locator._str = std::string_view(p, p_end - p);
 					locator.size = p_end - p;
 					break;
 				case Type::stored:
 					locator.volume = unserialise_length(&p, p_end);
 					locator.offset = unserialise_length(&p, p_end);
 					locator.size = unserialise_length(&p, p_end);
-					locator._view = std::string_view(p, p_end - p);
+					locator._str = std::string_view(p, p_end - p);
 					break;
 				default:
 					THROW(SerialisationError, "Bad encoded data locator: Unknown type");
