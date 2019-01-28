@@ -176,10 +176,14 @@ public:
 		offset(volume == -1 ? 0 : offset),
 		size(volume == -1 ? 0 : size) { }
 
-	template <typename S>
-	void data(S&& new_data) {
-		_raw_holder.assign(std::forward<S>(new_data));
-		size = _raw_holder.size();
+	void data(std::string_view new_data) {
+		size = new_data.size();
+		raw = new_data;
+	}
+
+	void data(const std::string& new_data) {
+		size = new_data.size();
+		_raw_holder = new_data;
 		raw = _raw_holder;
 	}
 
@@ -229,7 +233,7 @@ public:
 			default:
 				THROW(SerialisationError, "Bad data locator: Unknown type");
 		}
-		result.append(data());
+		result.append(raw);
 		result.insert(0, serialise_length(result.size()));
 		return result;
 	}
