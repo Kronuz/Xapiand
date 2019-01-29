@@ -183,29 +183,64 @@ public:
 	void data(std::string_view new_data) {
 		size = new_data.size();
 		switch (type) {
+			case Type::compressed_inplace:
+				if (size >= 128) {
+					_raw_holder = compress_lz4(new_data);
+					if (_raw_holder.size() < new_data.size()) {
+						raw = _raw_holder;
+						break;
+					}
+				}
+				type = Type::inplace;
+				/* FALLTHROUGH */
 			case Type::inplace:
-			case Type::stored:
 				raw = new_data;
 				break;
-			case Type::compressed_inplace:
 			case Type::compressed_stored:
-				_raw_holder = compress_lz4(new_data);
-				raw = _raw_holder;
+				if (size >= 128) {
+					_raw_holder = compress_lz4(new_data);
+					if (_raw_holder.size() < new_data.size()) {
+						raw = _raw_holder;
+						break;
+					}
+				}
+				type = Type::stored;
+				/* FALLTHROUGH */
+			case Type::stored:
+				raw = new_data;
 				break;
 		}
 	}
 
-	void data(const std::string& new_data) {
+	void data(std::string&& new_data) {
 		size = new_data.size();
 		switch (type) {
+			case Type::compressed_inplace:
+				if (size >= 128) {
+					_raw_holder = compress_lz4(new_data);
+					if (_raw_holder.size() < new_data.size()) {
+						raw = _raw_holder;
+						break;
+					}
+				}
+				type = Type::inplace;
+				/* FALLTHROUGH */
 			case Type::inplace:
-			case Type::stored:
-				_raw_holder = new_data;
+				_raw_holder = std::move(new_data);
 				raw = _raw_holder;
 				break;
-			case Type::compressed_inplace:
 			case Type::compressed_stored:
-				_raw_holder = compress_lz4(new_data);
+				if (size >= 128) {
+					_raw_holder = compress_lz4(new_data);
+					if (_raw_holder.size() < new_data.size()) {
+						raw = _raw_holder;
+						break;
+					}
+				}
+				type = Type::stored;
+				/* FALLTHROUGH */
+			case Type::stored:
+				_raw_holder = std::move(new_data);
 				raw = _raw_holder;
 				break;
 		}
