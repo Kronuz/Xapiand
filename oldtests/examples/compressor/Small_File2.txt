@@ -1,1 +1,1 @@
-Copyright (C) 2016 Dubalu LLC and contributors. All rights reserved.
+Copyright (C) 2016-2019 Dubalu LLC

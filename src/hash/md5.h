@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
- *
- * Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
+ * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2014,2015 Stephan Brumme
  * see http://create.stephan-brumme.com/disclaimer.html
  *
  * This software is provided 'as-is', without any express or

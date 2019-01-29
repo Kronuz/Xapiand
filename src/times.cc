@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
- * Copyright (C), MM Weiss. All rights reserved.
+ * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c), MM Weiss
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:

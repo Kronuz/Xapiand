@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
- * Copyright (C) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
+ * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

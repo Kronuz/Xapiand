@@ -1,7 +1,6 @@
 /**
- *  Copyright (C) 2015 Topology LP
- *  Copyright (C) 2013 Adam Rudd (bit calculations)
- *  All rights reserved.
+ *  Copyright (c) 2015 Topology LP
+ *  Copyright (c) 2013 Adam Rudd (bit calculations)
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to

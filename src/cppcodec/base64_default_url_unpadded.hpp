@@ -1,6 +1,5 @@
 /**
- *  Copyright (C) 2016 Topology LP
- *  All rights reserved.
+ *  Copyright (c) 2016 Topology LP
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to

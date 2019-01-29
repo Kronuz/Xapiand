@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+ * Copyright (c) 2015-2018 Dubalu LLC
  * Copyright (c) 2015 Daniel Kirchner
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
