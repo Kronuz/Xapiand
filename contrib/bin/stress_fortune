@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 :author: Dubalu LLC Team.
-:copyright: Copyright (C) 2018 Dubalu LLC. All rights reserved.
+:copyright: Copyright (C) 2018,2019 Dubalu LLC. All rights reserved.
 :license: MIT License
 
 This is a script aimed ot strees out Xapiand
@@ -13,9 +13,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 import os
 import sys
-import signal
-from multiprocessing import Pool
 import re
+from concurrent.futures import ThreadPoolExecutor, wait
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
 
@@ -28,6 +27,9 @@ NUM_DATABASES = 20
 NUM_HOSTS = 1
 
 FIELD = 'fortune'
+
+
+running = True
 
 
 class Args:
@@ -192,7 +194,7 @@ def _task(args):
                 return True
 
     indexed = []
-    while offset < args.end:
+    while running and offset < args.end:
         now = time.time()
         client = random.choice(args.clients)
         op = random.choice(args.ops)
@@ -238,7 +240,7 @@ def _task(args):
                 check.err = None
                 continue
 
-    # while indexed:
+    # while running and indexed:
     #     time.sleep(1)
     #     new_indexed = []
     #     for db, fortune_id, fortune, epoch in indexed:
@@ -264,6 +266,8 @@ def task(args):
 
 
 def main():
+    global running
+
     hosts = []
     databases = []
     start = 0
@@ -324,44 +328,51 @@ def main():
         ), file=sys.stderr)
         sys.exit(64)
 
-    hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
-    databases = databases or ['fortune.{}'.format(i) for i in range(NUM_DATABASES)]
-
-    # ops = ['get', 'put', 'put', 'put']  # 25% of the time it's a get
-    ops = ['get', 'get', 'put', 'put']  # 50% of the time it's a get
-    # ops = ['get', 'get', 'get', 'put']  # 75% of the time it's a get
-
-    from xapiand import Xapiand
-    clients = []
-    for host, port in hosts:
-        clients.append(Xapiand(host=host, port=port))
-
     try:
-        import fortunate
-    except ImportError:
-        print("You need to install 'fortunate' package:\nUse: pip install fortunate", file=sys.stderr)
-        sys.exit(70)
-    fortune = fortunate.Fortunate()
-    fortune()
+        hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
+        databases = databases or ['fortune.{}'.format(i) for i in range(NUM_DATABASES)]
 
-    def init_worker():
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        # ops = ['get', 'put', 'put', 'put']  # 25% of the time it's a get
+        ops = ['get', 'get', 'put', 'put']  # 50% of the time it's a get
+        # ops = ['get', 'get', 'get', 'put']  # 75% of the time it's a get
 
-    try:
+        from xapiand import Xapiand
+        clients = []
+        for host, port in hosts:
+            clients.append(Xapiand(host=host, port=port))
+
+        try:
+            import fortunate
+        except ImportError:
+            print("You need to install 'fortunate' package:\nUse: pip install fortunate", file=sys.stderr)
+            sys.exit(70)
+        fortune = fortunate.Fortunate()
+        fortune()
+
         if workers:
+            executor = ThreadPoolExecutor(max_workers=workers)
             tpw = tasks / workers
-            jobs = []
-            for i in range(workers):
-                jobs.append(Args(
-                    start=start + i * tpw,
-                    end=start + i * tpw + tpw,
-                    ops=ops,
-                    clients=clients,
-                    databases=databases,
-                    fortune=fortune,
-                ))
-            pool = Pool(workers, init_worker)
-            pool.map_async(task, jobs).wait(1000000)
+            try:
+                fs = []
+                for i in range(workers):
+                    fs.append(executor.submit(task, Args(
+                        start=start + i * tpw,
+                        end=start + i * tpw + tpw,
+                        ops=ops,
+                        clients=clients,
+                        databases=databases,
+                        fortune=fortune,
+                    )))
+            except (KeyboardInterrupt, SystemExit):
+                running = False
+            print("#")
+            try:
+                not_done = fs
+                while not_done:
+                    done, not_done = wait(not_done, 10)
+            except (KeyboardInterrupt, SystemExit):
+                running = False
+                executor.shutdown()
         else:
             task(Args(
                 start=start,
@@ -371,9 +382,9 @@ def main():
                 databases=databases,
                 fortune=fortune,
             ))
-    except KeyboardInterrupt:
-        pool.terminate()
-        pool.join()
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    print("done!")
 
 if __name__ == '__main__':
     main()
