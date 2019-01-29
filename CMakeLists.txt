@@ -558,7 +558,6 @@ endif ()
 ########################################################################
 # Compiler Flags
 ########################################################################
-message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
 # Setup CMAKE_CXX_FLAGS Debug flags.
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-strong")
@@ -579,8 +578,8 @@ add_cxx_compiler_flag("-Wnon-virtual-dtor")
 add_cxx_compiler_flag("-Wno-unknown-pragmas")
 add_cxx_compiler_flag("-Wno-variadic-macros")
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-	# using Clang
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	message(STATUS "Compiler: Clang (${CMAKE_CXX_COMPILER_ID})")
 	add_cxx_compiler_flag("-pedantic")
 	add_cxx_compiler_flag("-pedantic-errors")
 	add_cxx_compiler_flag("-Werror" RELEASE)
@@ -589,14 +588,17 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	add_cxx_compiler_flag("-Wstrict-aliasing")
 	add_cxx_compiler_flag("-Wsuggest-final-types")
 	add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	# using GCC
+	add_cxx_compiler_flag("-Qunused-arguments")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+	message(STATUS "Compiler: GCC (${CMAKE_CXX_COMPILER_ID})")
 	add_cxx_compiler_flag("-Wno-shadow")
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-	# using Intel C++
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	# using Visual Studio C++
-endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+	message(STATUS "Compiler: Intel C++ (${CMAKE_CXX_COMPILER_ID})")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+	message(STATUS "Compiler: Visual Studio C++ (${CMAKE_CXX_COMPILER_ID})")
+else ()
+	message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif ()
 
 
 ########################################################################
@@ -747,7 +749,6 @@ if (CCACHE_FOUND)
 	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
 	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		set (ENV{CCACHE_CPP2} "yes")
-		add_compile_options(-Qunused-arguments)
 	endif ()
 else ()
 	message(STATUS "Looking for ccache - not found")
