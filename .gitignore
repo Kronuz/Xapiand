@@ -3,8 +3,9 @@
 .dirstamp
 
 # Automake stuff
-/Makefile
-/Makefile.in
+Makefile
+Makefile.in
+Makefile.mk
 /aclocal.m4
 /configure
 /version.h
