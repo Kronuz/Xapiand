@@ -285,7 +285,7 @@
 
 #cmakedefine XAPIAND_CHECK_SIZES @XAPIAND_CHECK_SIZES@
 
-#define XAPIAND_PREFIX "@PREFIX@"
+#define XAPIAND_ROOT "@ROOT@"
 
 ////////////////////////////////////////////////////////////////////////////////
 

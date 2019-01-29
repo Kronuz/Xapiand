@@ -225,7 +225,7 @@ include_directories(
 
 
 file(GLOB BOOLEAN_PARSER_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h"
+	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h*"
 )
 add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
@@ -236,7 +236,7 @@ add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
 file(GLOB LIBEV_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h"
+	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h*"
 )
 list(REMOVE_ITEM LIBEV_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c"
@@ -255,7 +255,7 @@ add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
 
 file(GLOB LZ4_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h"
+	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h*"
 )
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
@@ -266,7 +266,7 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
 file(GLOB UUID_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h"
+	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h*"
 )
 add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
@@ -277,7 +277,7 @@ add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 
 file(GLOB PROMETHEUS_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h"
+	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h*"
 )
 add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 
@@ -304,13 +304,13 @@ add_library(MAIN_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
 
 
 file(GLOB XAPIAND_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h"
-	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h"
-	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h"
-	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h"
-	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h"
-	"${PROJECT_SOURCE_DIR}/src/server/*.c*" "${PROJECT_SOURCE_DIR}/src/server/*.h"
-	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h"
+	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/server/*.c*" "${PROJECT_SOURCE_DIR}/src/server/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h*"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/package.cc"
@@ -636,11 +636,7 @@ check_library_exists(pthread "pthread_setname_np" "" HAVE_PTHREAD_SETNAME_NP)
 check_library_exists(pthread "pthread_set_name_np" "" HAVE_PTHREAD_SET_NAME_NP)
 check_library_exists(pthread "pthread_attr_setaffinity_np" "" HAVE_PTHREAD_ATTR_SETAFFINITY_NP)
 
-check_cxx_source_compiles("
-	int main() {
-		if (__builtin_expect(1<2, 1)) {}
-	}" HAVE___BUILTIN_EXPECT)
-
+check_cxx_source_compiles("int main() { __builtin_expect(0, 0); return 0; }" HAVE_DECL___BUILTIN_EXPECT)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
 	# FIXME: See if we have fdatasync, and what libraries are needed for it.
@@ -685,14 +681,14 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 ########################################################################
 
  # check if type long long is supported
-foreach (opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
-	string(REPLACE " " "_" OPT "${opt}")
-	string(TOUPPER "${OPT}" OPT)
-	check_type_size("${opt}" "${OPT}")
-	if (${OPT})
-		set (HAVE_${OPT} 1)
+foreach (_type "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
+	string(REPLACE " " "_" TYPE "${_type}")
+	string(TOUPPER "${TYPE}" TYPE)
+	check_type_size("${_type}" "${TYPE}")
+	if (${TYPE})
+		set (HAVE_${TYPE} 1)
 	else ()
-		set (HAVE_${OPT} 0)
+		set (HAVE_${TYPE} 0)
 	endif ()
 endforeach ()
 

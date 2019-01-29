@@ -588,10 +588,10 @@ void parseOptions(int argc, char** argv) {
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
 			if (opts.logfile.empty()) {
-				opts.logfile = XAPIAND_PREFIX "/var/log/" XAPIAND_LOG_FILE;
+				opts.logfile = XAPIAND_ROOT "/var/log/" XAPIAND_LOG_FILE;
 			}
 			if (opts.pidfile.empty()) {
-				opts.pidfile = XAPIAND_PREFIX "/var/run/" XAPIAND_PID_FILE;
+				opts.pidfile = XAPIAND_ROOT "/var/run/" XAPIAND_PID_FILE;
 			}
 		}
 		opts.ev_flags = ev_backend(use.getValue());
