@@ -62,10 +62,10 @@ protected:
 	int flags;
 	Endpoints endpoints;
 
+public:
 	const std::shared_ptr<Database>& database() const noexcept;
 	Xapian::Database* db() const noexcept;
 
-public:
 	LockableDatabase();
 	LockableDatabase(const Endpoints& endpoints_, int flags_);
 };
