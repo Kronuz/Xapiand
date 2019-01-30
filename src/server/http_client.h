@@ -174,6 +174,12 @@ constexpr static auto http_commands = phf::make_phf({
 });
 
 
+class Request;
+class Response;
+class HttpClient;
+using view_function = void(HttpClient::*)(Request&, Response&);
+
+
 class Response {
 public:
 	std::string head;
@@ -201,11 +207,25 @@ public:
 
 
 class Request {
+public:
+	enum class Command : uint32_t {
+		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
+		COMMAND_OPTIONS()
+		#undef OPTION
+		NO_CMD_NO_ID,
+		NO_CMD_ID,
+		BAD_QUERY,
+	};
+
+private:
 	MsgPack _decoded_body;
 
 	void _decode();
 
 public:
+	view_function view;
+	bool immediate_view;  // immediate views are called before the whole body is received
+
 	Encoding type_encoding;
 
 	std::string _header_name;
@@ -213,11 +233,13 @@ public:
 	accept_set_t accept_set;
 	accept_encoding_set_t accept_encoding_set;
 
+	enum http_method method;
 	std::string path;
 	struct http_parser parser;
 
 	std::string headers;
 	std::string body;
+	std::atomic_bool complete;   // complete requests have received all body
 
 	std::string raw;
 
@@ -238,7 +260,7 @@ public:
 	std::chrono::time_point<std::chrono::system_clock> ready;
 	std::chrono::time_point<std::chrono::system_clock> ends;
 
-	Request() = default;
+	Request() : view{nullptr} { }
 	Request(class HttpClient* client);
 	~Request() noexcept;
 
@@ -262,18 +284,9 @@ public:
 class HttpClient : public MetaBaseClient<HttpClient> {
 	friend MetaBaseClient<HttpClient>;
 
-	enum class Command : uint32_t {
-		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
-		COMMAND_OPTIONS()
-		#undef OPTION
-		NO_CMD_NO_ID,
-		NO_CMD_ID,
-		BAD_QUERY,
-	};
-
 	bool is_idle() const;
 
-	Command getCommand(std::string_view command_name);
+	Request::Command getCommand(std::string_view command_name);
 
 	ssize_t on_read(const char* buf, ssize_t received);
 	void on_read_file(const char* buf, ssize_t received);
@@ -308,44 +321,45 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	int on_chunk_header(http_parser* parser);
 	int on_chunk_complete(http_parser* parser);
 
-	void home_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void metrics_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void info_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void write_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void update_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void delete_metadata_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void delete_document_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void delete_schema_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void index_document_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void write_schema_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void document_info_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void update_document_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void retrieve_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void search_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void count_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void touch_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void commit_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void dump_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void restore_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void schema_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void prepare();
+	view_function _prepare_options();
+	view_function _prepare_head();
+	view_function _prepare_get();
+	view_function _prepare_merge();
+	view_function _prepare_store();
+	view_function _prepare_put();
+	view_function _prepare_post();
+	view_function _prepare_patch();
+	view_function _prepare_delete();
+
+	void home_view(Request& request, Response& response);
+	void metrics_view(Request& request, Response& response);
+	void info_view(Request& request, Response& response);
+	void metadata_view(Request& request, Response& response);
+	void write_metadata_view(Request& request, Response& response);
+	void update_metadata_view(Request& request, Response& response);
+	void delete_metadata_view(Request& request, Response& response);
+	void delete_document_view(Request& request, Response& response);
+	void delete_schema_view(Request& request, Response& response);
+	void index_document_view(Request& request, Response& response);
+	void write_schema_view(Request& request, Response& response);
+	void document_info_view(Request& request, Response& response);
+	void update_document_view(Request& request, Response& response);
+	void retrieve_view(Request& request, Response& response);
+	void search_view(Request& request, Response& response);
+	void count_view(Request& request, Response& response);
+	void touch_view(Request& request, Response& response);
+	void commit_view(Request& request, Response& response);
+	void dump_view(Request& request, Response& response);
+	void restore_view(Request& request, Response& response);
+	void schema_view(Request& request, Response& response);
 #if XAPIAND_DATABASE_WAL
-	void wal_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void wal_view(Request& request, Response& response);
 #endif
-	void check_view(Request& request, Response& response, enum http_method method, Command cmd);
-	void nodes_view(Request& request, Response& response, enum http_method method, Command cmd);
+	void check_view(Request& request, Response& response);
+	void nodes_view(Request& request, Response& response);
 
-	void _options(Request& request, Response& response, enum http_method method);
-	void _head(Request& request, Response& response, enum http_method method);
-	void _get(Request& request, Response& response, enum http_method method);
-	void _merge(Request& request, Response& response, enum http_method method);
-	void _store(Request& request, Response& response, enum http_method method);
-	void _put(Request& request, Response& response, enum http_method method);
-	void _post(Request& request, Response& response, enum http_method method);
-	void _patch(Request& request, Response& response, enum http_method method);
-	void _delete(Request& request, Response& response, enum http_method method);
-
-	Command url_resolve(Request& request);
+	Request::Command url_resolve(Request& request);
 	void _endpoint_maker(Request& request, bool master);
 	void endpoints_maker(Request& request, bool master);
 	query_field_t query_field_maker(Request& request, int flags);

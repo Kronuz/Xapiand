@@ -764,15 +764,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	if (new_request->expect_100) {
-		// Return 100 if client is expecting it
-		Response response;
-		write(http_response(*new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
-	}
-
-	if (parser->http_major == 0 || (parser->http_major == 1 && parser->http_minor == 0)) {
-		new_request->closing = true;
-	}
+	prepare();  // Prepare the request view
 
 	return 0;
 }
@@ -782,7 +774,7 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_body(<parser>, <at>, <length>)");
 
-	L_RED("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
 	new_request->raw.append(at, length);
@@ -798,29 +790,30 @@ HttpClient::on_message_complete(http_parser* parser)
 	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
+	new_request->complete = true;
+
 	if (!closed) {
-		if (new_request->accept_set.empty()) {
-			if (!new_request->ct_type.empty()) {
-				new_request->accept_set.emplace(0, 1.0, new_request->ct_type, 0);
-			}
-			new_request->accept_set.emplace(1, 1.0, any_type, 0);
-		}
-		L_HTTP_PROTO("New request added:\n%s", string::indent(new_request->to_text(false), ' ', 8));
-		{
+		std::unique_ptr<Request> request = std::make_unique<Request>(this);
+		std::swap(new_request, request);
+
+		if (request->view) {
+			L_HTTP_PROTO("New request added:\n%s", string::indent(request->to_text(false), ' ', 8));
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (!running) {
 				// Enqueue request...
-				requests.push_back(std::move(new_request));
+				requests.push_back(std::move(request));
 				// And start a runner.
 				running = true;
 				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
 			} else {
 				// There should be a runner, just enqueue request.
-				requests.push_back(std::move(new_request));
+				requests.push_back(std::move(request));
 			}
+		} else {
+			L_HTTP_PROTO("Request without view discarded:\n%s", string::indent(request->to_text(false), ' ', 8));
 		}
-		new_request = std::make_unique<Request>(this);
 	}
+
 	waiting = false;
 
 	return 0;
@@ -850,6 +843,351 @@ HttpClient::on_chunk_complete(http_parser* parser)
 
 
 void
+HttpClient::prepare()
+{
+	L_CALL("HttpClient::prepare()");
+
+	if (Logging::log_level > LOG_DEBUG) {
+		log_request(*new_request);
+	}
+
+	if (new_request->parser.http_major == 0 || (new_request->parser.http_major == 1 && new_request->parser.http_minor == 0)) {
+		new_request->closing = true;
+	}
+
+	if (new_request->accept_set.empty()) {
+		if (!new_request->ct_type.empty()) {
+			new_request->accept_set.emplace(0, 1.0, new_request->ct_type, 0);
+		}
+		new_request->accept_set.emplace(1, 1.0, any_type, 0);
+	}
+
+	new_request->type_encoding = resolve_encoding(*new_request);
+	if (new_request->type_encoding == Encoding::unknown) {
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
+		};
+		Response response;
+		write_http_response(*new_request, response, error_code, err_response);
+		return;
+	}
+
+	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
+	switch (new_request->method) {
+		case HTTP_DELETE:
+			new_request->view = _prepare_delete();
+			return;
+		case HTTP_GET:
+			new_request->view = _prepare_get();
+			return;
+		case HTTP_POST:
+			new_request->view = _prepare_post();
+			return;
+		case HTTP_HEAD:
+			new_request->view = _prepare_head();
+			return;
+		case HTTP_MERGE:
+			new_request->view = _prepare_merge();
+			return;
+		case HTTP_STORE:
+			new_request->view = _prepare_store();
+			return;
+		case HTTP_PUT:
+			new_request->view = _prepare_put();
+			return;
+		case HTTP_OPTIONS:
+			new_request->view = _prepare_options();
+			return;
+		case HTTP_PATCH:
+			new_request->view = _prepare_patch();
+			return;
+		default: {
+			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { "Method not implemented!" } }
+			};
+			Response response;
+			write_http_response(*new_request, response, error_code, err_response);
+			new_request->parser.http_errno = HPE_INVALID_METHOD;
+			return;
+		}
+	}
+
+	if (new_request->expect_100) {
+		// Return 100 if client is expecting it
+		Response response;
+		write(http_response(*new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
+	}
+}
+
+
+view_function
+HttpClient::_prepare_options()
+{
+	L_CALL("HttpClient::_prepare_options()");
+
+	Response response;
+	write(http_response(*new_request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
+	return nullptr;
+}
+
+
+view_function
+HttpClient::_prepare_head()
+{
+	L_CALL("HttpClient::_prepare_head()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_NO_ID: {
+			Response response;
+			write_http_response(*new_request, response, HTTP_STATUS_OK);
+			return nullptr;
+		}
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::document_info_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_get()
+{
+	L_CALL("HttpClient::_prepare_get()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_NO_ID:
+			return &HttpClient::home_view;
+		case Request::Command::NO_CMD_ID:
+			if (!is_range(new_request->path_parser.get_id())) {
+				return &HttpClient::retrieve_view;
+			}
+			return &HttpClient::search_view;
+		case Request::Command::CMD_SEARCH:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::search_view;
+		case Request::Command::CMD_COUNT:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::count_view;
+		case Request::Command::CMD_SCHEMA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::schema_view;
+#if XAPIAND_DATABASE_WAL
+		case Request::Command::CMD_WAL:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::wal_view;
+#endif
+		case Request::Command::CMD_CHECK:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::check_view;
+		case Request::Command::CMD_INFO:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::info_view;
+		case Request::Command::CMD_METRICS:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::metrics_view;
+		case Request::Command::CMD_NODES:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::nodes_view;
+		case Request::Command::CMD_METADATA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::metadata_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_merge()
+{
+	L_CALL("HttpClient::_prepare_merge()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::update_document_view;
+		case Request::Command::CMD_METADATA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::update_metadata_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_store()
+{
+	L_CALL("HttpClient::_prepare_store()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::update_document_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_put()
+{
+	L_CALL("HttpClient::_prepare_put()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::index_document_view;
+		case Request::Command::CMD_METADATA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::write_metadata_view;
+		case Request::Command::CMD_SCHEMA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::write_schema_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_post()
+{
+	L_CALL("HttpClient::_prepare_post()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::index_document_view;
+		case Request::Command::CMD_SCHEMA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::write_schema_view;
+		case Request::Command::CMD_SEARCH:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::search_view;
+		case Request::Command::CMD_COUNT:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::count_view;
+		case Request::Command::CMD_TOUCH:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::touch_view;
+		case Request::Command::CMD_COMMIT:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::commit_view;
+		case Request::Command::CMD_DUMP:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::dump_view;
+		case Request::Command::CMD_RESTORE:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::restore_view;
+		case Request::Command::CMD_QUIT:
+			if (opts.admin_commands) {
+				XapiandManager::try_shutdown(true);
+				Response response;
+				write_http_response(*new_request, response, HTTP_STATUS_OK);
+				destroy();
+				detach();
+			} else {
+				Response response;
+				write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			return nullptr;
+		case Request::Command::CMD_FLUSH:
+			if (opts.admin_commands) {
+				// Flush both databases and clients by default (unless one is specified)
+				new_request->query_parser.rewind();
+				int flush_databases = new_request->query_parser.next("databases");
+				new_request->query_parser.rewind();
+				int flush_clients = new_request->query_parser.next("clients");
+				if (flush_databases != -1 || flush_clients == -1) {
+					XapiandManager::database_pool()->cleanup(true);
+				}
+				if (flush_clients != -1 || flush_databases == -1) {
+					XapiandManager::manager()->shutdown(0, 0);
+				}
+				Response response;
+				write_http_response(*new_request, response, HTTP_STATUS_OK);
+			} else {
+				Response response;
+				write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			return nullptr;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_patch()
+{
+	L_CALL("HttpClient::_prepare_patch()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::update_document_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+view_function
+HttpClient::_prepare_delete()
+{
+	L_CALL("HttpClient::_prepare_delete()");
+
+	auto cmd = url_resolve(*new_request);
+	switch (cmd) {
+		case Request::Command::NO_CMD_ID:
+			return &HttpClient::delete_document_view;
+		case Request::Command::CMD_METADATA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::delete_metadata_view;
+		case Request::Command::CMD_SCHEMA:
+			new_request->path_parser.skip_id();  // Command has no ID
+			return &HttpClient::delete_schema_view;
+		default: {
+			Response response;
+			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return nullptr;
+		}
+	}
+}
+
+
+void
 HttpClient::process(Request& request, Response& response)
 {
 	writes = 0;
@@ -865,57 +1203,12 @@ HttpClient::process(Request& request, Response& response)
 
 	enum http_status error_code = HTTP_STATUS_OK;
 
-	request.type_encoding = resolve_encoding(request);
-	if (request.type_encoding == Encoding::unknown) {
-		error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
-		};
-		write_http_response(request, response, error_code, err_response);
-		return;
-	}
-
 	std::string error;
 	try {
-		if (Logging::log_level > LOG_DEBUG) {
-			log_request(request);
-		}
 
-		auto method = HTTP_PARSER_METHOD(&request.parser);
-		switch (method) {
-			case HTTP_DELETE:
-				_delete(request, response, method);
-				break;
-			case HTTP_GET:
-				_get(request, response, method);
-				break;
-			case HTTP_POST:
-				_post(request, response, method);
-				break;
-			case HTTP_HEAD:
-				_head(request, response, method);
-				break;
-			case HTTP_MERGE:
-				_merge(request, response, method);
-				break;
-			case HTTP_STORE:
-				_store(request, response, method);
-				break;
-			case HTTP_PUT:
-				_put(request, response, method);
-				break;
-			case HTTP_OPTIONS:
-				_options(request, response, method);
-				break;
-			case HTTP_PATCH:
-				_patch(request, response, method);
-				break;
-			default:
-				error_code = HTTP_STATUS_NOT_IMPLEMENTED;
-				request.parser.http_errno = HPE_INVALID_METHOD;
-				break;
-		}
+		ASSERT(request.view);
+		(this->*request.view)(request, response);
+
 	} catch (const NotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
@@ -998,7 +1291,6 @@ HttpClient::process(Request& request, Response& response)
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, string::split(error, '\n') }
 			};
-
 			write_http_response(request, response, error_code, err_response);
 		}
 	}
@@ -1073,279 +1365,7 @@ HttpClient::operator()()
 
 
 void
-HttpClient::_options(Request& request, Response& response, enum http_method /*unused*/)
-{
-	L_CALL("HttpClient::_options()");
-
-	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
-}
-
-
-void
-HttpClient::_head(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_head()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_NO_ID:
-			write_http_response(request, response, HTTP_STATUS_OK);
-			break;
-		case Command::NO_CMD_ID:
-			document_info_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_get(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_get()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_NO_ID:
-			home_view(request, response, method, cmd);
-			break;
-		case Command::NO_CMD_ID:
-			if (!is_range(request.path_parser.get_id())) {
-				retrieve_view(request, response, method, cmd);
-			} else {
-				search_view(request, response, method, cmd);
-			}
-			break;
-		case Command::CMD_SEARCH:
-			request.path_parser.skip_id();  // Command has no ID
-			search_view(request, response, method, cmd);
-			break;
-		case Command::CMD_COUNT:
-			request.path_parser.skip_id();  // Command has no ID
-			count_view(request, response, method, cmd);
-			break;
-		case Command::CMD_SCHEMA:
-			request.path_parser.skip_id();  // Command has no ID
-			schema_view(request, response, method, cmd);
-			break;
-#if XAPIAND_DATABASE_WAL
-		case Command::CMD_WAL:
-			request.path_parser.skip_id();  // Command has no ID
-			wal_view(request, response, method, cmd);
-			break;
-#endif
-		case Command::CMD_CHECK:
-			request.path_parser.skip_id();  // Command has no ID
-			check_view(request, response, method, cmd);
-			break;
-		case Command::CMD_INFO:
-			request.path_parser.skip_id();  // Command has no ID
-			info_view(request, response, method, cmd);
-			break;
-		case Command::CMD_METRICS:
-			request.path_parser.skip_id();  // Command has no ID
-			metrics_view(request, response, method, cmd);
-			break;
-		case Command::CMD_NODES:
-			request.path_parser.skip_id();  // Command has no ID
-			nodes_view(request, response, method, cmd);
-			break;
-		case Command::CMD_METADATA:
-			request.path_parser.skip_id();  // Command has no ID
-			metadata_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_merge(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_merge()");
-
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			update_document_view(request, response, method, cmd);
-			break;
-		case Command::CMD_METADATA:
-			request.path_parser.skip_id();  // Command has no ID
-			update_metadata_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_store(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_store()");
-
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			update_document_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_put(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_put()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			index_document_view(request, response, method, cmd);
-			break;
-		case Command::CMD_METADATA:
-			request.path_parser.skip_id();  // Command has no ID
-			write_metadata_view(request, response, method, cmd);
-			break;
-		case Command::CMD_SCHEMA:
-			request.path_parser.skip_id();  // Command has no ID
-			write_schema_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_post(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_post()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			request.path_parser.skip_id();  // Command has no ID
-			index_document_view(request, response, method, cmd);
-			break;
-		case Command::CMD_SCHEMA:
-			request.path_parser.skip_id();  // Command has no ID
-			write_schema_view(request, response, method, cmd);
-			break;
-		case Command::CMD_SEARCH:
-			request.path_parser.skip_id();  // Command has no ID
-			search_view(request, response, method, cmd);
-			break;
-		case Command::CMD_COUNT:
-			request.path_parser.skip_id();  // Command has no ID
-			count_view(request, response, method, cmd);
-			break;
-		case Command::CMD_TOUCH:
-			request.path_parser.skip_id();  // Command has no ID
-			touch_view(request, response, method, cmd);
-			break;
-		case Command::CMD_COMMIT:
-			request.path_parser.skip_id();  // Command has no ID
-			commit_view(request, response, method, cmd);
-			break;
-		case Command::CMD_DUMP:
-			request.path_parser.skip_id();  // Command has no ID
-			dump_view(request, response, method, cmd);
-			break;
-		case Command::CMD_RESTORE:
-			request.path_parser.skip_id();  // Command has no ID
-			restore_view(request, response, method, cmd);
-			break;
-		case Command::CMD_QUIT:
-			if (opts.admin_commands) {
-				XapiandManager::try_shutdown(true);
-				write_http_response(request, response, HTTP_STATUS_OK);
-				destroy();
-				detach();
-			} else {
-				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-		case Command::CMD_FLUSH:
-			if (opts.admin_commands) {
-				// Flush both databases and clients by default (unless one is specified)
-				request.query_parser.rewind();
-				int flush_databases = request.query_parser.next("databases");
-				request.query_parser.rewind();
-				int flush_clients = request.query_parser.next("clients");
-				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::database_pool()->cleanup(true);
-				}
-				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager()->shutdown(0, 0);
-				}
-				write_http_response(request, response, HTTP_STATUS_OK);
-			} else {
-				write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_patch(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_patch()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			update_document_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::_delete(Request& request, Response& response, enum http_method method)
-{
-	L_CALL("HttpClient::_delete()");
-
-	auto cmd = url_resolve(request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			delete_document_view(request, response, method, cmd);
-			break;
-		case Command::CMD_METADATA:
-			request.path_parser.skip_id();  // Command has no ID
-			delete_metadata_view(request, response, method, cmd);
-			break;
-		case Command::CMD_SCHEMA:
-			request.path_parser.skip_id();  // Command has no ID
-			delete_schema_view(request, response, method, cmd);
-			break;
-		default:
-			write_status_response(request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			break;
-	}
-}
-
-
-void
-HttpClient::home_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::home_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::home_view()");
 
@@ -1355,7 +1375,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
 
 	auto local_node = Node::local_node();
 	auto document = db_handler.get_document(local_node->lower_name());
@@ -1389,7 +1409,7 @@ HttpClient::home_view(Request& request, Response& response, enum http_method met
 
 
 void
-HttpClient::metrics_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::metrics_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::metrics_view()");
 
@@ -1403,7 +1423,7 @@ HttpClient::metrics_view(Request& request, Response& response, enum http_method 
 
 
 void
-HttpClient::document_info_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::document_info_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::document_info_view()");
 
@@ -1411,7 +1431,7 @@ HttpClient::document_info_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
 
 	MsgPack response_obj;
 	response_obj[RESPONSE_DOCID] = db_handler.get_docid(request.path_parser.get_id());
@@ -1423,7 +1443,7 @@ HttpClient::document_info_view(Request& request, Response& response, enum http_m
 
 
 void
-HttpClient::delete_document_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::delete_document_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::delete_document_view()");
 
@@ -1436,7 +1456,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 
 	enum http_status status_code;
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 
 	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
@@ -1462,7 +1482,7 @@ HttpClient::delete_document_view(Request& request, Response& response, enum http
 
 
 void
-HttpClient::delete_schema_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::delete_schema_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
@@ -1470,7 +1490,7 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	db_handler.delete_schema();
 
 	request.ready = std::chrono::system_clock::now();
@@ -1490,14 +1510,14 @@ HttpClient::delete_schema_view(Request& request, Response& response, enum http_m
 
 
 void
-HttpClient::index_document_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::index_document_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::index_document_view()");
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
 	std::string doc_id;
-	if (method != HTTP_POST) {
+	if (request.method != HTTP_POST) {
 		doc_id = request.path_parser.get_id();
 	}
 
@@ -1507,7 +1527,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
 	response_obj = db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
 
@@ -1531,7 +1551,7 @@ HttpClient::index_document_view(Request& request, Response& response, enum http_
 
 
 void
-HttpClient::write_schema_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::write_schema_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::write_schema_view()");
 
@@ -1541,8 +1561,8 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
-	db_handler.write_schema(request.decoded_body(), method == HTTP_PUT);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	db_handler.write_schema(request.decoded_body(), request.method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1565,7 +1585,7 @@ HttpClient::write_schema_view(Request& request, Response& response, enum http_me
 
 
 void
-HttpClient::update_document_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::update_document_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::update_document_view()");
 
@@ -1578,11 +1598,11 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
-	if (method == HTTP_PATCH) {
+	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
-	} else if (method == HTTP_STORE) {
+	} else if (request.method == HTTP_STORE) {
 		response_obj = db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
 		response_obj = db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
@@ -1601,14 +1621,14 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating took %s", string::from_delta(took));
 
-	if (method == HTTP_PATCH) {
+	if (request.method == HTTP_PATCH) {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
 				{"operation", "patch"},
 			})
 			.Observe(took / 1e9);
-	} else if (method == HTTP_STORE) {
+	} else if (request.method == HTTP_STORE) {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
@@ -1627,7 +1647,7 @@ HttpClient::update_document_view(Request& request, Response& response, enum http
 
 
 void
-HttpClient::metadata_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::metadata_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::metadata_view()");
 
@@ -1645,9 +1665,9 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
 	auto selector = request.path_parser.get_slc();
@@ -1695,7 +1715,7 @@ HttpClient::metadata_view(Request& request, Response& response, enum http_method
 
 
 void
-HttpClient::write_metadata_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::write_metadata_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::write_metadata_view()");
 
@@ -1704,7 +1724,7 @@ HttpClient::write_metadata_view(Request& request, Response& response, enum http_
 
 
 void
-HttpClient::update_metadata_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::update_metadata_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::update_metadata_view()");
 
@@ -1713,7 +1733,7 @@ HttpClient::update_metadata_view(Request& request, Response& response, enum http
 
 
 void
-HttpClient::delete_metadata_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::delete_metadata_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::delete_metadata_view()");
 
@@ -1722,7 +1742,7 @@ HttpClient::delete_metadata_view(Request& request, Response& response, enum http
 
 
 void
-HttpClient::info_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::info_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::info_view()");
 
@@ -1743,9 +1763,9 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
 	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
@@ -1777,7 +1797,7 @@ HttpClient::info_view(Request& request, Response& response, enum http_method met
 
 
 void
-HttpClient::nodes_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::nodes_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::nodes_view()");
 
@@ -1822,7 +1842,7 @@ HttpClient::nodes_view(Request& request, Response& response, enum http_method /*
 
 
 void
-HttpClient::touch_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::touch_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::touch_view()");
 
@@ -1830,7 +1850,7 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 
 	db_handler.reopen();  // Ensure touch.
 
@@ -1854,7 +1874,7 @@ HttpClient::touch_view(Request& request, Response& response, enum http_method me
 
 
 void
-HttpClient::commit_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::commit_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::commit_view()");
 
@@ -1862,7 +1882,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 
 	db_handler.commit();  // Ensure touch.
 
@@ -1886,7 +1906,7 @@ HttpClient::commit_view(Request& request, Response& response, enum http_method m
 
 
 void
-HttpClient::dump_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::dump_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::dump_view()");
 
@@ -1950,7 +1970,7 @@ HttpClient::dump_view(Request& request, Response& response, enum http_method /*u
 
 
 void
-HttpClient::restore_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::restore_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::restore_view()");
 
@@ -1960,7 +1980,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	auto& docs = request.decoded_body();
 
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, method);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
 	for (auto& obj : docs) {
 		indexer->prepare(std::move(obj));
 	}
@@ -1989,7 +2009,7 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 
 void
-HttpClient::schema_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::schema_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::schema_view()");
 
@@ -2009,9 +2029,9 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
 	auto schema = db_handler.get_schema()->get_full(true);
@@ -2037,7 +2057,7 @@ HttpClient::schema_view(Request& request, Response& response, enum http_method m
 
 #if XAPIAND_DATABASE_WAL
 void
-HttpClient::wal_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::wal_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -2069,7 +2089,7 @@ HttpClient::wal_view(Request& request, Response& response, enum http_method /*un
 
 
 void
-HttpClient::check_view(Request& request, Response& response, enum http_method /*unused*/, Command /*unused*/)
+HttpClient::check_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -2098,7 +2118,7 @@ HttpClient::check_view(Request& request, Response& response, enum http_method /*
 
 
 void
-HttpClient::retrieve_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::retrieve_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::retrieve_view()");
 
@@ -2120,9 +2140,9 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, method);
+		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
 	// Retrive document ID
@@ -2206,7 +2226,7 @@ HttpClient::retrieve_view(Request& request, Response& response, enum http_method
 
 
 void
-HttpClient::search_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::search_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::search_view()");
 
@@ -2233,9 +2253,9 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 			if (endpoints.size() != 1) {
 				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN, method);
+			db_handler.reset(endpoints, DB_OPEN, request.method);
 		}
 
 		if (request.raw.empty()) {
@@ -2339,7 +2359,7 @@ HttpClient::search_view(Request& request, Response& response, enum http_method m
 
 
 void
-HttpClient::count_view(Request& request, Response& response, enum http_method method, Command /*unused*/)
+HttpClient::count_view(Request& request, Response& response)
 {
 	L_CALL("HttpClient::count_view()");
 
@@ -2357,9 +2377,9 @@ HttpClient::count_view(Request& request, Response& response, enum http_method me
 			if (endpoints.size() != 1) {
 				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, method);
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN, method);
+			db_handler.reset(endpoints, DB_OPEN, request.method);
 		}
 
 		if (request.raw.empty()) {
@@ -2401,16 +2421,16 @@ HttpClient::write_status_response(Request& request, Response& response, enum htt
 }
 
 
-HttpClient::Command
+Request::Command
 HttpClient::getCommand(std::string_view command_name)
 {
 	static const auto _ = http_commands;
 
-	return static_cast<Command>(_.fhhl(command_name));
+	return static_cast<Request::Command>(_.fhhl(command_name));
 }
 
 
-HttpClient::Command
+Request::Command
 HttpClient::url_resolve(Request& request)
 {
 	L_CALL("HttpClient::url_resolve(request)");
@@ -2431,14 +2451,14 @@ HttpClient::url_resolve(Request& request)
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
 				if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
-					return Command::BAD_QUERY;
+					return Request::Command::BAD_QUERY;
 				}
 			}
 		}
 
 		if ((u.field_set & (1 <<  UF_QUERY)) != 0) {
 			if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
-				return Command::BAD_QUERY;
+				return Request::Command::BAD_QUERY;
 			}
 		}
 
@@ -2458,15 +2478,15 @@ HttpClient::url_resolve(Request& request)
 		}
 
 		if (request.path_parser.off_id != nullptr) {
-			return Command::NO_CMD_ID;
+			return Request::Command::NO_CMD_ID;
 		}
 
-		return Command::NO_CMD_NO_ID;
+		return Request::Command::NO_CMD_NO_ID;
 	}
 
 	L_HTTP_PROTO("Parsing not done");
 	// Bad query
-	return Command::BAD_QUERY;
+	return Request::Command::BAD_QUERY;
 }
 
 
@@ -3135,7 +3155,11 @@ HttpClient::__repr__() const
 
 
 Request::Request(HttpClient* client)
-	: indented{-1},
+	: view{nullptr},
+	  immediate_view{false},
+	  type_encoding{Encoding::none},
+	  complete{false},
+	  indented{-1},
 	  expect_100{false},
 	  closing{false},
 	  begins{std::chrono::system_clock::now()}
