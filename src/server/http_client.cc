@@ -360,7 +360,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 
 HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  new_request(std::make_unique<Request>(this))
+	  new_request(std::make_shared<Request>(this))
 {
 	++XapiandManager::http_clients();
 
@@ -793,7 +793,7 @@ HttpClient::on_message_complete(http_parser* parser)
 	new_request->complete = true;
 
 	if (!closed) {
-		std::unique_ptr<Request> request = std::make_unique<Request>(this);
+		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
 
 		if (request->view) {
@@ -1309,7 +1309,7 @@ HttpClient::operator()()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	while (!requests.empty() && !closed) {
-		std::unique_ptr<Request> request;
+		std::shared_ptr<Request> request;
 		Response response;
 
 		std::swap(request, requests.front());
