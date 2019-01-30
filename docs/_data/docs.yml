@@ -19,6 +19,20 @@
         - url: reference-guide/schemas/dynamic-typing
     - url: reference-guide/search
     - url: reference-guide/query-dsl
+      docs:
+        - url: reference-guide/query-dsl/query-dsl
+          title: Queries
+        - url: reference-guide/query-dsl/text-queries
+          title: Text Queries
+          docs:
+            - url: reference-guide/query-dsl/text-queries/simple-query
+              title: Simple Query
+            - url: reference-guide/query-dsl/text-queries/match-query
+              title: Match Query
+            - url: reference-guide/query-dsl/text-queries/phrase-query
+              title: Phrase Query
+            - url: reference-guide/query-dsl/text-queries/partial-query
+              title: Partial Query
     - url: reference-guide/aggregations
       docs:
         - url: reference-guide/aggregations/metrics
