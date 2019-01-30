@@ -33,8 +33,8 @@
 
 #define NUM_SERVERS              2       // Number of servers per CPU
 #define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
-#define NUM_BINARY_CLIENTS       16      // Number of binary client threads per CPU
-#define NUM_REPLICA_CLIENTS      16      // Number of replication client threads per CPU
+#define NUM_REMOTE_CLIENTS       16      // Number of remote protocol client threads per CPU
+#define NUM_REPLICATION_CLIENTS  16      // Number of replication protocol client threads per CPU
 #define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
 #define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
 #define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
@@ -73,9 +73,9 @@ extern struct opts_t {
 	std::string gid = "";
 	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
 	ssize_t num_servers = std::ceil(NUM_SERVERS);
-	ssize_t num_http_clients = std::ceil(NUM_BINARY_CLIENTS);
-	ssize_t num_binary_clients = std::ceil(NUM_BINARY_CLIENTS);
-	ssize_t num_replication_clients = std::ceil(NUM_REPLICA_CLIENTS);
+	ssize_t num_http_clients = std::ceil(NUM_HTTP_CLIENTS);
+	ssize_t num_remote_clients = std::ceil(NUM_REMOTE_CLIENTS);
+	ssize_t num_replication_clients = std::ceil(NUM_REPLICATION_CLIENTS);
 	ssize_t num_async_wal_writers = std::ceil(NUM_ASYNC_WAL_WRITERS);
 	ssize_t num_committers = std::ceil(NUM_COMMITTERS);
 	ssize_t num_fsynchers = std::ceil(NUM_FSYNCHERS);

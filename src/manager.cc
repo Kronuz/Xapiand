@@ -155,7 +155,7 @@ XapiandManager::XapiandManager()
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_remote_clients)),
 	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
@@ -171,7 +171,7 @@ XapiandManager::XapiandManager()
 	std::vector<std::string> values({
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
 #ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " binary client thread" : " binary client threads"),
 #endif
 	});
 	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
@@ -189,7 +189,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_binary_clients)),
+	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>>("CB%02zu", opts.num_remote_clients)),
 	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::http_servers>>("SB%02zu", opts.num_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::http_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::http_servers>>("SR%02zu", opts.num_servers)),
@@ -832,7 +832,7 @@ XapiandManager::make_servers()
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
 #ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_binary_clients) +( (opts.num_binary_clients == 1) ? " binary client thread" : " binary client threads"),
+		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " binary client thread" : " binary client threads"),
 		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication client thread" : " replication client threads"),
 #endif
 #if XAPIAND_DATABASE_WAL

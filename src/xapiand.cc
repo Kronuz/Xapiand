@@ -416,7 +416,8 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_binary_clients("", "binary-clients", "Number of binary client threads.", false, std::ceil(NUM_BINARY_CLIENTS * hardware_concurrency), "threads", cmd);
+		ValueArg<std::size_t> num_remote_clients("", "remote-clients", "Number of remote protocol client threads.", false, std::ceil(NUM_REMOTE_CLIENTS * hardware_concurrency), "threads", cmd);
+		ValueArg<std::size_t> num_replication_clients("", "replication-clients", "Number of replication protocol client threads.", false, std::ceil(NUM_REPLICATION_CLIENTS * hardware_concurrency), "threads", cmd);
 #endif
 		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, std::ceil(NUM_HTTP_CLIENTS * hardware_concurrency), "threads", cmd);
 		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
@@ -583,7 +584,8 @@ void parseOptions(int argc, char** argv) {
 		opts.flush_threshold = flush_threshold.getValue();
 		opts.num_http_clients = num_http_clients.getValue();
 #ifdef XAPIAND_CLUSTERING
-		opts.num_binary_clients = num_binary_clients.getValue();
+		opts.num_remote_clients = num_remote_clients.getValue();
+		opts.num_replication_clients = num_replication_clients.getValue();
 #endif
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
