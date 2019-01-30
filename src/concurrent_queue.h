@@ -61,13 +61,13 @@ public:
 
 	bool enqueue(const T& item) {
 		std::lock_guard<std::mutex> lk(*mtx);
-		queue.push_back(item);
+		queue.emplace_back(item);
 		return true;
 	}
 
 	bool enqueue(T&& item) {
 		std::lock_guard<std::mutex> lk(*mtx);
-		queue.push_back(std::forward<T>(item));
+		queue.emplace_back(std::move(item));
 		return true;
 	}
 
@@ -76,14 +76,14 @@ public:
 	}
 
 	bool enqueue(const ProducerToken&, T&& item) {
-		return enqueue(std::forward<T>(item));
+		return enqueue(std::move(item));
 	}
 
 	template<typename It>
 	bool enqueue_bulk(It itemFirst, size_t count) {
 		std::lock_guard<std::mutex> lk(*mtx);
 		while (count--) {
-			queue.push_back(std::forward<T>(*itemFirst++));
+			queue.emplace_back(std::move(*itemFirst++));
 		}
 		return true;
 	}
