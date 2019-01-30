@@ -247,7 +247,7 @@ public:
 	Request& operator=(const Request&) = delete;
 	Request& operator=(Request&&) = default;
 
-	const MsgPack& decoded_body() {
+	MsgPack& decoded_body() {
 		_decode();
 		return _decoded_body;
 	}
