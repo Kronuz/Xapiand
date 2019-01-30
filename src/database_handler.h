@@ -163,7 +163,7 @@ public:
 
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
-class DatabaseHandler : protected LockableDatabase {
+class DatabaseHandler : public LockableDatabase {
 	friend Document;
 	friend Schema;
 	friend SchemasLRU;
