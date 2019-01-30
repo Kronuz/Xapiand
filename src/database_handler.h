@@ -229,7 +229,6 @@ public:
 	MsgPack dump_documents();
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(const MsgPack& obj);
-	void restore_documents(const MsgPack& docs);
 
 	std::string get_prefixed_term_id(const MsgPack& document_id);
 

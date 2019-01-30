@@ -1958,30 +1958,13 @@ HttpClient::restore_view(Request& request, Response& response, enum http_method 
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, method);
+	auto& docs = request.decoded_body();
 
-	auto& decoded_body = request.decoded_body();
-	if (decoded_body.is_string()) {
-		char path[] = "/tmp/xapian_dump.XXXXXX";
-		int file_descriptor = io::mkstemp(path);
-		try {
-			auto body = decoded_body.str_view();
-			io::write(file_descriptor, body.data(), body.size());
-			io::lseek(file_descriptor, 0, SEEK_SET);
-			db_handler.restore(file_descriptor);
-		} catch (...) {
-			io::close(file_descriptor);
-			io::unlink(path);
-			throw;
-		}
-
-		io::close(file_descriptor);
-		io::unlink(path);
-	} else if (decoded_body.is_array()) {
-		db_handler.restore_documents(decoded_body);
-	} else {
-		THROW(ClientError, "Expected a binary or list dump");
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, method);
+	for (auto& obj : docs) {
+		indexer->prepare(std::move(obj));
 	}
+	indexer->wait();
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
