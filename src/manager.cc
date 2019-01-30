@@ -55,7 +55,7 @@
 #include "cassert.h"                             // for ASSERT
 #include "color_tools.hh"                        // for color
 #include "database_cleanup.h"                    // for DatabaseCleanup
-#include "database_handler.h"                    // for DatabaseHandler, committer
+#include "database_handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database_pool.h"                       // for DatabasePool
 #include "database_utils.h"                      // for RESERVED_TYPE
 #include "database_wal.h"                        // for DatabaseWALWriter
@@ -160,6 +160,8 @@ XapiandManager::XapiandManager()
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR%02zu", opts.num_servers)),
 #endif
+	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP%02zu", opts.num_doc_preparers)),
+	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI%02zu", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
 	  _state(State::RESET),
@@ -194,6 +196,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR%02zu", opts.num_servers)),
 #endif
+	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP%02zu", opts.num_doc_preparers)),
+	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI%02zu", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
 	  _state(State::RESET),
@@ -963,6 +967,36 @@ XapiandManager::join()
 		}
 	}
 
+	////////////////////////////////////////////////////////////////////
+	if (_doc_preparer_pool) {
+		L_MANAGER("Finishing bulk document preparer threads pool!");
+		_doc_preparer_pool->finish();
+
+		L_MANAGER("Waiting for %zu replication client thread%s...", _doc_preparer_pool->running_size(), (_doc_preparer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		while (!_doc_preparer_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	if (_doc_indexer_pool) {
+		L_MANAGER("Finishing bulk document indexer threads pool!");
+		_doc_indexer_pool->finish();
+
+		L_MANAGER("Waiting for %zu replication client thread%s...", _doc_indexer_pool->running_size(), (_doc_indexer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		while (!_doc_indexer_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
 #ifdef XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
@@ -1175,6 +1209,10 @@ XapiandManager::join()
 
 	_http_client_pool.reset();
 	_http_server_pool.reset();
+
+	_doc_indexer_pool.reset();
+	_doc_preparer_pool.reset();
+
 #ifdef XAPIAND_CLUSTERING
 	_remote_client_pool.reset();
 	_remote_server_pool.reset();

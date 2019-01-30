@@ -407,7 +407,9 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_CLUSTERING
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 #endif
-		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, std::ceil(NUM_COMMITTERS * hardware_concurrency), "committers", cmd);
+		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, std::ceil(NUM_DOC_PREPARERS * hardware_concurrency), "threads", cmd);
+		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, std::ceil(NUM_DOC_INDEXERS * hardware_concurrency), "threads", cmd);
+		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, std::ceil(NUM_COMMITTERS * hardware_concurrency), "threads", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
 		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 
@@ -576,6 +578,8 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_CLUSTERING
 		opts.num_replicas = opts.solo ? 0 : num_replicas.getValue();
 #endif
+		opts.num_doc_preparers = num_doc_preparers.getValue();
+		opts.num_doc_indexers = num_doc_indexers.getValue();
 		opts.num_committers = num_committers.getValue();
 		opts.num_fsynchers = num_fsynchers.getValue();
 		opts.max_clients = max_clients.getValue();

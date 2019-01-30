@@ -53,6 +53,9 @@ class ReplicationProtocolClient;
 class ReplicationProtocolServer;
 #endif
 
+class DocPreparer;
+class DocIndexer;
+
 class MsgPack;
 class HttpClient;
 class HttpServer;
@@ -153,6 +156,8 @@ private:
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> _replication_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> _replication_server_pool;
 #endif
+	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> _doc_preparer_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> _doc_indexer_pool;
 
 	std::atomic_llong _shutdown_asap;
 	std::atomic_llong _shutdown_now;
@@ -348,6 +353,18 @@ public:
 		return _manager->_replication;
 	}
 #endif
+
+	static auto& doc_preparer_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_doc_preparer_pool);
+		return _manager->_doc_preparer_pool;
+	}
+
+	static auto& doc_indexer_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_doc_indexer_pool);
+		return _manager->_doc_indexer_pool;
+	}
 
 	static auto& http() {
 		ASSERT(_manager);

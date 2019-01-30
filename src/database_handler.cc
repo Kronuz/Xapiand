@@ -28,13 +28,11 @@
 #include <exception>                        // for std::exception
 #include <utility>                          // for std::move
 
-#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cast.h"                           // for Cast
 #include "database.h"                       // for Database
 #include "database_wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
-#include "lightweight_semaphore.h"          // for LightweightSemaphore
 #include "lock_database.h"                  // for lock_database
 #include "log.h"                            // for L_CALL
 #include "manager.h"                        // for XapiandManager
@@ -1928,6 +1926,131 @@ DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, 
 	}
 }
 #endif
+
+
+//  ____             ___           _
+// |  _ \  ___   ___|_ _|_ __   __| | _____  _____ _ __
+// | | | |/ _ \ / __|| || '_ \ / _` |/ _ \ \/ / _ \ '__|
+// | |_| | (_) | (__ | || | | | (_| |  __/>  <  __/ |
+// |____/ \___/ \___|___|_| |_|\__,_|\___/_/\_\___|_|
+
+void
+DocPreparer::operator()()
+{
+	L_CALL("DocPreparer::operator()()");
+
+	ASSERT(indexer);
+	if (indexer->running) {
+		try {
+			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
+			indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
+		} catch (...) {
+			L_EXC("ERROR: Cannot prepare document");
+			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+		}
+	}
+}
+
+
+void
+DocIndexer::operator()()
+{
+	L_CALL("DocIndexer::operator()()");
+
+	DatabaseHandler db_handler(endpoints, flags, method);
+	bool _ready = false;
+	while (running) {
+		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+		ready_queue.wait_dequeue(prepared);
+		if (!_ready) {
+			_ready = ready.load(std::memory_order_relaxed);
+		}
+		auto _processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
+
+		auto& term_id = std::get<0>(prepared);
+		auto& doc = std::get<1>(prepared);
+
+		if (!term_id.empty()) {
+			try {
+				lock_database lk_db(&db_handler);
+				db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
+			} catch (...) {
+				L_EXC("ERROR: Cannot replace document");
+			}
+		}
+
+		if (_ready) {
+			if (_processed >= total) {
+				done.signal();
+				break;
+			}
+		} else {
+			if (_processed % (limit_signal * 32) == 0) {
+				limit.signal(limit_signal);
+			}
+		}
+	}
+}
+
+
+void
+DocIndexer::prepare(MsgPack&& obj)
+{
+	L_CALL("DocIndexer::prepare(<obj>)");
+
+	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj));
+	if (bulk_cnt == bulk.size()) {
+		if (XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			if (total == 0) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
+			total += bulk_cnt;
+		} else {
+			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+		}
+		bulk_cnt = 0;
+		limit.wait();  // throttle the prepare
+	}
+}
+
+
+bool
+DocIndexer::wait(double timeout)
+{
+	L_CALL("DocIndexer::wait(<timeout>)");
+
+	if (bulk_cnt != 0) {
+		if (XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			if (total == 0) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
+			total += bulk_cnt;
+		} else {
+			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+		}
+	}
+
+	ready.store(true, std::memory_order_release);
+
+	if (timeout) {
+		if (timeout > 0.0) {
+			return done.wait(timeout * 1e6);
+		} else {
+			done.wait();
+		}
+	}
+	return processed >= total;
+}
+
+
+void
+DocIndexer::finish()
+{
+	L_CALL("DocIndexer::finish()");
+
+	running = false;
+	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+}
 
 
 //  ____                                        _

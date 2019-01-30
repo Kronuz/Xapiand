@@ -24,20 +24,24 @@
 
 #include "config.h"
 
-#include <memory>                            // for shared_ptr, make_shared
+#include <condition_variable>                // for std::condition_variable
+#include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
-#include <string>                            // for string
+#include <string>                            // for std::string
 #include "string_view.hh"                    // for std::string_view
-#include <unordered_map>                     // for unordered_map
+#include <unordered_map>                     // for std::unordered_map
 #include <utility>                           // for std::pair
-#include <vector>                            // for vector
+#include <vector>                            // for std::vector
 #include <xapian.h>                          // for Document, docid, MSet
 
+#include "blocking_concurrent_queue.h"       // for BlockingConcurrentQueue
 #include "database_flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
+#include "lightweight_semaphore.h"           // for LightweightSemaphore
 #include "lock_database.h"                   // for LockableDatabase
+#include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
 
@@ -48,7 +52,6 @@ class Locator;
 class Database;
 class DatabaseHandler;
 class Document;
-class MsgPack;
 class Multi_MultiValueKeyMaker;
 class Schema;
 class SchemasLRU;
@@ -261,6 +264,92 @@ public:
 	bool set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 	void dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 #endif
+};
+
+
+class DocIndexer;
+
+
+class DocPreparer {
+	std::shared_ptr<DocIndexer> indexer;
+
+	MsgPack obj;
+
+	DocPreparer(const std::shared_ptr<DocIndexer>& indexer, MsgPack&& obj) :
+		indexer{indexer},
+		obj{std::move(obj)} { }
+
+public:
+	template<typename... Args>
+	static auto make_unique(Args&&... args) {
+		/*
+		 * std::make_unique only can call a public constructor, for this reason
+		 * it is neccesary wrap the constructor in a struct.
+		 */
+		struct enable_make_unique : DocPreparer {
+			enable_make_unique(Args&&... _args) : DocPreparer(std::forward<Args>(_args)...) { }
+		};
+		return std::make_unique<enable_make_unique>(std::forward<Args>(args)...);
+	}
+
+	void operator()();
+};
+
+
+class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
+	friend DocPreparer;
+
+	static constexpr size_t limit_max = 16;
+	static constexpr size_t limit_signal = 8;
+
+	std::atomic_bool running;
+	std::atomic_bool ready;
+
+	Endpoints endpoints;
+	int flags;
+	enum http_method method;
+
+	std::atomic_size_t processed;
+	size_t total;
+	LightweightSemaphore limit;
+	LightweightSemaphore done;
+
+	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> ready_queue;
+
+	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
+	size_t bulk_cnt;
+
+	DocIndexer(const Endpoints& endpoints, int flags, enum http_method method) :
+		running{true},
+		ready{false},
+		endpoints{endpoints},
+		flags{flags},
+		method{method},
+		processed{0},
+		total{0},
+		limit{limit_max},
+		bulk_cnt{0} { }
+
+public:
+	template<typename... Args>
+	static auto make_shared(Args&&... args) {
+		/*
+		 * std::make_shared only can call a public constructor, for this reason
+		 * it is neccesary wrap the constructor in a struct.
+		 */
+		struct enable_make_shared : DocIndexer {
+			enable_make_shared(Args&&... _args) : DocIndexer(std::forward<Args>(_args)...) { }
+		};
+		return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+	}
+
+	void operator()();
+
+	void prepare(MsgPack&& obj);
+
+	bool wait(double timeout = -1.0);
+
+	void finish();
 };
 
 

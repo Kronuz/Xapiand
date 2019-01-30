@@ -36,6 +36,8 @@
 #define NUM_REMOTE_CLIENTS       16      // Number of remote protocol client threads per CPU
 #define NUM_REPLICATION_CLIENTS  16      // Number of replication protocol client threads per CPU
 #define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
+#define NUM_DOC_PREPARERS        8       // Number of threads handling bulk documents preparing per CPU
+#define NUM_DOC_INDEXERS         2       // Number of threads handling bulk documents indexing per CPU
 #define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
 #define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
 
@@ -77,6 +79,8 @@ extern struct opts_t {
 	ssize_t num_remote_clients = std::ceil(NUM_REMOTE_CLIENTS);
 	ssize_t num_replication_clients = std::ceil(NUM_REPLICATION_CLIENTS);
 	ssize_t num_async_wal_writers = std::ceil(NUM_ASYNC_WAL_WRITERS);
+	ssize_t num_doc_preparers = std::ceil(NUM_DOC_PREPARERS);
+	ssize_t num_doc_indexers = std::ceil(NUM_DOC_INDEXERS);
 	ssize_t num_committers = std::ceil(NUM_COMMITTERS);
 	ssize_t num_fsynchers = std::ceil(NUM_FSYNCHERS);
 	ssize_t dbpool_size = DBPOOL_SIZE;
