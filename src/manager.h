@@ -144,14 +144,14 @@ private:
 	std::unique_ptr<DatabasePool> _database_pool;
 	std::unique_ptr<DatabaseWALWriter> _wal_writer;
 
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::binary_clients>> _http_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::binary_servers>> _http_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> _http_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> _http_server_pool;
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::http_clients>> _binary_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::http_servers>> _binary_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> _binary_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> _binary_server_pool;
 
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::http_clients>> _replication_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::http_servers>> _replication_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> _replication_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> _replication_server_pool;
 #endif
 
 	std::atomic_llong _shutdown_asap;
