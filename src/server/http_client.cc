@@ -360,7 +360,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 
 HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  new_request(this)
+	  new_request(std::make_unique<Request>(this))
 {
 	++XapiandManager::http_clients();
 
@@ -368,8 +368,8 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 		.xapiand_http_connections
 		.Increment();
 
-	// Initialize new_request.begins as soon as possible (for correctly timing disconnecting clients)
-	new_request.begins = std::chrono::system_clock::now();
+	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
+	new_request->begins = std::chrono::system_clock::now();
 
 	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
 }
@@ -408,36 +408,36 @@ HttpClient::on_read(const char* buf, ssize_t received)
 {
 	L_CALL("HttpClient::on_read(<buf>, %zd)", received);
 
-	unsigned init_state = new_request.parser.state;
+	unsigned init_state = new_request->parser.state;
 
 	if (received <= 0) {
 		if (received < 0) {
-			L_NOTICE("Client connection closed unexpectedly after %s: %s (%d): %s", string::from_delta(new_request.begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
+			L_NOTICE("Client connection closed unexpectedly after %s: %s (%d): %s", string::from_delta(new_request->begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
 		} else if (init_state != 18) {
-			L_NOTICE("Client closed unexpectedly after %s: Not in final HTTP state (%d)", string::from_delta(new_request.begins, std::chrono::system_clock::now()), init_state);
+			L_NOTICE("Client closed unexpectedly after %s: Not in final HTTP state (%d)", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
 		} else if (waiting) {
-			L_NOTICE("Client closed unexpectedly after %s: There was still a request in progress", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after %s: There was still a request in progress", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		// } else if (running) {
-		// 	L_NOTICE("Client closed unexpectedly after %s: There was still a worker running", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+		// 	L_NOTICE("Client closed unexpectedly after %s: There was still a worker running", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else if (!write_queue.empty()) {
-			L_NOTICE("Client closed unexpectedly after %s: There was still pending data", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after %s: There was still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (!requests.empty()) {
-				L_NOTICE("Client closed unexpectedly after %s: There were still pending requests", string::from_delta(new_request.begins, std::chrono::system_clock::now()));
+				L_NOTICE("Client closed unexpectedly after %s: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 			}
 		}
 		return received;
 	}
 
 	L_HTTP_WIRE("HttpClient::on_read: %zd bytes", received);
-	ssize_t parsed = http_parser_execute(&new_request.parser, &settings, buf, received);
+	ssize_t parsed = http_parser_execute(&new_request->parser, &settings, buf, received);
 	if (parsed != received) {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
-		http_errno err = HTTP_PARSER_ERRNO(&new_request.parser);
+		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
 		if (err == HPE_INVALID_METHOD) {
 			Response response;
-			write_http_response(new_request, response, HTTP_STATUS_NOT_IMPLEMENTED);
+			write_http_response(*new_request, response, HTTP_STATUS_NOT_IMPLEMENTED);
 		} else {
 			std::string message(http_errno_description(err));
 			MsgPack err_response = {
@@ -445,8 +445,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 				{ RESPONSE_MESSAGE, string::split(message, '\n') }
 			};
 			Response response;
-			write_http_response(new_request, response, error_code, err_response);
-			L_NOTICE(HTTP_PARSER_ERRNO(&new_request.parser) != HPE_OK ? message : "incomplete request");
+			write_http_response(*new_request, response, error_code, err_response);
+			L_NOTICE(HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 		}
 		detach();
 	}
@@ -557,8 +557,8 @@ HttpClient::on_message_begin(http_parser* parser)
 	ignore_unused(parser);
 
 	waiting = true;
-	new_request.begins = std::chrono::system_clock::now();
-	L_TIMED_VAR(new_request.log, 10s,
+	new_request->begins = std::chrono::system_clock::now();
+	L_TIMED_VAR(new_request->log, 10s,
 		"Request taking too long...",
 		"Request took too long!");
 
@@ -573,7 +573,7 @@ HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_url {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request.path.append(at, length);
+	new_request->path.append(at, length);
 
 	return 0;
 }
@@ -600,7 +600,7 @@ HttpClient::on_header_field(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_header_field {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request._header_name = std::string(at, length);
+	new_request->_header_name = std::string(at, length);
 
 	return 0;
 }
@@ -615,10 +615,10 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 
 	auto _header_value = std::string_view(at, length);
 	if (Logging::log_level > LOG_DEBUG) {
-		new_request.headers.append(new_request._header_name);
-		new_request.headers.append(": ");
-		new_request.headers.append(_header_value);
-		new_request.headers.append(eol);
+		new_request->headers.append(new_request->_header_name);
+		new_request->headers.append(": ");
+		new_request->headers.append(_header_value);
+		new_request->headers.append(eol);
 	}
 
 	constexpr static auto _ = phf::make_phf({
@@ -631,15 +631,15 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 		hhl("x-http-method-override"),
 	});
 
-	switch (_.fhhl(new_request._header_name)) {
+	switch (_.fhhl(new_request->_header_name)) {
 		case _.fhhl("expect"):
 		case _.fhhl("100-continue"):
 			// Respond with HTTP/1.1 100 Continue
-			new_request.expect_100 = true;
+			new_request->expect_100 = true;
 			break;
 
 		case _.fhhl("content-type"):
-			new_request.ct_type = ct_type_t(_header_value);
+			new_request->ct_type = ct_type_t(_header_value);
 			break;
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;
@@ -672,7 +672,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 				}
 				accept_sets.emplace(value, lookup.second);
 			}
-			new_request.accept_set = std::move(lookup.second);
+			new_request->accept_set = std::move(lookup.second);
 			break;
 		}
 
@@ -703,14 +703,14 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 				}
 				accept_encoding_sets.emplace(value, lookup.second);
 			}
-			new_request.accept_encoding_set = std::move(lookup.second);
+			new_request->accept_encoding_set = std::move(lookup.second);
 			break;
 		}
 
 		case _.fhhl("x-http-method-override"):
 		case _.fhhl("http-method-override"): {
 			if (parser->method != HTTP_POST) {
-				THROW(ClientError, "%s header must use the POST method", repr(new_request._header_name));
+				THROW(ClientError, "%s header must use the POST method", repr(new_request->_header_name));
 			}
 
 			constexpr static auto __ = phf::make_phf({
@@ -764,14 +764,14 @@ HttpClient::on_headers_complete(http_parser* parser)
 	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	if (new_request.expect_100) {
+	if (new_request->expect_100) {
 		// Return 100 if client is expecting it
 		Response response;
-		write(http_response(new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
+		write(http_response(*new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
 	if (parser->http_major == 0 || (parser->http_major == 1 && parser->http_minor == 0)) {
-		new_request.closing = true;
+		new_request->closing = true;
 	}
 
 	return 0;
@@ -782,10 +782,10 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_body(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_RED("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request.raw.append(at, length);
+	new_request->raw.append(at, length);
 
 	return 0;
 }
@@ -799,13 +799,13 @@ HttpClient::on_message_complete(http_parser* parser)
 	ignore_unused(parser);
 
 	if (!closed) {
-		if (new_request.accept_set.empty()) {
-			if (!new_request.ct_type.empty()) {
-				new_request.accept_set.emplace(0, 1.0, new_request.ct_type, 0);
+		if (new_request->accept_set.empty()) {
+			if (!new_request->ct_type.empty()) {
+				new_request->accept_set.emplace(0, 1.0, new_request->ct_type, 0);
 			}
-			new_request.accept_set.emplace(1, 1.0, any_type, 0);
+			new_request->accept_set.emplace(1, 1.0, any_type, 0);
 		}
-		L_HTTP_PROTO("New request added:\n%s", string::indent(new_request.to_text(false), ' ', 8));
+		L_HTTP_PROTO("New request added:\n%s", string::indent(new_request->to_text(false), ' ', 8));
 		{
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (!running) {
@@ -819,7 +819,7 @@ HttpClient::on_message_complete(http_parser* parser)
 				requests.push_back(std::move(new_request));
 			}
 		}
-		new_request = Request(this);
+		new_request = std::make_unique<Request>(this);
 	}
 	waiting = false;
 
@@ -1017,7 +1017,7 @@ HttpClient::operator()()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	while (!requests.empty() && !closed) {
-		Request request;
+		std::unique_ptr<Request> request;
 		Response response;
 
 		std::swap(request, requests.front());
@@ -1026,7 +1026,7 @@ HttpClient::operator()()
 		lk.unlock();
 		try {
 
-			process(request, response);
+			process(*request, response);
 
 			auto sent = total_sent_bytes.exchange(0);
 			Metrics::metrics()
@@ -1048,7 +1048,7 @@ HttpClient::operator()()
 		}
 		lk.lock();
 
-		if (request.closing) {
+		if (request->closing) {
 			running = false;
 			lk.unlock();
 			L_CONN("Running in worker ended after request closing.");

@@ -281,9 +281,9 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 
 	static const http_parser_settings settings;
 
-	Request new_request;
 	mutable std::mutex runner_mutex;
-	std::deque<Request> requests;
+	std::unique_ptr<Request> new_request;
+	std::deque<std::unique_ptr<Request>> requests;
 	Endpoints endpoints;
 
 	static int message_begin_cb(http_parser* parser);
