@@ -147,8 +147,8 @@ private:
 	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> _http_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> _http_server_pool;
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> _binary_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> _binary_server_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> _remote_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> _remote_server_pool;
 
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> _replication_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> _replication_server_pool;
@@ -322,10 +322,15 @@ public:
 		return _manager->_http_client_pool;
 	}
 #ifdef XAPIAND_CLUSTERING
-	static auto& binary_client_pool() {
+	static auto& remote_client_pool() {
 		ASSERT(_manager);
-		ASSERT(_manager->_binary_client_pool);
-		return _manager->_binary_client_pool;
+		ASSERT(_manager->_remote_client_pool);
+		return _manager->_remote_client_pool;
+	}
+	static auto& replication_client_pool() {
+		ASSERT(_manager);
+		ASSERT(_manager->_replication_client_pool);
+		return _manager->_replication_client_pool;
 	}
 	static auto& discovery() {
 		ASSERT(_manager);
@@ -341,11 +346,6 @@ public:
 		ASSERT(_manager);
 		ASSERT(_manager->_replication);
 		return _manager->_replication;
-	}
-	static auto& replication_client_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_replication_client_pool);
-		return _manager->_replication_client_pool;
 	}
 #endif
 

@@ -155,8 +155,8 @@ XapiandManager::XapiandManager()
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB%02zu", opts.num_remote_clients)),
-	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB%02zu", opts.num_servers)),
+	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB%02zu", opts.num_remote_clients)),
+	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB%02zu", opts.num_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR%02zu", opts.num_servers)),
 #endif
@@ -189,8 +189,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH%02zu", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH%02zu", opts.num_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _binary_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB%02zu", opts.num_remote_clients)),
-	  _binary_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB%02zu", opts.num_servers)),
+	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB%02zu", opts.num_remote_clients)),
+	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB%02zu", opts.num_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR%02zu", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR%02zu", opts.num_servers)),
 #endif
@@ -786,11 +786,11 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _binary_server = Worker::make_shared<RemoteProtocolServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
-			if (_binary_server->addr.sin_family) {
-				_binary->addr = _binary_server->addr;
+			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
+			if (_remote_server->addr.sin_family) {
+				_binary->addr = _remote_server->addr;
 			}
-			_binary_server_pool->enqueue(std::move(_binary_server));
+			_remote_server_pool->enqueue(std::move(_remote_server));
 
 			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
 			if (_replication_server->addr.sin_family) {
@@ -982,13 +982,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_binary_server_pool) {
+	if (_remote_server_pool) {
 		L_MANAGER("Finishing binary servers pool!");
-		_binary_server_pool->finish();
+		_remote_server_pool->finish();
 
-		L_MANAGER("Waiting for %zu binary server%s...", _binary_server_pool->running_size(), (_binary_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu binary server%s...", _remote_server_pool->running_size(), (_remote_server_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Binary servers finished!");
-		while (!_binary_server_pool->join(500ms)) {
+		while (!_remote_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -997,13 +997,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_binary_client_pool) {
+	if (_remote_client_pool) {
 		L_MANAGER("Finishing binary client threads pool!");
-		_binary_client_pool->finish();
+		_remote_client_pool->finish();
 
-		L_MANAGER("Waiting for %zu binary client thread%s...", _binary_client_pool->running_size(), (_binary_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for %zu binary client thread%s...", _remote_client_pool->running_size(), (_remote_client_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
-		while (!_binary_client_pool->join(500ms)) {
+		while (!_remote_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1176,8 +1176,10 @@ XapiandManager::join()
 	_http_client_pool.reset();
 	_http_server_pool.reset();
 #ifdef XAPIAND_CLUSTERING
-	_binary_client_pool.reset();
-	_binary_server_pool.reset();
+	_remote_client_pool.reset();
+	_remote_server_pool.reset();
+	_replication_client_pool.reset();
+	_replication_server_pool.reset();
 #endif
 
 	_database_cleanup.reset();
@@ -1416,10 +1418,10 @@ XapiandManager::server_metrics_impl()
 
 #ifdef XAPIAND_CLUSTERING
 	// binary client tasks:
-	metrics.xapiand_binary_clients_running.Set(_binary_client_pool->running_size());
-	metrics.xapiand_binary_clients_queue_size.Set(_binary_client_pool->size());
-	metrics.xapiand_binary_clients_pool_size.Set(_binary_client_pool->threadpool_size());
-	metrics.xapiand_binary_clients_capacity.Set(_binary_client_pool->threadpool_capacity());
+	metrics.xapiand_binary_clients_running.Set(_remote_client_pool->running_size());
+	metrics.xapiand_binary_clients_queue_size.Set(_remote_client_pool->size());
+	metrics.xapiand_binary_clients_pool_size.Set(_remote_client_pool->threadpool_size());
+	metrics.xapiand_binary_clients_capacity.Set(_remote_client_pool->threadpool_capacity());
 #endif
 
 	// servers_threads:

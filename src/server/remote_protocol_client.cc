@@ -1307,7 +1307,7 @@ RemoteProtocolClient::init_remote() noexcept
 
 	// And start a runner.
 	running = true;
-	XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+	XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
 	return true;
 }
 
@@ -1380,7 +1380,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+				XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -1425,7 +1425,7 @@ RemoteProtocolClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::binary_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+			XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
