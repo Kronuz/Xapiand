@@ -177,7 +177,7 @@ constexpr static auto http_commands = phf::make_phf({
 class Request;
 class Response;
 class HttpClient;
-using view_function = void(HttpClient::*)(Request&, Response&);
+using view_function = void(HttpClient::*)(Request&);
 
 
 class Response {
@@ -223,6 +223,8 @@ private:
 	void _decode();
 
 public:
+	Response response;
+
 	view_function view;
 	bool immediate_view;  // immediate views are called before the whole body is received
 
@@ -333,32 +335,32 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	view_function _prepare_patch();
 	view_function _prepare_delete();
 
-	void home_view(Request& request, Response& response);
-	void metrics_view(Request& request, Response& response);
-	void info_view(Request& request, Response& response);
-	void metadata_view(Request& request, Response& response);
-	void write_metadata_view(Request& request, Response& response);
-	void update_metadata_view(Request& request, Response& response);
-	void delete_metadata_view(Request& request, Response& response);
-	void delete_document_view(Request& request, Response& response);
-	void delete_schema_view(Request& request, Response& response);
-	void index_document_view(Request& request, Response& response);
-	void write_schema_view(Request& request, Response& response);
-	void document_info_view(Request& request, Response& response);
-	void update_document_view(Request& request, Response& response);
-	void retrieve_view(Request& request, Response& response);
-	void search_view(Request& request, Response& response);
-	void count_view(Request& request, Response& response);
-	void touch_view(Request& request, Response& response);
-	void commit_view(Request& request, Response& response);
-	void dump_view(Request& request, Response& response);
-	void restore_view(Request& request, Response& response);
-	void schema_view(Request& request, Response& response);
+	void home_view(Request& request);
+	void metrics_view(Request& request);
+	void info_view(Request& request);
+	void metadata_view(Request& request);
+	void write_metadata_view(Request& request);
+	void update_metadata_view(Request& request);
+	void delete_metadata_view(Request& request);
+	void delete_document_view(Request& request);
+	void delete_schema_view(Request& request);
+	void index_document_view(Request& request);
+	void write_schema_view(Request& request);
+	void document_info_view(Request& request);
+	void update_document_view(Request& request);
+	void retrieve_view(Request& request);
+	void search_view(Request& request);
+	void count_view(Request& request);
+	void touch_view(Request& request);
+	void commit_view(Request& request);
+	void dump_view(Request& request);
+	void restore_view(Request& request);
+	void schema_view(Request& request);
 #if XAPIAND_DATABASE_WAL
-	void wal_view(Request& request, Response& response);
+	void wal_view(Request& request);
 #endif
-	void check_view(Request& request, Response& response);
-	void nodes_view(Request& request, Response& response);
+	void check_view(Request& request);
+	void nodes_view(Request& request);
 
 	Request::Command url_resolve(Request& request);
 	void _endpoint_maker(Request& request, bool master);
@@ -368,8 +370,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void log_request(Request& request);
 	void log_response(Response& response);
 
-	std::string http_response(Request& request, Response& response, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
-	void clean_http_request(Request& request, Response& response);
+	std::string http_response(Request& request, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
+	void clean_http_request(Request& request);
 	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
 	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);
@@ -377,8 +379,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types);
-	void write_status_response(Request& request, Response& response, enum http_status status, const std::string& message="");
-	void write_http_response(Request& request, Response& response, enum http_status status, const MsgPack& obj=MsgPack());
+	void write_status_response(Request& request, enum http_status status, const std::string& message="");
+	void write_http_response(Request& request, enum http_status status, const MsgPack& obj=MsgPack());
 	Encoding resolve_encoding(Request& request);
 	std::string readable_encoding(Encoding e);
 	std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
@@ -390,7 +392,7 @@ public:
 
 	~HttpClient() noexcept;
 
-	void process(Request& request, Response& response);
+	void process(Request& request);
 	void operator()();
 
 	std::string __repr__() const override;

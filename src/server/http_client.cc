@@ -275,7 +275,7 @@ bool can_preview(const ct_type_t& ct_type) {
 
 
 std::string
-HttpClient::http_response(Request& request, Response& response, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
+HttpClient::http_response(Request& request, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
 	L_CALL("HttpClient::http_response()");
 
 	std::string head;
@@ -285,7 +285,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 	std::string response_body;
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
-		response.status = status;
+		request.response.status = status;
 		auto http_major = request.parser.http_major;
 		auto http_minor = request.parser.http_minor;
 		if (http_major == 0 && http_minor == 0) {
@@ -346,11 +346,11 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 	}
 
 	auto this_response_size = response_body.size();
-	response.size += this_response_size;
+	request.response.size += this_response_size;
 
 	if (Logging::log_level > LOG_DEBUG) {
-		response.head += head;
-		response.headers += headers;
+		request.response.head += head;
+		request.response.headers += headers;
 	}
 
 	return head + head_sep + headers + headers_sep + response_body;
@@ -435,16 +435,14 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
 		if (err == HPE_INVALID_METHOD) {
-			Response response;
-			write_http_response(*new_request, response, HTTP_STATUS_NOT_IMPLEMENTED);
+			write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 		} else {
 			std::string message(http_errno_description(err));
 			MsgPack err_response = {
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, string::split(message, '\n') }
 			};
-			Response response;
-			write_http_response(*new_request, response, error_code, err_response);
+			write_http_response(*new_request, error_code, err_response);
 			L_NOTICE(HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 		}
 		detach();
@@ -868,8 +866,7 @@ HttpClient::prepare()
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 		};
-		Response response;
-		write_http_response(*new_request, response, error_code, err_response);
+		write_http_response(*new_request, error_code, err_response);
 		return;
 	}
 
@@ -908,8 +905,7 @@ HttpClient::prepare()
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, { "Method not implemented!" } }
 			};
-			Response response;
-			write_http_response(*new_request, response, error_code, err_response);
+			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
 			return;
 		}
@@ -917,8 +913,7 @@ HttpClient::prepare()
 
 	if (new_request->expect_100) {
 		// Return 100 if client is expecting it
-		Response response;
-		write(http_response(*new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
+		write(http_response(*new_request, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
 	if (new_request->parser.content_length) {
@@ -932,8 +927,7 @@ HttpClient::_prepare_options()
 {
 	L_CALL("HttpClient::_prepare_options()");
 
-	Response response;
-	write(http_response(*new_request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
+	write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
 	return nullptr;
 }
 
@@ -946,17 +940,14 @@ HttpClient::_prepare_head()
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
 		case Request::Command::NO_CMD_NO_ID: {
-			Response response;
-			write_http_response(*new_request, response, HTTP_STATUS_OK);
+			write_http_response(*new_request, HTTP_STATUS_OK);
 			return nullptr;
 		}
 		case Request::Command::NO_CMD_ID:
 			return &HttpClient::document_info_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1004,11 +995,9 @@ HttpClient::_prepare_get()
 		case Request::Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::metadata_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1025,11 +1014,9 @@ HttpClient::_prepare_merge()
 		case Request::Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::update_metadata_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1043,11 +1030,9 @@ HttpClient::_prepare_store()
 	switch (cmd) {
 		case Request::Command::NO_CMD_ID:
 			return &HttpClient::update_document_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1067,11 +1052,9 @@ HttpClient::_prepare_put()
 		case Request::Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::write_schema_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1110,13 +1093,11 @@ HttpClient::_prepare_post()
 		case Request::Command::CMD_QUIT:
 			if (opts.admin_commands) {
 				XapiandManager::try_shutdown(true);
-				Response response;
-				write_http_response(*new_request, response, HTTP_STATUS_OK);
+				write_http_response(*new_request, HTTP_STATUS_OK);
 				destroy();
 				detach();
 			} else {
-				Response response;
-				write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			return nullptr;
 		case Request::Command::CMD_FLUSH:
@@ -1132,18 +1113,14 @@ HttpClient::_prepare_post()
 				if (flush_clients != -1 || flush_databases == -1) {
 					XapiandManager::manager()->shutdown(0, 0);
 				}
-				Response response;
-				write_http_response(*new_request, response, HTTP_STATUS_OK);
+				write_http_response(*new_request, HTTP_STATUS_OK);
 			} else {
-				Response response;
-				write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			return nullptr;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1157,11 +1134,9 @@ HttpClient::_prepare_patch()
 	switch (cmd) {
 		case Request::Command::NO_CMD_ID:
 			return &HttpClient::update_document_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
@@ -1181,17 +1156,15 @@ HttpClient::_prepare_delete()
 		case Request::Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::delete_schema_view;
-		default: {
-			Response response;
-			write_status_response(*new_request, response, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		default:
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			return nullptr;
-		}
 	}
 }
 
 
 void
-HttpClient::process(Request& request, Response& response)
+HttpClient::process(Request& request)
 {
 	writes = 0;
 	L_OBJ_BEGIN("HttpClient::process:BEGIN");
@@ -1210,7 +1183,7 @@ HttpClient::process(Request& request, Response& response)
 	try {
 
 		ASSERT(request.view);
-		(this->*request.view)(request, response);
+		(this->*request.view)(request);
 
 	} catch (const NotFoundError& exc) {
 		error_code = HTTP_STATUS_NOT_FOUND;
@@ -1294,11 +1267,11 @@ HttpClient::process(Request& request, Response& response)
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, string::split(error, '\n') }
 			};
-			write_http_response(request, response, error_code, err_response);
+			write_http_response(request, error_code, err_response);
 		}
 	}
 
-	clean_http_request(request, response);
+	clean_http_request(request);
 }
 
 
@@ -1313,7 +1286,6 @@ HttpClient::operator()()
 
 	while (!requests.empty() && !closed) {
 		std::shared_ptr<Request> request;
-		Response response;
 
 		std::swap(request, requests.front());
 		requests.pop_front();
@@ -1321,7 +1293,7 @@ HttpClient::operator()()
 		lk.unlock();
 		try {
 
-			process(*request, response);
+			process(*request);
 
 			auto sent = total_sent_bytes.exchange(0);
 			Metrics::metrics()
@@ -1368,7 +1340,7 @@ HttpClient::operator()()
 
 
 void
-HttpClient::home_view(Request& request, Response& response)
+HttpClient::home_view(Request& request)
 {
 	L_CALL("HttpClient::home_view()");
 
@@ -1407,12 +1379,12 @@ HttpClient::home_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, obj);
+	write_http_response(request, HTTP_STATUS_OK, obj);
 }
 
 
 void
-HttpClient::metrics_view(Request& request, Response& response)
+HttpClient::metrics_view(Request& request)
 {
 	L_CALL("HttpClient::metrics_view()");
 
@@ -1421,12 +1393,12 @@ HttpClient::metrics_view(Request& request, Response& response)
 	request.processing = std::chrono::system_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
-	write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, server_info, "text/plain", "", server_info.size()));
+	write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, server_info, "text/plain", "", server_info.size()));
 }
 
 
 void
-HttpClient::document_info_view(Request& request, Response& response)
+HttpClient::document_info_view(Request& request)
 {
 	L_CALL("HttpClient::document_info_view()");
 
@@ -1441,12 +1413,12 @@ HttpClient::document_info_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 }
 
 
 void
-HttpClient::delete_document_view(Request& request, Response& response)
+HttpClient::delete_document_view(Request& request)
 {
 	L_CALL("HttpClient::delete_document_view()");
 
@@ -1470,7 +1442,7 @@ HttpClient::delete_document_view(Request& request, Response& response)
 		{ RESPONSE_COMMIT,  query_field.commit }
 	};
 
-	write_http_response(request, response, status_code, response_obj);
+	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Deletion took %s", string::from_delta(took));
@@ -1485,7 +1457,7 @@ HttpClient::delete_document_view(Request& request, Response& response)
 
 
 void
-HttpClient::delete_schema_view(Request& request, Response& response)
+HttpClient::delete_schema_view(Request& request)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
@@ -1498,7 +1470,7 @@ HttpClient::delete_schema_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_NO_CONTENT);
+	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Schema deletion took %s", string::from_delta(took));
@@ -1513,7 +1485,7 @@ HttpClient::delete_schema_view(Request& request, Response& response)
 
 
 void
-HttpClient::index_document_view(Request& request, Response& response)
+HttpClient::index_document_view(Request& request)
 {
 	L_CALL("HttpClient::index_document_view()");
 
@@ -1539,7 +1511,7 @@ HttpClient::index_document_view(Request& request, Response& response)
 	status_code = HTTP_STATUS_OK;
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
-	write_http_response(request, response, status_code, response_obj);
+	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Indexing took %s", string::from_delta(took));
@@ -1554,7 +1526,7 @@ HttpClient::index_document_view(Request& request, Response& response)
 
 
 void
-HttpClient::write_schema_view(Request& request, Response& response)
+HttpClient::write_schema_view(Request& request)
 {
 	L_CALL("HttpClient::write_schema_view()");
 
@@ -1573,7 +1545,7 @@ HttpClient::write_schema_view(Request& request, Response& response)
 	status_code = HTTP_STATUS_OK;
 	response_obj = db_handler.get_schema()->get_full(true);
 
-	write_http_response(request, response, status_code, response_obj);
+	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Schema write took %s", string::from_delta(took));
@@ -1588,7 +1560,7 @@ HttpClient::write_schema_view(Request& request, Response& response)
 
 
 void
-HttpClient::update_document_view(Request& request, Response& response)
+HttpClient::update_document_view(Request& request)
 {
 	L_CALL("HttpClient::update_document_view()");
 
@@ -1619,7 +1591,7 @@ HttpClient::update_document_view(Request& request, Response& response)
 	}
 	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
-	write_http_response(request, response, status_code, response_obj);
+	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating took %s", string::from_delta(took));
@@ -1650,7 +1622,7 @@ HttpClient::update_document_view(Request& request, Response& response)
 
 
 void
-HttpClient::metadata_view(Request& request, Response& response)
+HttpClient::metadata_view(Request& request)
 {
 	L_CALL("HttpClient::metadata_view()");
 
@@ -1703,7 +1675,7 @@ HttpClient::metadata_view(Request& request, Response& response)
 		response_obj = response_obj.select(selector);
 	}
 
-	write_http_response(request, response, status_code, response_obj);
+	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Get metadata took %s", string::from_delta(took));
@@ -1718,34 +1690,34 @@ HttpClient::metadata_view(Request& request, Response& response)
 
 
 void
-HttpClient::write_metadata_view(Request& request, Response& response)
+HttpClient::write_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::write_metadata_view()");
 
-	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::update_metadata_view(Request& request, Response& response)
+HttpClient::update_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::update_metadata_view()");
 
-	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::delete_metadata_view(Request& request, Response& response)
+HttpClient::delete_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::delete_metadata_view()");
 
-	write_http_response(request, response, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
 void
-HttpClient::info_view(Request& request, Response& response)
+HttpClient::info_view(Request& request)
 {
 	L_CALL("HttpClient::info_view()");
 
@@ -1785,7 +1757,7 @@ HttpClient::info_view(Request& request, Response& response)
 		response_obj = response_obj.select(selector);
 	}
 
-	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Info took %s", string::from_delta(took));
@@ -1800,18 +1772,18 @@ HttpClient::info_view(Request& request, Response& response)
 
 
 void
-HttpClient::nodes_view(Request& request, Response& response)
+HttpClient::nodes_view(Request& request)
 {
 	L_CALL("HttpClient::nodes_view()");
 
 	request.path_parser.next();
 	if (request.path_parser.next() != PathParser::State::END) {
-		write_status_response(request, response, HTTP_STATUS_NOT_FOUND);
+		write_status_response(request, HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
 	if ((request.path_parser.len_pth != 0u) || (request.path_parser.len_pmt != 0u) || (request.path_parser.len_ppmt != 0u)) {
-		write_status_response(request, response, HTTP_STATUS_NOT_FOUND);
+		write_status_response(request, HTTP_STATUS_NOT_FOUND);
 		return;
 	}
 
@@ -1837,7 +1809,7 @@ HttpClient::nodes_view(Request& request, Response& response)
 	}
 #endif
 
-	write_http_response(request, response, HTTP_STATUS_OK, {
+	write_http_response(request, HTTP_STATUS_OK, {
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
 		{ RESPONSE_NODES, nodes },
 	});
@@ -1845,7 +1817,7 @@ HttpClient::nodes_view(Request& request, Response& response)
 
 
 void
-HttpClient::touch_view(Request& request, Response& response)
+HttpClient::touch_view(Request& request)
 {
 	L_CALL("HttpClient::touch_view()");
 
@@ -1862,7 +1834,7 @@ HttpClient::touch_view(Request& request, Response& response)
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
-	write_http_response(request, response, HTTP_STATUS_CREATED, response_obj);
+	write_http_response(request, HTTP_STATUS_CREATED, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Touch took %s", string::from_delta(took));
@@ -1877,7 +1849,7 @@ HttpClient::touch_view(Request& request, Response& response)
 
 
 void
-HttpClient::commit_view(Request& request, Response& response)
+HttpClient::commit_view(Request& request)
 {
 	L_CALL("HttpClient::commit_view()");
 
@@ -1894,7 +1866,7 @@ HttpClient::commit_view(Request& request, Response& response)
 	MsgPack response_obj;
 	response_obj[RESPONSE_ENDPOINT] = endpoints.to_string();
 
-	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Commit took %s", string::from_delta(took));
@@ -1909,7 +1881,7 @@ HttpClient::commit_view(Request& request, Response& response)
 
 
 void
-HttpClient::dump_view(Request& request, Response& response)
+HttpClient::dump_view(Request& request)
 {
 	L_CALL("HttpClient::dump_view()");
 
@@ -1930,7 +1902,7 @@ HttpClient::dump_view(Request& request, Response& response)
 				{ RESPONSE_STATUS, (int)error_code },
 				{ RESPONSE_MESSAGE, { "Response type application/octet-stream not provided in the Accept header" } }
 			};
-			write_http_response(request, response, error_code, err_response);
+			write_http_response(request, error_code, err_response);
 			L_SEARCH("ABORTED SEARCH");
 			return;
 		}
@@ -1949,7 +1921,7 @@ HttpClient::dump_view(Request& request, Response& response)
 
 		size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
 		io::close(file_descriptor);
-		write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", dump_ct_type.to_string(), "", content_length));
+		write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", dump_ct_type.to_string(), "", content_length));
 		write_file(path, true);
 		return;
 	}
@@ -1958,7 +1930,7 @@ HttpClient::dump_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, docs);
+	write_http_response(request, HTTP_STATUS_OK, docs);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Dump took %s", string::from_delta(took));
@@ -1973,7 +1945,7 @@ HttpClient::dump_view(Request& request, Response& response)
 
 
 void
-HttpClient::restore_view(Request& request, Response& response)
+HttpClient::restore_view(Request& request)
 {
 	L_CALL("HttpClient::restore_view()");
 
@@ -1996,7 +1968,7 @@ HttpClient::restore_view(Request& request, Response& response)
 		{ RESPONSE_ENDPOINT, endpoints.to_string() },
 	};
 
-	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	L_TIME("Restore took %s", string::from_delta(took));
 
@@ -2010,7 +1982,7 @@ HttpClient::restore_view(Request& request, Response& response)
 
 
 void
-HttpClient::schema_view(Request& request, Response& response)
+HttpClient::schema_view(Request& request)
 {
 	L_CALL("HttpClient::schema_view()");
 
@@ -2042,7 +2014,7 @@ HttpClient::schema_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, schema);
+	write_http_response(request, HTTP_STATUS_OK, schema);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Schema took %s", string::from_delta(took));
@@ -2058,7 +2030,7 @@ HttpClient::schema_view(Request& request, Response& response)
 
 #if XAPIAND_DATABASE_WAL
 void
-HttpClient::wal_view(Request& request, Response& response)
+HttpClient::wal_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -2074,7 +2046,7 @@ HttpClient::wal_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, repr);
+	write_http_response(request, HTTP_STATUS_OK, repr);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("WAL took %s", string::from_delta(took));
@@ -2090,7 +2062,7 @@ HttpClient::wal_view(Request& request, Response& response)
 
 
 void
-HttpClient::check_view(Request& request, Response& response)
+HttpClient::check_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -2104,7 +2076,7 @@ HttpClient::check_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, response, HTTP_STATUS_OK, status);
+	write_http_response(request, HTTP_STATUS_OK, status);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Database check took %s", string::from_delta(took));
@@ -2119,7 +2091,7 @@ HttpClient::check_view(Request& request, Response& response)
 
 
 void
-HttpClient::retrieve_view(Request& request, Response& response)
+HttpClient::retrieve_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_view()");
 
@@ -2161,7 +2133,7 @@ HttpClient::retrieve_view(Request& request, Response& response)
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, { "Response type not accepted by the Accept header" } }
 		};
-		write_http_response(request, response, error_code, err_response);
+		write_http_response(request, error_code, err_response);
 		L_SEARCH("ABORTED RETRIEVE");
 		return;
 	}
@@ -2183,32 +2155,32 @@ HttpClient::retrieve_view(Request& request, Response& response)
 
 		request.ready = std::chrono::system_clock::now();
 
-		write_http_response(request, response, HTTP_STATUS_OK, obj);
+		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
-		response.blob = locator.data();
+		request.response.blob = locator.data();
 #ifdef XAPIAND_DATA_STORAGE
 		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
-			if (response.blob.empty()) {
+			if (request.response.blob.empty()) {
 				auto stored = db_handler.storage_get_stored(locator, did);
-				response.blob = unserialise_string_at(STORED_BLOB, stored);
+				request.response.blob = unserialise_string_at(STORED_BLOB, stored);
 			}
 		}
 #endif
 
 		request.ready = std::chrono::system_clock::now();
 
-		response.ct_type = ct_type;
+		request.response.ct_type = ct_type;
 		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, request.type_encoding, response.blob, false, true, true);
-			if (!encoded.empty() && encoded.size() <= response.blob.size()) {
-				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(request.type_encoding)));
+			auto encoded = encoding_http_response(request.response, request.type_encoding, request.response.blob, false, true, true);
+			if (!encoded.empty() && encoded.size() <= request.response.blob.size()) {
+				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
+				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, request.response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, response, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, response.blob, ct_type.to_string()));
+			write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, request.response.blob, ct_type.to_string()));
 		}
 	}
 
@@ -2227,7 +2199,7 @@ HttpClient::retrieve_view(Request& request, Response& response)
 
 
 void
-HttpClient::search_view(Request& request, Response& response)
+HttpClient::search_view(Request& request)
 {
 	L_CALL("HttpClient::search_view()");
 
@@ -2333,11 +2305,11 @@ HttpClient::search_view(Request& request, Response& response)
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Searching took %s", string::from_delta(took));
 
-	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		response.text += obj.to_string(DEFAULT_INDENTATION);
+	if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
+		request.response.text += obj.to_string(DEFAULT_INDENTATION);
 	}
 
-	write_http_response(request, response, HTTP_STATUS_OK, obj);
+	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	if (aggregations) {
 		Metrics::metrics()
@@ -2360,7 +2332,7 @@ HttpClient::search_view(Request& request, Response& response)
 
 
 void
-HttpClient::count_view(Request& request, Response& response)
+HttpClient::count_view(Request& request)
 {
 	L_CALL("HttpClient::count_view()");
 
@@ -2387,7 +2359,6 @@ HttpClient::count_view(Request& request, Response& response)
 			mset = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
-
 			mset = db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
 	} catch (const NotFoundError&) {
@@ -2402,20 +2373,20 @@ HttpClient::count_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 
-	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		response.text += obj.to_string(DEFAULT_INDENTATION);
+	if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
+		request.response.text += obj.to_string(DEFAULT_INDENTATION);
 	}
 
-	write_http_response(request, response, HTTP_STATUS_OK, obj);
+	write_http_response(request, HTTP_STATUS_OK, obj);
 }
 
 
 void
-HttpClient::write_status_response(Request& request, Response& response, enum http_status status, const std::string& message)
+HttpClient::write_status_response(Request& request, enum http_status status, const std::string& message)
 {
 	L_CALL("HttpClient::write_status_response()");
 
-	write_http_response(request, response, status, {
+	write_http_response(request, status, {
 		{ RESPONSE_STATUS, (int)status },
 		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
@@ -2793,7 +2764,7 @@ HttpClient::log_response(Response& response)
 
 
 void
-HttpClient::clean_http_request(Request& request, Response& response)
+HttpClient::clean_http_request(Request& request)
 {
 	L_CALL("HttpClient::clean_http_request()");
 
@@ -2811,25 +2782,25 @@ HttpClient::clean_http_request(Request& request, Response& response)
 		auto fmt = fmt_defaut.c_str();
 		int priority = LOG_DEBUG;
 
-		if ((int)response.status >= 200 && (int)response.status <= 299) {
+		if ((int)request.response.status >= 200 && (int)request.response.status <= 299) {
 			static constexpr auto fmt_2xx = WHITE + "\"%s\" %d %s %s";
 			fmt = fmt_2xx.c_str();
-		} else if ((int)response.status >= 300 && (int)response.status <= 399) {
+		} else if ((int)request.response.status >= 300 && (int)request.response.status <= 399) {
 			static constexpr auto fmt_3xx = STEEL_BLUE + "\"%s\" %d %s %s";
 			fmt = fmt_3xx.c_str();
-		} else if ((int)response.status >= 400 && (int)response.status <= 499) {
+		} else if ((int)request.response.status >= 400 && (int)request.response.status <= 499) {
 			static constexpr auto fmt_4xx = SADDLE_BROWN + "\"%s\" %d %s %s";
 			fmt = fmt_4xx.c_str();
-			if ((int)response.status != 404) {
+			if ((int)request.response.status != 404) {
 				priority = LOG_INFO;
 			}
-		} else if ((int)response.status >= 500 && (int)response.status <= 599) {
+		} else if ((int)request.response.status >= 500 && (int)request.response.status <= 599) {
 			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"%s\" %d %s %s";
 			fmt = fmt_5xx.c_str();
 			priority = LOG_NOTICE;
 		}
 		if (Logging::log_level > LOG_DEBUG) {
-			log_response(response);
+			log_response(request.response);
 		}
 
 		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count();
@@ -2837,11 +2808,11 @@ HttpClient::clean_http_request(Request& request, Response& response)
 			.xapiand_http_requests_summary
 			.Add({
 				{"method", http_method_str(HTTP_PARSER_METHOD(&request.parser))},
-				{"status", string::Number(response.status).str()},
+				{"status", string::Number(request.response.status).str()},
 			})
 			.Observe(took / 1e9);
 
-		L(priority, NO_COLOR, fmt, request.head(), (int)response.status, string::from_bytes(response.size), string::from_delta(request.begins, request.ends));
+		L(priority, NO_COLOR, fmt, request.head(), (int)request.response.status, string::from_bytes(request.response.size), string::from_delta(request.begins, request.ends));
 	}
 
 	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
@@ -2978,12 +2949,12 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 
 
 void
-HttpClient::write_http_response(Request& request, Response& response, enum http_status status, const MsgPack& obj)
+HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj)
 {
 	L_CALL("HttpClient::write_http_response()");
 
 	if (obj.is_undefined()) {
-		write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE));
+		write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE));
 		return;
 	}
 
@@ -2997,30 +2968,30 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 
 	try {
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
-		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
+		if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
-				response.text.append(obj.to_string(DEFAULT_INDENTATION));
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
-				response.text.append(obj.to_string(DEFAULT_INDENTATION));
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, x_msgpack_type) != nullptr) {
-				response.text.append(obj.to_string(DEFAULT_INDENTATION));
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, html_type) != nullptr) {
-				response.text.append(obj.to_string(DEFAULT_INDENTATION));
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, text_type) != nullptr) {
-				response.text.append(obj.to_string(DEFAULT_INDENTATION));
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (!obj.empty()) {
-				response.text.append("...");
+				request.response.text.append("...");
 			}
 		}
 		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, request.type_encoding, result.first, false, true, true);
+			auto encoded = encoding_http_response(request.response, request.type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
 		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
@@ -3030,14 +3001,14 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 		};
 		auto response_str = response_err.to_string();
 		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(response, request.type_encoding, response_str, false, true, true);
+			auto encoded = encoding_http_response(request.response, request.type_encoding, response_str, false, true, true);
 			if (!encoded.empty() && encoded.size() <= response_str.size()) {
-				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, accepted_type.to_string(), readable_encoding(request.type_encoding)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, accepted_type.to_string(), readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, response_str, accepted_type.to_string(), readable_encoding(Encoding::identity)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, response_str, accepted_type.to_string(), readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, response, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, response_str, accepted_type.to_string()));
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, response_str, accepted_type.to_string()));
 		}
 		return;
 	}
