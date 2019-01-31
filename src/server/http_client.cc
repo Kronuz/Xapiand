@@ -106,7 +106,6 @@ constexpr const char RESPONSE_AGGREGATIONS[]        = "#aggregations";
 constexpr const char RESPONSE_QUERY[]               = "#query";
 constexpr const char RESPONSE_MESSAGE[]             = "#message";
 constexpr const char RESPONSE_STATUS[]              = "#status";
-constexpr const char RESPONSE_TOOK[]                = "#took";
 constexpr const char RESPONSE_NODES[]               = "#nodes";
 constexpr const char RESPONSE_COMMIT[]              = "#commit";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
@@ -1988,11 +1987,9 @@ HttpClient::restore_view(Request& request, Response& response)
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	auto took_milliseconds = took / 1e6;
 
 	MsgPack response_obj = {
 		{ RESPONSE_ENDPOINT, endpoints.to_string() },
-		{ RESPONSE_TOOK, took_milliseconds },
 	};
 
 	write_http_response(request, response, HTTP_STATUS_OK, response_obj);
