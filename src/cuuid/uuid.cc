@@ -916,45 +916,6 @@ UUIDGenerator::newUUID()
 }
 
 
-// Android version that uses a call to a java api
-#elif defined UUID_ANDROID
-
-UUIDGenerator::UUIDGenerator(JNIEnv *env)
-{
-	_env = env;
-	_uuidClass = env->FindClass("java/util/UUID");
-	_newUUIDMethod = env->GetStaticMethodID(_uuidClass, "randomUUID", "()Ljava/util/UUID;");
-	_mostSignificantBitsMethod = env->GetMethodID(_uuidClass, "getMostSignificantBits", "()J");
-	_leastSignificantBitsMethod = env->GetMethodID(_uuidClass, "getLeastSignificantBits", "()J");
-}
-
-
-inline UUID
-UUIDGenerator::newUUID()
-{
-	jobject javaUuid = _env->CallStaticObjectMethod(_uuidClass, _newUUIDMethod);
-	jlong mostSignificant = _env->CallLongMethod(javaUuid, _mostSignificantBitsMethod);
-	jlong leastSignificant = _env->CallLongMethod(javaUuid, _leastSignificantBitsMethod);
-
-	return std::array<unsigned char, 16>{{
-		(mostSignificant >> 56) & 0xFF,
-		(mostSignificant >> 48) & 0xFF,
-		(mostSignificant >> 40) & 0xFF,
-		(mostSignificant >> 32) & 0xFF,
-		(mostSignificant >> 24) & 0xFF,
-		(mostSignificant >> 16) & 0xFF,
-		(mostSignificant >> 8) & 0xFF,
-		(mostSignificant) & 0xFF,
-		(leastSignificant >> 56) & 0xFF,
-		(leastSignificant >> 48) & 0xFF,
-		(leastSignificant >> 40) & 0xFF,
-		(leastSignificant >> 32) & 0xFF,
-		(leastSignificant >> 24) & 0xFF,
-		(leastSignificant >> 16) & 0xFF,
-		(leastSignificant >> 8) & 0xFF,
-		(leastSignificant) & 0xFF,
-	}};
-}
 #endif
 
 

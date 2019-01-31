@@ -31,10 +31,6 @@
 #include <string>          // for std::string
 #include "string_view.hh"  // for std::string_view
 
-#ifdef UUID_ANDROID
-#include <jni.h>
-#endif
-
 
 constexpr uint8_t UUID_LENGTH = 36;
 
@@ -164,20 +160,7 @@ class UUIDGenerator {
 	UUID newUUID();
 
 public:
-#ifdef UUID_ANDROID
-	explicit UUIDGenerator(JNIEnv* env);
-#else
 	UUIDGenerator() { }
-#endif
 
 	UUID operator ()(bool compact = true);
-
-#ifdef UUID_ANDROID
-private:
-	JNIEnv* _env;
-	jclass _uuidClass;
-	jmethodID _newUUIDMethod;
-	jmethodID _mostSignificantBitsMethod;
-	jmethodID _leastSignificantBitsMethod;
-#endif
 };
