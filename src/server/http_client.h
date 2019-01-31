@@ -41,6 +41,7 @@
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
+#include "lightweight_semaphore.h"          // for LightweightSemaphore
 #include "lru.h"                            // for LRU
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
@@ -220,10 +221,15 @@ public:
 		BAD_QUERY,
 	};
 
+	enum class Mode {
+		FULL,
+		STREAM,
+		STREAM_LINES,
+	} mode;
+
 	Response response;
 
 	view_function view;
-	bool streamed;  // streamed requests call their views before the whole body is received
 
 	Encoding type_encoding;
 
@@ -244,6 +250,7 @@ public:
 	bool ended;
 
 	std::string raw;
+	LightweightSemaphore raw_pending;
 	size_t raw_offset;
 	size_t raw_peek;
 
@@ -276,6 +283,7 @@ public:
 	Request& operator=(Request&&) = default;
 
 	void append(std::string_view str);
+	bool pending();
 
 	std::string_view read();
 	std::string_view read_line();

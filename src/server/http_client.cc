@@ -763,9 +763,9 @@ HttpClient::on_headers_complete(http_parser* parser)
 
 	prepare();  // Prepare the request view
 
-	if unlikely(!new_request->ending) {
-		if likely(!closed) {
-			if unlikely(new_request->streamed && new_request->view) {
+	if likely(!closed && !new_request->ending) {
+		if likely(new_request->view) {
+			if (new_request->mode != Request::Mode::FULL) {
 				std::lock_guard<std::mutex> lk(runner_mutex);
 				if (requests.empty() || new_request != requests.front()) {
 					requests.push_back(new_request);  // Enqueue streamed request
@@ -780,16 +780,22 @@ HttpClient::on_headers_complete(http_parser* parser)
 int
 HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
-	L_CALL("HttpClient::on_body(<parser>, <at>, <length>)");
+	L_STACKED_DIM_GREY("HttpClient::on_body(<parser>, <at>, %zu)", length);
 
 	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	if unlikely(!new_request->ending) {
-		new_request->append(std::string_view(at, length));
+	if likely(!closed && !new_request->ending) {
+		std::string_view raw(at, length);
+		new_request->append(raw);
 
-		if likely(!closed) {
-			if unlikely(new_request->streamed && new_request->view) {
+		if likely(new_request->view) {
+			if (
+				(new_request->mode == Request::Mode::STREAM) ||
+				(new_request->mode == Request::Mode::STREAM_LINES && raw.find_first_of('\n') != std::string_view::npos)
+			) {
+				new_request->raw_pending.signal();
+
 				std::lock_guard<std::mutex> lk(runner_mutex);
 				if (!running) {  // Start a runner if not running
 					running = true;
@@ -810,22 +816,22 @@ HttpClient::on_message_complete(http_parser* parser)
 	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	if unlikely(!new_request->ending) {
+	if likely(!closed && !new_request->ending) {
 		new_request->ending = true;
 
-		if likely(!closed) {
-			std::shared_ptr<Request> request = std::make_shared<Request>(this);
-			std::swap(new_request, request);
+		std::shared_ptr<Request> request = std::make_shared<Request>(this);
+		std::swap(new_request, request);
 
-			if (request->view) {
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (requests.empty() || request != requests.front()) {
-					requests.push_back(std::move(request));  // Enqueue request
-				}
-				if (!running) {  // Start a runner if not running
-					running = true;
-					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
-				}
+		if (request->view) {
+			request->raw_pending.signal();
+
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (requests.empty() || request != requests.front()) {
+				requests.push_back(std::move(request));  // Enqueue request
+			}
+			if (!running) {  // Start a runner if not running
+				running = true;
+				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
 			}
 		}
 	}
@@ -1116,7 +1122,7 @@ HttpClient::_prepare_post()
 		case Request::Command::CMD_RESTORE:
 			new_request->path_parser.skip_id();  // Command has no ID
 			if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
-				new_request->streamed = true;
+				new_request->mode = Request::Mode::STREAM_LINES;
 			}
 			return &HttpClient::restore_view;
 		case Request::Command::CMD_QUIT:
@@ -1317,6 +1323,15 @@ HttpClient::operator()()
 		}
 
 		lk.unlock();
+
+		request.raw_pending.wait();
+		// if (!request.raw_pending.wait(100000)) {
+		// }
+		if (!request.pending()) {
+			lk.lock();
+			continue;
+		}
+
 		try {
 			process(request);
 		} catch (...) {
@@ -1980,7 +1995,8 @@ HttpClient::restore_view(Request& request)
 		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
 	}
 
-	if (request.streamed) {  // for application/x-ndjson
+	if (request.mode == Request::Mode::STREAM_LINES) {
+		// for application/x-ndjson
 		auto line = request.read_line();
 		while (!line.empty()) {
 			request.indexer->prepare(request.decode(line));
@@ -3188,8 +3204,8 @@ HttpClient::__repr__() const
 
 
 Request::Request(HttpClient* client)
-	: view{nullptr},
-	  streamed{false},
+	: mode{Mode::FULL},
+	  view{nullptr},
 	  type_encoding{Encoding::none},
 	  starting{true},
 	  ending{false},
@@ -3243,7 +3259,7 @@ Request::decode(std::string_view body)
 	switch (_.fhhl(ct_type_str)) {
 		case _.fhhl(NDJSON_CONTENT_TYPE):
 		case _.fhhl(X_NDJSON_CONTENT_TYPE):
-			if (!streamed) {
+			if (mode == Mode::STREAM_LINES) {
 				decoded = MsgPack(MsgPack::Type::ARRAY);
 				for (auto json : Split<std::string_view>(body, '\n')) {
 					json_load(rdoc, json);
@@ -3301,6 +3317,15 @@ Request::append(std::string_view str)
 	L_CALL("Request::append()");
 
 	raw.append(str);
+}
+
+
+bool
+Request::pending()
+{
+	L_CALL("Request::pending()");
+
+	return raw_offset < raw.size();
 }
 
 
