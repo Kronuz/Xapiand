@@ -222,7 +222,7 @@ public:
 	Response response;
 
 	view_function view;
-	bool immediate_view;  // immediate views are called before the whole body is received
+	bool streamed;  // streamed requests call their views before the whole body is received
 
 	Encoding type_encoding;
 

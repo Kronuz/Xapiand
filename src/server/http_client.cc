@@ -3138,7 +3138,7 @@ HttpClient::__repr__() const
 
 Request::Request(HttpClient* client)
 	: view{nullptr},
-	  immediate_view{false},
+	  streamed{false},
 	  type_encoding{Encoding::none},
 	  ending{false},
 	  indented{-1},
