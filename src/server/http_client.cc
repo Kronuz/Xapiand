@@ -3163,66 +3163,77 @@ Request::~Request() noexcept
 }
 
 
-void
-Request::_decode()
+MsgPack
+Request::decode(std::string_view body)
 {
-	L_CALL("Request::decode()");
+	L_CALL("Request::decode(%s)", repr(body));
 
-	if (!raw.empty() && _decoded_body.is_undefined()) {
-		// Create a decoded MsgPack object from the raw body
+	std::string ct_type_str = ct_type.to_string();
+	if (ct_type_str.empty()) {
+		ct_type_str = JSON_CONTENT_TYPE;
+	}
 
-		std::string ct_type_str = ct_type.to_string();
-		if (ct_type_str.empty()) {
-			ct_type_str = JSON_CONTENT_TYPE;
-		}
+	MsgPack decoded;
+	rapidjson::Document rdoc;
 
-		rapidjson::Document rdoc;
-
-		constexpr static auto _ = phf::make_phf({
-			hhl(JSON_CONTENT_TYPE),
-			hhl(MSGPACK_CONTENT_TYPE),
-			hhl(X_MSGPACK_CONTENT_TYPE),
-			hhl(NDJSON_CONTENT_TYPE),
-			hhl(X_NDJSON_CONTENT_TYPE),
-			hhl(FORM_URLENCODED_CONTENT_TYPE),
-			hhl(X_FORM_URLENCODED_CONTENT_TYPE),
-		});
-		switch (_.fhhl(ct_type_str)) {
-			case _.fhhl(JSON_CONTENT_TYPE):
-				json_load(rdoc, raw);
-				_decoded_body = MsgPack(rdoc);
+	constexpr static auto _ = phf::make_phf({
+		hhl(JSON_CONTENT_TYPE),
+		hhl(MSGPACK_CONTENT_TYPE),
+		hhl(X_MSGPACK_CONTENT_TYPE),
+		hhl(NDJSON_CONTENT_TYPE),
+		hhl(X_NDJSON_CONTENT_TYPE),
+		hhl(FORM_URLENCODED_CONTENT_TYPE),
+		hhl(X_FORM_URLENCODED_CONTENT_TYPE),
+	});
+	switch (_.fhhl(ct_type_str)) {
+		case _.fhhl(JSON_CONTENT_TYPE):
+			json_load(rdoc, body);
+			decoded = MsgPack(rdoc);
+			ct_type = json_type;
+			return decoded;
+		case _.fhhl(NDJSON_CONTENT_TYPE):
+		case _.fhhl(X_NDJSON_CONTENT_TYPE):
+			decoded = MsgPack(MsgPack::Type::ARRAY);
+			ct_type = json_type;
+			for (auto json : Split<std::string_view>(body, '\n')) {
+				json_load(rdoc, json);
+				decoded.append(rdoc);
+			}
+			return decoded;
+		case _.fhhl(MSGPACK_CONTENT_TYPE):
+		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
+			decoded = MsgPack::unserialise(body);
+			ct_type = msgpack_type;
+			return decoded;
+		case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
+		case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
+			try {
+				json_load(rdoc, body);
+				decoded = MsgPack(rdoc);
 				ct_type = json_type;
-				break;
-			case _.fhhl(NDJSON_CONTENT_TYPE):
-			case _.fhhl(X_NDJSON_CONTENT_TYPE):
-				_decoded_body = MsgPack(MsgPack::Type::ARRAY);
-				ct_type = json_type;
-				for (auto json : Split<std::string_view>(raw, '\n')) {
-					json_load(rdoc, json);
-					_decoded_body.append(rdoc);
-				}
-				break;
-			case _.fhhl(MSGPACK_CONTENT_TYPE):
-			case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-				_decoded_body = MsgPack::unserialise(raw);
+			} catch (const std::exception&) {
+				decoded = MsgPack(body);
 				ct_type = msgpack_type;
-				break;
-			case _.fhhl(FORM_URLENCODED_CONTENT_TYPE):
-			case _.fhhl(X_FORM_URLENCODED_CONTENT_TYPE):
-				try {
-					json_load(rdoc, raw);
-					_decoded_body = MsgPack(rdoc);
-					ct_type = json_type;
-				} catch (const std::exception&) {
-					_decoded_body = MsgPack(raw);
-					ct_type = msgpack_type;
-				}
-				break;
-			default:
-				_decoded_body = MsgPack(raw);
-				break;
+			}
+			return decoded;
+		default:
+			decoded = MsgPack(body);
+			return decoded;
+	}
+}
+
+
+MsgPack&
+Request::decoded_body()
+{
+	L_CALL("Request::decoded_body()");
+
+	if (_decoded_body.is_undefined()) {
+		if (!raw.empty()) {
+			_decoded_body = decode(raw);
 		}
 	}
+	return _decoded_body;
 }
 
 

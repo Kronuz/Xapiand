@@ -207,6 +207,8 @@ public:
 
 
 class Request {
+	MsgPack _decoded_body;
+
 public:
 	enum class Command : uint32_t {
 		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
@@ -217,12 +219,6 @@ public:
 		BAD_QUERY,
 	};
 
-private:
-	MsgPack _decoded_body;
-
-	void _decode();
-
-public:
 	Response response;
 
 	view_function view;
@@ -274,10 +270,8 @@ public:
 
 	void append(std::string_view str);
 
-	MsgPack& decoded_body() {
-		_decode();
-		return _decoded_body;
-	}
+	MsgPack decode(std::string_view body);
+	MsgPack& decoded_body();
 
 	std::string head();
 
