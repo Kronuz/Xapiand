@@ -919,6 +919,12 @@ HttpClient::prepare()
 	if (new_request->parser.http_major == 0 || (new_request->parser.http_major == 1 && new_request->parser.http_minor == 0)) {
 		new_request->closing = true;
 	}
+	if ((new_request->parser.flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) {
+		new_request->closing = false;
+	}
+	if ((new_request->parser.flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) {
+		new_request->closing = true;
+	}
 
 	if (new_request->accept_set.empty()) {
 		if (!new_request->ct_type.empty()) {
