@@ -184,7 +184,7 @@ class Response {
 public:
 	std::string head;
 	std::string headers;
-	std::string body;
+	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
 
 	ct_type_t ct_type;
 	std::string blob;
@@ -238,7 +238,8 @@ public:
 	struct http_parser parser;
 
 	std::string headers;
-	std::string body;
+	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
+
 	std::atomic_bool complete;   // complete requests have received all body
 
 	std::string raw;

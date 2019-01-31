@@ -282,7 +282,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 	std::string headers;
 	std::string head_sep;
 	std::string headers_sep;
-	std::string response_text;
+	std::string response_body;
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
 		response.status = status;
@@ -342,10 +342,10 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 	}
 
 	if ((mode & HTTP_BODY_RESPONSE) != 0) {
-		response_text += body;
+		response_body += body;
 	}
 
-	auto this_response_size = response_text.size();
+	auto this_response_size = response_body.size();
 	response.size += this_response_size;
 
 	if (Logging::log_level > LOG_DEBUG) {
@@ -353,7 +353,7 @@ HttpClient::http_response(Request& request, Response& response, enum http_status
 		response.headers += headers;
 	}
 
-	return head + head_sep + headers + headers_sep + response_text;
+	return head + head_sep + headers + headers_sep + response_body;
 }
 
 
@@ -2334,7 +2334,7 @@ HttpClient::search_view(Request& request, Response& response)
 	L_TIME("Searching took %s", string::from_delta(took));
 
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		response.body += obj.to_string(DEFAULT_INDENTATION);
+		response.text += obj.to_string(DEFAULT_INDENTATION);
 	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, obj);
@@ -2403,7 +2403,7 @@ HttpClient::count_view(Request& request, Response& response)
 	request.ready = std::chrono::system_clock::now();
 
 	if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
-		response.body += obj.to_string(DEFAULT_INDENTATION);
+		response.text += obj.to_string(DEFAULT_INDENTATION);
 	}
 
 	write_http_response(request, response, HTTP_STATUS_OK, obj);
@@ -2999,17 +2999,17 @@ HttpClient::write_http_response(Request& request, Response& response, enum http_
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
 		if (Logging::log_level > LOG_DEBUG && response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
-				response.body.append(obj.to_string(DEFAULT_INDENTATION));
+				response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
-				response.body.append(obj.to_string(DEFAULT_INDENTATION));
+				response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, x_msgpack_type) != nullptr) {
-				response.body.append(obj.to_string(DEFAULT_INDENTATION));
+				response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, html_type) != nullptr) {
-				response.body.append(obj.to_string(DEFAULT_INDENTATION));
+				response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, text_type) != nullptr) {
-				response.body.append(obj.to_string(DEFAULT_INDENTATION));
+				response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (!obj.empty()) {
-				response.body.append("...");
+				response.text.append("...");
 			}
 		}
 		if (request.type_encoding != Encoding::none) {
@@ -3258,7 +3258,7 @@ Request::to_text(bool decode)
 	static constexpr auto no_col = NO_COLOR;
 	auto request_headers_color = no_col.c_str();
 	auto request_head_color = no_col.c_str();
-	auto request_body_color = no_col.c_str();
+	auto request_text_color = no_col.c_str();
 
 	switch (HTTP_PARSER_METHOD(&parser)) {
 		case HTTP_OPTIONS: {
@@ -3267,8 +3267,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(30, 77, 124);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(30, 77, 124);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(30, 77, 124);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_HEAD: {
@@ -3277,8 +3277,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(100, 64, 131);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(100, 64, 131);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(100, 64, 131);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_GET: {
@@ -3287,8 +3287,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(34, 113, 191);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(34, 113, 191);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(34, 113, 191);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_POST: {
@@ -3297,8 +3297,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(55, 100, 79);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(55, 100, 79);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(55, 100, 79);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_PATCH: {
@@ -3307,8 +3307,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(51, 136, 116);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(51, 136, 116);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_MERGE: {
@@ -3317,8 +3317,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(51, 136, 116);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(51, 136, 116);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_STORE: {
@@ -3327,8 +3327,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(51, 136, 116);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(51, 136, 116);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(51, 136, 116);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_PUT: {
@@ -3337,8 +3337,8 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(158, 95, 28);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(158, 95, 28);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(158, 95, 28);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		case HTTP_DELETE: {
@@ -3347,15 +3347,15 @@ Request::to_text(bool decode)
 			request_headers_color = _request_headers_color.c_str();
 			static constexpr auto _request_head_color = brgb(151, 31, 34);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_body_color = rgb(151, 31, 34);
-			request_body_color = _request_body_color.c_str();
+			static constexpr auto _request_text_color = rgb(151, 31, 34);
+			request_text_color = _request_text_color.c_str();
 			break;
 		}
 		default:
 			break;
 	};
 
-	auto request_text = request_head_color + head() + "\n" + request_headers_color + headers + request_body_color;
+	auto request_text = request_head_color + head() + "\n" + request_headers_color + headers + request_text_color;
 	if (!raw.empty()) {
 		if (!decode) {
 			if (raw.size() > 1024 * 10) {
@@ -3384,17 +3384,17 @@ Request::to_text(bool decode)
 				}
 			}
 		}
-	} else if (!body.empty()) {
+	} else if (!text.empty()) {
 		if (!decode) {
-			if (body.size() > 1024 * 10) {
-				request_text += "<body " + string::from_bytes(body.size()) + ">";
+			if (text.size() > 1024 * 10) {
+				request_text += "<body " + string::from_bytes(text.size()) + ">";
 			} else {
-				request_text += "<body " + repr(body, true, true, 500) + ">";
+				request_text += "<body " + repr(text, true, true, 500) + ">";
 			}
-		} else if (body.size() > 1024 * 10) {
-			request_text += "<body " + string::from_bytes(body.size()) + ">";
+		} else if (text.size() > 1024 * 10) {
+			request_text += "<body " + string::from_bytes(text.size()) + ">";
 		} else {
-			request_text += body;
+			request_text += text;
 		}
 	}
 
@@ -3415,46 +3415,46 @@ Response::to_text(bool decode)
 	static constexpr auto no_col = NO_COLOR;
 	auto response_headers_color = no_col.c_str();
 	auto response_head_color = no_col.c_str();
-	auto response_body_color = no_col.c_str();
+	auto response_text_color = no_col.c_str();
 
 	if ((int)status >= 200 && (int)status <= 299) {
 		static constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		static constexpr auto _response_head_color = brgb(68, 136, 68);
 		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(68, 136, 68);
-		response_body_color = _response_body_color.c_str();
+		static constexpr auto _response_text_color = rgb(68, 136, 68);
+		response_text_color = _response_text_color.c_str();
 	} else if ((int)status >= 300 && (int)status <= 399) {
 		static constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		static constexpr auto _response_head_color = brgb(68, 136, 120);
 		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(68, 136, 120);
-		response_body_color = _response_body_color.c_str();
+		static constexpr auto _response_text_color = rgb(68, 136, 120);
+		response_text_color = _response_text_color.c_str();
 	} else if ((int)status == 404) {
 		static constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		static constexpr auto _response_head_color = brgb(116, 100, 77);
 		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(116, 100, 77);
-		response_body_color = _response_body_color.c_str();
+		static constexpr auto _response_text_color = rgb(116, 100, 77);
+		response_text_color = _response_text_color.c_str();
 	} else if ((int)status >= 400 && (int)status <= 499) {
 		static constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		static constexpr auto _response_head_color = brgb(183, 70, 17);
 		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(183, 70, 17);
-		response_body_color = _response_body_color.c_str();
+		static constexpr auto _response_text_color = rgb(183, 70, 17);
+		response_text_color = _response_text_color.c_str();
 	} else if ((int)status >= 500 && (int)status <= 599) {
 		static constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
 		response_headers_color = _response_headers_color.c_str();
 		static constexpr auto _response_head_color = brgb(190, 30, 10);
 		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_body_color = rgb(190, 30, 10);
-		response_body_color = _response_body_color.c_str();
+		static constexpr auto _response_text_color = rgb(190, 30, 10);
+		response_text_color = _response_text_color.c_str();
 	}
 
-	auto response_text = response_head_color + head + "\n" + response_headers_color + headers + response_body_color;
+	auto response_text = response_head_color + head + "\n" + response_headers_color + headers + response_text_color;
 	if (!blob.empty()) {
 		if (!decode) {
 			if (blob.size() > 1024 * 10) {
@@ -3478,17 +3478,17 @@ Response::to_text(bool decode)
 				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
 			}
 		}
-	} else if (!body.empty()) {
+	} else if (!text.empty()) {
 		if (!decode) {
 			if (size > 1024 * 10) {
 				response_text += "<body " + string::from_bytes(size) + ">";
 			} else {
-				response_text += "<body " + repr(body, true, true, 500) + ">";
+				response_text += "<body " + repr(text, true, true, 500) + ">";
 			}
 		} else if (size > 1024 * 10) {
 			response_text += "<body " + string::from_bytes(size) + ">";
 		} else {
-			response_text += body;
+			response_text += text;
 		}
 	}
 
