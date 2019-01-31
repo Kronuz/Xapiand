@@ -489,6 +489,21 @@ const http_parser_settings HttpClient::settings = {
 	HttpClient::chunk_complete_cb,
 };
 
+
+inline std::string readable_http_parser_flags(http_parser* parser) {
+	std::vector<std::string> values;
+	if ((parser->flags & F_CHUNKED) == F_CHUNKED) values.push_back("F_CHUNKED");
+	if ((parser->flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) values.push_back("F_CONNECTION_KEEP_ALIVE");
+	if ((parser->flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) values.push_back("F_CONNECTION_CLOSE");
+	if ((parser->flags & F_CONNECTION_UPGRADE) == F_CONNECTION_UPGRADE) values.push_back("F_CONNECTION_UPGRADE");
+	if ((parser->flags & F_TRAILING) == F_TRAILING) values.push_back("F_TRAILING");
+	if ((parser->flags & F_UPGRADE) == F_UPGRADE) values.push_back("F_UPGRADE");
+	if ((parser->flags & F_SKIPBODY) == F_SKIPBODY) values.push_back("F_SKIPBODY");
+	if ((parser->flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) values.push_back("F_CONTENTLENGTH");
+	return string::join(values, "|");
+}
+
+
 int
 HttpClient::message_begin_cb(http_parser* parser)
 {
@@ -763,7 +778,10 @@ HttpClient::on_headers_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_headers_complete(<parser>)");
 
-	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s, flags:[%s]}",
+		HttpParserStateNames(parser->state),
+		HttpParserHeaderStateNames(parser->header_state),
+		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
 	prepare();  // Prepare the request view
@@ -787,7 +805,11 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_body(<parser>, <at>, %zu)", length);
 
-	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_body {state:%s, header_state:%s, flags:[%s]}: %s",
+		HttpParserStateNames(parser->state),
+		HttpParserHeaderStateNames(parser->header_state),
+		readable_http_parser_flags(parser),
+		repr(at, length));
 	ignore_unused(parser);
 
 	if likely(!closed && !new_request->ending) {
@@ -818,7 +840,10 @@ HttpClient::on_message_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_message_complete(<parser>)");
 
-	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s, flags:[%s]}",
+		HttpParserStateNames(parser->state),
+		HttpParserHeaderStateNames(parser->header_state),
+		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
 	if likely(!closed && !new_request->ending) {
@@ -851,7 +876,10 @@ HttpClient::on_chunk_header(http_parser* parser)
 {
 	L_CALL("HttpClient::on_chunk_header(<parser>)");
 
-	L_HTTP_PROTO("on_chunk_header {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+	L_HTTP_PROTO("on_chunk_header {state:%s, header_state:%s, flags:[%s]}",
+		HttpParserStateNames(parser->state),
+		HttpParserHeaderStateNames(parser->header_state),
+		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
 	return 0;
@@ -862,7 +890,10 @@ HttpClient::on_chunk_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_chunk_complete(<parser>)");
 
-	L_HTTP_PROTO("on_chunk_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+	L_HTTP_PROTO("on_chunk_complete {state:%s, header_state:%s, flags:[%s]}",
+		HttpParserStateNames(parser->state),
+		HttpParserHeaderStateNames(parser->header_state),
+		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
 	return 0;
