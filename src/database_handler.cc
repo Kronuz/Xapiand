@@ -1899,13 +1899,13 @@ DocIndexer::prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj));
 	if (bulk_cnt == bulk.size()) {
-		if (XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			if (total == 0) {
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-			}
-			total += bulk_cnt;
-		} else {
+		total += bulk_cnt;
+		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			total -= bulk_cnt;
 			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+		}
+		if (total == bulk_cnt) {
+			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 		}
 		bulk_cnt = 0;
 		limit.wait();  // throttle the prepare
@@ -1919,14 +1919,15 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		if (XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			if (total == 0) {
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-			}
-			total += bulk_cnt;
-		} else {
+		total += bulk_cnt;
+		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			total -= bulk_cnt;
 			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 		}
+		if (total == bulk_cnt) {
+			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		}
+		bulk_cnt = 0;
 	}
 
 	ready.store(true, std::memory_order_release);
