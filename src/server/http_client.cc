@@ -1115,6 +1115,9 @@ HttpClient::_prepare_post()
 			return &HttpClient::dump_view;
 		case Request::Command::CMD_RESTORE:
 			new_request->path_parser.skip_id();  // Command has no ID
+			if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
+				new_request->streamed = true;
+			}
 			return &HttpClient::restore_view;
 		case Request::Command::CMD_QUIT:
 			if (opts.admin_commands) {
@@ -1969,35 +1972,48 @@ HttpClient::restore_view(Request& request)
 {
 	L_CALL("HttpClient::restore_view()");
 
-	endpoints_maker(request, true);
+	if (request.starting) {
+		endpoints_maker(request, true);
 
-	request.processing = std::chrono::system_clock::now();
+		request.processing = std::chrono::system_clock::now();
 
-	auto& docs = request.decoded_body();
-
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
-	for (auto& obj : docs) {
-		indexer->prepare(std::move(obj));
+		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
 	}
-	indexer->wait();
 
-	request.ready = std::chrono::system_clock::now();
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	if (request.streamed) {  // for application/x-ndjson
+		auto line = request.read_line();
+		while (!line.empty()) {
+			request.indexer->prepare(request.decode(line));
+			line = request.read_line();
+		}
+	} else {
+		auto& docs = request.decoded_body();
+		for (auto& obj : docs) {
+			request.indexer->prepare(std::move(obj));
+		}
+	}
 
-	MsgPack response_obj = {
-		{ RESPONSE_ENDPOINT, endpoints.to_string() },
-	};
+	if (request.ending) {
+		request.indexer->wait();
 
-	write_http_response(request, HTTP_STATUS_OK, response_obj);
+		request.ready = std::chrono::system_clock::now();
+		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 
-	L_TIME("Restore took %s", string::from_delta(took));
+		MsgPack response_obj = {
+			{ RESPONSE_ENDPOINT, endpoints.to_string() },
+		};
 
-	Metrics::metrics()
-		.xapiand_operations_summary
-		.Add({
-			{"operation", "restore"},
-		})
-		.Observe(took / 1e9);
+		write_http_response(request, HTTP_STATUS_OK, response_obj);
+
+		L_TIME("Restore took %s", string::from_delta(took));
+
+		Metrics::metrics()
+			.xapiand_operations_summary
+			.Add({
+				{"operation", "restore"},
+			})
+			.Observe(took / 1e9);
+	}
 }
 
 

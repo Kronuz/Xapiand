@@ -137,6 +137,8 @@ static const ct_type_t any_type(ANY_CONTENT_TYPE);
 static const ct_type_t html_type(HTML_CONTENT_TYPE);
 static const ct_type_t text_type(TEXT_CONTENT_TYPE);
 static const ct_type_t json_type(JSON_CONTENT_TYPE);
+static const ct_type_t ndjson_type(NDJSON_CONTENT_TYPE);
+static const ct_type_t x_ndjson_type(X_NDJSON_CONTENT_TYPE);
 static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
 static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
 static const std::vector<ct_type_t> msgpack_serializers({ json_type, msgpack_type, x_msgpack_type });

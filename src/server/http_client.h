@@ -47,6 +47,7 @@
 #include "url_parser.h"                     // for PathParser, QueryParser
 
 
+class DocIndexer;
 class UUIDGenerator;
 class Logging;
 class Worker;
@@ -262,6 +263,8 @@ public:
 	std::chrono::time_point<std::chrono::system_clock> processing;
 	std::chrono::time_point<std::chrono::system_clock> ready;
 	std::chrono::time_point<std::chrono::system_clock> ends;
+
+	std::shared_ptr<DocIndexer> indexer;
 
 	Request() : view{nullptr} { }
 	Request(class HttpClient* client);
