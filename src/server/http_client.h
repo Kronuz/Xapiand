@@ -243,6 +243,8 @@ public:
 	bool ended;
 
 	std::string raw;
+	size_t raw_offset;
+	size_t raw_peek;
 
 	ct_type_t ct_type;
 
@@ -271,6 +273,9 @@ public:
 	Request& operator=(Request&&) = default;
 
 	void append(std::string_view str);
+
+	std::string_view read();
+	std::string_view read_line();
 
 	MsgPack decode(std::string_view body);
 	MsgPack& decoded_body();

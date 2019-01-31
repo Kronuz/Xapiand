@@ -3178,6 +3178,8 @@ Request::Request(HttpClient* client)
 	  starting{true},
 	  ending{false},
 	  ended{false},
+	  raw_offset{0},
+	  raw_peek{0},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},
@@ -3283,6 +3285,37 @@ Request::append(std::string_view str)
 	L_CALL("Request::append()");
 
 	raw.append(str);
+}
+
+
+std::string_view
+Request::read()
+{
+	L_CALL("Request::read()");
+
+	auto body = std::string_view(raw).substr(raw_offset);
+	raw_offset = raw_peek = raw.size();
+	return body;
+}
+
+
+std::string_view
+Request::read_line()
+{
+	L_CALL("Request::read_line()");
+
+	auto new_raw_offset = raw.find_first_of('\n', raw_peek);
+	if (new_raw_offset != std::string::npos) {
+		auto line = std::string_view(raw).substr(raw_offset, new_raw_offset - raw_offset);
+		raw_offset = raw_peek = new_raw_offset + 1;
+		return line;
+	}
+	if (ending) {
+		auto line = std::string_view(raw).substr(raw_offset);
+		raw_offset = raw_peek = raw.size();
+		return line;
+	}
+	return "";
 }
 
 
