@@ -3223,19 +3223,22 @@ Request::decode(std::string_view body)
 		hhl(X_FORM_URLENCODED_CONTENT_TYPE),
 	});
 	switch (_.fhhl(ct_type_str)) {
+		case _.fhhl(NDJSON_CONTENT_TYPE):
+		case _.fhhl(X_NDJSON_CONTENT_TYPE):
+			if (!streamed) {
+				decoded = MsgPack(MsgPack::Type::ARRAY);
+				for (auto json : Split<std::string_view>(body, '\n')) {
+					json_load(rdoc, json);
+					decoded.append(rdoc);
+				}
+				ct_type = json_type;
+				return decoded;
+			}
+			/* FALLTHROUGH */
 		case _.fhhl(JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
 			decoded = MsgPack(rdoc);
 			ct_type = json_type;
-			return decoded;
-		case _.fhhl(NDJSON_CONTENT_TYPE):
-		case _.fhhl(X_NDJSON_CONTENT_TYPE):
-			decoded = MsgPack(MsgPack::Type::ARRAY);
-			ct_type = json_type;
-			for (auto json : Split<std::string_view>(body, '\n')) {
-				json_load(rdoc, json);
-				decoded.append(rdoc);
-			}
 			return decoded;
 		case _.fhhl(MSGPACK_CONTENT_TYPE):
 		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
