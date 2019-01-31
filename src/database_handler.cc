@@ -1842,7 +1842,19 @@ DocPreparer::operator()()
 	if (indexer->running) {
 		try {
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
-			indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
+			switch (obj.getType()) {
+				case MsgPack::Type::MAP:
+					indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
+					break;
+				case MsgPack::Type::ARRAY:
+					for (auto& o : obj) {
+						indexer->ready_queue.enqueue(db_handler.prepare_document(o));
+					}
+					break;
+				default:
+					L_ERR("Indexing object has an unsupported type: %s", obj.getStrType());
+					break;
+			}
 		} catch (...) {
 			L_EXC("ERROR: Cannot prepare document");
 			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
