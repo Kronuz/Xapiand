@@ -774,7 +774,7 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	new_request->raw.append(at, length);
+	new_request->append(std::string_view(at, length));
 
 	return 0;
 }
@@ -3213,6 +3213,13 @@ Request::_decode()
 				break;
 		}
 	}
+}
+
+
+void
+Request::append(std::string_view str)
+{
+	raw.append(str);
 }
 
 

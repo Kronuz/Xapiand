@@ -272,6 +272,8 @@ public:
 	Request& operator=(const Request&) = delete;
 	Request& operator=(Request&&) = default;
 
+	void append(std::string_view str);
+
 	MsgPack& decoded_body() {
 		_decode();
 		return _decoded_body;
