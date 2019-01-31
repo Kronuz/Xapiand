@@ -787,7 +787,7 @@ HttpClient::on_message_complete(http_parser* parser)
 	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	new_request->complete = true;
+	new_request->ending = true;
 
 	if (!closed) {
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
@@ -3140,7 +3140,7 @@ Request::Request(HttpClient* client)
 	: view{nullptr},
 	  immediate_view{false},
 	  type_encoding{Encoding::none},
-	  complete{false},
+	  ending{false},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},

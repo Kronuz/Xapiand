@@ -242,7 +242,7 @@ public:
 	std::string headers;
 	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
 
-	std::atomic_bool complete;   // complete requests have received all body
+	std::atomic_bool ending;  // ending requests have received all body
 
 	std::string raw;
 
