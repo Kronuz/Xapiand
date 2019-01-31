@@ -971,11 +971,11 @@ HttpClient::_prepare_head()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_NO_ID: {
+		case Command::NO_CMD_NO_ID: {
 			write_http_response(*new_request, HTTP_STATUS_OK);
 			return nullptr;
 		}
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::document_info_view;
 		default:
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -991,40 +991,40 @@ HttpClient::_prepare_get()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_NO_ID:
+		case Command::NO_CMD_NO_ID:
 			return &HttpClient::home_view;
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			if (!is_range(new_request->path_parser.get_id())) {
 				return &HttpClient::retrieve_view;
 			}
 			return &HttpClient::search_view;
-		case Request::Command::CMD_SEARCH:
+		case Command::CMD_SEARCH:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::search_view;
-		case Request::Command::CMD_COUNT:
+		case Command::CMD_COUNT:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::count_view;
-		case Request::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::schema_view;
 #if XAPIAND_DATABASE_WAL
-		case Request::Command::CMD_WAL:
+		case Command::CMD_WAL:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::wal_view;
 #endif
-		case Request::Command::CMD_CHECK:
+		case Command::CMD_CHECK:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::check_view;
-		case Request::Command::CMD_INFO:
+		case Command::CMD_INFO:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::info_view;
-		case Request::Command::CMD_METRICS:
+		case Command::CMD_METRICS:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::metrics_view;
-		case Request::Command::CMD_NODES:
+		case Command::CMD_NODES:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::nodes_view;
-		case Request::Command::CMD_METADATA:
+		case Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::metadata_view;
 		default:
@@ -1041,9 +1041,9 @@ HttpClient::_prepare_merge()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::update_document_view;
-		case Request::Command::CMD_METADATA:
+		case Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::update_metadata_view;
 		default:
@@ -1060,7 +1060,7 @@ HttpClient::_prepare_store()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::update_document_view;
 		default:
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1076,12 +1076,12 @@ HttpClient::_prepare_put()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::index_document_view;
-		case Request::Command::CMD_METADATA:
+		case Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::write_metadata_view;
-		case Request::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::write_schema_view;
 		default:
@@ -1098,34 +1098,34 @@ HttpClient::_prepare_post()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::index_document_view;
-		case Request::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::write_schema_view;
-		case Request::Command::CMD_SEARCH:
+		case Command::CMD_SEARCH:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::search_view;
-		case Request::Command::CMD_COUNT:
+		case Command::CMD_COUNT:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::count_view;
-		case Request::Command::CMD_TOUCH:
+		case Command::CMD_TOUCH:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::touch_view;
-		case Request::Command::CMD_COMMIT:
+		case Command::CMD_COMMIT:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::commit_view;
-		case Request::Command::CMD_DUMP:
+		case Command::CMD_DUMP:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::dump_view;
-		case Request::Command::CMD_RESTORE:
+		case Command::CMD_RESTORE:
 			new_request->path_parser.skip_id();  // Command has no ID
 			if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
 				new_request->mode = Request::Mode::STREAM_LINES;
 			}
 			return &HttpClient::restore_view;
-		case Request::Command::CMD_QUIT:
+		case Command::CMD_QUIT:
 			if (opts.admin_commands) {
 				XapiandManager::try_shutdown(true);
 				write_http_response(*new_request, HTTP_STATUS_OK);
@@ -1135,7 +1135,7 @@ HttpClient::_prepare_post()
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			return nullptr;
-		case Request::Command::CMD_FLUSH:
+		case Command::CMD_FLUSH:
 			if (opts.admin_commands) {
 				// Flush both databases and clients by default (unless one is specified)
 				new_request->query_parser.rewind();
@@ -1167,7 +1167,7 @@ HttpClient::_prepare_patch()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::update_document_view;
 		default:
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1183,12 +1183,12 @@ HttpClient::_prepare_delete()
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
-		case Request::Command::NO_CMD_ID:
+		case Command::NO_CMD_ID:
 			return &HttpClient::delete_document_view;
-		case Request::Command::CMD_METADATA:
+		case Command::CMD_METADATA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::delete_metadata_view;
-		case Request::Command::CMD_SCHEMA:
+		case Command::CMD_SCHEMA:
 			new_request->path_parser.skip_id();  // Command has no ID
 			return &HttpClient::delete_schema_view;
 		default:
@@ -2445,18 +2445,18 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 }
 
 
-Request::Command
+HttpClient::Command
 HttpClient::getCommand(std::string_view command_name)
 {
 	L_CALL("HttpClient::getCommand(%s)", repr(command_name));
 
 	static const auto _ = http_commands;
 
-	return static_cast<Request::Command>(_.fhhl(command_name));
+	return static_cast<Command>(_.fhhl(command_name));
 }
 
 
-Request::Command
+HttpClient::Command
 HttpClient::url_resolve(Request& request)
 {
 	L_CALL("HttpClient::url_resolve(request)");
@@ -2477,14 +2477,14 @@ HttpClient::url_resolve(Request& request)
 			normalize_path(path_str, path_str + path_size, path_buf_str);
 			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
 				if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
-					return Request::Command::BAD_QUERY;
+					return Command::BAD_QUERY;
 				}
 			}
 		}
 
 		if ((u.field_set & (1 <<  UF_QUERY)) != 0) {
 			if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
-				return Request::Command::BAD_QUERY;
+				return Command::BAD_QUERY;
 			}
 		}
 
@@ -2504,15 +2504,15 @@ HttpClient::url_resolve(Request& request)
 		}
 
 		if (request.path_parser.off_id != nullptr) {
-			return Request::Command::NO_CMD_ID;
+			return Command::NO_CMD_ID;
 		}
 
-		return Request::Command::NO_CMD_NO_ID;
+		return Command::NO_CMD_NO_ID;
 	}
 
 	L_HTTP_PROTO("Parsing not done");
 	// Bad query
-	return Request::Command::BAD_QUERY;
+	return Command::BAD_QUERY;
 }
 
 

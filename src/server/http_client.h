@@ -212,15 +212,6 @@ class Request {
 	MsgPack _decoded_body;
 
 public:
-	enum class Command : uint32_t {
-		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
-		COMMAND_OPTIONS()
-		#undef OPTION
-		NO_CMD_NO_ID,
-		NO_CMD_ID,
-		BAD_QUERY,
-	};
-
 	enum class Mode {
 		FULL,
 		STREAM,
@@ -301,9 +292,18 @@ public:
 class HttpClient : public MetaBaseClient<HttpClient> {
 	friend MetaBaseClient<HttpClient>;
 
+	enum class Command : uint32_t {
+		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
+		COMMAND_OPTIONS()
+		#undef OPTION
+		NO_CMD_NO_ID,
+		NO_CMD_ID,
+		BAD_QUERY,
+	};
+
 	bool is_idle() const;
 
-	Request::Command getCommand(std::string_view command_name);
+	Command getCommand(std::string_view command_name);
 
 	ssize_t on_read(const char* buf, ssize_t received);
 	void on_read_file(const char* buf, ssize_t received);
@@ -376,7 +376,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void check_view(Request& request);
 	void nodes_view(Request& request);
 
-	Request::Command url_resolve(Request& request);
+	Command url_resolve(Request& request);
 	void _endpoint_maker(Request& request, bool master);
 	void endpoints_maker(Request& request, bool master);
 	query_field_t query_field_maker(Request& request, int flags);
