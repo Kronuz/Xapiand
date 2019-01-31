@@ -308,8 +308,9 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	int flags;
 	enum http_method method;
 
-	std::atomic_size_t processed;
-	size_t total;
+	std::atomic_size_t _processed;
+	std::atomic_size_t _indexed;
+	size_t _total;
 	LightweightSemaphore limit;
 	LightweightSemaphore done;
 
@@ -324,10 +325,13 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 		endpoints{endpoints},
 		flags{flags},
 		method{method},
-		processed{0},
-		total{0},
+		_processed{0},
+		_indexed{0},
+		_total{0},
 		limit{limit_max},
 		bulk_cnt{0} { }
+
+	void _prepare(MsgPack&& obj);
 
 public:
 	template<typename... Args>
@@ -349,6 +353,18 @@ public:
 	bool wait(double timeout = -1.0);
 
 	void finish();
+
+	size_t processed() {
+		return _processed.load(std::memory_order_relaxed);
+	}
+
+	size_t indexed() {
+		return _indexed.load(std::memory_order_relaxed);
+	}
+
+	size_t total() {
+		return _total;
+	}
 };
 
 

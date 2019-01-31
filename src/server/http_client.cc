@@ -116,6 +116,9 @@ constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
 constexpr const char RESPONSE_SERVER[]              = "#server";
 constexpr const char RESPONSE_URL[]                 = "#url";
 constexpr const char RESPONSE_VERSIONS[]            = "#versions";
+constexpr const char RESPONSE_PROCESSED[]           = "#processed";
+constexpr const char RESPONSE_INDEXED[]             = "#indexed";
+constexpr const char RESPONSE_TOTAL[]               = "#total";
 
 static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
 static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
@@ -2026,6 +2029,9 @@ HttpClient::restore_view(Request& request)
 
 		MsgPack response_obj = {
 			{ RESPONSE_ENDPOINT, endpoints.to_string() },
+			{ RESPONSE_PROCESSED, request.indexer->processed() },
+			{ RESPONSE_INDEXED, request.indexer->indexed() },
+			{ RESPONSE_TOTAL, request.indexer->total() },
 		};
 
 		write_http_response(request, HTTP_STATUS_OK, response_obj);

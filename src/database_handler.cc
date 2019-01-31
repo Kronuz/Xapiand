@@ -999,7 +999,7 @@ DatabaseHandler::restore(int fd)
 			DatabaseHandler db_handler(endpoints, flags, method);
 			lock_database lk_db(&db_handler);
 			lk_db.unlock();
-			bool _ready = false;
+			bool ready_ = false;
 			while (true) {
 				if (XapiandManager::manager()->is_detaching()) {
 					thread_pool.finish();
@@ -1007,10 +1007,10 @@ DatabaseHandler::restore(int fd)
 				}
 				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 				queue.wait_dequeue(prepared);
-				if (!_ready) {
-					_ready = ready.load(std::memory_order_relaxed);
+				if (!ready_) {
+					ready_ = ready.load(std::memory_order_relaxed);
 				}
-				auto _processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
+				auto processed_ = processed.fetch_add(1, std::memory_order_acquire) + 1;
 
 				auto& term_id = std::get<0>(prepared);
 				auto& doc = std::get<1>(prepared);
@@ -1025,20 +1025,20 @@ DatabaseHandler::restore(int fd)
 					lk_db.unlock();
 				}
 
-				if (_ready) {
-					if (_processed >= total) {
+				if (ready_) {
+					if (processed_ >= total) {
 						queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
 						break;
 					}
-					if (_processed % (1024 * 16) == 0) {
-						L_INFO("%zu of %zu documents processed (%s)", _processed, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
+					if (processed_ % (1024 * 16) == 0) {
+						L_INFO("%zu of %zu documents processed (%s)", processed_, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				} else {
-					if (_processed % (limit_signal * 32) == 0) {
+					if (processed_ % (limit_signal * 32) == 0) {
 						limit.signal(limit_signal);
 					}
-					if (_processed % (1024 * 16) == 0) {
-						L_INFO("%zu documents processed (%s)", _processed, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
+					if (processed_ % (1024 * 16) == 0) {
+						L_INFO("%zu documents processed (%s)", processed_, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				}
 			}
@@ -1842,19 +1842,7 @@ DocPreparer::operator()()
 	if (indexer->running) {
 		try {
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
-			switch (obj.getType()) {
-				case MsgPack::Type::MAP:
-					indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
-					break;
-				case MsgPack::Type::ARRAY:
-					for (auto& o : obj) {
-						indexer->ready_queue.enqueue(db_handler.prepare_document(o));
-					}
-					break;
-				default:
-					L_ERR("Indexing object has an unsupported type: %s", obj.getStrType());
-					break;
-			}
+			indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
 		} catch (...) {
 			L_EXC("ERROR: Cannot prepare document");
 			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
@@ -1869,14 +1857,14 @@ DocIndexer::operator()()
 	L_CALL("DocIndexer::operator()()");
 
 	DatabaseHandler db_handler(endpoints, flags, method);
-	bool _ready = false;
+	bool ready_ = false;
 	while (running) {
 		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 		ready_queue.wait_dequeue(prepared);
-		if (!_ready) {
-			_ready = ready.load(std::memory_order_relaxed);
+		if (!ready_) {
+			ready_ = ready.load(std::memory_order_relaxed);
 		}
-		auto _processed = processed.fetch_add(1, std::memory_order_acquire) + 1;
+		auto processed_ = _processed.fetch_add(1, std::memory_order_acquire) + 1;
 
 		auto& term_id = std::get<0>(prepared);
 		auto& doc = std::get<1>(prepared);
@@ -1885,21 +1873,48 @@ DocIndexer::operator()()
 			try {
 				lock_database lk_db(&db_handler);
 				db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
+				++_indexed;
 			} catch (...) {
 				L_EXC("ERROR: Cannot replace document");
 			}
 		}
 
-		if (_ready) {
-			if (_processed >= total) {
+		if (ready_) {
+			if (processed_ >= _total) {
 				done.signal();
 				break;
 			}
 		} else {
-			if (_processed % (limit_signal * 32) == 0) {
+			if (processed_ % (limit_signal * 32) == 0) {
 				limit.signal(limit_signal);
 			}
 		}
+	}
+}
+
+
+void
+DocIndexer::_prepare(MsgPack&& obj)
+{
+	L_CALL("DocIndexer::_prepare(<obj>)");
+
+	if (!obj.is_map()) {
+		L_ERR("Indexing object has an unsupported type: %s", obj.getStrType());
+		return;
+	}
+
+	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj));
+	if (bulk_cnt == bulk.size()) {
+		_total += bulk_cnt;
+		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			_total -= bulk_cnt;
+			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+		}
+		if (_total == bulk_cnt) {
+			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		}
+		bulk_cnt = 0;
+		limit.wait();  // throttle the prepare
 	}
 }
 
@@ -1909,18 +1924,12 @@ DocIndexer::prepare(MsgPack&& obj)
 {
 	L_CALL("DocIndexer::prepare(<obj>)");
 
-	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj));
-	if (bulk_cnt == bulk.size()) {
-		total += bulk_cnt;
-		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			total -= bulk_cnt;
-			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+	if (obj.is_array()) {
+		for (auto &o : obj) {
+			_prepare(std::move(o));
 		}
-		if (total == bulk_cnt) {
-			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-		}
-		bulk_cnt = 0;
-		limit.wait();  // throttle the prepare
+	} else {
+		_prepare(std::move(obj));
 	}
 }
 
@@ -1931,12 +1940,12 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		total += bulk_cnt;
+		_total += bulk_cnt;
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			total -= bulk_cnt;
+			_total -= bulk_cnt;
 			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
 		}
-		if (total == bulk_cnt) {
+		if (_total == bulk_cnt) {
 			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 		}
 		bulk_cnt = 0;
@@ -1951,7 +1960,8 @@ DocIndexer::wait(double timeout)
 			done.wait();
 		}
 	}
-	return processed >= total;
+
+	return _processed >= _total;
 }
 
 
