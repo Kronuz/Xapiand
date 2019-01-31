@@ -794,20 +794,14 @@ HttpClient::on_message_complete(http_parser* parser)
 		std::swap(new_request, request);
 
 		if (request->view) {
-			L_HTTP_PROTO("New request added:\n%s", string::indent(request->to_text(false), ' ', 8));
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (!running) {
-				// Enqueue request...
-				requests.push_back(std::move(request));
-				// And start a runner.
-				running = true;
+				requests.push_back(std::move(request));  // Enqueue request...
+				running = true;  // And start a runner.
 				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
 			} else {
-				// There should be a runner, just enqueue request.
-				requests.push_back(std::move(request));
+				requests.push_back(std::move(request));  // There a runner, just enqueue.
 			}
-		} else {
-			L_HTTP_PROTO("Request without view discarded:\n%s", string::indent(request->to_text(false), ' ', 8));
 		}
 	}
 
