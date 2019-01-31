@@ -238,7 +238,9 @@ public:
 	std::string headers;
 	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
 
+	bool starting;
 	std::atomic_bool ending;  // ending requests have received all body
+	bool ended;
 
 	std::string raw;
 
@@ -367,7 +369,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void log_response(Response& response);
 
 	std::string http_response(Request& request, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
-	void clean_http_request(Request& request);
+	void end_http_request(Request& request);
 	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
 
 	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);

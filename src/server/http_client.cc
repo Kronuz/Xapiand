@@ -842,6 +842,13 @@ HttpClient::prepare()
 {
 	L_CALL("HttpClient::prepare()");
 
+	L_TIMED_VAR(request.log, 1s,
+		"Response taking too long: %s",
+		"Response took too long: %s",
+		request.head());
+
+	new_request->received = std::chrono::system_clock::now();
+
 	if (Logging::log_level > LOG_DEBUG) {
 		log_request(*new_request);
 	}
@@ -1166,16 +1173,8 @@ HttpClient::process(Request& request)
 {
 	L_CALL("HttpClient::process()");
 
-	writes = 0;
 	L_OBJ_BEGIN("HttpClient::process:BEGIN");
 	L_OBJ_END("HttpClient::process:END");
-
-	L_TIMED_VAR(request.log, 1s,
-		"Response taking too long: %s",
-		"Response took too long: %s",
-		request.head());
-
-	request.received = std::chrono::system_clock::now();
 
 	enum http_status error_code = HTTP_STATUS_OK;
 
@@ -1269,9 +1268,8 @@ HttpClient::process(Request& request)
 			};
 			write_http_response(request, error_code, err_response);
 		}
+		request.ending = true;
 	}
-
-	clean_http_request(request);
 }
 
 
@@ -1285,43 +1283,44 @@ HttpClient::operator()()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	while (!requests.empty() && !closed) {
-		std::shared_ptr<Request> request;
-
-		std::swap(request, requests.front());
-		requests.pop_front();
+		Request& request = *requests.front();
+		if (request.ended) {
+			requests.pop_front();
+			continue;
+		}
+		if (request.starting) {
+			writes = 0;
+		}
 
 		lk.unlock();
 		try {
-
-			process(*request);
-
-			auto sent = total_sent_bytes.exchange(0);
-			Metrics::metrics()
-				.xapiand_http_sent_bytes
-				.Increment(sent);
-
-			auto received = total_received_bytes.exchange(0);
-			Metrics::metrics()
-				.xapiand_http_received_bytes
-				.Increment(received);
-
+			process(request);
 		} catch (...) {
+			request.starting = false;
+			end_http_request(request);
 			lk.lock();
+			requests.pop_front();
 			running = false;
 			lk.unlock();
 			L_CONN("Running in worker ended with an exception.");
 			detach();
 			throw;
 		}
-		lk.lock();
-
-		if (request->closing) {
-			running = false;
-			lk.unlock();
-			L_CONN("Running in worker ended after request closing.");
-			destroy();
-			detach();
-			return;
+		request.starting = false;
+		if (request.ending) {
+			end_http_request(request);
+			lk.lock();
+			requests.pop_front();
+			if (request.closing) {
+				running = false;
+				lk.unlock();
+				L_CONN("Running in worker ended after request closing.");
+				destroy();
+				detach();
+				return;
+			}
+		} else {
+			lk.lock();
 		}
 	}
 
@@ -2776,11 +2775,12 @@ HttpClient::log_response(Response& response)
 
 
 void
-HttpClient::clean_http_request(Request& request)
+HttpClient::end_http_request(Request& request)
 {
-	L_CALL("HttpClient::clean_http_request()");
+	L_CALL("HttpClient::end_http_request()");
 
 	request.ends = std::chrono::system_clock::now();
+	request.ended = true;
 	waiting = false;
 
 	if (request.log) {
@@ -2828,6 +2828,16 @@ HttpClient::clean_http_request(Request& request)
 	}
 
 	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
+
+	auto sent = total_sent_bytes.exchange(0);
+	Metrics::metrics()
+		.xapiand_http_sent_bytes
+		.Increment(sent);
+
+	auto received = total_received_bytes.exchange(0);
+	Metrics::metrics()
+		.xapiand_http_received_bytes
+		.Increment(received);
 }
 
 
@@ -3144,7 +3154,9 @@ Request::Request(HttpClient* client)
 	: view{nullptr},
 	  streamed{false},
 	  type_encoding{Encoding::none},
+	  starting{true},
 	  ending{false},
+	  ended{false},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},
