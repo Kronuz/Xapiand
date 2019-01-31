@@ -396,7 +396,8 @@ HttpClient::is_idle() const
 {
 	if (!waiting && !running && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
-		return requests.empty();
+		auto requests_size = requests.size();
+		return !requests_size || (requests_size == 1 && requests.front()->ended);
 	}
 	return false;
 }
@@ -422,7 +423,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_NOTICE("Client closed unexpectedly after %s: There was still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (!requests.empty()) {
+			auto requests_size = requests.size();
+			if (requests_size && (requests_size > 1 || !requests.front()->ended)) {
 				L_NOTICE("Client closed unexpectedly after %s: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 			}
 		}
