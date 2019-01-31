@@ -834,9 +834,16 @@ UUIDGenerator::newUUID()
 #elif defined UUID_LIBUUID
 #include <uuid/uuid.h>
 
+#if defined(__APPLE__)
+std::mutex UUIDGenerator::mtx;
+#endif
+
 inline UUID
 UUIDGenerator::newUUID()
 {
+#if defined(__APPLE__)
+	std::lock_guard<std::mutex> lk(mtx);
+#endif
 	std::array<unsigned char, 16> byteArray;
 	uuid_generate_time(byteArray.data());
 	return UUID(byteArray);

@@ -23,7 +23,10 @@
 
 #pragma once
 
+#include "config.h"        // for UUID_*
+
 #include <array>           // for std::array
+#include <mutex>           // for std::mutex
 #include <ostream>         // for std::ostream
 #include <string>          // for std::string
 #include "string_view.hh"  // for std::string_view
@@ -154,6 +157,10 @@ private:
  * each platform, but the use of the generator is uniform.
  */
 class UUIDGenerator {
+#if defined (UUID_LIBUUID) && defined(__APPLE__)
+	static std::mutex mtx;
+#endif
+
 	UUID newUUID();
 
 public:
