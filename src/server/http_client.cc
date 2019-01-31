@@ -911,31 +911,31 @@ HttpClient::prepare()
 	switch (new_request->method) {
 		case HTTP_DELETE:
 			new_request->view = _prepare_delete();
-			return;
+			break;
 		case HTTP_GET:
 			new_request->view = _prepare_get();
-			return;
+			break;
 		case HTTP_POST:
 			new_request->view = _prepare_post();
-			return;
+			break;
 		case HTTP_HEAD:
 			new_request->view = _prepare_head();
-			return;
+			break;
 		case HTTP_MERGE:
 			new_request->view = _prepare_merge();
-			return;
+			break;
 		case HTTP_STORE:
 			new_request->view = _prepare_store();
-			return;
+			break;
 		case HTTP_PUT:
 			new_request->view = _prepare_put();
-			return;
+			break;
 		case HTTP_OPTIONS:
 			new_request->view = _prepare_options();
-			return;
+			break;
 		case HTTP_PATCH:
 			new_request->view = _prepare_patch();
-			return;
+			break;
 		default: {
 			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
 			MsgPack err_response = {
@@ -948,12 +948,16 @@ HttpClient::prepare()
 		}
 	}
 
+	if (!new_request->view) {
+		return;
+	}
+
 	if (new_request->expect_100) {
-		// Return 100 if client is expecting it
+		// Return "100 Continue" if client sent "Expect: 100-continue"
 		write(http_response(*new_request, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
 
-	if (new_request->parser.content_length) {
+	if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && new_request->parser.content_length) {
 		new_request->raw.reserve(new_request->parser.content_length);
 	}
 }
