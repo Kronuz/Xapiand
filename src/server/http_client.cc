@@ -1324,13 +1324,19 @@ HttpClient::operator()()
 
 		lk.unlock();
 
-		request.raw_pending.wait();
-		while (request.raw_pending.tryWaitMany(1000)) { }
-		// if (!request.raw_pending.wait(100000)) {
-		// }
-		if (!request.pending()) {
-			lk.lock();
-			continue;
+		if (request.mode != Request::Mode::FULL) {
+			// Wait for a pending raw body for one second (1000000us) and flush
+			// pending signals before processing the request, otherwise retry
+			// checking for empty/ended requests or closed connections.
+			if (!request.raw_pending.wait(1000000)) {
+				lk.lock();
+				continue;
+			}
+			while (request.raw_pending.tryWaitMany(std::numeric_limits<ssize_t>::max())) { }
+			if (!request.pending()) {
+				lk.lock();
+				continue;
+			}
 		}
 
 		try {
