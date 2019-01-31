@@ -2364,10 +2364,6 @@ HttpClient::search_view(Request& request)
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Searching took %s", string::from_delta(took));
 
-	if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
-		request.response.text += obj.to_string(DEFAULT_INDENTATION);
-	}
-
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	if (aggregations) {
@@ -2431,10 +2427,6 @@ HttpClient::count_view(Request& request)
 	};
 
 	request.ready = std::chrono::system_clock::now();
-
-	if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
-		request.response.text += obj.to_string(DEFAULT_INDENTATION);
-	}
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 }
