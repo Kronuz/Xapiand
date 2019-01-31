@@ -763,6 +763,17 @@ HttpClient::on_headers_complete(http_parser* parser)
 
 	prepare();  // Prepare the request view
 
+	if unlikely(!new_request->ending) {
+		if likely(!closed) {
+			if unlikely(new_request->streamed && new_request->view) {
+				std::lock_guard<std::mutex> lk(runner_mutex);
+				if (requests.empty() || new_request != requests.front()) {
+					requests.push_back(new_request);  // Enqueue streamed request
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -774,8 +785,18 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
-	if (!new_request->ending) {
+	if unlikely(!new_request->ending) {
 		new_request->append(std::string_view(at, length));
+
+		if likely(!closed) {
+			if unlikely(new_request->streamed && new_request->view) {
+				std::lock_guard<std::mutex> lk(runner_mutex);
+				if (!running) {  // Start a runner if not running
+					running = true;
+					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+				}
+			}
+		}
 	}
 
 	return 0;
@@ -789,21 +810,21 @@ HttpClient::on_message_complete(http_parser* parser)
 	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
-	if (!new_request->ending) {
+	if unlikely(!new_request->ending) {
 		new_request->ending = true;
 
-		if (!closed) {
+		if likely(!closed) {
 			std::shared_ptr<Request> request = std::make_shared<Request>(this);
 			std::swap(new_request, request);
 
 			if (request->view) {
 				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (!running) {
-					requests.push_back(std::move(request));  // Enqueue request...
-					running = true;  // And start a runner.
+				if (requests.empty() || request != requests.front()) {
+					requests.push_back(std::move(request));  // Enqueue request
+				}
+				if (!running) {  // Start a runner if not running
+					running = true;
 					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
-				} else {
-					requests.push_back(std::move(request));  // There a runner, just enqueue.
 				}
 			}
 		}
