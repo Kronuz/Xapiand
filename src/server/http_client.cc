@@ -920,6 +920,10 @@ HttpClient::prepare()
 		Response response;
 		write(http_response(*new_request, response, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
 	}
+
+	if (new_request->parser.content_length) {
+		new_request->raw.reserve(new_request->parser.content_length);
+	}
 }
 
 
