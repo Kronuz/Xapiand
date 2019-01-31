@@ -1166,6 +1166,8 @@ HttpClient::_prepare_delete()
 void
 HttpClient::process(Request& request)
 {
+	L_CALL("HttpClient::process()");
+
 	writes = 0;
 	L_OBJ_BEGIN("HttpClient::process:BEGIN");
 	L_OBJ_END("HttpClient::process:END");
@@ -2396,6 +2398,8 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 Request::Command
 HttpClient::getCommand(std::string_view command_name)
 {
+	L_CALL("HttpClient::getCommand(%s)", repr(command_name));
+
 	static const auto _ = http_commands;
 
 	return static_cast<Request::Command>(_.fhhl(command_name));
@@ -2465,6 +2469,8 @@ HttpClient::url_resolve(Request& request)
 void
 HttpClient::endpoints_maker(Request& request, bool master)
 {
+	L_CALL("HttpClient::endpoints_maker(<request>, <master>)");
+
 	endpoints.clear();
 
 	PathParser::State state;
@@ -2477,6 +2483,8 @@ HttpClient::endpoints_maker(Request& request, bool master)
 void
 HttpClient::_endpoint_maker(Request& request, bool master)
 {
+	L_CALL("HttpClient::_endpoint_maker(<request>, <master>)");
+
 	std::string index_path;
 
 	auto pth = request.path_parser.get_pth();
@@ -2528,6 +2536,8 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 query_field_t
 HttpClient::query_field_maker(Request& request, int flags)
 {
+	L_CALL("HttpClient::query_field_maker(<request>, <flags>)");
+
 	query_field_t query_field;
 
 	if ((flags & QUERY_FIELD_COMMIT) != 0) {
@@ -2735,6 +2745,8 @@ HttpClient::query_field_maker(Request& request, int flags)
 void
 HttpClient::log_request(Request& request)
 {
+	L_CALL("HttpClient::log_request()");
+
 	std::string request_prefix = " 🌎  ";
 	int priority = -LOG_DEBUG;
 	auto request_text = request.to_text(true);
@@ -2745,6 +2757,8 @@ HttpClient::log_request(Request& request)
 void
 HttpClient::log_response(Response& response)
 {
+	L_CALL("HttpClient::log_response()");
+
 	std::string response_prefix = " 💊  ";
 	int priority = -LOG_DEBUG;
 	if ((int)response.status >= 300 && (int)response.status <= 399) {
@@ -2914,7 +2928,7 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 std::pair<std::string, std::string>
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
-	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string()), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
+	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
 
 	if (ct_type == no_type) {
 		return std::make_pair("", "");
@@ -3051,6 +3065,8 @@ HttpClient::resolve_encoding(Request& request)
 std::string
 HttpClient::readable_encoding(Encoding e)
 {
+	L_CALL("Request::readable_encoding()");
+
 	switch (e) {
 		case Encoding::none:
 			return "none";
@@ -3219,6 +3235,8 @@ Request::_decode()
 void
 Request::append(std::string_view str)
 {
+	L_CALL("Request::append()");
+
 	raw.append(str);
 }
 
@@ -3226,6 +3244,8 @@ Request::append(std::string_view str)
 std::string
 Request::head()
 {
+	L_CALL("Request::head()");
+
 	return string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&parser)), path, parser.http_major, parser.http_minor);
 }
 
@@ -3233,6 +3253,8 @@ Request::head()
 std::string
 Request::to_text(bool decode)
 {
+	L_CALL("Request::to_text(%s)", decode ? "true" : "false");
+
 	static constexpr auto no_col = NO_COLOR;
 	auto request_headers_color = no_col.c_str();
 	auto request_head_color = no_col.c_str();
@@ -3390,6 +3412,8 @@ Response::Response()
 std::string
 Response::to_text(bool decode)
 {
+	L_CALL("Response::to_text(%s)", decode ? "true" : "false");
+
 	static constexpr auto no_col = NO_COLOR;
 	auto response_headers_color = no_col.c_str();
 	auto response_head_color = no_col.c_str();
