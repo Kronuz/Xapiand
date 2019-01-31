@@ -780,7 +780,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 int
 HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
-	L_STACKED_DIM_GREY("HttpClient::on_body(<parser>, <at>, %zu)", length);
+	L_CALL("HttpClient::on_body(<parser>, <at>, %zu)", length);
 
 	L_HTTP_PROTO("on_body {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
@@ -1325,6 +1325,7 @@ HttpClient::operator()()
 		lk.unlock();
 
 		request.raw_pending.wait();
+		while (request.raw_pending.tryWaitMany(1000)) { }
 		// if (!request.raw_pending.wait(100000)) {
 		// }
 		if (!request.pending()) {
