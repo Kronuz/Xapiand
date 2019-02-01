@@ -7774,10 +7774,11 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 
 
 inline void
-Schema::process_data(std::string_view /*unused*/, const MsgPack& /*unused*/)
+Schema::process_data(std::string_view /*unused*/, const MsgPack& doc_data)
 {
 	// RESERVED_DATA is ignored by the schema.
 	L_CALL("Schema::process_data(%s)", repr(doc_data.to_string()));
+	ignore_unused(doc_data);
 }
 
 
