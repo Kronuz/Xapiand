@@ -288,6 +288,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 	std::string response_body;
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
+		ASSERT(request.response.status != static_cast<http_status>(0));
 		request.response.status = status;
 		auto http_major = request.parser.http_major;
 		auto http_minor = request.parser.http_minor;
@@ -301,6 +302,8 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 			headers_sep += eol;
 		}
 	}
+
+	ASSERT(request.response.status != static_cast<http_status>(0));
 
 	if ((mode & HTTP_HEADER_RESPONSE) != 0) {
 		headers += "Server: " + Package::STRING + eol;
@@ -478,16 +481,19 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		L_EXC("ERROR: Dispatching HTTP request");
 	}
 
-	if (writes != 0) {
+	if (request.response.status != static_cast<http_status>(0)) {
+		// There was an error, but request already had written stuff...
+		// disconnect client!
 		detach();
+		request.ending = true;
 	} else {
 		MsgPack err_response = {
 			{ RESPONSE_STATUS, (int)error_code },
 			{ RESPONSE_MESSAGE, string::split(error, '\n') }
 		};
 		write_http_response(request, error_code, err_response);
+		end_http_request(request);
 	}
-	request.completing = true;
 
 	return 1;
 }
@@ -539,15 +545,21 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
 		if (err == HPE_INVALID_METHOD) {
-			write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+			if (new_request->response.status == static_cast<http_status>(0)) {
+				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+				end_http_request(*new_request);
+			}
 		} else {
 			std::string message(http_errno_description(err));
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, string::split(message, '\n') }
-			};
-			write_http_response(*new_request, error_code, err_response);
-			L_NOTICE(HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
+			L_DEBUG("HTTP parser error: %s", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
+			if (new_request->response.status == static_cast<http_status>(0)) {
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, (int)error_code },
+					{ RESPONSE_MESSAGE, string::split(message, '\n') }
+				};
+				write_http_response(*new_request, error_code, err_response);
+				end_http_request(*new_request);
+			}
 		}
 		detach();
 	}
@@ -916,7 +928,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 	// Prepare the request view
 	prepare();
 
-	if likely(!closed && !new_request->completing) {
+	if likely(!closed && !new_request->ending) {
 		if likely(new_request->view) {
 			if (new_request->mode != Request::Mode::FULL) {
 				std::lock_guard<std::mutex> lk(runner_mutex);
@@ -942,7 +954,7 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 		repr(at, length));
 	ignore_unused(parser);
 
-	if likely(!closed && !new_request->completing && new_request->view) {
+	if likely(!closed && !new_request->ending && new_request->view) {
 		if (new_request->append(at, length)) {
 			new_request->pending.signal();
 
@@ -968,15 +980,15 @@ HttpClient::on_message_complete(http_parser* parser)
 		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
-	if likely(!closed && !new_request->completing) {
-		new_request->completing = true;
+	if likely(!closed && !new_request->ending) {
+		new_request->ending = true;
 
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
 
 		if (request->view) {
 			request->append(nullptr, 0);  // flush pending stuff
-			request->pending.signal();  // always signal, so view continues completing
+			request->pending.signal();  // always signal, so view continues ending
 
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (requests.empty() || request != requests.front()) {
@@ -1064,6 +1076,7 @@ HttpClient::prepare()
 			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 		};
 		write_http_response(*new_request, error_code, err_response);
+		end_http_request(*new_request);
 		return;
 	}
 
@@ -1104,6 +1117,7 @@ HttpClient::prepare()
 			};
 			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
+			end_http_request(*new_request);
 			return;
 		}
 	}
@@ -1115,6 +1129,7 @@ HttpClient::prepare()
 	if (new_request->expect_100) {
 		// Return "100 Continue" if client sent "Expect: 100-continue"
 		write(http_response(*new_request, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
+		new_request->response.status = static_cast<http_status>(0);  // go back to unknown response state
 	}
 
 	if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && new_request->parser.content_length) {
@@ -1405,9 +1420,6 @@ HttpClient::operator()()
 			requests.pop_front();
 			continue;
 		}
-		if (request.begining) {
-			writes = 0;
-		}
 
 		lk.unlock();
 
@@ -1432,7 +1444,7 @@ HttpClient::operator()()
 			throw;
 		}
 		request.begining = false;
-		if (request.completing) {
+		if (request.ending) {
 			end_http_request(request);
 			lk.lock();
 			requests.pop_front();
@@ -2093,7 +2105,7 @@ HttpClient::restore_view(Request& request)
 		}
 	}
 
-	if (request.completing) {
+	if (request.ending) {
 		request.indexer->wait();
 
 		request.ready = std::chrono::system_clock::now();
@@ -2912,6 +2924,7 @@ HttpClient::end_http_request(Request& request)
 	L_CALL("HttpClient::end_http_request()");
 
 	request.ends = std::chrono::system_clock::now();
+	request.ending = true;
 	request.ended = true;
 	waiting = false;
 
@@ -3287,7 +3300,7 @@ Request::Request(HttpClient* client)
 	  view{nullptr},
 	  type_encoding{Encoding::none},
 	  begining{true},
-	  completing{false},
+	  ending{false},
 	  ended{false},
 	  raw_peek{0},
 	  raw_offset{0},
@@ -3676,7 +3689,7 @@ Request::to_text(bool decode)
 
 
 Response::Response()
-	: status{HTTP_STATUS_OK},
+	: status{static_cast<http_status>(0)},
 	  size{0}
 {
 }
