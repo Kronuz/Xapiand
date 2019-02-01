@@ -492,7 +492,7 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			{ RESPONSE_MESSAGE, string::split(error, '\n') }
 		};
 		write_http_response(request, error_code, err_response);
-		end_http_request(request);
+		request.ending = true;
 	}
 
 	return 1;
@@ -926,7 +926,10 @@ HttpClient::on_headers_complete(http_parser* parser)
 	ignore_unused(parser);
 
 	// Prepare the request view
-	prepare();
+	if (int err = prepare()) {
+		end_http_request(*new_request);
+		return err;
+	}
 
 	if likely(!closed && !new_request->ending) {
 		if likely(new_request->view) {
@@ -1035,7 +1038,7 @@ HttpClient::on_chunk_complete(http_parser* parser)
 }
 
 
-void
+int
 HttpClient::prepare()
 {
 	L_CALL("HttpClient::prepare()");
@@ -1076,8 +1079,7 @@ HttpClient::prepare()
 			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
 		};
 		write_http_response(*new_request, error_code, err_response);
-		end_http_request(*new_request);
-		return;
+		return 1;
 	}
 
 	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
@@ -1117,13 +1119,12 @@ HttpClient::prepare()
 			};
 			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
-			end_http_request(*new_request);
-			return;
+			return 1;
 		}
 	}
 
 	if (!new_request->view) {
-		return;
+		return 1;
 	}
 
 	if (new_request->expect_100) {
@@ -1139,6 +1140,8 @@ HttpClient::prepare()
 			new_request->raw.reserve(new_request->parser.content_length);
 		}
 	}
+
+	return 0;
 }
 
 

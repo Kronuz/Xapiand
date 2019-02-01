@@ -349,7 +349,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	int on_chunk_header(http_parser* parser);
 	int on_chunk_complete(http_parser* parser);
 
-	void prepare();
+	int prepare();
 	view_function _prepare_options();
 	view_function _prepare_head();
 	view_function _prepare_get();
