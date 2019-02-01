@@ -4797,7 +4797,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
 				return;
 			}
-			if (specification.flags.text_detection && !specification.flags.bool_term) {
+			if (specification.flags.text_detection && !specification.flags.bool_term && Serialise::isText(str_value)) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
 				return;
 			}
