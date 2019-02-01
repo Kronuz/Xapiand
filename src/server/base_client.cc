@@ -266,6 +266,10 @@ BaseClient::write(const char *buf, size_t buf_size)
 {
 	L_CALL("BaseClient::write(<buf>, %zu)", buf_size);
 
+	if (!buf_size) {
+		return true;
+	}
+
 	return write_buffer(std::make_shared<Buffer>('\0', buf, buf_size));
 }
 
