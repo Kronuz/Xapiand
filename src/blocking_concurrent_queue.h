@@ -28,12 +28,15 @@
 #include "moodycamel/blockingconcurrentqueue.h"
 #else
 
+#include <chrono>
 #include <condition_variable>
 
 #include "concurrent_queue.h"
 #include "likely.h"
 
 namespace moodycamel {
+
+using namespace std::chrono_literals;
 
 template <typename T>
 class BlockingConcurrentQueue : public ConcurrentQueue<T> {
@@ -83,6 +86,31 @@ public:
 		});
 		item = std::move(ConcurrentQueue<T>::queue.front());
 		ConcurrentQueue<T>::queue.pop_front();
+	}
+
+	template<typename U>
+	bool wait_dequeue_timed(U& item, int64_t timeout_usecs = -1) {
+		std::unique_lock<std::mutex> lk(*ConcurrentQueue<T>::mtx);
+		auto wait_pred = [&]{
+			return !ConcurrentQueue<T>::queue.empty();
+		};
+		if (timeout_usecs) {
+			if (timeout_usecs > 0) {
+				auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout_usecs / 1e6);
+				if (!cond.wait_until(lk, timeout_tp, wait_pred)) {
+					return false;
+				}
+			} else {
+				while (!cond.wait_for(lk, 1s, wait_pred)) {}
+			}
+		} else {
+			if (!wait_pred()) {
+				return false;
+			}
+		}
+		item = std::move(ConcurrentQueue<T>::queue.front());
+		ConcurrentQueue<T>::queue.pop_front();
+		return true;
 	}
 };
 
