@@ -2965,6 +2965,12 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			properties = &index_subproperties(properties, data, name, object, fields, 0);
 			index_item_value(properties, doc, data, fields);
 			if (specification.flags.store) {
+				if (data->is_map() && data->size() == 1) {
+					auto it = data->find(RESERVED_VALUE);
+					if (it != data->end()) {
+						*data = it.value();
+					}
+				}
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
 					parent_data->erase(name);
 				}
@@ -2986,6 +2992,12 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			index_subproperties(properties, data, name, 0);
 			index_partial_paths(doc);
 			if (specification.flags.store) {
+				if (data->is_map() && data->size() == 1) {
+					auto it = data->find(RESERVED_VALUE);
+					if (it != data->end()) {
+						*data = it.value();
+					}
+				}
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
 					parent_data->erase(name);
 				}
@@ -3001,6 +3013,12 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			index_subproperties(properties, data, name, 0);
 			index_item_value(doc, *data, object, 0);
 			if (specification.flags.store) {
+				if (data->is_map() && data->size() == 1) {
+					auto it = data->find(RESERVED_VALUE);
+					if (it != data->end()) {
+						*data = it.value();
+					}
+				}
 				if (data->is_undefined() || (data->is_map() && data->empty())) {
 					parent_data->erase(name);
 				}
@@ -3117,10 +3135,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
 		set_type_to_object();
 	}
-
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
-	}
 }
 
 
@@ -3195,10 +3209,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		if (!specification.flags.static_endpoint) {
 			data[RESERVED_ENDPOINT] = specification.endpoint;
 		}
-	}
-
-	if (specification.flags.store && data.size() == 1) {
-		data = data[RESERVED_VALUE];
 	}
 }
 
