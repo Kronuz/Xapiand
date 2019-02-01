@@ -535,3 +535,40 @@ GET /test/xxx/:schema
 ###
 GET /test/xxx/:metadata
 ###
+
+
+
+
+POST /test/schemas/namespace
+
+{
+	"A": {
+		"_value": "A de árbol",
+		"_namespace" : true
+	},
+
+	"B": {
+		"_value": "B de barco",
+		"_namespace": true
+	},
+
+	"C": {
+		"_value": "C de casa",
+		"_namespace": true,
+		"_partial_paths": true,
+		"D": {
+			"_value": "D de dedo",
+			"E": {
+				"_value": [
+					"E de Espada",
+					null
+				]
+			}
+		}
+	}
+}
+###
+GET /test/schemas/namespace/:schema
+###
+GET /test/schemas/namespace/:metadata
+###
