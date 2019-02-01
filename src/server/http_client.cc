@@ -2094,7 +2094,7 @@ HttpClient::restore_view(Request& request)
 
 		request.processing = std::chrono::system_clock::now();
 
-		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
+		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	}
 
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {

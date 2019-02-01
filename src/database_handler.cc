@@ -1876,7 +1876,7 @@ DocIndexer::operator()()
 			if (!term_id.empty()) {
 				try {
 					lock_database lk_db(&db_handler);
-					db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
+					db_handler.database()->replace_document_term(term_id, std::move(doc), false, true);
 					++_indexed;
 				} catch (...) {
 					L_EXC("ERROR: Cannot replace document");
