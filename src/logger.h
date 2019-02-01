@@ -93,9 +93,13 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	static std::unordered_map<std::thread::id, unsigned> stack_levels;
 
 	std::thread::id thread_id;
+
+#if defined(XAPIAND_TRACEBACKS) || !defined(NDEBUG)
 	const char* function;
 	const char* filename;
 	int line;
+#endif
+
 	unsigned stack_level;
 
 	bool clears;

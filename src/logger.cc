@@ -308,9 +308,11 @@ Logging::Logging(
 ) :
 	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
+#if defined(XAPIAND_TRACEBACKS) || !defined(NDEBUG)
 	function(function),
 	filename(filename),
 	line(line),
+#endif
 	stack_level(0),
 	clears(clears),
 	str(std::move(str)),
@@ -322,6 +324,9 @@ Logging::Logging(
 	priority(priority),
 	cleaned_at(0)
 {
+	ignore_unused(function);
+	ignore_unused(filename);
+	ignore_unused(line);
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
 		auto it = stack_levels.find(thread_id);
@@ -609,7 +614,7 @@ Logging::operator()()
 			msg.append(filename);
 			msg.push_back(':');
 			msg.append(string::Number(line));
-			msg.append(" at ");
+			msg.append(" Xat ");
 			msg.append(function);
 			msg.append(": ");
 		}
@@ -624,17 +629,21 @@ Logging::operator()()
 
 	msg.append(str);
 
+	std::string exception_description;
+	std::string exception;
 	if (eptr) {
-		std::string description;
-		std::string exception = "\n== Exception: ";
+#ifdef XAPIAND_TRACEBACKS
+		exception.append(DEBUG_COL.c_str(), DEBUG_COL.size());
+#endif
 		try {
 			std::rethrow_exception(eptr);
 		} catch (const BaseException& exc) {
 			if (*exc.get_context()) {
-				description.append(exc.get_context());
+				exception_description.append(exc.get_context());
 			} else {
-				description.append("Unkown BaseException");
+				exception_description.append("Unkown BaseException");
 			}
+#ifdef XAPIAND_TRACEBACKS
 			if (exc.empty()) {
 				exception.append("\n== Location: ");
 				exception.append(filename);
@@ -645,42 +654,46 @@ Logging::operator()()
 			} else {
 				exception.append(exc.get_traceback());
 			}
+#endif
 		} catch (const Xapian::Error& exc) {
-			description.append(exc.get_description());
+			exception_description.append(exc.get_description());
+#ifdef XAPIAND_TRACEBACKS
 			exception.append("\n== Location: ");
 			exception.append(filename);
 			exception.push_back(':');
 			exception.append(std::to_string(line));
 			exception.append(" at ");
 			exception.append(function);
+#endif
 		} catch (const std::exception& exc) {
 			if (*exc.what()) {
-				description.append(exc.what());
+				exception_description.append(exc.what());
 			} else {
-				description.append("Unkown std::exception");
+				exception_description.append("Unkown std::exception");
 			}
+#ifdef XAPIAND_TRACEBACKS
 			exception.append("\n== Location: ");
 			exception.append(filename);
 			exception.push_back(':');
 			exception.append(std::to_string(line));
 			exception.append(" at ");
 			exception.append(function);
+#endif
 		} catch (...) {
-			description.append("Unkown exception");
+			exception_description.append("Unkown exception");
+#ifdef XAPIAND_TRACEBACKS
 			exception.append("\n== Location: ");
 			exception.append(filename);
 			exception.push_back(':');
 			exception.append(std::to_string(line));
 			exception.append(" at ");
 			exception.append(function);
+#endif
 		}
 		if (!str.empty()) {
 			msg.append(": ");
 		}
-		msg.append(description);
-		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
-		msg.append(exception);
-		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
+		msg.append(exception_description);
 	}
 
 	if (async) {
@@ -689,6 +702,9 @@ Logging::operator()()
 			msg += " " + string::from_delta(log_age, clears ? "+" : "~", true);
 		}
 	}
+
+	msg.append(exception);
+	msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
 
 	if (priority >= -LOG_ERR && priority <= LOG_ERR) {
 		Logging::growl(Logging::colorized(str, false));
