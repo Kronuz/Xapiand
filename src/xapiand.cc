@@ -1080,7 +1080,7 @@ void banner() {
 		constexpr auto outer = rgb(0, 128, 0);
 		constexpr auto inner = rgb(144, 238, 144);
 		constexpr auto top = rgb(255, 255, 255);
-		L(-LOG_INFO, NO_COLOR,
+		L(-LOG_NOTICE, NO_COLOR,
 			"\n\n" +
 			outer + "      _       "                                                       + rgb(255, 255, 255) + "      ___\n" +
 			outer + "  _-´´" +      top + "_" + outer  + "``-_   "                         + rgb(255, 255, 255) + " __  /  /          _                 _\n" +
@@ -1096,7 +1096,7 @@ void banner() {
 			string::center("Using " + string::join(values, ", ", " and "), 42),
 			string::center("[" + Package::BUGREPORT + "]", 42));
 	} else {
-		L(-LOG_INFO, NO_COLOR, "%s started.", Package::STRING);
+		L(-LOG_NOTICE, NOTICE_COL, "%s started.", Package::STRING);
 	}
 }
 
@@ -1160,9 +1160,9 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 
 	long managers = manager.use_count() - 1;
 	if (managers == 0) {
-		L_NOTICE("Xapiand is cleanly done with all work!");
+		L(-LOG_NOTICE, NOTICE_COL, "Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING("Xapiand is uncleanly done with all work (%ld)!\n%s", managers, manager->dump_tree());
+		L(-LOG_WARNING, WARNING_COL, "Xapiand is uncleanly done with all work (%ld)!\n%s", managers, manager->dump_tree());
 	}
 	manager.reset();
 }

@@ -512,7 +512,7 @@ XapiandManager::init()
 
 	// Set addr in local node
 	auto address = host_address();
-	L_NOTICE("Node IP address is %s on interface %s, running with pid:%d", inet_ntop(address.first), address.second, getpid());
+	L(-LOG_NOTICE, NOTICE_COL, "Node IP address is %s on interface %s, running with pid:%d", inet_ntop(address.first), address.second, getpid());
 	node_copy->addr(address.first);
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
@@ -824,7 +824,7 @@ XapiandManager::make_servers()
 		msg += " and " + _replication->getDescription();
 	}
 #endif
-	L_NOTICE(msg);
+	L(-LOG_NOTICE, NOTICE_COL, msg);
 
 	// Setup database cleanup thread.
 	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
