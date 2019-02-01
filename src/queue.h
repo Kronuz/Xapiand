@@ -24,6 +24,7 @@
 
 #include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <functional>
@@ -35,6 +36,8 @@
 
 
 namespace queue {
+	using namespace std::chrono_literals;
+
 	struct QueueState {
 		size_t _hard_limit;
 		size_t _soft_limit;
