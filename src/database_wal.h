@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"                         // for XAPIAND_REMOTE_SERVERPORT, XAPIAND_BINARY_PROXY
+#include "config.h"                         // for XAPIAND_REMOTE_SERVERPORT
 
 #if XAPIAND_DATABASE_WAL
 

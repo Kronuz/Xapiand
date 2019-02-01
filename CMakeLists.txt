@@ -47,7 +47,6 @@ option(BUILD_TESTS "Build all tests"                                OFF)
 option(BUILD_BENCHMARKS "Build all benchmarks"                      OFF)
 option(DEBUGINFO_EXTERNALIZE "Externalize debug information"        OFF)
 
-option(BINARY_PROXY  "Define a proxy port for binary protocol"      OFF)
 option(CLUSTERING    "Enable remote clustering"                      ON)
 option(DATABASE_WAL  "Enable database write ahead log (WAL)"         ON)
 option(DATA_STORAGE  "Enable data storage"                           ON)
@@ -64,7 +63,7 @@ option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 
 
-foreach (opt BINARY_PROXY CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS CHECK_IO_FDES TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS)
+foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS CHECK_IO_FDES TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")

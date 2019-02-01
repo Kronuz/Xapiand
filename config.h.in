@@ -236,9 +236,6 @@
 #cmakedefine HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS @HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS@
 
 
-/* Define to what port binary traffic will be redirected to. */
-#cmakedefine XAPIAND_BINARY_PROXY @XAPIAND_BINARY_PROXY@
-
 /* Enable remote clustering. */
 #cmakedefine XAPIAND_CLUSTERING @XAPIAND_CLUSTERING@
 
@@ -295,9 +292,6 @@
 #define XAPIAND_HTTP_SERVERPORT        8880            /* HTTP TCP port */
 #define XAPIAND_REMOTE_SERVERPORT      9880            /* Remote Protocol TCP port */
 #define XAPIAND_REPLICATION_SERVERPORT 7880            /* Replication Protocol TCP port */
-#ifndef XAPIAND_BINARY_PROXY
-#define XAPIAND_BINARY_PROXY           XAPIAND_REMOTE_SERVERPORT
-#endif
 
 /* Enable xxh static linking structures */
 #define XXH_STATIC_LINKING_ONLY 1

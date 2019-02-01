@@ -293,9 +293,8 @@ Database::reopen_writable()
 		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
-		int port = (endpoint.node.remote_port == XAPIAND_REMOTE_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.remote_port;
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		wsdb = Xapian::Remote::open_writable(endpoint.node.host(), port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
+		wsdb = Xapian::Remote::open_writable(endpoint.node.host(), endpoint.node.remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -415,9 +414,8 @@ Database::reopen_readable()
 			? Xapian::DB_CREATE_OR_OPEN
 			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
-			int port = (endpoint.node.remote_port == XAPIAND_REMOTE_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.remote_port;
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Remote::open(endpoint.node.host(), port, 10000, 10000, _flags, endpoint.path);
+			rsdb = Xapian::Remote::open(endpoint.node.host(), endpoint.node.remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
