@@ -288,7 +288,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 	std::string response_body;
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
-		ASSERT(request.response.status != static_cast<http_status>(0));
+		ASSERT(request.response.status == static_cast<http_status>(0));
 		request.response.status = status;
 		auto http_major = request.parser.http_major;
 		auto http_minor = request.parser.http_minor;
