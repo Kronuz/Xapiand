@@ -430,7 +430,7 @@ void parseOptions(int argc, char** argv) {
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> binary_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
+		ValueArg<unsigned int> remote_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<unsigned int> replication_port("", "replica-port", "Xapiand replication protocol TCP port number to listen on.", false, 0, "port", cmd);
 #endif
 		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, 0, "port", cmd);
@@ -561,7 +561,7 @@ void parseOptions(int argc, char** argv) {
 #ifdef XAPIAND_CLUSTERING
 		opts.cluster_name = cluster_name.getValue();
 		opts.node_name = node_name.getValue();
-		opts.binary_port = binary_port.getValue();
+		opts.remote_port = remote_port.getValue();
 		opts.replication_port = replication_port.getValue();
 		opts.discovery_port = discovery_port.getValue();
 		opts.discovery_group = discovery_group.getValue();

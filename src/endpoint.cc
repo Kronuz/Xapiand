@@ -220,7 +220,7 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 		}
 	} else {
 		node.host(uri);
-		node.binary_port = strict_stoi(nullptr, _port);
+		node.remote_port = strict_stoi(nullptr, _port);
 		search = _search;
 		password = _password;
 		user = _user;
@@ -336,11 +336,11 @@ Endpoint::to_string() const
 		ret += "@";
 	}
 	ret += node.host();
-	if (node.binary_port > 0) {
+	if (node.remote_port > 0) {
 		ret += ":";
-		ret += string::Number(node.binary_port);
+		ret += string::Number(node.remote_port);
 	}
-	if (!node.host().empty() || node.binary_port > 0) {
+	if (!node.host().empty() || node.remote_port > 0) {
 		ret += "/";
 	}
 	ret += path;
@@ -362,8 +362,8 @@ bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
-	int binary_port = local_node->binary_port;
-	return (node.host() == local_node->host() || node.host() == "127.0.0.1" || node.host() == "localhost") && node.binary_port == binary_port;
+	int remote_port = local_node->remote_port;
+	return (node.host() == local_node->host() || node.host() == "127.0.0.1" || node.host() == "localhost") && node.remote_port == remote_port;
 }
 
 
@@ -377,7 +377,7 @@ Endpoint::hash() const
 		hash_fn_string(user) ^
 		hash_fn_string(password) ^
 		hash_fn_string(node.host()) ^
-		hash_fn_int(node.binary_port) ^
+		hash_fn_int(node.remote_port) ^
 		hash_fn_string(search)
 	);
 }

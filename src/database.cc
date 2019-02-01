@@ -282,7 +282,7 @@ Database::reopen_writable()
 	if (endpoint.empty()) {
 		THROW(Error, "Database must not have empty endpoints");
 	}
-	if (endpoint.node.binary_port == 0) {
+	if (endpoint.node.remote_port == 0) {
 		THROW(Error, "Endpoint must be configured with a proper node port");
 	}
 
@@ -293,7 +293,7 @@ Database::reopen_writable()
 		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
-		int port = (endpoint.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.binary_port;
+		int port = (endpoint.node.remote_port == XAPIAND_REMOTE_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.remote_port;
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		wsdb = Xapian::Remote::open_writable(endpoint.node.host(), port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
@@ -404,7 +404,7 @@ Database::reopen_readable()
 		if (endpoint.empty()) {
 			THROW(Error, "Database must not have empty endpoints");
 		}
-		if (endpoint.node.binary_port == 0) {
+		if (endpoint.node.remote_port == 0) {
 			THROW(Error, "Endpoint must be configured with a proper node port");
 		}
 
@@ -415,7 +415,7 @@ Database::reopen_readable()
 			? Xapian::DB_CREATE_OR_OPEN
 			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
-			int port = (endpoint.node.binary_port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.binary_port;
+			int port = (endpoint.node.remote_port == XAPIAND_REMOTE_SERVERPORT) ? XAPIAND_BINARY_PROXY : endpoint.node.remote_port;
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			rsdb = Xapian::Remote::open(endpoint.node.host(), port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK

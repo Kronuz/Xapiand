@@ -78,7 +78,7 @@ public:
 
 	bool empty() const noexcept {
 		return path.empty() || (
-			node.binary_port == -1 &&
+			node.remote_port == -1 &&
 			user.empty() &&
 			password.empty() &&
 			node.host().empty() &&

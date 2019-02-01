@@ -44,11 +44,11 @@
 
 class Http;
 #ifdef XAPIAND_CLUSTERING
-class Binary;
-class Replication;
 class Discovery;
+class RemoteProtocol;
 class RemoteProtocolClient;
 class RemoteProtocolServer;
+class ReplicationProtocol;
 class ReplicationProtocolClient;
 class ReplicationProtocolServer;
 #endif
@@ -136,8 +136,8 @@ private:
 
 	std::shared_ptr<Http> _http;
 #ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<Binary> _binary;
-	std::shared_ptr<Replication> _replication;
+	std::shared_ptr<RemoteProtocol> _binary;
+	std::shared_ptr<ReplicationProtocol> _replication;
 	std::shared_ptr<Discovery> _discovery;
 #endif
 

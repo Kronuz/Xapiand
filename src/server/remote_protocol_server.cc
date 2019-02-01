@@ -27,7 +27,7 @@
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
-#include "binary.h"                         // for Binary
+#include "remote_protocol.h"                // for RemoteProtocol
 #include "remote_protocol_client.h"         // for RemoteProtocolClient
 #include "cassert.h"                        // for ASSERT
 #include "endpoint.h"                       // for Endpoints
@@ -48,13 +48,13 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-RemoteProtocolServer::RemoteProtocolServer(const std::shared_ptr<Binary>& binary_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
-	: MetaBaseServer<RemoteProtocolServer>(binary_, ev_loop_, ev_flags_, "Binary", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
-	  binary(*binary_)
+RemoteProtocolServer::RemoteProtocolServer(const std::shared_ptr<RemoteProtocol>& remote_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: MetaBaseServer<RemoteProtocolServer>(remote_, ev_loop_, ev_flags_, "Remote", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
+	  remote(*remote_)
 {
 	bind(hostname, serv, tries);
 
-	L_EV("Start binary's async trigger replication signal event");
+	L_EV("Start remote protocol's async trigger replication signal event");
 }
 
 
@@ -75,8 +75,8 @@ RemoteProtocolServer::start_impl()
 
 	Worker::start_impl();
 
-	io.start(sock == -1 ? binary.sock : sock, ev::READ);
-	L_EV("Start binary's server accept event {sock:%d}", sock == -1 ? binary.sock : sock);
+	io.start(sock == -1 ? remote.sock : sock, ev::READ);
+	L_EV("Start remote protocol's server accept event {sock:%d}", sock == -1 ? remote.sock : sock);
 }
 
 
@@ -88,7 +88,7 @@ RemoteProtocolServer::accept()
 	if (sock != -1) {
 		return TCP::accept();
 	}
-	return binary.accept();
+	return remote.accept();
 }
 
 
@@ -106,7 +106,7 @@ RemoteProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid binary event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid remote protocol event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
@@ -129,7 +129,7 @@ RemoteProtocolServer::__repr__() const
 {
 	return string::format("<RemoteProtocolServer {cnt:%ld, sock:%d}%s%s%s>",
 		use_count(),
-		sock == -1 ? binary.sock : sock,
+		sock == -1 ? remote.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
 		is_detaching() ? " (deteaching)" : "");

@@ -29,18 +29,18 @@
 #include "base_server.h"                      // for BaseServer
 
 
-class Binary;
+class RemoteProtocol;
 class Endpoint;
 
 
-// Binary Server
+// RemoteProtocol Server
 class RemoteProtocolServer : public MetaBaseServer<RemoteProtocolServer> {
-	Binary& binary;
+	RemoteProtocol& remote;
 
 	void start_impl() override;
 
 public:
-	RemoteProtocolServer(const std::shared_ptr<Binary>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	RemoteProtocolServer(const std::shared_ptr<RemoteProtocol>& remote_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 	~RemoteProtocolServer() noexcept;
 
 	int accept();

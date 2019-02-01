@@ -94,7 +94,7 @@ ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worke
 		.xapiand_replication_connections
 		.Increment();
 
-	L_CONN("New Replication Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Replication Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
 }
 
 
@@ -122,7 +122,7 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 		}
 
 		if (is_shutting_down() && !is_idle()) {
-			L_INFO("Replication client killed!");
+			L_INFO("Replication Protocol client killed!");
 		}
 
 		if (cluster_database) {

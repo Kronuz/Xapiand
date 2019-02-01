@@ -87,9 +87,12 @@
 #include "phonetic/german_soundex.h"
 #include "phonetic/spanish_soundex.h"
 #include "server/base_client.h"
-#include "server/binary.h"
-#include "server/binary_client.h"
-#include "server/binary_server.h"
+#include "server/remote_protocol.h"
+#include "server/remote_protocol_client.h"
+#include "server/remote_protocol_server.h"
+#include "server/replication_protocol.h"
+#include "server/replication_protocol_client.h"
+#include "server/replication_protocol_server.h"
 #include "server/buffer.h"
 #include "server/discovery.h"
 #include "server/http.h"
@@ -323,14 +326,23 @@ CHECK_MAX_SIZE(SMALL, (HttpClient))
 CHECK_MAX_SIZE(SMALL, (Response))
 CHECK_MAX_SIZE(SMALL, (Request))
 
-// server/binary.h
-CHECK_MAX_SIZE(SMALL, (Binary))
+// server/remote_protocol.h
+CHECK_MAX_SIZE(SMALL, (RemoteProtocol))
 
-// server/binary_server.h
+// server/remote_protocol_server.h
 CHECK_MAX_SIZE(SMALL, (RemoteProtocolServer))
 
-// server/binary_client.h
+// server/remote_protocol_client.h
 CHECK_MAX_SIZE(SMALL, (RemoteProtocolClient))
+
+// server/replication_protocol.h
+CHECK_MAX_SIZE(SMALL, (ReplicationProtocol))
+
+// server/replication_protocol_server.h
+CHECK_MAX_SIZE(SMALL, (ReplicationProtocolServer))
+
+// server/replication_protocol_client.h
+CHECK_MAX_SIZE(SMALL, (ReplicationProtocolClient))
 
 // server/discovery.h
 CHECK_MAX_SIZE(SMALL, (Discovery))

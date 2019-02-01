@@ -120,7 +120,7 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 		.xapiand_binary_connections
 		.Increment();
 
-	L_CONN("New Binary Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::binary_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Remote Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::binary_clients().load(), XapiandManager::total_clients().load());
 }
 
 
@@ -146,7 +146,7 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 		}
 
 		if (is_shutting_down() && !is_idle()) {
-			L_INFO("Binary client killed!");
+			L_INFO("Remote Protocol client killed!");
 		}
 
 		if (cluster_database) {

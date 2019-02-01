@@ -20,17 +20,17 @@
  * THE SOFTWARE.
  */
 
-#include "replication.h"
+#include "remote_protocol.h"
 
 #ifdef XAPIAND_CLUSTERING
 
 #include <netinet/tcp.h>                      // for TCP_NODELAY
 
+#include "remote_protocol_server.h"           // For RemoteProtocolServer
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
 #include "node.h"                             // for Node, local_node
 #include "remote_protocol_client.h"           // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
-#include "replication_protocol_server.h"      // For ReplicationProtocolServer
 
 
 // #undef L_DEBUG
@@ -39,47 +39,31 @@
 // #define L_CALL L_STACKED_DIM_GREY
 
 
-Replication::Replication(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
-	: BaseTCP(parent_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY)
+RemoteProtocol::RemoteProtocol(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+	: BaseTCP(parent_, ev_loop_, ev_flags_, "Remote", TCP_TCP_NODELAY)
 {
 	bind(hostname, serv, tries);
 }
 
 
 void
-Replication::start()
+RemoteProtocol::start()
 {
-	L_CALL("Replication::start()");
+	L_CALL("RemoteProtocol::start()");
 
 	auto weak_children = gather_children();
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
-			std::static_pointer_cast<ReplicationProtocolServer>(child)->start();
-		}
-	}
-}
-
-
-void
-Replication::trigger_replication(const TriggerReplicationArgs& args)
-{
-	L_CALL("Replication::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
-
-	trigger_replication_args.enqueue(args);
-
-	auto weak_children = gather_children();
-	for (auto& weak_child : weak_children) {
-		if (auto child = weak_child.lock()) {
-			std::static_pointer_cast<ReplicationProtocolServer>(child)->trigger_replication();
+			std::static_pointer_cast<RemoteProtocolServer>(child)->start();
 		}
 	}
 }
 
 
 std::string
-Replication::__repr__() const
+RemoteProtocol::__repr__() const
 {
-	return string::format("<Replication {cnt:%ld}%s%s%s>",
+	return string::format("<RemoteProtocol {cnt:%ld}%s%s%s>",
 		use_count(),
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
@@ -88,9 +72,10 @@ Replication::__repr__() const
 
 
 std::string
-Replication::getDescription() const
+RemoteProtocol::getDescription() const
 {
-	return string::format("TCP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION, XAPIAND_REPLICATION_PROTOCOL_MINOR_VERSION);
+	std::string proxy((ntohs(addr.sin_port) == XAPIAND_REMOTE_SERVERPORT && XAPIAND_REMOTE_SERVERPORT != XAPIAND_BINARY_PROXY) ? "->" + std::to_string(XAPIAND_BINARY_PROXY) : "");
+	return string::format("TCP %s:%d%s (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), proxy, description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

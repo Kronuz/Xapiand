@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"               // for XAPIAND_BINARY_SERVERPORT, XAPIAND_BINARY_PROXY
+#include "config.h"               // for XAPIAND_REMOTE_SERVERPORT, XAPIAND_BINARY_PROXY
 
 #include <atomic>                 // for std::atomic_bool
 #include <chrono>                 // for system_clock, system_clock::time_point

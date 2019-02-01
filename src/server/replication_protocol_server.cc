@@ -32,7 +32,7 @@
 #include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
-#include "replication.h"                    // for Replication
+#include "replication_protocol.h"           // for ReplicationProtocol
 #include "replication_protocol_client.h"    // for ReplicationProtocolClient
 #include "repr.hh"                          // for repr
 #include "tcp.h"                            // for TCP::socket
@@ -46,7 +46,7 @@
 // #define L_EV L_MEDIUM_PURPLE
 
 
-ReplicationProtocolServer::ReplicationProtocolServer(const std::shared_ptr<Replication>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
+ReplicationProtocolServer::ReplicationProtocolServer(const std::shared_ptr<ReplicationProtocol>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
 	: MetaBaseServer<ReplicationProtocolServer>(replication_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
 	  replication(*replication_),
 	  trigger_replication_async(*ev_loop)
@@ -55,7 +55,7 @@ ReplicationProtocolServer::ReplicationProtocolServer(const std::shared_ptr<Repli
 
 	trigger_replication_async.set<ReplicationProtocolServer, &ReplicationProtocolServer::trigger_replication_async_cb>(this);
 	trigger_replication_async.start();
-	L_EV("Start replication's async trigger replication signal event");
+	L_EV("Start replication protocol's async trigger replication signal event");
 }
 
 
@@ -77,7 +77,7 @@ ReplicationProtocolServer::start_impl()
 	Worker::start_impl();
 
 	io.start(sock == -1 ? replication.sock : sock, ev::READ);
-	L_EV("Start replication's server accept event not needed {sock:%d}", sock == -1 ? replication.sock : sock);
+	L_EV("Start replication protocol's server accept event not needed {sock:%d}", sock == -1 ? replication.sock : sock);
 }
 
 
@@ -107,7 +107,7 @@ ReplicationProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid replication event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid replication protocol event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

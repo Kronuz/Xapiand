@@ -1938,7 +1938,7 @@ HttpClient::nodes_view(Request& request)
 			if (Node::is_active(node)) {
 				obj["host"] = node->host();
 				obj["http_port"] = node->http_port;
-				obj["binary_port"] = node->binary_port;
+				obj["remote_port"] = node->remote_port;
 				obj["replication_port"] = node->replication_port;
 				obj["active"] = true;
 			} else {
@@ -2660,8 +2660,8 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 			index_path = string::format("xapian://%s/%s", node_name, index_path);
 		}
 		Endpoint endpoint{index_path, node.get()};
-		if (endpoint.node.binary_port == 0) {
-			endpoint.node.binary_port = XAPIAND_BINARY_SERVERPORT;
+		if (endpoint.node.remote_port == 0) {
+			endpoint.node.remote_port = XAPIAND_REMOTE_SERVERPORT;
 		}
 		if (endpoint.node.replication_port == 0) {
 			endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;

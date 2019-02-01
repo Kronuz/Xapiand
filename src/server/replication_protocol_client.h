@@ -24,7 +24,6 @@
 
 #include "config.h"                         // for XAPIAND_CLUSTERING
 
-
 #ifdef XAPIAND_CLUSTERING
 
 #include <deque>                            // for std::deque

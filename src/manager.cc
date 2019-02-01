@@ -86,10 +86,10 @@
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 
 #ifdef XAPIAND_CLUSTERING
-#include "server/binary.h"                       // for Binary
+#include "server/remote_protocol.h"              // for RemoteProtocol
 #include "server/remote_protocol_server.h"       // for RemoteProtocolServer
 #include "server/remote_protocol_client.h"       // for RemoteProtocolClient
-#include "server/replication.h"                  // for Replication
+#include "server/replication_protocol.h"         // for ReplicationProtocol
 #include "server/replication_protocol_client.h"  // for ReplicationProtocolClient
 #include "server/replication_protocol_server.h"  // for ReplicationProtocolServer
 #include "server/discovery.h"                    // for Discovery
@@ -728,8 +728,8 @@ XapiandManager::make_servers()
 
 	int http_tries = opts.http_port ? 1 : 10;
 	int http_port = opts.http_port ? opts.http_port : XAPIAND_HTTP_SERVERPORT;
-	int binary_tries = opts.binary_port ? 1 : 10;
-	int binary_port = opts.binary_port ? opts.binary_port : XAPIAND_BINARY_SERVERPORT;
+	int binary_tries = opts.remote_port ? 1 : 10;
+	int remote_port = opts.remote_port ? opts.remote_port : XAPIAND_REMOTE_SERVERPORT;
 	int replication_tries = opts.replication_port ? 1 : 10;
 	int replication_port = opts.replication_port ? opts.replication_port : XAPIAND_REPLICATION_SERVERPORT;
 
@@ -747,11 +747,11 @@ XapiandManager::make_servers()
 					it = nodes.begin();
 					continue;
 				}
-				if (node->binary_port == binary_port) {
+				if (node->remote_port == remote_port) {
 					if (--binary_tries == 0) {
-						THROW(Error, "Cannot use port %d, it's already in use!", binary_port);
+						THROW(Error, "Cannot use port %d, it's already in use!", remote_port);
 					}
-					++binary_port;
+					++remote_port;
 					it = nodes.begin();
 					continue;
 				}
@@ -776,8 +776,8 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_binary = Worker::make_shared<Binary>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? 0 : binary_tries);
-        _replication = Worker::make_shared<Replication>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
+		_binary = Worker::make_shared<RemoteProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? 0 : binary_tries);
+        _replication = Worker::make_shared<ReplicationProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
 	}
 #endif
 
@@ -790,7 +790,7 @@ XapiandManager::make_servers()
 
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
-			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), binary_port, reuse_ports ? binary_tries : 0);
+			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(_binary, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? binary_tries : 0);
 			if (_remote_server->addr.sin_family) {
 				_binary->addr = _remote_server->addr;
 			}
@@ -810,7 +810,7 @@ XapiandManager::make_servers()
 	node_copy->http_port = ntohs(_http->addr.sin_port);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		node_copy->binary_port = ntohs(_binary->addr.sin_port);
+		node_copy->remote_port = ntohs(_binary->addr.sin_port);
 		node_copy->replication_port = ntohs(_replication->addr.sin_port);
 	}
 #endif
@@ -972,8 +972,8 @@ XapiandManager::join()
 		L_MANAGER("Finishing bulk document preparer threads pool!");
 		_doc_preparer_pool->finish();
 
-		L_MANAGER("Waiting for %zu replication client thread%s...", _doc_preparer_pool->running_size(), (_doc_preparer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		L_MANAGER("Waiting for %zu bulk document preparer thread%s...", _doc_preparer_pool->running_size(), (_doc_preparer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document preparers...", "Bulk document preparers finished!");
 		while (!_doc_preparer_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -987,8 +987,8 @@ XapiandManager::join()
 		L_MANAGER("Finishing bulk document indexer threads pool!");
 		_doc_indexer_pool->finish();
 
-		L_MANAGER("Waiting for %zu replication client thread%s...", _doc_indexer_pool->running_size(), (_doc_indexer_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		L_MANAGER("Waiting for %zu bulk document indexer thread%s...", _doc_indexer_pool->running_size(), (_doc_indexer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document indexers...", "Bulk document indexers finished!");
 		while (!_doc_indexer_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1006,7 +1006,7 @@ XapiandManager::join()
 		trigger_replication_obj->finish();
 
 		L_MANAGER("Waiting for %zu replication scheduler%s...", trigger_replication_obj->running_size(), (trigger_replication_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication schedulers finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication schedulers...", "Replication Protocol schedulers finished!");
 		while (!trigger_replication_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1021,7 +1021,7 @@ XapiandManager::join()
 		_remote_server_pool->finish();
 
 		L_MANAGER("Waiting for %zu binary server%s...", _remote_server_pool->running_size(), (_remote_server_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Binary servers finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary servers...", "Remote Protocol servers finished!");
 		while (!_remote_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1036,7 +1036,7 @@ XapiandManager::join()
 		_remote_client_pool->finish();
 
 		L_MANAGER("Waiting for %zu binary client thread%s...", _remote_client_pool->running_size(), (_remote_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Binary clients finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the binary clients...", "Remote Protocol clients finished!");
 		while (!_remote_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1051,7 +1051,7 @@ XapiandManager::join()
 		_replication_server_pool->finish();
 
 		L_MANAGER("Waiting for %zu replication server%s...", _replication_server_pool->running_size(), (_replication_server_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication servers...", "Replication servers finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication servers...", "Replication Protocol servers finished!");
 		while (!_replication_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1066,7 +1066,7 @@ XapiandManager::join()
 		_replication_client_pool->finish();
 
 		L_MANAGER("Waiting for %zu replication client thread%s...", _replication_client_pool->running_size(), (_replication_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication clients finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication clients...", "Replication Protocol clients finished!");
 		while (!_replication_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {

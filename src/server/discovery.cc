@@ -356,7 +356,7 @@ Discovery::cluster_wave(Message type, const std::string& message)
 		auto node = put.first;
 		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
 		if (put.second) {
-			L_INFO("Node %s%s" + INFO_COL + " is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->binary_port);
+			L_INFO("Node %s%s" + INFO_COL + " is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
 
 		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
@@ -421,7 +421,7 @@ Discovery::cluster_enter(Message type, const std::string& message)
 		auto node = put.first;
 		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
 		if (put.second) {
-			L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->binary_port);
+			L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
 	}
 }

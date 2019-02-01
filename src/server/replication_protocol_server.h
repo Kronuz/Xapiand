@@ -29,13 +29,13 @@
 #include "base_server.h"                      // for BaseServer
 
 
-class Replication;
+class ReplicationProtocol;
 struct TriggerReplicationArgs;
 
 
-// Replication Server
+// ReplicationProtocol Server
 class ReplicationProtocolServer : public MetaBaseServer<ReplicationProtocolServer> {
-	Replication& replication;
+	ReplicationProtocol& replication;
 
 	ev::async trigger_replication_async;
 
@@ -44,7 +44,7 @@ class ReplicationProtocolServer : public MetaBaseServer<ReplicationProtocolServe
 	void trigger_replication_async_cb(ev::async& watcher, int revents);
 
 public:
-	ReplicationProtocolServer(const std::shared_ptr<Replication>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
+	ReplicationProtocolServer(const std::shared_ptr<ReplicationProtocol>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);
 	~ReplicationProtocolServer() noexcept;
 
 	int accept();
