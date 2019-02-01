@@ -624,22 +624,16 @@ Logging::operator()()
 
 	msg.append(str);
 
-	if (async) {
-		auto log_age = age();
-		if (log_age > 1e8) {
-			msg += " " + string::from_delta(log_age, clears ? "+" : "~", true);
-		}
-	}
-
 	if (eptr) {
+		std::string description;
 		std::string exception = "\n== Exception: ";
 		try {
 			std::rethrow_exception(eptr);
 		} catch (const BaseException& exc) {
 			if (*exc.get_context()) {
-				exception.append(exc.get_context());
+				description.append(exc.get_context());
 			} else {
-				exception.append("Unkown BaseException");
+				description.append("Unkown BaseException");
 			}
 			if (exc.empty()) {
 				exception.append("\n== Location: ");
@@ -652,7 +646,7 @@ Logging::operator()()
 				exception.append(exc.get_traceback());
 			}
 		} catch (const Xapian::Error& exc) {
-			exception.append(exc.get_description());
+			description.append(exc.get_description());
 			exception.append("\n== Location: ");
 			exception.append(filename);
 			exception.push_back(':');
@@ -661,9 +655,9 @@ Logging::operator()()
 			exception.append(function);
 		} catch (const std::exception& exc) {
 			if (*exc.what()) {
-				exception.append(exc.what());
+				description.append(exc.what());
 			} else {
-				exception.append("Unkown std::exception");
+				description.append("Unkown std::exception");
 			}
 			exception.append("\n== Location: ");
 			exception.append(filename);
@@ -672,7 +666,7 @@ Logging::operator()()
 			exception.append(" at ");
 			exception.append(function);
 		} catch (...) {
-			exception.append("Unkown exception");
+			description.append("Unkown exception");
 			exception.append("\n== Location: ");
 			exception.append(filename);
 			exception.push_back(':');
@@ -680,9 +674,20 @@ Logging::operator()()
 			exception.append(" at ");
 			exception.append(function);
 		}
+		if (!str.empty()) {
+			msg.append(": ");
+		}
+		msg.append(description);
 		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
 		msg.append(exception);
 		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
+	}
+
+	if (async) {
+		auto log_age = age();
+		if (log_age > 1e8) {
+			msg += " " + string::from_delta(log_age, clears ? "+" : "~", true);
+		}
 	}
 
 	if (priority >= -LOG_ERR && priority <= LOG_ERR) {
