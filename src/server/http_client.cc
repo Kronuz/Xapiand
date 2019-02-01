@@ -786,7 +786,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 
 	prepare();  // Prepare the request view
 
-	if likely(!closed && !new_request->ending) {
+	if likely(!closed && !new_request->completing) {
 		if likely(new_request->view) {
 			if (new_request->mode != Request::Mode::FULL) {
 				std::lock_guard<std::mutex> lk(runner_mutex);
@@ -812,7 +812,7 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 		repr(at, length));
 	ignore_unused(parser);
 
-	if likely(!closed && !new_request->ending) {
+	if likely(!closed && !new_request->completing) {
 		std::string_view raw(at, length);
 		new_request->append(raw);
 
@@ -846,8 +846,8 @@ HttpClient::on_message_complete(http_parser* parser)
 		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
-	if likely(!closed && !new_request->ending) {
-		new_request->ending = true;
+	if likely(!closed && !new_request->completing) {
+		new_request->completing = true;
 
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
@@ -1344,7 +1344,7 @@ HttpClient::process(Request& request)
 			};
 			write_http_response(request, error_code, err_response);
 		}
-		request.ending = true;
+		request.completing = true;
 	}
 }
 
@@ -1364,7 +1364,7 @@ HttpClient::operator()()
 			requests.pop_front();
 			continue;
 		}
-		if (request.starting) {
+		if (request.begining) {
 			writes = 0;
 		}
 
@@ -1388,7 +1388,7 @@ HttpClient::operator()()
 		try {
 			process(request);
 		} catch (...) {
-			request.starting = false;
+			request.begining = false;
 			end_http_request(request);
 			lk.lock();
 			requests.pop_front();
@@ -1398,8 +1398,8 @@ HttpClient::operator()()
 			detach();
 			throw;
 		}
-		request.starting = false;
-		if (request.ending) {
+		request.begining = false;
+		if (request.completing) {
 			end_http_request(request);
 			lk.lock();
 			requests.pop_front();
@@ -2040,7 +2040,7 @@ HttpClient::restore_view(Request& request)
 {
 	L_CALL("HttpClient::restore_view()");
 
-	if (request.starting) {
+	if (request.begining) {
 		endpoints_maker(request, true);
 
 		request.processing = std::chrono::system_clock::now();
@@ -2062,7 +2062,7 @@ HttpClient::restore_view(Request& request)
 		}
 	}
 
-	if (request.ending) {
+	if (request.completing) {
 		request.indexer->wait();
 
 		request.ready = std::chrono::system_clock::now();
@@ -3255,8 +3255,8 @@ Request::Request(HttpClient* client)
 	: mode{Mode::FULL},
 	  view{nullptr},
 	  type_encoding{Encoding::none},
-	  starting{true},
-	  ending{false},
+	  begining{true},
+	  completing{false},
 	  ended{false},
 	  raw_offset{0},
 	  raw_peek{0},
@@ -3399,7 +3399,7 @@ Request::read_line()
 		raw_offset = raw_peek = new_raw_offset + 1;
 		return line;
 	}
-	if (ending) {
+	if (completing) {
 		auto line = std::string_view(raw).substr(raw_offset);
 		raw_offset = raw_peek = raw.size();
 		return line;

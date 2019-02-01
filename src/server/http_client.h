@@ -236,12 +236,12 @@ public:
 	std::string headers;
 	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
 
-	bool starting;
-	std::atomic_bool ending;  // ending requests have received all body
+	bool begining;
+	std::atomic_bool completing;  // completing requests have received all body
 	bool ended;
 
-	std::string raw;
 	LightweightSemaphore raw_pending;
+	std::string raw;
 	size_t raw_offset;
 	size_t raw_peek;
 
