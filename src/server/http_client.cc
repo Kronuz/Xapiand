@@ -1449,9 +1449,10 @@ HttpClient::operator()()
 		request.begining = false;
 		if (request.ending) {
 			end_http_request(request);
+			auto closing = request.closing;
 			lk.lock();
 			requests.pop_front();
-			if (request.closing) {
+			if (closing) {
 				running = false;
 				lk.unlock();
 				L_CONN("Running in worker ended after request closing.");
