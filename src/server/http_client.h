@@ -211,11 +211,14 @@ public:
 class Request {
 	MsgPack _decoded_body;
 
+	MsgPack decode(std::string_view body);
+
 public:
 	enum class Mode {
 		FULL,
 		STREAM,
-		STREAM_LINES,
+		STREAM_NDJSON,
+		STREAM_MSGPACK,
 	} mode;
 
 	Response response;
@@ -240,10 +243,15 @@ public:
 	std::atomic_bool completing;  // completing requests have received all body
 	bool ended;
 
-	LightweightSemaphore raw_pending;
+	LightweightSemaphore pending;
+
 	std::string raw;
-	size_t raw_offset;
 	size_t raw_peek;
+	size_t raw_offset;
+
+	std::mutex objects_mtx;
+	std::deque<MsgPack> objects;
+	msgpack::unpacker unpacker;  // msgpack unpacker
 
 	ct_type_t ct_type;
 
@@ -273,13 +281,13 @@ public:
 	Request& operator=(const Request&) = delete;
 	Request& operator=(Request&&) = default;
 
-	void append(std::string_view str);
-	bool pending();
+	bool append(const char* at, size_t length);
 
-	std::string_view read();
-	std::string_view read_line();
+	bool wait();
 
-	MsgPack decode(std::string_view body);
+	bool next(std::string_view& str_view);
+	bool next_object(MsgPack& obj);
+
 	MsgPack& decoded_body();
 
 	std::string head();
@@ -300,6 +308,9 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 		NO_CMD_ID,
 		BAD_QUERY,
 	};
+
+	template <typename Func>
+	int handled_errors(Request& request, Func&& func);
 
 	bool is_idle() const;
 

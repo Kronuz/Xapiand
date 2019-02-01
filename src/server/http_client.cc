@@ -394,6 +394,105 @@ HttpClient::~HttpClient() noexcept
 }
 
 
+template <typename Func>
+int
+HttpClient::handled_errors(Request& request, Func&& func)
+{
+	L_CALL("HttpClient::handled_errors()");
+
+	enum http_status error_code = HTTP_STATUS_OK;
+	std::string error;
+	try {
+		return func();
+	} catch (const NotFoundError& exc) {
+		error_code = HTTP_STATUS_NOT_FOUND;
+		error.assign(http_status_str(error_code));
+	} catch (const MissingTypeError& exc) {
+		error_code = HTTP_STATUS_PRECONDITION_FAILED;
+		error.assign(exc.what());
+	} catch (const ClientError& exc) {
+		error_code = HTTP_STATUS_BAD_REQUEST;
+		error.assign(exc.what());
+	} catch (const TimeOutError& exc) {
+		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
+		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const Xapian::NetworkTimeoutError& exc) {
+		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
+		error.assign(exc.get_description());
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
+		error.assign(exc.get_description());
+	} catch (const Xapian::NetworkError& exc) {
+		std::string msg;
+		const char* error_string = exc.get_error_string();
+		if (!error_string) {
+			msg = exc.get_msg();
+			error_string = msg.c_str();
+		}
+		constexpr static auto _ = phf::make_phf({
+			hhl("Can't assign requested address"),
+			hhl("Connection refused"),
+			hhl("Connection reset by peer"),
+			hhl("Connection closed unexpectedly"),
+		});
+		switch (_.fhhl(error_string)) {
+			case _.fhhl("Can't assign requested address"):
+				error_code = HTTP_STATUS_BAD_GATEWAY;
+				error.assign("Endpoint can't assign requested address!");
+				break;
+			case _.fhhl("Connection refused"):
+				error_code = HTTP_STATUS_BAD_GATEWAY;
+				error.assign("Endpoint connection refused!");
+				break;
+			case _.fhhl("Connection reset by peer"):
+				error_code = HTTP_STATUS_BAD_GATEWAY;
+				error.assign("Endpoint connection reset by peer!");
+				break;
+			case _.fhhl("Connection closed unexpectedly"):
+				error_code = HTTP_STATUS_BAD_GATEWAY;
+				error.assign("Endpoint connection closed unexpectedly!");
+				break;
+			default:
+				error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+				error.assign(exc.get_description());
+				L_EXC("ERROR: Dispatching HTTP request");
+		}
+	} catch (const BaseException& exc) {
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
+		L_EXC("ERROR: Dispatching HTTP request");
+	} catch (const Xapian::Error& exc) {
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+		error.assign(exc.get_description());
+		L_EXC("ERROR: Dispatching HTTP request");
+	} catch (const std::exception& exc) {
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+		error.assign(*exc.what() != 0 ? exc.what() : "Unkown std::exception!");
+		L_EXC("ERROR: Dispatching HTTP request");
+	} catch (...) {
+		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+		error.assign("Unknown exception!");
+		L_EXC("ERROR: Dispatching HTTP request");
+	}
+
+	if (writes != 0) {
+		detach();
+	} else {
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, string::split(error, '\n') }
+		};
+		write_http_response(request, error_code, err_response);
+	}
+	request.completing = true;
+
+	return 1;
+}
+
+
 bool
 HttpClient::is_idle() const
 {
@@ -507,61 +606,91 @@ inline std::string readable_http_parser_flags(http_parser* parser) {
 int
 HttpClient::message_begin_cb(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_message_begin(parser);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_message_begin(parser);
+	});
 }
 
 int
 HttpClient::url_cb(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_url(parser, at, length);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_url(parser, at, length);
+	});
 }
 
 int
 HttpClient::status_cb(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_status(parser, at, length);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_status(parser, at, length);
+	});
 }
 
 int
 HttpClient::header_field_cb(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_header_field(parser, at, length);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_header_field(parser, at, length);
+	});
 }
 
 int
 HttpClient::header_value_cb(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_header_value(parser, at, length);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_header_value(parser, at, length);
+	});
 }
 
 int
 HttpClient::headers_complete_cb(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_headers_complete(parser);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_headers_complete(parser);
+	});
 }
 
 int
 HttpClient::body_cb(http_parser* parser, const char* at, size_t length)
 {
-	return static_cast<HttpClient *>(parser->data)->on_body(parser, at, length);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_body(parser, at, length);
+	});
 }
 
 int
 HttpClient::message_complete_cb(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_message_complete(parser);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_message_complete(parser);
+	});
 }
 
 int
 HttpClient::chunk_header_cb(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_chunk_header(parser);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_chunk_header(parser);
+	});
 }
 
 int
 HttpClient::chunk_complete_cb(http_parser* parser)
 {
-	return static_cast<HttpClient *>(parser->data)->on_chunk_complete(parser);
+	auto http_client = static_cast<HttpClient *>(parser->data);
+	return http_client->handled_errors(*http_client->new_request, [&]{
+		return http_client->on_chunk_complete(parser);
+	});
 }
 
 
@@ -784,7 +913,8 @@ HttpClient::on_headers_complete(http_parser* parser)
 		readable_http_parser_flags(parser));
 	ignore_unused(parser);
 
-	prepare();  // Prepare the request view
+	// Prepare the request view
+	prepare();
 
 	if likely(!closed && !new_request->completing) {
 		if likely(new_request->view) {
@@ -812,22 +942,14 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 		repr(at, length));
 	ignore_unused(parser);
 
-	if likely(!closed && !new_request->completing) {
-		std::string_view raw(at, length);
-		new_request->append(raw);
+	if likely(!closed && !new_request->completing && new_request->view) {
+		if (new_request->append(at, length)) {
+			new_request->pending.signal();
 
-		if likely(new_request->view) {
-			if (
-				(new_request->mode == Request::Mode::STREAM) ||
-				(new_request->mode == Request::Mode::STREAM_LINES && raw.find_first_of('\n') != std::string_view::npos)
-			) {
-				new_request->raw_pending.signal();
-
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (!running) {  // Start a runner if not running
-					running = true;
-					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
-				}
+			std::lock_guard<std::mutex> lk(runner_mutex);
+			if (!running) {  // Start a runner if not running
+				running = true;
+				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
 			}
 		}
 	}
@@ -853,7 +975,8 @@ HttpClient::on_message_complete(http_parser* parser)
 		std::swap(new_request, request);
 
 		if (request->view) {
-			request->raw_pending.signal();
+			request->append(nullptr, 0);  // flush pending stuff
+			request->pending.signal();  // always signal, so view continues completing
 
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			if (requests.empty() || request != requests.front()) {
@@ -995,7 +1118,11 @@ HttpClient::prepare()
 	}
 
 	if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && new_request->parser.content_length) {
-		new_request->raw.reserve(new_request->parser.content_length);
+		if (new_request->mode == Request::Mode::STREAM_MSGPACK) {
+			new_request->unpacker.reserve_buffer(new_request->parser.content_length);
+		} else {
+			new_request->raw.reserve(new_request->parser.content_length);
+		}
 	}
 }
 
@@ -1167,8 +1294,12 @@ HttpClient::_prepare_post()
 			return &HttpClient::dump_view;
 		case Command::CMD_RESTORE:
 			new_request->path_parser.skip_id();  // Command has no ID
-			if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
-				new_request->mode = Request::Mode::STREAM_LINES;
+			if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+				if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
+					new_request->mode = Request::Mode::STREAM_NDJSON;
+				} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
+					new_request->mode = Request::Mode::STREAM_MSGPACK;
+				}
 			}
 			return &HttpClient::restore_view;
 		case Command::CMD_QUIT:
@@ -1252,100 +1383,10 @@ HttpClient::process(Request& request)
 	L_OBJ_BEGIN("HttpClient::process:BEGIN");
 	L_OBJ_END("HttpClient::process:END");
 
-	enum http_status error_code = HTTP_STATUS_OK;
-
-	std::string error;
-	try {
-
-		ASSERT(request.view);
+	handled_errors(request, [&]{
 		(this->*request.view)(request);
-
-	} catch (const NotFoundError& exc) {
-		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(http_status_str(error_code));
-	} catch (const MissingTypeError& exc) {
-		error_code = HTTP_STATUS_PRECONDITION_FAILED;
-		error.assign(exc.what());
-	} catch (const ClientError& exc) {
-		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(exc.what());
-	} catch (const TimeOutError& exc) {
-		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const Xapian::NetworkTimeoutError& exc) {
-		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
-		error.assign(exc.get_description());
-	} catch (const Xapian::DatabaseModifiedError& exc) {
-		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(exc.get_description());
-	} catch (const Xapian::NetworkError& exc) {
-		std::string msg;
-		const char* error_string = exc.get_error_string();
-		if (!error_string) {
-			msg = exc.get_msg();
-			error_string = msg.c_str();
-		}
-		constexpr static auto _ = phf::make_phf({
-			hhl("Can't assign requested address"),
-			hhl("Connection refused"),
-			hhl("Connection reset by peer"),
-			hhl("Connection closed unexpectedly"),
-		});
-		switch (_.fhhl(error_string)) {
-			case _.fhhl("Can't assign requested address"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint can't assign requested address!");
-				break;
-			case _.fhhl("Connection refused"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection refused!");
-				break;
-			case _.fhhl("Connection reset by peer"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection reset by peer!");
-				break;
-			case _.fhhl("Connection closed unexpectedly"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection closed unexpectedly!");
-				break;
-			default:
-				error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-				error.assign(exc.get_description());
-				L_EXC("ERROR: Dispatching HTTP request");
-		}
-	} catch (const BaseException& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (const Xapian::Error& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(exc.get_description());
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (const std::exception& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (...) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign("Unknown exception!");
-		L_EXC("ERROR: Dispatching HTTP request");
-	}
-
-	if (error_code != HTTP_STATUS_OK) {
-		if (writes != 0) {
-			detach();
-		} else {
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, string::split(error, '\n') }
-			};
-			write_http_response(request, error_code, err_response);
-		}
-		request.completing = true;
-	}
+		return 0;
+	});
 }
 
 
@@ -1370,22 +1411,14 @@ HttpClient::operator()()
 
 		lk.unlock();
 
-		if (request.mode != Request::Mode::FULL) {
-			// Wait for a pending raw body for one second (1000000us) and flush
-			// pending signals before processing the request, otherwise retry
-			// checking for empty/ended requests or closed connections.
-			if (!request.raw_pending.wait(1000000)) {
-				lk.lock();
-				continue;
-			}
-			while (request.raw_pending.tryWaitMany(std::numeric_limits<ssize_t>::max())) { }
-			if (!request.pending()) {
-				lk.lock();
-				continue;
-			}
+		// !ait for the request to be ready
+		if (!request.wait()) {
+			lk.lock();
+			continue;
 		}
 
 		try {
+			ASSERT(request.view);
 			process(request);
 		} catch (...) {
 			request.begining = false;
@@ -2048,12 +2081,10 @@ HttpClient::restore_view(Request& request)
 		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL, request.method);
 	}
 
-	if (request.mode == Request::Mode::STREAM_LINES) {
-		// for application/x-ndjson
-		auto line = request.read_line();
-		while (!line.empty()) {
-			request.indexer->prepare(request.decode(line));
-			line = request.read_line();
+	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
+		MsgPack obj;
+		while (request.next_object(obj)) {
+			request.indexer->prepare(std::move(obj));
 		}
 	} else {
 		auto& docs = request.decoded_body();
@@ -3258,8 +3289,8 @@ Request::Request(HttpClient* client)
 	  begining{true},
 	  completing{false},
 	  ended{false},
-	  raw_offset{0},
 	  raw_peek{0},
+	  raw_offset{0},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},
@@ -3307,15 +3338,13 @@ Request::decode(std::string_view body)
 	switch (_.fhhl(ct_type_str)) {
 		case _.fhhl(NDJSON_CONTENT_TYPE):
 		case _.fhhl(X_NDJSON_CONTENT_TYPE):
-			if (mode == Mode::STREAM_LINES) {
-				decoded = MsgPack(MsgPack::Type::ARRAY);
-				for (auto json : Split<std::string_view>(body, '\n')) {
-					json_load(rdoc, json);
-					decoded.append(rdoc);
-				}
-				ct_type = json_type;
-				return decoded;
+			decoded = MsgPack(MsgPack::Type::ARRAY);
+			for (auto json : Split<std::string_view>(body, '\n')) {
+				json_load(rdoc, json);
+				decoded.append(rdoc);
 			}
+			ct_type = json_type;
+			return decoded;
 			/* FALLTHROUGH */
 		case _.fhhl(JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
@@ -3359,52 +3388,129 @@ Request::decoded_body()
 }
 
 
-void
-Request::append(std::string_view str)
+bool
+Request::append(const char* at, size_t length)
 {
-	L_CALL("Request::append()");
+	L_CALL("Request::append(<at>, <length>)");
 
-	raw.append(str);
+	bool signal_pending = false;
+
+	switch (mode) {
+		case Mode::FULL:
+			raw.append(std::string_view(at, length));
+			break;
+
+		case Mode::STREAM:
+			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+
+			raw.append(std::string_view(at, length));
+			signal_pending = true;
+			break;
+
+		case Mode::STREAM_NDJSON:
+			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+
+			if (length) {
+				raw.append(std::string_view(at, length));
+
+				auto new_raw_offset = raw.find_first_of('\n', raw_peek);
+				while (new_raw_offset != std::string::npos) {
+					auto json = std::string_view(raw).substr(raw_offset, new_raw_offset - raw_offset);
+					raw_offset = raw_peek = new_raw_offset + 1;
+					new_raw_offset = raw.find_first_of('\n', raw_peek);
+					if (!json.empty()) {
+						signal_pending = true;
+						rapidjson::Document rdoc;
+						json_load(rdoc, json);
+						std::lock_guard<std::mutex> lk(objects_mtx);
+						objects.emplace_back(rdoc);
+					}
+				}
+			}
+
+			if (!length) {
+				auto json = std::string_view(raw).substr(raw_offset);
+				raw_offset = raw_peek = raw.size();
+				if (!json.empty()) {
+					signal_pending = true;
+					rapidjson::Document rdoc;
+					json_load(rdoc, json);
+					std::lock_guard<std::mutex> lk(objects_mtx);
+					objects.emplace_back(rdoc);
+				}
+			}
+
+			break;
+
+		case Mode::STREAM_MSGPACK:
+			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+
+			if (length) {
+				unpacker.reserve_buffer(length);
+				memcpy(unpacker.buffer(), at, length);
+				unpacker.buffer_consumed(length);
+
+				msgpack::object_handle result;
+				while (unpacker.next(result)) {
+					signal_pending = true;
+					std::lock_guard<std::mutex> lk(objects_mtx);
+					objects.emplace_back(result.get());
+				}
+			}
+
+			break;
+	}
+
+	return signal_pending;
+}
+
+bool
+Request::wait()
+{
+	if (mode != Request::Mode::FULL) {
+		// Wait for a pending raw body for one second (1000000us) and flush
+		// pending signals before processing the request, otherwise retry
+		// checking for empty/ended requests or closed connections.
+		if (!pending.wait(1000000)) {
+			return false;
+		}
+		while (pending.tryWaitMany(std::numeric_limits<ssize_t>::max())) { }
+	}
+	return true;
+}
+
+bool
+Request::next(std::string_view& str_view)
+{
+	L_CALL("Request::next(<&str_view>)");
+
+	ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+	ASSERT(mode == Mode::STREAM);
+
+	if (raw_offset == raw.size()) {
+		return false;
+	}
+	str_view = std::string_view(raw).substr(raw_offset);
+	raw_offset = raw.size();
+	return true;
 }
 
 
 bool
-Request::pending()
+Request::next_object(MsgPack& obj)
 {
-	L_CALL("Request::pending()");
+	L_CALL("Request::next_object(<&obj>)");
 
-	return raw_offset < raw.size();
-}
+	ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+	ASSERT(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
 
-
-std::string_view
-Request::read()
-{
-	L_CALL("Request::read()");
-
-	auto body = std::string_view(raw).substr(raw_offset);
-	raw_offset = raw_peek = raw.size();
-	return body;
-}
-
-
-std::string_view
-Request::read_line()
-{
-	L_CALL("Request::read_line()");
-
-	auto new_raw_offset = raw.find_first_of('\n', raw_peek);
-	if (new_raw_offset != std::string::npos) {
-		auto line = std::string_view(raw).substr(raw_offset, new_raw_offset - raw_offset);
-		raw_offset = raw_peek = new_raw_offset + 1;
-		return line;
+	std::lock_guard<std::mutex> lk(objects_mtx);
+	if (objects.empty()) {
+		return false;
 	}
-	if (completing) {
-		auto line = std::string_view(raw).substr(raw_offset);
-		raw_offset = raw_peek = raw.size();
-		return line;
-	}
-	return "";
+	obj = std::move(objects.front());
+	objects.pop_front();
+	return true;
 }
 
 
