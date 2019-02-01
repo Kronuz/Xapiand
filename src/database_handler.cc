@@ -1860,23 +1860,30 @@ DocIndexer::operator()()
 	bool ready_ = false;
 	while (running) {
 		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
-		ready_queue.wait_dequeue(prepared);
+		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
+
 		if (!ready_) {
 			ready_ = ready.load(std::memory_order_relaxed);
 		}
-		auto processed_ = _processed.fetch_add(1, std::memory_order_acquire) + 1;
 
-		auto& term_id = std::get<0>(prepared);
-		auto& doc = std::get<1>(prepared);
+		size_t processed_;
+		if (valid) {
+			processed_ = _processed.fetch_add(1, std::memory_order_acquire) + 1;
 
-		if (!term_id.empty()) {
-			try {
-				lock_database lk_db(&db_handler);
-				db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
-				++_indexed;
-			} catch (...) {
-				L_EXC("ERROR: Cannot replace document");
+			auto& term_id = std::get<0>(prepared);
+			auto& doc = std::get<1>(prepared);
+
+			if (!term_id.empty()) {
+				try {
+					lock_database lk_db(&db_handler);
+					db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
+					++_indexed;
+				} catch (...) {
+					L_EXC("ERROR: Cannot replace document");
+				}
 			}
+		} else {
+			processed_ = _processed.load(std::memory_order_acquire);
 		}
 
 		if (ready_) {
