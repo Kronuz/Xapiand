@@ -1960,7 +1960,7 @@ DocIndexer::wait(double timeout)
 
 	ready.store(true, std::memory_order_release);
 
-	if (timeout) {
+	if (_total && timeout) {
 		if (timeout > 0.0) {
 			return done.wait(timeout * 1e6);
 		} else {
