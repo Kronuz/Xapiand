@@ -53,6 +53,13 @@
 #include "string.hh"                       // for string::tolower
 #include "static_string.hh"                // for static_string
 
+
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+
+
 #ifndef L_SCHEMA
 #define L_SCHEMA_DEFINED
 #define L_SCHEMA L_NOTHING
