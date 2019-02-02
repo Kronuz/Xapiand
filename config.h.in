@@ -226,16 +226,6 @@
 #cmakedefine HAVE__BOOL @HAVE__BOOL@
 
 
-/* Define to 1 if Xapian has Database::get_revision() available. */
-#cmakedefine HAVE_XAPIAN_DATABASE_GET_REVISION @HAVE_XAPIAN_DATABASE_GET_REVISION@
-
-/* Define to 1 if Xapian has RemoteProtocol available. */
-#cmakedefine HAVE_XAPIAN_REMOTE_PROTOCOL @HAVE_XAPIAN_REMOTE_PROTOCOL@
-
-/* Define to 1 if Xapian has Database::get_document() with flags available. */
-#cmakedefine HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS @HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS@
-
-
 /* Enable remote clustering. */
 #cmakedefine XAPIAND_CLUSTERING @XAPIAND_CLUSTERING@
 
@@ -306,6 +296,306 @@
 #define XAPIAND_TCP_BACKLOG       -1
 #else
 #define XAPIAND_TCP_BACKLOG       511
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+// Xapian specific
+
+/* Force move semantics in xapian */
+#define XAPIAN_MOVE_SEMANTICS 1
+
+/* directory separator(s) as a character or string literal */
+#define DIR_SEPS '/'
+
+/* directory separator(s) as an initialiser list */
+#define DIR_SEPS_LIST { '/' }
+
+/* Define to error out if we try to include GPL code in libxapian */
+/* #undef DISABLE_GPL_LIBXAPIAN */
+
+/* Define to use flock() for flint-compatible locking */
+#define FLINTLOCK_USE_FLOCK 1
+
+/* Define if ftime returns void */
+#cmakedefine FTIME_RETURNS_VOID @FTIME_RETURNS_VOID@
+
+/* Define to 1 if you have the `closefrom' function. */
+#cmakedefine HAVE_CLOSEFROM @HAVE_CLOSEFROM@
+
+/* Define to 1 if you have `exp10(double)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL_EXP10
+
+/* Define to 1 if you have `log2(double)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL_LOG2
+
+/* Define to 1 if you have `strerror_r', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL_STRERROR_R
+
+/* Define to 1 if you have `_byteswap_uint64', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL__BYTESWAP_UINT64
+
+/* Define to 1 if you have `_byteswap_ulong', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL__BYTESWAP_ULONG
+
+/* Define to 1 if you have `_byteswap_ushort', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL__BYTESWAP_USHORT
+
+/* Define to 1 if you have `_putenv_s(const char *,const char *)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL__PUTENV_S
+
+/* Define to 1 if you have `__builtin_add_overflow(int, int, int*)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_ADD_OVERFLOW
+
+/* Define to 1 if you have `__builtin_bswap16(uint16_t)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_BSWAP16
+
+/* Define to 1 if you have `__builtin_bswap32(uint32_t)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_BSWAP32
+
+/* Define to 1 if you have `__builtin_bswap64(uint64_t)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_BSWAP64
+
+/* Define to 1 if you have `__builtin_clz(unsigned)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CLZ
+
+/* Define to 1 if you have `__builtin_clzl(unsigned long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CLZL
+
+/* Define to 1 if you have `__builtin_clzll(unsigned long long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CLZLL
+
+/* Define to 1 if you have `__builtin_ctz(unsigned)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CTZ
+
+/* Define to 1 if you have `__builtin_ctzl(unsigned long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CTZL
+
+/* Define to 1 if you have `__builtin_ctzll(unsigned long long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_CTZLL
+
+/* Define to 1 if you have `__builtin_expect(long, long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_EXPECT
+
+/* Define to 1 if you have `__builtin_mul_overflow(int, int, int*)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_MUL_OVERFLOW
+
+/* Define to 1 if you have `__builtin_popcount(unsigned)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_POPCOUNT
+
+/* Define to 1 if you have `__builtin_popcountl(unsigned long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_POPCOUNTL
+
+/* Define to 1 if you have `__builtin_popcountll(unsigned long long)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___BUILTIN_POPCOUNTLL
+
+/* Define to 1 if you have `__exp10(double)', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___EXP10
+
+/* Define to 1 if you have `__popcnt', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___POPCNT
+
+/* Define to 1 if you have `__popcnt64', and to 0 if you don't. */
+#cmakedefine01 HAVE_DECL___POPCNT64
+
+/* Define to 1 if you have the `fork' function. */
+#cmakedefine HAVE_FORK @HAVE_FORK@
+
+/* Define to 1 if you have the `ftime' function. */
+#cmakedefine HAVE_FTIME @HAVE_FTIME@
+
+/* Define to 1 if you have the `ftruncate' function. */
+#cmakedefine HAVE_FTRUNCATE @HAVE_FTRUNCATE@
+
+/* Define to 1 if you have the `getdirentries' function. */
+#cmakedefine HAVE_GETDIRENTRIES @HAVE_GETDIRENTRIES@
+
+/* Define to 1 if you have the `gethostname' function. */
+#cmakedefine HAVE_GETHOSTNAME @HAVE_GETHOSTNAME@
+
+/* Define to 1 if you have the `getrlimit' function. */
+#cmakedefine HAVE_GETRLIMIT @HAVE_GETRLIMIT@
+
+/* Define to 1 if you have the `getrusage' function. */
+#cmakedefine HAVE_GETRUSAGE @HAVE_GETRUSAGE@
+
+/* Define to 1 if you have the `link' function. */
+#cmakedefine HAVE_LINK @HAVE_LINK@
+
+/* Define to 1 if you have the <memory.h> header file. */
+#cmakedefine HAVE_MEMORY_H @HAVE_MEMORY_H@
+
+/* Define to 1 if you have the `nftw' function. */
+#cmakedefine HAVE_NFTW @HAVE_NFTW@
+
+/* Define to 1 if you have the `random' function. */
+#cmakedefine HAVE_RANDOM @HAVE_RANDOM@
+
+/* Define to 1 if you have the `setenv' function. */
+#cmakedefine HAVE_SETENV @HAVE_SETENV@
+
+/* Define to 1 if you have the `sigaction' function. */
+#cmakedefine HAVE_SIGACTION @HAVE_SIGACTION@
+
+/* Define to 1 if you have the 'sigsetjmp' function */
+#cmakedefine HAVE_SIGSETJMP @HAVE_SIGSETJMP@
+
+/* Define to 1 if you have the `sleep' function. */
+#cmakedefine HAVE_SLEEP @HAVE_SLEEP@
+
+/* Define to 1 if you have the 'socketpair' function. */
+#cmakedefine HAVE_SOCKETPAIR @HAVE_SOCKETPAIR@
+
+/* Define to 1 if you have the `srandom' function. */
+#cmakedefine HAVE_SRANDOM @HAVE_SRANDOM@
+
+/* Define to 1 if you have 'std::is_trivially_copyable<>'. */
+#cmakedefine HAVE_STD_IS_TRIVIALLY_COPYABLE @HAVE_STD_IS_TRIVIALLY_COPYABLE@
+
+/* Define to 1 if you have the `strerror_r' function. */
+#cmakedefine HAVE_STRERROR_R @HAVE_STRERROR_R@
+
+/* Define to 1 if you have the `sysconf' function. */
+#cmakedefine HAVE_SYSCONF @HAVE_SYSCONF@
+
+/* Define if you have 'sys_errlist' and 'sys_nerr' */
+#cmakedefine HAVE_SYS_ERRLIST_AND_SYS_NERR @HAVE_SYS_ERRLIST_AND_SYS_NERR@
+
+/* Define to 1 if you have the <sys/resource.h> header file. */
+#cmakedefine HAVE_SYS_RESOURCE_H @HAVE_SYS_RESOURCE_H@
+
+/* Define to 1 if you have the <sys/uio.h> header file. */
+#cmakedefine HAVE_SYS_UIO_H @HAVE_SYS_UIO_H@
+
+/* Define to 1 if you have the <sys/utsname.h> header file. */
+#cmakedefine HAVE_SYS_UTSNAME_H @HAVE_SYS_UTSNAME_H@
+
+/* Define to 1 if you have the 'timer_create' function. */
+#cmakedefine HAVE_TIMER_CREATE @HAVE_TIMER_CREATE@
+
+/* Define to 1 if you have the `times' function. */
+#cmakedefine HAVE_TIMES @HAVE_TIMES@
+
+/* Define to 1 if you have the <uuid.h> header file. */
+#cmakedefine HAVE_UUID_H @HAVE_UUID_H@
+
+/* Define to 1 if you have the <uuid/uuid.h> header file. */
+#cmakedefine HAVE_UUID_UUID_H @HAVE_UUID_UUID_H@
+
+/* Define to 1 if you have the `writev' function. */
+#cmakedefine HAVE_WRITEV @HAVE_WRITEV@
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#cmakedefine HAVE_ZLIB_H @HAVE_ZLIB_H@
+
+/* Define if you have '_sys_errlist' and '_sys_nerr' */
+#cmakedefine HAVE__SYS_ERRLIST_AND__SYS_NERR @HAVE__SYS_ERRLIST_AND__SYS_NERR@
+
+/* Define to 1 if you have the '__builtin_exp10' function. */
+#cmakedefine HAVE___BUILTIN_EXP10 @HAVE___BUILTIN_EXP10@
+
+/* Name of package */
+#define PACKAGE "xapiand"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "xapian-core 1.5.0"
+
+/* explicit prototype needed for pread (if any) */
+#cmakedefine PREAD_PROTOTYPE @PREAD_PROTOTYPE@
+
+/* explicit prototype needed for pwrite (if any) */
+#cmakedefine PWRITE_PROTOTYPE @PWRITE_PROTOTYPE@
+
+/* Define to the name of a function implementing snprintf but not caring about
+   ISO C99 return value semantics (if one exists) */
+#cmakedefine SNPRINTF @SNPRINTF@
+
+/* Define to the name of a function implementing snprintf with ISO C99
+   semantics (if one exists) */
+#cmakedefine SNPRINTF_ISO @SNPRINTF_ISO@
+
+/* type to use for 5th parameter to getsockopt */
+#cmakedefine SOCKLEN_T @SOCKLEN_T@
+
+/* Define to 1 if strerror_r returns char *. */
+#cmakedefine STRERROR_R_CHAR_P @STRERROR_R_CHAR_P@
+
+/* Define to 1 to read UUID from '/proc/sys/kernel/random/uuid' */
+#cmakedefine USE_PROC_FOR_UUID @USE_PROC_FOR_UUID@
+
+/* Define to 1 to use UuidCreate(), etc */
+#cmakedefine USE_WIN32_UUID_API @USE_WIN32_UUID_API@
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+/* #  undef WORDS_BIGENDIAN */
+
+/* Define if you want assertions (causes some slow-down) */
+/* #undef XAPIAN_ASSERTIONS */
+
+/* Define if you want paranoid assertions (causes significant slow-down) */
+/* #undef XAPIAN_ASSERTIONS_PARANOID */
+
+/* Define if you want a log of methods called and other debug messages */
+/* #undef XAPIAN_DEBUG_LOG */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+/* #undef _FILE_OFFSET_BITS */
+
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef mode_t */
+
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef pid_t */
+
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef ssize_t */
+
+/* _FORTIFY_SOURCE is only supported by GCC >= 4.1 and glibc >= 2.3.4, but it
+ * shouldn't cause a problem to define it where it's not supported and some
+ * distros may have backported support, so hardcoding version checks is
+ * counter-productive.
+ *
+ * Check if _FORTIFY_SOURCE is already defined to allow the user to override
+ * our choice with "./configure CPPFLAGS=-D_FORTIFY_SOURCE=0" or "...=1".
+ */
+#if defined __GNUC__ && !defined _FORTIFY_SOURCE
+# define _FORTIFY_SOURCE 2
+#endif
+
+/* For compilers which support it (such as GCC, clang, Intel's C++ compiler)
+ * we can use __builtin_expect to give the compiler hints about branch
+ * prediction.  See HACKING for how to use these.
+ */
+#if HAVE_DECL___BUILTIN_EXPECT
+/* The arguments of __builtin_expect() are both long, so use !! to ensure that
+ * the first argument is always an integer expression, and always 0 or 1, but
+ * still has the same truth value for the if or while it is used in.
+ */
+# define rare(COND) __builtin_expect(!!(COND), 0)
+# define usual(COND) __builtin_expect(!!(COND), 1)
+#else
+# define rare(COND) (COND)
+# define usual(COND) (COND)
+#endif
+
+/* Signal we're building the library so it's OK to include headers such as
+ * xapian/query.h directly.
+ */
+#define XAPIAN_LIB_BUILD 1
+
+/* With Sun CC 5.13 (Studio 12.4) on Solaris 11.2, <math.h> seems to get
+ * implicitly included somehow before <cmath>, and compilation fails due
+ * to 'std::exception' colliding with 'struct exception'.  It's not clear
+ * how to avoid this, so just define the same magic macro which <cmath> does
+ * before it includes <math.h>.
+ */
+#ifdef __SUNPRO_CC
+# define __MATHERR_RENAME_EXCEPTION
 #endif
 
 #endif /*  _CONFIG_H_ */

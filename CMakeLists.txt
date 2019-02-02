@@ -99,7 +99,10 @@ set (CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
 include (AC_HEADER_STDC)
 include (AddCXXCompilerFlag)
+include (CheckSymbolExists)
 include (CheckCXXSourceCompiles)
+include (CheckCXXSourceRuns)
+include (CheckCXXSymbolExists)
 include (CheckFunctionExists)
 include (CheckIncludeFileCXX)
 include (CheckIncludeFiles)
@@ -219,6 +222,143 @@ include_directories(
 
 
 ########################################################################
+# Xapian library target
+########################################################################
+
+# Xapian Exceptions
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian")
+
+add_custom_command(
+	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/error.h" "${PROJECT_BINARY_DIR}/src/xapian/errordispatch.h"
+	COMMAND perl
+		-w
+		-I "${PROJECT_SOURCE_DIR}/src/xapian"
+		"${PROJECT_SOURCE_DIR}/src/xapian/generate-exceptions"
+	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src"
+	DEPENDS
+		"${PROJECT_SOURCE_DIR}/src/xapian/generate-exceptions"
+		"${PROJECT_SOURCE_DIR}/src/xapian/exception_data.pm"
+)
+list(APPEND XAPIAN_H_LIST "${PROJECT_BINARY_DIR}/src/xapian/error.h" "${PROJECT_BINARY_DIR}/src/xapian/errordispatch.h")
+
+# Snowball
+
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/languages")
+
+file(GLOB SNOWBALL_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/compiler/*.h*"
+)
+add_executable(snowball EXCLUDE_FROM_ALL ${SNOWBALL_SRC_LIST})
+set_target_properties(snowball PROPERTIES COMPILE_FLAGS "-DDISABLE_CSHARP -DDISABLE_GO -DDISABLE_JAVA -DDISABLE_JS -DDISABLE_PASCAL -DDISABLE_PYTHON -DDISABLE_RUST")
+
+file(GLOB LANGUAGES_SBL_LIST
+	"${PROJECT_SOURCE_DIR}/src/xapian/languages/*.sbl"
+)
+foreach (language_sbl ${LANGUAGES_SBL_LIST})
+	get_filename_component(Language ${language_sbl} NAME_WE)
+	string(SUBSTRING ${Language} 0 1 first_letter)
+	string(TOUPPER ${first_letter} first_letter)
+	string(REGEX REPLACE "^.(.*)" "${first_letter}\\1" Language "${Language}")
+	string(REGEX REPLACE "^${PROJECT_SOURCE_DIR}/(.*).sbl" "${PROJECT_BINARY_DIR}/\\1" language "${language_sbl}")
+	# Run snowball command
+	add_custom_command(
+		OUTPUT "${language}.cc" "${language}.h"
+		COMMAND snowball ${language_sbl} -o ${language} -c++ -u -n InternalStem${Language} -p SnowballStemImplementation
+		DEPENDS snowball ${language_sbl}
+	)
+	list(APPEND LANGUAGES_SRC_LIST "${language}.cc" "${language}.h")
+endforeach ()
+
+add_custom_command(
+	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/languages/allsnowballheaders.h" "${PROJECT_BINARY_DIR}/src/xapian/languages/sbl-dispatch.h"
+	COMMAND perl
+		-I "${PROJECT_SOURCE_DIR}/src/xapian/common"
+		-I "${PROJECT_SOURCE_DIR}/src/xapian/languages"
+		"${PROJECT_SOURCE_DIR}/src/xapian/languages/collate-sbl"
+		"''"
+		${LANGUAGES_SBL_LIST}
+	WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian"
+	DEPENDS ${LANGUAGES_SBL_LIST}
+)
+list(APPEND LANGUAGES_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/languages/allsnowballheaders.h" "${PROJECT_BINARY_DIR}/src/xapian/languages/sbl-dispatch.h")
+
+# Unicode
+
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/unicode")
+
+add_custom_command(
+	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc"
+	COMMAND tclsh
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/uniParse.tcl"
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/UnicodeData.txt" 11.0.0
+		"${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc"
+	DEPENDS
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/uniParse.tcl"
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/UnicodeData.txt"
+)
+list(APPEND UNICODE_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/unicode/unicode-data.cc")
+
+add_custom_command(
+	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h"
+	COMMAND perl
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/gen_c_istab"
+		"${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h"
+	DEPENDS
+		"${PROJECT_SOURCE_DIR}/src/xapian/unicode/gen_c_istab"
+)
+list(APPEND UNICODE_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/unicode/c_istab.h")
+
+# QueryParser
+
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/xapian/queryparser")
+
+add_executable(lemon EXCLUDE_FROM_ALL "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/lemon.c")
+
+add_custom_command(
+	OUTPUT "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc" "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h"
+	COMMAND lemon -q
+		-o"${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc"
+		-h"${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h"
+		"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/queryparser.lemony"
+	DEPENDS lemon "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/queryparser.lemony"
+)
+list(APPEND QUERYPARSER_SRC_LIST "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_internal.cc" "${PROJECT_BINARY_DIR}/src/xapian/queryparser/queryparser_token.h")
+
+# Xapian
+
+file(GLOB XAPIAN_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/xapian/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/weight/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/weight/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/cluster/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/cluster/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/queryparser/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/expand/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/expand/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/net/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/net/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/unicode/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/unicode/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/languages/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/matcher/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/matcher/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/common/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/common/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/diversify/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/diversify/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/api/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/api/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/geospatial/*.h*"
+)
+list(REMOVE_ITEM XAPIAN_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/xapian/version_h.cc"
+	"${PROJECT_SOURCE_DIR}/src/xapian/queryparser/lemon.c"
+)
+list(APPEND XAPIAN_SRC_LIST ${XAPIAN_H_LIST})
+list(APPEND XAPIAN_SRC_LIST ${LANGUAGES_SRC_LIST})
+list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
+list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
+add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
+
+
+########################################################################
 # Boolean parser library target
 ########################################################################
 
@@ -226,6 +366,7 @@ include_directories(
 file(GLOB BOOLEAN_PARSER_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h*"
 )
+list(APPEND BOOLEAN_PARSER_SRC_LIST ${XAPIAN_H_LIST})
 add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
@@ -245,6 +386,7 @@ list(REMOVE_ITEM LIBEV_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/ev/ev_select.c"
 	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
 )
+list(APPEND LIBEV_SRC_LIST ${XAPIAN_H_LIST})
 add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
 
@@ -256,6 +398,7 @@ add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 file(GLOB LZ4_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h*"
 )
+list(APPEND LZ4_SRC_LIST ${XAPIAN_H_LIST})
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
@@ -267,6 +410,7 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 file(GLOB UUID_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h*"
 )
+list(APPEND UUID_SRC_LIST ${XAPIAN_H_LIST})
 add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 
 
@@ -278,6 +422,7 @@ add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
 file(GLOB PROMETHEUS_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h*"
 )
+list(APPEND PROMETHEUS_SRC_LIST ${XAPIAN_H_LIST})
 add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 
 
@@ -286,15 +431,18 @@ add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 ########################################################################
 
 
-add_library(PACKAGE_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/package.cc")
+list(APPEND PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
+list(APPEND PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
+add_library(PACKAGE_OBJ OBJECT ${PACKAGE_SRC_LIST})
 
 
 ########################################################################
 # Xapiand main() target
 ########################################################################
 
-
-add_library(MAIN_OBJ OBJECT "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
+list(APPEND MAIN_SRC_LIST "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
+list(APPEND MAIN_SRC_LIST ${XAPIAN_H_LIST})
+add_library(MAIN_OBJ OBJECT ${MAIN_SRC_LIST})
 
 
 ########################################################################
@@ -316,6 +464,7 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/package.cc"
 	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
 )
+list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 
@@ -327,6 +476,7 @@ add_executable(${PROJECT_NAME}
 	"$<TARGET_OBJECTS:MAIN_OBJ>"
 	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
 	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+	"$<TARGET_OBJECTS:XAPIAN_OBJ>"
 	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
 	"$<TARGET_OBJECTS:LIBEV_OBJ>"
 	"$<TARGET_OBJECTS:LZ4_OBJ>"
@@ -468,47 +618,6 @@ endif ()
 find_package(UUID REQUIRED)
 target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${UUID_INCLUDE_DIRS}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${UUID_LIBRARIES})
-
-
-########################################################################
-# Xapian Library
-########################################################################
-
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DXAPIAN_MOVE_SEMANTICS")
-
-find_package(Xapian REQUIRED)
-include_directories(BEFORE "${XAPIAN_INCLUDE_DIR}") # <xapian.h> is imported everywhere (for exceptions)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${XAPIAN_LIBRARIES})
-
-cmake_push_check_state()
-set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
-set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::MSet mset;
-		mset.serialise();
-	}" HAVE_XAPIAN_REMOTE_PROTOCOL)
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::Database db;
-		db.get_revision();
-	}" HAVE_XAPIAN_DATABASE_GET_REVISION)
-check_cxx_source_compiles("
-	#include <xapian.h>
-	int main() {
-		Xapian::Database db;
-		db.get_document(0, Xapian::DOC_ASSUME_VALID);
-	}" HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS)
-cmake_pop_check_state()
-
-if (CLUSTERING AND HAVE_XAPIAN_REMOTE_PROTOCOL)
-	set ("XAPIAND_CLUSTERING" 1)
-else ()
-	set ("XAPIAND_CLUSTERING" 0)
-endif ()
-
 
 
 ########################################################################
@@ -683,6 +792,196 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 
 
 ########################################################################
+# xapian Flags
+########################################################################
+
+check_symbol_exists(exp10 "math.h" HAVE_DECL_EXP10)
+check_symbol_exists(log2 "math.h" HAVE_DECL_LOG2)
+check_symbol_exists(__exp10 "math.h" HAVE_DECL___EXP10)
+
+check_cxx_symbol_exists(strerror_r "string.h" HAVE_DECL_STRERROR_R)
+check_cxx_symbol_exists(_byteswap_uint64 "stdlib.h" HAVE_DECL__BYTESWAP_UINT64)
+check_cxx_symbol_exists(_byteswap_ulong "stdlib.h" HAVE_DECL__BYTESWAP_ULONG)
+check_cxx_symbol_exists(_byteswap_ushort "stdlib.h" HAVE_DECL__BYTESWAP_USHORT)
+check_cxx_symbol_exists(_putenv_s "stdlib.h" HAVE_DECL__PUTENV_S)
+check_cxx_symbol_exists(__popcnt "intrin.h" HAVE_DECL___POPCNT)
+check_cxx_symbol_exists(__popcnt64 "intrin.h" HAVE_DECL___POPCNT64)
+
+check_function_exists("closefrom" HAVE_CLOSEFROM)
+check_function_exists("fork" HAVE_FORK)
+check_function_exists("ftime" HAVE_FTIME)
+check_function_exists("ftruncate" HAVE_FTRUNCATE)
+check_function_exists("getdirentries" HAVE_GETDIRENTRIES)
+check_function_exists("gethostname" HAVE_GETHOSTNAME)
+check_function_exists("getrlimit" HAVE_GETRLIMIT)
+check_function_exists("getrusage" HAVE_GETRUSAGE)
+check_function_exists("link" HAVE_LINK)
+check_function_exists("nftw" HAVE_NFTW)
+check_function_exists("random" HAVE_RANDOM)
+check_function_exists("setenv" HAVE_SETENV)
+check_function_exists("sigaction" HAVE_SIGACTION)
+check_function_exists("sigsetjmp" HAVE_SIGSETJMP)
+check_function_exists("sleep" HAVE_SLEEP)
+check_function_exists("socketpair" HAVE_SOCKETPAIR)
+check_function_exists("srandom" HAVE_SRANDOM)
+check_function_exists("strerror_r" HAVE_STRERROR_R)
+check_function_exists("sysconf" HAVE_SYSCONF)
+check_function_exists("timer_create" HAVE_TIMER_CREATE)
+check_function_exists("times" HAVE_TIMES)
+check_function_exists("writev" HAVE_WRITEV)
+
+check_cxx_source_compiles("
+	#include <errno.h>
+	#include <stdio.h>
+	int main() {
+		printf(\"%s\", sys_errlist[sys_nerr - 1]);
+		return 0;
+	}" HAVE_SYS_ERRLIST_AND_SYS_NERR)
+
+check_cxx_source_compiles("
+	#include <errno.h>
+	#include <stdio.h>
+	int main() {
+		printf(\"%s\", _sys_errlist[_sys_nerr - 1]);
+		return 0;
+	}" HAVE__SYS_ERRLIST_AND__SYS_NERR)
+
+check_cxx_source_compiles("int main() { __builtin_exp10(0.0); return 0; }" HAVE___BUILTIN_EXP10)
+
+check_cxx_source_compiles("
+	#include <sys/timeb.h>
+	int main() {
+		struct timeb tp;
+		return ftime(&tp);
+	}" FTIME_RETURNS_INT)
+if (NOT FTIME_RETURNS_INT)
+	set (FTIME_RETURNS_VOID 1)
+endif ()
+
+check_cxx_source_compiles("
+	int main() {
+		char buf[100];
+		char x = *strerror_r(0, buf, sizeof buf);
+		char *p = strerror_r(0, buf, sizeof buf);
+		return !p || x;
+	}" STRERROR_R_CHAR_P)
+
+check_cxx_source_compiles("int main() { int r; __builtin_add_overflow(0, 0, &r); return 0; }" HAVE_DECL___BUILTIN_ADD_OVERFLOW)
+check_cxx_source_compiles("int main() { __builtin_bswap16(0); return 0; }" HAVE_DECL___BUILTIN_BSWAP16)
+check_cxx_source_compiles("int main() { __builtin_bswap32(0); return 0; }" HAVE_DECL___BUILTIN_BSWAP32)
+check_cxx_source_compiles("int main() { __builtin_bswap64(0); return 0; }" HAVE_DECL___BUILTIN_BSWAP64)
+check_cxx_source_compiles("int main() { __builtin_clz(0); return 0; }" HAVE_DECL___BUILTIN_CLZ)
+check_cxx_source_compiles("int main() { __builtin_clzl(0); return 0; }" HAVE_DECL___BUILTIN_CLZL)
+check_cxx_source_compiles("int main() { __builtin_clzll(0); return 0; }" HAVE_DECL___BUILTIN_CLZLL)
+check_cxx_source_compiles("int main() { __builtin_ctz(0); return 0; }" HAVE_DECL___BUILTIN_CTZ)
+check_cxx_source_compiles("int main() { __builtin_ctzl(0); return 0; }" HAVE_DECL___BUILTIN_CTZL)
+check_cxx_source_compiles("int main() { __builtin_ctzll(0); return 0; }" HAVE_DECL___BUILTIN_CTZLL)
+check_cxx_source_compiles("int main() { int r; __builtin_mul_overflow(0, 0, &r); return 0; }" HAVE_DECL___BUILTIN_MUL_OVERFLOW)
+check_cxx_source_compiles("int main() { __builtin_popcount(0); return 0; }" HAVE_DECL___BUILTIN_POPCOUNT)
+check_cxx_source_compiles("int main() { __builtin_popcountl(0); return 0; }" HAVE_DECL___BUILTIN_POPCOUNTL)
+check_cxx_source_compiles("int main() { __builtin_popcountll(0); return 0; }" HAVE_DECL___BUILTIN_POPCOUNTLL)
+
+check_cxx_source_compiles("
+	#include <type_traits>
+	int main() {
+		std::is_trivially_copyable<int>;
+		return 0;
+	}" HAVE_STD_IS_TRIVIALLY_COPYABLE)
+
+check_include_files("memory.h" HAVE_MEMORY_H)
+check_include_files("sys/resource.h" HAVE_SYS_RESOURCE_H)
+check_include_files("sys/uio.h" HAVE_SYS_UIO_H)
+check_include_files("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+check_include_files("uuid.h" HAVE_UUID_H)
+check_include_files("uuid/uuid.h" HAVE_UUID_UUID_H)
+check_include_files("zlib.h" HAVE_ZLIB_H)
+
+if (LINUX)
+	set (USE_PROC_FOR_UUID 1)
+endif ()
+
+if (WIN32)
+	set (USE_WIN32_UUID_API 1)
+endif ()
+
+foreach (_socklen_t socklen_t int size_t unsigned long "unsigned long")
+	check_cxx_source_compiles("
+		#include <sys/types.h>
+		#if defined __WIN32__ || defined _WIN32
+		# include <winsock2.h>
+		#else
+			# include <sys/socket.h>
+		#endif
+		int main() {
+			${_socklen_t} len;
+			getsockopt(0, 0, 0, 0, &len);
+			return 0;
+		}" SOCKLEN_T)
+	if (SOCKLEN_T)
+		set (SOCKLEN_T "${_socklen_t}")
+		break ()
+	endif ()
+endforeach ()
+
+foreach (_snprintf "snprintf" "_snprintf")
+	check_cxx_source_runs("
+		#include <cstdio>
+		#include <cstring>
+		using namespace std;
+		int main() {
+			char buffer[4] = \"abc\";
+			int res1 = ${_snprintf}(buffer, 2, \"%s\", \"XYZ\");
+			if (memcmp(buffer, \"X\\\\0c\", 4) != 0) return 2;
+			int res2 = ${_snprintf}(buffer, 2, \"%x\", 0x12);
+			if (memcmp(buffer, \"1\\\\0c\", 4) != 0) return 3;
+			if (res1 == -1 && res2 == -1) return 15; /* Pre-ISO semantics. */
+			if (res1 != 3) return 4;
+			if (res2 != 2) return 5;
+			return 0;
+		}" SNPRINTF)
+	if (SNPRINTF)
+		set (SNPRINTF "${_snprintf}")
+		if (NOT SNPRINTF_EXITCODE)
+			set (SNPRINTF_ISO "${_snprintf}")
+		endif ()
+		break ()
+	endif ()
+endforeach ()
+
+foreach (_pread_prototype "" "extern \"C\" ssize_t pread(int, void *, size_t, off_t) throw ();" "extern \"C\" ssize_t pread(int, void *, size_t, off_t);")
+	check_cxx_source_compiles("
+		#include <sys/types.h>
+		#include <unistd.h>
+		${_pread_prototype}
+		int main() {
+			char b[256];
+			pread(1, b, 256, 20);
+			return 0;
+		}" PREAD_PROTOTYPE)
+	if (PREAD_PROTOTYPE)
+		set (PREAD_PROTOTYPE "${_pread_prototype}")
+		break ()
+	endif ()
+endforeach ()
+
+foreach (_pwrite_prototype "" "extern \"C\" ssize_t pwrite(int, const void *, size_t, off_t) throw ();" "extern \"C\" ssize_t pwrite(int, const void *, size_t, off_t);")
+	check_cxx_source_compiles("
+		#include <sys/types.h>
+		#include <unistd.h>
+		${_pwrite_prototype}
+		int main() {
+			const char *p = \"hello\";
+			pwrite(1, p, 5, 20);
+			return 0;
+		}" PWRITE_PROTOTYPE)
+	if (PWRITE_PROTOTYPE)
+		set (PWRITE_PROTOTYPE "${_pwrite_prototype}")
+		break ()
+	endif ()
+endforeach ()
+
+
+########################################################################
 # sparsehash Flags
 ########################################################################
 
@@ -827,6 +1126,7 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
 				"$<TARGET_OBJECTS:PACKAGE_OBJ>"
 				"$<TARGET_OBJECTS:XAPIAND_OBJ>"
+				"$<TARGET_OBJECTS:XAPIAN_OBJ>"
 				"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
 				"$<TARGET_OBJECTS:LIBEV_OBJ>"
 				"$<TARGET_OBJECTS:LZ4_OBJ>"
@@ -836,7 +1136,6 @@ if (BUILD_TESTS)
 			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				${GTEST_BOTH_LIBRARIES}
-				${XAPIAN_LIBRARIES}
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
 				${CHAISCRIPT_LIBRARIES}

@@ -1,0 +1,4 @@
+/.*.sw?
+/error.h
+/errordispatch.h
+/version.h.timestamp
