@@ -32,7 +32,6 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <utility>                          // for std::move
-#include <xapian.h>                         // for Xapian::major_version, Xapian::minor_version
 
 #if defined(XAPIAND_V8)
 #include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
@@ -68,6 +67,7 @@
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
 #include "string.hh"                        // for string::from_delta
+#include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version
 
 
 // #undef L_DEBUG

@@ -23,7 +23,6 @@
 #include "endpoint.h"
 
 #include <cstdlib>              // for atoi
-#include <xapian.h>             // for SerialisationError
 
 #include "hashes.hh"            // for fnv1ah32::hash
 #include "length.h"             // for serialise_length, unserialise_length, ser...
@@ -32,6 +31,7 @@
 #include "opts.h"               // for opts
 #include "serialise.h"          // for Serialise
 #include "string.hh"            // for string::Number
+#include "xapian.h"             // for SerialisationError
 
 
 #define L_NODE_NODES(args...)

@@ -24,9 +24,9 @@
 
 #include <cmath>              // for M_PI
 #include <string>             // for string
-#include <xapian.h>           // for docid, valueno, Query, ValuePostingSource
 
 #include "geospatial/geospatial.h"   // for GeoSpatial, MsgPack
+#include "xapian.h"           // for docid, valueno, Query, ValuePostingSource
 
 
 struct required_spc_t;

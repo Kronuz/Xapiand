@@ -47,7 +47,6 @@
 #include <thread>                   // for thread
 #include <unistd.h>                 // for dup2, unlink, STDERR_FILENO, chdir
 #include <vector>                   // for vector
-#include <xapian.h>                 // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -80,6 +79,7 @@
 #include "string.hh"                // for string::format, string::center
 #include "system.hh"                // for get_max_files_per_proc, get_open_files_system_wide
 #include "worker.h"                 // for Worker
+#include "xapian.h"                 // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
 #include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np

@@ -23,9 +23,9 @@
 #pragma once
 
 #include <string>           // for string
-#include <xapian.h>         // for docid, ValuePostingSource, valueno, Query
 
 #include "msgpack.h"        // for MsgPack
+#include "xapian.h"         // for docid, ValuePostingSource, valueno, Query
 
 
 struct required_spc_t;

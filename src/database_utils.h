@@ -26,13 +26,12 @@
 #include "string_view.hh"          // for std::string_view
 #include <vector>                  // for vector
 
-#include <xapian.h>                // for valueno
-
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
 #include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
 #include "database_data.h"         // for ct_type_t, Data
+#include "xapian.h"                // for valueno
 
 
 // Reserved field names.

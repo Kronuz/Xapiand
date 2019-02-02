@@ -24,12 +24,11 @@
 
 #include "config.h"         // for XAPIAND_*
 
-#include <xapian.h>         // for SerialisationError
-
 #include "fs.hh"            // for normalize_path
 #include "opts.h"           // for opts
 #include "serialise.h"      // for UUIDRepr, Serialise
 #include "string.hh"        // for string::Number
+#include "xapian.h"         // for SerialisationError
 
 
 static inline std::string

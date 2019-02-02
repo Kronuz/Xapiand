@@ -27,7 +27,8 @@
 #include "string_view.hh"     // for std::string_view
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
-#include <xapian.h>           // for DocNotFoundError, InternalError, InvalidArgum...
+
+#include "xapian.h"           // for DocNotFoundError, InternalError, InvalidArgum...
 
 #ifdef WITHOUT_FMT
 #include <cstdarg>            // for va_list

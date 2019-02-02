@@ -35,7 +35,6 @@
 #include <unordered_map>      // for unordered_map
 #include <utility>
 #include <vector>             // for vector
-#include <xapian.h>           // for Xapian::Error
 
 #include "base_x.hh"          // for Base64
 #include "bloom_filter.hh"    // for BloomFilter
@@ -48,6 +47,7 @@
 #include "string.hh"          // for string::format
 #include "thread.hh"          // for get_thread_name, ThreadPolicyType::*
 #include "time_point.hh"      // for time_point_to_ullong
+#include "xapian.h"           // for Xapian::Error
 
 
 #define STACKED_INDENT "<indent>"

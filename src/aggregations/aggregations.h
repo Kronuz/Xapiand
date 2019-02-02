@@ -29,9 +29,9 @@
 #include <type_traits>              // for decay_t, enable_if_t, forward
 #include <utility>                  // for std::pair, std::make_pair
 #include <vector>                   // for vector
-#include <xapian.h>                 // for MatchSpy, doccount
 
 #include "msgpack.h"                // for MsgPack
+#include "xapian.h"                 // for MatchSpy, doccount
 
 
 constexpr const char AGGREGATION_AGGS[]             = "_aggs";

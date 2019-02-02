@@ -31,12 +31,12 @@
 #include <string>                 // for std::string
 #include <utility>                // for std::pair
 #include <vector>                 // for std::vector
-#include <xapian.h>               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 #include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
 #include "database_flags.h"       // for DB_OPEN
 #include "lz4/xxhash.h"           // for XXH32_state_t
 #include "string.hh"              // for string::join
+#include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 
 class Locator;

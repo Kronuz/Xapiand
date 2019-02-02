@@ -32,7 +32,6 @@
 #include <unordered_map>                     // for std::unordered_map
 #include <utility>                           // for std::pair
 #include <vector>                            // for std::vector
-#include <xapian.h>                          // for Document, docid, MSet
 
 #include "blocking_concurrent_queue.h"       // for BlockingConcurrentQueue
 #include "database_flags.h"                  // for DB_*
@@ -44,6 +43,7 @@
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
+#include "xapian.h"                          // for Document, docid, MSet
 
 
 class AggregationMatchSpy;

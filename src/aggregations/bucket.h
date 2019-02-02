@@ -33,7 +33,6 @@
 #include <tuple>                            // for std::forward_as_tuple
 #include <utility>                          // for std::pair, std::make_pair
 #include <vector>                           // for std::vector
-#include <xapian.h>                         // for Document, valueno
 
 #include "aggregations.h"                   // for Aggregation, AGGREGATION_*
 #include "metrics.h"                        // for HandledSubAggregation
@@ -43,6 +42,7 @@
 #include "serialise.h"                      // for _float
 #include "string.hh"                        // for string::format, string::Number
 #include "hashes.hh"                        // for xxh64
+#include "xapian.h"                         // for Document, valueno
 
 
 class Schema;

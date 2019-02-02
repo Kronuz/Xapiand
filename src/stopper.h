@@ -29,10 +29,10 @@
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint32_t
 #include <memory>                  // for std::unique_ptr, std::make_unique
-#include <xapian.h>                // for Xapian::Stopper
 
 #include "hashes.hh"               // for fnv1ah32
 #include "phf.hh"                  // for phf
+#include "xapian.h"                // for Xapian::Stopper
 
 
 // Same implementation as Xapian::SimpleStopper, only this uses perfect hashes

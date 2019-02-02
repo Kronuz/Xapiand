@@ -22,12 +22,11 @@
 
 #pragma once
 
-#include <xapian.h>             // for Xapian::Database
-
 #include "cassert.h"            // for ASSERT
 #include "database_pool.h"      // for DatabasePool (database_pool)
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
+#include "xapian.h"             // for Xapian::Database
 
 
 class Database;

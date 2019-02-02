@@ -27,11 +27,10 @@
 #include "string_view.hh"   // for std::string_view
 #include <vector>
 
-#include <xapian.h>
-
 #include "ContentReader.h"
 #include "Lexer.h"
 #include "Node.h"
+#include "xapian.h"
 
 
 class BooleanTree {

@@ -31,11 +31,11 @@
 #include <mutex>                            // for std::mutex
 #include <string>                           // for std::string
 #include <vector>                           // for std::vector
-#include <xapian.h>
 
 #include "base_client.h"                    // for MetaBaseClient
 #include "lock_database.h"                  // for LockableDatabase
 #include "threadpool.hh"                    // for Task
+#include "xapian.h"
 
 
 // #define SAVE_LAST_MESSAGES

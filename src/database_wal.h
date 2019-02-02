@@ -33,7 +33,6 @@
 #include <sys/types.h>                      // for uint32_t, uint8_t, ssize_t
 #include <unordered_map>                    // for std::unordered_map
 #include <utility>                          // for pair, make_pair
-#include <xapian.h>                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 #include "cassert.h"                        // for ASSERT
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
@@ -42,6 +41,7 @@
 #include "lru.h"                            // for lru::LRU
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
+#include "xapian.h"                         // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 
 class MsgPack;

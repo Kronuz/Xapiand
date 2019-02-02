@@ -29,7 +29,6 @@
 #include <stdexcept>                      // for out_of_range
 #include <string>                         // for string, operator==, stod
 #include <sys/types.h>                    // for int64_t, uint64_t
-#include <xapian.h>                       // for valueno, KeyMaker
 
 #include "database_utils.h"               // for query_field_t
 #include "datetime.h"                     // for timestamp
@@ -40,6 +39,7 @@
 #include "serialise_list.h"               // for StringList, ...
 #include "strict_stox.hh"                 // for strict_stoull
 #include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
+#include "xapian.h"                       // for valueno, KeyMaker
 
 
 const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));

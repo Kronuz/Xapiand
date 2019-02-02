@@ -33,12 +33,12 @@
 #include "string_view.hh"           // for std::string_view
 #include <utility>                  // for std::pair
 #include <vector>                   // for std::vector
-#include <xapian.h>                 // for valueno
 
 #include "aggregations.h"           // for BaseAggregation, AGGREGATION_*
 #include "exception.h"              // for AggregationError, MSG_AggregationError
 #include "msgpack.h"                // for MsgPack, object::object
 #include "serialise_list.h"         // for StringList, RangeList
+#include "xapian.h"                 // for valueno
 
 
 class Schema;

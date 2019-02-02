@@ -34,7 +34,6 @@
 #include <unordered_set>           // for std::unordered_set
 #include <utility>                 // for std::pair
 #include <vector>                  // for std::vector
-#include <xapian.h>                // for Xapian::QueryParser
 
 #include "database_utils.h"
 #include "geospatial/htm.h"        // for range_t, GeoSpatial
@@ -42,6 +41,7 @@
 #include "msgpack.h"               // for MsgPack
 #include "repr.hh"                 // for repr
 #include "utype.hh"                // for toUType
+#include "xapian.h"                // for Xapian::QueryParser
 
 
 enum class TypeIndex : uint8_t {

@@ -34,11 +34,11 @@
 #include <string>               // for std::string
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
-#include <xapian.h>             // for Xapian::rev
 
 #include "threadpool.hh"        // for TaskQueue
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include "lru.h"                // for LRU, DropAction, LRU<>::iterator, DropAc...
+#include "xapian.h"             // for Xapian::rev
 
 
 using namespace std::chrono_literals;

@@ -28,7 +28,6 @@
 #include <sysexits.h>               // for EX_SOFTWARE
 #include <type_traits>              // for remove_reference<>::type
 #include <utility>                  // for std::move
-#include <xapian.h>                 // for SerialisationError
 
 #include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
@@ -42,6 +41,7 @@
 #include "readable_revents.hh"      // for readable_revents
 #include "repr.hh"                  // for repr
 #include "thread.hh"                // for get_thread_name
+#include "xapian.h"                 // for SerialisationError
 
 
 // #undef L_DEBUG
