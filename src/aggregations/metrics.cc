@@ -20,10 +20,10 @@
  * THE SOFTWARE.
  */
 
-#include "aggregation_metric.h"
+#include "metrics.h"
 
+#include "exception.h"             // for AggregationError, MSG_AggregationE...
 #include "msgpack/object_fwd.hpp"  // for type_error
-#include "multivalue/exception.h"  // for AggregationError, MSG_AggregationE...
 #include "repr.hh"                 // for repr
 #include "schema.h"                // for FieldType, required_spc_t, FieldTy...
 #include "utype.hh"                // for toUType

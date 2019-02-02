@@ -35,9 +35,9 @@
 #include <vector>                           // for std::vector
 #include <xapian.h>                         // for Document, valueno
 
-#include "aggregation.h"                    // for Aggregation, AGGREGATION_*
+#include "aggregations.h"                   // for Aggregation, AGGREGATION_*
+#include "metrics.h"                        // for HandledSubAggregation
 #include "msgpack.h"                        // for MsgPack, object::object, ...
-#include "aggregation_metric.h"             // for HandledSubAggregation
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "schema.h"                         // for FieldType
 #include "serialise.h"                      // for _float

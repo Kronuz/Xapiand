@@ -59,8 +59,7 @@
 #include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
-#include "multivalue/aggregation.h"         // for AggregationMatchSpy
-#include "multivalue/aggregation_metric.h"  // for AGGREGATION_AGGREGATIONS
+#include "aggregations/aggregations.h"      // for AggregationMatchSpy, AGGREGATION_AGGREGATIONS
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*

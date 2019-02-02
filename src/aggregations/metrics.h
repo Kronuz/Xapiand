@@ -35,7 +35,7 @@
 #include <vector>                   // for std::vector
 #include <xapian.h>                 // for valueno
 
-#include "aggregation.h"            // for BaseAggregation, AGGREGATION_*
+#include "aggregations.h"           // for BaseAggregation, AGGREGATION_*
 #include "exception.h"              // for AggregationError, MSG_AggregationError
 #include "msgpack.h"                // for MsgPack, object::object
 #include "serialise_list.h"         // for StringList, RangeList

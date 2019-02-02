@@ -20,14 +20,14 @@
  * THE SOFTWARE.
  */
 
-#include "aggregation_bucket.h"
+#include "bucket.h"
 
 #include <algorithm>                      // for std::move, std::set_intersection
 #include <iterator>                       // for std::inserter
 #include <set>                            // for std::set
 
+#include "aggregations.h"                 // for Aggregation
 #include "metrics/basic_string_metric.h"  // for Counter
-#include "multivalue/aggregation.h"       // for Aggregation
 #include "schema.h"                       // for Schema, required_spc_t
 
 

@@ -55,6 +55,9 @@
 #include "threadpool.hh"
 #include "url_parser.h"
 #include "url_parser.h"
+#include "aggregations/aggregations.h"
+#include "aggregations/bucket.h"
+#include "aggregations/metrics.h"
 #include "booleanParser/BooleanParser.h"
 #include "chaipp/chaipp.h"
 #include "cuuid/uuid.h"
@@ -76,9 +79,6 @@
 #include "metrics/levenshtein.h"
 #include "metrics/sorensen_dice.h"
 #include "metrics/soundex_metric.h"
-#include "multivalue/aggregation.h"
-#include "multivalue/aggregation_bucket.h"
-#include "multivalue/aggregation_metric.h"
 #include "multivalue/geospatialrange.h"
 #include "multivalue/keymaker.h"
 #include "multivalue/range.h"
@@ -221,6 +221,32 @@ CHECK_MAX_SIZE(SMALL, (ThreadPool<>))
 CHECK_MAX_SIZE(SMALL, (QueryParser))
 CHECK_MAX_SIZE(SMALL, (PathParser))
 
+// aggregations/aggregations.h
+CHECK_MAX_SIZE(SMALL, (Aggregation))
+CHECK_MAX_SIZE(SMALL, (AggregationMatchSpy))
+
+// aggregations/bucket.h
+CHECK_MAX_SIZE(SMALL, (BucketAggregation))
+CHECK_MAX_SIZE(SMALL, (ValueAggregation))
+CHECK_MAX_SIZE(SMALL, (HistogramAggregation))
+CHECK_MAX_SIZE(SMALL, (RangeAggregation))
+CHECK_MAX_SIZE(SMALL, (FilterAggregation))
+
+// aggregations/metrics.h
+CHECK_MAX_SIZE(SMALL, (ValueHandle))
+CHECK_MAX_SIZE(SMALL, (HandledSubAggregation))
+CHECK_MAX_SIZE(SMALL, (MetricCount))
+CHECK_MAX_SIZE(SMALL, (MetricSum))
+CHECK_MAX_SIZE(SMALL, (MetricAvg))
+CHECK_MAX_SIZE(SMALL, (MetricMin))
+CHECK_MAX_SIZE(SMALL, (MetricMax))
+CHECK_MAX_SIZE(SMALL, (MetricVariance))
+CHECK_MAX_SIZE(SMALL, (MetricStdDeviation))
+CHECK_MAX_SIZE(SMALL, (MetricMedian))
+CHECK_MAX_SIZE(SMALL, (MetricMode))
+CHECK_MAX_SIZE(SMALL, (MetricStats))
+CHECK_MAX_SIZE(SMALL, (MetricExtendedStats))
+
 // booleanParser/BooleanParser.h
 CHECK_MAX_SIZE(SMALL, (BooleanTree))
 
@@ -265,32 +291,6 @@ CHECK_MAX_SIZE(SMALL, (Levenshtein))
 CHECK_MAX_SIZE(SMALL, (Sorensen_Dice))
 // metrics/soundex_metric.h
 // CHECK_MAX_SIZE(SMALL, (SoundexMetric))
-
-// multivalue/aggregation.h
-CHECK_MAX_SIZE(SMALL, (Aggregation))
-CHECK_MAX_SIZE(SMALL, (AggregationMatchSpy))
-
-// multivalue/aggregation_bucket.h
-CHECK_MAX_SIZE(SMALL, (BucketAggregation))
-CHECK_MAX_SIZE(SMALL, (ValueAggregation))
-CHECK_MAX_SIZE(SMALL, (HistogramAggregation))
-CHECK_MAX_SIZE(SMALL, (RangeAggregation))
-CHECK_MAX_SIZE(SMALL, (FilterAggregation))
-
-// multivalue/aggregation_metric.h
-CHECK_MAX_SIZE(SMALL, (ValueHandle))
-CHECK_MAX_SIZE(SMALL, (HandledSubAggregation))
-CHECK_MAX_SIZE(SMALL, (MetricCount))
-CHECK_MAX_SIZE(SMALL, (MetricSum))
-CHECK_MAX_SIZE(SMALL, (MetricAvg))
-CHECK_MAX_SIZE(SMALL, (MetricMin))
-CHECK_MAX_SIZE(SMALL, (MetricMax))
-CHECK_MAX_SIZE(SMALL, (MetricVariance))
-CHECK_MAX_SIZE(SMALL, (MetricStdDeviation))
-CHECK_MAX_SIZE(SMALL, (MetricMedian))
-CHECK_MAX_SIZE(SMALL, (MetricMode))
-CHECK_MAX_SIZE(SMALL, (MetricStats))
-CHECK_MAX_SIZE(SMALL, (MetricExtendedStats))
 
 // multivalue/geospatialrange.h
 CHECK_MAX_SIZE(SMALL, (GeoSpatialRange))

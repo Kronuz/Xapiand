@@ -38,7 +38,7 @@
 #include "manager.h"                        // for XapiandManager
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
-#include "multivalue/aggregation.h"         // for AggregationMatchSpy
+#include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
 #include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
