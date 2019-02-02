@@ -4964,6 +4964,13 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 {
 	L_CALL("Schema::void(<doc>, <field_spc>, %zu)", pos);
 
+	if (term.size() > 245) {
+		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
+			THROW(ClientError, "Keyword too long");
+		}
+		return;
+	}
+
 	const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
 	const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 	if (position != 0u) {
