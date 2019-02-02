@@ -41,6 +41,7 @@
 #include "utype.hh"                           // for toUType
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
 
+#include "xapian/common/serialise-double.h"
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY

@@ -73,10 +73,6 @@ std::string serialise_strings(const std::vector<std::string_view>& strings);
 
 std::string_view unserialise_string_at(size_t at, const char** p, const char* end);
 
-std::string serialise_double(double v);
-
-double unserialise_double(const char** p, const char* end);
-
 
 /** Append an encoded unsigned integer to a string.
  *
@@ -183,13 +179,6 @@ inline std::string_view unserialise_string_at(size_t at, std::string_view data) 
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_string_at(at, &p, p_end);
-}
-
-
-inline double unserialise_double(std::string_view data) {
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	return unserialise_double(&p, p_end);
 }
 
 
