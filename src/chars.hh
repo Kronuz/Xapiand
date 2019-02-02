@@ -24,6 +24,98 @@
 
 namespace chars {
 
+constexpr unsigned int HEX          = 0x0000ffff;
+constexpr unsigned int IS_SPACE     = 0x00010000;
+constexpr unsigned int IS_ALPHA     = 0x00020000;
+constexpr unsigned int IS_UPPER     = 0x00040000;
+constexpr unsigned int IS_DIGIT     = 0x00080000;
+constexpr unsigned int IS_HEX_DIGIT = 0x00100000;
+constexpr unsigned int IS_NON_HEX   = 0x00001000;
+
+constexpr unsigned int N   = IS_NON_HEX;
+constexpr unsigned int S   = IS_SPACE;
+constexpr unsigned int HD  = IS_HEX_DIGIT | IS_DIGIT;
+constexpr unsigned int HA  = IS_HEX_DIGIT | IS_ALPHA;
+constexpr unsigned int HAU = IS_HEX_DIGIT | IS_ALPHA | IS_UPPER;
+constexpr unsigned int NA  = IS_NON_HEX | IS_ALPHA;
+constexpr unsigned int NAU = IS_NON_HEX | IS_ALPHA | IS_UPPER;
+
+constexpr unsigned int char_tab[256]{
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      S,      S,      N,      S,      S,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	S,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	HD |0,  HD |1,  HD |2,  HD |3,  HD |4,  HD |5,  HD |6,  HD |7,  HD |8,  HD |9,  N,      N,      N,      N,      N,      N,
+
+	N,      HAU|10, HAU|11, HAU|12, HAU|13, HAU|14, HAU|15, NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,
+	NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    NAU,    N,      N,      N,      N,      N,
+	N,      HA |10, HA |11, HA |12, HA |13, HA |14, HA |15, NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,
+	NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,     NA,     N,      N,      N,      N,      N,
+
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+	N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,      N,
+};
+
+
+inline constexpr int
+isspace(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & IS_SPACE;
+}
+
+
+inline constexpr int
+isalpha(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & IS_ALPHA;
+}
+
+
+inline constexpr int
+isupper(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & IS_UPPER;
+}
+
+
+inline constexpr int
+isdigit(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & IS_DIGIT;
+}
+
+
+inline constexpr int
+isalnum(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & (IS_DIGIT | IS_ALPHA);
+}
+
+
+inline constexpr int
+ishexdigit(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & IS_HEX_DIGIT;
+}
+
+
+inline constexpr unsigned int
+hexdigit(char c) noexcept {
+	return char_tab[static_cast<unsigned char>(c)] & HEX;
+}
+
+
+// converts the two hexadecimal characters to an int (a byte)
+inline constexpr int
+hexdec(const char** ptr) noexcept {
+	auto pos = *ptr;
+	auto a = hexdigit(*pos++);
+	auto b = hexdigit(*pos++);
+	*ptr = pos;
+	return a << 4 | b;
+}
+
+
 // converts a character to lowercase
 inline constexpr char tolower(char c) noexcept {
 	constexpr char _[256]{
@@ -101,46 +193,6 @@ inline constexpr char toupper(char c) noexcept {
 		'\xf8', '\xf9', '\xfa', '\xfb', '\xfc', '\xfd', '\xfe', '\xff',
 	};
 	return _[static_cast<unsigned char>(c)];
-}
-
-inline constexpr int
-hexdigit(char c) noexcept {
-	constexpr int _[256]{
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
-
-		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	};
-	return _[static_cast<unsigned char>(c)];
-}
-
-
-// converts the two hexadecimal characters to an int (a byte)
-inline constexpr int
-hexdec(const char** ptr) noexcept {
-	auto pos = *ptr;
-	auto a = hexdigit(*pos++);
-	auto b = hexdigit(*pos++);
-	if (a == -1 || b == -1) {
-		return -1;
-	}
-	*ptr = pos;
-	return a << 4 | b;
 }
 
 

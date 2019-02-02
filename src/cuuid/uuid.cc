@@ -284,10 +284,10 @@ std::ostream& operator<<(std::ostream& os, const UUID& uuid) {
 
 static inline unsigned char hexPairToChar(const char** ptr) {
 	auto dec = chars::hexdec(ptr);
-	if (dec == -1) {
-		THROW(InvalidArgument, "Invalid UUID string hex character");
+	if (dec < 256) {
+		return dec;
 	}
-	return dec;
+	THROW(InvalidArgument, "Invalid UUID string hex character");
 }
 
 
@@ -636,42 +636,42 @@ UUID::is_valid(const char** ptr, const char* end)
 	auto size = end - pos;
 	if (
 		size == UUID_LENGTH &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
 		*pos++ == '-' &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
 		*pos++ == '-' &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
 		*pos++ == '-' &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
 		*pos++ == '-' &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0) &&
-		(chars::hexdigit(*pos++) >= 0)
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16) &&
+		(chars::hexdigit(*pos++) < 16)
 	) {
 		*ptr = pos;
 		return true;

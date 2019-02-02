@@ -61,7 +61,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 				break;
 			case '%': {
 				auto dec = chars::hexdec(&q);
-				if (dec != -1) {
+				if (dec < 256) {
 					c = dec; /* Reset c, try the special characters again */
 				}
 			}
