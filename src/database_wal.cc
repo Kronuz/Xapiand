@@ -896,6 +896,8 @@ DatabaseWALWriterThread::DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* 
 DatabaseWALWriterThread&
 DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 {
+	L_CALL("DatabaseWALWriterThread::operator=()");
+
 	_wal_writer = std::move(other._wal_writer);
 	_name = std::move(other._name);
 	Thread::operator=(static_cast<Thread&&>(other));
@@ -906,6 +908,8 @@ DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 size_t
 DatabaseWALWriterThread::inc_producer_token(const std::string& path, ProducerToken** producer_token)
 {
+	L_CALL("DatabaseWALWriterThread::inc_producer_token()");
+
 	std::lock_guard<std::mutex> lk(producers_mtx);
 	auto it = producers.find(path);
 	if (it == producers.end()) {
@@ -921,6 +925,8 @@ DatabaseWALWriterThread::inc_producer_token(const std::string& path, ProducerTok
 size_t
 DatabaseWALWriterThread::dec_producer_token(const std::string& path)
 {
+	L_CALL("DatabaseWALWriterThread::dec_producer_token()");
+
 	std::lock_guard<std::mutex> lk(producers_mtx);
 	auto it = producers.find(path);
 	if (it == producers.end()) {
@@ -938,6 +944,8 @@ DatabaseWALWriterThread::dec_producer_token(const std::string& path)
 const std::string&
 DatabaseWALWriterThread::name() const noexcept
 {
+	L_CALL("DatabaseWALWriterThread::name()");
+
 	return _name;
 }
 
@@ -945,6 +953,8 @@ DatabaseWALWriterThread::name() const noexcept
 void
 DatabaseWALWriterThread::operator()()
 {
+	L_CALL("DatabaseWALWriterThread::operator()()");
+
 	_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
 		DatabaseWALWriterTask task;
@@ -967,6 +977,8 @@ DatabaseWALWriterThread::operator()()
 void
 DatabaseWALWriterThread::clear()
 {
+	L_CALL("DatabaseWALWriterThread::clear()");
+
 	DatabaseWALWriterTask task;
 	while (_queue.try_dequeue(task)) {}
 }
@@ -975,6 +987,8 @@ DatabaseWALWriterThread::clear()
 DatabaseWAL&
 DatabaseWALWriterThread::wal(const std::string& path)
 {
+	L_CALL("DatabaseWALWriterThread::wal()");
+
 	auto it = lru.find(path);
 	if (it == lru.end()) {
 		it = lru.emplace(path, std::make_unique<DatabaseWAL>(path)).first;
@@ -1000,6 +1014,8 @@ DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads
 void
 DatabaseWALWriter::execute(DatabaseWALWriterTask&& task)
 {
+	L_CALL("DatabaseWALWriter::execute()");
+
 	static thread_local DatabaseWALWriterThread thread(0, this);
 	inc_producer_token(task.path);
 	task(thread);
@@ -1009,6 +1025,8 @@ DatabaseWALWriter::execute(DatabaseWALWriterTask&& task)
 bool
 DatabaseWALWriter::enqueue(const ProducerToken& token, DatabaseWALWriterTask&& task)
 {
+	L_CALL("DatabaseWALWriter::enqueue()");
+
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(task.path);
 	auto& thread = _threads[hash % _threads.size()];
@@ -1020,6 +1038,8 @@ DatabaseWALWriter::enqueue(const ProducerToken& token, DatabaseWALWriterTask&& t
 void
 DatabaseWALWriter::clear()
 {
+	L_CALL("DatabaseWALWriter::clear()");
+
 	for (auto& _thread : _threads) {
 		_thread.clear();
 	}
@@ -1029,6 +1049,8 @@ DatabaseWALWriter::clear()
 bool
 DatabaseWALWriter::join(std::chrono::milliseconds timeout)
 {
+	L_CALL("DatabaseWALWriter::join()");
+
 	bool ret = true;
 	// Divide timeout among number of running worker threads
 	// to give each thread the chance to "join".
@@ -1050,6 +1072,8 @@ DatabaseWALWriter::join(std::chrono::milliseconds timeout)
 void
 DatabaseWALWriter::end()
 {
+	L_CALL("DatabaseWALWriter::end()");
+
 	if (!_ending.exchange(true, std::memory_order_release)) {
 		for (auto& _thread : _threads) {
 			_thread._queue.enqueue(DatabaseWALWriterTask{});
@@ -1061,6 +1085,8 @@ DatabaseWALWriter::end()
 void
 DatabaseWALWriter::finish()
 {
+	L_CALL("DatabaseWALWriter::finish()");
+
 	if (!_finished.exchange(true, std::memory_order_release)) {
 		for (auto& _thread : _threads) {
 			_thread._queue.enqueue(DatabaseWALWriterTask{});
@@ -1072,6 +1098,8 @@ DatabaseWALWriter::finish()
 std::size_t
 DatabaseWALWriter::running_size()
 {
+	L_CALL("DatabaseWALWriter::running_size()");
+
 	return _threads.size();
 }
 
@@ -1079,6 +1107,8 @@ DatabaseWALWriter::running_size()
 size_t
 DatabaseWALWriter::inc_producer_token(const std::string& path, ProducerToken** producer_token)
 {
+	L_CALL("DatabaseWALWriter::inc_producer_token()");
+
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
 	auto& thread = _threads[hash % _threads.size()];
@@ -1089,6 +1119,8 @@ DatabaseWALWriter::inc_producer_token(const std::string& path, ProducerToken** p
 size_t
 DatabaseWALWriter::dec_producer_token(const std::string& path)
 {
+	L_CALL("DatabaseWALWriter::dec_producer_token()");
+
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(path);
 	auto& thread = _threads[hash % _threads.size()];
@@ -1099,6 +1131,8 @@ DatabaseWALWriter::dec_producer_token(const std::string& path)
 void
 DatabaseWALWriterTask::write_add_document(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_add_document()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = doc.serialise();
@@ -1115,6 +1149,8 @@ DatabaseWALWriterTask::write_add_document(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_delete_document_term(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_delete_document_term()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_string(term_word_val);  // term
@@ -1131,6 +1167,8 @@ DatabaseWALWriterTask::write_delete_document_term(DatabaseWALWriterThread& threa
 void
 DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_remove_spelling()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_length(freq);  // freqdec
@@ -1148,6 +1186,8 @@ DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_commit()");
+
 	L_DATABASE_NOW(start);
 
 	L_DATABASE("write_commit {path:%s, rev:%llu}", repr(path), revision);
@@ -1163,6 +1203,8 @@ DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_replace_document()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_length(did);
@@ -1180,6 +1222,8 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_replace_document_term(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_replace_document_term()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_string(term_word_val);  // term
@@ -1197,6 +1241,8 @@ DatabaseWALWriterTask::write_replace_document_term(DatabaseWALWriterThread& thre
 void
 DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_delete_document()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_length(did);
@@ -1213,6 +1259,8 @@ DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_set_metadata()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_string(key);
@@ -1230,6 +1278,8 @@ DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 {
+	L_CALL("DatabaseWALWriterTask::write_add_spelling()");
+
 	L_DATABASE_NOW(start);
 
 	auto line = serialise_length(freq);  // freqinc
@@ -1247,6 +1297,8 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc)
 {
+	L_CALL("DatabaseWALWriter::write_add_document()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1274,6 +1326,8 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 void
 DatabaseWALWriter::write_delete_document_term(Database& database, const std::string& term)
 {
+	L_CALL("DatabaseWALWriter::write_delete_document_term()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1301,6 +1355,8 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 void
 DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec)
 {
+	L_CALL("DatabaseWALWriter::write_remove_spelling()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1329,6 +1385,8 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 void
 DatabaseWALWriter::write_commit(Database& database, bool send_update)
 {
+	L_CALL("DatabaseWALWriter::write_commit()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1356,6 +1414,8 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 void
 DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc)
 {
+	L_CALL("DatabaseWALWriter::write_replace_document()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1384,6 +1444,8 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 void
 DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc)
 {
+	L_CALL("DatabaseWALWriter::write_replace_document_term()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1412,6 +1474,8 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 void
 DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 {
+	L_CALL("DatabaseWALWriter::write_delete_document()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1439,6 +1503,8 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 void
 DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key, const std::string& val)
 {
+	L_CALL("DatabaseWALWriter::write_set_metadata()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
@@ -1467,6 +1533,8 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 void
 DatabaseWALWriter::write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc)
 {
+	L_CALL("DatabaseWALWriter::write_add_spelling()");
+
 	ASSERT(database.is_wal_active());
 	auto endpoint = database.endpoints[0];
 	ASSERT(endpoint.is_local());
