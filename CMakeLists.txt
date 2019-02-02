@@ -566,17 +566,29 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-s
 add_required_cxx_compiler_flag("-std=c++1z")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
+add_cxx_compiler_flag("-fno-common")
+add_cxx_compiler_flag("-flto" RELEASE)
 
 add_cxx_compiler_flag("-Wall")
 add_cxx_compiler_flag("-Wextra")
 add_cxx_compiler_flag("-Wshadow")
+add_cxx_compiler_flag("-Wpointer-arith")
+add_cxx_compiler_flag("-Wformat-security")
+add_cxx_compiler_flag("-Wredundant-decls")
+add_cxx_compiler_flag("-Woverloaded-virtual")
+add_cxx_compiler_flag("-Wmissing-declarations")
+add_cxx_compiler_flag("-Winit-self")
+add_cxx_compiler_flag("-Wcast-align")
+# add_cxx_compiler_flag("-Wundef")
+# add_cxx_compiler_flag("-Wcast-qual")
 # add_cxx_compiler_flag("-Wshorten-64-to-32") ##
 # add_cxx_compiler_flag("-Wfloat-equal") ##
 
 # Disable certain warnings.
-add_cxx_compiler_flag("-Wnon-virtual-dtor")
 add_cxx_compiler_flag("-Wno-unknown-pragmas")
 add_cxx_compiler_flag("-Wno-variadic-macros")
+add_cxx_compiler_flag("-Wno-gnu-anonymous-struct")
+add_cxx_compiler_flag("-fno-gnu-keywords")
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	message(STATUS "Compiler: Clang (${CMAKE_CXX_COMPILER_ID})")
