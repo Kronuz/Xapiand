@@ -31,6 +31,7 @@
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "schema.h"                         // for Schema
 #include "hashes.hh"                        // for fnv1ah32
+#include "phf.hh"                           // for phf
 
 
 Aggregation::Aggregation()

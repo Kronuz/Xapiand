@@ -1686,28 +1686,6 @@ bool has_dispatch_process_properties(uint32_t key);
 bool has_dispatch_process_concrete_properties(uint32_t key);
 
 
-const std::unique_ptr<SimpleStopper<>>& getStopper(std::string_view language) {
-	static std::mutex mtx;
-	static std::string stopwords_path(getenv("XAPIAN_STOPWORDS_PATH") != nullptr ? getenv("XAPIAN_STOPWORDS_PATH") : STOPWORDS_PATH);
-	static std::unordered_map<uint32_t, std::unique_ptr<SimpleStopper<>>> stoppers;
-	auto language_hash = hh(language);
-	std::lock_guard<std::mutex> lk(mtx);
-	auto it = stoppers.find(language_hash);
-	if (it != stoppers.end()) {
-		return it->second;
-	}
-	auto& stopper = stoppers[language_hash];
-	auto path = stopwords_path + "/" + std::string(language) + ".txt";
-	std::ifstream words(path);
-	if (words.is_open()) {
-		stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
-	} else {
-		L_WARNING_ONCE("Cannot open stop words file: %s", path);
-	}
-	return stopper;
-}
-
-
 required_spc_t::flags_t::flags_t()
 	: bool_term(DEFAULT_BOOL_TERM),
 	  partials(DEFAULT_GEO_PARTIALS),

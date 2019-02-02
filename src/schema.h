@@ -24,26 +24,22 @@
 
 #include "config.h"                // for XAPIAND_CHAISCRIPT, XAPIAND_V8
 
-#include <array>                   // for array
-#include <future>                  // for future
-#include <memory>                  // for shared_ptr
-#include <stddef.h>                // for size_t
-#include <string>                  // for string
+#include <array>                   // for std::array
+#include <cstdint>                 // for uint8_t
+#include <memory>                  // for std::shared_ptr
+#include <string>                  // for std::string
 #include "string_view.hh"          // for std::string_view
-#include <sys/types.h>             // for uint8_t
-#include <tuple>                   // for tuple
-#include <unordered_map>           // for unordered_map
-#include <unordered_set>           // for unordered_set
-#include <utility>                 // for pair
-#include <vector>                  // for vector
-#include <xapian.h>                // for QueryParser
+#include <tuple>                   // for std::tuple
+#include <unordered_map>           // for std::unordered_map
+#include <unordered_set>           // for std::unordered_set
+#include <utility>                 // for std::pair
+#include <vector>                  // for std::vector
+#include <xapian.h>                // for Xapian::QueryParser
 
 #include "database_utils.h"
-#include "geospatial/htm.h"        // for GeoSpatial, range_t
-#include "hashes.hh"               // for fnv1ah32
+#include "geospatial/htm.h"        // for range_t, GeoSpatial
 #include "log.h"                   // for L_CALL
 #include "msgpack.h"               // for MsgPack
-#include "phf.hh"                  // for phf
 #include "repr.hh"                 // for repr
 #include "utype.hh"                // for toUType
 
@@ -210,31 +206,6 @@ enum class FieldType : uint8_t {
 	TIMEDELTA     = TIMEDELTA_CHAR,
 	UUID          = UUID_CHAR,
 };
-
-
-// Same implementation as Xapian::SimpleStopper, only this uses perfect hashes
-// which is much faster ~ 5.24591s -> 0.861319s
-template <std::size_t max_size = 1000>
-class SimpleStopper : public Xapian::Stopper {
-	phf::phf<phf::fast_phf, std::uint32_t, max_size> stop_words;
-
-public:
-	SimpleStopper() { }
-
-	template <class Iterator>
-	SimpleStopper(Iterator begin, Iterator end) {
-		std::vector<std::uint32_t> result;
-		result.reserve(max_size);
-		std::transform(begin, end, std::back_inserter(result), fnv1ah32{});
-		stop_words.assign(result.data(), std::min(max_size, result.size()));
-	}
-
-	virtual bool operator()(const std::string& term) const {
-		return stop_words.count(hh(term));
-	}
-};
-
-const std::unique_ptr<SimpleStopper<>>& getStopper(std::string_view language);
 
 
 inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {

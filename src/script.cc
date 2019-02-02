@@ -30,6 +30,7 @@
 #include "serialise.h"
 #include "v8pp/v8pp.h"
 #include "hashes.hh"        // for fnv1ah32
+#include "phf.hh"           // for phf
 
 
 static const auto str_set_dispatch_script(string::join<std::string>({
