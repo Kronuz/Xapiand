@@ -589,11 +589,7 @@ Database::get_revision()
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-#if HAVE_XAPIAN_DATABASE_GET_REVISION
 	return db()->get_revision();
-#else
-	return 0;
-#endif
 }
 
 
@@ -1399,14 +1395,9 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-#ifdef HAVE_XAPIAN_DATABASE_GET_DOCUMENT_WITH_FLAGS
 			if (assume_valid_) {
 				doc = rdb->get_document(did, Xapian::DOC_ASSUME_VALID);
-			} else
-#else
-			ignore_unused(assume_valid_);
-#endif
-			{
+			} else {
 				doc = rdb->get_document(did);
 			}
 			break;
