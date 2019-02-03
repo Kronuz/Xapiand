@@ -1,8 +1,18 @@
 Xapiand
-Copyright (c) 2015-2019 Dubalu LLC. All rights reserved.
+Copyright (c) 2015-2019 Dubalu LLC
 
 Source code in this repository is variously licensed under the MIT license,
-BSD-style licenses, and the Apache License Version 2.0. Source code in a given
-file is licensed under the MIT license and the copyright belongs to Dubalu LLC
-unless a LICENSE file present in the directory subtree declares a separate
-license or otherwise noted at the beginning of the file.
+BSD-style licenses, the Apache License Version 2.0, and GNU General Public
+License Version 2.
+
+Source code in a given file is licensed under the MIT license and the copyright
+belongs to Dubalu LLC unless a LICENSE file present in the directory subtree
+declares a separate license or otherwise noted at the beginning of the file.
+
+The current distribution of Xapian contains many files which are only licensed
+under the GPL, but work is in the progress towards being able to distribute
+Xapian under a more permissive license, once this process is complete, there
+will not be any more GNU GPL licensed code in this repository.
+
+Xapiand clients and documentation are heavyly based upon the work from the
+Elasticsearch project, licensed under the Apache License.
