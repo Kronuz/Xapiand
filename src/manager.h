@@ -131,12 +131,12 @@ private:
 
 	std::atomic_int _total_clients;
 	std::atomic_int _http_clients;
-	std::atomic_int _binary_clients;
+	std::atomic_int _remote_clients;
 	std::atomic_int _replication_clients;
 
 	std::shared_ptr<Http> _http;
 #ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<RemoteProtocol> _binary;
+	std::shared_ptr<RemoteProtocol> _remote;
 	std::shared_ptr<ReplicationProtocol> _replication;
 	std::shared_ptr<Discovery> _discovery;
 #endif
@@ -307,9 +307,9 @@ public:
 		ASSERT(_manager);
 		return _manager->_http_clients;
 	}
-	static auto& binary_clients() {
+	static auto& remote_clients() {
 		ASSERT(_manager);
-		return _manager->_binary_clients;
+		return _manager->_remote_clients;
 	}
 	static auto& replication_clients() {
 		ASSERT(_manager);
@@ -342,10 +342,10 @@ public:
 		ASSERT(_manager->_discovery);
 		return _manager->_discovery;
 	}
-	static auto& binary() {
+	static auto& remote() {
 		ASSERT(_manager);
-		ASSERT(_manager->_binary);
-		return _manager->_binary;
+		ASSERT(_manager->_remote);
+		return _manager->_remote;
 	}
 	static auto& replication() {
 		ASSERT(_manager);

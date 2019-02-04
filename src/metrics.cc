@@ -112,31 +112,59 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		.Add({})
 	},
 #ifdef XAPIAND_CLUSTERING
-	xapiand_binary_clients_running{
+	xapiand_remote_clients_running{
 		registry.AddGauge(
-			"xapiand_binary_clients_running",
-			"Number of binary clients running",
+			"xapiand_remote_clients_running",
+			"Number of remote protocol clients running",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_clients_queue_size{
+	xapiand_remote_clients_queue_size{
 		registry.AddGauge(
-			"xapiand_binary_clients_queue_size",
-			"Binary clients in the queue",
+			"xapiand_remote_clients_queue_size",
+			"Remote protocol clients in the queue",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_clients_capacity{
+	xapiand_remote_clients_capacity{
 		registry.AddGauge(
-			"xapiand_binary_clients_capacity",
-			"Binary client queue capacity",
+			"xapiand_remote_clients_capacity",
+			"Remote protocol client queue capacity",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_clients_pool_size{
+	xapiand_remote_clients_pool_size{
 		registry.AddGauge(
 			"xapiand_clients_pool_size",
-			"Binary client total pool size",
+			"Remote protocol client total pool size",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_clients_running{
+		registry.AddGauge(
+			"xapiand_replication_clients_running",
+			"Number of replication protocol clients running",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_clients_queue_size{
+		registry.AddGauge(
+			"xapiand_replication_clients_queue_size",
+			"Replication protocol clients in the queue",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_clients_capacity{
+		registry.AddGauge(
+			"xapiand_replication_clients_capacity",
+			"Replication protocol client queue capacity",
+			constant_labels)
+		.Add({})
+	},
+	xapiand_replication_clients_pool_size{
+		registry.AddGauge(
+			"xapiand_clients_pool_size",
+			"Replication protocol client total pool size",
 			constant_labels)
 		.Add({})
 	},
@@ -240,17 +268,17 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		.Add({})
 	},
 #ifdef XAPIAND_CLUSTERING
-	xapiand_binary_current_connections{
+	xapiand_remote_current_connections{
 		registry.AddGauge(
-			"xapiand_binary_current_connections",
-			"Current binary connections",
+			"xapiand_remote_current_connections",
+			"Current remote protocol connections",
 			constant_labels)
 		.Add({})
 	},
-	xapiand_binary_connections{
+	xapiand_remote_connections{
 		registry.AddCounter(
-			"xapiand_binary_connections",
-			"Binary connections",
+			"xapiand_remote_connections",
+			"Remote protocol connections",
 			constant_labels)
 		.Add({})
 	},

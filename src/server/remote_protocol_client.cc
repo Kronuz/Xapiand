@@ -114,20 +114,20 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 	  cluster_database(cluster_database_),
 	  _msg_query_database_lock(this)
 {
-	++XapiandManager::binary_clients();
+	++XapiandManager::remote_clients();
 
 	Metrics::metrics()
-		.xapiand_binary_connections
+		.xapiand_remote_connections
 		.Increment();
 
-	L_CONN("New Remote Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::binary_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Remote Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
 }
 
 
 RemoteProtocolClient::~RemoteProtocolClient() noexcept
 {
 	try {
-		if (XapiandManager::binary_clients().fetch_sub(1) == 0) {
+		if (XapiandManager::remote_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of binary clients");
 			sig_exit(-EX_SOFTWARE);
 		}

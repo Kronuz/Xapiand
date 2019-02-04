@@ -58,11 +58,16 @@ public:
 	prometheus::Gauge& xapiand_http_clients_pool_size;
 
 #ifdef XAPIAND_CLUSTERING
-	// binary client tasks:
-	prometheus::Gauge& xapiand_binary_clients_running;
-	prometheus::Gauge& xapiand_binary_clients_queue_size;
-	prometheus::Gauge& xapiand_binary_clients_capacity;
-	prometheus::Gauge& xapiand_binary_clients_pool_size;
+	// remote protocol client tasks:
+	prometheus::Gauge& xapiand_remote_clients_running;
+	prometheus::Gauge& xapiand_remote_clients_queue_size;
+	prometheus::Gauge& xapiand_remote_clients_capacity;
+	prometheus::Gauge& xapiand_remote_clients_pool_size;
+	// remote protocol client tasks:
+	prometheus::Gauge& xapiand_replication_clients_running;
+	prometheus::Gauge& xapiand_replication_clients_queue_size;
+	prometheus::Gauge& xapiand_replication_clients_capacity;
+	prometheus::Gauge& xapiand_replication_clients_pool_size;
 #endif
 
 	// server tasks:
@@ -88,8 +93,8 @@ public:
 	prometheus::Counter& xapiand_http_connections;
 
 #ifdef XAPIAND_CLUSTERING
-	prometheus::Gauge& xapiand_binary_current_connections;
-	prometheus::Counter& xapiand_binary_connections;
+	prometheus::Gauge& xapiand_remote_current_connections;
+	prometheus::Counter& xapiand_remote_connections;
 	prometheus::Gauge& xapiand_replication_current_connections;
 	prometheus::Counter& xapiand_replication_connections;
 #endif
