@@ -24,8 +24,8 @@
 
 #include <string>
 
-#include "api/postlist.h"
-#include "backends/positionlist.h"
+#include "xapian/api/postlist.h"
+#include "xapian/backends/positionlist.h"
 
 /// Class for merging PostList objects from subdatabases.
 class MultiPostList : public PostList {

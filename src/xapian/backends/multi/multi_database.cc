@@ -16,18 +16,18 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "multi_database.h"
+#include "xapian/backends/multi/multi_database.h"
 
-#include "backends/backends.h"
-#include "backends/multi.h"
-#include "expand/ortermlist.h"
-#include "expand/termlistmerger.h"
-#include "multi_alltermslist.h"
-#include "multi_postlist.h"
-#include "multi_termlist.h"
-#include "multi_valuelist.h"
+#include "xapian/backends/backends.h"
+#include "xapian/backends/multi.h"
+#include "xapian/expand/ortermlist.h"
+#include "xapian/expand/termlistmerger.h"
+#include "xapian/backends/multi/multi_alltermslist.h"
+#include "xapian/backends/multi/multi_postlist.h"
+#include "xapian/backends/multi/multi_termlist.h"
+#include "xapian/backends/multi/multi_valuelist.h"
 
 #include <memory>
 

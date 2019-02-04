@@ -19,29 +19,29 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remote-database.h"
+#include "xapian/backends/remote/remote-database.h"
 
 #include <signal.h>
 
-#include "api/msetinternal.h"
-#include "api/smallvector.h"
-#include "backends/inmemory/inmemory_positionlist.h"
-#include "net_postlist.h"
-#include "remote-document.h"
-#include "omassert.h"
-#include "realtime.h"
-#include "net/length.h"
-#include "net/serialise.h"
-#include "net/serialise-error.h"
-#include "remote_alltermslist.h"
-#include "remote_metadatatermlist.h"
-#include "remote_termlist.h"
-#include "serialise-double.h"
-#include "str.h"
-#include "stringutils.h" // For STRINGIZE().
-#include "weight/weightinternal.h"
+#include "xapian/api/msetinternal.h"
+#include "xapian/api/smallvector.h"
+#include "xapian/backends/inmemory/inmemory_positionlist.h"
+#include "xapian/backends/remote/net_postlist.h"
+#include "xapian/backends/remote/remote-document.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/realtime.h"
+#include "xapian/net/length.h"
+#include "xapian/net/serialise.h"
+#include "xapian/net/serialise-error.h"
+#include "xapian/backends/remote/remote_alltermslist.h"
+#include "xapian/backends/remote/remote_metadatatermlist.h"
+#include "xapian/backends/remote/remote_termlist.h"
+#include "xapian/common/serialise-double.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h" // For STRINGIZE().
+#include "xapian/weight/weightinternal.h"
 
 #include <cerrno>
 #include <memory>

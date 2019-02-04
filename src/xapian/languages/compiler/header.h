@@ -79,7 +79,7 @@ struct include {
 
 enum token_codes {
 
-#include "syswords2.h"
+#include "xapian/languages/compiler/syswords2.h"
 
     c_mathassign,
     c_name,

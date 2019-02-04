@@ -19,7 +19,7 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/compactor.h"
 #include "xapian/constants.h"
@@ -34,28 +34,28 @@
 #include <cerrno>
 #include <cstdio>
 
-#include "backends/flint_lock.h"
-#include "compression_stream.h"
-#include "honey_cursor.h"
-#include "honey_database.h"
-#include "honey_defs.h"
-#include "honey_postlist_encodings.h"
-#include "honey_table.h"
-#include "honey_values.h"
-#include "honey_version.h"
-#include "filetests.h"
-#include "internaltypes.h"
-#include "pack.h"
-#include "backends/valuestats.h"
-#include "wordaccess.h"
+#include "xapian/backends/flint_lock.h"
+#include "xapian/common/compression_stream.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/backends/honey/honey_defs.h"
+#include "xapian/backends/honey/honey_postlist_encodings.h"
+#include "xapian/backends/honey/honey_table.h"
+#include "xapian/backends/honey/honey_values.h"
+#include "xapian/backends/honey/honey_version.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/pack.h"
+#include "xapian/backends/valuestats.h"
+#include "xapian/common/wordaccess.h"
 
-#include "../byte_length_strings.h"
-#include "../prefix_compressed_strings.h"
+#include "xapian/backends/byte_length_strings.h"
+#include "xapian/backends/prefix_compressed_strings.h"
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-# include "../glass/glass_database.h"
-# include "../glass/glass_table.h"
-# include "../glass/glass_values.h"
+# include "xapian/backends/glass/glass_database.h"
+# include "xapian/backends/glass/glass_table.h"
+# include "xapian/backends/glass/glass_values.h"
 #endif
 
 using namespace std;

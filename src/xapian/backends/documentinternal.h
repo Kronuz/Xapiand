@@ -21,14 +21,14 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 #define XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 
-#include <xapian/document.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/types.h>
+#include "xapian/document.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/types.h"
 
-#include "api/terminfo.h"
-#include "api/termlist.h"
-#include "backends/databaseinternal.h"
-#include "overflow.h"
+#include "xapian/api/terminfo.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/overflow.h"
 
 #include <map>
 #include <memory>

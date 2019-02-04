@@ -27,8 +27,8 @@
 # error "Never use <xapian/registry.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/visibility.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/visibility.h"
 #include <string>
 
 namespace Xapian {

@@ -25,11 +25,11 @@
 #include <string>
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/types.h>
-#include <xapian/postingiterator.h>
+#include "xapian/types.h"
+#include "xapian/postingiterator.h"
 
-#include "backends/positionlist.h"
-#include "weight/weightinternal.h"
+#include "xapian/backends/positionlist.h"
+#include "xapian/weight/weightinternal.h"
 
 class OrPositionList;
 

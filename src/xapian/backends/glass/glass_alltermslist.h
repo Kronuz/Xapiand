@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_GLASS_ALLTERMSLIST_H
 #define XAPIAN_INCLUDED_GLASS_ALLTERMSLIST_H
 
-#include "backends/alltermslist.h"
-#include "glass_database.h"
-#include "glass_postlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/backends/glass/glass_postlist.h"
 
 class GlassCursor;
 

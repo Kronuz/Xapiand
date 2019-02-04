@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_document.h"
+#include "xapian/backends/glass/glass_document.h"
 
-#include "glass_docdata.h"
-#include "glass_values.h"
+#include "xapian/backends/glass/glass_docdata.h"
+#include "xapian/backends/glass/glass_values.h"
 
 string
 GlassDocument::fetch_value(Xapian::valueno slot) const

@@ -19,12 +19,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/postingsource.h"
 #include "xapian/error.h"
-#include "net/length.h"
-#include "serialise-double.h"
+#include "xapian/net/length.h"
+#include "xapian/common/serialise-double.h"
 #include <cmath>
 
 using namespace Xapian;

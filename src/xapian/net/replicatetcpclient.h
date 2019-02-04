@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_REPLICATETCPCLIENT_H
 #define XAPIAN_INCLUDED_REPLICATETCPCLIENT_H
 
-#include "remoteconnection.h"
+#include "xapian/net/remoteconnection.h"
 
 #include "xapian/visibility.h"
-#include "api/replication.h"
+#include "xapian/api/replication.h"
 
 #ifdef __WIN32__
 # define SOCKET_INITIALIZER_MIXIN : private WinsockInitializer

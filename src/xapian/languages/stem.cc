@@ -19,17 +19,17 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/stem.h>
+#include "xapian/stem.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "steminternal.h"
+#include "xapian/languages/steminternal.h"
 
-#include "allsnowballheaders.h"
-#include "keyword.h"
-#include "sbl-dispatch.h"
+#include "xapian/languages/allsnowballheaders.h"
+#include "xapian/common/keyword.h"
+#include "xapian/languages/sbl-dispatch.h"
 
 #include <string>
 

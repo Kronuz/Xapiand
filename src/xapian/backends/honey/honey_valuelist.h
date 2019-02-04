@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_HONEY_VALUELIST_H
 #define XAPIAN_INCLUDED_HONEY_VALUELIST_H
 
-#include "backends/valuelist.h"
-#include "honey_values.h"
+#include "xapian/backends/valuelist.h"
+#include "xapian/backends/honey/honey_values.h"
 
 class HoneyCursor;
 class HoneyDatabase;

@@ -22,25 +22,25 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "inmemory_database.h"
+#include "xapian/backends/inmemory/inmemory_database.h"
 
-#include "debuglog.h"
+#include "xapian/common/debuglog.h"
 
-#include "expand/expandweight.h"
-#include "inmemory_document.h"
-#include "inmemory_alltermslist.h"
-#include "str.h"
-#include "backends/valuestats.h"
+#include "xapian/expand/expandweight.h"
+#include "xapian/backends/inmemory/inmemory_document.h"
+#include "xapian/backends/inmemory/inmemory_alltermslist.h"
+#include "xapian/common/str.h"
+#include "xapian/backends/valuestats.h"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 #include <map>
 
-#include <xapian/error.h>
-#include <xapian/valueiterator.h>
+#include "xapian/error.h"
+#include "xapian/valueiterator.h"
 
 using std::make_pair;
 using Xapian::Internal::intrusive_ptr;

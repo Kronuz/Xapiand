@@ -22,12 +22,12 @@
 #ifndef XAPIAN_INCLUDED_REMOTE_DATABASE_H
 #define XAPIAN_INCLUDED_REMOTE_DATABASE_H
 
-#include "backends/backends.h"
-#include "backends/databaseinternal.h"
-#include "api/enquireinternal.h"
-#include "api/queryinternal.h"
-#include "net/remoteconnection.h"
-#include "backends/valuestats.h"
+#include "xapian/backends/backends.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/api/enquireinternal.h"
+#include "xapian/api/queryinternal.h"
+#include "xapian/net/remoteconnection.h"
+#include "xapian/backends/valuestats.h"
 #include "xapian/weight.h"
 
 namespace Xapian {

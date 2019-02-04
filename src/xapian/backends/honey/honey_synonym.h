@@ -21,12 +21,12 @@
 #ifndef XAPIAN_INCLUDED_HONEY_SYNONYM_H
 #define XAPIAN_INCLUDED_HONEY_SYNONYM_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "api/termlist.h"
-#include "backends/alltermslist.h"
-#include "honey_cursor.h"
-#include "honey_lazytable.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_lazytable.h"
 
 #include <set>
 #include <string>

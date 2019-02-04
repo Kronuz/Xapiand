@@ -18,23 +18,23 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
 #ifdef __WIN32__
-# include "safewindows.h"
+# include "xapian/common/safewindows.h"
 #else
-# include "safenetdb.h"
+# include "xapian/common/safenetdb.h"
 #endif
 
 #include <cerrno>
 #include <cstdlib> // For abs().
 #include <cstring> // For memcmp().
 
-#include "errno_to_string.h"
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/common/errno_to_string.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 using namespace std;
 

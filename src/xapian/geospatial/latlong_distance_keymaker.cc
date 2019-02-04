@@ -21,7 +21,7 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/geospatial.h"
 #include "xapian/document.h"

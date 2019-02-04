@@ -19,12 +19,12 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "msetcmp.h"
+#include "xapian/matcher/msetcmp.h"
 
-#include "api/result.h"
-#include "omassert.h"
+#include "xapian/api/result.h"
+#include "xapian/common/omassert.h"
 
 /* We use templates to generate all the different comparison functions which we
  * need, which avoids having to write them all out by hand.

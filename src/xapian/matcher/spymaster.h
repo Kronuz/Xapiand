@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_SPYMASTER_H
 #define XAPIAN_INCLUDED_SPYMASTER_H
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/matchspy.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/matchspy.h"
 
 #include <vector>
 

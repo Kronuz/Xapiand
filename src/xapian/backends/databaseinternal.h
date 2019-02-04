@@ -22,16 +22,16 @@
 #ifndef XAPIAN_INCLUDED_DATABASEINTERNAL_H
 #define XAPIAN_INCLUDED_DATABASEINTERNAL_H
 
-#include "internaltypes.h"
+#include "xapian/common/internaltypes.h"
 
-#include <xapian/database.h>
-#include <xapian/document.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/positioniterator.h>
-#include <xapian/postingiterator.h>
-#include <xapian/termiterator.h>
-#include <xapian/types.h>
-#include <xapian/valueiterator.h>
+#include "xapian/database.h"
+#include "xapian/document.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/positioniterator.h"
+#include "xapian/postingiterator.h"
+#include "xapian/termiterator.h"
+#include "xapian/types.h"
+#include "xapian/valueiterator.h"
 
 #include <string>
 

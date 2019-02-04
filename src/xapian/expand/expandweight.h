@@ -22,10 +22,10 @@
 #ifndef XAPIAN_INCLUDED_EXPANDWEIGHT_H
 #define XAPIAN_INCLUDED_EXPANDWEIGHT_H
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
-#include "api/termlist.h"
-#include "internaltypes.h"
+#include "xapian/api/termlist.h"
+#include "xapian/common/internaltypes.h"
 
 #include <string>
 #include <vector>

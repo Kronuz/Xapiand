@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "collapser.h"
+#include "xapian/matcher/collapser.h"
 
-#include "heap.h"
-#include "omassert.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 

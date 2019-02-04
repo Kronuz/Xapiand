@@ -18,19 +18,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #ifdef XAPIAN_DEBUG_LOG
 
-#include "debuglog.h"
+#include "xapian/common/debuglog.h"
 
-#include "errno_to_string.h"
-#include "str.h"
+#include "xapian/common/errno_to_string.h"
+#include "xapian/common/str.h"
 
 #include <sys/types.h>
-#include "safefcntl.h"
-#include "safesysstat.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safesysstat.h"
+#include "xapian/common/safeunistd.h"
 
 #include <cerrno>
 #include <cstdlib> // For getenv().

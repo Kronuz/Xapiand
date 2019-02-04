@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_DIVERSIFYINTERNAL_H
 #define XAPIAN_INCLUDED_DIVERSIFYINTERNAL_H
 
-#include <xapian/intrusive_ptr.h>
+#include "xapian/intrusive_ptr.h"
 
 #include <vector>
 

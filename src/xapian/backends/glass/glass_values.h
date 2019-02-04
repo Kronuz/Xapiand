@@ -22,8 +22,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_VALUES_H
 #define XAPIAN_INCLUDED_GLASS_VALUES_H
 
-#include "pack.h"
-#include "backends/valuestats.h"
+#include "xapian/common/pack.h"
+#include "xapian/backends/valuestats.h"
 
 #include "xapian/error.h"
 #include "xapian/types.h"

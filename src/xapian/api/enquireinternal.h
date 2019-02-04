@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_ENQUIREINTERNAL_H
 #define XAPIAN_INCLUDED_ENQUIREINTERNAL_H
 
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 #include "xapian/constants.h"
 #include "xapian/database.h"
 #include "xapian/enquire.h"

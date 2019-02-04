@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_GLASS_SPELLINGWORDSLIST_H
 #define XAPIAN_INCLUDED_GLASS_SPELLINGWORDSLIST_H
 
-#include "backends/alltermslist.h"
-#include "glass_spelling.h"
-#include "glass_cursor.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/glass/glass_spelling.h"
+#include "xapian/backends/glass/glass_cursor.h"
 
 class GlassDatabase;
 

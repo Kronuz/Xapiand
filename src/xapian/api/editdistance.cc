@@ -27,11 +27,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "editdistance.h"
+#include "xapian/api/editdistance.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 #include <cstdlib>

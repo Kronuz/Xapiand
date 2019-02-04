@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_LAZYTABLE_H
 #define XAPIAN_INCLUDED_HONEY_LAZYTABLE_H
 
-#include "honey_table.h"
+#include "xapian/backends/honey/honey_table.h"
 
 class HoneyLazyTable : public HoneyTable {
   public:

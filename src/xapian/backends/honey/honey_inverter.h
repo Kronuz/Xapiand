@@ -23,14 +23,14 @@
 
 #include "xapian/types.h"
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 
 #include <map>
 #include <string>
 #include <vector>
 
-#include "omassert.h"
-#include "str.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
 #include "xapian/error.h"
 
 class HoneyPostListTable;

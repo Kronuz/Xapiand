@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_REMOTETCPSERVER_H
 #define XAPIAN_INCLUDED_REMOTETCPSERVER_H
 
-#include "tcpserver.h"
+#include "xapian/net/tcpserver.h"
 
-#include <xapian/database.h>
-#include <xapian/registry.h>
-#include <xapian/visibility.h>
+#include "xapian/database.h"
+#include "xapian/registry.h"
+#include "xapian/visibility.h"
 
 #include <string>
 #include <vector>

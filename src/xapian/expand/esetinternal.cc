@@ -19,24 +19,24 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "esetinternal.h"
+#include "xapian/expand/esetinternal.h"
 
 #include "xapian/enquire.h"
 #include "xapian/expanddecider.h"
-#include "backends/databaseinternal.h"
-#include "backends/multi.h"
-#include "debuglog.h"
-#include "api/rsetinternal.h"
-#include "expandweight.h"
-#include "heap.h"
-#include "omassert.h"
-#include "ortermlist.h"
-#include "str.h"
-#include "api/termlist.h"
-#include "termlistmerger.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/multi.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/api/rsetinternal.h"
+#include "xapian/expand/expandweight.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
+#include "xapian/expand/ortermlist.h"
+#include "xapian/common/str.h"
+#include "xapian/api/termlist.h"
+#include "xapian/expand/termlistmerger.h"
+#include "xapian/unicode/description_append.h"
 
 #include <memory>
 #include <set>

@@ -19,16 +19,16 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_alltermslist.h"
-#include "honey_cursor.h"
-#include "honey_postlist.h"
-#include "honey_postlist_encodings.h"
+#include "xapian/backends/honey/honey_alltermslist.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_postlist.h"
+#include "xapian/backends/honey/honey_postlist_encodings.h"
 
-#include "debuglog.h"
-#include "pack.h"
-#include "stringutils.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/stringutils.h"
 
 #include "xapian/error.h"
 

@@ -19,20 +19,20 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "localsubmatch.h"
+#include "xapian/matcher/localsubmatch.h"
 
-#include "backends/databaseinternal.h"
-#include "debuglog.h"
-#include "api/emptypostlist.h"
-#include "extraweightpostlist.h"
-#include "api/leafpostlist.h"
-#include "omassert.h"
-#include "queryoptimiser.h"
-#include "synonympostlist.h"
-#include "api/termlist.h"
-#include "weight/weightinternal.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/api/emptypostlist.h"
+#include "xapian/matcher/extraweightpostlist.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/matcher/queryoptimiser.h"
+#include "xapian/matcher/synonympostlist.h"
+#include "xapian/api/termlist.h"
+#include "xapian/weight/weightinternal.h"
 
 #include "xapian/error.h"
 

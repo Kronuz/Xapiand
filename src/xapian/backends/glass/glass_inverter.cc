@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_inverter.h"
+#include "xapian/backends/glass/glass_inverter.h"
 
-#include "glass_postlist.h"
-#include "glass_positionlist.h"
+#include "xapian/backends/glass/glass_postlist.h"
+#include "xapian/backends/glass/glass_positionlist.h"
 
-#include "api/termlist.h"
+#include "xapian/api/termlist.h"
 
 #include <map>
 #include <string>

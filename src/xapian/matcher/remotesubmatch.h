@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_REMOTESUBMATCH_H
 #define XAPIAN_INCLUDED_REMOTESUBMATCH_H
 
-#include "backends/remote/remote-database.h"
+#include "xapian/backends/remote/remote-database.h"
 #include "xapian/weight.h"
 
 namespace Xapian {

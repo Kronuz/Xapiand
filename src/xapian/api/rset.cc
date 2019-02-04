@@ -16,12 +16,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/rset.h>
+#include "xapian/rset.h"
 
-#include "rsetinternal.h"
-#include "str.h"
+#include "xapian/api/rsetinternal.h"
+#include "xapian/common/str.h"
 
 #include <string>
 

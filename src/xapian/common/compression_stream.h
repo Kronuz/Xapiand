@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_COMPRESSION_STREAM_H
 #define XAPIAN_INCLUDED_COMPRESSION_STREAM_H
 
-#include "internaltypes.h"
+#include "xapian/common/internaltypes.h"
 #include <string>
 #include <zlib.h>
 

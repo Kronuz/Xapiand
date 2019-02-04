@@ -26,9 +26,9 @@
 # error "Never use <xapian/stem.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/constinfo.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/visibility.h>
+#include "xapian/constinfo.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/visibility.h"
 
 #include <string>
 

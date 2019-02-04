@@ -25,10 +25,10 @@
 # error "Never use <xapian/termgenerator.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/types.h>
-#include <xapian/unicode.h>
-#include <xapian/visibility.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/types.h"
+#include "xapian/unicode.h"
+#include "xapian/visibility.h"
 
 #include <string>
 

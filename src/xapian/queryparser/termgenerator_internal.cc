@@ -18,19 +18,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "termgenerator_internal.h"
+#include "xapian/queryparser/termgenerator_internal.h"
 
-#include "api/msetinternal.h"
-#include "api/queryinternal.h"
+#include "xapian/api/msetinternal.h"
+#include "xapian/api/queryinternal.h"
 
-#include <xapian/document.h>
-#include <xapian/queryparser.h>
-#include <xapian/stem.h>
-#include <xapian/unicode.h>
+#include "xapian/document.h"
+#include "xapian/queryparser.h"
+#include "xapian/stem.h"
+#include "xapian/unicode.h"
 
-#include "stringutils.h"
+#include "xapian/common/stringutils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -41,7 +41,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "cjk-tokenizer.h"
+#include "xapian/queryparser/cjk-tokenizer.h"
 
 using namespace std;
 

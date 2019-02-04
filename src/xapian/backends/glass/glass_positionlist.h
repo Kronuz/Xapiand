@@ -22,13 +22,13 @@
 #ifndef XAPIAN_INCLUDED_GLASS_POSITIONLIST_H
 #define XAPIAN_INCLUDED_GLASS_POSITIONLIST_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "bitstream.h"
-#include "glass_cursor.h"
-#include "glass_lazytable.h"
-#include "pack.h"
-#include "backends/positionlist.h"
+#include "xapian/common/bitstream.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_lazytable.h"
+#include "xapian/common/pack.h"
+#include "xapian/backends/positionlist.h"
 
 #include <string>
 

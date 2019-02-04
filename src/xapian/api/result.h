@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_RESULT_H
 #define XAPIAN_INCLUDED_RESULT_H
 
-#include "backends/multi.h"
+#include "xapian/backends/multi.h"
 #include "xapian/types.h"
 
 #include <string>

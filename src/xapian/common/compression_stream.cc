@@ -20,12 +20,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "compression_stream.h"
+#include "config.h"
+#include "xapian/common/compression_stream.h"
 
-#include "omassert.h"
-#include "str.h"
-#include "stringutils.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
 
 #include "xapian/error.h"
 

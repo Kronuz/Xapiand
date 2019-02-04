@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_POSITIONLIST_H
 #define XAPIAN_INCLUDED_POSITIONLIST_H
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/positioniterator.h>
-#include <xapian/types.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/positioniterator.h"
+#include "xapian/types.h"
 
 namespace Xapian {
 

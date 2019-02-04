@@ -19,13 +19,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remotesubmatch.h"
+#include "xapian/matcher/remotesubmatch.h"
 
-#include "debuglog.h"
-#include "backends/remote/remote-database.h"
-#include "weight/weightinternal.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/backends/remote/remote-database.h"
+#include "xapian/weight/weightinternal.h"
 
 using namespace std;
 

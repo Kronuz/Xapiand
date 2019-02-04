@@ -19,23 +19,23 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
-#include "backends/databaseinternal.h"
-#include "backends/empty_database.h"
-#include "backends/multi/multi_database.h"
-#include "debuglog.h"
-#include "editdistance.h"
-#include "omassert.h"
-#include "postingiteratorinternal.h"
-#include <xapian/constants.h>
-#include <xapian/error.h>
-#include <xapian/positioniterator.h>
-#include <xapian/postingiterator.h>
-#include <xapian/termiterator.h>
-#include <xapian/unicode.h>
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/empty_database.h"
+#include "xapian/backends/multi/multi_database.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/api/editdistance.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/postingiteratorinternal.h"
+#include "xapian/constants.h"
+#include "xapian/error.h"
+#include "xapian/positioniterator.h"
+#include "xapian/postingiterator.h"
+#include "xapian/termiterator.h"
+#include "xapian/unicode.h"
 
 #include <algorithm>
 #include <cstdlib> // For abs().

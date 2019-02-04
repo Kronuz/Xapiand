@@ -36,7 +36,7 @@
  *    + PHP
  */
 
-#include <xapian.h>
+#include "xapian.h"
 
 namespace Xapian {
 

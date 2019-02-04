@@ -19,18 +19,18 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "replicate_utils.h"
+#include "xapian/common/replicate_utils.h"
 
 #include "xapian/error.h"
 
-#include "io_utils.h"
-#include "posixy_wrapper.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/posixy_wrapper.h"
 
-#include "safefcntl.h"
-#include "safesysstat.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safesysstat.h"
+#include "xapian/common/safeunistd.h"
 
 #include <sys/types.h>
 

@@ -19,14 +19,14 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "bitstream.h"
+#include "xapian/common/bitstream.h"
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "omassert.h"
-#include "pack.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/pack.h"
 
 #include <cmath>
 #include <vector>

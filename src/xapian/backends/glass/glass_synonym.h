@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_GLASS_SYNONYM_H
 #define XAPIAN_INCLUDED_GLASS_SYNONYM_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "backends/alltermslist.h"
-#include "glass_lazytable.h"
-#include "api/termlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/glass/glass_lazytable.h"
+#include "xapian/api/termlist.h"
 
 #include <set>
 #include <string>

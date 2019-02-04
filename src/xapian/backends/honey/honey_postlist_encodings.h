@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_POSTLIST_ENCODINGS_H
 #define XAPIAN_INCLUDED_HONEY_POSTLIST_ENCODINGS_H
 
-#include "pack.h"
+#include "xapian/common/pack.h"
 
 inline void
 encode_initial_chunk_header(Xapian::doccount termfreq,

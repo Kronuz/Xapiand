@@ -28,8 +28,8 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "alignment_cast.h"
-#include "omassert.h"
+#include "xapian/common/alignment_cast.h"
+#include "xapian/common/omassert.h"
 
 #ifndef WORDS_BIGENDIAN
 

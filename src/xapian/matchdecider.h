@@ -25,9 +25,9 @@
 # error "Never use <xapian/matchdecider.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

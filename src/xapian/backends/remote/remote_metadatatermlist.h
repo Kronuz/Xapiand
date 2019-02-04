@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_REMOTE_METADATATERMLIST_H
 #define XAPIAN_INCLUDED_REMOTE_METADATATERMLIST_H
 
-#include "backends/alltermslist.h"
+#include "xapian/backends/alltermslist.h"
 
 /// Iterate all terms in a remote database.
 class RemoteMetadataTermList : public AllTermsList {

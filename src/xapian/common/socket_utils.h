@@ -22,12 +22,12 @@
 #ifndef XAPIAN_INCLUDED_SOCKET_UTILS_H
 #define XAPIAN_INCLUDED_SOCKET_UTILS_H
 
-#include "safenetdb.h"
-#include "safeunistd.h"
+#include "xapian/common/safenetdb.h"
+#include "xapian/common/safeunistd.h"
 
 #ifdef __WIN32__
 
-#include "safewinsock2.h"
+#include "xapian/common/safewinsock2.h"
 
 /// Convert an fd (which might be a socket) to a WIN32 HANDLE.
 extern HANDLE fd_to_handle(int fd);

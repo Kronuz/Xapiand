@@ -19,16 +19,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_metadata.h"
+#include "xapian/backends/honey/honey_metadata.h"
 
-#include "honey_cursor.h"
+#include "xapian/backends/honey/honey_cursor.h"
 
-#include "backends/databaseinternal.h"
-#include "debuglog.h"
-#include "omassert.h"
-#include "stringutils.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/stringutils.h"
 
 #include "xapian/error.h"
 

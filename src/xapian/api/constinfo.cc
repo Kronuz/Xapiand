@@ -22,14 +22,14 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/constinfo.h"
-#include "languages/sbl-dispatch.h"
-#include "stringutils.h"
+#include "xapian/languages/sbl-dispatch.h"
+#include "xapian/common/stringutils.h"
 
 static const struct Xapian::Internal::constinfo const_info = {
-#include "unicode/c_istab.h"
+#include "xapian/unicode/c_istab.h"
     XAPIAN_MAJOR_VERSION,
     XAPIAN_MINOR_VERSION,
     XAPIAN_REVISION,

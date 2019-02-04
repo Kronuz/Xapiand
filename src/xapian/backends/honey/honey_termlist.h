@@ -25,8 +25,8 @@
 #include <string>
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/positioniterator.h>
-#include <xapian/types.h>
+#include "xapian/positioniterator.h"
+#include "xapian/types.h"
 
 namespace Xapian {
     namespace Internal {
@@ -34,9 +34,9 @@ namespace Xapian {
     }
 }
 
-#include "honey_database.h"
-#include "api/termlist.h"
-#include "honey_table.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/honey/honey_table.h"
 
 /// A TermList in a honey database.
 class HoneyTermList : public TermList {

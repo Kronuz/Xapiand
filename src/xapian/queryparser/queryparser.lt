@@ -233,8 +233,8 @@ struct yyParser {
 };
 typedef struct yyParser yyParser;
 
-#include "omassert.h"
-#include "debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/debuglog.h"
 
 #if defined(YYCOVERAGE) || defined(XAPIAN_DEBUG_LOG)
 /* For tracing shifts, the names of all terminals and nonterminals

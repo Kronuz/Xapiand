@@ -16,16 +16,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "multi_postlist.h"
+#include "xapian/backends/multi/multi_postlist.h"
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
-#include "api/leafpostlist.h"
-#include "backends/multi.h"
-#include "heap.h"
-#include "omassert.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/backends/multi.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 #include <functional>

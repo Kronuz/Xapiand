@@ -25,13 +25,13 @@
 #ifndef XAPIAN_INCLUDED_GLASS_POSTLIST_H
 #define XAPIAN_INCLUDED_GLASS_POSTLIST_H
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
-#include "glass_defs.h"
-#include "glass_inverter.h"
-#include "glass_positionlist.h"
-#include "api/leafpostlist.h"
-#include "omassert.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_inverter.h"
+#include "xapian/backends/glass/glass_positionlist.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/common/omassert.h"
 
 #include <memory>
 #include <map>

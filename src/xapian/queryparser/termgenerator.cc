@@ -18,15 +18,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/termgenerator.h>
-#include <xapian/types.h>
-#include <xapian/unicode.h>
+#include "xapian/termgenerator.h"
+#include "xapian/types.h"
+#include "xapian/unicode.h"
 
-#include "termgenerator_internal.h"
+#include "xapian/queryparser/termgenerator_internal.h"
 
-#include "str.h"
+#include "xapian/common/str.h"
 
 using namespace std;
 using namespace Xapian;

@@ -18,11 +18,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "str.h"
+#include "xapian/common/str.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 #include <cstdio> // For snprintf() or sprintf().
 #include <cstdlib> // For abort().

@@ -24,20 +24,20 @@
 #ifndef XAPIAN_INCLUDED_GLASS_TABLE_H
 #define XAPIAN_INCLUDED_GLASS_TABLE_H
 
-#include <xapian/constants.h>
-#include <xapian/error.h>
+#include "xapian/constants.h"
+#include "xapian/error.h"
 
-#include "glass_freelist.h"
-#include "glass_cursor.h"
-#include "glass_defs.h"
+#include "xapian/backends/glass/glass_freelist.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_defs.h"
 
-#include "io_utils.h"
-#include "omassert.h"
-#include "str.h"
-#include "stringutils.h"
-#include "wordaccess.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/common/wordaccess.h"
 
-#include "common/compression_stream.h"
+#include "xapian/common/compression_stream.h"
 
 #include <algorithm>
 #include <string>

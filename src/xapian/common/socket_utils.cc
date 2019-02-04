@@ -18,23 +18,23 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "socket_utils.h"
+#include "config.h"
+#include "xapian/common/socket_utils.h"
 
 #include <limits>
 
-#include "realtime.h"
-#include "safesyssocket.h"
+#include "xapian/common/realtime.h"
+#include "xapian/common/safesyssocket.h"
 
 using namespace std;
 
-#include "stringutils.h"
+#include "xapian/common/stringutils.h"
 
 #ifndef __WIN32__
 # include <arpa/inet.h>
 #else
 # include <io.h>
-# include "msvcignoreinvalidparam.h"
+# include "xapian/common/msvcignoreinvalidparam.h"
 # include <cerrno>
 
 /// Convert an fd (which might be a socket) to a WIN32 HANDLE.

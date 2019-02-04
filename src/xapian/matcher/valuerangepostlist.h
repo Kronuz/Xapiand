@@ -23,8 +23,8 @@
 #ifndef XAPIAN_INCLUDED_VALUERANGEPOSTLIST_H
 #define XAPIAN_INCLUDED_VALUERANGEPOSTLIST_H
 
-#include "api/postlist.h"
-#include "backends/valuelist.h"
+#include "xapian/api/postlist.h"
+#include "xapian/backends/valuelist.h"
 #include "xapian/database.h"
 
 class ValueRangePostList : public PostList {

@@ -21,13 +21,13 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remotetcpserver.h"
+#include "xapian/net/remotetcpserver.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "remoteserver.h"
+#include "xapian/net/remoteserver.h"
 
 #include <iostream>
 

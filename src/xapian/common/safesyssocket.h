@@ -26,7 +26,7 @@
 # include <sys/types.h>
 # include <sys/socket.h>
 #else
-# include "safewinsock2.h"
+# include "xapian/common/safewinsock2.h"
 #endif
 
 #ifdef __WIN32__

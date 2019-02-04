@@ -3,7 +3,7 @@
  *
  * (For portability, files run through $CXXCPP must have extension .c .cc or .C)
  */
-#include <config.h>
+#include "config.h"
 const char * dummy[] = {
 "/** @file version.h",
 " * @brief Define preprocessor symbols for the library version",

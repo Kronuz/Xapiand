@@ -23,8 +23,8 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_ALLTERMSLIST_H
 #define XAPIAN_INCLUDED_INMEMORY_ALLTERMSLIST_H
 
-#include "backends/alltermslist.h"
-#include "inmemory_database.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/inmemory/inmemory_database.h"
 
 /** class for alltermslists over several databases */
 class InMemoryAllTermsList : public AllTermsList

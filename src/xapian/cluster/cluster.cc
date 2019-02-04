@@ -20,15 +20,15 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/cluster.h"
 
-#include "cluster/clusterinternal.h"
+#include "xapian/cluster/clusterinternal.h"
 #include "xapian/error.h"
-#include "api/termlist.h"
-#include "debuglog.h"
-#include "omassert.h"
+#include "xapian/api/termlist.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
 
 #include <cmath>
 #include <unordered_map>

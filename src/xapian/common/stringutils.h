@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_STRINGUTILS_H
 #define XAPIAN_INCLUDED_STRINGUTILS_H
 
-#include <xapian/constinfo.h>
+#include "xapian/constinfo.h"
 
 #include <algorithm>
 #include <string>

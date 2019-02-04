@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_VALUELIST_H
 #define XAPIAN_INCLUDED_GLASS_VALUELIST_H
 
-#include "backends/valuelist.h"
-#include "glass_values.h"
+#include "xapian/backends/valuelist.h"
+#include "xapian/backends/glass/glass_values.h"
 
 class GlassCursor;
 class GlassDatabase;

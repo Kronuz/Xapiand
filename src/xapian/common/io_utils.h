@@ -23,8 +23,8 @@
 #define XAPIAN_INCLUDED_IO_UTILS_H
 
 #include <sys/types.h>
-#include "safefcntl.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safeunistd.h"
 #include <string>
 
 /** Open a block-based file for reading.

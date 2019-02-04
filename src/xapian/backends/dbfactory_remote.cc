@@ -18,13 +18,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/dbfactory.h>
+#include "xapian/dbfactory.h"
 
-#include "debuglog.h"
-#include "net/progclient.h"
-#include "net/remotetcpclient.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/net/progclient.h"
+#include "xapian/net/remotetcpclient.h"
 
 #include <string>
 

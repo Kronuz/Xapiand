@@ -23,8 +23,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_DATABASEREPLICATOR_H
 #define XAPIAN_INCLUDED_GLASS_DATABASEREPLICATOR_H
 
-#include "backends/databasereplicator.h"
-#include "glass_defs.h"
+#include "xapian/backends/databasereplicator.h"
+#include "xapian/backends/glass/glass_defs.h"
 
 class GlassDatabaseReplicator : public Xapian::DatabaseReplicator {
     private:

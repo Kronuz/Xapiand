@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_ANDMAYBEPOSTLIST_H
 #define XAPIAN_INCLUDED_ANDMAYBEPOSTLIST_H
 
-#include "postlisttree.h"
-#include "wrapperpostlist.h"
+#include "xapian/matcher/postlisttree.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
 /// PostList class implementing Query::OP_AND_MAYBE
 class AndMaybePostList : public WrapperPostList {

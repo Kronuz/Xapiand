@@ -21,17 +21,17 @@
  * USA
  */
 
-#include <config.h>
-#include "glass_termlist.h"
+#include "config.h"
+#include "xapian/backends/glass/glass_termlist.h"
 
 #include "xapian/error.h"
 
-#include "expand/expandweight.h"
-#include "glass_positionlist.h"
-#include "debuglog.h"
-#include "omassert.h"
-#include "pack.h"
-#include "str.h"
+#include "xapian/expand/expandweight.h"
+#include "xapian/backends/glass/glass_positionlist.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/str.h"
 
 using namespace std;
 using Xapian::Internal::intrusive_ptr;

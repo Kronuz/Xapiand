@@ -26,9 +26,9 @@
 
 #include <string>
 
-#include <xapian/registry.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/registry.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

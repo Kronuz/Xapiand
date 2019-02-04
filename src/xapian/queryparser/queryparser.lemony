@@ -21,21 +21,21 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "queryparser_internal.h"
+#include "xapian/queryparser/queryparser_internal.h"
 
-#include "api/queryinternal.h"
-#include "omassert.h"
-#include "str.h"
-#include "stringutils.h"
+#include "xapian/api/queryinternal.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
 #include "xapian/error.h"
 #include "xapian/unicode.h"
 
 // Include the list of token values lemon generates.
-#include "queryparser_token.h"
+#include "xapian/queryparser/queryparser_token.h"
 
-#include "cjk-tokenizer.h"
+#include "xapian/queryparser/cjk-tokenizer.h"
 
 #include <algorithm>
 #include <cstring>

@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_FILETESTS_H
 #define XAPIAN_INCLUDED_FILETESTS_H
 
-#include "safesysstat.h"
+#include "xapian/common/safesysstat.h"
 #include <cerrno>
 #include <string>
 

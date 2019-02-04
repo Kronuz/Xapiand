@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_EMPTY_DATABASE_H
 #define XAPIAN_INCLUDED_EMPTY_DATABASE_H
 
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
 /// Empty database internals.
 class EmptyDatabase : public Xapian::Database::Internal {

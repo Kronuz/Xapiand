@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_SLOWVALUELIST_H
 #define XAPIAN_INCLUDED_SLOWVALUELIST_H
 
-#include "valuelist.h"
+#include "xapian/backends/valuelist.h"
 
-#include "databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
 /** Slow implementation for backends which don't streamed values.
  *

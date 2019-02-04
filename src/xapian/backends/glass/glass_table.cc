@@ -22,16 +22,16 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_table.h"
+#include "xapian/backends/glass/glass_table.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "omassert.h"
-#include "posixy_wrapper.h"
-#include "str.h"
-#include "stringutils.h" // For STRINGIZE().
+#include "xapian/common/omassert.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h" // For STRINGIZE().
 
 #include <sys/types.h>
 
@@ -39,17 +39,17 @@
 #include <cstring>   /* for memmove */
 #include <climits>   /* for CHAR_BIT */
 
-#include "glass_freelist.h"
-#include "glass_changes.h"
-#include "glass_cursor.h"
-#include "glass_defs.h"
-#include "glass_version.h"
+#include "xapian/backends/glass/glass_freelist.h"
+#include "xapian/backends/glass/glass_changes.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_version.h"
 
-#include "debuglog.h"
-#include "filetests.h"
-#include "io_utils.h"
-#include "pack.h"
-#include "wordaccess.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/wordaccess.h"
 
 #include <algorithm>  // for std::min()
 #include <string>

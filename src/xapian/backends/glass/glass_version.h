@@ -22,18 +22,18 @@
 #ifndef XAPIAN_INCLUDED_GLASS_VERSION_H
 #define XAPIAN_INCLUDED_GLASS_VERSION_H
 
-#include "glass_changes.h"
-#include "glass_defs.h"
+#include "xapian/backends/glass/glass_changes.h"
+#include "xapian/backends/glass/glass_defs.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 #include <cstring>
 #include <string>
 
-#include "backends/uuids.h"
-#include "internaltypes.h"
-#include "min_non_zero.h"
+#include "xapian/backends/uuids.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/min_non_zero.h"
 #include "xapian/types.h"
 
 namespace Glass {

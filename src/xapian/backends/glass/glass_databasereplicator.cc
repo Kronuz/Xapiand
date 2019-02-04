@@ -20,27 +20,27 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_databasereplicator.h"
+#include "xapian/backends/glass/glass_databasereplicator.h"
 
 #include "xapian/error.h"
 
-#include "../flint_lock.h"
-#include "glass_defs.h"
-#include "glass_replicate_internal.h"
-#include "glass_version.h"
-#include "compression_stream.h"
-#include "debuglog.h"
-#include "fd.h"
-#include "internaltypes.h"
-#include "io_utils.h"
-#include "pack.h"
-#include "posixy_wrapper.h"
-#include "net/remoteconnection.h"
-#include "replicationprotocol.h"
-#include "str.h"
-#include "stringutils.h"
+#include "xapian/backends/flint_lock.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_replicate_internal.h"
+#include "xapian/backends/glass/glass_version.h"
+#include "xapian/common/compression_stream.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/fd.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/net/remoteconnection.h"
+#include "xapian/common/replicationprotocol.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
 
 #include <algorithm>
 #include <cerrno>

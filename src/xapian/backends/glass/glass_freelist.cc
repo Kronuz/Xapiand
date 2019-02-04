@@ -19,15 +19,15 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_freelist.h"
+#include "xapian/backends/glass/glass_freelist.h"
 
-#include "glass_table.h"
+#include "xapian/backends/glass/glass_table.h"
 #include "xapian/error.h"
 
-#include "omassert.h"
-#include "wordaccess.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/wordaccess.h"
 #include <cstring>
 
 #if !HAVE_DECL___BUILTIN_POPCOUNT

@@ -19,11 +19,11 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/cluster.h"
 
-#include "debuglog.h"
+#include "xapian/common/debuglog.h"
 
 #include <cmath>
 

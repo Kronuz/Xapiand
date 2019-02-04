@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #ifdef __WIN32__
 
-#include "realtime.h"
-#include "safewindows.h"
+#include "xapian/common/realtime.h"
+#include "xapian/common/safewindows.h"
 
 // Used by safeunistd.h:
 void

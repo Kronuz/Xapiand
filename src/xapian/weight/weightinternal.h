@@ -28,9 +28,9 @@
 #include "xapian/error.h"
 #include "xapian/query.h"
 
-#include "backends/databaseinternal.h"
-#include "internaltypes.h"
-#include "omassert.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/omassert.h"
 
 #include <cerrno>
 #include <cstdlib>

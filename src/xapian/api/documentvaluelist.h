@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 #define XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 
-#include "backends/valuelist.h"
+#include "xapian/backends/valuelist.h"
 
-#include "backends/documentinternal.h"
+#include "xapian/backends/documentinternal.h"
 
 #include <map>
 

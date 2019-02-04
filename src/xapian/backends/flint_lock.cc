@@ -19,26 +19,26 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "flint_lock.h"
+#include "xapian/backends/flint_lock.h"
 
 #ifndef __WIN32__
 #include <cerrno>
 
-#include "safefcntl.h"
+#include "xapian/common/safefcntl.h"
 #include <unistd.h>
 #include <cstdlib>
 #include <sys/types.h>
-#include "safesyssocket.h"
+#include "xapian/common/safesyssocket.h"
 #include <sys/wait.h>
 #include <signal.h>
 #include <cstring>
 #endif
 
-#include "closefrom.h"
-#include "errno_to_string.h"
-#include "omassert.h"
+#include "xapian/common/closefrom.h"
+#include "xapian/common/errno_to_string.h"
+#include "xapian/common/omassert.h"
 
 #ifdef __CYGWIN__
 # include <cygwin/version.h>

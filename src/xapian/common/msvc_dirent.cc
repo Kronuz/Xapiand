@@ -24,10 +24,10 @@
     But that said, if there are any problems please get in touch.
 */
 
-#include <config.h>
+#include "config.h"
 #ifdef __WIN32__
 
-#include "msvc_dirent.h"
+#include "xapian/common/msvc_dirent.h"
 #include <cerrno>
 #include <io.h> /* _findfirst and _findnext set errno iff they return -1 */
 #include <cstdlib>

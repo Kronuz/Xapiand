@@ -25,9 +25,9 @@
 
 #include <string>
 
-#include "api/leafpostlist.h"
-#include "omassert.h"
-#include "remote-database.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/backends/remote/remote-database.h"
 
 using namespace std;
 

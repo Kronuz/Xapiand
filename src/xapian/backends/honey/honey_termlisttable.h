@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_HONEY_TERMLISTTABLE_H
 #define XAPIAN_INCLUDED_HONEY_TERMLISTTABLE_H
 
-#include <xapian/constants.h>
-#include <xapian/types.h>
+#include "xapian/constants.h"
+#include "xapian/types.h"
 
-#include "honey_table.h"
-#include "pack.h"
+#include "xapian/backends/honey/honey_table.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

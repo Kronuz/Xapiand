@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_SYNONYMPOSTLIST_H
 #define XAPIAN_INCLUDED_SYNONYMPOSTLIST_H
 
-#include "wrapperpostlist.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
 class PostListTree;
 

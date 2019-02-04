@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "vectortermlist.h"
+#include "xapian/api/vectortermlist.h"
 
-#include "net/length.h"
-#include "omassert.h"
+#include "xapian/net/length.h"
+#include "xapian/common/omassert.h"
 #include "xapian/error.h"
 
 using namespace std;

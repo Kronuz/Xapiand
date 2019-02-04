@@ -19,15 +19,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "nearpostlist.h"
+#include "xapian/matcher/nearpostlist.h"
 
-#include "debuglog.h"
-#include "backends/positionlist.h"
-#include "heap.h"
-#include "omassert.h"
-#include "str.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/backends/positionlist.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
 
 #include <algorithm>
 #include <vector>

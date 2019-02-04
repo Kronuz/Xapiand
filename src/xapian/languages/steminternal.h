@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_STEMINTERNAL_H
 #define XAPIAN_INCLUDED_STEMINTERNAL_H
 
-#include <xapian/stem.h>
+#include "xapian/stem.h"
 
-#include "alignment_cast.h"
+#include "xapian/common/alignment_cast.h"
 
 #include <cstdlib>
 #include <string>

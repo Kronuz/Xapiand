@@ -19,9 +19,9 @@
 #ifndef XAPIAN_INCLUDED_RSETINTERNAL_H
 #define XAPIAN_INCLUDED_RSETINTERNAL_H
 
-#include <xapian/rset.h>
+#include "xapian/rset.h"
 
-#include "backends/multi.h"
+#include "xapian/backends/multi.h"
 
 #include <set>
 #include <vector>

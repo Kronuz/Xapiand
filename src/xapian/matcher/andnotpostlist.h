@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_ANDNOTPOSTLIST_H
 #define XAPIAN_INCLUDED_ANDNOTPOSTLIST_H
 
-#include "wrapperpostlist.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
 class PostListTree;
 

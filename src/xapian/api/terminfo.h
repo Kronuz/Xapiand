@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_TERMINFO_H
 #define XAPIAN_INCLUDED_TERMINFO_H
 
-#include "api/smallvector.h"
-#include <xapian/types.h>
+#include "xapian/api/smallvector.h"
+#include "xapian/types.h"
 
 using namespace std;
 

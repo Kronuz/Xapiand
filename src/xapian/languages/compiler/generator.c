@@ -1467,7 +1467,7 @@ static void generate_head(struct generator * g) {
 	const char * s = g->options->output_file;
 	const char * leaf;
 	w(g, "~N"
-	     "#include <config.h>~N"
+	     "#include \"config.h\"~N"
 	     "#include <limits.h>~N");
 	if (!s) abort(); /* checked in driver.c */
 	leaf = strrchr(s, '/');
@@ -1795,7 +1795,7 @@ static void generate_header_file(struct generator * g) {
     if (g->options->make_lang != LANG_C) {
 	const char * p;
 	w(g, "~N"
-	     "#include \"steminternal.h\"~N"
+	     "#include \"xapian/languages/steminternal.h\"~N"
 	     "~N"
 	     "namespace Xapian {~N"
 	     "~N");

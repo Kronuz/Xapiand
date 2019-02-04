@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_HONEY_SPELLING_H
 #define XAPIAN_INCLUDED_HONEY_SPELLING_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "honey_lazytable.h"
-#include "api/termlist.h"
+#include "xapian/backends/honey/honey_lazytable.h"
+#include "xapian/api/termlist.h"
 
 #include <map>
 #include <set>

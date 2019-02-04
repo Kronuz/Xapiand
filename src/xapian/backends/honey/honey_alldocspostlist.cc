@@ -19,15 +19,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "honey_alldocspostlist.h"
+#include "config.h"
+#include "xapian/backends/honey/honey_alldocspostlist.h"
 
-#include "honey_database.h"
-#include "honey_defs.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/backends/honey/honey_defs.h"
 
-#include "debuglog.h"
-#include "str.h"
-#include "wordaccess.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/str.h"
+#include "xapian/common/wordaccess.h"
 
 #include <string>
 

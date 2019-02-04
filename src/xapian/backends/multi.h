@@ -23,8 +23,8 @@
 #define XAPIAN_INCLUDED_MULTI_H
 
 #include <cstddef> // For std::size_t
-#include <xapian/types.h>
-#include "omassert.h"
+#include "xapian/types.h"
+#include "xapian/common/omassert.h"
 
 /** Convert docid in the multi-db to the docid in the shard.
  *

@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_REMOTE_TERMLIST_H
 #define XAPIAN_INCLUDED_REMOTE_TERMLIST_H
 
-#include "api/termlist.h"
+#include "xapian/api/termlist.h"
 
 class RemoteDatabase;
 

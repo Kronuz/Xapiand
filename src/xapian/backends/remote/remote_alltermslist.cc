@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remote_alltermslist.h"
+#include "xapian/backends/remote/remote_alltermslist.h"
 
-#include "net/length.h"
-#include "omassert.h"
+#include "xapian/net/length.h"
+#include "xapian/common/omassert.h"
 
 using namespace std;
 

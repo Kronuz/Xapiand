@@ -18,17 +18,17 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/enquire.h"
-#include "enquireinternal.h"
+#include "xapian/api/enquireinternal.h"
 
-#include "expand/esetinternal.h"
-#include "expand/expandweight.h"
-#include "matcher/matcher.h"
-#include "msetinternal.h"
-#include "vectortermlist.h"
-#include "weight/weightinternal.h"
+#include "xapian/expand/esetinternal.h"
+#include "xapian/expand/expandweight.h"
+#include "xapian/matcher/matcher.h"
+#include "xapian/api/msetinternal.h"
+#include "xapian/api/vectortermlist.h"
+#include "xapian/weight/weightinternal.h"
 #include "xapian/database.h"
 #include "xapian/error.h"
 #include "xapian/expanddecider.h"

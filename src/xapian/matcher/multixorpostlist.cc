@@ -19,12 +19,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "multixorpostlist.h"
+#include "xapian/matcher/multixorpostlist.h"
 
-#include "debuglog.h"
-#include "omassert.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 

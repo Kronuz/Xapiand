@@ -22,13 +22,13 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
-#include "serialise-double.h"
+#include "xapian/common/serialise-double.h"
 
 #include <cfloat>
 #include <cmath>

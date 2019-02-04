@@ -22,10 +22,10 @@
 #ifndef XAPIAN_INCLUDED_TERMLISTMERGER_H
 #define XAPIAN_INCLUDED_TERMLISTMERGER_H
 
-#include "api/termlist.h"
-#include "heap.h"
-#include "omassert.h"
-#include "ortermlist.h"
+#include "xapian/api/termlist.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
+#include "xapian/expand/ortermlist.h"
 
 struct CompareTermListSizeAscending {
     bool operator()(const TermList* a, const TermList* b) const {

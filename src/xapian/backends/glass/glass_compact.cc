@@ -19,7 +19,7 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/compactor.h"
 #include "xapian/constants.h"
@@ -33,19 +33,19 @@
 #include <cerrno>
 #include <cstdio>
 
-#include "backends/flint_lock.h"
-#include "glass_database.h"
-#include "glass_defs.h"
-#include "glass_table.h"
-#include "glass_cursor.h"
-#include "glass_version.h"
-#include "filetests.h"
-#include "internaltypes.h"
-#include "pack.h"
-#include "backends/valuestats.h"
+#include "xapian/backends/flint_lock.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_table.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_version.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/pack.h"
+#include "xapian/backends/valuestats.h"
 
-#include "../byte_length_strings.h"
-#include "../prefix_compressed_strings.h"
+#include "xapian/backends/byte_length_strings.h"
+#include "xapian/backends/prefix_compressed_strings.h"
 
 using namespace std;
 

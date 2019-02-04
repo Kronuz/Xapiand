@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_LEAFPOSTLIST_H
 #define XAPIAN_INCLUDED_LEAFPOSTLIST_H
 
-#include "postlist.h"
+#include "xapian/api/postlist.h"
 
 #include <string>
 

@@ -19,16 +19,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_values.h"
+#include "xapian/backends/glass/glass_values.h"
 
-#include "glass_cursor.h"
-#include "glass_postlist.h"
-#include "glass_termlist.h"
-#include "debuglog.h"
-#include "backends/documentinternal.h"
-#include "pack.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_postlist.h"
+#include "xapian/backends/glass/glass_termlist.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/common/pack.h"
 
 #include "xapian/error.h"
 #include "xapian/valueiterator.h"

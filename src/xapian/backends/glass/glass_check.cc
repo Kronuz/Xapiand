@@ -22,11 +22,11 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_check.h"
-#include "glass_version.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/glass/glass_check.h"
+#include "xapian/backends/glass/glass_version.h"
+#include "xapian/unicode/description_append.h"
 #include "xapian/constants.h"
 
 #include <climits>

@@ -25,7 +25,7 @@
 #include <string>
 
 #if defined __CYGWIN__ || defined __WIN32__
-# include "safewindows.h"
+# include "xapian/common/safewindows.h"
 #else
 # include <sys/types.h>
 #endif

@@ -29,9 +29,9 @@
 #include <string>
 #include <vector>
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

@@ -27,9 +27,9 @@
 # error "Never use <xapian/valuesetmatchdecider.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/matchdecider.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/matchdecider.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 #include <string>
 #include <set>

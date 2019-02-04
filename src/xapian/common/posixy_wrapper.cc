@@ -19,12 +19,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #ifdef __CYGWIN__
-# include "posixy_wrapper.h"
+# include "xapian/common/posixy_wrapper.h"
 
-# include "filetests.h"
+# include "xapian/common/filetests.h"
 
 int
 posixy_unlink(const char * filename)
@@ -53,13 +53,13 @@ posixy_unlink(const char * filename)
 
 #elif defined __WIN32__
 
-#include "posixy_wrapper.h"
+#include "xapian/common/posixy_wrapper.h"
 
 #include <io.h>
 
 #include <cerrno>
-#include "safefcntl.h"
-#include "safewindows.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safewindows.h"
 
 /** Call GetLastError() and set errno appropriately. */
 static int

@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/query.h"
-#include "queryinternal.h"
+#include "xapian/api/queryinternal.h"
 
 #include <algorithm>
 
-#include "debuglog.h"
-#include "omassert.h"
-#include "vectortermlist.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/vectortermlist.h"
 
 #include "xapian/error.h"
 

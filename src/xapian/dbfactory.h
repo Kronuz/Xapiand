@@ -28,12 +28,12 @@
 
 #include <string>
 
-#include <xapian/constants.h>
-#include <xapian/database.h>
-#include <xapian/deprecated.h>
-#include <xapian/types.h>
-#include <xapian/version.h>
-#include <xapian/visibility.h>
+#include "xapian/constants.h"
+#include "xapian/database.h"
+#include "xapian/deprecated.h"
+#include "xapian/types.h"
+#include "xapian/version.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

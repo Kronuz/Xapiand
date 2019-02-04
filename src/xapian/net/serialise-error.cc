@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "length.h"
-#include "serialise-error.h"
+#include "xapian/net/length.h"
+#include "xapian/net/serialise-error.h"
 
 #include <string>
 

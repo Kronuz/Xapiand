@@ -38,10 +38,10 @@ posixy_open(const char *filename, int flags, int)
 int posixy_rename(const char *from, const char *to);
 #else
 # include <cstdio>
-# include "safeunistd.h"
+# include "xapian/common/safeunistd.h"
 # include <sys/types.h>
-# include "safesysstat.h"
-# include "safefcntl.h"
+# include "xapian/common/safesysstat.h"
+# include "xapian/common/safefcntl.h"
 # define posixy_open ::open
 # define posixy_rename(F, T) std::rename(F, T)
 #endif

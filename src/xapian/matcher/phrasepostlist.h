@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_PHRASEPOSTLIST_H
 #define XAPIAN_INCLUDED_PHRASEPOSTLIST_H
 
-#include "selectpostlist.h"
+#include "xapian/matcher/selectpostlist.h"
 #include <vector>
 
 class PostListTree;

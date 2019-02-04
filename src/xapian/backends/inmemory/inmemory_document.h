@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_DOCUMENT_H
 #define XAPIAN_INCLUDED_INMEMORY_DOCUMENT_H
 
-#include "backends/databaseinternal.h"
-#include "backends/documentinternal.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/documentinternal.h"
 
 /// A document read from a InMemoryDatabase.
 class InMemoryDocument : public Xapian::Document::Internal {

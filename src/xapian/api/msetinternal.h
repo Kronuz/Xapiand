@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_MSETINTERNAL_H
 #define XAPIAN_INCLUDED_MSETINTERNAL_H
 
-#include "enquireinternal.h"
-#include "net/serialise.h"
-#include "result.h"
-#include "weight/weightinternal.h"
+#include "xapian/api/enquireinternal.h"
+#include "xapian/net/serialise.h"
+#include "xapian/api/result.h"
+#include "xapian/weight/weightinternal.h"
 
 #include "xapian/intrusive_ptr.h"
 #include "xapian/mset.h"

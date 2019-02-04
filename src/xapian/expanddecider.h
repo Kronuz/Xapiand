@@ -28,8 +28,8 @@
 #include <set>
 #include <string>
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/visibility.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

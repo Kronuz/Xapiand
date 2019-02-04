@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_SELECTPOSTLIST_H
 #define XAPIAN_INCLUDED_SELECTPOSTLIST_H
 
-#include "wrapperpostlist.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
 #include <cmath>
 

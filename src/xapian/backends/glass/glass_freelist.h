@@ -22,8 +22,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_FREELIST_H
 #define XAPIAN_INCLUDED_GLASS_FREELIST_H
 
-#include "glass_defs.h"
-#include "pack.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/common/pack.h"
 
 class GlassTable;
 

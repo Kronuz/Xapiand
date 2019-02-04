@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "glass_synonym.h"
+#include "config.h"
+#include "xapian/backends/glass/glass_synonym.h"
 
 #include "xapian/error.h"
 
-#include "glass_cursor.h"
-#include "glass_database.h"
-#include "debuglog.h"
-#include "stringutils.h"
-#include "api/vectortermlist.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/api/vectortermlist.h"
 
 #include <set>
 #include <string>

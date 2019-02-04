@@ -18,19 +18,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remoteconnection.h"
+#include "xapian/net/remoteconnection.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "safefcntl.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safeunistd.h"
 
 #ifdef HAVE_POLL_H
 # include <poll.h>
 #else
-# include "safesysselect.h"
+# include "xapian/common/safesysselect.h"
 #endif
 
 #include <algorithm>
@@ -42,15 +42,15 @@
 # include <type_traits>
 #endif
 
-#include "debuglog.h"
-#include "fd.h"
-#include "filetests.h"
-#include "omassert.h"
-#include "overflow.h"
-#include "posixy_wrapper.h"
-#include "realtime.h"
-#include "length.h"
-#include "socket_utils.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/fd.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/overflow.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/realtime.h"
+#include "xapian/net/length.h"
+#include "xapian/common/socket_utils.h"
 
 using namespace std;
 

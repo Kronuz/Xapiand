@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_HONEY_ALLTERMSLIST_H
 #define XAPIAN_INCLUDED_HONEY_ALLTERMSLIST_H
 
-#include "backends/alltermslist.h"
-#include "honey_database.h"
-#include "honey_postlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/backends/honey/honey_postlist.h"
 
 class HoneyCursor;
 

@@ -19,14 +19,14 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_alltermslist.h"
-#include "glass_postlist.h"
+#include "xapian/backends/glass/glass_alltermslist.h"
+#include "xapian/backends/glass/glass_postlist.h"
 
-#include "debuglog.h"
-#include "pack.h"
-#include "stringutils.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/stringutils.h"
 
 void
 GlassAllTermsList::read_termfreq_and_collfreq() const

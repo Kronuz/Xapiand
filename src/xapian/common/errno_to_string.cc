@@ -22,9 +22,9 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "errno_to_string.h"
+#include "xapian/common/errno_to_string.h"
 
 #include <cerrno>
 // <cstring> doesn't give us strerror_r() with Sun C++ 5.9.
@@ -36,7 +36,7 @@
 # include <stdlib.h>
 #endif
 
-#include "str.h"
+#include "xapian/common/str.h"
 
 using namespace std;
 

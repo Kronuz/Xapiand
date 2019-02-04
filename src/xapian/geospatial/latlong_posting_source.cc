@@ -21,16 +21,16 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/geospatial.h"
 
 #include "xapian/error.h"
 #include "xapian/registry.h"
 
-#include "net/length.h"
-#include "serialise-double.h"
-#include "str.h"
+#include "xapian/net/length.h"
+#include "xapian/common/serialise-double.h"
+#include "xapian/common/str.h"
 
 #include <cmath>
 

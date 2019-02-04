@@ -20,8 +20,8 @@
 #ifndef XAPIAN_INCLUDED_XAPIAN_CONSTINFO_H
 #define XAPIAN_INCLUDED_XAPIAN_CONSTINFO_H
 
-#include <xapian/attributes.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 namespace Internal {

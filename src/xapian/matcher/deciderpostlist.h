@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_DECIDERPOSTLIST_H
 #define XAPIAN_INCLUDED_DECIDERPOSTLIST_H
 
-#include "selectpostlist.h"
-#include "valuestreamdocument.h"
+#include "xapian/matcher/selectpostlist.h"
+#include "xapian/matcher/valuestreamdocument.h"
 
-#include <xapian/document.h>
-#include <xapian/matchdecider.h>
+#include "xapian/document.h"
+#include "xapian/matchdecider.h"
 
 namespace Xapian {
 class MatchDecider;

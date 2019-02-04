@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "multi_valuelist.h"
+#include "xapian/backends/multi/multi_valuelist.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "heap.h"
-#include "omassert.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 

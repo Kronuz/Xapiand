@@ -20,25 +20,25 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_dbcheck.h"
+#include "xapian/backends/glass/glass_dbcheck.h"
 
-#include "bitstream.h"
+#include "xapian/common/bitstream.h"
 
-#include "internaltypes.h"
+#include "xapian/common/internaltypes.h"
 
-#include "glass_check.h"
-#include "glass_cursor.h"
-#include "glass_defs.h"
-#include "glass_table.h"
-#include "glass_version.h"
-#include "pack.h"
-#include "backends/valuestats.h"
+#include "xapian/backends/glass/glass_check.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_table.h"
+#include "xapian/backends/glass/glass_version.h"
+#include "xapian/common/pack.h"
+#include "xapian/backends/valuestats.h"
 
-#include <xapian.h>
+#include "xapian.h"
 
-#include "filetests.h"
+#include "xapian/common/filetests.h"
 #include <memory>
 #include <ostream>
 #include <vector>

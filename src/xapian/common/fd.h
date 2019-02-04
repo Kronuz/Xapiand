@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_FD_H
 #define XAPIAN_INCLUDED_FD_H
 
-#include "safeunistd.h"
+#include "xapian/common/safeunistd.h"
 
 class FD {
     int fd;

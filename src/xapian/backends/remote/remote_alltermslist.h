@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_REMOTE_ALLTERMSLIST_H
 #define XAPIAN_INCLUDED_REMOTE_ALLTERMSLIST_H
 
-#include "backends/alltermslist.h"
+#include "xapian/backends/alltermslist.h"
 
 /// Iterate all terms in a remote database.
 class RemoteAllTermsList : public AllTermsList {

@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_QUERYINTERNAL_H
 #define XAPIAN_INCLUDED_QUERYINTERNAL_H
 
-#include "postlist.h"
-#include "queryvector.h"
-#include "stringutils.h"
+#include "xapian/api/postlist.h"
+#include "xapian/api/queryvector.h"
+#include "xapian/common/stringutils.h"
 #include "xapian/intrusive_ptr.h"
 #include "xapian/query.h"
 

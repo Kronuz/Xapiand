@@ -32,8 +32,8 @@
 
 #ifdef XAPIAN_DEBUG_LOG
 
-#include "output.h"
-#include "pretty.h"
+#include "xapian/common/output.h"
+#include "xapian/common/pretty.h"
 
 #include <cstring>
 #include <ostream>

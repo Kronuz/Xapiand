@@ -32,7 +32,7 @@
 # ifdef HAVE_GETTIMEOFDAY
 #  include <sys/time.h>
 # endif
-# include "safesysselect.h"
+# include "xapian/common/safesysselect.h"
 #else
 # include <sys/types.h>
 # include <sys/timeb.h>

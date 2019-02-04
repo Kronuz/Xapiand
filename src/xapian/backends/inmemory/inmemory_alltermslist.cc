@@ -20,10 +20,10 @@
  * USA
  */
 
-#include <config.h>
-#include "inmemory_alltermslist.h"
+#include "config.h"
+#include "xapian/backends/inmemory/inmemory_alltermslist.h"
 
-#include "stringutils.h"
+#include "xapian/common/stringutils.h"
 
 Xapian::termcount
 InMemoryAllTermsList::get_approx_size() const

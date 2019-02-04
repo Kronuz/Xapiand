@@ -20,13 +20,13 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/geospatial.h"
 #include "xapian/error.h"
 
-#include "geoencode.h"
-#include "str.h"
+#include "xapian/geospatial/geoencode.h"
+#include "xapian/common/str.h"
 
 #include <cmath>
 

@@ -20,26 +20,26 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include <xapian/matchspy.h>
+#include "config.h"
+#include "xapian/matchspy.h"
 
-#include <xapian/document.h>
-#include <xapian/error.h>
-#include <xapian/queryparser.h>
-#include <xapian/registry.h>
+#include "xapian/document.h"
+#include "xapian/error.h"
+#include "xapian/queryparser.h"
+#include "xapian/registry.h"
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "debuglog.h"
-#include "heap.h"
-#include "omassert.h"
-#include "net/length.h"
-#include "stringutils.h"
-#include "str.h"
-#include "termlist.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
+#include "xapian/net/length.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/common/str.h"
+#include "xapian/api/termlist.h"
 
 #include <cfloat>
 #include <cmath>

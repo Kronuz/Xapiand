@@ -25,11 +25,11 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "cjk-tokenizer.h"
+#include "xapian/queryparser/cjk-tokenizer.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 #include "xapian/unicode.h"
 
 #include <cstdlib>

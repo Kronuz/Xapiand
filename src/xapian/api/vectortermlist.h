@@ -23,8 +23,8 @@
 
 #include "xapian/types.h"
 
-#include "net/length.h"
-#include "termlist.h"
+#include "xapian/net/length.h"
+#include "xapian/api/termlist.h"
 
 /** This class stores a list of terms.
  *

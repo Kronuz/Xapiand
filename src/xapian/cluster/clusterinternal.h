@@ -19,7 +19,7 @@
  * USA
  */
 
-#include <xapian/intrusive_ptr.h>
+#include "xapian/intrusive_ptr.h"
 
 #include <vector>
 

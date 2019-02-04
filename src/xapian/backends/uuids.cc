@@ -19,22 +19,22 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "uuids.h"
+#include "xapian/backends/uuids.h"
 
 #include "xapian/error.h"
 
 #include <cerrno>
 #include <cstring>
-#include "stringutils.h"
+#include "xapian/common/stringutils.h"
 
 #include <sys/types.h>
-#include "safefcntl.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safeunistd.h"
 
 #ifdef USE_PROC_FOR_UUID
-# include "safesysstat.h"
+# include "xapian/common/safesysstat.h"
 #elif defined HAVE_UUID_UUID_H
 # include <exception>
 # include <uuid/uuid.h>
@@ -44,10 +44,10 @@
 # include <exception>
 # include <uuid.h>
 #elif defined USE_WIN32_UUID_API
-# include "safewindows.h"
+# include "xapian/common/safewindows.h"
 # include <rpc.h>
 # ifdef __WIN32__
-#  include "safewinsock2.h" // For htonl() and htons().
+#  include "xapian/common/safewinsock2.h" // For htonl() and htons().
 # else
 // Cygwin:
 #  include <arpa/inet.h> // For htonl() and htons().

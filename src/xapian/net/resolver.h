@@ -22,9 +22,9 @@
 #define XAPIAN_INCLUDED_RESOLVER_H
 
 #include <cstring>
-#include "safenetdb.h"
-#include "safesyssocket.h"
-#include "str.h"
+#include "xapian/common/safenetdb.h"
+#include "xapian/common/safesyssocket.h"
+#include "xapian/common/str.h"
 #include "xapian/error.h"
 
 using namespace std;

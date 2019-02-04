@@ -22,9 +22,9 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 
 #include <algorithm>
 

@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_VALUESTREAMDOCUMENT_H
 #define XAPIAN_INCLUDED_VALUESTREAMDOCUMENT_H
 
-#include "backends/documentinternal.h"
-#include "backends/multi.h"
-#include "backends/multi/multi_database.h"
-#include "backends/valuelist.h"
-#include "omassert.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/backends/multi.h"
+#include "xapian/backends/multi/multi_database.h"
+#include "xapian/backends/valuelist.h"
+#include "xapian/common/omassert.h"
 #include "xapian/database.h"
 #include "xapian/types.h"
 

@@ -18,15 +18,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/document.h"
 
 #include <string>
 
-#include "backends/documentinternal.h"
-#include "net/serialise.h"
-#include "str.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/net/serialise.h"
+#include "xapian/common/str.h"
 
 #include "xapian/error.h"
 

@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_COLLAPSER_H
 #define XAPIAN_INCLUDED_COLLAPSER_H
 
-#include "backends/documentinternal.h"
-#include "msetcmp.h"
-#include "omassert.h"
-#include "api/postlist.h"
-#include "api/result.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/matcher/msetcmp.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/postlist.h"
+#include "xapian/api/result.h"
 
 #include <unordered_map>
 #include <vector>

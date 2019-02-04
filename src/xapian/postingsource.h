@@ -26,13 +26,13 @@
 # error "Never use <xapian/postingsource.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/database.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/postingiterator.h>
-#include <xapian/types.h>
-#include <xapian/valueiterator.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/database.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/postingiterator.h"
+#include "xapian/types.h"
+#include "xapian/valueiterator.h"
+#include "xapian/visibility.h"
 
 #include <string>
 #include <map>

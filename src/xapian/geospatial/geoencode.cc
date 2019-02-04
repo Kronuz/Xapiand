@@ -23,8 +23,8 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
-#include "geoencode.h"
+#include "config.h"
+#include "xapian/geospatial/geoencode.h"
 
 #include <cmath>
 

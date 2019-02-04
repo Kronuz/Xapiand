@@ -19,9 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "replication.h"
+#include "xapian/api/replication.h"
 
 #include "xapian/intrusive_ptr.h"
 #include "xapian/constants.h"
@@ -29,22 +29,22 @@
 #include "xapian/error.h"
 #include "xapian/version.h"
 
-#include "backends/databaseinternal.h"
-#include "backends/databasereplicator.h"
-#include "debuglog.h"
-#include "filetests.h"
-#include "fileutils.h"
-#include "io_utils.h"
-#include "omassert.h"
-#include "pack.h"
-#include "realtime.h"
-#include "net/remoteconnection.h"
-#include "replicationprotocol.h"
-#include "safesysstat.h"
-#include "safeunistd.h"
-#include "net/length.h"
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/databasereplicator.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/fileutils.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/realtime.h"
+#include "xapian/net/remoteconnection.h"
+#include "xapian/common/replicationprotocol.h"
+#include "xapian/common/safesysstat.h"
+#include "xapian/common/safeunistd.h"
+#include "xapian/net/length.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 #include <cerrno>
 #include <fstream>

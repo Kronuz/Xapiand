@@ -19,16 +19,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "weightinternal.h"
+#include "xapian/weight/weightinternal.h"
 
 #include "xapian/enquire.h"
 
-#include "omassert.h"
-#include "api/rsetinternal.h"
-#include "str.h"
-#include "api/termlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/rsetinternal.h"
+#include "xapian/common/str.h"
+#include "xapian/api/termlist.h"
 
 #include <memory>
 #include <set>

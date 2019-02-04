@@ -19,20 +19,20 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_values.h"
+#include "xapian/backends/honey/honey_values.h"
 
-#include "honey_cursor.h"
-#include "honey_postlist.h"
-#include "honey_postlisttable.h"
-#include "honey_termlist.h"
-#include "honey_termlisttable.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_postlist.h"
+#include "xapian/backends/honey/honey_postlisttable.h"
+#include "xapian/backends/honey/honey_termlist.h"
+#include "xapian/backends/honey/honey_termlisttable.h"
 
-#include "bitstream.h"
-#include "debuglog.h"
-#include "backends/documentinternal.h"
-#include "pack.h"
+#include "xapian/common/bitstream.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/common/pack.h"
 
 #include "xapian/error.h"
 #include "xapian/valueiterator.h"

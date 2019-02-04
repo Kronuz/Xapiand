@@ -22,10 +22,10 @@
 #ifndef XAPIAN_INCLUDED_HONEY_ALLDOCSPOSTLIST_H
 #define XAPIAN_INCLUDED_HONEY_ALLDOCSPOSTLIST_H
 
-#include "api/leafpostlist.h"
-#include "honey_defs.h"
-#include "pack.h"
-#include "wordaccess.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/backends/honey/honey_defs.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/wordaccess.h"
 
 #include <string>
 

@@ -24,7 +24,7 @@
 
 #include <string>
 
-#include "glass_postlist.h"
+#include "xapian/backends/glass/glass_postlist.h"
 
 class GlassAllDocsPostList : public GlassPostList {
     /// Don't allow assignment.

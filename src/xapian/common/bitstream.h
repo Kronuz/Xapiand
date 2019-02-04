@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_BITSTREAM_H
 #define XAPIAN_INCLUDED_BITSTREAM_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 
 #include <string>
 #include <vector>

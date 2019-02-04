@@ -20,18 +20,18 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "databasereplicator.h"
+#include "xapian/backends/databasereplicator.h"
 
 #include "xapian/error.h"
 #include "xapian/version.h" // For XAPIAN_HAS_XXX_BACKEND.
 
-#include "debuglog.h"
-#include "filetests.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/filetests.h"
 
 #if defined XAPIAN_HAS_GLASS_BACKEND && defined XAPIAN_HAS_REMOTE_BACKEND
-# include "glass/glass_databasereplicator.h"
+# include "xapian/backends/glass/glass_databasereplicator.h"
 #endif
 
 using namespace std;

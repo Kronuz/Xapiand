@@ -29,11 +29,11 @@
 #include <iterator>
 #include <string>
 
-#include <xapian/attributes.h>
-#include <xapian/derefwrapper.h>
-#include <xapian/positioniterator.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/derefwrapper.h"
+#include "xapian/positioniterator.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

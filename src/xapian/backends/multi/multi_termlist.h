@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_MULTI_TERMLIST_H
 #define XAPIAN_INCLUDED_MULTI_TERMLIST_H
 
-#include "api/termlist.h"
+#include "xapian/api/termlist.h"
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
 using Xapian::Internal::intrusive_ptr_nonnull;
 

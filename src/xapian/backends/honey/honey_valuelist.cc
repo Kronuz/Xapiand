@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_valuelist.h"
+#include "xapian/backends/honey/honey_valuelist.h"
 
-#include "honey_cursor.h"
-#include "honey_database.h"
-#include "omassert.h"
-#include "str.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
 
 using namespace Honey;
 using namespace std;

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "remoteserver.h"
+#include "config.h"
+#include "xapian/net/remoteserver.h"
 
 #include "xapian/constants.h"
 #include "xapian/database.h"
@@ -36,18 +36,18 @@
 #include <cstdlib>
 #include <memory>
 
-#include "api/msetinternal.h"
-#include "api/termlist.h"
-#include "length.h"
-#include "matcher/matcher.h"
-#include "omassert.h"
-#include "realtime.h"
-#include "serialise.h"
-#include "serialise-double.h"
-#include "serialise-error.h"
-#include "str.h"
-#include "stringutils.h"
-#include "weight/weightinternal.h"
+#include "xapian/api/msetinternal.h"
+#include "xapian/api/termlist.h"
+#include "xapian/net/length.h"
+#include "xapian/matcher/matcher.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/realtime.h"
+#include "xapian/net/serialise.h"
+#include "xapian/common/serialise-double.h"
+#include "xapian/net/serialise-error.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/weight/weightinternal.h"
 
 using namespace std;
 

@@ -25,8 +25,8 @@
 # error "Never use <xapian/unicode.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/visibility.h"
 
 #include <string>
 

@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_HONEY_SPELLINGWORDSLIST_H
 #define XAPIAN_INCLUDED_HONEY_SPELLINGWORDSLIST_H
 
-#include "backends/alltermslist.h"
-#include "honey_spelling.h"
-#include "honey_cursor.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/honey/honey_spelling.h"
+#include "xapian/backends/honey/honey_cursor.h"
 
 class HoneyDatabase;
 

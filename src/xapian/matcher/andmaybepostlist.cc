@@ -18,11 +18,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "andmaybepostlist.h"
+#include "xapian/matcher/andmaybepostlist.h"
 
-#include "multiandpostlist.h"
+#include "xapian/matcher/multiandpostlist.h"
 
 using namespace std;
 

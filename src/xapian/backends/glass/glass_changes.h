@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_GLASS_CHANGES_H
 #define XAPIAN_INCLUDED_GLASS_CHANGES_H
 
-#include "glass_defs.h"
+#include "xapian/backends/glass/glass_defs.h"
 #include <string>
 
 class GlassChanges {

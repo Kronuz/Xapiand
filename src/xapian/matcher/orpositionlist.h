@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_ORPOSITIONLIST_H
 #define XAPIAN_INCLUDED_ORPOSITIONLIST_H
 
-#include "backends/positionlist.h"
-#include "api/postlist.h"
+#include "xapian/backends/positionlist.h"
+#include "xapian/api/postlist.h"
 
 #include "xapian/error.h"
 #include <algorithm>

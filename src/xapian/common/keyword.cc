@@ -22,9 +22,9 @@
  * IN THE SOFTWARE.
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "keyword.h"
+#include "xapian/common/keyword.h"
 
 #include <string.h>
 

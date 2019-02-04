@@ -21,9 +21,9 @@
 #ifndef XAPIAN_INCLUDED_POSTLISTTREE_H
 #define XAPIAN_INCLUDED_POSTLISTTREE_H
 
-#include "api/postlist.h"
-#include "backends/multi.h"
-#include "valuestreamdocument.h"
+#include "xapian/api/postlist.h"
+#include "xapian/backends/multi.h"
+#include "xapian/matcher/valuestreamdocument.h"
 
 class PostListTree {
     PostList* pl = NULL;

@@ -21,15 +21,15 @@
 #ifndef XAPIAN_INCLUDED_TERMLIST_H
 #define XAPIAN_INCLUDED_TERMLIST_H
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 
-#include "backends/positionlist.h"
+#include "xapian/backends/positionlist.h"
 
 #include <string>
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/types.h>
-#include <xapian/termiterator.h>
+#include "xapian/types.h"
+#include "xapian/termiterator.h"
 
 namespace Xapian {
     namespace Internal {

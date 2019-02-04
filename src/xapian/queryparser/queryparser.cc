@@ -20,15 +20,15 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/error.h"
-#include <xapian/queryparser.h>
-#include <xapian/termiterator.h>
+#include "xapian/queryparser.h"
+#include "xapian/termiterator.h"
 
-#include "api/vectortermlist.h"
-#include "omassert.h"
-#include "queryparser_internal.h"
+#include "xapian/api/vectortermlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/queryparser/queryparser_internal.h"
 
 #include <cstring>
 

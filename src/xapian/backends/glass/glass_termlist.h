@@ -24,8 +24,8 @@
 #include <string>
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/positioniterator.h>
-#include <xapian/types.h>
+#include "xapian/positioniterator.h"
+#include "xapian/types.h"
 
 namespace Xapian {
     namespace Internal {
@@ -33,9 +33,9 @@ namespace Xapian {
     }
 }
 
-#include "glass_database.h"
-#include "api/termlist.h"
-#include "glass_table.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/glass/glass_table.h"
 
 /// A TermList in a glass database.
 class GlassTermList : public TermList {

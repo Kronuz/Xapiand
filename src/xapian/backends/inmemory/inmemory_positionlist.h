@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_POSITIONLIST_H
 #define XAPIAN_INCLUDED_INMEMORY_POSITIONLIST_H
 
-#include "api/smallvector.h"
-#include "backends/positionlist.h"
+#include "xapian/api/smallvector.h"
+#include "xapian/backends/positionlist.h"
 
 /// PositionList from an InMemory DB or a Document object.
 class InMemoryPositionList : public PositionList {

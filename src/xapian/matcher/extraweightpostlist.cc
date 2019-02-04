@@ -18,13 +18,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "extraweightpostlist.h"
+#include "xapian/matcher/extraweightpostlist.h"
 
-#include "omassert.h"
-#include "postlisttree.h"
-#include "str.h"
+#include "xapian/common/omassert.h"
+#include "xapian/matcher/postlisttree.h"
+#include "xapian/common/str.h"
 
 using namespace std;
 

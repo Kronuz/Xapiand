@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "honey_synonym.h"
+#include "config.h"
+#include "xapian/backends/honey/honey_synonym.h"
 
 #include "xapian/error.h"
 
-#include "honey_cursor.h"
-#include "honey_database.h"
-#include "debuglog.h"
-#include "stringutils.h"
-#include "api/vectortermlist.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/api/vectortermlist.h"
 
 #include <set>
 #include <string>

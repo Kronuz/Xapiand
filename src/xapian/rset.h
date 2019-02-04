@@ -26,11 +26,11 @@
 # error "Never use <xapian/rset.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/mset.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/mset.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

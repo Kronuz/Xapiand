@@ -22,11 +22,11 @@
 #define XAPIAN_INCLUDED_TERMGENERATOR_INTERNAL_H
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/database.h>
-#include <xapian/document.h>
-#include <xapian/termgenerator.h>
-#include <xapian/queryparser.h> // For Xapian::Stopper
-#include <xapian/stem.h>
+#include "xapian/database.h"
+#include "xapian/document.h"
+#include "xapian/termgenerator.h"
+#include "xapian/queryparser.h" // For Xapian::Stopper
+#include "xapian/stem.h"
 
 namespace Xapian {
 

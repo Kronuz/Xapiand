@@ -29,13 +29,13 @@
 
 #include <string>
 
-#include <xapian/attributes.h>
-#include <xapian/eset.h>
-#include <xapian/intrusive_ptr.h>
-#include <xapian/mset.h>
-#include <xapian/types.h>
-#include <xapian/termiterator.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/eset.h"
+#include "xapian/intrusive_ptr.h"
+#include "xapian/mset.h"
+#include "xapian/types.h"
+#include "xapian/termiterator.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

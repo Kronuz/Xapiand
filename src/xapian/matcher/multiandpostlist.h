@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_MULTIANDPOSTLIST_H
 #define XAPIAN_INCLUDED_MULTIANDPOSTLIST_H
 
-#include "omassert.h"
-#include "api/postlist.h"
-#include "postlisttree.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/postlist.h"
+#include "xapian/matcher/postlisttree.h"
 
 #include <algorithm>
 

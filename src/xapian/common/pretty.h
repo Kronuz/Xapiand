@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 
 #include "xapian/cluster.h"
 #include "xapian/intrusive_ptr.h"
@@ -351,7 +351,7 @@ operator<<(PrettyOStream<S> &ps, const RemoteConnection &) {
     return ps;
 }
 
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
 template<class S>
 inline PrettyOStream<S> &

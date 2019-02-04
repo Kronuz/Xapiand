@@ -47,20 +47,20 @@
 #endif
 
 #include <sys/types.h>
-#include "safesysstat.h"
-#include "safeunistd.h"
+#include "xapian/common/safesysstat.h"
+#include "xapian/common/safeunistd.h"
 
-#include "compression_stream.h"
-#include "honey_defs.h"
-#include "honey_version.h"
-#include "internaltypes.h"
-#include "io_utils.h"
-#include "pack.h"
-#include "str.h"
-#include "stringutils.h"
-#include "wordaccess.h"
+#include "xapian/common/compression_stream.h"
+#include "xapian/backends/honey/honey_defs.h"
+#include "xapian/backends/honey/honey_version.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/common/wordaccess.h"
 
-#include "unicode/description_append.h"
+#include "xapian/unicode/description_append.h"
 
 #ifdef BLK_UNUSED
 # undef BLK_UNUSED

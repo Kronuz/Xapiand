@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "remotetcpclient.h"
+#include "xapian/net/remotetcpclient.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "str.h"
-#include "tcpclient.h"
+#include "xapian/common/str.h"
+#include "xapian/net/tcpclient.h"
 
 using namespace std;
 

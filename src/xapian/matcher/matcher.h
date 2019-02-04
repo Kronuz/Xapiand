@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_MATCHER_H
 #define XAPIAN_INCLUDED_MATCHER_H
 
-#include "api/enquireinternal.h"
-#include "localsubmatch.h"
-#include "remotesubmatch.h"
-#include "weight/weightinternal.h"
+#include "xapian/api/enquireinternal.h"
+#include "xapian/matcher/localsubmatch.h"
+#include "xapian/matcher/remotesubmatch.h"
+#include "xapian/weight/weightinternal.h"
 
 #include "xapian/database.h"
 #include "xapian/query.h"

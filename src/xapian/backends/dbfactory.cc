@@ -20,7 +20,7 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/dbfactory.h"
 
@@ -29,30 +29,30 @@
 #include "xapian/error.h"
 #include "xapian/version.h" // For XAPIAN_HAS_XXX_BACKEND.
 
-#include "backends.h"
-#include "debuglog.h"
-#include "filetests.h"
-#include "fileutils.h"
-#include "posixy_wrapper.h"
-#include "str.h"
+#include "xapian/backends/backends.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/fileutils.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/str.h"
 
 #include <cerrno>
 #include <cstdlib> // For atoi().
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-# include "glass/glass_database.h"
+# include "xapian/backends/glass/glass_database.h"
 #endif
-#include "glass/glass_defs.h"
+#include "xapian/backends/glass/glass_defs.h"
 #ifdef XAPIAN_HAS_HONEY_BACKEND
-# include "honey/honey_database.h"
+# include "xapian/backends/honey/honey_database.h"
 #endif
-#include "honey/honey_defs.h"
+#include "xapian/backends/honey/honey_defs.h"
 #ifdef XAPIAN_HAS_INMEMORY_BACKEND
-# include "inmemory/inmemory_database.h"
+# include "xapian/backends/inmemory/inmemory_database.h"
 #endif
 // Even if none of the above get included, we still need a definition of
 // Database::Internal.
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
 #include <fstream>
 #include <string>

@@ -25,7 +25,7 @@
 # error "Never use <xapian/types.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/version.h>
+#include "xapian/version.h"
 
 namespace Xapian {
 

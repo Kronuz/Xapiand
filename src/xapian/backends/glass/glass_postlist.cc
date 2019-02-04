@@ -21,16 +21,16 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_postlist.h"
+#include "xapian/backends/glass/glass_postlist.h"
 
-#include "glass_cursor.h"
-#include "glass_database.h"
-#include "debuglog.h"
-#include "pack.h"
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 using Xapian::Internal::intrusive_ptr;
 

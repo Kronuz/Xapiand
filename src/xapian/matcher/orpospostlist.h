@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_ORPOSPOSTLIST_H
 #define XAPIAN_INCLUDED_ORPOSPOSTLIST_H
 
-#include "orpositionlist.h"
-#include "wrapperpostlist.h"
+#include "xapian/matcher/orpositionlist.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
 /** Wrapper postlist providing positions for an OR. */
 class OrPosPostList : public WrapperPostList {

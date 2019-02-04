@@ -24,14 +24,14 @@
 #include <cerrno>
 #include <string>
 
-#include "remoteprotocol.h"
-#include "safenetdb.h" // For EAI_* constants.
-#include "safeunistd.h"
+#include "xapian/net/remoteprotocol.h"
+#include "xapian/common/safenetdb.h" // For EAI_* constants.
+#include "xapian/common/safeunistd.h"
 
 #ifdef __WIN32__
-# include "safewinsock2.h"
+# include "xapian/common/safewinsock2.h"
 
-# include <xapian/error.h>
+# include "xapian/error.h"
 
 /** Class to initialise winsock and keep it initialised while we use it.
  *

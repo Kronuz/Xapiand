@@ -19,13 +19,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "fileutils.h"
+#include "xapian/common/fileutils.h"
 
 #include "xapian/error.h"
-#include "safedirent.h"
-#include "safeunistd.h"
+#include "xapian/common/safedirent.h"
+#include "xapian/common/safeunistd.h"
 
 #include <cerrno>
 #include <cstring>

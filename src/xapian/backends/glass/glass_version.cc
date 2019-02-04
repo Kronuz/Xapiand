@@ -19,30 +19,30 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_version.h"
+#include "xapian/backends/glass/glass_version.h"
 
-#include "debuglog.h"
-#include "fd.h"
-#include "glass_defs.h"
-#include "io_utils.h"
-#include "omassert.h"
-#include "pack.h"
-#include "posixy_wrapper.h"
-#include "stringutils.h" // For STRINGIZE() and CONST_STRLEN().
+#include "xapian/common/debuglog.h"
+#include "xapian/common/fd.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/stringutils.h" // For STRINGIZE() and CONST_STRLEN().
 
 #include <cerrno>
 #include <cstring> // For memcmp().
 #include <string>
 #include <sys/types.h>
-#include "safesysstat.h"
-#include "safefcntl.h"
-#include "safeunistd.h"
-#include "str.h"
-#include "stringutils.h"
+#include "xapian/common/safesysstat.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safeunistd.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
 
-#include "backends/uuids.h"
+#include "xapian/backends/uuids.h"
 
 #include "xapian/constants.h"
 #include "xapian/error.h"

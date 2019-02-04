@@ -20,14 +20,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/weight.h"
-#include "weightinternal.h"
+#include "xapian/weight/weightinternal.h"
 
-#include "debuglog.h"
-#include "omassert.h"
-#include "serialise-double.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/serialise-double.h"
 
 #include "xapian/error.h"
 

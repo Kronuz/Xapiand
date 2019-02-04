@@ -27,8 +27,8 @@
 # error "Never use <xapian/compactor.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/constants.h>
-#include <xapian/visibility.h>
+#include "xapian/constants.h"
+#include "xapian/visibility.h"
 #include <string>
 
 namespace Xapian {

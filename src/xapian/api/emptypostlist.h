@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_EMPTYPOSTLIST_H
 #define XAPIAN_INCLUDED_EMPTYPOSTLIST_H
 
-#include "postlist.h"
+#include "xapian/api/postlist.h"
 
 /// A PostList which contains no entries.
 class EmptyPostList : public PostList {

@@ -24,8 +24,8 @@
 #include <string>
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/types.h>
-#include <xapian/valueiterator.h>
+#include "xapian/types.h"
+#include "xapian/valueiterator.h"
 
 /// Abstract base class for value streams.
 class Xapian::ValueIterator::Internal : public Xapian::Internal::intrusive_base {

@@ -21,15 +21,15 @@
 #ifndef XAPIAN_INCLUDED_PROTOMSET_H
 #define XAPIAN_INCLUDED_PROTOMSET_H
 
-#include "api/enquireinternal.h"
-#include "api/result.h"
-#include "collapser.h"
-#include "heap.h"
-#include "matchtimeout.h"
-#include "msetcmp.h"
-#include "omassert.h"
-#include "spymaster.h"
-#include "stdclamp.h"
+#include "xapian/api/enquireinternal.h"
+#include "xapian/api/result.h"
+#include "xapian/matcher/collapser.h"
+#include "xapian/common/heap.h"
+#include "xapian/matcher/matchtimeout.h"
+#include "xapian/matcher/msetcmp.h"
+#include "xapian/common/omassert.h"
+#include "xapian/matcher/spymaster.h"
+#include "xapian/common/stdclamp.h"
 
 #include <algorithm>
 

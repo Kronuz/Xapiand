@@ -22,13 +22,13 @@
 #ifndef XAPIAN_INCLUDED_HONEY_POSITIONLIST_H
 #define XAPIAN_INCLUDED_HONEY_POSITIONLIST_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "backends/positionlist.h"
-#include "bitstream.h"
-#include "honey_cursor.h"
-#include "honey_lazytable.h"
-#include "pack.h"
+#include "xapian/backends/positionlist.h"
+#include "xapian/common/bitstream.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_lazytable.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

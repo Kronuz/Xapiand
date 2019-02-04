@@ -22,13 +22,13 @@
 #ifndef XAPIAN_INCLUDED_PREFIX_COMPRESSED_STRINGS_H
 #define XAPIAN_INCLUDED_PREFIX_COMPRESSED_STRINGS_H
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
 #include <algorithm>
 #include <string>
 
-#include "honey/honey_spelling.h"
-#include "stringutils.h"
+#include "xapian/backends/honey/honey_spelling.h"
+#include "xapian/common/stringutils.h"
 
 // We XOR the length values with this so that they are more likely to coincide
 // with lower case ASCII letters, which are likely to be common.  This means

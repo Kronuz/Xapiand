@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_document.h"
+#include "xapian/backends/honey/honey_document.h"
 
-#include "honey_docdata.h"
-#include "honey_values.h"
+#include "xapian/backends/honey/honey_docdata.h"
+#include "xapian/backends/honey/honey_values.h"
 
 string
 HoneyDocument::fetch_value(Xapian::valueno slot) const

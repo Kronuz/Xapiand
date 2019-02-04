@@ -23,10 +23,10 @@
 #ifndef XAPIAN_INCLUDED_GLASS_CURSOR_H
 #define XAPIAN_INCLUDED_GLASS_CURSOR_H
 
-#include "glass_defs.h"
+#include "xapian/backends/glass/glass_defs.h"
 
-#include "alignment_cast.h"
-#include "omassert.h"
+#include "xapian/common/alignment_cast.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 #include <cstring>

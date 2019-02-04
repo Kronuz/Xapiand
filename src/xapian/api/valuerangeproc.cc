@@ -18,15 +18,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/queryparser.h>
+#include "xapian/queryparser.h"
 
 #include <cerrno>
 #include <cstdlib> // For atoi().
 
 #include <string>
-#include "stringutils.h"
+#include "xapian/common/stringutils.h"
 
 using namespace std;
 

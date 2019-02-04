@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_QUERYVECTOR_H
 #define XAPIAN_INCLUDED_QUERYVECTOR_H
 
-#include "api/smallvector.h"
+#include "xapian/api/smallvector.h"
 #include "xapian/query.h"
 
 namespace Xapian {

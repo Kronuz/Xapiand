@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_BOOLORPOSTLIST_H
 #define XAPIAN_INCLUDED_BOOLORPOSTLIST_H
 
-#include "api/postlist.h"
+#include "xapian/api/postlist.h"
 
 class PostListTree;
 

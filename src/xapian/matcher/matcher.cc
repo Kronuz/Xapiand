@@ -18,29 +18,29 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "matcher.h"
+#include "xapian/matcher/matcher.h"
 
-#include "api/enquireinternal.h"
-#include "api/msetinternal.h"
-#include "api/rsetinternal.h"
-#include "backends/multi/multi_database.h"
-#include "deciderpostlist.h"
-#include "localsubmatch.h"
-#include "msetcmp.h"
-#include "omassert.h"
-#include "postlisttree.h"
-#include "protomset.h"
-#include "spymaster.h"
-#include "valuestreamdocument.h"
-#include "weight/weightinternal.h"
+#include "xapian/api/enquireinternal.h"
+#include "xapian/api/msetinternal.h"
+#include "xapian/api/rsetinternal.h"
+#include "xapian/backends/multi/multi_database.h"
+#include "xapian/matcher/deciderpostlist.h"
+#include "xapian/matcher/localsubmatch.h"
+#include "xapian/matcher/msetcmp.h"
+#include "xapian/common/omassert.h"
+#include "xapian/matcher/postlisttree.h"
+#include "xapian/matcher/protomset.h"
+#include "xapian/matcher/spymaster.h"
+#include "xapian/matcher/valuestreamdocument.h"
+#include "xapian/weight/weightinternal.h"
 
-#include <xapian/version.h> // For XAPIAN_HAS_REMOTE_BACKEND
+#include "xapian/version.h" // For XAPIAN_HAS_REMOTE_BACKEND
 
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
-# include "backends/remote/remote-database.h"
-# include "remotesubmatch.h"
+# include "xapian/backends/remote/remote-database.h"
+# include "xapian/matcher/remotesubmatch.h"
 #endif
 
 #include <algorithm>
@@ -50,7 +50,7 @@
 #ifdef HAVE_POLL_H
 # include <poll.h>
 #else
-# include "safesysselect.h"
+# include "xapian/common/safesysselect.h"
 #endif
 
 using namespace std;

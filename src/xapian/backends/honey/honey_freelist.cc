@@ -19,15 +19,15 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_freelist.h"
+#include "xapian/backends/honey/honey_freelist.h"
 
-#include "honey_table.h"
+#include "xapian/backends/honey/honey_table.h"
 #include "xapian/error.h"
 
-#include "omassert.h"
-#include "wordaccess.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/wordaccess.h"
 #include <cstring>
 
 #if !HAVE_DECL___BUILTIN_POPCOUNT

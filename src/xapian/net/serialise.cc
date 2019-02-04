@@ -18,19 +18,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/document.h>
-#include <xapian/positioniterator.h>
-#include <xapian/termiterator.h>
-#include <xapian/valueiterator.h>
+#include "xapian/document.h"
+#include "xapian/positioniterator.h"
+#include "xapian/termiterator.h"
+#include "xapian/valueiterator.h"
 
-#include "omassert.h"
-#include "api/rsetinternal.h"
-#include "length.h"
-#include "serialise.h"
-#include "serialise-double.h"
-#include "weight/weightinternal.h"
+#include "xapian/common/omassert.h"
+#include "xapian/api/rsetinternal.h"
+#include "xapian/net/length.h"
+#include "xapian/net/serialise.h"
+#include "xapian/common/serialise-double.h"
+#include "xapian/weight/weightinternal.h"
 
 #include <memory>
 #include <set>

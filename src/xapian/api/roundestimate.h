@@ -22,7 +22,7 @@
 #define XAPIAN_INCLUDED_ROUNDESTIMATE_H
 
 #include <cmath>
-#include "exp10.h"
+#include "xapian/common/exp10.h"
 
 /** Round a bounded estimate to an appropriate number of S.F.
  *

@@ -18,13 +18,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "inmemory_document.h"
+#include "xapian/backends/inmemory/inmemory_document.h"
 
-#include "inmemory_database.h"
+#include "xapian/backends/inmemory/inmemory_database.h"
 
-#include "debuglog.h"
+#include "xapian/common/debuglog.h"
 
 string
 InMemoryDocument::fetch_value(Xapian::valueno slot) const

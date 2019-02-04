@@ -21,25 +21,25 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "tcpclient.h"
+#include "xapian/net/tcpclient.h"
 
-#include "remoteconnection.h"
-#include "resolver.h"
-#include "str.h"
-#include <xapian/error.h>
+#include "xapian/net/remoteconnection.h"
+#include "xapian/net/resolver.h"
+#include "xapian/common/str.h"
+#include "xapian/error.h"
 
-#include "realtime.h"
-#include "safefcntl.h"
-#include "safenetdb.h"
-#include "safesyssocket.h"
-#include "socket_utils.h"
+#include "xapian/common/realtime.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safenetdb.h"
+#include "xapian/common/safesyssocket.h"
+#include "xapian/common/socket_utils.h"
 
 #ifdef HAVE_POLL_H
 # include <poll.h>
 #else
-# include "safesysselect.h"
+# include "xapian/common/safesysselect.h"
 #endif
 
 #include <cerrno>

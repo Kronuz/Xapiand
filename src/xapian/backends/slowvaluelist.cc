@@ -18,13 +18,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "slowvaluelist.h"
+#include "xapian/backends/slowvaluelist.h"
 
-#include "documentinternal.h"
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 #include "xapian/error.h"
 

@@ -21,14 +21,14 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "safefcntl.h"
+#include "xapian/common/safefcntl.h"
 
-#include "progclient.h"
-#include <xapian/error.h>
-#include "closefrom.h"
-#include "debuglog.h"
+#include "xapian/net/progclient.h"
+#include "xapian/error.h"
+#include "xapian/common/closefrom.h"
+#include "xapian/common/debuglog.h"
 
 #include <cerrno>
 #include <string>
@@ -36,7 +36,7 @@
 
 #include <sys/types.h>
 #ifndef __WIN32__
-# include "safesyssocket.h"
+# include "xapian/common/safesyssocket.h"
 # include <sys/wait.h>
 #else
 # include <cstdio> // For sprintf().

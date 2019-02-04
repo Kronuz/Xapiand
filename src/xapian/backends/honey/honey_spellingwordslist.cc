@@ -19,17 +19,17 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_spellingwordslist.h"
+#include "xapian/backends/honey/honey_spellingwordslist.h"
 
 #include "xapian/error.h"
 #include "xapian/types.h"
 
-#include "debuglog.h"
-#include "honey_database.h"
-#include "pack.h"
-#include "stringutils.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/stringutils.h"
 
 using namespace std;
 

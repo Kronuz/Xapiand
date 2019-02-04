@@ -34,9 +34,9 @@
 # endif
 #else
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "str.h"
+#include "xapian/common/str.h"
 
 #define XAPIAN_ASSERT_LOCATION__(LINE,MSG) __FILE__":"#LINE": "#MSG
 #define XAPIAN_ASSERT_LOCATION_(LINE,MSG) XAPIAN_ASSERT_LOCATION__(LINE,MSG)

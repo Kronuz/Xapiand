@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "backends/documentinternal.h"
+#include "xapian/backends/documentinternal.h"
 
-#include "api/documenttermlist.h"
-#include "api/documentvaluelist.h"
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/api/documenttermlist.h"
+#include "xapian/api/documentvaluelist.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 #include "xapian/valueiterator.h"
 

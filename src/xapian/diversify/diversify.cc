@@ -19,13 +19,13 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/diversify.h"
 #include "xapian/error.h"
 
-#include "debuglog.h"
-#include "diversify/diversifyinternal.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/diversify/diversifyinternal.h"
 
 #include <algorithm>
 #include <cmath>

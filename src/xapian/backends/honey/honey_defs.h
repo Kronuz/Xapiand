@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_DEFS_H
 #define XAPIAN_INCLUDED_HONEY_DEFS_H
 
-#include "internaltypes.h"
+#include "xapian/common/internaltypes.h"
 
 #define SST_SEARCH
 

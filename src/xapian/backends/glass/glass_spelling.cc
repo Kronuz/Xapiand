@@ -18,18 +18,18 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/error.h>
-#include <xapian/types.h>
+#include "xapian/error.h"
+#include "xapian/types.h"
 
-#include "expand/expandweight.h"
-#include "glass_spelling.h"
-#include "omassert.h"
-#include "expand/ortermlist.h"
-#include "pack.h"
+#include "xapian/expand/expandweight.h"
+#include "xapian/backends/glass/glass_spelling.h"
+#include "xapian/common/omassert.h"
+#include "xapian/expand/ortermlist.h"
+#include "xapian/common/pack.h"
 
-#include "../prefix_compressed_strings.h"
+#include "xapian/backends/prefix_compressed_strings.h"
 
 #include <algorithm>
 #include <map>

@@ -19,15 +19,15 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_positionlist.h"
+#include "xapian/backends/glass/glass_positionlist.h"
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "bitstream.h"
-#include "debuglog.h"
-#include "pack.h"
+#include "xapian/common/bitstream.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_EXTRAWEIGHTPOSTLIST_H
 #define XAPIAN_INCLUDED_EXTRAWEIGHTPOSTLIST_H
 
-#include "wrapperpostlist.h"
+#include "xapian/matcher/wrapperpostlist.h"
 
 namespace Xapian {
 class Weight;

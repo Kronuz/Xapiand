@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_ALLTERMSLIST_H
 #define XAPIAN_INCLUDED_ALLTERMSLIST_H
 
-#include "api/termlist.h"
+#include "xapian/api/termlist.h"
 
 /// Abstract base class for iterating all terms in a database.
 class AllTermsList : public TermList {

@@ -19,19 +19,19 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_changes.h"
+#include "xapian/backends/glass/glass_changes.h"
 
-#include "glass_defs.h"
-#include "glass_replicate_internal.h"
-#include "fd.h"
-#include "io_utils.h"
-#include "pack.h"
-#include "posixy_wrapper.h"
-#include "str.h"
-#include "stringutils.h"
-#include "wordaccess.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_replicate_internal.h"
+#include "xapian/common/fd.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/pack.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/str.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/common/wordaccess.h"
 #include "xapian/constants.h"
 #include "xapian/error.h"
 

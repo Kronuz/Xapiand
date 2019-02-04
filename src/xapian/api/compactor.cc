@@ -20,9 +20,9 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include <xapian/compactor.h>
+#include "xapian/compactor.h"
 
 #include <algorithm>
 #include <fstream>
@@ -31,38 +31,38 @@
 #include <cerrno>
 #include <cstring>
 #include <ctime>
-#include "safesysstat.h"
+#include "xapian/common/safesysstat.h"
 #include <sys/types.h>
 
-#include "safeunistd.h"
-#include "safefcntl.h"
+#include "xapian/common/safeunistd.h"
+#include "xapian/common/safefcntl.h"
 
-#include "backends/backends.h"
-#include "backends/databaseinternal.h"
-#include "debuglog.h"
-#include "leafpostlist.h"
-#include "omassert.h"
-#include "filetests.h"
-#include "fileutils.h"
-#include "io_utils.h"
-#include "stringutils.h"
-#include "str.h"
+#include "xapian/backends/backends.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/fileutils.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/stringutils.h"
+#include "xapian/common/str.h"
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-#include "backends/glass/glass_database.h"
-#include "backends/glass/glass_version.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/backends/glass/glass_version.h"
 #endif
 
 #ifdef XAPIAN_HAS_HONEY_BACKEND
-#include "backends/honey/honey_database.h"
-#include "backends/honey/honey_version.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/backends/honey/honey_version.h"
 #endif
 
-#include "backends/multi/multi_database.h"
+#include "xapian/backends/multi/multi_database.h"
 
-#include <xapian/constants.h>
-#include <xapian/database.h>
-#include <xapian/error.h>
+#include "xapian/constants.h"
+#include "xapian/database.h"
+#include "xapian/error.h"
 
 using namespace std;
 

@@ -193,9 +193,9 @@ proc uni::main {} {
  * All rights reserved.
  */
 
-#include <config.h>
+#include \"config.h\"
 
-#include <xapian/unicode.h>
+#include \"xapian/unicode.h\"
 
 /*
  * A Unicode character is split into two parts in order to index

@@ -20,17 +20,17 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_cursor.h"
+#include "xapian/backends/glass/glass_cursor.h"
 
 #include <cerrno>
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "glass_table.h"
-#include "debuglog.h"
-#include "omassert.h"
+#include "xapian/backends/glass/glass_table.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
 
 using namespace Glass;
 

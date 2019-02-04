@@ -28,7 +28,7 @@
 #include "xapian/visibility.h"
 #include "xapian/weight.h"
 
-#include "remoteconnection.h"
+#include "xapian/net/remoteconnection.h"
 
 #include <string>
 

@@ -19,24 +19,24 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 #include "xapian/database.h"
 
 #include "xapian/constants.h"
 #include "xapian/error.h"
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-#include "glass/glass_changes.h"
-#include "glass/glass_database.h"
-#include "glass/glass_dbcheck.h"
-#include "glass/glass_defs.h"
-#include "glass/glass_version.h"
+#include "xapian/backends/glass/glass_changes.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/backends/glass/glass_dbcheck.h"
+#include "xapian/backends/glass/glass_defs.h"
+#include "xapian/backends/glass/glass_version.h"
 #endif
 
-#include "filetests.h"
-#include "omassert.h"
-#include "posixy_wrapper.h"
-#include "stringutils.h"
+#include "xapian/common/filetests.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/posixy_wrapper.h"
+#include "xapian/common/stringutils.h"
 
 #include <ostream>
 #include <stdexcept>

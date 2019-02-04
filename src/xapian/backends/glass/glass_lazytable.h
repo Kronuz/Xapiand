@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_GLASS_LAZYTABLE_H
 #define XAPIAN_INCLUDED_GLASS_LAZYTABLE_H
 
-#include "glass_table.h"
+#include "xapian/backends/glass/glass_table.h"
 
 class GlassLazyTable : public GlassTable {
   public:

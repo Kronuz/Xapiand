@@ -18,11 +18,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 //#define DEBUGGING
 
-#include "honey_cursor.h"
+#include "xapian/backends/honey/honey_cursor.h"
 
 #include <string>
 

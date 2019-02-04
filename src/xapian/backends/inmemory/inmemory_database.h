@@ -25,19 +25,19 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 #define XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 
-#include "api/leafpostlist.h"
-#include "api/smallvector.h"
-#include "api/termlist.h"
-#include "backends/backends.h"
-#include "backends/databaseinternal.h"
-#include "backends/valuestats.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/api/smallvector.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/backends.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/valuestats.h"
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <xapian/document.h>
-#include "inmemory_positionlist.h"
-#include "internaltypes.h"
-#include "omassert.h"
+#include "xapian/document.h"
+#include "xapian/backends/inmemory/inmemory_positionlist.h"
+#include "xapian/common/internaltypes.h"
+#include "xapian/common/omassert.h"
 
 using namespace std;
 

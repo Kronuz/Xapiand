@@ -46,7 +46,7 @@
 // The FD_SET macro expects an unsigned type (SOCKET) for the fd and passing
 // an int can result in a warning about comparing signed and unsigned, so we
 // add a wrapper to cast the fd argument of FD_SET to unsigned.
-# include "safewinsock2.h"
+# include "xapian/common/safewinsock2.h"
 inline void xapian_FD_SET_(int fd, fd_set *set) {
     FD_SET(unsigned(fd), set);
 }

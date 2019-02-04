@@ -20,11 +20,11 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "net_postlist.h"
-#include "net/length.h"
-#include "unicode/description_append.h"
+#include "xapian/backends/remote/net_postlist.h"
+#include "xapian/net/length.h"
+#include "xapian/unicode/description_append.h"
 
 using namespace std;
 

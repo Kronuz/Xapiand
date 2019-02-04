@@ -22,8 +22,8 @@
 #ifndef XAPIAN_INCLUDED_MAXPOSTLIST_H
 #define XAPIAN_INCLUDED_MAXPOSTLIST_H
 
-#include "api/postlist.h"
-#include "postlisttree.h"
+#include "xapian/api/postlist.h"
+#include "xapian/matcher/postlisttree.h"
 
 /// N-way OR postlist with wt=max(wt_i).
 class MaxPostList : public PostList {

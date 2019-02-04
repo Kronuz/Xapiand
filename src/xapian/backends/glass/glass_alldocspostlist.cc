@@ -19,15 +19,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
-#include "glass_alldocspostlist.h"
+#include "config.h"
+#include "xapian/backends/glass/glass_alldocspostlist.h"
 
 #include <string>
 
-#include "glass_database.h"
-#include "debuglog.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/common/debuglog.h"
 
-#include "str.h"
+#include "xapian/common/str.h"
 
 using namespace std;
 using Xapian::Internal::intrusive_ptr;

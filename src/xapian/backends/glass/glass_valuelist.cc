@@ -18,14 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "glass_valuelist.h"
+#include "xapian/backends/glass/glass_valuelist.h"
 
-#include "glass_cursor.h"
-#include "glass_database.h"
-#include "omassert.h"
-#include "str.h"
+#include "xapian/backends/glass/glass_cursor.h"
+#include "xapian/backends/glass/glass_database.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
 
 using namespace Glass;
 using namespace std;

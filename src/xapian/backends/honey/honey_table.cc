@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 //#define DEBUGGING
 
-#include "honey_table.h"
+#include "xapian/backends/honey/honey_table.h"
 
-#include "honey_cursor.h"
-#include "stringutils.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/common/stringutils.h"
 
-#include "unicode/description_append.h"
+#include "xapian/unicode/description_append.h"
 
 #ifdef DEBUGGING
 # include <iostream>

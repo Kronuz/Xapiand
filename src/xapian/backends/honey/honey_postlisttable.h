@@ -21,13 +21,13 @@
 #ifndef XAPIAN_INCLUDED_HONEY_POSTLISTTABLE_H
 #define XAPIAN_INCLUDED_HONEY_POSTLISTTABLE_H
 
-#include <xapian/constants.h>
-#include <xapian/types.h>
+#include "xapian/constants.h"
+#include "xapian/types.h"
 
-#include "honey_inverter.h"
-#include "honey_postlist.h"
-#include "honey_table.h"
-#include "pack.h"
+#include "xapian/backends/honey/honey_inverter.h"
+#include "xapian/backends/honey/honey_postlist.h"
+#include "xapian/backends/honey/honey_table.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

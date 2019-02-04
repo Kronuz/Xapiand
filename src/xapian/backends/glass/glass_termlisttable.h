@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_GLASS_TERMLISTTABLE_H
 #define XAPIAN_INCLUDED_GLASS_TERMLISTTABLE_H
 
-#include <xapian/constants.h>
-#include <xapian/types.h>
+#include "xapian/constants.h"
+#include "xapian/types.h"
 
-#include "glass_table.h"
-#include "pack.h"
+#include "xapian/backends/glass/glass_table.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

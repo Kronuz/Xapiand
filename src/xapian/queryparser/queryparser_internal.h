@@ -24,10 +24,10 @@
 #define XAPIAN_INCLUDED_QUERYPARSER_INTERNAL_H
 
 #include "xapian/intrusive_ptr.h"
-#include <xapian/database.h>
-#include <xapian/query.h>
-#include <xapian/queryparser.h>
-#include <xapian/stem.h>
+#include "xapian/database.h"
+#include "xapian/query.h"
+#include "xapian/queryparser.h"
+#include "xapian/stem.h"
 
 #include <list>
 #include <map>

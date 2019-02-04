@@ -18,15 +18,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "multi_alltermslist.h"
+#include "xapian/backends/multi/multi_alltermslist.h"
 
-#include <xapian/database.h>
+#include "xapian/database.h"
 
-#include "backends/databaseinternal.h"
-#include "heap.h"
-#include "omassert.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/common/heap.h"
+#include "xapian/common/omassert.h"
 
 using namespace std;
 

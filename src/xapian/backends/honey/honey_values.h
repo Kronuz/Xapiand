@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_HONEY_VALUES_H
 #define XAPIAN_INCLUDED_HONEY_VALUES_H
 
-#include "honey_cursor.h"
-#include "backends/valuestats.h"
-#include "pack.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/valuestats.h"
+#include "xapian/common/pack.h"
 #include "xapian/error.h"
 #include "xapian/types.h"
 

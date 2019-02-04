@@ -22,8 +22,8 @@
 #ifndef XAPIAN_INCLUDED_HONEY_FREELIST_H
 #define XAPIAN_INCLUDED_HONEY_FREELIST_H
 
-#include "honey_defs.h"
-#include "pack.h"
+#include "xapian/backends/honey/honey_defs.h"
+#include "xapian/common/pack.h"
 
 class HoneyTable;
 

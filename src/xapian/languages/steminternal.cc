@@ -52,13 +52,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "steminternal.h"
+#include "xapian/languages/steminternal.h"
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 #include <cstdlib>
 #include <cstring>

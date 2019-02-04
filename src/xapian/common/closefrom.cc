@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 // We don't currently need closefrom() on __WIN32__.
 #if !defined HAVE_CLOSEFROM && !defined __WIN32__
 
-#include "closefrom.h"
+#include "xapian/common/closefrom.h"
 
 #include <cerrno>
-#include "safefcntl.h"
-#include "safeunistd.h"
+#include "xapian/common/safefcntl.h"
+#include "xapian/common/safeunistd.h"
 
 #ifdef HAVE_SYS_RESOURCE_H
 # include <sys/types.h>
@@ -35,8 +35,8 @@
 #endif
 
 #if defined __linux__
-# include "alignment_cast.h"
-# include "safedirent.h"
+# include "xapian/common/alignment_cast.h"
+# include "xapian/common/safedirent.h"
 # include <cstdlib>
 #elif defined __APPLE__
 # include <sys/attr.h>

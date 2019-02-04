@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_MULTI_VALUELIST_H
 #define XAPIAN_INCLUDED_MULTI_VALUELIST_H
 
-#include "backends/valuelist.h"
+#include "xapian/backends/valuelist.h"
 
-#include "backends/databaseinternal.h"
-#include "backends/multi.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/multi.h"
 
 #include <string>
 

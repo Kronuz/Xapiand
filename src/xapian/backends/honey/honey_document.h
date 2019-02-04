@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_HONEY_DOCUMENT_H
 #define XAPIAN_INCLUDED_HONEY_DOCUMENT_H
 
-#include "honey_docdata.h"
-#include "honey_values.h"
-#include "backends/databaseinternal.h"
-#include "backends/documentinternal.h"
+#include "xapian/backends/honey/honey_docdata.h"
+#include "xapian/backends/honey/honey_values.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/documentinternal.h"
 
 /// A document read from a HoneyDatabase.
 class HoneyDocument : public Xapian::Document::Internal {

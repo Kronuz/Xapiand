@@ -28,7 +28,7 @@
 
 // Include windows.h ourselves first to avoid problems with winsock2.h
 // including it for us but without our workarounds.
-#include "safewindows.h"
+#include "xapian/common/safewindows.h"
 
 #include <winsock2.h>
 

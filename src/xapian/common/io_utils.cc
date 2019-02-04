@@ -19,21 +19,21 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "io_utils.h"
-#include "posixy_wrapper.h"
+#include "xapian/common/io_utils.h"
+#include "xapian/common/posixy_wrapper.h"
 
-#include "safeunistd.h"
+#include "xapian/common/safeunistd.h"
 
 #include <cerrno>
 #include <cstring>
 #include <string>
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
-#include "omassert.h"
-#include "str.h"
+#include "xapian/common/omassert.h"
+#include "xapian/common/str.h"
 
 // Trying to include the correct headers with the correct defines set to
 // get pread() and pwrite() prototyped on every platform without breaking any

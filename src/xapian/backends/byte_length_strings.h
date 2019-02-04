@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_BYTE_LENGTH_STRINGS_H
 #define XAPIAN_INCLUDED_BYTE_LENGTH_STRINGS_H
 
-#include <xapian/error.h>
+#include "xapian/error.h"
 
 #include <string>
 

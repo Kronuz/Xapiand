@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_VALUEGEPOSTLIST_H
 #define XAPIAN_INCLUDED_VALUEGEPOSTLIST_H
 
-#include "valuerangepostlist.h"
+#include "xapian/matcher/valuerangepostlist.h"
 
 class ValueGePostList: public ValueRangePostList {
     /// Disallow copying.

@@ -22,9 +22,9 @@
 #ifndef XAPIAN_INCLUDED_LOCALSUBMATCH_H
 #define XAPIAN_INCLUDED_LOCALSUBMATCH_H
 
-#include "backends/databaseinternal.h"
-#include "api/leafpostlist.h"
-#include "api/queryinternal.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/api/queryinternal.h"
 #include "xapian/enquire.h"
 #include "xapian/weight.h"
 

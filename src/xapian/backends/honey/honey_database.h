@@ -22,17 +22,17 @@
 #ifndef XAPIAN_INCLUDED_HONEY_DATABASE_H
 #define XAPIAN_INCLUDED_HONEY_DATABASE_H
 
-#include "backends/databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
-#include "honey_alldocspostlist.h"
-#include "honey_docdata.h"
-#include "honey_postlisttable.h"
-#include "honey_positionlist.h"
-#include "honey_spelling.h"
-#include "honey_synonym.h"
-#include "honey_termlisttable.h"
-#include "honey_values.h"
-#include "honey_version.h"
+#include "xapian/backends/honey/honey_alldocspostlist.h"
+#include "xapian/backends/honey/honey_docdata.h"
+#include "xapian/backends/honey/honey_postlisttable.h"
+#include "xapian/backends/honey/honey_positionlist.h"
+#include "xapian/backends/honey/honey_spelling.h"
+#include "xapian/backends/honey/honey_synonym.h"
+#include "xapian/backends/honey/honey_termlisttable.h"
+#include "xapian/backends/honey/honey_values.h"
+#include "xapian/backends/honey/honey_version.h"
 #include "xapian/compactor.h"
 
 class HoneyAllTermsList;

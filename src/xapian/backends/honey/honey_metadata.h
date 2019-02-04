@@ -22,13 +22,13 @@
 #ifndef XAPIAN_INCLUDED_HONEY_METADATA_H
 #define XAPIAN_INCLUDED_HONEY_METADATA_H
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/database.h>
-#include <xapian/types.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/database.h"
+#include "xapian/types.h"
 
-#include "backends/alltermslist.h"
-#include "honey_table.h"
-#include "api/termlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/honey/honey_table.h"
+#include "xapian/api/termlist.h"
 
 #include <string>
 

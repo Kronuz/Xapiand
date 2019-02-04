@@ -32,12 +32,12 @@
 #include <vector>
 #include <string>
 
-#include <xapian/attributes.h>
-#include <xapian/derefwrapper.h>
-#include <xapian/keymaker.h>
-#include <xapian/postingsource.h>
-#include <xapian/queryparser.h> // For sortable_serialise
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/derefwrapper.h"
+#include "xapian/keymaker.h"
+#include "xapian/postingsource.h"
+#include "xapian/queryparser.h" // For sortable_serialise
+#include "xapian/visibility.h"
 
 namespace Xapian {
 

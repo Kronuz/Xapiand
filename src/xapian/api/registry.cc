@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/registry.h"
 
@@ -30,8 +30,8 @@
 #include "xapian/postingsource.h"
 #include "xapian/weight.h"
 
-#include "debuglog.h"
-#include "stringutils.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/stringutils.h"
 
 #include <algorithm>
 #include <map>

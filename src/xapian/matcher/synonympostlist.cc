@@ -20,13 +20,13 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "synonympostlist.h"
+#include "xapian/matcher/synonympostlist.h"
 
-#include "debuglog.h"
-#include "omassert.h"
-#include "postlisttree.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
+#include "xapian/matcher/postlisttree.h"
 
 using namespace std;
 

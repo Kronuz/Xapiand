@@ -18,19 +18,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_database.h"
+#include "xapian/backends/honey/honey_database.h"
 
-#include "honey_alltermslist.h"
-#include "honey_document.h"
-#include "honey_metadata.h"
-#include "honey_termlist.h"
-#include "honey_spellingwordslist.h"
-#include "honey_valuelist.h"
+#include "xapian/backends/honey/honey_alltermslist.h"
+#include "xapian/backends/honey/honey_document.h"
+#include "xapian/backends/honey/honey_metadata.h"
+#include "xapian/backends/honey/honey_termlist.h"
+#include "xapian/backends/honey/honey_spellingwordslist.h"
+#include "xapian/backends/honey/honey_valuelist.h"
 
-#include "api/leafpostlist.h"
-#include "backends/backends.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/backends/backends.h"
 #include "xapian/error.h"
 
 using namespace std;

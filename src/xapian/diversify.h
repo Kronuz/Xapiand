@@ -26,11 +26,11 @@
 #error "Never use <xapian/diversify.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/cluster.h>
-#include <xapian/mset.h>
-#include <xapian/types.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/cluster.h"
+#include "xapian/mset.h"
+#include "xapian/types.h"
+#include "xapian/visibility.h"
 
 #include <map>
 #include <unordered_map>

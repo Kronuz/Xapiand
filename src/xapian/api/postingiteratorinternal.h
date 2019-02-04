@@ -23,7 +23,7 @@
 
 #include "xapian/postingiterator.h"
 
-#include "postlist.h"
+#include "xapian/api/postlist.h"
 
 namespace Xapian {
 

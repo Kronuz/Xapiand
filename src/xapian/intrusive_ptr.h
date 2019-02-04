@@ -40,8 +40,8 @@
 # error "Never use <xapian/intrusive_ptr.h> directly; include <xapian.h> instead."
 #endif
 
-#include <xapian/attributes.h>
-#include <xapian/visibility.h>
+#include "xapian/attributes.h"
+#include "xapian/visibility.h"
 
 namespace Xapian {
 namespace Internal {

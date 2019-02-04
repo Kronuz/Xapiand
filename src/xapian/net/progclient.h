@@ -23,7 +23,7 @@
 
 #include <sys/types.h>
 
-#include "backends/remote/remote-database.h"
+#include "xapian/backends/remote/remote-database.h"
 
 /** Implementation of RemoteDatabase using a spawned server.
  *

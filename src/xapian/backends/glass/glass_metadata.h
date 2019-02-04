@@ -22,13 +22,13 @@
 #ifndef XAPIAN_INCLUDED_GLASS_METADATA_H
 #define XAPIAN_INCLUDED_GLASS_METADATA_H
 
-#include <xapian/intrusive_ptr.h>
-#include <xapian/database.h>
-#include <xapian/types.h>
+#include "xapian/intrusive_ptr.h"
+#include "xapian/database.h"
+#include "xapian/types.h"
 
-#include "backends/alltermslist.h"
-#include "glass_table.h"
-#include "api/termlist.h"
+#include "xapian/backends/alltermslist.h"
+#include "xapian/backends/glass/glass_table.h"
+#include "xapian/api/termlist.h"
 
 #include <string>
 

@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "honey_postlisttable.h"
+#include "xapian/backends/honey/honey_postlisttable.h"
 
-#include "honey_alldocspostlist.h"
-#include "honey_cursor.h"
-#include "honey_database.h"
-#include "honey_defs.h"
-#include "honey_postlist.h"
-#include "honey_postlist_encodings.h"
+#include "xapian/backends/honey/honey_alldocspostlist.h"
+#include "xapian/backends/honey/honey_cursor.h"
+#include "xapian/backends/honey/honey_database.h"
+#include "xapian/backends/honey/honey_defs.h"
+#include "xapian/backends/honey/honey_postlist.h"
+#include "xapian/backends/honey/honey_postlist_encodings.h"
 
 #include <memory>
 

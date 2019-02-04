@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_CURSOR_H
 #define XAPIAN_INCLUDED_HONEY_CURSOR_H
 
-#include "honey_table.h"
+#include "xapian/backends/honey/honey_table.h"
 
 class HoneyCursor {
     /** Search for @a key.

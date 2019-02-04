@@ -25,7 +25,7 @@
 #include <string>
 #include <type_traits>
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 #include "xapian/types.h"
 

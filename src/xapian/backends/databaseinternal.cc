@@ -19,13 +19,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "databaseinternal.h"
+#include "xapian/backends/databaseinternal.h"
 
-#include "api/leafpostlist.h"
-#include "omassert.h"
-#include "slowvaluelist.h"
+#include "xapian/api/leafpostlist.h"
+#include "xapian/common/omassert.h"
+#include "xapian/backends/slowvaluelist.h"
 #include "xapian/error.h"
 
 #include <algorithm>

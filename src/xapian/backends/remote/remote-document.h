@@ -21,8 +21,8 @@
 #ifndef XAPIAN_INCLUDED_REMOTE_DOCUMENT_H
 #define XAPIAN_INCLUDED_REMOTE_DOCUMENT_H
 
-#include "backends/databaseinternal.h"
-#include "backends/documentinternal.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/documentinternal.h"
 
 /// A document read from a RemoteDatabase.
 class RemoteDocument : public Xapian::Document::Internal {

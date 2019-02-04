@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_NEARPOSTLIST_H
 #define XAPIAN_INCLUDED_NEARPOSTLIST_H
 
-#include "selectpostlist.h"
+#include "xapian/matcher/selectpostlist.h"
 #include <vector>
 
 class PostListTree;

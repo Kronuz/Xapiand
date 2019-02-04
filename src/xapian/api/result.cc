@@ -18,12 +18,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
-#include "result.h"
+#include "xapian/api/result.h"
 
-#include "str.h"
-#include "unicode/description_append.h"
+#include "xapian/common/str.h"
+#include "xapian/unicode/description_append.h"
 
 using namespace std;
 

@@ -41,73 +41,73 @@
 #define XAPIAN_IN_XAPIAN_H
 
 // Set defines for library version and check C++ ABI versions match.
-#include <xapian/version.h>
+#include "xapian/version.h"
 
 // Types
-#include <xapian/types.h>
+#include "xapian/types.h"
 
 // Function attributes
-#include <xapian/attributes.h>
+#include "xapian/attributes.h"
 
 // Constants
-#include <xapian/constants.h>
+#include "xapian/constants.h"
 
 // Exceptions
-#include <xapian/error.h>
+#include "xapian/error.h"
 
 // Access to databases, documents, etc.
-#include <xapian/database.h>
-#include <xapian/dbfactory.h>
-#include <xapian/document.h>
-#include <xapian/positioniterator.h>
-#include <xapian/postingiterator.h>
-#include <xapian/termiterator.h>
-#include <xapian/valueiterator.h>
+#include "xapian/database.h"
+#include "xapian/dbfactory.h"
+#include "xapian/document.h"
+#include "xapian/positioniterator.h"
+#include "xapian/postingiterator.h"
+#include "xapian/termiterator.h"
+#include "xapian/valueiterator.h"
 
 // Indexing
-#include <xapian/termgenerator.h>
+#include "xapian/termgenerator.h"
 
 // Searching
-#include <xapian/enquire.h>
-#include <xapian/eset.h>
-#include <xapian/mset.h>
-#include <xapian/expanddecider.h>
-#include <xapian/keymaker.h>
-#include <xapian/matchdecider.h>
-#include <xapian/matchspy.h>
-#include <xapian/postingsource.h>
-#include <xapian/query.h>
-#include <xapian/queryparser.h>
-#include <xapian/rset.h>
-#include <xapian/valuesetmatchdecider.h>
-#include <xapian/weight.h>
+#include "xapian/enquire.h"
+#include "xapian/eset.h"
+#include "xapian/mset.h"
+#include "xapian/expanddecider.h"
+#include "xapian/keymaker.h"
+#include "xapian/matchdecider.h"
+#include "xapian/matchspy.h"
+#include "xapian/postingsource.h"
+#include "xapian/query.h"
+#include "xapian/queryparser.h"
+#include "xapian/rset.h"
+#include "xapian/valuesetmatchdecider.h"
+#include "xapian/weight.h"
 
 // Clustering
-#include <xapian/cluster.h>
+#include "xapian/cluster.h"
 
 // Stemming
-#include <xapian/stem.h>
+#include "xapian/stem.h"
 
 // Diversification
-#include <xapian/diversify.h>
+#include "xapian/diversify.h"
 
 // Subclass registry
-#include <xapian/registry.h>
+#include "xapian/registry.h"
 
 // Unicode support
-#include <xapian/unicode.h>
+#include "xapian/unicode.h"
 
 // Geospatial
-#include <xapian/geospatial.h>
+#include "xapian/geospatial.h"
 
 // Database compaction and merging
-#include <xapian/compactor.h>
+#include "xapian/compactor.h"
 
 // ELF visibility annotations for GCC.
-#include <xapian/visibility.h>
+#include "xapian/visibility.h"
 
 // Mechanism for accessing a struct of constant information
-#include <xapian/constinfo.h>
+#include "xapian/constinfo.h"
 
 /// The Xapian namespace contains public interfaces for the Xapian library.
 namespace Xapian {

@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_GLASS_DOCDATA_H
 #define XAPIAN_INCLUDED_GLASS_DOCDATA_H
 
-#include <xapian/types.h>
+#include "xapian/types.h"
 
-#include "glass_lazytable.h"
-#include "pack.h"
+#include "xapian/backends/glass/glass_lazytable.h"
+#include "xapian/common/pack.h"
 
 #include <string>
 

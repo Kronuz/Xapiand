@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_GLASS_DEFS_H
 #define XAPIAN_INCLUDED_GLASS_DEFS_H
 
-#include "internaltypes.h"
+#include "xapian/common/internaltypes.h"
 
 /// Glass table extension.
 #define GLASS_TABLE_EXTENSION "glass"

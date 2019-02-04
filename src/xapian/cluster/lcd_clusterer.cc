@@ -19,13 +19,13 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/cluster.h"
 #include "xapian/error.h"
 
-#include "debuglog.h"
-#include "omassert.h"
+#include "xapian/common/debuglog.h"
+#include "xapian/common/omassert.h"
 
 #include <algorithm>
 #include <set>

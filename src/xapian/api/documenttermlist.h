@@ -21,11 +21,11 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 #define XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 
-#include "termlist.h"
+#include "xapian/api/termlist.h"
 
-#include "backends/documentinternal.h"
+#include "xapian/backends/documentinternal.h"
 
-#include "omassert.h"
+#include "xapian/common/omassert.h"
 
 /// Iteration over terms in a document.
 class DocumentTermList : public TermList {

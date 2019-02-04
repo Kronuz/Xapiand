@@ -20,22 +20,22 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#include <config.h>
+#include "config.h"
 
 #include "xapian/postingsource.h"
 
-#include "backends/databaseinternal.h"
-#include "backends/documentinternal.h"
-#include "matcher/postlisttree.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/documentinternal.h"
+#include "xapian/matcher/postlisttree.h"
 
 #include "xapian/document.h"
 #include "xapian/error.h"
 #include "xapian/queryparser.h" // For sortable_unserialise().
 
-#include "omassert.h"
-#include "net/length.h"
-#include "serialise-double.h"
-#include "str.h"
+#include "xapian/common/omassert.h"
+#include "xapian/net/length.h"
+#include "xapian/common/serialise-double.h"
+#include "xapian/common/str.h"
 
 #include <cfloat>
 #include <memory>

@@ -22,17 +22,17 @@
 #define XAPIAN_INCLUDED_TCPSERVER_H
 
 #ifdef __WIN32__
-# include "remoteconnection.h"
+# include "xapian/net/remoteconnection.h"
 # define SOCKET_INITIALIZER_MIXIN : private WinsockInitializer
 #else
 # define SOCKET_INITIALIZER_MIXIN
 #endif
 
 #if defined __CYGWIN__ || defined __WIN32__
-# include "safewindows.h" // Only for HANDLE!
+# include "xapian/common/safewindows.h" // Only for HANDLE!
 #endif
 
-#include <xapian/visibility.h>
+#include "xapian/visibility.h"
 
 #include <string>
 

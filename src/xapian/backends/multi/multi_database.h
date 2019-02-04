@@ -21,10 +21,10 @@
 #ifndef XAPIAN_INCLUDED_MULTI_DATABASE_H
 #define XAPIAN_INCLUDED_MULTI_DATABASE_H
 
-#include "api/postlist.h"
-#include "api/termlist.h"
-#include "backends/databaseinternal.h"
-#include "backends/valuelist.h"
+#include "xapian/api/postlist.h"
+#include "xapian/api/termlist.h"
+#include "xapian/backends/databaseinternal.h"
+#include "xapian/backends/valuelist.h"
 
 class Matcher;
 class ValueStreamDocument;
